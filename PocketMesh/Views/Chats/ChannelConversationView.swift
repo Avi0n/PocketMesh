@@ -1,9 +1,8 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct ChannelConversationView: View {
-
     let channel: Channel
 
     @Environment(\.modelContext) private var modelContext
@@ -22,7 +21,7 @@ struct ChannelConversationView: View {
             filter: #Predicate<Message> { message in
                 message.channel?.id == channelId
             },
-            sort: [SortDescriptor(\.timestamp, order: .forward)]
+            sort: [SortDescriptor(\.timestamp, order: .forward)],
         )
     }
 
@@ -54,7 +53,7 @@ struct ChannelConversationView: View {
             HStack(spacing: 12) {
                 TextField("Message to #\(channel.name)", text: $messageText, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...4)
+                    .lineLimit(1 ... 4)
                     .focused($isInputFocused)
 
                 Button(action: sendMessage) {
@@ -73,7 +72,8 @@ struct ChannelConversationView: View {
     private func sendMessage() {
         guard !messageText.isEmpty,
               let device = coordinator.connectedDevice,
-              let channelService = coordinator.channelService else {
+              let channelService = coordinator.channelService
+        else {
             return
         }
 

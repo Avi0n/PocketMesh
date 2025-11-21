@@ -1,13 +1,12 @@
-import SwiftUI
-import SwiftData
 import OSLog
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Coordinator")
 
 @MainActor
 final class AppCoordinator: ObservableObject {
-
     @Published var hasCompletedOnboarding: Bool = false
     @Published var connectedDevice: Device?
     @Published var bleManager: BLEManager?
@@ -18,14 +17,15 @@ final class AppCoordinator: ObservableObject {
     var advertisementService: AdvertisementService?
     var channelService: ChannelService?
     var pollingService: MessagePollingService?
+    var telemetryService: TelemetryService?
 
     private let modelContext: ModelContext
 
     init() {
-        self.modelContext = PersistenceController.shared.container.mainContext
+        modelContext = PersistenceController.shared.container.mainContext
 
         // Check if already onboarded
-        self.hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+        hasCompletedOnboarding = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
     }
 
     deinit {
@@ -39,7 +39,7 @@ final class AppCoordinator: ObservableObject {
         NotificationCenter.default.addObserver(
             forName: NSNotification.Name("BLEConnectionRestored"),
             object: nil,
-            queue: .main
+            queue: .main,
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.handleBLEConnectionRestored()
@@ -58,7 +58,7 @@ final class AppCoordinator: ObservableObject {
         logger.info("BLE connection restored - reinitializing services")
 
         // Reinitialize services if we have both BLE manager and protocol
-        if bleManager != nil && meshProtocol != nil {
+        if bleManager != nil, meshProtocol != nil {
             initializeServices()
         }
     }
@@ -87,8 +87,9 @@ final class AppCoordinator: ObservableObject {
     }
 
     private func initializeServices() {
-        guard let bleManager = bleManager,
-              let meshProtocol = meshProtocol else {
+        guard let bleManager,
+              let meshProtocol
+        else {
             return
         }
 
@@ -100,8 +101,9 @@ final class AppCoordinator: ObservableObject {
         pollingService = MessagePollingService(
             protocol: meshProtocol,
             modelContext: modelContext,
-            deviceRepository: deviceRepo
+            deviceRepository: deviceRepo,
         )
+        telemetryService = TelemetryService(protocol: meshProtocol, modelContext: modelContext)
 
         pollingService?.startPolling()
     }

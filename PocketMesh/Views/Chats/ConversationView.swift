@@ -1,9 +1,8 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct ConversationView: View {
-
     let contact: Contact
 
     @Environment(\.modelContext) private var modelContext
@@ -23,7 +22,7 @@ struct ConversationView: View {
             filter: #Predicate<Message> { message in
                 message.contact?.publicKey == contactPublicKey
             },
-            sort: [SortDescriptor(\.timestamp, order: .forward)]
+            sort: [SortDescriptor(\.timestamp, order: .forward)],
         )
     }
 
@@ -45,7 +44,7 @@ struct ConversationView: View {
                                     isInputFocused = true
                                 }
 
-                                if message.isOutgoing && message.deliveryStatus == .queued {
+                                if message.isOutgoing, message.deliveryStatus == .queued {
                                     Button("Delete", role: .destructive) {
                                         deleteMessage(message)
                                     }
@@ -65,7 +64,7 @@ struct ConversationView: View {
             Divider()
 
             // Reply indicator
-            if let replyingTo = replyingTo {
+            if let replyingTo {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Replying to")
@@ -78,7 +77,9 @@ struct ConversationView: View {
 
                     Spacer()
 
-                    Button(action: { self.replyingTo = nil }) {
+                    Button {
+                        self.replyingTo = nil
+                    } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                     }
@@ -92,7 +93,7 @@ struct ConversationView: View {
             HStack(spacing: 12) {
                 TextField("Message", text: $messageText, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...4)
+                    .lineLimit(1 ... 4)
                     .focused($isInputFocused)
 
                 Button(action: sendMessage) {
@@ -111,7 +112,8 @@ struct ConversationView: View {
     private func sendMessage() {
         guard !messageText.isEmpty,
               let device = coordinator.connectedDevice,
-              let messageService = coordinator.messageService else {
+              let messageService = coordinator.messageService
+        else {
             return
         }
 

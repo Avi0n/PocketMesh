@@ -1,8 +1,7 @@
-import SwiftUI
 import PocketMeshKit
+import SwiftUI
 
 struct MessageBubble: View {
-
     let message: Message
     let onReply: () -> Void
 

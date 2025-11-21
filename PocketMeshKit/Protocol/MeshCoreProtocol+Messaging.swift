@@ -1,16 +1,29 @@
 import Foundation
 
-extension MeshCoreProtocol {
-
+public extension MeshCoreProtocol {
     /// CMD_SEND_TXT_MSG (2): Send direct message to contact
-    public func sendTextMessage(
+    func sendTextMessage(
         text: String,
         recipientPublicKey: Data,
-        floodMode: Bool
+        floodMode: Bool,
+        scope: String? = nil,
+        attempt: UInt8 = 0,
     ) async throws -> MessageSendResult {
+        // If scope specified, set it before sending
+        if let scope {
+            try await setFloodScope(scope)
+        }
+
         var payload = Data()
 
-        // Recipient public key (32 bytes)
+        // Attempt counter (1 byte) - matches Python implementation
+        payload.append(attempt)
+
+        // Timestamp (4 bytes, little-endian) - Unix timestamp
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+        withUnsafeBytes(of: timestamp.littleEndian) { payload.append(contentsOf: $0) }
+
+        // Destination public key (32 bytes)
         payload.append(recipientPublicKey)
 
         // Flood mode flag (1 byte)
@@ -32,18 +45,60 @@ extension MeshCoreProtocol {
     }
 
     /// CMD_SYNC_NEXT_MESSAGE (10): Poll for next queued incoming message
-    public func syncNextMessage() async throws -> IncomingMessage? {
+    @preconcurrency
+    func syncNextMessage() async throws -> IncomingMessage? {
         let frame = ProtocolFrame(code: CommandCode.syncNextMessage.rawValue)
 
-        // We need to handle multiple possible response codes
-        // For now, we'll implement a simplified version that expects one of the message received codes
-        let response = try await sendCommand(frame, expectingResponse: ResponseCode.contactMessageReceivedV3.rawValue)
+        // All valid response codes for message polling
+        let validResponseCodes = [
+            ResponseCode.contactMessageReceived.rawValue, // V2 direct messages
+            ResponseCode.channelMessageReceived.rawValue, // V2 channel messages
+            ResponseCode.contactMessageReceivedV3.rawValue, // V3 direct messages
+            ResponseCode.channelMessageReceivedV3.rawValue, // V3 channel messages
+            ResponseCode.noMoreMessages.rawValue, // End of message queue
+        ]
 
+        // Send the command and wait for response
+        let encodedFrame = frame.encode()
+        try await bleManager.send(frame: encodedFrame)
+
+        let response = try await waitForMultiFrameResponse(codes: validResponseCodes, timeout: 5.0)
+
+        // Check for end of message queue
         if response.code == ResponseCode.noMoreMessages.rawValue {
             return nil
         }
 
+        // Decode the message (IncomingMessage decoder handles V2/V3 differences)
         return try IncomingMessage.decode(from: response.payload, code: response.code)
+    }
+
+    // MARK: - Flood Scope Management
+
+    /// CMD_SET_FLOOD_SCOPE (25): Set the flood scope for limiting message propagation by region
+    /// - Parameter scope: Scope identifier (e.g., "*" for global, "#RegionName" for specific region)
+    func setFloodScope(_ scope: String) async throws {
+        guard let scopeData = scope.data(using: .utf8), scopeData.count <= 64 else {
+            throw ProtocolError.invalidPayload
+        }
+
+        var payload = Data()
+        payload.append(scopeData)
+
+        let frame = ProtocolFrame(code: CommandCode.setFloodScope.rawValue, payload: payload)
+        _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
+    }
+
+    /// CMD_GET_FLOOD_SCOPE (26): Get the current flood scope setting
+    func getFloodScope() async throws -> String {
+        let frame = ProtocolFrame(code: CommandCode.getFloodScope.rawValue)
+        let response = try await sendCommand(frame, expectingResponse: ResponseCode.floodScope.rawValue)
+
+        guard let scope = String(data: response.payload, encoding: .utf8) else {
+            throw ProtocolError.invalidPayload
+        }
+
+        return scope
     }
 }
 
@@ -77,14 +132,14 @@ public struct IncomingMessage: Sendable {
 
     static func decode(from data: Data, code: UInt8) throws -> IncomingMessage {
         let isV3 = (code == ResponseCode.contactMessageReceivedV3.rawValue ||
-                    code == ResponseCode.channelMessageReceivedV3.rawValue)
+            code == ResponseCode.channelMessageReceivedV3.rawValue)
         let isDirect = (code == ResponseCode.contactMessageReceived.rawValue ||
-                        code == ResponseCode.contactMessageReceivedV3.rawValue)
+            code == ResponseCode.contactMessageReceivedV3.rawValue)
 
         var offset = 0
 
         // SNR (v3 only, at start)
-        var snr: Double? = nil
+        var snr: Double?
         if isV3 {
             guard data.count > offset else { throw ProtocolError.invalidPayload }
             let snrRaw = Int8(bitPattern: data[offset])
@@ -98,13 +153,13 @@ public struct IncomingMessage: Sendable {
         let senderTimestamp = Date(timeIntervalSince1970: TimeInterval(timestamp))
         offset += 4
 
-        var senderPublicKeyPrefix: Data? = nil
-        var channelIndex: UInt8? = nil
+        var senderPublicKeyPrefix: Data?
+        var channelIndex: UInt8?
 
         if isDirect {
             // Direct message: 6-byte sender public key prefix
             guard data.count >= offset + 6 else { throw ProtocolError.invalidPayload }
-            senderPublicKeyPrefix = data.subdata(in: offset..<offset + 6)
+            senderPublicKeyPrefix = data.subdata(in: offset ..< offset + 6)
             offset += 6
         } else {
             // Channel message: channel index
@@ -124,7 +179,7 @@ public struct IncomingMessage: Sendable {
         offset += 1
 
         // Text content (rest of payload)
-        let textData = data.subdata(in: offset..<data.count)
+        let textData = data.subdata(in: offset ..< data.count)
         guard let text = String(data: textData, encoding: .utf8) else {
             throw ProtocolError.invalidPayload
         }
@@ -137,7 +192,7 @@ public struct IncomingMessage: Sendable {
             pathLength: pathLength,
             textType: textType,
             text: text,
-            snr: snr
+            snr: snr,
         )
     }
 }

@@ -1,10 +1,9 @@
-import SwiftUI
 import CoreBluetooth
-import UserNotifications
 import CoreLocation
+import SwiftUI
+import UserNotifications
 
 struct PermissionsView: View {
-
     @Binding var hasBluetoothPermission: Bool
     @Binding var hasNotificationPermission: Bool
     @Binding var hasLocationPermission: Bool
@@ -33,7 +32,7 @@ struct PermissionsView: View {
                     isGranted: hasBluetoothPermission,
                     action: {
                         bluetoothManager.requestPermission()
-                    }
+                    },
                 )
 
                 PermissionRow(
@@ -41,7 +40,7 @@ struct PermissionsView: View {
                     title: "Notifications",
                     description: "Alert you of new messages",
                     isGranted: hasNotificationPermission,
-                    action: requestNotificationPermission
+                    action: requestNotificationPermission,
                 )
 
                 PermissionRow(
@@ -52,7 +51,7 @@ struct PermissionsView: View {
                     action: {
                         locationManager.requestPermission()
                         hasLocationPermission = locationManager.hasPermission
-                    }
+                    },
                 )
             }
 
@@ -193,7 +192,7 @@ final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralMan
         }
     }
 
-    nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    nonisolated func centralManagerDidUpdateState(_: CBCentralManager) {
         Task { @MainActor in
             updatePermissionStatus()
         }
@@ -224,7 +223,7 @@ final class LocationPermissionManager: NSObject, ObservableObject, CLLocationMan
         }
     }
 
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+    nonisolated func locationManagerDidChangeAuthorization(_: CLLocationManager) {
         Task { @MainActor in
             checkPermission()
         }

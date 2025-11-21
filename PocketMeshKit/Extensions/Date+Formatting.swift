@@ -1,7 +1,6 @@
 import Foundation
 
 public extension Date {
-
     /// Returns relative time string showing minutes only (no seconds)
     func relativeTimeStringMinutesOnly() -> String {
         let now = Date()

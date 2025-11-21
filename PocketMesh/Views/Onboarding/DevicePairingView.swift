@@ -1,9 +1,8 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct DevicePairingView: View {
-
     let device: MeshCoreDevice
 
     @EnvironmentObject private var coordinator: AppCoordinator
@@ -106,7 +105,7 @@ struct DevicePairingView: View {
                 let savedDevice = try repository.createOrUpdateDevice(
                     from: selfInfo,
                     name: device.name,
-                    firmwareVersion: deviceInfo.firmwareVersion
+                    firmwareVersion: deviceInfo.firmwareVersion,
                 )
 
                 try repository.setActiveDevice(savedDevice)

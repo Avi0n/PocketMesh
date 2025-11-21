@@ -3,7 +3,6 @@ import SwiftData
 
 @Model
 public final class Channel {
-
     public var id: UUID
     public var slotIndex: UInt8 // 0-7 (0 = public, 1-7 = custom)
     public var name: String
@@ -21,13 +20,13 @@ public final class Channel {
         slotIndex: UInt8,
         name: String,
         secretHash: Data? = nil,
-        device: Device? = nil
+        device: Device? = nil,
     ) {
-        self.id = UUID()
+        id = UUID()
         self.slotIndex = slotIndex
         self.name = name
         self.secretHash = secretHash
-        self.createdDate = Date()
+        createdDate = Date()
         self.device = device
     }
 

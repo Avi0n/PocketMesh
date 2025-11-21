@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct WelcomeView: View {
-
     let onContinue: () -> Void
 
     var body: some View {

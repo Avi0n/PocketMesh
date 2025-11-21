@@ -1,16 +1,28 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct ContactsListView: View {
-
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var coordinator: AppCoordinator
 
-    @Query(sort: \Contact.name) private var contacts: [Contact]
+    @Query(
+        filter: #Predicate<Contact> { contact in
+            contact.isPending == false
+        },
+        sort: \Contact.name,
+    ) private var contacts: [Contact]
+
+    @Query(
+        filter: #Predicate<Contact> { contact in
+            contact.isPending == true
+        },
+    ) private var pendingContacts: [Contact]
+
     @State private var searchText = ""
     @State private var isSendingAdvertisement = false
     @State private var showSendSuccess = false
+    @State private var showingPendingContacts = false
 
     var body: some View {
         NavigationStack {
@@ -34,6 +46,23 @@ struct ContactsListView: View {
                 ContactDetailView(contact: contact)
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingPendingContacts = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .symbolVariant(pendingContacts.isEmpty ? .none : .fill)
+                            if !pendingContacts.isEmpty {
+                                Text("\(pendingContacts.count)")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                            }
+                        }
+                        .foregroundColor(pendingContacts.isEmpty ? .secondary : .blue)
+                    }
+                }
+
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
                         Button {
@@ -48,13 +77,15 @@ struct ContactsListView: View {
                             Label("Network-wide (Flood)", systemImage: "network")
                         }
                     } label: {
-                        Image(systemName: isSendingAdvertisement ? "antenna.radiowaves.left.and.right.slash" : "antenna.radiowaves.left.and.right")
+                        Image(systemName: isSendingAdvertisement
+                            ? "antenna.radiowaves.left.and.right.slash"
+                            : "antenna.radiowaves.left.and.right")
                     }
                     .disabled(isSendingAdvertisement)
                 }
             }
             .alert("Advertisement Sent", isPresented: $showSendSuccess) {
-                Button("OK", role: .cancel) { }
+                Button("OK", role: .cancel) {}
             } message: {
                 Text("Your advertisement has been broadcast to the mesh network.")
             }
@@ -63,18 +94,22 @@ struct ContactsListView: View {
                     ContentUnavailableView(
                         "No Contacts",
                         systemImage: "person.2",
-                        description: Text("Send an advertisement to discover nearby mesh contacts")
+                        description: Text("Send an advertisement to discover nearby mesh contacts"),
                     )
                 }
+            }
+            .sheet(isPresented: $showingPendingContacts) {
+                PendingContactsView()
+                    .environmentObject(coordinator)
             }
         }
     }
 
     private var filteredContacts: [Contact] {
         if searchText.isEmpty {
-            return contacts
+            contacts
         } else {
-            return contacts.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            contacts.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
     }
 
@@ -108,16 +143,49 @@ struct ContactsListView: View {
 struct ContactRow: View {
     let contact: Contact
 
+    private var contactIcon: String {
+        switch contact.type {
+        case .companion:
+            "person.circle.fill"
+        case .repeater:
+            "antenna.radiowaves.left.and.right"
+        case .room:
+            "person.3.fill"
+        case .sensor:
+            "sensor.fill"
+        case .none:
+            "questionmark.circle"
+        }
+    }
+
+    private var contactColor: Color {
+        switch contact.type {
+        case .companion:
+            .blue
+        case .repeater:
+            .purple
+        case .room:
+            .green
+        case .sensor:
+            .orange
+        case .none:
+            .gray
+        }
+    }
+
     var body: some View {
         HStack {
             // Avatar
-            Circle()
-                .fill(Color.green.gradient)
+            Image(systemName: contactIcon)
+                .font(.title3)
+                .foregroundStyle(.white)
                 .frame(width: 40, height: 40)
-                .overlay {
-                    Text(contact.name.prefix(1).uppercased())
-                        .foregroundStyle(.white)
-                }
+                .background(contactColor)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5),
+                )
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(contact.name)
@@ -132,7 +200,7 @@ struct ContactRow: View {
 
             Spacer()
 
-            if contact.latitude != nil && contact.longitude != nil {
+            if contact.latitude != nil, contact.longitude != nil {
                 Image(systemName: "mappin.circle.fill")
                     .foregroundStyle(.blue)
             }

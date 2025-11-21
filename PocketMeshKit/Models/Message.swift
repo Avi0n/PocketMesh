@@ -3,7 +3,6 @@ import SwiftData
 
 @Model
 public final class Message {
-
     public var id: UUID
     public var text: String
     public var timestamp: Date
@@ -16,6 +15,7 @@ public final class Message {
     public var expectedAckTimeout: Date?
     public var retryCount: Int
     public var lastRetryDate: Date?
+    public var routingMode: MessageRoutingMode?
 
     // Incoming message metadata
     public var senderPublicKeyPrefix: Data? // First 6 bytes
@@ -35,15 +35,15 @@ public final class Message {
         isOutgoing: Bool,
         contact: Contact? = nil,
         channel: Channel? = nil,
-        device: Device? = nil
+        device: Device? = nil,
     ) {
-        self.id = UUID()
+        id = UUID()
         self.text = text
-        self.timestamp = Date()
+        timestamp = Date()
         self.isOutgoing = isOutgoing
-        self.deliveryStatus = isOutgoing ? .queued : .received
-        self.retryCount = 0
-        self.messageType = channel != nil ? .channel : .direct
+        deliveryStatus = isOutgoing ? .queued : .received
+        retryCount = 0
+        messageType = channel != nil ? .channel : .direct
         self.contact = contact
         self.channel = channel
         self.device = device
@@ -51,15 +51,21 @@ public final class Message {
 }
 
 public enum DeliveryStatus: String, Codable {
-    case queued = "queued"
-    case sending = "sending"
-    case sent = "sent"
-    case acknowledged = "acknowledged"
-    case failed = "failed"
-    case received = "received"
+    case queued
+    case sending
+    case sent
+    case acknowledged
+    case failed
+    case received
 }
 
 public enum MessageType: String, Codable {
-    case direct = "direct"
-    case channel = "channel"
+    case direct
+    case channel
+}
+
+public enum MessageRoutingMode: String, Codable {
+    case direct // Sent via direct path
+    case flood // Sent via flood routing
+    case unknown // For incoming messages
 }

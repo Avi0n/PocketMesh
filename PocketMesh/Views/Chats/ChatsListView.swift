@@ -1,9 +1,8 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct ChatsListView: View {
-
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var coordinator: AppCoordinator
 
@@ -26,7 +25,7 @@ struct ChatsListView: View {
                                         name: contact.name,
                                         lastMessage: conversation.lastMessage,
                                         unreadCount: conversation.unreadCount,
-                                        timestamp: conversation.timestamp
+                                        timestamp: conversation.timestamp,
                                     )
                                 }
                             }
@@ -44,7 +43,7 @@ struct ChatsListView: View {
                                         name: channel.name,
                                         lastMessage: conversation.lastMessage,
                                         unreadCount: conversation.unreadCount,
-                                        timestamp: conversation.timestamp
+                                        timestamp: conversation.timestamp,
                                     )
                                 }
                             }
@@ -52,20 +51,20 @@ struct ChatsListView: View {
                     }
                 }
 
-                if directConversations.isEmpty && channelConversations.isEmpty {
+                if directConversations.isEmpty, channelConversations.isEmpty {
                     ContentUnavailableView(
                         "No Conversations",
                         systemImage: "message",
-                        description: Text("Start messaging by selecting a contact or joining a channel")
+                        description: Text("Start messaging by selecting a contact or joining a channel"),
                     )
                 }
             }
             .navigationTitle("Chats")
             .navigationDestination(for: ChatDestination.self) { destination in
                 switch destination {
-                case .contact(let contact):
+                case let .contact(contact):
                     ConversationView(contact: contact)
-                case .channel(let channel):
+                case let .channel(channel):
                     ChannelConversationView(channel: channel)
                 }
             }
@@ -75,7 +74,7 @@ struct ChatsListView: View {
     private var directConversations: [ConversationSummary] {
         Dictionary(grouping: allMessages.filter { $0.contact != nil }, by: { $0.contact })
             .compactMap { contact, messages -> ConversationSummary? in
-                guard let contact = contact,
+                guard let contact,
                       let lastMessage = messages.first else { return nil }
 
                 return ConversationSummary(
@@ -83,7 +82,7 @@ struct ChatsListView: View {
                     channel: nil,
                     lastMessage: lastMessage.text,
                     timestamp: lastMessage.timestamp,
-                    unreadCount: messages.filter { !$0.isOutgoing }.count
+                    unreadCount: messages.count(where: { !$0.isOutgoing }),
                 )
             }
             .sorted { $0.timestamp > $1.timestamp }
@@ -92,7 +91,7 @@ struct ChatsListView: View {
     private var channelConversations: [ConversationSummary] {
         Dictionary(grouping: allMessages.filter { $0.channel != nil }, by: { $0.channel })
             .compactMap { channel, messages -> ConversationSummary? in
-                guard let channel = channel,
+                guard let channel,
                       let lastMessage = messages.first else { return nil }
 
                 return ConversationSummary(
@@ -100,7 +99,7 @@ struct ChatsListView: View {
                     channel: channel,
                     lastMessage: lastMessage.text,
                     timestamp: lastMessage.timestamp,
-                    unreadCount: messages.filter { !$0.isOutgoing }.count
+                    unreadCount: messages.count(where: { !$0.isOutgoing }),
                 )
             }
             .sorted { $0.timestamp > $1.timestamp }

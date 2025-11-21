@@ -72,6 +72,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.tests
         GENERATE_INFOPLIST_FILE: YES
+        DEVELOPMENT_TEAM: L6E4TF9NZ9
+        CODE_SIGN_STYLE: Automatic
 
 schemes:
   PocketMesh:

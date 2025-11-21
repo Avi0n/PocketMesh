@@ -1,12 +1,11 @@
 import Foundation
-import UserNotifications
 import OSLog
+import UserNotifications
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Notifications")
 
 @MainActor
 public final class NotificationService {
-
     public static let shared = NotificationService()
 
     private init() {}
@@ -14,7 +13,7 @@ public final class NotificationService {
     public func requestAuthorization() async -> Bool {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(
-                options: [.alert, .sound, .badge]
+                options: [.alert, .sound, .badge],
             )
             logger.info("Notification authorization: \(granted)")
             return granted
@@ -35,17 +34,17 @@ public final class NotificationService {
         // Add contact info to userInfo for reply handling
         content.userInfo = [
             "contactPublicKey": contactPublicKey.base64EncodedString(),
-            "contactName": contactName
+            "contactName": contactName,
         ]
 
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
-            trigger: nil // Immediate
+            trigger: nil, // Immediate
         )
 
         UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
+            if let error {
                 logger.error("Failed to schedule notification: \(error.localizedDescription)")
             } else {
                 logger.info("Message notification scheduled")
@@ -62,7 +61,7 @@ public final class NotificationService {
         let request = UNNotificationRequest(
             identifier: "low-battery",
             content: content,
-            trigger: nil
+            trigger: nil,
         )
 
         UNUserNotificationCenter.current().add(request)

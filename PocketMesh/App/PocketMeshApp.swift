@@ -1,10 +1,9 @@
-import SwiftUI
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 @main
 struct PocketMeshApp: App {
-
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var appCoordinator = AppCoordinator()
 

@@ -1,9 +1,9 @@
 import Foundation
 import SwiftData
+import SwiftUI
 
 @Model
 public final class Contact: Identifiable {
-
     public var id: UUID
     @Attribute(.unique) public var publicKey: Data // 32 bytes
     public var name: String
@@ -21,6 +21,7 @@ public final class Contact: Identifiable {
 
     // Flags
     public var isManuallyAdded: Bool
+    public var isPending: Bool
 
     // Relationships
     public var device: Device?
@@ -31,29 +32,55 @@ public final class Contact: Identifiable {
     public init(
         publicKey: Data,
         name: String,
-        type: ContactType = .chat,
-        device: Device? = nil
+        type: ContactType = .companion,
+        device: Device? = nil,
+        isPending: Bool = false,
     ) {
-        self.id = UUID()
+        id = UUID()
         self.publicKey = publicKey
         self.name = name
         self.type = type
         self.device = device
-        self.lastModified = Date()
-        self.isManuallyAdded = false
+        lastModified = Date()
+        isManuallyAdded = false
+        self.isPending = isPending
     }
 }
 
 public enum ContactType: String, Codable, Sendable {
     case none = "NONE"
-    case chat = "CHAT"
+    case companion = "COMPANION" // Type 1 - companion/client (was "CHAT")
     case repeater = "REPEATER"
-    case room = "ROOM"
-}
+    case room = "ROOM" // Type 3
+    case sensor = "SENSOR" // Type 4 - NEW
 
-// Extension to convert Data to hex string for display
-public extension Data {
-    var hexString: String {
-        return self.map { String(format: "%02x", $0) }.joined()
+    public var displayName: String {
+        switch self {
+        case .none: "Unknown"
+        case .companion: "Companion"
+        case .repeater: "Repeater"
+        case .room: "Room"
+        case .sensor: "Sensor"
+        }
+    }
+
+    public var iconName: String {
+        switch self {
+        case .none: "questionmark.circle"
+        case .companion: "iphone"
+        case .repeater: "antenna.radiowaves.left.and.right"
+        case .room: "building.2"
+        case .sensor: "sensor"
+        }
+    }
+
+    public var color: Color {
+        switch self {
+        case .none: .gray
+        case .companion: .blue
+        case .repeater: .purple
+        case .room: .cyan
+        case .sensor: .orange
+        }
     }
 }

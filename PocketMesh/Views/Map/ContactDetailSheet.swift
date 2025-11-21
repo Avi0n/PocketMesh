@@ -1,5 +1,5 @@
-import SwiftUI
 import PocketMeshKit
+import SwiftUI
 
 struct ContactDetailSheet: View {
     let contact: Contact
@@ -64,7 +64,8 @@ struct ContactDetailSheet: View {
             }
 
             if let latitude = contact.latitude, let longitude = contact.longitude,
-               latitude != 0 && longitude != 0 {
+               latitude != 0, longitude != 0
+            {
                 Section("Location") {
                     HStack {
                         Text("Latitude")
@@ -118,13 +119,15 @@ struct ContactDetailSheet: View {
     private var contactTypeDisplay: String {
         switch contact.type {
         case .none:
-            return "None"
-        case .chat:
-            return "Chat"
+            "None"
+        case .companion:
+            "Companion"
         case .repeater:
-            return "Repeater"
+            "Repeater"
         case .room:
-            return "Room"
+            "Room"
+        case .sensor:
+            "Sensor"
         }
     }
 }

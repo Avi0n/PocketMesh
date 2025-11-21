@@ -1,19 +1,18 @@
+import OSLog
+import PocketMeshKit // Add this import
+import SwiftData // Add this import
 import UIKit
 import UserNotifications
-import OSLog
-import PocketMeshKit  // Add this import
-import SwiftData      // Add this import
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "AppDelegate")
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-
     // Add coordinator reference
     weak var appCoordinator: AppCoordinator?
 
     func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+        _: UIApplication,
+        didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil,
     ) -> Bool {
         logger.info("App did finish launching")
 
@@ -32,14 +31,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             title: "Reply",
             options: [],
             textInputButtonTitle: "Send",
-            textInputPlaceholder: "Type a message..."
+            textInputPlaceholder: "Type a message...",
         )
 
         let messageCategory = UNNotificationCategory(
             identifier: "MESSAGE",
             actions: [replyAction],
             intentIdentifiers: [],
-            options: []
+            options: [],
         )
 
         UNUserNotificationCenter.current().setNotificationCategories([messageCategory])
@@ -48,23 +47,24 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // MARK: - UNUserNotificationCenterDelegate
 
     nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+        _: UNUserNotificationCenter,
+        willPresent _: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void,
     ) {
         // Show notification even when app is in foreground
         completionHandler([.banner, .sound, .badge])
     }
 
     nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
+        _: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
+        withCompletionHandler completionHandler: @escaping () -> Void,
     ) {
         logger.info("Notification action: \(response.actionIdentifier)")
 
         if response.actionIdentifier == "REPLY",
-           let textResponse = response as? UNTextInputNotificationResponse {
+           let textResponse = response as? UNTextInputNotificationResponse
+        {
             let messageText = textResponse.userText
             logger.info("User replied: \(messageText)")
 
@@ -73,7 +73,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
             guard let publicKeyBase64 = userInfo["contactPublicKey"] as? String,
                   let contactPublicKey = Data(base64Encoded: publicKeyBase64),
-                  let contactName = userInfo["contactName"] as? String else {
+                  let contactName = userInfo["contactName"] as? String
+            else {
                 logger.error("Missing contact info in notification userInfo")
                 completionHandler()
                 return
@@ -86,7 +87,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 await self.sendReplyMessage(
                     text: messageText,
                     contactPublicKey: contactPublicKey,
-                    contactName: contactName
+                    contactName: contactName,
                 )
             }
         } else {
@@ -106,7 +107,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Verify services are initialized
         guard let messageService = coordinator.messageService,
-              let device = coordinator.connectedDevice else {
+              let device = coordinator.connectedDevice
+        else {
             logger.error("MessageService or device not available - app may not be fully initialized")
             return
         }
@@ -118,7 +120,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             let descriptor = FetchDescriptor<Contact>(
                 predicate: #Predicate { contact in
                     contact.publicKey == contactPublicKey
-                }
+                },
             )
 
             guard let contact = try modelContext.fetch(descriptor).first else {

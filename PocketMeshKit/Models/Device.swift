@@ -3,7 +3,6 @@ import SwiftData
 
 @Model
 public final class Device {
-
     @Attribute(.unique) var publicKey: Data // 32 bytes - primary identifier
     public var name: String
     public var firmwareVersion: String
@@ -20,6 +19,10 @@ public final class Device {
     // Location (optional)
     public var latitude: Double?
     public var longitude: Double?
+
+    // Protocol configuration
+    public var multiAcksEnabled: Bool = false
+    public var defaultFloodScope: String = "*" // Global scope by default
 
     // Relationships
     @Relationship(deleteRule: .cascade, inverse: \Contact.device)
@@ -39,13 +42,13 @@ public final class Device {
         radioBandwidth: UInt32,
         radioSpreadingFactor: UInt8,
         radioCodingRate: UInt8,
-        txPower: Int8
+        txPower: Int8,
     ) {
         self.publicKey = publicKey
         self.name = name
         self.firmwareVersion = firmwareVersion
-        self.lastConnected = Date()
-        self.isActive = false
+        lastConnected = Date()
+        isActive = false
         self.radioFrequency = radioFrequency
         self.radioBandwidth = radioBandwidth
         self.radioSpreadingFactor = radioSpreadingFactor

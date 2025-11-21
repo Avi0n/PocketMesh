@@ -1,20 +1,55 @@
+import Combine
 import Foundation
 import OSLog
-import Combine
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Protocol")
 
 /// High-level protocol handler for MeshCore commands and responses
 public actor MeshCoreProtocol {
+    let bleManager: BLEManagerProtocol
+    private struct ContinuationWrapper {
+        let continuation: CheckedContinuation<ProtocolFrame, Error>
+        let id: Int
+        private var hasResumed: Bool = false
 
-    let bleManager: BLEManager
-    private var responseContinuations: [UInt8: CheckedContinuation<ProtocolFrame, Error>] = [:]
+        init(continuation: CheckedContinuation<ProtocolFrame, Error>, id: Int) {
+            self.continuation = continuation
+            self.id = id
+        }
+
+        mutating func resume(returning value: ProtocolFrame) {
+            guard !hasResumed else { return }
+            hasResumed = true
+            continuation.resume(returning: value)
+        }
+
+        mutating func resume(throwing error: Error) {
+            guard !hasResumed else { return }
+            hasResumed = true
+            continuation.resume(throwing: error)
+        }
+    }
+
+    private var responseContinuations: [UInt8: ContinuationWrapper] = [:]
+    private var multiFrameContinuations: [Int: Set<UInt8>] = [:]
+    private var resumedContinuations: Set<Int> = []
+    private var continuationIdCounter: Int = 0
     private var cancellables = Set<AnyCancellable>()
+
+    // Add debugging for continuation tracking
+    private var activeContinuationIds: Set<Int> = []
+
+    // Request queue management for concurrent requests
+    private var requestQueue: [UInt8: [ContinuationWrapper]] = [:] // Allow multiple waiters per code
+
+    // Request ID tracking for enhanced concurrent request handling
+    private var requestIdCounter: UInt32 = 0
+    private var pendingRequests: [UInt32: ContinuationWrapper] = [:]
 
     // Push notification handlers
     private var pushHandlers: [@Sendable (UInt8, Data) async -> Void] = []
 
-    public init(bleManager: BLEManager) {
+    public init(bleManager: BLEManagerProtocol) {
         self.bleManager = bleManager
 
         // Subscribe to incoming frames
@@ -43,22 +78,11 @@ public actor MeshCoreProtocol {
 
     // MARK: - Internal Helpers
 
-    public func sendCommand(_ frame: ProtocolFrame, expectingResponse expectedCode: UInt8) async throws -> ProtocolFrame {
-        return try await withCheckedThrowingContinuation { continuation in
-            Task {
-                // Store continuation for this expected response code
-                responseContinuations[expectedCode] = continuation
-
-                do {
-                    let encodedFrame = frame.encode()
-                    try await bleManager.send(frame: encodedFrame)
-                    logger.debug("Sent command code: \(frame.code)")
-                } catch {
-                    responseContinuations.removeValue(forKey: expectedCode)
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+    public func sendCommand(
+        _ frame: ProtocolFrame,
+        expectingResponse expectedCode: UInt8,
+    ) async throws -> ProtocolFrame {
+        try await sendCommandWithRequestID(frame, expectingResponse: expectedCode)
     }
 
     private func handleIncomingFrame(_ data: Data) {
@@ -66,9 +90,82 @@ public actor MeshCoreProtocol {
             let frame = try ProtocolFrame.decode(data)
             logger.debug("Received frame code: \(frame.code)")
 
-            // Check if we're waiting for this response
-            if let continuation = responseContinuations.removeValue(forKey: frame.code) {
-                continuation.resume(returning: frame)
+            // Try to extract request ID from response payload
+            let requestId = extractRequestID(from: frame.payload)
+
+            // First try to match by request ID
+            if let requestId,
+               let wrapper = pendingRequests.removeValue(forKey: requestId)
+            {
+                // Clean up from legacy tracking
+                responseContinuations.removeValue(forKey: frame.code)
+                activeContinuationIds.remove(wrapper.id)
+
+                // Remove from request queue as well (for backward compatibility)
+                if var waiters = requestQueue[frame.code] {
+                    waiters.removeAll { $0.id == wrapper.id }
+                    if waiters.isEmpty {
+                        requestQueue.removeValue(forKey: frame.code)
+                    } else {
+                        requestQueue[frame.code] = waiters
+                    }
+                }
+
+                // Strip request ID from response payload before returning
+                let responseWithoutRequestId: ProtocolFrame
+                if frame.payload.count >= 4 {
+                    let strippedPayload = frame.payload.subdata(in: 4..<frame.payload.count)
+                    responseWithoutRequestId = ProtocolFrame(code: frame.code, payload: strippedPayload)
+                } else {
+                    responseWithoutRequestId = frame
+                }
+
+                var mutableWrapper = wrapper
+                mutableWrapper.resume(returning: responseWithoutRequestId)
+                return
+            }
+
+            // Fall back to existing response code matching for backward compatibility
+            if var waiters = requestQueue[frame.code], !waiters.isEmpty {
+                // Resume the first waiter and remove it from queue
+                let wrapper = waiters.removeFirst()
+
+                if waiters.isEmpty {
+                    requestQueue.removeValue(forKey: frame.code)
+                } else {
+                    requestQueue[frame.code] = waiters
+                }
+
+                // Clean up from responseContinuations
+                responseContinuations.removeValue(forKey: frame.code)
+
+                // Remove from active tracking
+                activeContinuationIds.remove(wrapper.id)
+
+                // Check if this is a multi-frame continuation
+                let continuationId = wrapper.id
+                if continuationId >= 0 {
+                    resumedContinuations.insert(continuationId)
+
+                    if let associatedCodes = multiFrameContinuations[continuationId] {
+                        for code in associatedCodes {
+                            // Remove this continuation from other codes as well
+                            if var otherWaiters = requestQueue[code] {
+                                otherWaiters.removeAll { $0.id == continuationId }
+                                if otherWaiters.isEmpty {
+                                    requestQueue.removeValue(forKey: code)
+                                } else {
+                                    requestQueue[code] = otherWaiters
+                                }
+                            }
+                            responseContinuations.removeValue(forKey: code)
+                        }
+                        multiFrameContinuations.removeValue(forKey: continuationId)
+                    }
+                }
+
+                var mutableWrapper = wrapper
+                mutableWrapper.resume(returning: frame)
             } else {
                 // Handle unsolicited frames (push notifications, etc.)
                 handlePushNotification(frame)
@@ -88,7 +185,10 @@ public actor MeshCoreProtocol {
 
         logger.info("Received push notification: \(pushCode.rawValue)")
 
-        // Dispatch to registered handlers
+        // First try the new registry system
+        Self.handlePushNotification(code: frame.code, payload: frame.payload)
+
+        // Also maintain existing handler system for backwards compatibility
         Task {
             for handler in pushHandlers {
                 await handler(frame.code, frame.payload)
@@ -107,17 +207,53 @@ public actor MeshCoreProtocol {
 
     /// Wait for a specific response code with timeout
     public func waitForResponse(code: UInt8, timeout: TimeInterval) async throws -> ProtocolFrame {
-        return try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { continuation in
             Task {
-                // Store continuation
-                responseContinuations[code] = continuation
+                let continuationId = continuationIdCounter
+                continuationIdCounter += 1
 
-                // Set up timeout
+                // Track active continuation for debugging
+                activeContinuationIds.insert(continuationId)
+
+                var wrapper = ContinuationWrapper(continuation: continuation, id: continuationId)
+                if requestQueue[code] == nil {
+                    requestQueue[code] = []
+                }
+                requestQueue[code]?.append(wrapper)
+                responseContinuations[code] = wrapper
+
+                // Set up timeout with enhanced cleanup
                 Task {
-                    try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                    if responseContinuations.removeValue(forKey: code) != nil {
-                        continuation.resume(throwing: ProtocolError.timeout)
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+
+                    // Check if continuation is still active
+                    guard activeContinuationIds.contains(continuationId) else {
+                        return // Already handled
                     }
+
+                    // Remove from active tracking
+                    activeContinuationIds.remove(continuationId)
+
+                    // Clean up request queue with better error handling
+                    if var waiters = requestQueue[code] {
+                        waiters.removeAll { $0.id == continuationId }
+                        if waiters.isEmpty {
+                            requestQueue.removeValue(forKey: code)
+                        } else {
+                            requestQueue[code] = waiters
+                        }
+                    }
+
+                    // Clean up from responseContinuations
+                    responseContinuations.removeValue(forKey: code)
+
+                    // Clean up from pendingRequests if this was a request ID based request
+                    if continuationId >= 0 {
+                        pendingRequests.removeValue(forKey: UInt32(continuationId))
+                    }
+
+                    // Resume with timeout
+                    wrapper.resume(throwing: ProtocolError.timeout)
                 }
             }
         }
@@ -125,31 +261,141 @@ public actor MeshCoreProtocol {
 
     /// Wait for one of multiple response codes (for multi-frame protocols)
     public func waitForMultiFrameResponse(codes: [UInt8], timeout: TimeInterval) async throws -> ProtocolFrame {
-        return try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { continuation in
             Task {
+                let continuationId = continuationIdCounter
+                continuationIdCounter += 1
+                let codeSet = Set(codes)
+
+                // Track which codes belong to this continuation
+                multiFrameContinuations[continuationId] = codeSet
+
                 // Store continuation for all expected codes
+                var wrapper = ContinuationWrapper(continuation: continuation, id: continuationId)
                 for code in codes {
-                    responseContinuations[code] = continuation
+                    if requestQueue[code] == nil {
+                        requestQueue[code] = []
+                    }
+                    requestQueue[code]?.append(wrapper)
+                    responseContinuations[code] = wrapper
                 }
 
-                // Set up timeout
+                // Set up timeout with state tracking to prevent double-resume
                 Task {
-                    try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
 
-                    // Clean up all continuations if timeout occurs
-                    var didTimeout = false
-                    for code in codes {
-                        if responseContinuations.removeValue(forKey: code) != nil {
-                            didTimeout = true
+                    // Atomically check and mark as resumed
+                    let wasResumed = !resumedContinuations.insert(continuationId).inserted
+
+                    if !wasResumed {
+                        // Clean up all associated continuations from request queue
+                        for code in codeSet {
+                            if var waiters = requestQueue[code] {
+                                waiters.removeAll { $0.id == continuationId }
+                                if waiters.isEmpty {
+                                    requestQueue.removeValue(forKey: code)
+                                } else {
+                                    requestQueue[code] = waiters
+                                }
+                            }
+                            responseContinuations.removeValue(forKey: code)
                         }
-                    }
+                        multiFrameContinuations.removeValue(forKey: continuationId)
 
-                    if didTimeout {
-                        continuation.resume(throwing: ProtocolError.timeout)
+                        // Clean up from pendingRequests if this was a request ID based request
+                        if continuationId >= 0 {
+                            pendingRequests.removeValue(forKey: UInt32(continuationId))
+                        }
+
+                        // Only resume if it hasn't been resumed already
+                        wrapper.resume(throwing: ProtocolError.timeout)
                     }
                 }
             }
         }
+    }
+
+    // MARK: - Legacy Fallback Mechanism
+
+    private func sendCommandLegacy(
+        _ frame: ProtocolFrame,
+        expectingResponse expectedCode: UInt8,
+    ) async throws -> ProtocolFrame {
+        // Use existing implementation for commands that can't be modified
+        try await withCheckedThrowingContinuation { continuation in
+            Task {
+                let wrapper = ContinuationWrapper(continuation: continuation, id: -1)
+                responseContinuations[expectedCode] = wrapper
+
+                do {
+                    let encodedFrame = frame.encode()
+                    try await bleManager.send(frame: encodedFrame)
+                    logger.debug("Sent legacy command code: \(frame.code)")
+                } catch {
+                    responseContinuations.removeValue(forKey: expectedCode)
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Enhanced Request Tracking
+
+    private func sendCommandWithRequestID(
+        _ frame: ProtocolFrame,
+        expectingResponse expectedCode: UInt8,
+    ) async throws -> ProtocolFrame {
+        let requestId = requestIdCounter
+        requestIdCounter += 1
+
+        // Add request ID to frame payload if not already present
+        let frameWithID = ProtocolFrame(
+            code: frame.code,
+            payload: addRequestID(frame.payload, id: requestId),
+        )
+
+        // Use enhanced continuation tracking
+        return try await sendCommandWithTracking(frameWithID, expectingResponse: expectedCode, requestId: requestId)
+    }
+
+    public func sendCommandWithTracking(
+        _ frame: ProtocolFrame,
+        expectingResponse expectedCode: UInt8,
+        requestId: UInt32,
+    ) async throws -> ProtocolFrame {
+        try await withCheckedThrowingContinuation { continuation in
+            Task {
+                let wrapper = ContinuationWrapper(continuation: continuation, id: Int(requestId))
+                pendingRequests[requestId] = wrapper
+
+                // Also maintain existing responseContinuations for backward compatibility
+                responseContinuations[expectedCode] = wrapper
+
+                do {
+                    let encodedFrame = frame.encode()
+                    try await bleManager.send(frame: encodedFrame)
+                    logger.debug("Sent command code: \(frame.code) with request ID: \(requestId)")
+                } catch {
+                    pendingRequests.removeValue(forKey: requestId)
+                    responseContinuations.removeValue(forKey: expectedCode)
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    // MARK: - Request ID Helper Functions
+
+    private func addRequestID(_ payload: Data, id: UInt32) -> Data {
+        var newPayload = Data()
+        withUnsafeBytes(of: id.littleEndian) { newPayload.append(contentsOf: $0) }
+        newPayload.append(payload)
+        return newPayload
+    }
+
+    private func extractRequestID(from payload: Data) -> UInt32? {
+        guard payload.count >= 4 else { return nil }
+        return payload.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
     }
 }
 
@@ -204,7 +450,7 @@ public struct DeviceInfo: Sendable {
             blePin: blePin,
             manufacturer: manufacturer,
             model: model,
-            buildDate: buildDate
+            buildDate: buildDate,
         )
     }
 }
@@ -229,7 +475,7 @@ public struct SelfInfo: Sendable {
         var offset = 0
 
         // Read 32-byte public key
-        let publicKey = data.subdata(in: offset..<offset + 32)
+        let publicKey = data.subdata(in: offset ..< offset + 32)
         offset += 32
 
         // Read TX power (int8)
@@ -265,7 +511,7 @@ public struct SelfInfo: Sendable {
             radioFrequency: radioFrequency,
             radioBandwidth: radioBandwidth,
             radioSpreadingFactor: radioSpreadingFactor,
-            radioCodingRate: radioCodingRate
+            radioCodingRate: radioCodingRate,
         )
     }
 }

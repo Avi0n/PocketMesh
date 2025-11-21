@@ -1,13 +1,12 @@
-import Foundation
-import SwiftData
 import CryptoKit
+import Foundation
 import OSLog
+import SwiftData
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Channels")
 
 @MainActor
 public final class ChannelService: ObservableObject {
-
     private let `protocol`: MeshCoreProtocol
     private let modelContext: ModelContext
 
@@ -27,7 +26,7 @@ public final class ChannelService: ObservableObject {
         let devicePublicKey = device.publicKey
         let descriptor = FetchDescriptor<Channel>(
             predicate: #Predicate { $0.device?.publicKey == devicePublicKey },
-            sortBy: [SortDescriptor(\.slotIndex)]
+            sortBy: [SortDescriptor(\.slotIndex)],
         )
         let existingChannels = try modelContext.fetch(descriptor)
 
@@ -36,13 +35,13 @@ public final class ChannelService: ObservableObject {
         }
 
         // Find first available slot index
-        let usedSlots = Set(existingChannels.map { $0.slotIndex })
-        guard let nextSlot = (0..<UInt8(maxChannels)).first(where: { !usedSlots.contains($0) }) else {
+        let usedSlots = Set(existingChannels.map(\.slotIndex))
+        guard let nextSlot = (0 ..< UInt8(maxChannels)).first(where: { !usedSlots.contains($0) }) else {
             throw ChannelError.allSlotsFull
         }
 
         // Generate secret if name starts with "#"
-        var secretHash: Data? = nil
+        var secretHash: Data?
         var channelName = name
 
         if name.hasPrefix("#") {
@@ -55,7 +54,7 @@ public final class ChannelService: ObservableObject {
             slotIndex: nextSlot,
             name: channelName,
             secretHash: secretHash,
-            device: device
+            device: device,
         )
 
         modelContext.insert(channel)
@@ -90,7 +89,7 @@ public final class ChannelService: ObservableObject {
             isOutgoing: true,
             contact: nil,
             channel: channel,
-            device: device
+            device: device,
         )
         modelContext.insert(message)
         try modelContext.save()
@@ -102,7 +101,7 @@ public final class ChannelService: ObservableObject {
 
             try await `protocol`.sendChannelTextMessage(
                 text: text,
-                channelIndex: channel.slotIndex
+                channelIndex: channel.slotIndex,
             )
 
             message.deliveryStatus = .sent
@@ -123,7 +122,7 @@ public final class ChannelService: ObservableObject {
         let devicePublicKey = device.publicKey
         let descriptor = FetchDescriptor<Channel>(
             predicate: #Predicate { $0.device?.publicKey == devicePublicKey },
-            sortBy: [SortDescriptor(\.slotIndex)]
+            sortBy: [SortDescriptor(\.slotIndex)],
         )
         channels = try modelContext.fetch(descriptor)
     }
@@ -146,9 +145,9 @@ public enum ChannelError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .allSlotsFull: return "All channel slots are full (max 8)"
-        case .messageTooLong: return "Channel message exceeds 160 byte limit"
-        case .invalidSlotIndex: return "Invalid channel slot index"
+        case .allSlotsFull: "All channel slots are full (max 8)"
+        case .messageTooLong: "Channel message exceeds 160 byte limit"
+        case .invalidSlotIndex: "Invalid channel slot index"
         }
     }
 }

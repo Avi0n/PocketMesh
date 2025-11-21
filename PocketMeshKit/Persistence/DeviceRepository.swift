@@ -1,9 +1,8 @@
-import SwiftData
 import Foundation
+import SwiftData
 
 @MainActor
 public final class DeviceRepository {
-
     private let modelContext: ModelContext
 
     public init(modelContext: ModelContext) {
@@ -12,7 +11,7 @@ public final class DeviceRepository {
 
     public func getActiveDevice() throws -> Device? {
         let descriptor = FetchDescriptor<Device>(
-            predicate: #Predicate { $0.isActive == true }
+            predicate: #Predicate { $0.isActive == true },
         )
         let devices = try modelContext.fetch(descriptor)
         return devices.first
@@ -20,7 +19,7 @@ public final class DeviceRepository {
 
     public func getDevice(byPublicKey publicKey: Data) throws -> Device? {
         let descriptor = FetchDescriptor<Device>(
-            predicate: #Predicate { $0.publicKey == publicKey }
+            predicate: #Predicate { $0.publicKey == publicKey },
         )
         let devices = try modelContext.fetch(descriptor)
         return devices.first
@@ -50,7 +49,7 @@ public final class DeviceRepository {
                 radioBandwidth: selfInfo.radioBandwidth,
                 radioSpreadingFactor: selfInfo.radioSpreadingFactor,
                 radioCodingRate: selfInfo.radioCodingRate,
-                txPower: selfInfo.txPower
+                txPower: selfInfo.txPower,
             )
             device.latitude = selfInfo.latitude
             device.longitude = selfInfo.longitude

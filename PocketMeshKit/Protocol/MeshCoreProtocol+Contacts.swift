@@ -3,10 +3,9 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Contacts")
 
-extension MeshCoreProtocol {
-
+public extension MeshCoreProtocol {
     /// CMD_SEND_SELF_ADVERT (7): Transmit advertisement
-    public func sendSelfAdvertisement(floodMode: Bool) async throws {
+    func sendSelfAdvertisement(floodMode: Bool) async throws {
         var payload = Data()
         payload.append(floodMode ? 1 : 0)
 
@@ -15,7 +14,7 @@ extension MeshCoreProtocol {
     }
 
     /// CMD_SET_ADVERT_NAME (8): Update node name
-    public func setAdvertisementName(_ name: String) async throws {
+    func setAdvertisementName(_ name: String) async throws {
         guard let nameData = name.data(using: .utf8), nameData.count <= 32 else {
             throw ProtocolError.invalidPayload
         }
@@ -25,7 +24,7 @@ extension MeshCoreProtocol {
     }
 
     /// CMD_SET_ADVERT_LATLON (14): Set location
-    public func setAdvertisementLocation(latitude: Double, longitude: Double, altitude: Int16?) async throws {
+    func setAdvertisementLocation(latitude: Double, longitude: Double, altitude: Int16?) async throws {
         var payload = Data()
 
         // Latitude and longitude multiplied by 1E6, as int32 little-endian
@@ -36,7 +35,7 @@ extension MeshCoreProtocol {
         withUnsafeBytes(of: lonInt.littleEndian) { payload.append(contentsOf: $0) }
 
         // Altitude (optional, int16)
-        if let altitude = altitude {
+        if let altitude {
             withUnsafeBytes(of: altitude.littleEndian) { payload.append(contentsOf: $0) }
         }
 
@@ -45,10 +44,10 @@ extension MeshCoreProtocol {
     }
 
     /// CMD_GET_CONTACTS (4): Sync contacts with optional timestamp watermark
-    public func getContacts(since: Date?) async throws -> [ContactData] {
+    func getContacts(since: Date?) async throws -> [ContactData] {
         var payload = Data()
 
-        if let since = since {
+        if let since {
             let timestamp = UInt32(since.timeIntervalSince1970)
             withUnsafeBytes(of: timestamp.littleEndian) { payload.append(contentsOf: $0) }
         }
@@ -72,7 +71,7 @@ extension MeshCoreProtocol {
             // Wait for next frame (either CONTACT or END_OF_CONTACTS)
             let response = try await waitForMultiFrameResponse(
                 codes: [ResponseCode.contact.rawValue, ResponseCode.endOfContacts.rawValue],
-                timeout: 5.0
+                timeout: 5.0,
             )
 
             switch response.code {
@@ -94,14 +93,14 @@ extension MeshCoreProtocol {
     }
 
     /// CMD_ADD_UPDATE_CONTACT (9): Manually add or update contact
-    public func addOrUpdateContact(_ contact: ContactData) async throws {
+    func addOrUpdateContact(_ contact: ContactData) async throws {
         let payload = contact.encode()
         let frame = ProtocolFrame(code: CommandCode.addUpdateContact.rawValue, payload: payload)
         _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
     }
 
     /// CMD_REMOVE_CONTACT (15): Delete contact by public key
-    public func removeContact(publicKey: Data) async throws {
+    func removeContact(publicKey: Data) async throws {
         guard publicKey.count == 32 else {
             throw ProtocolError.invalidPayload
         }
@@ -111,7 +110,7 @@ extension MeshCoreProtocol {
     }
 
     // Helper function to send a frame (exposed for multi-frame operations)
-    public func send(frame: Data) async throws {
+    func send(frame: Data) async throws {
         try await bleManager.send(frame: frame)
     }
 }
@@ -130,6 +129,30 @@ public struct ContactData: Sendable {
     let longitude: Double?
     let lastModified: Date
 
+    public init(
+        publicKey: Data,
+        name: String,
+        type: ContactType,
+        flags: UInt8,
+        outPathLength: UInt8,
+        outPath: Data?,
+        lastAdvertisement: Date,
+        latitude: Double?,
+        longitude: Double?,
+        lastModified: Date,
+    ) {
+        self.publicKey = publicKey
+        self.name = name
+        self.type = type
+        self.flags = flags
+        self.outPathLength = outPathLength
+        self.outPath = outPath
+        self.lastAdvertisement = lastAdvertisement
+        self.latitude = latitude
+        self.longitude = longitude
+        self.lastModified = lastModified
+    }
+
     static func decode(from data: Data) throws -> ContactData {
         guard data.count >= 32 + 1 + 1 + 1 + 64 + 32 + 4 + 4 + 4 + 4 else {
             throw ProtocolError.invalidPayload
@@ -138,19 +161,18 @@ public struct ContactData: Sendable {
         var offset = 0
 
         // Public key (32 bytes)
-        let publicKey = data.subdata(in: offset..<offset + 32)
+        let publicKey = data.subdata(in: offset ..< offset + 32)
         offset += 32
 
         // Type (1 byte)
         let typeRaw = data[offset]
-        let type: ContactType = {
-            switch typeRaw {
-            case 1: return .chat
-            case 2: return .repeater
-            case 3: return .room
-            default: return .none
-            }
-        }()
+        let type: ContactType = switch typeRaw {
+        case 1: .companion // Changed from .chat
+        case 2: .repeater
+        case 3: .room
+        case 4: .sensor // NEW
+        default: .none
+        }
         offset += 1
 
         // Flags (1 byte)
@@ -162,11 +184,11 @@ public struct ContactData: Sendable {
         offset += 1
 
         // Out path (64 bytes)
-        let outPath = outPathLength > 0 ? data.subdata(in: offset..<offset + Int(outPathLength)) : nil
+        let outPath = outPathLength > 0 ? data.subdata(in: offset ..< offset + Int(outPathLength)) : nil
         offset += 64
 
         // Name (32 chars, null-terminated)
-        let nameData = data.subdata(in: offset..<offset + 32)
+        let nameData = data.subdata(in: offset ..< offset + 32)
         let name = String(data: nameData, encoding: .utf8)?
             .trimmingCharacters(in: CharacterSet(charactersIn: "\0")) ?? "Unknown"
         offset += 32
@@ -200,7 +222,7 @@ public struct ContactData: Sendable {
             lastAdvertisement: lastAdvertisement,
             latitude: latitude,
             longitude: longitude,
-            lastModified: lastModified
+            lastModified: lastModified,
         )
     }
 
@@ -211,14 +233,13 @@ public struct ContactData: Sendable {
         data.append(publicKey)
 
         // Type (1 byte)
-        let typeValue: UInt8 = {
-            switch type {
-            case .none: return 0
-            case .chat: return 1
-            case .repeater: return 2
-            case .room: return 3
-            }
-        }()
+        let typeValue: UInt8 = switch type {
+        case .none: 0
+        case .companion: 1 // Changed from .chat
+        case .repeater: 2
+        case .room: 3
+        case .sensor: 4 // NEW
+        }
         data.append(typeValue)
 
         // Flags (1 byte)
@@ -229,9 +250,9 @@ public struct ContactData: Sendable {
 
         // Out path (64 bytes, padded with zeros if shorter)
         var pathData = Data(count: 64)
-        if let outPath = outPath {
+        if let outPath {
             let copyLength = min(outPath.count, 64)
-            pathData.replaceSubrange(0..<copyLength, with: outPath.prefix(copyLength))
+            pathData.replaceSubrange(0 ..< copyLength, with: outPath.prefix(copyLength))
         }
         data.append(pathData)
 
@@ -239,7 +260,7 @@ public struct ContactData: Sendable {
         var nameData = Data(count: 32)
         if let nameBytes = name.data(using: .utf8) {
             let copyLength = min(nameBytes.count, 31) // Leave room for null terminator
-            nameData.replaceSubrange(0..<copyLength, with: nameBytes.prefix(copyLength))
+            nameData.replaceSubrange(0 ..< copyLength, with: nameBytes.prefix(copyLength))
         }
         data.append(nameData)
 

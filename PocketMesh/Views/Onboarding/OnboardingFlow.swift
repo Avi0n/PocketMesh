@@ -1,8 +1,7 @@
-import SwiftUI
 import PocketMeshKit
+import SwiftUI
 
 struct OnboardingFlow: View {
-
     @EnvironmentObject private var coordinator: AppCoordinator
     @State private var currentStep: OnboardingStep = .welcome
     @State private var hasBluetoothPermission = false
@@ -25,7 +24,7 @@ struct OnboardingFlow: View {
                         hasLocationPermission: $hasLocationPermission,
                         onContinue: {
                             currentStep = .deviceScanning
-                        }
+                        },
                     )
 
                 case .deviceScanning:
@@ -36,10 +35,10 @@ struct OnboardingFlow: View {
                         onSkip: {
                             // Complete onboarding without a device
                             coordinator.completeOnboarding(device: nil)
-                        }
+                        },
                     )
 
-                case .devicePairing(let device):
+                case let .devicePairing(device):
                     DevicePairingView(device: device)
                 }
             }

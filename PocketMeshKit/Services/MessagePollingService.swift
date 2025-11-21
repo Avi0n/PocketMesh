@@ -1,28 +1,59 @@
 import Foundation
-import SwiftData
 import OSLog
+import SwiftData
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Polling")
 
 @MainActor
 public final class MessagePollingService {
-
     private let `protocol`: MeshCoreProtocol
     private let modelContext: ModelContext
     private let deviceRepository: DeviceRepository
 
     private var pollingTask: Task<Void, Never>?
+    private var pushNotificationTask: Task<Void, Never>?
     private var isPolling = false
+    private var pollingInterval: TimeInterval = 30.0 // Fallback polling every 30 seconds
+    private var stats = PollingStats()
+
+    private struct PollingStats {
+        var pushTriggeredPolls: Int = 0
+        var scheduledPolls: Int = 0
+        var messagesFromPush: Int = 0
+        var messagesFromScheduled: Int = 0
+
+        func logStats() {
+            let total = pushTriggeredPolls + scheduledPolls
+            if total > 0 {
+                let pushMsgs = messagesFromPush
+                let scheduledMsgs = messagesFromScheduled
+                let pushEfficiency = Double(pushMsgs) / Double(pushMsgs + scheduledMsgs) * 100
+                let efficiencyStr = String(format: "%.1f", pushEfficiency)
+                logger.info(
+                    """
+                    Polling stats: \(pushMsgs) msgs from push, \(scheduledMsgs) from scheduled \
+                    (\(efficiencyStr)% push efficiency)
+                    """,
+                )
+            }
+        }
+    }
 
     public init(protocol: MeshCoreProtocol, modelContext: ModelContext, deviceRepository: DeviceRepository) {
         self.protocol = `protocol`
         self.modelContext = modelContext
         self.deviceRepository = deviceRepository
 
-        // Listen for push notification that messages are waiting
-        Task {
-            // TODO: Implement push notification subscription when protocol supports it
-            // For now, this is a placeholder for future implementation
+        // Subscribe to message waiting notifications
+        pushNotificationTask = Task {
+            await self.protocol.subscribeToPushNotifications { [weak self] code, _ in
+                guard let self else { return }
+
+                if code == PushCode.messageWaiting.rawValue {
+                    // Trigger immediate message poll
+                    await pollSingleMessage()
+                }
+            }
         }
     }
 
@@ -41,28 +72,68 @@ public final class MessagePollingService {
         isPolling = false
     }
 
+    public func logPollingStatistics() {
+        stats.logStats()
+    }
+
     private func pollMessages() async {
-        logger.info("Polling for messages...")
+        logger.info("Starting hybrid message polling (event-driven with 30s fallback)")
+
+        while !Task.isCancelled {
+            do {
+                guard let device = try deviceRepository.getActiveDevice() else {
+                    try await Task.sleep(for: .seconds(pollingInterval))
+                    continue
+                }
+
+                // Fetch all available messages
+                await pollAllMessages(for: device, triggeredByPush: false)
+
+                // Wait for next polling interval (push notifications will trigger immediate polls)
+                try await Task.sleep(for: .seconds(pollingInterval))
+
+            } catch {
+                logger.error("Error in polling loop: \(error)")
+                try? await Task.sleep(for: .seconds(5)) // Short retry delay on error
+            }
+        }
+    }
+
+    private func pollAllMessages(for device: Device, triggeredByPush: Bool = false) async {
+        var messageCount = 0
 
         do {
-            let device = try deviceRepository.getActiveDevice()
-            guard let device = device else {
-                logger.warning("No active device for polling")
+            // Keep fetching until noMoreMessages
+            while let incomingMessage = try await `protocol`.syncNextMessage() {
+                try await handleIncomingMessage(incomingMessage, device: device)
+                messageCount += 1
+            }
+
+            if messageCount > 0 {
+                if triggeredByPush {
+                    stats.pushTriggeredPolls += 1
+                    stats.messagesFromPush += messageCount
+                } else {
+                    stats.scheduledPolls += 1
+                    stats.messagesFromScheduled += messageCount
+                }
+                logger.info("Polled \(messageCount) message(s) - source: \(triggeredByPush ? "push" : "scheduled")")
+            }
+        } catch {
+            logger.error("Failed to poll messages: \(error)")
+        }
+    }
+
+    private func pollSingleMessage() async {
+        do {
+            guard let device = try deviceRepository.getActiveDevice() else {
                 return
             }
 
-            // Poll until no more messages
-            while true {
-                guard let incoming = try await `protocol`.syncNextMessage() else {
-                    logger.debug("No more messages in queue")
-                    break
-                }
-
-                try await handleIncomingMessage(incoming, device: device)
-            }
-
+            logger.debug("Message waiting push received - polling all messages")
+            await pollAllMessages(for: device, triggeredByPush: true)
         } catch {
-            logger.error("Message polling failed: \(error.localizedDescription)")
+            logger.error("Failed to poll after message waiting push: \(error)")
         }
     }
 
@@ -79,7 +150,7 @@ public final class MessagePollingService {
                 isOutgoing: false,
                 contact: contact,
                 channel: nil,
-                device: device
+                device: device,
             )
             message.senderTimestamp = incoming.senderTimestamp
             message.senderPublicKeyPrefix = senderPrefix
@@ -102,7 +173,7 @@ public final class MessagePollingService {
                 isOutgoing: false,
                 contact: nil,
                 channel: channel,
-                device: device
+                device: device,
             )
             message.senderTimestamp = incoming.senderTimestamp
             message.pathLength = incoming.pathLength
@@ -115,16 +186,16 @@ public final class MessagePollingService {
         }
     }
 
-    private func findContact(byPublicKeyPrefix prefix: Data, device: Device) throws -> Contact? {
+    private func findContact(byPublicKeyPrefix _: Data, device _: Device) throws -> Contact? {
         // Note: This is a prefix match - in production we'd need better matching
         // For now, return nil and create unknown contact in UI layer
-        return nil
+        nil
     }
 
     private func findChannel(bySlotIndex index: UInt8, device: Device) throws -> Channel? {
         let devicePublicKey = device.publicKey
         let descriptor = FetchDescriptor<Channel>(
-            predicate: #Predicate { $0.slotIndex == index && $0.device?.publicKey == devicePublicKey }
+            predicate: #Predicate { $0.slotIndex == index && $0.device?.publicKey == devicePublicKey },
         )
         return try modelContext.fetch(descriptor).first
     }

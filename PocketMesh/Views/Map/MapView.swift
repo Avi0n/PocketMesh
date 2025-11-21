@@ -1,7 +1,7 @@
-import SwiftUI
 import MapKit
-import SwiftData
 import PocketMeshKit
+import SwiftData
+import SwiftUI
 
 struct MapView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,11 +9,11 @@ struct MapView: View {
     @State private var contactAnnotations: [MapContactAnnotation] = []
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-        span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180)
+        span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180),
     )
 
     @State private var selectedContact: Contact?
-    @State private var lastUpdateTime: Date = Date.distantPast
+    @State private var lastUpdateTime: Date = .distantPast
     @State private var updateTimer: Timer?
     @State private var isUserInteracting = false
     @State private var isProcessingTap = false
@@ -25,7 +25,7 @@ struct MapView: View {
 
     // Smart caching system
     @State private var cachedAnnotations: [MapContactAnnotation] = []
-    @State private var lastCacheUpdate: Date = Date()
+    @State private var lastCacheUpdate: Date = .init()
     private let cacheValidityDuration: TimeInterval = 30.0 // 30 seconds
 
     var body: some View {
@@ -54,7 +54,7 @@ struct MapView: View {
                                     .clipShape(Circle())
                                     .overlay(
                                         Circle()
-                                            .stroke(Color.white, lineWidth: 2)
+                                            .stroke(Color.white, lineWidth: 2),
                                     )
                                     .shadow(radius: 3)
 
@@ -80,11 +80,11 @@ struct MapView: View {
                                     await updateAnnotationsIfNeeded()
                                 }
                             }
-                        }
+                        },
                 )
                 .ignoresSafeArea(edges: .bottom)
 
-                if isLoading && !hasLoadedOnce {
+                if isLoading, !hasLoadedOnce {
                     VStack {
                         ProgressView("Loading contacts...")
                             .scaleEffect(1.2)
@@ -93,13 +93,13 @@ struct MapView: View {
                             .foregroundColor(.secondary)
                     }
                     .background(Color(uiColor: .systemBackground).opacity(0.9))
-                } else if contactAnnotations.isEmpty && !isLoading {
+                } else if contactAnnotations.isEmpty, !isLoading {
                     VStack {
                         Spacer()
                         ContentUnavailableView(
                             "No Contact Locations",
                             systemImage: "map",
-                            description: Text("Contacts will appear on the map once they broadcast their location")
+                            description: Text("Contacts will appear on the map once they broadcast their location"),
                         )
                         Spacer()
                     }
@@ -124,7 +124,7 @@ struct MapView: View {
         }
     }
 
-     // Private methods for optimized annotation management
+    // Private methods for optimized annotation management
 
     private func loadInitialData() {
         // Set loading state immediately to show loading indicator
@@ -137,21 +137,21 @@ struct MapView: View {
 
                 await MainActor.run {
                     let annotations: [MapContactAnnotation] = contacts.compactMap { contact in
-                        guard contact.latitude != nil && contact.longitude != nil else { return nil }
+                        guard contact.latitude != nil, contact.longitude != nil else { return nil }
                         return MapContactAnnotation(contact: contact)
                     }
 
                     // Update cache with initial data
-                    self.cachedAnnotations = annotations
-                    self.contactAnnotations = annotations
-                    self.isLoading = false
-                    self.hasLoadedOnce = true
+                    cachedAnnotations = annotations
+                    contactAnnotations = annotations
+                    isLoading = false
+                    hasLoadedOnce = true
                     updateRegion()
                 }
             } catch {
                 await MainActor.run {
-                    self.isLoading = false
-                    self.hasLoadedOnce = true
+                    isLoading = false
+                    hasLoadedOnce = true
                     print("Failed to load initial contacts: \(error)")
                 }
             }
@@ -174,15 +174,16 @@ struct MapView: View {
 
     private func updateAnnotationsIfNeeded() async {
         // Don't update if user is actively panning/zooming or still loading initial data
-        guard !isUserInteracting && !isLoading else { return }
+        guard !isUserInteracting, !isLoading else { return }
 
         let now = Date()
 
         // Use cache if still valid and not empty
-        if now.timeIntervalSince(lastCacheUpdate) < cacheValidityDuration && !cachedAnnotations.isEmpty {
+        if now.timeIntervalSince(lastCacheUpdate) < cacheValidityDuration, !cachedAnnotations.isEmpty {
             // Check if cached data differs from current annotations
             if cachedAnnotations.count != contactAnnotations.count ||
-               !cachedAnnotations.elementsEqual(contactAnnotations, by: { $0.id == $1.id }) {
+                !cachedAnnotations.elementsEqual(contactAnnotations, by: { $0.id == $1.id })
+            {
                 await MainActor.run {
                     withAnimation(.none) {
                         contactAnnotations = cachedAnnotations
@@ -204,7 +205,7 @@ struct MapView: View {
 
             await MainActor.run {
                 let newAnnotations: [MapContactAnnotation] = contacts.compactMap { contact in
-                    guard contact.latitude != nil && contact.longitude != nil else { return nil }
+                    guard contact.latitude != nil, contact.longitude != nil else { return nil }
                     return MapContactAnnotation(contact: contact)
                 }
 
@@ -213,7 +214,8 @@ struct MapView: View {
 
                 // Only update if annotations actually changed
                 if newAnnotations.count != contactAnnotations.count ||
-                   !newAnnotations.elementsEqual(contactAnnotations, by: { $0.id == $1.id }) {
+                    !newAnnotations.elementsEqual(contactAnnotations, by: { $0.id == $1.id })
+                {
                     // Use no animation to prevent conflicts with user interactions
                     withAnimation(.none) {
                         contactAnnotations = newAnnotations
@@ -229,26 +231,32 @@ struct MapView: View {
             }
         }
     }
+}
 
+// MARK: - Helper Methods
+
+extension MapView {
     private func iconName(for type: ContactType) -> String {
         switch type {
         case .repeater:
-            return "antenna.radiowaves.left.and.right.circle.fill"
+            "antenna.radiowaves.left.and.right.circle.fill"
         case .room:
-            return "person.3.fill"
-        case .chat, .none:
-            return "person.circle.fill"
+            "person.3.fill"
+        case .companion, .sensor, .none:
+            "person.circle.fill"
         }
     }
 
     private func iconColor(for type: ContactType) -> Color {
         switch type {
         case .repeater:
-            return .orange
+            .orange
         case .room:
-            return .purple
-        case .chat, .none:
-            return .blue
+            .purple
+        case .companion, .none:
+            .blue
+        case .sensor:
+            .orange
         }
     }
 
@@ -260,16 +268,16 @@ struct MapView: View {
 
     private func canShowContactDetails(_ contact: Contact) -> Bool {
         // Basic validation to ensure contact has minimum required data
-        return !contact.name.isEmpty && !contact.publicKey.isEmpty
+        !contact.name.isEmpty && !contact.publicKey.isEmpty
     }
 
     private func calculateOptimalRegion(for annotations: [MapContactAnnotation]) -> MKCoordinateRegion {
-        let contacts = annotations.map { $0.contact }
+        let contacts = annotations.map(\.contact)
         guard !contacts.isEmpty else {
             // Default to world view when no contacts
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-                span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180)
+                span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180),
             )
         }
 
@@ -285,7 +293,7 @@ struct MapView: View {
             // No valid coordinates
             return MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
-                span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180)
+                span: MKCoordinateSpan(latitudeDelta: 180, longitudeDelta: 180),
             )
         }
 
@@ -294,7 +302,7 @@ struct MapView: View {
             let coordinate = coordinates[0]
             return MKCoordinateRegion(
                 center: coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05),
             )
         }
 
@@ -313,7 +321,7 @@ struct MapView: View {
 
         let center = CLLocationCoordinate2D(
             latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
+            longitude: (minLon + maxLon) / 2,
         )
 
         // Add 20% padding to the span
@@ -323,7 +331,7 @@ struct MapView: View {
         // Apply minimum zoom level
         let span = MKCoordinateSpan(
             latitudeDelta: max(latDelta, 0.01),
-            longitudeDelta: max(lonDelta, 0.01)
+            longitudeDelta: max(lonDelta, 0.01),
         )
 
         return MKCoordinateRegion(center: center, span: span)
@@ -331,18 +339,18 @@ struct MapView: View {
 }
 
 struct MapContactAnnotation: Identifiable {
-    let id: UUID  // Use Contact's stable UUID
+    let id: UUID // Use Contact's stable UUID
     let contact: Contact
 
     init(contact: Contact) {
         self.contact = contact
-        self.id = contact.id  // Use Contact's stable UUID
+        id = contact.id // Use Contact's stable UUID
     }
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(
             latitude: contact.latitude ?? 0,
-            longitude: contact.longitude ?? 0
+            longitude: contact.longitude ?? 0,
         )
     }
 }

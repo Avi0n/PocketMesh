@@ -1,13 +1,19 @@
-@preconcurrency import CoreBluetooth
 import Combine
+@preconcurrency import CoreBluetooth
 import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh.app", category: "BLE")
 
+/// Protocol defining the BLE manager interface for testing and dependency injection
+@preconcurrency
+public protocol BLEManagerProtocol: AnyObject, Sendable {
+    @MainActor var framePublisher: AnyPublisher<Data, Never> { get }
+    @MainActor @preconcurrency func send(frame: Data) async throws
+}
+
 /// Manages CoreBluetooth central operations for MeshCore device connections
 @MainActor
 public final class BLEManager: NSObject, ObservableObject {
-
     // MARK: - Published State
 
     @Published public private(set) var state: BLEState = .idle
@@ -42,15 +48,15 @@ public final class BLEManager: NSObject, ObservableObject {
     /// CoreBluetooth state preservation key
     public static let stateRestorationIdentifier = "com.pocketmesh.ble.central"
 
-    public override init() {
+    override public init() {
         super.init()
         centralManager = CBCentralManager(
             delegate: self,
             queue: .main,
             options: [
                 CBCentralManagerOptionRestoreIdentifierKey: Self.stateRestorationIdentifier,
-                CBCentralManagerOptionShowPowerAlertKey: true
-            ]
+                CBCentralManagerOptionShowPowerAlertKey: true,
+            ],
         )
     }
 
@@ -65,7 +71,7 @@ public final class BLEManager: NSObject, ObservableObject {
         discoveredDevices.removeAll()
         centralManager.scanForPeripherals(
             withServices: [meshCoreServiceUUID],
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false],
         )
         state = .scanning
     }
@@ -94,10 +100,11 @@ public final class BLEManager: NSObject, ObservableObject {
         centralManager.cancelPeripheralConnection(peripheral)
     }
 
-    func send(frame: Data) async throws {
+    public func send(frame: Data) async throws {
         guard let characteristic = txCharacteristic,
               let peripheral = activePeripheral,
-              state == .connected else {
+              state == .connected
+        else {
             throw BLEError.notConnected
         }
 
@@ -112,7 +119,7 @@ public final class BLEManager: NSObject, ObservableObject {
             // Chunked write for large frames
             for offset in stride(from: 0, to: frame.count, by: mtu) {
                 let end = min(offset + mtu, frame.count)
-                let chunk = frame.subdata(in: offset..<end)
+                let chunk = frame.subdata(in: offset ..< end)
                 peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
                 try await Task.sleep(nanoseconds: 10_000_000) // 10ms between chunks
             }
@@ -123,7 +130,6 @@ public final class BLEManager: NSObject, ObservableObject {
 // MARK: - CBCentralManagerDelegate
 
 extension BLEManager: CBCentralManagerDelegate {
-
     public nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task { @MainActor in
             switch central.state {
@@ -146,10 +152,10 @@ extension BLEManager: CBCentralManagerDelegate {
     }
 
     public nonisolated func centralManager(
-        _ central: CBCentralManager,
+        _: CBCentralManager,
         didDiscover peripheral: CBPeripheral,
-        advertisementData: [String: Any],
-        rssi RSSI: NSNumber
+        advertisementData _: [String: Any],
+        rssi RSSI: NSNumber,
     ) {
         Task { @MainActor in
             let deviceName = peripheral.name ?? "Unknown MeshCore Device"
@@ -163,7 +169,7 @@ extension BLEManager: CBCentralManagerDelegate {
                 id: peripheral.identifier,
                 name: deviceName,
                 rssi: RSSI.intValue,
-                peripheral: peripheral
+                peripheral: peripheral,
             )
 
             discoveredDevices.append(device)
@@ -171,7 +177,7 @@ extension BLEManager: CBCentralManagerDelegate {
         }
     }
 
-    public nonisolated func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+    public nonisolated func centralManager(_: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task { @MainActor in
             logger.info("Connected to peripheral: \(peripheral.name ?? "unknown")")
             state = .connected
@@ -180,9 +186,9 @@ extension BLEManager: CBCentralManagerDelegate {
     }
 
     public nonisolated func centralManager(
-        _ central: CBCentralManager,
-        didFailToConnect peripheral: CBPeripheral,
-        error: Error?
+        _: CBCentralManager,
+        didFailToConnect _: CBPeripheral,
+        error: Error?,
     ) {
         Task { @MainActor in
             logger.error("Failed to connect: \(error?.localizedDescription ?? "unknown error")")
@@ -192,12 +198,12 @@ extension BLEManager: CBCentralManagerDelegate {
     }
 
     public nonisolated func centralManager(
-        _ central: CBCentralManager,
-        didDisconnectPeripheral peripheral: CBPeripheral,
-        error: Error?
+        _: CBCentralManager,
+        didDisconnectPeripheral _: CBPeripheral,
+        error: Error?,
     ) {
         Task { @MainActor in
-            if let error = error {
+            if let error {
                 logger.error("Disconnected with error: \(error.localizedDescription)")
             } else {
                 logger.info("Disconnected from peripheral")
@@ -213,8 +219,8 @@ extension BLEManager: CBCentralManagerDelegate {
     /// Handle state restoration from system
     /// NOTE: This is called by CoreBluetooth on app launch if state was preserved
     public nonisolated func centralManager(
-        _ central: CBCentralManager,
-        willRestoreState dict: [String: Any]
+        _: CBCentralManager,
+        willRestoreState dict: [String: Any],
     ) {
         // Log immediately outside of MainActor
         logger.info("BLE state restoration triggered")
@@ -231,7 +237,9 @@ extension BLEManager: CBCentralManagerDelegate {
                     peripheral.delegate = self
 
                     if peripheral.state == .connected {
-                        logger.info("Peripheral '\(peripheral.name ?? "unknown")' already connected - rediscovering services")
+                        logger.info(
+                            "Peripheral '\(peripheral.name ?? "unknown")' already connected - rediscovering services",
+                        )
                         self.activePeripheral = peripheral
                         self.state = .connected
 
@@ -239,7 +247,9 @@ extension BLEManager: CBCentralManagerDelegate {
                         peripheral.discoverServices([self.meshCoreServiceUUID])
 
                     } else if peripheral.state == .connecting {
-                        logger.info("Peripheral '\(peripheral.name ?? "unknown")' is connecting - waiting for connection")
+                        logger.info(
+                            "Peripheral '\(peripheral.name ?? "unknown")' is connecting - waiting for connection",
+                        )
                         self.activePeripheral = peripheral
                         self.state = .connecting
                     }
@@ -265,10 +275,9 @@ extension BLEManager: CBCentralManagerDelegate {
 // MARK: - CBPeripheralDelegate
 
 extension BLEManager: CBPeripheralDelegate {
-
     public nonisolated func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         Task { @MainActor in
-            if let error = error {
+            if let error {
                 logger.error("Service discovery failed: \(error.localizedDescription)")
                 return
             }
@@ -286,10 +295,10 @@ extension BLEManager: CBPeripheralDelegate {
     public nonisolated func peripheral(
         _ peripheral: CBPeripheral,
         didDiscoverCharacteristicsFor service: CBService,
-        error: Error?
+        error: Error?,
     ) {
         Task { @MainActor in
-            if let error = error {
+            if let error {
                 logger.error("Characteristic discovery failed: \(error.localizedDescription)")
                 return
             }
@@ -312,7 +321,7 @@ extension BLEManager: CBPeripheralDelegate {
             }
 
             // Verify we have both characteristics
-            if txCharacteristic != nil && rxCharacteristic != nil {
+            if txCharacteristic != nil, rxCharacteristic != nil {
                 state = .connected
                 logger.info("BLE connection fully established\(self.isRestoringState ? " (restored)" : "")")
 
@@ -321,7 +330,7 @@ extension BLEManager: CBPeripheralDelegate {
                     // Post notification that connection was restored
                     NotificationCenter.default.post(
                         name: NSNotification.Name("BLEConnectionRestored"),
-                        object: nil
+                        object: nil,
                     )
                 }
             } else {
@@ -332,14 +341,14 @@ extension BLEManager: CBPeripheralDelegate {
     }
 
     public nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
+        _: CBPeripheral,
         didUpdateNotificationStateFor characteristic: CBCharacteristic,
-        error: Error?
+        error: Error?,
     ) {
         let isNotifying = characteristic.isNotifying
 
         Task { @MainActor in
-            if let error = error {
+            if let error {
                 logger.error("Notification state update failed: \(error.localizedDescription)")
             } else if isNotifying {
                 logger.info("Notifications enabled for RX characteristic")
@@ -348,14 +357,14 @@ extension BLEManager: CBPeripheralDelegate {
     }
 
     public nonisolated func peripheral(
-        _ peripheral: CBPeripheral,
+        _: CBPeripheral,
         didUpdateValueFor characteristic: CBCharacteristic,
-        error: Error?
+        error: Error?,
     ) {
         let value = characteristic.value
 
         Task { @MainActor in
-            if let error = error {
+            if let error {
                 logger.error("Characteristic read failed: \(error.localizedDescription)")
                 return
             }
@@ -389,12 +398,16 @@ public enum BLEError: LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .notConnected: return "Not connected to a device"
-        case .characteristicNotFound: return "Required BLE characteristic not found"
-        case .writeTimedOut: return "Write operation timed out"
+        case .notConnected: "Not connected to a device"
+        case .characteristicNotFound: "Required BLE characteristic not found"
+        case .writeTimedOut: "Write operation timed out"
         }
     }
 }
+
+// MARK: - BLEManagerProtocol Conformance
+
+extension BLEManager: BLEManagerProtocol {}
 
 public struct MeshCoreDevice: Identifiable, Equatable {
     public let id: UUID
@@ -403,6 +416,6 @@ public struct MeshCoreDevice: Identifiable, Equatable {
     public weak var peripheral: CBPeripheral?
 
     public static func == (lhs: MeshCoreDevice, rhs: MeshCoreDevice) -> Bool {
-        return lhs.id == rhs.id
+        lhs.id == rhs.id
     }
 }

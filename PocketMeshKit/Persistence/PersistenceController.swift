@@ -1,9 +1,8 @@
-import SwiftData
 import Foundation
+import SwiftData
 
 @MainActor
 public final class PersistenceController {
-
     public static let shared = PersistenceController()
 
     public let container: ModelContainer
@@ -13,13 +12,13 @@ public final class PersistenceController {
             Device.self,
             Contact.self,
             Message.self,
-            Channel.self
+            Channel.self,
         ])
 
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            allowsSave: true
+            allowsSave: true,
         )
 
         do {
@@ -27,7 +26,7 @@ public final class PersistenceController {
 
             // Seed test data for development
             #if DEBUG
-            seedTestDataContacts()
+                seedTestDataContacts()
             #endif
         } catch {
             fatalError("Failed to create ModelContainer: \(error)")
@@ -61,7 +60,7 @@ public final class PersistenceController {
                     type: .repeater,
                     latitude: 47.6062,
                     longitude: -122.3321,
-                    isManuallyAdded: true
+                    isManuallyAdded: true,
                 )
 
                 // Seattle Room Hub - Space Needle area
@@ -72,7 +71,7 @@ public final class PersistenceController {
                     type: .room,
                     latitude: 47.6205,
                     longitude: -122.3493,
-                    isManuallyAdded: true
+                    isManuallyAdded: true,
                 )
 
                 // Seattle Companion - Pioneer Square
@@ -80,10 +79,10 @@ public final class PersistenceController {
                 _ = try await contactRepository.createContact(
                     publicKey: seattleCompanionKey,
                     name: "Seattle Companion",
-                    type: .chat,
+                    type: .companion,
                     latitude: 47.5900,
                     longitude: -122.3310,
-                    isManuallyAdded: true
+                    isManuallyAdded: true,
                 )
 
                 try await contactRepository.save()
@@ -100,8 +99,8 @@ public final class PersistenceController {
         var key = Data(count: 32)
 
         // Create a deterministic key based on the identifier
-        for i in 0..<32 {
-            key[i] = UInt8((identifier * 31 + i * 7) % 256)
+        for index in 0 ..< 32 {
+            key[index] = UInt8((identifier * 31 + index * 7) % 256)
         }
 
         return key
@@ -113,12 +112,12 @@ public final class PersistenceController {
             Device.self,
             Contact.self,
             Message.self,
-            Channel.self
+            Channel.self,
         ])
 
         let configuration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: true
+            isStoredInMemoryOnly: true,
         )
 
         do {
@@ -134,7 +133,7 @@ public final class PersistenceController {
                 radioBandwidth: 125_000,
                 radioSpreadingFactor: 7,
                 radioCodingRate: 5,
-                txPower: 20
+                txPower: 20,
             )
             context.insert(device)
 

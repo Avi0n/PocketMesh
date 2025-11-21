@@ -1,8 +1,7 @@
-import SwiftUI
 import PocketMeshKit
+import SwiftUI
 
 struct DeviceScanningView: View {
-
     @StateObject private var bleManager = BLEManager()
     @State private var isScanning = false
 
@@ -26,10 +25,10 @@ struct DeviceScanningView: View {
             }
 
             List(bleManager.discoveredDevices) { device in
-                Button(action: {
+                Button {
                     bleManager.stopScanning()
                     onDeviceSelected(device)
-                }) {
+                } label: {
                     HStack {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                             .foregroundStyle(.blue)
@@ -53,10 +52,10 @@ struct DeviceScanningView: View {
 
             Spacer()
 
-            Button(action: {
+            Button {
                 bleManager.stopScanning()
                 onSkip()
-            }) {
+            } label: {
                 Text("Skip for Now")
                     .font(.headline)
                     .foregroundStyle(.blue)

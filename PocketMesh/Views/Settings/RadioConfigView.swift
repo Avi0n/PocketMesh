@@ -1,8 +1,7 @@
-import SwiftUI
 import PocketMeshKit
+import SwiftUI
 
 struct RadioConfigView: View {
-
     let device: Device
 
     @EnvironmentObject private var coordinator: AppCoordinator
@@ -34,7 +33,7 @@ struct RadioConfigView: View {
                     Spacer()
                 }
 
-                Slider(value: $frequency, in: 902.0...928.0, step: 0.125)
+                Slider(value: $frequency, in: 902.0 ... 928.0, step: 0.125)
             } header: {
                 Text("Frequency")
             } footer: {
@@ -54,8 +53,8 @@ struct RadioConfigView: View {
 
             Section {
                 Picker("SF", selection: $spreadingFactor) {
-                    ForEach(7...12, id: \.self) { sf in
-                        Text("SF\(sf)").tag(sf)
+                    ForEach(7 ... 12, id: \.self) { spreadFactor in
+                        Text("SF\(spreadFactor)").tag(spreadFactor)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -86,8 +85,8 @@ struct RadioConfigView: View {
 
                 Slider(value: Binding(
                     get: { Double(txPower) },
-                    set: { txPower = Int($0) }
-                ), in: 2...20, step: 1)
+                    set: { txPower = Int($0) },
+                ), in: 2 ... 20, step: 1)
             } header: {
                 Text("Transmit Power")
             } footer: {
@@ -121,10 +120,10 @@ struct RadioConfigView: View {
         let bwHz = UInt32(bandwidth * 1000) // kHz to Hz
 
         return device.radioFrequency != freqHz ||
-        device.radioBandwidth != bwHz ||
-        Int(device.radioSpreadingFactor) != spreadingFactor ||
-        Int(device.radioCodingRate) != codingRate ||
-        Int(device.txPower) != txPower
+            device.radioBandwidth != bwHz ||
+            Int(device.radioSpreadingFactor) != spreadingFactor ||
+            Int(device.radioCodingRate) != codingRate ||
+            Int(device.txPower) != txPower
     }
 
     private func saveConfiguration() {
@@ -143,7 +142,7 @@ struct RadioConfigView: View {
                     frequency: freqHz,
                     bandwidth: bwHz,
                     spreadingFactor: UInt8(spreadingFactor),
-                    codingRate: UInt8(codingRate)
+                    codingRate: UInt8(codingRate),
                 )
 
                 // Send TX power command
