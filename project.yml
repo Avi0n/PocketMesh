@@ -64,9 +64,11 @@ targets:
   PocketMeshTests:
     type: bundle.unit-test
     platform: iOS
+    deploymentTarget: "17.0"
     sources:
       - path: PocketMeshTests
     dependencies:
+      - target: PocketMesh
       - target: PocketMeshKit
     settings:
       base:
@@ -74,6 +76,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         DEVELOPMENT_TEAM: L6E4TF9NZ9
         CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: complete
 
 schemes:
   PocketMesh:
@@ -85,6 +88,10 @@ schemes:
     test:
       config: Debug
       targets:
-        - name: PocketMeshTests
+        - PocketMeshTests
+      gatherCoverageForAllTargets: true
+      codeCoverageTargets:
+        - PocketMesh
+        - PocketMeshKit
     archive:
       config: Release
