@@ -31,13 +31,13 @@ public final class DeviceRepository {
             existing.name = name
             existing.firmwareVersion = firmwareVersion
             existing.lastConnected = Date()
-            existing.radioFrequency = selfInfo.radioFrequency
-            existing.radioBandwidth = selfInfo.radioBandwidth
-            existing.radioSpreadingFactor = selfInfo.radioSpreadingFactor
-            existing.radioCodingRate = selfInfo.radioCodingRate
+            existing.frequency = selfInfo.frequency
+            existing.bandwidth = selfInfo.bandwidth
+            existing.spreadingFactor = selfInfo.spreadingFactor
+            existing.codingRate = selfInfo.codingRate
             existing.txPower = selfInfo.txPower
-            existing.latitude = selfInfo.latitude
-            existing.longitude = selfInfo.longitude
+            existing.latitude = Double(selfInfo.latitude) / 1_000_000.0
+            existing.longitude = Double(selfInfo.longitude) / 1_000_000.0
             return existing
         } else {
             // Create new
@@ -45,14 +45,14 @@ public final class DeviceRepository {
                 publicKey: selfInfo.publicKey,
                 name: name,
                 firmwareVersion: firmwareVersion,
-                radioFrequency: selfInfo.radioFrequency,
-                radioBandwidth: selfInfo.radioBandwidth,
-                radioSpreadingFactor: selfInfo.radioSpreadingFactor,
-                radioCodingRate: selfInfo.radioCodingRate,
+                frequency: selfInfo.frequency,
+                bandwidth: selfInfo.bandwidth,
+                spreadingFactor: selfInfo.spreadingFactor,
+                codingRate: selfInfo.codingRate,
                 txPower: selfInfo.txPower,
             )
-            device.latitude = selfInfo.latitude
-            device.longitude = selfInfo.longitude
+            device.latitude = Double(selfInfo.latitude) / 1_000_000.0
+            device.longitude = Double(selfInfo.longitude) / 1_000_000.0
             modelContext.insert(device)
             return device
         }

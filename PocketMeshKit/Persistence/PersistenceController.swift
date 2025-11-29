@@ -74,12 +74,12 @@ public final class PersistenceController {
                     isManuallyAdded: true,
                 )
 
-                // Seattle Companion - Pioneer Square
-                let seattleCompanionKey = generateTestPublicKey(for: 3)
+                // Seattle Chat - Pioneer Square
+                let seattleChatKey = generateTestPublicKey(for: 3)
                 _ = try await contactRepository.createContact(
-                    publicKey: seattleCompanionKey,
-                    name: "Seattle Companion",
-                    type: .companion,
+                    publicKey: seattleChatKey,
+                    name: "Seattle Chat",
+                    type: .chat,
                     latitude: 47.5900,
                     longitude: -122.3310,
                     isManuallyAdded: true,
@@ -129,10 +129,10 @@ public final class PersistenceController {
                 publicKey: Data(repeating: 0x01, count: 32),
                 name: "Test Device",
                 firmwareVersion: "1.0.0",
-                radioFrequency: 915_000_000,
-                radioBandwidth: 125_000,
-                radioSpreadingFactor: 7,
-                radioCodingRate: 5,
+                frequency: 915_000_000,
+                bandwidth: 125_000,
+                spreadingFactor: 7,
+                codingRate: 5,
                 txPower: 20,
             )
             context.insert(device)
