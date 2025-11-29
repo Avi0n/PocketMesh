@@ -3,6 +3,17 @@
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 .DS_Store
+
+# MeshCore examples
+meshcore_py-2.2.1
+MeshCore-firmware-examples
+meshcore-cli-example.xml
+meshcore-py-repo.xml
+
+# AI
+.claude
+.claudiomiro
+--glm
 thoughts/
 
 ## User settings
@@ -63,3 +74,7 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Python
+__pycache__
+.venv

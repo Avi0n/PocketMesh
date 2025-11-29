@@ -7,102 +7,108 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		04700D00F3423E2526A0E2A0 /* ProtocolFrameComplianceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91ED4A76CB29D85EAA0E0A5D /* ProtocolFrameComplianceTests.swift */; };
-		048CF61935BD1ECF9446AD1E /* ProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB3E50FF707FBB6367B5F31D /* ProtocolTests.swift */; };
 		04B4CC1542206F66EAC3E590 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0F7970153742CC033CB038 /* WelcomeView.swift */; };
-		058950592B39F6968DE95309 /* LoadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDC33E9B5F6C70E449C6C957 /* LoadTests.swift */; };
 		07951AD761B99CC4062807B8 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4790EA7D9965FEACBC408916 /* PersistenceController.swift */; };
 		082689EC4B90E48FDFDD7921 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A0D54AAD444724758431C8E /* NotificationService.swift */; };
 		085F45A67199450FEC2A20B9 /* MeshCoreProtocol+Telemetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54684A86A90EF7D0FC30126 /* MeshCoreProtocol+Telemetry.swift */; };
 		0BAA2D777227C375D7AF640F /* DeviceRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45B1A0A13DC23C92005347FE /* DeviceRepository.swift */; };
 		0C1A55F84C6DD7C805E42D7E /* BLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3F104F3FE6A56A96C8F88AE /* BLEManager.swift */; };
+		0C49B2C40ABD4A3C3594838A /* PushNotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EFC68036DA46DAF3A9DAFB0 /* PushNotificationModels.swift */; };
+		0C988C5C8BE8D511420D1306 /* MockBLEPeripheral.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0CB1016B7FB83BD82867C6 /* MockBLEPeripheral.swift */; };
+		0CFA19B76C115460415214B5 /* ContactProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52EDD945646E83AC4D7E8960 /* ContactProtocolTests.swift */; };
 		0D461B2193AD56FBC09F10D7 /* TelemetryChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D243D6805EB31DFECE47094 /* TelemetryChartView.swift */; };
 		0DFDEB97D19FFD590E2E46FA /* MeshCoreProtocol+Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64E7B5E376544956FD5D6B44 /* MeshCoreProtocol+Authentication.swift */; };
-		0EED240350D72D9A280402B8 /* HardwareTestChecklist.md in Resources */ = {isa = PBXBuildFile; fileRef = FE5C5159C25C57A75A42AB9C /* HardwareTestChecklist.md */; };
+		136E7E6A3EFA0114DF372617 /* README-ContactStorage.md in Resources */ = {isa = PBXBuildFile; fileRef = E9863F3C39157B4AF27AEF8B /* README-ContactStorage.md */; };
 		196A880F719BA6E1AE3B645B /* ACLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33597751C4457615E18360EF /* ACLView.swift */; };
 		1A3B27D20A5026805F20EFA4 /* MeshCoreProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3666BE63C7A8728158C827 /* MeshCoreProtocol.swift */; };
-		1EA8F5A34C5264C96F9A74F5 /* MockConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD58CC329F7C077D676B3519 /* MockConnectionManager.swift */; };
 		2548F6A91ECAC4785DB3F1E4 /* MeshCoreProtocol+Contacts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70401CCEB3544E3415E8271B /* MeshCoreProtocol+Contacts.swift */; };
 		25CC7D2592C03F7A5DFBE98E /* PocketMeshApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F34A0E53D1001C5D381D27D /* PocketMeshApp.swift */; };
 		2735DBC4D5EA645EDAD0713A /* DevicePairingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75FF400E09A0ED446EB6E0B /* DevicePairingView.swift */; };
 		29E4752CA180354A31575E76 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4445AFF3A5E0066EFD18401D /* PermissionsView.swift */; };
-		29F7FDE83AC61F4FE173D79F /* ResponseSimulationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79713990C7A15DB905835BF6 /* ResponseSimulationEngine.swift */; };
 		2B52474A7088768CC23B4C71 /* MeshCoreProtocol+TelemetryStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51D6BFBCEC4229630F8B1B7 /* MeshCoreProtocol+TelemetryStatus.swift */; };
 		2B8F73E3DBC0975E31317609 /* PocketMeshKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2BD2E8F77C404A9360EFA0C5 /* MeshCoreProtocol+Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A04442F40F0D59B8B7AAA4 /* MeshCoreProtocol+Configuration.swift */; };
-		2F5B0D78DEB6CD66B9AD7489 /* PerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B8028BA6312831A4F93BDC /* PerformanceTests.swift */; };
+		320EF508BC86BF047891423D /* MockBLERadio.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DC5133A1EFE353F7589CDD /* MockBLERadio.swift */; };
+		384F07CF5A4DE3667C2378AD /* TXCharacteristic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E7A13D843209364585BB975 /* TXCharacteristic.swift */; };
 		39AB293F43B5F56A43335757 /* ChatsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A15BABD9F5ACB43C7C3E412 /* ChatsListView.swift */; };
 		3B3A45C47D09D258EB2AD128 /* PasswordManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DECD82F677EDD360A3DF244 /* PasswordManager.swift */; };
+		3B60296ADD5B76CDEE11A5B9 /* TestDataFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A1790A5D818DC660FD7800 /* TestDataFactory.swift */; };
+		3B909387DFD4F0C5E1DC056D /* ProtocolTestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F6B86480A02D99979884DE3 /* ProtocolTestHelpers.swift */; };
 		431040862CE0BC900CD384C4 /* MeshCoreProtocol+Channels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DAB3EA9B50A1BE66A80F894 /* MeshCoreProtocol+Channels.swift */; };
 		45DD5683BA0C088BA5351036 /* ChannelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19636F60B0605513BF191CBF /* ChannelService.swift */; };
+		476CC605CCA2BB97496A64C9 /* InfrastructureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E213C89519A32AC890301786 /* InfrastructureTests.swift */; };
 		47F03E5DE218B3460404D987 /* MeshCoreProtocol+PushRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4AE2F39F93A7DB356B9417 /* MeshCoreProtocol+PushRegistry.swift */; };
 		4A87BB08663A1D228CEB0EF6 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A7CDD4F4EC260777547BAA /* LoginView.swift */; };
+		4AEC2E979B0216349C7AB464 /* MockBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA5AC3FB487D5D8FFB9200FB /* MockBLEManager.swift */; };
 		4C8EC2717D770CA60B429AEC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C0F740701C9B7C9B012341 /* AppDelegate.swift */; };
+		4E0FDC71CB3C3F57A1BC19AA /* BLEExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDC1263B93593C836F30FADC /* BLEExtensions.swift */; };
 		540EA7C2BB034A4AB716EFA3 /* TelemetryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42283E829395EB9DF2B87A0E /* TelemetryDetailView.swift */; };
 		549C7D8BF83A096678D74504 /* MeshCoreProtocol+Security.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE329756323A69A6157ED52 /* MeshCoreProtocol+Security.swift */; };
 		55605992566F8CF5F667803F /* PocketMeshKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		55CA0C342B8743CF61DA447D /* PocketMeshKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; };
 		56C6A39C21F2D6E6093ED2E8 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D00CDA3DB460ED521289CFC /* Message.swift */; };
 		57DE561AF2EEE7B168A6F7CC /* Data+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD601DB43F8133089DA900CB /* Data+Extensions.swift */; };
+		5C2FE328B0F926FF194EE98F /* ControlService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93663C0DB789601EE1549AE1 /* ControlService.swift */; };
+		5D17A293EC2CC81B09892CF6 /* MockConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F086DA681E7D40FBC2E4483 /* MockConfig.swift */; };
 		5E6DD2912E56A9AB756905C3 /* ContactRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0F80FC9757F604513FF144C /* ContactRepository.swift */; };
+		61F1AD466D1B6D4D072B4780 /* BaseTestCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = E72C85314095CDE745CAB4D0 /* BaseTestCase.swift */; };
 		64FEA9FB06289559C4470956 /* ContactDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCADFDA38F997A471312DFA /* ContactDetailView.swift */; };
-		6625DDCA58A6A13D27346DFD /* PathDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC69D69D5935C38500EC8715 /* PathDiscoveryTests.swift */; };
 		670A178DE041DCDFD68692DE /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539B5076B54A2945A0E90C41 /* ContentView.swift */; };
 		6A1F9993529AB5A2217FAFA9 /* ACLEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A0C294728EDEAD0FACED8F /* ACLEntry.swift */; };
 		6ADF0B4E40E00931232EE12B /* MeshCoreProtocol+TelemetryMMA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 445B18EBB0727BC4A851553E /* MeshCoreProtocol+TelemetryMMA.swift */; };
-		6BCE2CA72785A33F100D5CB9 /* RecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CE9196B19AB0A806D6517AA /* RecoveryTests.swift */; };
-		70DE8759822FE6E214C5F6AD /* BinaryProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F36CBEE3BC4905D4D85FACC2 /* BinaryProtocolTests.swift */; };
 		716C010E9ACA43775C440CC7 /* MeshCoreProtocol+Messaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 937A2BA4F9DB743A4328CCE7 /* MeshCoreProtocol+Messaging.swift */; };
 		73E1844F85A15DD9B31CC82B /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9705E3FDD538F1DC42221E7E /* MessageService.swift */; };
-		8B131F37CF272A88E0C4C4B0 /* EnhancedMockBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458E90E1A1C97F2A46150E74 /* EnhancedMockBLEManager.swift */; };
+		7B08D697BEF1A6ABAB3A040E /* MeshCoreProtocol+Binary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCA2281DC90AF547900B597E /* MeshCoreProtocol+Binary.swift */; };
+		7F5EDB014A7DE18D9E8E7282 /* RadioService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E6807CA1C76FB0ED65DE5CB /* RadioService.swift */; };
+		8236899F5116FE269DB7809D /* DeviceInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF17FCB11FE28333E97B374 /* DeviceInfo.swift */; };
 		8C58D03BABF51C6468D6131C /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BC20AD728EB3A9DD89F86E /* Device.swift */; };
 		92041E155082F000A2CF01AC /* MessagePollingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4ADBD01EE65C7E16CEC224 /* MessagePollingService.swift */; };
+		97420CFC9CCDCFD590310567 /* ConfigurationProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 762B8CE008428054F4F28187 /* ConfigurationProtocolTests.swift */; };
 		98B604E40404CCB7859F7266 /* ProtocolFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDD6AB7C7D704DFDB56FE2DC /* ProtocolFrame.swift */; };
 		98D36662B6E6B2171A9E9CC9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5DFB0DC0115B51CD4EFB79 /* MainTabView.swift */; };
 		9B1DD4E7BA12D34AF6D9752F /* PendingContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659275E8CAC69A0440054CF6 /* PendingContactsView.swift */; };
 		A053B5EE63D2377CAA63D87B /* PocketMeshKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; };
 		A17F541BCAD396D16E13723B /* Date+Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BA6EDD9B7093D4C6F2532D8 /* Date+Formatting.swift */; };
-		A64D1DCAE5A94B6E6C8BF83A /* MeshCoreProtocolValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66A2AFF76AD3A117C4961C5B /* MeshCoreProtocolValidator.swift */; };
 		A71DCC5B96C8E5577565CAC3 /* Notification+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48E3875A7C7FC95DABB1E7C /* Notification+Extensions.swift */; };
-		A7789E2262DD34E7502C3F9B /* ErrorScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 632A123D04F75EBB0AC04F84 /* ErrorScenarioTests.swift */; };
-		AAA88457EDDEA131C35624E6 /* ProtocolTestDataFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F9F817E34538045EC5610B9 /* ProtocolTestDataFactory.swift */; };
+		AB02E3100FA1987FA8D3460E /* RXCharacteristic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8703A78C512967E4651E4D23 /* RXCharacteristic.swift */; };
 		AB609B0A91AD1AE0E634E13F /* PathVisualizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054C47281A43737FED3EB05E /* PathVisualizationView.swift */; };
 		ACFF6147E0FD5E5A57C68860 /* TelemetryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C863E88CA679A56DFE9BFDC0 /* TelemetryService.swift */; };
-		B0F85F1E1CEDBA4151867666 /* MultiDeviceTestProcedures.md in Resources */ = {isa = PBXBuildFile; fileRef = CE04040827AA0203482F7960 /* MultiDeviceTestProcedures.md */; };
-		B7C1503B5D8AFC88FA330778 /* EnhancedPerformanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1173EA033F774D202071CEE5 /* EnhancedPerformanceTests.swift */; };
-		B9102A354ABB8FC69AE35485 /* MockBLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5FA9AD88652C57DEA54C75 /* MockBLEManager.swift */; };
+		B8BFBB43DFB74770D63C7D10 /* BLERadioState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3234A8AD646A4472EA24CAEC /* BLERadioState.swift */; };
 		BA0500A707AA4D1D6C17FA36 /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C643DA1AD15A734272472EE /* Contact.swift */; };
 		BB7EE7F9AC3B871A36512F4B /* AdvancedMessagingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE29B5AE4AE14E030E663DB1 /* AdvancedMessagingSettingsView.swift */; };
+		BBDC6DF52899ED70C6242950 /* MessagingProtocolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6696FB373363881F1C55EF47 /* MessagingProtocolTests.swift */; };
 		BC39AE7B285634F050593F66 /* ContactsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */; };
-		BEBA445C0131E3EDF3450FFD /* MessageRetrievalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2071AFEEEB6704D7FF726C8 /* MessageRetrievalTests.swift */; };
+		BEE6A03074154468DA975187 /* ProtocolComplianceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F23C4BE35473EEADDE3E04E /* ProtocolComplianceTests.swift */; };
 		C29A9863B8395C4B83C7DE5F /* ChannelConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F49842EC45B9382B2E2D9C6 /* ChannelConversationView.swift */; };
-		C511D6AC25ED69E5D0C85ADF /* MessageRetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0E24D50042376C5179A718 /* MessageRetryTests.swift */; };
+		C35A1B6B64BB2061FEA2EAA4 /* BLEProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB782371C9B7DCACAEAA913A /* BLEProtocols.swift */; };
+		C93082E1E0D71460A485D251 /* PushNotificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E28DB83E80B81BFCF97FAD60 /* PushNotificationTests.swift */; };
 		CB2B542E08B1C5703924FC00 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD9C35244A7297C10AAEBF3 /* Channel.swift */; };
-		CBD0A5CA38FB80D26D96D3A5 /* ContactTypeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D1E5AADB57C9F1CE4EBE60 /* ContactTypeTests.swift */; };
 		CC0E3161BBCE45B7695F5233 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DDDC5026F8F35285E404A2E /* RootView.swift */; };
-		CDB712100271156318739646 /* ChannelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5891882AD3B71BDE7947EB /* ChannelTests.swift */; };
-		D3C1502B932389AA46C25FA6 /* ProtocolEnhancementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE2B747A5E4EEFB5FCF0919B /* ProtocolEnhancementTests.swift */; };
-		D59B9064D95EF2604688E4A4 /* ServiceIntegrationBaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3D8FEB02FAB72641FDD3757 /* ServiceIntegrationBaseTests.swift */; };
+		D02F64004B338D53557CFD1F /* SelfInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A009E402591036AB76A6DF15 /* SelfInfo.swift */; };
 		D8881715ACE8FEFE4DADCCA5 /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98BCF1B1C3BFF8DA83643054 /* MapView.swift */; };
 		D8FF8BFD7059C04D8B2BEF63 /* MeshCoreProtocol+PathDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB40797D8BE2D63FD36698A /* MeshCoreProtocol+PathDiscovery.swift */; };
-		DE7D76D8741AFED3433D8506 /* ConnectionEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22B600B647280E7121B46F3 /* ConnectionEventTests.swift */; };
+		D959014BCC4E9C173295609E /* AsyncTestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = DED7FC48D27D1FFD4CCC0BB8 /* AsyncTestHelpers.swift */; };
+		E8E90E638CDE6DAE2AF2A361 /* RadioPacket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BAF6B10B8F06857CB79A17 /* RadioPacket.swift */; };
 		E93DBDA789A72640D418765E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433E7925F6AF25F51DAFE548 /* SettingsView.swift */; };
 		E9883B997FDCF3DCC25F85C3 /* RadioConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1E3AA80BEB087A3E5687D3 /* RadioConfigView.swift */; };
-		EA84B61149004C7F07E1D0E2 /* BLEConnectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BABEC456F9A2D8A45CB34703 /* BLEConnectionTests.swift */; };
 		EA90CEE815B36F993FB4D993 /* DeviceScanningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDC9550B53986E665926C468 /* DeviceScanningView.swift */; };
 		EB51212416D0270DB3339F4D /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00557D11E58C09AB9086680 /* OnboardingFlow.swift */; };
 		EBF7A2215A7028CDA953A111 /* ConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4868B74ECC3F92A796E38E82 /* ConversationView.swift */; };
 		ED665545044E2449E05EFEBA /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E0BC74BB72B89397A495137 /* MessageBubble.swift */; };
-		EE2E22FD88A85383550DF0C7 /* ProtocolValidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53E23C49EDE951D18D749E3 /* ProtocolValidationTests.swift */; };
 		F439F486C34F5F76E76DA489 /* ContactDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF0E4776336F1893D6AC308 /* ContactDetailSheet.swift */; };
-		F4539F3ABFFB721CE1E0E019 /* MessageParsingEnhancementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2FAFF2C41BC4E82372D5785 /* MessageParsingEnhancementTests.swift */; };
 		F5539ADF0C3797333BD3369E /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 181BD80329BD64F2DB85E1B2 /* AppCoordinator.swift */; };
 		F6D1450EFD8C75428F630E71 /* AdvertisementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448DAB29DF80063E788E82C5 /* AdvertisementService.swift */; };
-		F7C7129A6747A67E68458F07 /* ProtocolServiceIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA4A95D42F0D14D71981DB70 /* ProtocolServiceIntegrationTests.swift */; };
-		F9C426A711CD82BCD6D612BB /* TelemetryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53E7F93DB748FA1CB4364759 /* TelemetryTests.swift */; };
+		FD7A92AC5FFD7B5B7528E191 /* MockBLERadioFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E7B90CFD976B655AF5290A1 /* MockBLERadioFactory.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		647A2469DC62FF730B1C7B0A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B075D29168C5838CB086652F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E0B5AABF144609984709AF9F;
+			remoteInfo = PocketMesh;
+		};
 		7D496179E2C15869556E7DCA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B075D29168C5838CB086652F /* Project object */;
@@ -148,22 +154,23 @@
 		054C47281A43737FED3EB05E /* PathVisualizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathVisualizationView.swift; sourceTree = "<group>"; };
 		0A3666BE63C7A8728158C827 /* MeshCoreProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshCoreProtocol.swift; sourceTree = "<group>"; };
 		0D1B9546AAAA951D4E679E55 /* PocketMeshTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketMeshTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		1173EA033F774D202071CEE5 /* EnhancedPerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedPerformanceTests.swift; sourceTree = "<group>"; };
+		17BAF6B10B8F06857CB79A17 /* RadioPacket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioPacket.swift; sourceTree = "<group>"; };
 		181BD80329BD64F2DB85E1B2 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		19636F60B0605513BF191CBF /* ChannelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelService.swift; sourceTree = "<group>"; };
 		1B4AE2F39F93A7DB356B9417 /* MeshCoreProtocol+PushRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+PushRegistry.swift"; sourceTree = "<group>"; };
 		1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsListView.swift; sourceTree = "<group>"; };
 		1DCADFDA38F997A471312DFA /* ContactDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDetailView.swift; sourceTree = "<group>"; };
 		1E0BC74BB72B89397A495137 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
+		1F086DA681E7D40FBC2E4483 /* MockConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockConfig.swift; sourceTree = "<group>"; };
 		1F34A0E53D1001C5D381D27D /* PocketMeshApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PocketMeshApp.swift; sourceTree = "<group>"; };
 		28A04442F40F0D59B8B7AAA4 /* MeshCoreProtocol+Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Configuration.swift"; sourceTree = "<group>"; };
 		2A15BABD9F5ACB43C7C3E412 /* ChatsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsListView.swift; sourceTree = "<group>"; };
-		2C0E24D50042376C5179A718 /* MessageRetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRetryTests.swift; sourceTree = "<group>"; };
+		2C0CB1016B7FB83BD82867C6 /* MockBLEPeripheral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEPeripheral.swift; sourceTree = "<group>"; };
+		2FF17FCB11FE28333E97B374 /* DeviceInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceInfo.swift; sourceTree = "<group>"; };
 		30C0F740701C9B7C9B012341 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		3234A8AD646A4472EA24CAEC /* BLERadioState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLERadioState.swift; sourceTree = "<group>"; };
 		33597751C4457615E18360EF /* ACLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACLView.swift; sourceTree = "<group>"; };
-		37B8028BA6312831A4F93BDC /* PerformanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceTests.swift; sourceTree = "<group>"; };
 		3BA6EDD9B7093D4C6F2532D8 /* Date+Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Formatting.swift"; sourceTree = "<group>"; };
-		3CE9196B19AB0A806D6517AA /* RecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryTests.swift; sourceTree = "<group>"; };
 		3D0F7970153742CC033CB038 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		3DAB3EA9B50A1BE66A80F894 /* MeshCoreProtocol+Channels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Channels.swift"; sourceTree = "<group>"; };
 		3DE329756323A69A6157ED52 /* MeshCoreProtocol+Security.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Security.swift"; sourceTree = "<group>"; };
@@ -172,72 +179,70 @@
 		4445AFF3A5E0066EFD18401D /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
 		445B18EBB0727BC4A851553E /* MeshCoreProtocol+TelemetryMMA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+TelemetryMMA.swift"; sourceTree = "<group>"; };
 		448DAB29DF80063E788E82C5 /* AdvertisementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvertisementService.swift; sourceTree = "<group>"; };
-		458E90E1A1C97F2A46150E74 /* EnhancedMockBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnhancedMockBLEManager.swift; sourceTree = "<group>"; };
 		45B1A0A13DC23C92005347FE /* DeviceRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRepository.swift; sourceTree = "<group>"; };
 		4790EA7D9965FEACBC408916 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
 		4868B74ECC3F92A796E38E82 /* ConversationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationView.swift; sourceTree = "<group>"; };
 		48A0C294728EDEAD0FACED8F /* ACLEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ACLEntry.swift; sourceTree = "<group>"; };
 		4D243D6805EB31DFECE47094 /* TelemetryChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryChartView.swift; sourceTree = "<group>"; };
+		4E7A13D843209364585BB975 /* TXCharacteristic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TXCharacteristic.swift; sourceTree = "<group>"; };
+		52EDD945646E83AC4D7E8960 /* ContactProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactProtocolTests.swift; sourceTree = "<group>"; };
 		539B5076B54A2945A0E90C41 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		53E7F93DB748FA1CB4364759 /* TelemetryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryTests.swift; sourceTree = "<group>"; };
 		55A7CDD4F4EC260777547BAA /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		5A0D54AAD444724758431C8E /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		5DDDC5026F8F35285E404A2E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		5F49842EC45B9382B2E2D9C6 /* ChannelConversationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelConversationView.swift; sourceTree = "<group>"; };
 		5FD9C35244A7297C10AAEBF3 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
-		632A123D04F75EBB0AC04F84 /* ErrorScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorScenarioTests.swift; sourceTree = "<group>"; };
 		64E7B5E376544956FD5D6B44 /* MeshCoreProtocol+Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Authentication.swift"; sourceTree = "<group>"; };
 		659275E8CAC69A0440054CF6 /* PendingContactsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingContactsView.swift; sourceTree = "<group>"; };
-		66A2AFF76AD3A117C4961C5B /* MeshCoreProtocolValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshCoreProtocolValidator.swift; sourceTree = "<group>"; };
-		68D1E5AADB57C9F1CE4EBE60 /* ContactTypeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTypeTests.swift; sourceTree = "<group>"; };
-		6B5FA9AD88652C57DEA54C75 /* MockBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEManager.swift; sourceTree = "<group>"; };
+		6696FB373363881F1C55EF47 /* MessagingProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagingProtocolTests.swift; sourceTree = "<group>"; };
+		68A1790A5D818DC660FD7800 /* TestDataFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestDataFactory.swift; sourceTree = "<group>"; };
 		6C643DA1AD15A734272472EE /* Contact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Contact.swift; sourceTree = "<group>"; };
 		6CF0E4776336F1893D6AC308 /* ContactDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDetailSheet.swift; sourceTree = "<group>"; };
-		6F9F817E34538045EC5610B9 /* ProtocolTestDataFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTestDataFactory.swift; sourceTree = "<group>"; };
+		6E6807CA1C76FB0ED65DE5CB /* RadioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioService.swift; sourceTree = "<group>"; };
+		6EFC68036DA46DAF3A9DAFB0 /* PushNotificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationModels.swift; sourceTree = "<group>"; };
+		6F23C4BE35473EEADDE3E04E /* ProtocolComplianceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolComplianceTests.swift; sourceTree = "<group>"; };
 		70401CCEB3544E3415E8271B /* MeshCoreProtocol+Contacts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Contacts.swift"; sourceTree = "<group>"; };
-		79713990C7A15DB905835BF6 /* ResponseSimulationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponseSimulationEngine.swift; sourceTree = "<group>"; };
+		762B8CE008428054F4F28187 /* ConfigurationProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigurationProtocolTests.swift; sourceTree = "<group>"; };
 		7B3A8D9589A690BFF13B4561 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		8C5891882AD3B71BDE7947EB /* ChannelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelTests.swift; sourceTree = "<group>"; };
+		7F6B86480A02D99979884DE3 /* ProtocolTestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTestHelpers.swift; sourceTree = "<group>"; };
+		8703A78C512967E4651E4D23 /* RXCharacteristic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RXCharacteristic.swift; sourceTree = "<group>"; };
 		8DECD82F677EDD360A3DF244 /* PasswordManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordManager.swift; sourceTree = "<group>"; };
-		91ED4A76CB29D85EAA0E0A5D /* ProtocolFrameComplianceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolFrameComplianceTests.swift; sourceTree = "<group>"; };
+		93663C0DB789601EE1549AE1 /* ControlService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlService.swift; sourceTree = "<group>"; };
 		937A2BA4F9DB743A4328CCE7 /* MeshCoreProtocol+Messaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Messaging.swift"; sourceTree = "<group>"; };
 		9705E3FDD538F1DC42221E7E /* MessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageService.swift; sourceTree = "<group>"; };
 		98BCF1B1C3BFF8DA83643054 /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		9C5DFB0DC0115B51CD4EFB79 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		9D00CDA3DB460ED521289CFC /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
-		A3D8FEB02FAB72641FDD3757 /* ServiceIntegrationBaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceIntegrationBaseTests.swift; sourceTree = "<group>"; };
+		9E7B90CFD976B655AF5290A1 /* MockBLERadioFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLERadioFactory.swift; sourceTree = "<group>"; };
+		A009E402591036AB76A6DF15 /* SelfInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfInfo.swift; sourceTree = "<group>"; };
 		AE29B5AE4AE14E030E663DB1 /* AdvancedMessagingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedMessagingSettingsView.swift; sourceTree = "<group>"; };
 		B00557D11E58C09AB9086680 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
 		B0F80FC9757F604513FF144C /* ContactRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactRepository.swift; sourceTree = "<group>"; };
 		B3F104F3FE6A56A96C8F88AE /* BLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEManager.swift; sourceTree = "<group>"; };
 		B4BC20AD728EB3A9DD89F86E /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
-		BABEC456F9A2D8A45CB34703 /* BLEConnectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEConnectionTests.swift; sourceTree = "<group>"; };
-		BD58CC329F7C077D676B3519 /* MockConnectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockConnectionManager.swift; sourceTree = "<group>"; };
 		BDC9550B53986E665926C468 /* DeviceScanningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceScanningView.swift; sourceTree = "<group>"; };
 		BDE5B1CA2B629437BD46D2A3 /* PocketMesh.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketMesh.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		C2071AFEEEB6704D7FF726C8 /* MessageRetrievalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRetrievalTests.swift; sourceTree = "<group>"; };
 		C48E3875A7C7FC95DABB1E7C /* Notification+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Notification+Extensions.swift"; sourceTree = "<group>"; };
 		C51D6BFBCEC4229630F8B1B7 /* MeshCoreProtocol+TelemetryStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+TelemetryStatus.swift"; sourceTree = "<group>"; };
+		C6DC5133A1EFE353F7589CDD /* MockBLERadio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLERadio.swift; sourceTree = "<group>"; };
 		C863E88CA679A56DFE9BFDC0 /* TelemetryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TelemetryService.swift; sourceTree = "<group>"; };
+		CB782371C9B7DCACAEAA913A /* BLEProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEProtocols.swift; sourceTree = "<group>"; };
+		CCA2281DC90AF547900B597E /* MeshCoreProtocol+Binary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Binary.swift"; sourceTree = "<group>"; };
 		CD601DB43F8133089DA900CB /* Data+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Data+Extensions.swift"; sourceTree = "<group>"; };
 		CDB40797D8BE2D63FD36698A /* MeshCoreProtocol+PathDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+PathDiscovery.swift"; sourceTree = "<group>"; };
-		CE04040827AA0203482F7960 /* MultiDeviceTestProcedures.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = MultiDeviceTestProcedures.md; sourceTree = "<group>"; };
 		D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PocketMeshKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DA4A95D42F0D14D71981DB70 /* ProtocolServiceIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolServiceIntegrationTests.swift; sourceTree = "<group>"; };
-		DB3E50FF707FBB6367B5F31D /* ProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolTests.swift; sourceTree = "<group>"; };
-		DDC33E9B5F6C70E449C6C957 /* LoadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadTests.swift; sourceTree = "<group>"; };
-		E22B600B647280E7121B46F3 /* ConnectionEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionEventTests.swift; sourceTree = "<group>"; };
-		E53E23C49EDE951D18D749E3 /* ProtocolValidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolValidationTests.swift; sourceTree = "<group>"; };
+		DED7FC48D27D1FFD4CCC0BB8 /* AsyncTestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AsyncTestHelpers.swift; sourceTree = "<group>"; };
+		E213C89519A32AC890301786 /* InfrastructureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfrastructureTests.swift; sourceTree = "<group>"; };
+		E28DB83E80B81BFCF97FAD60 /* PushNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationTests.swift; sourceTree = "<group>"; };
 		E54684A86A90EF7D0FC30126 /* MeshCoreProtocol+Telemetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MeshCoreProtocol+Telemetry.swift"; sourceTree = "<group>"; };
+		E72C85314095CDE745CAB4D0 /* BaseTestCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseTestCase.swift; sourceTree = "<group>"; };
+		E9863F3C39157B4AF27AEF8B /* README-ContactStorage.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "README-ContactStorage.md"; sourceTree = "<group>"; };
 		EB4ADBD01EE65C7E16CEC224 /* MessagePollingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePollingService.swift; sourceTree = "<group>"; };
 		EDD6AB7C7D704DFDB56FE2DC /* ProtocolFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolFrame.swift; sourceTree = "<group>"; };
 		EE1E3AA80BEB087A3E5687D3 /* RadioConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioConfigView.swift; sourceTree = "<group>"; };
-		EE2B747A5E4EEFB5FCF0919B /* ProtocolEnhancementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolEnhancementTests.swift; sourceTree = "<group>"; };
-		F2FAFF2C41BC4E82372D5785 /* MessageParsingEnhancementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageParsingEnhancementTests.swift; sourceTree = "<group>"; };
-		F36CBEE3BC4905D4D85FACC2 /* BinaryProtocolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryProtocolTests.swift; sourceTree = "<group>"; };
 		F75FF400E09A0ED446EB6E0B /* DevicePairingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairingView.swift; sourceTree = "<group>"; };
-		FC69D69D5935C38500EC8715 /* PathDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathDiscoveryTests.swift; sourceTree = "<group>"; };
-		FE5C5159C25C57A75A42AB9C /* HardwareTestChecklist.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = HardwareTestChecklist.md; sourceTree = "<group>"; };
+		FA5AC3FB487D5D8FFB9200FB /* MockBLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEManager.swift; sourceTree = "<group>"; };
+		FDC1263B93593C836F30FADC /* BLEExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEExtensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -260,6 +265,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		005A00A63B829E7BF27FF299 /* protocols */ = {
+			isa = PBXGroup;
+			children = (
+				CB782371C9B7DCACAEAA913A /* BLEProtocols.swift */,
+			);
+			path = protocols;
+			sourceTree = "<group>";
+		};
 		1005B908A4E334855399571E /* BLE */ = {
 			isa = PBXGroup;
 			children = (
@@ -301,27 +314,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		2CB6A61F35F797BAC08DC0C3 /* Mocks */ = {
-			isa = PBXGroup;
-			children = (
-				458E90E1A1C97F2A46150E74 /* EnhancedMockBLEManager.swift */,
-				6B5FA9AD88652C57DEA54C75 /* MockBLEManager.swift */,
-				BD58CC329F7C077D676B3519 /* MockConnectionManager.swift */,
-				38C482FD9731872CBB37FA36 /* Protocol */,
-			);
-			path = Mocks;
-			sourceTree = "<group>";
-		};
-		38C482FD9731872CBB37FA36 /* Protocol */ = {
-			isa = PBXGroup;
-			children = (
-				66A2AFF76AD3A117C4961C5B /* MeshCoreProtocolValidator.swift */,
-				E53E23C49EDE951D18D749E3 /* ProtocolValidationTests.swift */,
-				79713990C7A15DB905835BF6 /* ResponseSimulationEngine.swift */,
-			);
-			path = Protocol;
-			sourceTree = "<group>";
-		};
 		3C2BB4E3E9A8161B3703BC9A /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -331,6 +323,14 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		407EEA5DE9508DC507E1DB5D /* extensions */ = {
+			isa = PBXGroup;
+			children = (
+				FDC1263B93593C836F30FADC /* BLEExtensions.swift */,
+			);
+			path = extensions;
+			sourceTree = "<group>";
+		};
 		48922D6465C2927C27363D6C /* Map */ = {
 			isa = PBXGroup;
 			children = (
@@ -338,6 +338,17 @@
 				98BCF1B1C3BFF8DA83643054 /* MapView.swift */,
 			);
 			path = Map;
+			sourceTree = "<group>";
+		};
+		57589D8C58B10D2309A8E375 /* TestHelpers */ = {
+			isa = PBXGroup;
+			children = (
+				DED7FC48D27D1FFD4CCC0BB8 /* AsyncTestHelpers.swift */,
+				E72C85314095CDE745CAB4D0 /* BaseTestCase.swift */,
+				7F6B86480A02D99979884DE3 /* ProtocolTestHelpers.swift */,
+				68A1790A5D818DC660FD7800 /* TestDataFactory.swift */,
+			);
+			path = TestHelpers;
 			sourceTree = "<group>";
 		};
 		5BCC9A5B3892FD7AECC683EC /* Extensions */ = {
@@ -350,13 +361,12 @@
 			path = Extensions;
 			sourceTree = "<group>";
 		};
-		60107D872D29B99E0263A6EE /* Connection */ = {
+		621005E07AC12A936B50B1AF /* config */ = {
 			isa = PBXGroup;
 			children = (
-				BABEC456F9A2D8A45CB34703 /* BLEConnectionTests.swift */,
-				E22B600B647280E7121B46F3 /* ConnectionEventTests.swift */,
+				1F086DA681E7D40FBC2E4483 /* MockConfig.swift */,
 			);
-			path = Connection;
+			path = config;
 			sourceTree = "<group>";
 		};
 		627A1D685A96273F3C39D201 /* Settings */ = {
@@ -380,15 +390,6 @@
 			);
 			sourceTree = "<group>";
 		};
-		669D183762BEF5F7898B5882 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				DA4A95D42F0D14D71981DB70 /* ProtocolServiceIntegrationTests.swift */,
-				A3D8FEB02FAB72641FDD3757 /* ServiceIntegrationBaseTests.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
 		69C6DDBE9B630FB515D26899 /* Chats */ = {
 			isa = PBXGroup;
 			children = (
@@ -400,40 +401,12 @@
 			path = Chats;
 			sourceTree = "<group>";
 		};
-		6BCFE73F53AA9DBDA3400D05 /* Performance */ = {
-			isa = PBXGroup;
-			children = (
-				1173EA033F774D202071CEE5 /* EnhancedPerformanceTests.swift */,
-				DDC33E9B5F6C70E449C6C957 /* LoadTests.swift */,
-			);
-			path = Performance;
-			sourceTree = "<group>";
-		};
-		6FF4717CFF80F11832D558C7 /* ErrorHandling */ = {
-			isa = PBXGroup;
-			children = (
-				632A123D04F75EBB0AC04F84 /* ErrorScenarioTests.swift */,
-				3CE9196B19AB0A806D6517AA /* RecoveryTests.swift */,
-			);
-			path = ErrorHandling;
-			sourceTree = "<group>";
-		};
 		84393BA1C5ED3FA991C9D1B2 /* PocketMeshTests */ = {
 			isa = PBXGroup;
 			children = (
-				8C5891882AD3B71BDE7947EB /* ChannelTests.swift */,
-				FE5C5159C25C57A75A42AB9C /* HardwareTestChecklist.md */,
-				2C0E24D50042376C5179A718 /* MessageRetryTests.swift */,
-				CE04040827AA0203482F7960 /* MultiDeviceTestProcedures.md */,
-				37B8028BA6312831A4F93BDC /* PerformanceTests.swift */,
-				DB3E50FF707FBB6367B5F31D /* ProtocolTests.swift */,
-				60107D872D29B99E0263A6EE /* Connection */,
-				6FF4717CFF80F11832D558C7 /* ErrorHandling */,
-				901DB0CC40ACF9E6C669C1EF /* Factories */,
-				2CB6A61F35F797BAC08DC0C3 /* Mocks */,
-				6BCFE73F53AA9DBDA3400D05 /* Performance */,
+				E8C8E43043D3877BC76EF7AB /* Infrastructure */,
 				93B4EEB0D2065B97B03B8A03 /* Protocol */,
-				669D183762BEF5F7898B5882 /* Services */,
+				57589D8C58B10D2309A8E375 /* TestHelpers */,
 			);
 			path = PocketMeshTests;
 			sourceTree = "<group>";
@@ -448,6 +421,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		8CBEFFD0DEF79A942F3C2A66 /* models */ = {
+			isa = PBXGroup;
+			children = (
+				17BAF6B10B8F06857CB79A17 /* RadioPacket.swift */,
+			);
+			path = models;
+			sourceTree = "<group>";
+		};
 		8D8BDE997D80A71EF89C26E6 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
@@ -460,25 +441,23 @@
 			path = Onboarding;
 			sourceTree = "<group>";
 		};
-		901DB0CC40ACF9E6C669C1EF /* Factories */ = {
+		916ECCD08E00D47CBE6A6A97 /* services */ = {
 			isa = PBXGroup;
 			children = (
-				6F9F817E34538045EC5610B9 /* ProtocolTestDataFactory.swift */,
+				93663C0DB789601EE1549AE1 /* ControlService.swift */,
+				6E6807CA1C76FB0ED65DE5CB /* RadioService.swift */,
 			);
-			path = Factories;
+			path = services;
 			sourceTree = "<group>";
 		};
 		93B4EEB0D2065B97B03B8A03 /* Protocol */ = {
 			isa = PBXGroup;
 			children = (
-				F36CBEE3BC4905D4D85FACC2 /* BinaryProtocolTests.swift */,
-				68D1E5AADB57C9F1CE4EBE60 /* ContactTypeTests.swift */,
-				F2FAFF2C41BC4E82372D5785 /* MessageParsingEnhancementTests.swift */,
-				C2071AFEEEB6704D7FF726C8 /* MessageRetrievalTests.swift */,
-				FC69D69D5935C38500EC8715 /* PathDiscoveryTests.swift */,
-				EE2B747A5E4EEFB5FCF0919B /* ProtocolEnhancementTests.swift */,
-				91ED4A76CB29D85EAA0E0A5D /* ProtocolFrameComplianceTests.swift */,
-				53E7F93DB748FA1CB4364759 /* TelemetryTests.swift */,
+				762B8CE008428054F4F28187 /* ConfigurationProtocolTests.swift */,
+				52EDD945646E83AC4D7E8960 /* ContactProtocolTests.swift */,
+				6696FB373363881F1C55EF47 /* MessagingProtocolTests.swift */,
+				6F23C4BE35473EEADDE3E04E /* ProtocolComplianceTests.swift */,
+				E28DB83E80B81BFCF97FAD60 /* PushNotificationTests.swift */,
 			);
 			path = Protocol;
 			sourceTree = "<group>";
@@ -495,6 +474,25 @@
 			path = Contacts;
 			sourceTree = "<group>";
 		};
+		BE87FA676E40C4185D894FCD /* MockBLERadio */ = {
+			isa = PBXGroup;
+			children = (
+				FA5AC3FB487D5D8FFB9200FB /* MockBLEManager.swift */,
+				2C0CB1016B7FB83BD82867C6 /* MockBLEPeripheral.swift */,
+				C6DC5133A1EFE353F7589CDD /* MockBLERadio.swift */,
+				9E7B90CFD976B655AF5290A1 /* MockBLERadioFactory.swift */,
+				E9863F3C39157B4AF27AEF8B /* README-ContactStorage.md */,
+				F3AA28FCA56CD4343F73CFC0 /* characteristics */,
+				621005E07AC12A936B50B1AF /* config */,
+				407EEA5DE9508DC507E1DB5D /* extensions */,
+				8CBEFFD0DEF79A942F3C2A66 /* models */,
+				005A00A63B829E7BF27FF299 /* protocols */,
+				916ECCD08E00D47CBE6A6A97 /* services */,
+				F660877206FB19F012D97302 /* state */,
+			);
+			path = MockBLERadio;
+			sourceTree = "<group>";
+		};
 		CCBD67100761C2F6AEBE2D19 /* PocketMeshKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -505,8 +503,17 @@
 				D56CD13820A592AEAC704A56 /* Protocol */,
 				DA6A0F28F6944C246B3E4F66 /* Security */,
 				1C239E83B8A6A39062228C61 /* Services */,
+				D128F2E6BC2977428C83D37E /* Testing */,
 			);
 			path = PocketMeshKit;
+			sourceTree = "<group>";
+		};
+		D128F2E6BC2977428C83D37E /* Testing */ = {
+			isa = PBXGroup;
+			children = (
+				BE87FA676E40C4185D894FCD /* MockBLERadio */,
+			);
+			path = Testing;
 			sourceTree = "<group>";
 		};
 		D56CD13820A592AEAC704A56 /* Protocol */ = {
@@ -514,6 +521,7 @@
 			children = (
 				0A3666BE63C7A8728158C827 /* MeshCoreProtocol.swift */,
 				64E7B5E376544956FD5D6B44 /* MeshCoreProtocol+Authentication.swift */,
+				CCA2281DC90AF547900B597E /* MeshCoreProtocol+Binary.swift */,
 				3DAB3EA9B50A1BE66A80F894 /* MeshCoreProtocol+Channels.swift */,
 				28A04442F40F0D59B8B7AAA4 /* MeshCoreProtocol+Configuration.swift */,
 				70401CCEB3544E3415E8271B /* MeshCoreProtocol+Contacts.swift */,
@@ -525,6 +533,7 @@
 				445B18EBB0727BC4A851553E /* MeshCoreProtocol+TelemetryMMA.swift */,
 				C51D6BFBCEC4229630F8B1B7 /* MeshCoreProtocol+TelemetryStatus.swift */,
 				EDD6AB7C7D704DFDB56FE2DC /* ProtocolFrame.swift */,
+				6EFC68036DA46DAF3A9DAFB0 /* PushNotificationModels.swift */,
 			);
 			path = Protocol;
 			sourceTree = "<group>";
@@ -535,6 +544,14 @@
 				8DECD82F677EDD360A3DF244 /* PasswordManager.swift */,
 			);
 			path = Security;
+			sourceTree = "<group>";
+		};
+		E8C8E43043D3877BC76EF7AB /* Infrastructure */ = {
+			isa = PBXGroup;
+			children = (
+				E213C89519A32AC890301786 /* InfrastructureTests.swift */,
+			);
+			path = Infrastructure;
 			sourceTree = "<group>";
 		};
 		E8FB57A8551FD3E69BF0FAD9 /* Views */ = {
@@ -570,9 +587,28 @@
 				5FD9C35244A7297C10AAEBF3 /* Channel.swift */,
 				6C643DA1AD15A734272472EE /* Contact.swift */,
 				B4BC20AD728EB3A9DD89F86E /* Device.swift */,
+				2FF17FCB11FE28333E97B374 /* DeviceInfo.swift */,
 				9D00CDA3DB460ED521289CFC /* Message.swift */,
+				A009E402591036AB76A6DF15 /* SelfInfo.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		F3AA28FCA56CD4343F73CFC0 /* characteristics */ = {
+			isa = PBXGroup;
+			children = (
+				8703A78C512967E4651E4D23 /* RXCharacteristic.swift */,
+				4E7A13D843209364585BB975 /* TXCharacteristic.swift */,
+			);
+			path = characteristics;
+			sourceTree = "<group>";
+		};
+		F660877206FB19F012D97302 /* state */ = {
+			isa = PBXGroup;
+			children = (
+				3234A8AD646A4472EA24CAEC /* BLERadioState.swift */,
+			);
+			path = state;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -583,6 +619,7 @@
 			buildConfigurationList = D63C91B90D9453582A65353E /* Build configuration list for PBXNativeTarget "PocketMeshKit" */;
 			buildPhases = (
 				133CB2BDAE215B75DAAE01E1 /* Sources */,
+				35DE107D0DD87A98AA2067C4 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -620,13 +657,13 @@
 			buildConfigurationList = 3D17085DC0F6698EEC4E4657 /* Build configuration list for PBXNativeTarget "PocketMeshTests" */;
 			buildPhases = (
 				E75864AE4473F3BD415842E9 /* Sources */,
-				09C6A85BFE4C4A1C49325039 /* Resources */,
 				51221A733DF93344FF8DA930 /* Frameworks */,
 				7D04477D43199AD6EAA00DFE /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				39CBEB19213EF6EBB99DDF00 /* PBXTargetDependency */,
 				20B5F64FEC5F0DC5DE87FBF0 /* PBXTargetDependency */,
 			);
 			name = PocketMeshTests;
@@ -646,10 +683,6 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					E0B5AABF144609984709AF9F = {
-						DevelopmentTeam = L6E4TF9NZ9;
-						ProvisioningStyle = Automatic;
-					};
-					E3CBC3B4D7D03D4012E98BBD = {
 						DevelopmentTeam = L6E4TF9NZ9;
 						ProvisioningStyle = Automatic;
 					};
@@ -677,12 +710,11 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		09C6A85BFE4C4A1C49325039 /* Resources */ = {
+		35DE107D0DD87A98AA2067C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0EED240350D72D9A280402B8 /* HardwareTestChecklist.md in Resources */,
-				B0F85F1E1CEDBA4151867666 /* MultiDeviceTestProcedures.md in Resources */,
+				136E7E6A3EFA0114DF372617 /* README-ContactStorage.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -695,16 +727,22 @@
 			files = (
 				6A1F9993529AB5A2217FAFA9 /* ACLEntry.swift in Sources */,
 				F6D1450EFD8C75428F630E71 /* AdvertisementService.swift in Sources */,
+				4E0FDC71CB3C3F57A1BC19AA /* BLEExtensions.swift in Sources */,
 				0C1A55F84C6DD7C805E42D7E /* BLEManager.swift in Sources */,
+				C35A1B6B64BB2061FEA2EAA4 /* BLEProtocols.swift in Sources */,
+				B8BFBB43DFB74770D63C7D10 /* BLERadioState.swift in Sources */,
 				CB2B542E08B1C5703924FC00 /* Channel.swift in Sources */,
 				45DD5683BA0C088BA5351036 /* ChannelService.swift in Sources */,
 				BA0500A707AA4D1D6C17FA36 /* Contact.swift in Sources */,
 				5E6DD2912E56A9AB756905C3 /* ContactRepository.swift in Sources */,
+				5C2FE328B0F926FF194EE98F /* ControlService.swift in Sources */,
 				57DE561AF2EEE7B168A6F7CC /* Data+Extensions.swift in Sources */,
 				A17F541BCAD396D16E13723B /* Date+Formatting.swift in Sources */,
 				8C58D03BABF51C6468D6131C /* Device.swift in Sources */,
+				8236899F5116FE269DB7809D /* DeviceInfo.swift in Sources */,
 				0BAA2D777227C375D7AF640F /* DeviceRepository.swift in Sources */,
 				0DFDEB97D19FFD590E2E46FA /* MeshCoreProtocol+Authentication.swift in Sources */,
+				7B08D697BEF1A6ABAB3A040E /* MeshCoreProtocol+Binary.swift in Sources */,
 				431040862CE0BC900CD384C4 /* MeshCoreProtocol+Channels.swift in Sources */,
 				2BD2E8F77C404A9360EFA0C5 /* MeshCoreProtocol+Configuration.swift in Sources */,
 				2548F6A91ECAC4785DB3F1E4 /* MeshCoreProtocol+Contacts.swift in Sources */,
@@ -719,11 +757,22 @@
 				56C6A39C21F2D6E6093ED2E8 /* Message.swift in Sources */,
 				92041E155082F000A2CF01AC /* MessagePollingService.swift in Sources */,
 				73E1844F85A15DD9B31CC82B /* MessageService.swift in Sources */,
+				4AEC2E979B0216349C7AB464 /* MockBLEManager.swift in Sources */,
+				0C988C5C8BE8D511420D1306 /* MockBLEPeripheral.swift in Sources */,
+				320EF508BC86BF047891423D /* MockBLERadio.swift in Sources */,
+				FD7A92AC5FFD7B5B7528E191 /* MockBLERadioFactory.swift in Sources */,
+				5D17A293EC2CC81B09892CF6 /* MockConfig.swift in Sources */,
 				A71DCC5B96C8E5577565CAC3 /* Notification+Extensions.swift in Sources */,
 				082689EC4B90E48FDFDD7921 /* NotificationService.swift in Sources */,
 				3B3A45C47D09D258EB2AD128 /* PasswordManager.swift in Sources */,
 				07951AD761B99CC4062807B8 /* PersistenceController.swift in Sources */,
 				98B604E40404CCB7859F7266 /* ProtocolFrame.swift in Sources */,
+				0C49B2C40ABD4A3C3594838A /* PushNotificationModels.swift in Sources */,
+				AB02E3100FA1987FA8D3460E /* RXCharacteristic.swift in Sources */,
+				E8E90E638CDE6DAE2AF2A361 /* RadioPacket.swift in Sources */,
+				7F5EDB014A7DE18D9E8E7282 /* RadioService.swift in Sources */,
+				D02F64004B338D53557CFD1F /* SelfInfo.swift in Sources */,
+				384F07CF5A4DE3667C2378AD /* TXCharacteristic.swift in Sources */,
 				ACFF6147E0FD5E5A57C68860 /* TelemetryService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -767,33 +816,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EA84B61149004C7F07E1D0E2 /* BLEConnectionTests.swift in Sources */,
-				70DE8759822FE6E214C5F6AD /* BinaryProtocolTests.swift in Sources */,
-				CDB712100271156318739646 /* ChannelTests.swift in Sources */,
-				DE7D76D8741AFED3433D8506 /* ConnectionEventTests.swift in Sources */,
-				CBD0A5CA38FB80D26D96D3A5 /* ContactTypeTests.swift in Sources */,
-				8B131F37CF272A88E0C4C4B0 /* EnhancedMockBLEManager.swift in Sources */,
-				B7C1503B5D8AFC88FA330778 /* EnhancedPerformanceTests.swift in Sources */,
-				A7789E2262DD34E7502C3F9B /* ErrorScenarioTests.swift in Sources */,
-				058950592B39F6968DE95309 /* LoadTests.swift in Sources */,
-				A64D1DCAE5A94B6E6C8BF83A /* MeshCoreProtocolValidator.swift in Sources */,
-				F4539F3ABFFB721CE1E0E019 /* MessageParsingEnhancementTests.swift in Sources */,
-				BEBA445C0131E3EDF3450FFD /* MessageRetrievalTests.swift in Sources */,
-				C511D6AC25ED69E5D0C85ADF /* MessageRetryTests.swift in Sources */,
-				B9102A354ABB8FC69AE35485 /* MockBLEManager.swift in Sources */,
-				1EA8F5A34C5264C96F9A74F5 /* MockConnectionManager.swift in Sources */,
-				6625DDCA58A6A13D27346DFD /* PathDiscoveryTests.swift in Sources */,
-				2F5B0D78DEB6CD66B9AD7489 /* PerformanceTests.swift in Sources */,
-				D3C1502B932389AA46C25FA6 /* ProtocolEnhancementTests.swift in Sources */,
-				04700D00F3423E2526A0E2A0 /* ProtocolFrameComplianceTests.swift in Sources */,
-				F7C7129A6747A67E68458F07 /* ProtocolServiceIntegrationTests.swift in Sources */,
-				AAA88457EDDEA131C35624E6 /* ProtocolTestDataFactory.swift in Sources */,
-				048CF61935BD1ECF9446AD1E /* ProtocolTests.swift in Sources */,
-				EE2E22FD88A85383550DF0C7 /* ProtocolValidationTests.swift in Sources */,
-				6BCE2CA72785A33F100D5CB9 /* RecoveryTests.swift in Sources */,
-				29F7FDE83AC61F4FE173D79F /* ResponseSimulationEngine.swift in Sources */,
-				D59B9064D95EF2604688E4A4 /* ServiceIntegrationBaseTests.swift in Sources */,
-				F9C426A711CD82BCD6D612BB /* TelemetryTests.swift in Sources */,
+				D959014BCC4E9C173295609E /* AsyncTestHelpers.swift in Sources */,
+				61F1AD466D1B6D4D072B4780 /* BaseTestCase.swift in Sources */,
+				97420CFC9CCDCFD590310567 /* ConfigurationProtocolTests.swift in Sources */,
+				0CFA19B76C115460415214B5 /* ContactProtocolTests.swift in Sources */,
+				476CC605CCA2BB97496A64C9 /* InfrastructureTests.swift in Sources */,
+				BBDC6DF52899ED70C6242950 /* MessagingProtocolTests.swift in Sources */,
+				BEE6A03074154468DA975187 /* ProtocolComplianceTests.swift in Sources */,
+				3B909387DFD4F0C5E1DC056D /* ProtocolTestHelpers.swift in Sources */,
+				C93082E1E0D71460A485D251 /* PushNotificationTests.swift in Sources */,
+				3B60296ADD5B76CDEE11A5B9 /* TestDataFactory.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -809,6 +841,11 @@
 			isa = PBXTargetDependency;
 			target = BB58F0E7399C4FB41E74DC74 /* PocketMeshKit */;
 			targetProxy = BB8895EDC13DEA8851F4917C /* PBXContainerItemProxy */;
+		};
+		39CBEB19213EF6EBB99DDF00 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E0B5AABF144609984709AF9F /* PocketMesh */;
+			targetProxy = 647A2469DC62FF730B1C7B0A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -925,9 +962,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = L6E4TF9NZ9;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -936,6 +972,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/PocketMesh";
 			};
 			name = Release;
 		};
@@ -943,9 +980,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = L6E4TF9NZ9;
 				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -954,6 +990,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.tests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/PocketMesh";
 			};
 			name = Debug;
 		};
