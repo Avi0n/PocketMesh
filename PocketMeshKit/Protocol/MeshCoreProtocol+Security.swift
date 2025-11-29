@@ -16,7 +16,7 @@ public extension MeshCoreProtocol {
     ///
     /// - Returns: 64-byte private key data or throws if disabled/not supported
     func exportPrivateKey() async throws -> Data {
-        let frame = ProtocolFrame(code: CommandCode.exportPrivateKey.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.exportPrivateKey.rawValue, payload: Data())
 
         // Send command and wait for one of the expected responses
         let encodedFrame = frame.encode()
@@ -129,7 +129,7 @@ public struct PrivateKeyExportResult: Sendable {
         }
 
         // Read metadata length
-        let metadataLength = Int(data.withUnsafeBytes { $0.load(as: UInt32.self).littleEndian })
+        let metadataLength = Int(data.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self).littleEndian })
         guard data.count >= 4 + metadataLength + 64 else {
             throw SecurityError.privateKeyExportFailed("Invalid export file format")
         }

@@ -1,33 +1,46 @@
 import Foundation
 
 /// Represents a MeshCore protocol frame (command or response)
-public struct ProtocolFrame: Sendable {
-    let code: UInt8
-    let payload: Data
+public struct ProtocolFrame: Sendable, Codable {
+    public let code: UInt8
+    public let payload: Data
 
-    public init(code: UInt8, payload: Data = Data()) {
+    public init(code: UInt8, payload: Data) {
         self.code = code
         self.payload = payload
     }
 
-    /// Encode frame for BLE transmission
-    func encode() -> Data {
-        var data = Data()
-        data.append(code)
-        data.append(payload)
-        return data
+    // Validate frame meets MeshCore specification
+    public var isValidMeshCoreFrame: Bool {
+        // MeshCore frames have specific constraints
+        isValidCommandCode() && payload.count <= 250 // Max payload size per spec (MAX_FRAME_SIZE - 1 for command byte)
     }
 
-    /// Decode frame from BLE characteristic value
-    static func decode(_ data: Data) throws -> ProtocolFrame {
+    private func isValidCommandCode() -> Bool {
+        // Verify command code is valid MeshCore code
+        if let _ = CommandCode(rawValue: code) { return true }
+        if let _ = ResponseCode(rawValue: code) { return true }
+        if let _ = PushCode(rawValue: code) { return true }
+        return false
+    }
+
+    public func encode() -> Data {
+        var frame = Data()
+        frame.append(code)
+        frame.append(payload)
+        return frame
+    }
+
+    public static func decode(_ data: Data) throws -> ProtocolFrame {
         guard !data.isEmpty else {
-            throw ProtocolError.invalidFrame
+            throw ProtocolError.invalidFrame("Empty frame")
         }
 
-        let code = data[0]
-        let payload = data.count > 1 ? data.subdata(in: 1 ..< data.count) : Data()
-
-        return ProtocolFrame(code: code, payload: payload)
+        let frame = ProtocolFrame(code: data[0], payload: data.subdata(in: 1 ..< data.count))
+        guard frame.isValidMeshCoreFrame else {
+            throw ProtocolError.invalidFrame("Invalid MeshCore frame")
+        }
+        return frame
     }
 }
 
@@ -172,19 +185,27 @@ public enum PushCode: UInt8, Sendable {
 }
 
 public enum ProtocolError: LocalizedError, Equatable {
-    case invalidFrame
+    case invalidFrame(String)
     case unsupportedCommand
     case invalidPayload
     case deviceError(code: UInt8)
     case timeout
+    case encodingError
+    case invalidParameter
+    case invalidConfiguration(String)
+    case frameTooLarge
 
     public var errorDescription: String? {
         switch self {
-        case .invalidFrame: "Invalid protocol frame"
+        case let .invalidFrame(message): "Invalid protocol frame: \(message)"
         case .unsupportedCommand: "Unsupported command"
         case .invalidPayload: "Invalid payload data"
         case let .deviceError(code): "Device error code: \(code)"
         case .timeout: "Operation timed out"
+        case .encodingError: "Failed to encode data"
+        case .invalidParameter: "Invalid parameter value"
+        case let .invalidConfiguration(message): "Invalid configuration: \(message)"
+        case .frameTooLarge: "Frame exceeds MeshCore size limit"
         }
     }
 }

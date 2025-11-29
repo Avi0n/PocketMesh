@@ -23,10 +23,10 @@ public extension MeshCoreProtocol {
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.sent.rawValue)
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
-        logger.info("Path discovery request sent, suggested timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Path discovery request sent, suggested timeout: \(sendResult.estimatedTimeout)ms")
 
         // Wait for path discovery response with timeout
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let pathResponse = try await waitForResponse(
             code: ResponseCode.pathDiscoveryResponse.rawValue,
             timeout: actualTimeout,
@@ -54,12 +54,12 @@ public extension MeshCoreProtocol {
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
         // Extract tag from ACK code (little-endian uint32)
-        let tag = sendResult.ackCode
+        let tag = sendResult.expectedAck
 
-        logger.info("Trace request sent, tag: \(String(format: "%08X", tag)), timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Trace request sent, tag: \(String(format: "%08X", tag)), timeout: \(sendResult.estimatedTimeout)ms")
 
         // Wait for TRACE_DATA push notification (0x89)
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let traceResponse = try await waitForPushCode(
             code: PushCode.traceData.rawValue,
             matchingTag: tag,
@@ -69,12 +69,18 @@ public extension MeshCoreProtocol {
         return try TraceResult.decode(from: traceResponse)
     }
 
-    /// CMD_RESET_PATH (13): Reset contact path to flood mode
-    func resetPath(for contact: ContactData) async throws {
-        let frame = ProtocolFrame(code: CommandCode.resetPath.rawValue, payload: contact.publicKey)
-        _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
+    /// CMD_RESET_PATH (13): Clear cached routing path for a contact
+    /// Called when switching to flood mode to clear stale direct path
+    func resetPath(publicKey: Data) async throws {
+        guard publicKey.count == 32 else {
+            throw ProtocolError.invalidParameter
+        }
 
-        logger.info("Reset path for contact: \(contact.name)")
+        var payload = Data()
+        payload.append(publicKey)
+
+        let frame = ProtocolFrame(code: CommandCode.resetPath.rawValue, payload: payload)
+        _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
     }
 
     /// CMD_CHANGE_CONTACT_PATH (29): Manually set contact routing path
@@ -109,7 +115,7 @@ public extension MeshCoreProtocol {
         try await withCheckedThrowingContinuation { continuation in
             // Register this specific response expectation
             let key = "tag:\(String(format: "%08X", matchingTag))"
-            MeshCoreProtocol.registerPendingPush(code: code, key: key, continuation: continuation)
+            registerPendingPush(code: code, key: key, continuation: continuation)
 
             // Set up timeout
             Task {

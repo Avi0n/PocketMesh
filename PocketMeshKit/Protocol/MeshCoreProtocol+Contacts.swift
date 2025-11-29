@@ -24,20 +24,27 @@ public extension MeshCoreProtocol {
     }
 
     /// CMD_SET_ADVERT_LATLON (14): Set location
-    func setAdvertisementLocation(latitude: Double, longitude: Double, altitude: Int16?) async throws {
+    /// - Parameters:
+    ///   - latitude: Latitude in degrees
+    ///   - longitude: Longitude in degrees
+    ///   - altitude: Altitude in meters (mandatory, use 0 if not set)
+    func setAdvertisementLocation(latitude: Double, longitude: Double, altitude: Int32 = 0) async throws {
+        // Protocol requires mandatory 4-byte altitude field (use 0 if not set)
         var payload = Data()
 
         // Latitude and longitude multiplied by 1E6, as int32 little-endian
         let latInt = Int32(latitude * 1_000_000)
         let lonInt = Int32(longitude * 1_000_000)
 
-        withUnsafeBytes(of: latInt.littleEndian) { payload.append(contentsOf: $0) }
-        withUnsafeBytes(of: lonInt.littleEndian) { payload.append(contentsOf: $0) }
+        var latLE = latInt.littleEndian
+        withUnsafeBytes(of: &latLE) { payload.append(contentsOf: $0) }
 
-        // Altitude (optional, int16)
-        if let altitude {
-            withUnsafeBytes(of: altitude.littleEndian) { payload.append(contentsOf: $0) }
-        }
+        var lonLE = lonInt.littleEndian
+        withUnsafeBytes(of: &lonLE) { payload.append(contentsOf: $0) }
+
+        // Altitude is MANDATORY (4 bytes, little-endian, signed)
+        var altLE = altitude.littleEndian
+        withUnsafeBytes(of: &altLE) { payload.append(contentsOf: $0) }
 
         let frame = ProtocolFrame(code: CommandCode.setAdvertLatLon.rawValue, payload: payload)
         _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
@@ -45,6 +52,7 @@ public extension MeshCoreProtocol {
 
     /// CMD_GET_CONTACTS (4): Sync contacts with optional timestamp watermark
     func getContacts(since: Date?) async throws -> [ContactData] {
+        logger.info("🧪 getContacts ENTRY: called, since: \(since?.description ?? "nil")")
         var payload = Data()
 
         if let since {
@@ -53,40 +61,52 @@ public extension MeshCoreProtocol {
         }
 
         let frame = ProtocolFrame(code: CommandCode.getContacts.rawValue, payload: payload)
+        logger.debug("🔄 getContacts: Sending CMD_GET_CONTACTS frame, payload size: \(payload.count)")
 
         // Contact sync is multi-frame: CONTACTS_START → CONTACT (multiple) → END_OF_CONTACTS
         var contacts: [ContactData] = []
 
-        // Send command and wait for CONTACTS_START
-        try await send(frame: frame.encode())
+        // Send command using the proper channel and wait for first response
+        logger.debug("🔄 getContacts: Calling sendCommand for CONTACTS_START")
+        _ = try await sendCommand(frame, expectingResponse: ResponseCode.contactsStart.rawValue)
+        logger.debug("✅ getContacts: sendCommand completed successfully")
+        logger.debug("Contact sync started, received CONTACTS_START")
 
-        // Wait for CONTACTS_START response
-        let startResponse = try await waitForResponse(code: ResponseCode.contactsStart.rawValue, timeout: 5.0)
-
-        logger.debug("Contact sync started")
-
-        // Read CONTACT frames until END_OF_CONTACTS
+        // Now read CONTACT frames until END_OF_CONTACTS
         var syncComplete = false
-        while !syncComplete {
-            // Wait for next frame (either CONTACT or END_OF_CONTACTS)
-            let response = try await waitForMultiFrameResponse(
-                codes: [ResponseCode.contact.rawValue, ResponseCode.endOfContacts.rawValue],
-                timeout: 5.0,
-            )
+        let maxContacts = 100 // Prevent infinite loop
+        var contactCount = 0
 
-            switch response.code {
-            case ResponseCode.contact.rawValue:
-                let contact = try ContactData.decode(from: response.payload)
-                contacts.append(contact)
-                logger.debug("Received contact: \(contact.name)")
+        while !syncComplete, contactCount < maxContacts {
+            // Use the sendCommand pattern for multi-frame responses by registering for multiple codes
+            do {
+                let response = try await waitForMultiFrameResponse(
+                    codes: [ResponseCode.contact.rawValue, ResponseCode.endOfContacts.rawValue],
+                    timeout: 5.0,
+                )
 
-            case ResponseCode.endOfContacts.rawValue:
-                syncComplete = true
-                logger.info("Contact sync complete: \(contacts.count) contacts")
+                switch response.code {
+                case ResponseCode.contact.rawValue:
+                    let contact = try ContactData.decode(from: response.payload)
+                    contacts.append(contact)
+                    logger.debug("Received contact: \(contact.name)")
+                    contactCount += 1
 
-            default:
-                throw ProtocolError.unsupportedCommand
+                case ResponseCode.endOfContacts.rawValue:
+                    syncComplete = true
+                    logger.info("Contact sync complete: \(contacts.count) contacts")
+
+                default:
+                    logger.warning("Unexpected response code: \(response.code)")
+                }
+            } catch {
+                logger.error("Error waiting for contact response: \(error)")
+                throw error
             }
+        }
+
+        if contactCount >= maxContacts {
+            logger.warning("Reached maximum contact count without END_OF_CONTACTS")
         }
 
         return contacts
@@ -167,11 +187,10 @@ public struct ContactData: Sendable {
         // Type (1 byte)
         let typeRaw = data[offset]
         let type: ContactType = switch typeRaw {
-        case 1: .companion // Changed from .chat
+        case 1: .chat // Type 1 per MeshCore specification
         case 2: .repeater
         case 3: .room
-        case 4: .sensor // NEW
-        default: .none
+        default: .none // Invalid types default to .none
         }
         offset += 1
 
@@ -235,10 +254,9 @@ public struct ContactData: Sendable {
         // Type (1 byte)
         let typeValue: UInt8 = switch type {
         case .none: 0
-        case .companion: 1 // Changed from .chat
+        case .chat: 1 // Type 1 per MeshCore specification
         case .repeater: 2
         case .room: 3
-        case .sensor: 4 // NEW
         }
         data.append(typeValue)
 
@@ -256,11 +274,17 @@ public struct ContactData: Sendable {
         }
         data.append(pathData)
 
-        // Name (32 chars, null-terminated)
+        // Name (32 chars, null-terminated UTF-8)
         var nameData = Data(count: 32)
         if let nameBytes = name.data(using: .utf8) {
-            let copyLength = min(nameBytes.count, 31) // Leave room for null terminator
+            // Copy up to 31 bytes, leaving room for null terminator
+            let copyLength = min(nameBytes.count, 31)
             nameData.replaceSubrange(0 ..< copyLength, with: nameBytes.prefix(copyLength))
+            // Ensure null terminator at end (32nd byte is already 0 from initialization)
+            // If string was shorter than 31 bytes, add explicit null after string
+            if nameBytes.count < 31 {
+                nameData[nameBytes.count] = 0
+            }
         }
         data.append(nameData)
 

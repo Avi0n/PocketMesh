@@ -22,10 +22,10 @@ public extension MeshCoreProtocol {
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.sent.rawValue)
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
-        logger.info("Telemetry request sent to \(contact.name), timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Telemetry request sent to \(contact.name), timeout: \(sendResult.estimatedTimeout)ms")
 
         // Wait for TELEMETRY_RESPONSE push (0x8B)
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let telemetryPush = try await waitForPushCode(
             code: PushCode.telemetryResponse.rawValue,
             matchingPublicKey: contact.publicKey.prefix(6),
@@ -52,10 +52,10 @@ public extension MeshCoreProtocol {
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.sent.rawValue)
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
-        logger.info("Status request sent to \(contact.name), timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Status request sent to \(contact.name), timeout: \(sendResult.estimatedTimeout)ms")
 
         // Wait for STATUS_RESPONSE push (0x87)
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let statusPush = try await waitForPushCode(
             code: PushCode.statusResponse.rawValue,
             matchingPublicKey: contact.publicKey.prefix(6),
@@ -85,11 +85,11 @@ public extension MeshCoreProtocol {
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.sent.rawValue)
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
-        logger.info("Neighbours request sent to \(contact.name), timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Neighbours request sent to \(contact.name), timeout: \(sendResult.estimatedTimeout)ms")
 
         // Collect multiple BINARY_RESPONSE pushes until timeout
         var neighbours: [NeighbourEntry] = []
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let deadline = Date().addingTimeInterval(actualTimeout)
 
         while Date() < deadline {
@@ -150,12 +150,12 @@ public extension MeshCoreProtocol {
         logger.info(
             """
             MMA request sent to \(contact.name), range: \(fromSeconds)s-\(toSeconds)s, \
-            timeout: \(sendResult.timeoutSeconds)s
+            timeout: \(sendResult.estimatedTimeout)ms
             """,
         )
 
         // Wait for BINARY_RESPONSE push (0x8C)
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let mmaPush = try await waitForPushCode(
             code: PushCode.binaryResponse.rawValue,
             matchingPublicKey: contact.publicKey.prefix(6),
@@ -172,7 +172,7 @@ public extension MeshCoreProtocol {
         try await withCheckedThrowingContinuation { continuation in
             // Register this specific response expectation
             let key = "pubkey:\(matchingPublicKey.hexString)"
-            MeshCoreProtocol.registerPendingPush(code: code, key: key, continuation: continuation)
+            registerPendingPush(code: code, key: key, continuation: continuation)
 
             // Set up timeout with safety flag
             Task {
@@ -200,10 +200,10 @@ public extension MeshCoreProtocol {
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.sent.rawValue)
         let sendResult = try MessageSendResult.decode(from: response.payload)
 
-        logger.info("Keep-alive sent to \(contact.name), timeout: \(sendResult.timeoutSeconds)s")
+        logger.info("Keep-alive sent to \(contact.name), timeout: \(sendResult.estimatedTimeout)ms")
 
         // Wait for BINARY_RESPONSE push (0x8C) with keep-alive data
-        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.timeoutSeconds)
+        let actualTimeout = timeout > 0 ? timeout : Double(sendResult.estimatedTimeout) / 1000.0
         let keepAlivePush = try await waitForPushCode(
             code: PushCode.binaryResponse.rawValue,
             matchingPublicKey: contact.publicKey.prefix(6),

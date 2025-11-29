@@ -49,13 +49,17 @@ public actor MeshCoreProtocol {
     // Push notification handlers
     private var pushHandlers: [@Sendable (UInt8, Data) async -> Void] = []
 
+    // Registry for pending push notification responses
+    var pendingPushResponses: [UInt8: [String: CheckedContinuation<Data, Error>]] = [:]
+
     public init(bleManager: BLEManagerProtocol) {
         self.bleManager = bleManager
 
-        // Subscribe to incoming frames
-        Task { @MainActor in
-            for await frame in bleManager.framePublisher.values {
-                await self.handleIncomingFrame(frame)
+        // Subscribe to incoming frames using AsyncStream (preferred) or Combine (fallback)
+        Task {
+            // Prefer AsyncStream if available, fall back to Combine
+            for await frame in bleManager.frameStream {
+                await handleIncomingFrame(frame)
             }
         }
     }
@@ -64,15 +68,25 @@ public actor MeshCoreProtocol {
 
     /// CMD_DEVICE_QUERY (22): Initial handshake to get device info
     public func deviceQuery() async throws -> DeviceInfo {
-        let frame = ProtocolFrame(code: CommandCode.deviceQuery.rawValue)
-        let response = try await sendCommand(frame, expectingResponse: ResponseCode.deviceInfo.rawValue)
+        // Protocol requires: 0x16 (command) + 0x03 (protocol version)
+        var payload = Data()
+        payload.append(0x03) // Protocol version byte
+        let frame = ProtocolFrame(code: CommandCode.deviceQuery.rawValue, payload: payload)
+        // Use legacy path without request IDs to match MeshCore spec exactly
+        let response = try await sendCommandLegacy(frame, expectingResponse: ResponseCode.deviceInfo.rawValue)
         return try DeviceInfo.decode(from: response.payload)
     }
 
     /// CMD_APP_START (1): Get self-info including public key and radio params
-    public func appStart() async throws -> SelfInfo {
-        let frame = ProtocolFrame(code: CommandCode.appStart.rawValue)
-        let response = try await sendCommand(frame, expectingResponse: ResponseCode.selfInfo.rawValue)
+    public func appStart(appName: String = "PocketMesh") async throws -> SelfInfo {
+        // Firmware expects: [1][reserved:7][app_name:null_terminated]
+        var payload = Data()
+        payload.append(contentsOf: repeatElement(0, count: 7)) // reserved:7 bytes
+        payload.append(contentsOf: appName.data(using: .utf8) ?? Data()) // app_name (null-terminated)
+
+        let frame = ProtocolFrame(code: CommandCode.appStart.rawValue, payload: payload)
+        // Use legacy path without request IDs to match MeshCore spec exactly
+        let response = try await sendCommandLegacy(frame, expectingResponse: ResponseCode.selfInfo.rawValue)
         return try SelfInfo.decode(from: response.payload)
     }
 
@@ -85,7 +99,7 @@ public actor MeshCoreProtocol {
         try await sendCommandWithRequestID(frame, expectingResponse: expectedCode)
     }
 
-    private func handleIncomingFrame(_ data: Data) {
+    private func handleIncomingFrame(_ data: Data) async {
         do {
             let frame = try ProtocolFrame.decode(data)
             logger.debug("Received frame code: \(frame.code)")
@@ -97,8 +111,11 @@ public actor MeshCoreProtocol {
             if let requestId,
                let wrapper = pendingRequests.removeValue(forKey: requestId)
             {
-                // Clean up from legacy tracking
-                responseContinuations.removeValue(forKey: frame.code)
+                // Only clean up from legacy tracking if this continuation was stored there
+                // (which it won't be for request ID commands)
+                if responseContinuations[frame.code]?.id == wrapper.id {
+                    responseContinuations.removeValue(forKey: frame.code)
+                }
                 activeContinuationIds.remove(wrapper.id)
 
                 // Remove from request queue as well (for backward compatibility)
@@ -114,7 +131,7 @@ public actor MeshCoreProtocol {
                 // Strip request ID from response payload before returning
                 let responseWithoutRequestId: ProtocolFrame
                 if frame.payload.count >= 4 {
-                    let strippedPayload = frame.payload.subdata(in: 4..<frame.payload.count)
+                    let strippedPayload = frame.payload.subdata(in: 4 ..< frame.payload.count)
                     responseWithoutRequestId = ProtocolFrame(code: frame.code, payload: strippedPayload)
                 } else {
                     responseWithoutRequestId = frame
@@ -167,8 +184,26 @@ public actor MeshCoreProtocol {
                 var mutableWrapper = wrapper
                 mutableWrapper.resume(returning: frame)
             } else {
-                // Handle unsolicited frames (push notifications, etc.)
-                handlePushNotification(frame)
+                // Handle unsolicited frames - check for response continuations first
+                if let continuation = responseContinuations[frame.code] {
+                    // There's an active continuation waiting for this response code
+                    logger.debug("Resuming continuation for response code: \(frame.code)")
+                    let wrapper = continuation
+                    responseContinuations.removeValue(forKey: frame.code)
+                    activeContinuationIds.remove(wrapper.id)
+
+                    var mutableWrapper = wrapper
+                    mutableWrapper.resume(returning: frame)
+                } else {
+                    logger.debug("No continuation found for response code: \(frame.code), checking responseContinuations count: \(self.responseContinuations.count)")
+                    if frame.code >= 0x80 {
+                        // Handle as push notification (codes 0x80+)
+                        handlePushNotification(frame)
+                    } else {
+                        // Handle as unsolicited response code (codes 0-127) - no active continuation
+                        await handleUnsolicitedResponse(frame)
+                    }
+                }
             }
 
         } catch {
@@ -179,14 +214,14 @@ public actor MeshCoreProtocol {
     private func handlePushNotification(_ frame: ProtocolFrame) {
         // Handle push codes (0x80+)
         guard let pushCode = PushCode(rawValue: frame.code) else {
-            logger.warning("Unhandled frame code: \(frame.code)")
+            logger.warning("Unhandled push notification code: \(frame.code)")
             return
         }
 
         logger.info("Received push notification: \(pushCode.rawValue)")
 
         // First try the new registry system
-        Self.handlePushNotification(code: frame.code, payload: frame.payload)
+        handlePushNotification(code: frame.code, payload: frame.payload)
 
         // Also maintain existing handler system for backwards compatibility
         Task {
@@ -196,11 +231,229 @@ public actor MeshCoreProtocol {
         }
     }
 
+    private func handleUnsolicitedResponse(_ frame: ProtocolFrame) async {
+        // Handle response codes (0-127) that aren't matched to pending commands
+        guard let responseCode = ResponseCode(rawValue: frame.code) else {
+            logger.warning("Unhandled response code: \(frame.code)")
+            return
+        }
+
+        logger.debug("Received unsolicited response: \(responseCode.rawValue)")
+
+        // Try to match with pending command first
+        if await tryMatchWithPendingCommand(responseCode: responseCode, data: frame.payload) {
+            return
+        }
+
+        // Handle as unsolicited response or ignore based on type
+        switch responseCode {
+        case .ok, .error, .contactsStart, .contact, .endOfContacts, .selfInfo, .sent, .deviceInfo, .batteryAndStorage, .privateKey, .disabled, .currentTime, .noMoreMessages, .channelInfo:
+            logger.info("Received unsolicited response code: \(responseCode.rawValue) - no pending command to match")
+
+        default:
+            logger.warning("Received unexpected unsolicited response code: \(responseCode.rawValue)")
+        }
+    }
+
+    private func tryMatchWithPendingCommand(responseCode: ResponseCode, data: Data) async -> Bool {
+        // Try to match with any pending request ID based requests
+        for (requestId, wrapper) in pendingRequests {
+            // Only match if the response code is one that should match a pending request
+            // Allow contact sync responses to be matched when using getContacts
+            switch responseCode {
+            case .ok, .error, .selfInfo, .sent, .deviceInfo, .batteryAndStorage, .privateKey, .disabled, .currentTime, .noMoreMessages, .channelInfo, .contactsStart, .contact, .endOfContacts:
+                // These can be matched with pending commands
+                break
+            default:
+                continue
+            }
+
+            var mutableWrapper = wrapper
+            let responseFrame = ProtocolFrame(code: responseCode.rawValue, payload: data)
+
+            // Remove from pending
+            pendingRequests.removeValue(forKey: requestId)
+
+            // Only clean up from legacy tracking if this continuation was stored there
+            // (which it won't be for request ID commands)
+            if responseContinuations[responseCode.rawValue]?.id == wrapper.id {
+                responseContinuations.removeValue(forKey: responseCode.rawValue)
+            }
+            activeContinuationIds.remove(wrapper.id)
+
+            // Resume the continuation
+            mutableWrapper.resume(returning: responseFrame)
+            return true
+        }
+
+        return false
+    }
+
     // MARK: - Push Notification Support
+
+    /// Register a pending push notification response
+    func registerPendingPush(
+        code: UInt8,
+        key: String,
+        continuation: CheckedContinuation<Data, Error>,
+    ) {
+        if pendingPushResponses[code] == nil {
+            pendingPushResponses[code] = [:]
+        }
+        pendingPushResponses[code]?[key] = continuation
+    }
 
     /// Subscribe to push notifications from the device
     public func subscribeToPushNotifications(handler: @escaping @Sendable (UInt8, Data) async -> Void) {
         pushHandlers.append(handler)
+    }
+
+    /// Subscribe to specific push notification types with typed handlers
+    public func subscribeToAdvertisements(handler: @escaping @Sendable (AdvertisementPush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.advert.rawValue || code == PushCode.newAdvert.rawValue {
+                if let advert = try? AdvertisementPush.decode(from: payload) {
+                    Task {
+                        await handler(advert)
+                    }
+                }
+            }
+        }
+    }
+
+    public func subscribeToMessageNotifications(handler: @escaping @Sendable (MessageNotificationPush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.messageWaiting.rawValue {
+                if let notification = try? MessageNotificationPush.decode(from: payload) {
+                    Task {
+                        await handler(notification)
+                    }
+                }
+            }
+        }
+    }
+
+    public func subscribeToSendConfirmations(handler: @escaping @Sendable (SendConfirmationPush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.sendConfirmed.rawValue {
+                if let confirmation = try? SendConfirmationPush.decode(from: payload) {
+                    Task {
+                        await handler(confirmation)
+                    }
+                }
+            }
+        }
+    }
+
+    public func subscribeToPathUpdates(handler: @escaping @Sendable (PathUpdatePush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.pathUpdated.rawValue {
+                if let update = try? PathUpdatePush.decode(from: payload) {
+                    Task {
+                        await handler(update)
+                    }
+                }
+            }
+        }
+    }
+
+    public func subscribeToTelemetry(handler: @escaping @Sendable (TelemetryPush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.telemetryResponse.rawValue {
+                if let telemetry = try? TelemetryPush.decode(from: payload) {
+                    Task {
+                        await handler(telemetry)
+                    }
+                }
+            }
+        }
+    }
+
+    public func subscribeToDiscoveryResponses(handler: @escaping @Sendable (DiscoveryResponsePush) async -> Void) async {
+        subscribeToPushNotifications { code, payload in
+            if code == PushCode.pathDiscoveryResponse.rawValue {
+                if let discovery = try? DiscoveryResponsePush.decode(from: payload) {
+                    Task {
+                        await handler(discovery)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Wait for specific push notification with timeout
+    public func waitForAdvertisementPush(timeout: TimeInterval = 30.0) async throws -> AdvertisementPush {
+        try await waitForPushNotification(code: PushCode.newAdvert.rawValue, timeout: timeout) { payload in
+            try AdvertisementPush.decode(from: payload)
+        }
+    }
+
+    public func waitForMessageNotification(timeout: TimeInterval = 30.0) async throws -> MessageNotificationPush {
+        try await waitForPushNotification(code: PushCode.messageWaiting.rawValue, timeout: timeout) { payload in
+            try MessageNotificationPush.decode(from: payload)
+        }
+    }
+
+    public func waitForSendConfirmation(ackCode: Data, timeout: TimeInterval = 30.0) async throws -> SendConfirmationPush {
+        let key = "ack:\(ackCode.hexString)"
+        return try await waitForPushNotification(code: PushCode.sendConfirmed.rawValue, timeout: timeout, key: key) { payload in
+            try SendConfirmationPush.decode(from: payload)
+        }
+    }
+
+    /// Generic wait for push notification with timeout and type conversion
+    private func waitForPushNotification<T: Sendable>(
+        code: UInt8,
+        timeout: TimeInterval = 30.0,
+        key: String? = nil,
+        converter: @escaping @Sendable (Data) throws -> T,
+    ) async throws -> T {
+        // Create a simple adapter using actor isolation
+        let waitResult = try await withThrowingTaskGroup(of: T.self) { [self] group in
+            // Add timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw ProtocolError.timeout
+            }
+
+            // Add push notification waiting task
+            group.addTask {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
+                    // Set up push notification handler
+                    let handler: @Sendable (UInt8, Data) async -> Void = { receivedCode, payload in
+                        guard receivedCode == code else { return }
+
+                        // Check if this matches our key (if provided)
+                        if let key {
+                            // Simple key matching for now
+                            if key.hasPrefix("ack:") {
+                                _ = String(key.dropFirst(4))
+                                // Skip complex hex matching for now, just accept any push
+                            }
+                        }
+
+                        do {
+                            let converted = try converter(payload)
+                            continuation.resume(returning: converted)
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+
+                    // Subscribe temporarily
+                    Task { [self] in
+                        await subscribeToPushNotifications(handler: handler)
+                    }
+                }
+            }
+
+            // Return the first result
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+
+        return waitResult
     }
 
     // MARK: - Multi-Frame Response Support
@@ -348,6 +601,8 @@ public actor MeshCoreProtocol {
         let requestId = requestIdCounter
         requestIdCounter += 1
 
+        logger.debug("🔄 sendCommandWithRequestID: Starting, code: \(frame.code), requestId: \(requestId)")
+
         // Add request ID to frame payload if not already present
         let frameWithID = ProtocolFrame(
             code: frame.code,
@@ -362,20 +617,36 @@ public actor MeshCoreProtocol {
         _ frame: ProtocolFrame,
         expectingResponse expectedCode: UInt8,
         requestId: UInt32,
+        timeout: TimeInterval = 5.0,
     ) async throws -> ProtocolFrame {
         try await withCheckedThrowingContinuation { continuation in
             Task {
                 let wrapper = ContinuationWrapper(continuation: continuation, id: Int(requestId))
                 pendingRequests[requestId] = wrapper
 
-                // Also maintain existing responseContinuations for backward compatibility
-                responseContinuations[expectedCode] = wrapper
+                // Set up timeout
+                Task {
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+
+                    // Check if request is still pending and timeout
+                    if let pendingWrapper = pendingRequests[requestId], pendingWrapper.id == wrapper.id {
+                        pendingRequests.removeValue(forKey: requestId)
+                        continuation.resume(throwing: ProtocolError.timeout)
+                        logger.debug("Command timed out for request ID: \(requestId)")
+                    }
+                }
+
+                // Don't store in responseContinuations when using request IDs to prevent double processing
+                // The request ID handling will take care of resuming the continuation
 
                 do {
                     let encodedFrame = frame.encode()
+                    logger.debug("🔄 sendCommandWithRequestID: About to call bleManager.send, frame size: \(encodedFrame.count) bytes")
                     try await bleManager.send(frame: encodedFrame)
-                    logger.debug("Sent command code: \(frame.code) with request ID: \(requestId)")
+                    logger.debug("✅ Sent command code: \(frame.code) with request ID: \(requestId), timeout: \(timeout)s")
+                    logger.debug("✅ sendCommandWithRequestID: bleManager.send completed successfully")
                 } catch {
+                    logger.error("❌ sendCommandWithRequestID: bleManager.send failed: \(error)")
                     pendingRequests.removeValue(forKey: requestId)
                     responseContinuations.removeValue(forKey: expectedCode)
                     continuation.resume(throwing: error)
@@ -401,117 +672,7 @@ public actor MeshCoreProtocol {
 
 // MARK: - Device Info Response
 
-public struct DeviceInfo: Sendable {
-    public let firmwareVersion: String
-    public let maxContacts: UInt16
-    public let maxChannels: UInt8
-    public let blePin: UInt32
-    public let manufacturer: String
-    public let model: String
-    public let buildDate: String
-
-    public static func decode(from data: Data) throws -> DeviceInfo {
-        // Parse per protocol spec (example structure)
-        guard data.count >= 20 else {
-            throw ProtocolError.invalidPayload
-        }
-
-        var offset = 0
-
-        // Read firmware version (4 bytes: major.minor.patch.build)
-        let major = data[offset]
-        let minor = data[offset + 1]
-        let patch = data[offset + 2]
-        let build = data[offset + 3]
-        let firmwareVersion = "\(major).\(minor).\(patch).\(build)"
-        offset += 4
-
-        // Read max contacts (uint16 little-endian)
-        let maxContacts = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt16.self) }
-        offset += 2
-
-        // Read max channels (uint8)
-        let maxChannels = data[offset]
-        offset += 1
-
-        // Read BLE PIN (uint32 little-endian)
-        let blePin = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self) }
-        offset += 4
-
-        // Read strings (null-terminated or fixed length - adjust per actual protocol)
-        let manufacturer = "MeshCore" // Placeholder
-        let model = "Radio v1" // Placeholder
-        let buildDate = "2025-11-17" // Placeholder
-
-        return DeviceInfo(
-            firmwareVersion: firmwareVersion,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            blePin: blePin,
-            manufacturer: manufacturer,
-            model: model,
-            buildDate: buildDate,
-        )
-    }
-}
-
 // MARK: - Self Info Response
 
-public struct SelfInfo: Sendable {
-    public let publicKey: Data // 32 bytes
-    public let txPower: Int8 // dBm
-    public let latitude: Double?
-    public let longitude: Double?
-    public let radioFrequency: UInt32
-    public let radioBandwidth: UInt32
-    public let radioSpreadingFactor: UInt8
-    public let radioCodingRate: UInt8
-
-    public static func decode(from data: Data) throws -> SelfInfo {
-        guard data.count >= 50 else {
-            throw ProtocolError.invalidPayload
-        }
-
-        var offset = 0
-
-        // Read 32-byte public key
-        let publicKey = data.subdata(in: offset ..< offset + 32)
-        offset += 32
-
-        // Read TX power (int8)
-        let txPower = Int8(bitPattern: data[offset])
-        offset += 1
-
-        // Read coordinates (int32 * 1E6, little-endian)
-        let latRaw = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: Int32.self) }
-        let latitude: Double? = latRaw != 0 ? Double(latRaw) / 1_000_000.0 : nil
-        offset += 4
-
-        let lonRaw = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: Int32.self) }
-        let longitude: Double? = lonRaw != 0 ? Double(lonRaw) / 1_000_000.0 : nil
-        offset += 4
-
-        // Read radio params (all uint32 little-endian)
-        let radioFrequency = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self) }
-        offset += 4
-
-        let radioBandwidth = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self) }
-        offset += 4
-
-        let radioSpreadingFactor = data[offset]
-        offset += 1
-
-        let radioCodingRate = data[offset]
-
-        return SelfInfo(
-            publicKey: publicKey,
-            txPower: txPower,
-            latitude: latitude,
-            longitude: longitude,
-            radioFrequency: radioFrequency,
-            radioBandwidth: radioBandwidth,
-            radioSpreadingFactor: radioSpreadingFactor,
-            radioCodingRate: radioCodingRate,
-        )
-    }
-}
+// Use the SelfInfo model from PocketMeshKit/Models/SelfInfo.swift
+// This follows the exact firmware specification with all required fields

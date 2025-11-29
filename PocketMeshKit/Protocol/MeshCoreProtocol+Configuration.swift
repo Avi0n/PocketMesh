@@ -23,6 +23,21 @@ public extension MeshCoreProtocol {
         _ = try await sendCommand(frame, expectingResponse: ResponseCode.ok.rawValue)
     }
 
+    /// Get current radio configuration by querying self info
+    func getRadioConfiguration() async throws -> RadioConfiguration {
+        let frame = ProtocolFrame(code: CommandCode.appStart.rawValue, payload: Data())
+        let response = try await sendCommand(frame, expectingResponse: ResponseCode.selfInfo.rawValue)
+        let selfInfo = try SelfInfo.decode(from: response.payload)
+
+        return RadioConfiguration(
+            frequency: selfInfo.frequency,
+            bandwidth: selfInfo.bandwidth,
+            spreadingFactor: selfInfo.spreadingFactor,
+            codingRate: selfInfo.codingRate,
+            txPower: selfInfo.txPower,
+        )
+    }
+
     /// CMD_SET_RADIO_TX_POWER (12): Set TX power in dBm
     func setRadioTxPower(_ power: Int8) async throws {
         var payload = Data()
@@ -34,7 +49,7 @@ public extension MeshCoreProtocol {
 
     /// CMD_GET_BATT_AND_STORAGE (20): Get battery and storage stats
     func getBatteryAndStorage() async throws -> BatteryAndStorage {
-        let frame = ProtocolFrame(code: CommandCode.getBatteryAndStorage.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.getBatteryAndStorage.rawValue, payload: Data())
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.batteryAndStorage.rawValue)
         return try BatteryAndStorage.decode(from: response.payload)
     }
@@ -43,7 +58,7 @@ public extension MeshCoreProtocol {
 
     /// CMD_GET_MULTI_ACKS (24): Get current multi-ACK mode status
     func getMultiAcks() async throws -> Bool {
-        let frame = ProtocolFrame(code: CommandCode.getMultiAcks.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.getMultiAcks.rawValue, payload: Data())
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.multiAcksStatus.rawValue)
 
         guard response.payload.count >= 1 else {
@@ -96,7 +111,7 @@ public extension MeshCoreProtocol {
 
     /// CMD_GET_CUSTOM_VARS (40): Retrieve all custom variables from device
     func getCustomVariables() async throws -> CustomVariables {
-        let frame = ProtocolFrame(code: CommandCode.getCustomVars.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.getCustomVars.rawValue, payload: Data())
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.customVars.rawValue)
 
         return try CustomVariables.decode(from: response.payload)
@@ -177,6 +192,38 @@ public struct BatteryAndStorage: Sendable {
     public var storagePercentUsed: Double {
         guard storageTotalKB > 0 else { return 0 }
         return (Double(storageUsedKB) / Double(storageTotalKB)) * 100
+    }
+}
+
+/// Radio configuration container
+public struct RadioConfiguration: Sendable {
+    public let frequency: UInt32 // Radio frequency in Hz
+    public let bandwidth: UInt32 // Radio bandwidth in Hz
+    public let spreadingFactor: UInt8 // LoRa spreading factor
+    public let codingRate: UInt8 // LoRa coding rate
+    public let txPower: Int8 // TX power in dBm
+
+    public init(frequency: UInt32, bandwidth: UInt32, spreadingFactor: UInt8, codingRate: UInt8, txPower: Int8) {
+        self.frequency = frequency
+        self.bandwidth = bandwidth
+        self.spreadingFactor = spreadingFactor
+        self.codingRate = codingRate
+        self.txPower = txPower
+    }
+
+    /// Bandwidth as a human-readable string
+    public var bandwidthDescription: String {
+        switch bandwidth {
+        case 125_000: "125 kHz"
+        case 250_000: "250 kHz"
+        case 500_000: "500 kHz"
+        default: "\(bandwidth / 1000) kHz"
+        }
+    }
+
+    /// Frequency as a human-readable string in MHz
+    public var frequencyDescription: String {
+        String(format: "%.1f MHz", Double(frequency) / 1_000_000.0)
     }
 }
 

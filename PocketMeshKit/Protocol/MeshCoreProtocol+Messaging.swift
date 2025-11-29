@@ -1,5 +1,11 @@
 import Foundation
 
+/// Text message types per MeshCore firmware specification
+public enum TextMessageType: UInt8, Sendable {
+    case plain = 0 // TXT_TYPE_PLAIN
+    case cliData = 1 // TXT_TYPE_CLI_DATA
+}
+
 public extension MeshCoreProtocol {
     /// CMD_SEND_TXT_MSG (2): Send direct message to contact
     func sendTextMessage(
@@ -8,31 +14,35 @@ public extension MeshCoreProtocol {
         floodMode: Bool,
         scope: String? = nil,
         attempt: UInt8 = 0,
+        messageType: TextMessageType = .plain,
     ) async throws -> MessageSendResult {
-        // If scope specified, set it before sending
-        if let scope {
-            try await setFloodScope(scope)
+        // If flood mode requested, set flood scope first (before sending message)
+        if floodMode {
+            let floodScope = scope ?? "*" // Use provided scope or global "*"
+            try await setFloodScope(floodScope)
         }
 
+        // Firmware expects: [2][txt_type][attempt][timestamp:4][pub_key_prefix:6][text]
         var payload = Data()
 
-        // Attempt counter (1 byte) - matches Python implementation
+        // Text message type (1 byte)
+        payload.append(messageType.rawValue)
+
+        // Attempt counter (1 byte)
         payload.append(attempt)
 
         // Timestamp (4 bytes, little-endian) - Unix timestamp
         let timestamp = UInt32(Date().timeIntervalSince1970)
-        withUnsafeBytes(of: timestamp.littleEndian) { payload.append(contentsOf: $0) }
+        var timestampLE = timestamp.littleEndian
+        withUnsafeBytes(of: &timestampLE) { payload.append(contentsOf: $0) }
 
-        // Destination public key (32 bytes)
-        payload.append(recipientPublicKey)
+        // Public key prefix (first 6 bytes of 32-byte key) - firmware optimization
+        let pubKeyPrefix = Data(recipientPublicKey.prefix(6))
+        payload.append(pubKeyPrefix)
 
-        // Flood mode flag (1 byte)
-        payload.append(floodMode ? 1 : 0)
-
-        // Text type (TXT_TYPE_PLAIN = 0)
-        payload.append(0)
-
-        // Text content (UTF-8, max 160 bytes)
+        // Message text (UTF-8 encoded, max 160 bytes)
+        // Note: floodMode is NOT part of the message payload
+        // It is set via CMD_SET_FLOOD_SCOPE before sending
         guard let textData = text.data(using: .utf8), textData.count <= 160 else {
             throw ProtocolError.invalidPayload
         }
@@ -45,9 +55,8 @@ public extension MeshCoreProtocol {
     }
 
     /// CMD_SYNC_NEXT_MESSAGE (10): Poll for next queued incoming message
-    @preconcurrency
     func syncNextMessage() async throws -> IncomingMessage? {
-        let frame = ProtocolFrame(code: CommandCode.syncNextMessage.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.syncNextMessage.rawValue, payload: Data())
 
         // All valid response codes for message polling
         let validResponseCodes = [
@@ -91,7 +100,7 @@ public extension MeshCoreProtocol {
 
     /// CMD_GET_FLOOD_SCOPE (26): Get the current flood scope setting
     func getFloodScope() async throws -> String {
-        let frame = ProtocolFrame(code: CommandCode.getFloodScope.rawValue)
+        let frame = ProtocolFrame(code: CommandCode.getFloodScope.rawValue, payload: Data())
         let response = try await sendCommand(frame, expectingResponse: ResponseCode.floodScope.rawValue)
 
         guard let scope = String(data: response.payload, encoding: .utf8) else {
@@ -105,18 +114,20 @@ public extension MeshCoreProtocol {
 // MARK: - Supporting Types
 
 public struct MessageSendResult: Sendable {
-    let ackCode: UInt32
-    let timeoutSeconds: UInt16
+    let isFlood: Bool // is_flood: 0=direct, 1=flood
+    let expectedAck: UInt32 // expected_ack: message tag for confirmation
+    let estimatedTimeout: UInt32 // est_timeout: timeout in milliseconds
 
     static func decode(from data: Data) throws -> MessageSendResult {
-        guard data.count >= 6 else {
+        guard data.count >= 9 else { // 1 + 4 + 4 = 9 bytes
             throw ProtocolError.invalidPayload
         }
 
-        let ackCode = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
-        let timeoutSeconds = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: UInt16.self) }
+        let isFlood = data[0] != 0
+        let expectedAck = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 1, as: UInt32.self) }
+        let estimatedTimeout = data.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 5, as: UInt32.self) }
 
-        return MessageSendResult(ackCode: ackCode, timeoutSeconds: timeoutSeconds)
+        return MessageSendResult(isFlood: isFlood, expectedAck: expectedAck, estimatedTimeout: estimatedTimeout)
     }
 }
 
