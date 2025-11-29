@@ -120,14 +120,12 @@ struct ContactDetailSheet: View {
         switch contact.type {
         case .none:
             "None"
-        case .companion:
-            "Companion"
+        case .chat:
+            "Chat"
         case .repeater:
             "Repeater"
         case .room:
             "Room"
-        case .sensor:
-            "Sensor"
         }
     }
 }

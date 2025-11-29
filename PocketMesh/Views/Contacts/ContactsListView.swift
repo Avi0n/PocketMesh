@@ -145,14 +145,12 @@ struct ContactRow: View {
 
     private var contactIcon: String {
         switch contact.type {
-        case .companion:
+        case .chat:
             "person.circle.fill"
         case .repeater:
             "antenna.radiowaves.left.and.right"
         case .room:
             "person.3.fill"
-        case .sensor:
-            "sensor.fill"
         case .none:
             "questionmark.circle"
         }
@@ -160,14 +158,12 @@ struct ContactRow: View {
 
     private var contactColor: Color {
         switch contact.type {
-        case .companion:
+        case .chat:
             .blue
         case .repeater:
             .purple
         case .room:
             .green
-        case .sensor:
-            .orange
         case .none:
             .gray
         }

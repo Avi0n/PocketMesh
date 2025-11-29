@@ -7,17 +7,23 @@ struct AdvancedMessagingSettingsView: View {
     var body: some View {
         Form {
             Section("Message Retry Strategy") {
-                Stepper("Max Direct Attempts: \(messageService.maxDirectAttempts)",
-                        value: $messageService.maxDirectAttempts,
-                        in: 1 ... 5)
+                Stepper(
+                    "Max Attempts: \(messageService.maxAttempts)",
+                    value: $messageService.maxAttempts,
+                    in: 1 ... 5,
+                )
 
-                Stepper("Flood After: \(messageService.floodAfterAttempts)",
-                        value: $messageService.floodAfterAttempts,
-                        in: 1 ... messageService.maxDirectAttempts)
+                Stepper(
+                    "Flood After: \(messageService.floodAfter)",
+                    value: $messageService.floodAfter,
+                    in: 1 ... messageService.maxAttempts,
+                )
 
-                Stepper("Max Flood Attempts: \(messageService.maxFloodAttempts)",
-                        value: $messageService.maxFloodAttempts,
-                        in: 0 ... 3)
+                Stepper(
+                    "Max Flood Attempts: \(messageService.maxFloodAttempts)",
+                    value: $messageService.maxFloodAttempts,
+                    in: 0 ... 3,
+                )
             }
 
             Section("Reliability") {

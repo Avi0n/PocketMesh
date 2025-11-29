@@ -242,7 +242,7 @@ extension MapView {
             "antenna.radiowaves.left.and.right.circle.fill"
         case .room:
             "person.3.fill"
-        case .companion, .sensor, .none:
+        case .chat, .none:
             "person.circle.fill"
         }
     }
@@ -253,10 +253,8 @@ extension MapView {
             .orange
         case .room:
             .purple
-        case .companion, .none:
+        case .chat, .none:
             .blue
-        case .sensor:
-            .orange
         }
     }
 

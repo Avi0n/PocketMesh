@@ -69,8 +69,8 @@ struct ContactDetailView: View {
                 }
             }
 
-            // Authentication section for repeaters and sensors
-            if contact.type == .repeater || contact.type == .sensor {
+            // Authentication section for repeaters
+            if contact.type == .repeater {
                 Section("Authentication") {
                     if isLoggedIn {
                         Label("Authenticated", systemImage: "checkmark.circle.fill")

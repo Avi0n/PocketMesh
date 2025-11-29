@@ -51,7 +51,7 @@ struct MessageBubble: View {
             Image(systemName: "checkmark")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-        case .acknowledged:
+        case .delivered:
             Image(systemName: "checkmark.circle.fill")
                 .font(.caption2)
                 .foregroundStyle(.green)

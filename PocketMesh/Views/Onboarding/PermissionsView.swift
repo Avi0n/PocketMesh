@@ -138,6 +138,26 @@ final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralMan
     private var centralManager: CBCentralManager?
     @Published var hasPermission = false
 
+    #if DEBUG
+
+        // MARK: - Simulator Bypass Properties
+
+        private var allowButtonTapCount = 0
+        private var lastTapTime: Date?
+        private let tapTimeout: TimeInterval = 2.0 // Reset counter after 2 seconds
+        private let requiredTapCount = 3
+
+        // MARK: - Simulator Detection
+
+        private var isRunningInSimulator: Bool {
+            #if targetEnvironment(simulator)
+                return true
+            #else
+                return false
+            #endif
+        }
+    #endif
+
     override init() {
         super.init()
         // Start with permission = false
@@ -145,11 +165,63 @@ final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralMan
     }
 
     func requestPermission() {
-        // Create the central manager and start scanning to trigger iOS Bluetooth permission prompt
+        #if DEBUG
+            if isRunningInSimulator {
+                handleSimulatorPermissionRequest()
+            } else {
+                handleDevicePermissionRequest()
+            }
+        #else
+            handleDevicePermissionRequest()
+        #endif
+    }
+
+    #if DEBUG
+        private func handleSimulatorPermissionRequest() {
+            // In simulator, increment tap counter and check for bypass
+            incrementTapCounter()
+
+            // Still attempt to create CBCentralManager for consistency
+            // This will always fail with .unsupported state in simulator
+            if centralManager == nil {
+                centralManager = CBCentralManager(delegate: self, queue: .main)
+            }
+        }
+    #endif
+
+    private func handleDevicePermissionRequest() {
+        // Original device permission logic
         if centralManager == nil {
             centralManager = CBCentralManager(delegate: self, queue: .main)
         }
     }
+
+    #if DEBUG
+        private func incrementTapCounter() {
+            let now = Date()
+
+            // Reset counter if too much time has passed
+            if let lastTap = lastTapTime, now.timeIntervalSince(lastTap) > tapTimeout {
+                allowButtonTapCount = 0
+            }
+
+            allowButtonTapCount += 1
+            lastTapTime = now
+
+            // Check for bypass condition
+            if allowButtonTapCount >= requiredTapCount {
+                enableSimulatorBypass()
+            }
+        }
+
+        private func enableSimulatorBypass() {
+            hasPermission = true
+            allowButtonTapCount = 0
+
+            // Log bypass activation for debugging
+            print("🔧 Bluetooth permission bypass enabled for simulator testing")
+        }
+    #endif
 
     private func startScanToTriggerPermission() {
         // Start scanning for any BLE devices
@@ -168,6 +240,15 @@ final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralMan
             return
         }
 
+        #if DEBUG
+            if isRunningInSimulator {
+                // In simulator, only update if we haven't already enabled bypass
+                if hasPermission {
+                    return // Keep bypass state
+                }
+            }
+        #endif
+
         switch manager.state {
         case .poweredOn:
             // Bluetooth is powered on and ready
@@ -182,8 +263,15 @@ final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralMan
             // App is not authorized to use Bluetooth
             hasPermission = false
         case .unsupported:
-            // Device doesn't support Bluetooth
-            hasPermission = false
+            #if DEBUG
+                // In simulator, this is expected - don't change permission state
+                if !isRunningInSimulator {
+                    hasPermission = false
+                }
+            #else
+                // Device doesn't support Bluetooth
+                hasPermission = false
+            #endif
         case .unknown:
             // State not determined yet - wait
             hasPermission = false

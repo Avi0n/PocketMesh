@@ -17,10 +17,10 @@ struct RadioConfigView: View {
     init(device: Device) {
         self.device = device
 
-        _frequency = State(initialValue: Double(device.radioFrequency) / 1000.0 / 1000.0) // Hz to MHz
-        _bandwidth = State(initialValue: Double(device.radioBandwidth) / 1000.0 / 1000.0) // Hz to kHz
-        _spreadingFactor = State(initialValue: Int(device.radioSpreadingFactor))
-        _codingRate = State(initialValue: Int(device.radioCodingRate))
+        _frequency = State(initialValue: Double(device.frequency) / 1_000_000.0) // Hz to MHz
+        _bandwidth = State(initialValue: Double(device.bandwidth) / 1000.0) // Hz to kHz
+        _spreadingFactor = State(initialValue: Int(device.spreadingFactor))
+        _codingRate = State(initialValue: Int(device.codingRate))
         _txPower = State(initialValue: Int(device.txPower))
     }
 
@@ -119,10 +119,10 @@ struct RadioConfigView: View {
         let freqHz = UInt32(frequency * 1_000_000) // MHz to Hz
         let bwHz = UInt32(bandwidth * 1000) // kHz to Hz
 
-        return device.radioFrequency != freqHz ||
-            device.radioBandwidth != bwHz ||
-            Int(device.radioSpreadingFactor) != spreadingFactor ||
-            Int(device.radioCodingRate) != codingRate ||
+        return device.frequency != freqHz ||
+            device.bandwidth != bwHz ||
+            Int(device.spreadingFactor) != spreadingFactor ||
+            Int(device.codingRate) != codingRate ||
             Int(device.txPower) != txPower
     }
 
@@ -150,10 +150,10 @@ struct RadioConfigView: View {
 
                 // Update local model
                 await MainActor.run {
-                    device.radioFrequency = freqHz
-                    device.radioBandwidth = bwHz
-                    device.radioSpreadingFactor = UInt8(spreadingFactor)
-                    device.radioCodingRate = UInt8(codingRate)
+                    device.frequency = freqHz
+                    device.bandwidth = bwHz
+                    device.spreadingFactor = UInt8(spreadingFactor)
+                    device.codingRate = UInt8(codingRate)
                     device.txPower = Int8(txPower)
 
                     isSaving = false
