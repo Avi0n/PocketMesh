@@ -1,16 +1,6 @@
 import Foundation
 
 extension Data {
-    /// Append uint32 in little-endian format
-    mutating func appendUInt32LE(_ value: UInt32) {
-        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
-    }
-
-    /// Append int32 in little-endian format
-    mutating func appendInt32LE(_ value: Int32) {
-        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
-    }
-
     /// Append uint16 in little-endian format
     mutating func appendUInt16LE(_ value: UInt16) {
         Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }

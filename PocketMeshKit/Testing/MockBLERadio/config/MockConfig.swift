@@ -17,15 +17,21 @@ public struct MockRadioConfig: Sendable {
     /// Enable verbose logging
     public var verboseLogging: Bool = true
 
-    /// Custom device info
+    /// Custom device info (uses DeviceInfo.default if nil)
     public var deviceInfo: DeviceInfo?
 
-    /// Custom self info
+    /// Custom self info (uses SelfInfo.default if nil)
     public var selfInfo: SelfInfo?
 
-    public init() {}
-
-    public init(packetLossRate: Double = 0.0, maxRandomDelay: TimeInterval = 0.0, forcedMTU: Int? = nil, disconnectAfterFrames: Int? = nil, verboseLogging: Bool = true, deviceInfo: DeviceInfo? = nil, selfInfo: SelfInfo? = nil) {
+    public init(
+        packetLossRate: Double = 0.0,
+        maxRandomDelay: TimeInterval = 0.0,
+        forcedMTU: Int? = nil,
+        disconnectAfterFrames: Int? = nil,
+        verboseLogging: Bool = true,
+        deviceInfo: DeviceInfo? = nil,
+        selfInfo: SelfInfo? = nil,
+    ) {
         self.packetLossRate = packetLossRate
         self.maxRandomDelay = maxRandomDelay
         self.forcedMTU = forcedMTU

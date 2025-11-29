@@ -5,10 +5,36 @@ import OSLog
 private let logger = Logger(subsystem: "com.pocketmesh.mock", category: "Peripheral")
 
 /// Mock BLE peripheral implementing BLEPeripheralProtocol
-public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable {
-    public let identifier: UUID
-    public let name: String?
-    public private(set) var state: BLEConnectionState = .disconnected
+public actor MockBLEPeripheral: @preconcurrency BLEPeripheralProtocol {
+    public nonisolated let identifier: UUID
+    public nonisolated let name: String?
+
+    // State backing storage - synchronous access for protocol conformance
+    private let _stateBox: StateBox
+
+    // Nonisolated property for protocol conformance
+    public nonisolated var state: BLEConnectionState {
+        _stateBox.state
+    }
+
+    // Internal helper class for thread-safe state access
+    private final class StateBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var _state: BLEConnectionState = .disconnected
+
+        var state: BLEConnectionState {
+            get {
+                lock.lock()
+                defer { lock.unlock() }
+                return _state
+            }
+            set {
+                lock.lock()
+                defer { lock.unlock() }
+                _state = newValue
+            }
+        }
+    }
 
     private let radioService: RadioService
     private var services: [BLEServiceProtocol] = []
@@ -24,8 +50,9 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
     ) {
         self.identifier = identifier
         self.name = name
+        self._stateBox = StateBox()
         self.radioService = radioService
-        services = [radioService]
+        self.services = [radioService]
         self.config = config
 
         logger.info("Mock peripheral created: \(name ?? "unknown")")
@@ -53,7 +80,7 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
 
         // Only RX characteristic supports read
         if let rxChar = characteristic as? RXCharacteristic {
-            return rxChar.read() ?? Data()
+            return await rxChar.read() ?? Data()
         }
 
         throw RadioError.characteristicNotFound
@@ -87,7 +114,7 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
             frameCounter += 1
             if frameCounter >= disconnectAfter {
                 logger.warning("Simulated disconnect after \(self.frameCounter) frames")
-                state = .disconnected
+                _stateBox.state = .disconnected
                 throw RadioError.notConnected
             }
         }
@@ -109,13 +136,13 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
         }
 
         if let rxChar = characteristic as? RXCharacteristic {
-            rxChar.setNotifyValue(enabled)
+            await rxChar.setNotifyValue(enabled)
         } else {
             throw RadioError.characteristicNotFound
         }
     }
 
-    public func maximumWriteValueLength(for _: BLEWriteType) -> Int {
+    public nonisolated func maximumWriteValueLength(for _: BLEWriteType) -> Int {
         config.forcedMTU ?? RadioConstants.defaultMTU
     }
 
@@ -123,25 +150,33 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
 
     public func connect() {
         logger.info("Connecting peripheral")
-        state = .connecting
+        _stateBox.state = .connecting
 
         // Simulate async connection
         Task {
             try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-            state = .connected
+            await self.setStateConnected()
             logger.info("Peripheral connected")
         }
     }
 
+    private func setStateConnected() {
+        _stateBox.state = .connected
+    }
+
     public func disconnect() {
         logger.info("Disconnecting peripheral")
-        state = .disconnecting
+        _stateBox.state = .disconnecting
 
         Task {
             try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
-            state = .disconnected
+            await self.setStateDisconnected()
             logger.info("Peripheral disconnected")
         }
+    }
+
+    private func setStateDisconnected() {
+        _stateBox.state = .disconnected
     }
 
     public func setMTU(_ mtu: Int) {
@@ -153,6 +188,6 @@ public final class MockBLEPeripheral: BLEPeripheralProtocol, @unchecked Sendable
 
     public func simulateDisconnectWithError() {
         logger.warning("Simulating unexpected disconnect")
-        state = .disconnected
+        _stateBox.state = .disconnected
     }
 }

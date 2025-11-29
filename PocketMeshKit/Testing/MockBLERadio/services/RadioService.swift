@@ -11,12 +11,12 @@ public final class RadioService: BLEServiceProtocol, @unchecked Sendable {
     public init(
         uuid: UUID,
         txUUID: UUID,
-        rxUUID: UUID,
+        rxCharacteristic: RXCharacteristic,
         onTXWrite: @escaping @Sendable (Data) async -> Void,
     ) {
         self.uuid = uuid
-        txCharacteristic = TXCharacteristic(uuid: txUUID, onWrite: onTXWrite)
-        rxCharacteristic = RXCharacteristic(uuid: rxUUID)
-        characteristics = [txCharacteristic, rxCharacteristic]
+        self.txCharacteristic = TXCharacteristic(uuid: txUUID, onWrite: onTXWrite)
+        self.rxCharacteristic = rxCharacteristic
+        self.characteristics = [txCharacteristic, rxCharacteristic]
     }
 }

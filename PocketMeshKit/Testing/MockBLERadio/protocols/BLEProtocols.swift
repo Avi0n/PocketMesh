@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 
 /// Protocol defining BLE peripheral behavior (mimics CBPeripheral)
@@ -53,38 +52,4 @@ public struct BLECharacteristicProperties: OptionSet, Sendable {
     public static let writeWithoutResponse = BLECharacteristicProperties(rawValue: 1 << 2)
     public static let notify = BLECharacteristicProperties(rawValue: 1 << 3)
     public static let indicate = BLECharacteristicProperties(rawValue: 1 << 4)
-}
-
-// MARK: - Mock BLE Manager
-
-/// Mock BLE Manager for testing (conforms to BLEManagerProtocol)
-@MainActor
-public final class MockBLEManager: BLEManagerProtocol {
-    private let radio: MockBLERadio
-    private let frameSubject = PassthroughSubject<Data, Never>()
-    private var cancellables = Set<AnyCancellable>()
-
-    public var framePublisher: AnyPublisher<Data, Never> {
-        frameSubject.eraseToAnyPublisher()
-    }
-
-    public init(radio: MockBLERadio) {
-        self.radio = radio
-
-        // Forward RX notifications to frame publisher
-        radio.rxNotifications
-            .sink { [weak self] frame in
-                self?.frameSubject.send(frame)
-            }
-            .store(in: &cancellables)
-    }
-
-    public func send(frame: Data) async throws {
-        // Write to TX characteristic via peripheral
-        let peripheral = radio.peripheral
-        let service = radio.radioService
-        let txChar = service.txCharacteristic
-
-        try await peripheral.writeValue(frame, for: txChar, type: .withoutResponse)
-    }
 }
