@@ -10,14 +10,18 @@ public final class MessageService: ObservableObject {
     private let `protocol`: MeshCoreProtocol
     private let modelContext: ModelContext
 
-    /// Maximum attempts before switching to flood mode
-    public var maxDirectAttempts: Int = 3
+    // Python spec defaults: max_attempts=3, flood_after=2, max_flood_attempts=2
+    /// Total attempt limit (attempts 0, 1, 2)
+    public var maxAttempts: Int = 3
 
-    /// Switch to flood mode after N failed direct attempts (CLI: flood_after=2)
-    public var floodAfterAttempts: Int = 2
+    /// Switch to flood after this many attempts
+    public var floodAfter: Int = 2
 
-    /// Maximum flood mode attempts after direct attempts fail
-    public var maxFloodAttempts: Int = 1
+    /// Flood-specific limit
+    public var maxFloodAttempts: Int = 2
+
+    /// Timeout configuration (matching Python spec)
+    public var timeoutMultiplier: Double = 1.2 // 20% buffer over suggested timeout
 
     /// Enable multi-ACK duplicate detection
     public var multiAckEnabled: Bool = true
@@ -67,136 +71,108 @@ public final class MessageService: ObservableObject {
     private func sendMessageWithRetry(_ message: Message, contact: Contact, scope: String? = nil) async {
         let messageId = message.id
         sendingMessages.insert(messageId)
-        defer { self.sendingMessages.remove(messageId) }
+        defer { sendingMessages.remove(messageId) }
 
-        if await tryDirectRouting(message: message, contact: contact, scope: scope) {
-            return // Success - direct routing worked
-        }
+        var attempts = 0
+        var floodAttempts = 0
+        var isFloodMode = false
 
-        await tryFloodRouting(message: message, contact: contact, scope: scope)
-    }
-
-    private func tryDirectRouting(message: Message, contact: Contact, scope: String?) async -> Bool {
-        for attempt in 0 ..< maxDirectAttempts {
+        // Unified retry loop per Python spec:
+        // while attempts < max_attempts AND (not flood OR flood_attempts < max_flood_attempts)
+        while attempts < maxAttempts, !isFloodMode || floodAttempts < maxFloodAttempts {
             do {
+                // Switch to flood mode at floodAfter threshold
+                if attempts >= floodAfter, !isFloodMode {
+                    logger.info("[Messaging] Switching to flood mode after \(attempts) attempts")
+                    isFloodMode = true
+                    floodAttempts = 0
+
+                    // CRITICAL: Call resetPath() when switching to flood
+                    do {
+                        try await self.protocol.resetPath(publicKey: contact.publicKey)
+                    } catch {
+                        logger.warning("[Messaging] Failed to reset path: \(error.localizedDescription)")
+                        // Continue even if resetPath fails
+                    }
+                }
+
+                // Update message status
                 message.deliveryStatus = .sending
-                message.retryCount = attempt
+                message.retryCount = attempts
                 message.lastRetryDate = Date()
                 try modelContext.save()
 
-                let attemptInfo = "\(attempt + 1)/\(maxDirectAttempts)"
-                logger.info("Direct send attempt \(attemptInfo)")
+                logger.info("[Messaging] Attempt \(attempts + 1)/\(self.maxAttempts) (\(isFloodMode ? "flood" : "direct"))")
 
+                // Send message (flood mode controlled by previous setFloodScope call)
                 let result = try await self.protocol.sendTextMessage(
                     text: message.text,
                     recipientPublicKey: contact.publicKey,
-                    floodMode: false,
+                    floodMode: isFloodMode,
                     scope: scope,
+                    attempt: UInt8(attempts),
                 )
 
-                await handleDirectSendSuccess(message: message, result: result)
-                return true
-
-            } catch {
-                logger.error("Direct attempt \(attempt + 1) failed: \(error.localizedDescription)")
-
-                if attempt + 1 >= floodAfterAttempts {
-                    logger.info("Reached flood_after threshold (\(self.floodAfterAttempts)), switching to flood mode")
-                    break
-                }
-
-                if attempt < maxDirectAttempts - 1 {
-                    try? await Task.sleep(
-                        nanoseconds: UInt64(pow(2.0, Double(attempt))) * 1_000_000_000,
-                    )
-                }
-            }
-        }
-        return false
-    }
-
-    private func handleDirectSendSuccess(message: Message, result: MessageSendResult) async {
-        message.ackCode = result.ackCode
-        let timeoutInterval = TimeInterval(result.timeoutSeconds)
-        message.expectedAckTimeout = Date().addingTimeInterval(timeoutInterval)
-        message.deliveryStatus = .sent
-        message.routingMode = .direct
-        try? modelContext.save()
-
-        logger.info("Message sent (direct), ACK: \(String(format: "%08X", result.ackCode))")
-    }
-
-    private func tryFloodRouting(message: Message, contact: Contact, scope: String?) async {
-        logger.warning("Direct routing failed after \(message.retryCount) attempts, trying flood mode")
-
-        for floodAttempt in 0 ..< maxFloodAttempts {
-            do {
-                message.deliveryStatus = .sending
-                message.retryCount += 1
+                // Update message with delivery info
+                message.ackCode = result.expectedAck
+                let timeoutInterval = TimeInterval(result.estimatedTimeout) / 1000.0 * timeoutMultiplier
+                message.expectedAckTimeout = Date().addingTimeInterval(timeoutInterval)
+                message.deliveryStatus = .sent
+                message.routingMode = isFloodMode ? .meshBroadcast : .direct
+                message.retryCount = attempts + 1
                 try modelContext.save()
 
-                let attemptInfo = "\(floodAttempt + 1)/\(maxFloodAttempts)"
-                logger.info("Flood attempt \(attemptInfo)")
+                logger.info("[Messaging] Message sent (\(isFloodMode ? "flood" : "direct")), ACK: \(String(format: "%08X", result.expectedAck))")
 
-                let result = try await self.protocol.sendTextMessage(
-                    text: message.text,
-                    recipientPublicKey: contact.publicKey,
-                    floodMode: true,
-                    scope: scope,
-                )
-
-                await handleFloodSendSuccess(message: message, result: result)
+                // Success!
                 return
 
             } catch {
-                logger.error("Flood attempt \(floodAttempt + 1) failed: \(error.localizedDescription)")
+                attempts += 1
+                if isFloodMode {
+                    floodAttempts += 1
+                }
 
-                if floodAttempt < maxFloodAttempts - 1 {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                logger.warning("[Messaging] Attempt \(attempts) failed: \(error.localizedDescription)")
+
+                // Exponential backoff before retry
+                if attempts < maxAttempts {
+                    let delay = pow(2.0, Double(attempts - 1)) // 2^(attempt-1) seconds
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
                 }
             }
         }
 
-        await handleSendFailure(message: message)
-    }
-
-    private func handleFloodSendSuccess(message: Message, result: MessageSendResult) async {
-        message.ackCode = result.ackCode
-        message.deliveryStatus = .sent
-        message.routingMode = .flood
-        try? modelContext.save()
-
-        logger.info("Message sent (flood), ACK: \(String(format: "%08X", result.ackCode))")
-    }
-
-    private func handleSendFailure(message: Message) async {
-        logger.error("Message delivery failed after \(message.retryCount) total attempts")
+        // All attempts failed
         message.deliveryStatus = .failed
+        message.retryCount = attempts
         try? modelContext.save()
+
+        logger.error("[Messaging] Message delivery failed after \(attempts) total attempts")
     }
 
     /// Handle incoming ACK confirmation
     func handleAckConfirmation(ackCode: UInt32, roundTripMs: UInt32) {
         do {
-            // Find message with matching ACK code (sent or already acknowledged)
+            // Find message with matching ACK code (sent or already delivered)
             let sentStatus = DeliveryStatus.sent
-            let acknowledgedStatus = DeliveryStatus.acknowledged
+            let deliveredStatus = DeliveryStatus.delivered
             let descriptor = FetchDescriptor<Message>(
                 predicate: #Predicate { message in
                     message.ackCode == ackCode &&
-                        (message.deliveryStatus == sentStatus || message.deliveryStatus == acknowledgedStatus)
+                        (message.deliveryStatus == sentStatus || message.deliveryStatus == deliveredStatus)
                 },
             )
 
-            guard let message = try modelContext.fetch(descriptor).first else {
+            guard let message = try modelContext.fetch(descriptor).first as? Message else {
                 // In multi-ACK mode, duplicate ACKs are expected
                 logger.debug("Received ACK for code \(String(format: "%08X", ackCode)) - already processed or unknown")
                 return
             }
 
-            // Update status only if not already acknowledged
+            // Update status only if not already delivered
             if message.deliveryStatus == sentStatus {
-                message.deliveryStatus = .acknowledged
+                message.deliveryStatus = .delivered
                 try modelContext.save()
                 logger.info("Message acknowledged in \(roundTripMs)ms (ACK code: \(String(format: "%08X", ackCode)))")
             } else {

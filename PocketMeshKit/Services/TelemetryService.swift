@@ -89,12 +89,6 @@ public final class TelemetryService: ObservableObject {
         logger.info("Received MMA data from \(contact.name): \(mma.sampleCount) samples")
         return mma
     }
-
-    /// Get all sensor contacts
-    public func getSensorContacts() async throws -> [Contact] {
-        let contacts = try await contactRepository.getAllContacts()
-        return contacts.filter { $0.type == .sensor }
-    }
 }
 
 public enum TelemetryError: LocalizedError {
