@@ -1,4 +1,4 @@
-import Combine
+@preconcurrency import Combine
 @preconcurrency import CoreBluetooth
 import OSLog
 
@@ -8,7 +8,28 @@ private let logger = Logger(subsystem: "com.pocketmesh.app", category: "BLE")
 @preconcurrency
 public protocol BLEManagerProtocol: AnyObject, Sendable {
     @MainActor var framePublisher: AnyPublisher<Data, Never> { get }
+
+    // New async stream interface (optional during transition)
+    var frameStream: AsyncStream<Data> { get }
+
     @MainActor @preconcurrency func send(frame: Data) async throws
+}
+
+// Default implementation for backward compatibility
+public extension BLEManagerProtocol {
+    var frameStream: AsyncStream<Data> {
+        AsyncStream { continuation in
+            Task { @MainActor in
+                let cancellable = framePublisher
+                    .sink { data in
+                        continuation.yield(data)
+                    }
+                continuation.onTermination = { _ in
+                    cancellable.cancel()
+                }
+            }
+        }
+    }
 }
 
 /// Manages CoreBluetooth central operations for MeshCore device connections
@@ -108,21 +129,29 @@ public final class BLEManager: NSObject, ObservableObject {
             throw BLEError.notConnected
         }
 
-        // BLE write without response (per MeshCore protocol)
-        let mtu = peripheral.maximumWriteValueLength(for: .withoutResponse)
-        logger.debug("Writing frame of \(frame.count) bytes (MTU: \(mtu))")
+        do {
+            let mtu = peripheral.maximumWriteValueLength(for: .withoutResponse)
+            logger.debug("Writing MeshCore frame: code=0x\(frame.first.map { String(format: "%02x", $0) } ?? "00"), size=\(frame.count) bytes, MTU=\(mtu)")
 
-        // Chunk if necessary (though protocol frames should fit in single write)
-        if frame.count <= mtu {
-            peripheral.writeValue(frame, for: characteristic, type: .withoutResponse)
-        } else {
-            // Chunked write for large frames
-            for offset in stride(from: 0, to: frame.count, by: mtu) {
-                let end = min(offset + mtu, frame.count)
-                let chunk = frame.subdata(in: offset ..< end)
-                peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
-                try await Task.sleep(nanoseconds: 10_000_000) // 10ms between chunks
+            // Verify frame doesn't exceed MeshCore MAX_FRAME_SIZE
+            guard frame.count <= 251 else { // MeshCore spec limit (1 command byte + 250 payload)
+                throw BLEError.frameTooLarge
             }
+
+            if frame.count <= mtu {
+                peripheral.writeValue(frame, for: characteristic, type: .withoutResponse)
+            } else {
+                // Chunked write for large frames (rare in MeshCore)
+                for offset in stride(from: 0, to: frame.count, by: mtu) {
+                    let end = min(offset + mtu, frame.count)
+                    let chunk = frame.subdata(in: offset ..< end)
+                    peripheral.writeValue(chunk, for: characteristic, type: .withoutResponse)
+                    try await Task.sleep(nanoseconds: 10_000_000) // 10ms between chunks
+                }
+            }
+        } catch {
+            logger.error("BLE send failed: \(error.localizedDescription)")
+            throw BLEError.writeFailed(error)
         }
     }
 }
@@ -395,12 +424,16 @@ public enum BLEError: LocalizedError {
     case notConnected
     case characteristicNotFound
     case writeTimedOut
+    case frameTooLarge
+    case writeFailed(Error)
 
     public var errorDescription: String? {
         switch self {
-        case .notConnected: "Not connected to a device"
+        case .notConnected: "Not connected to MeshCore device"
         case .characteristicNotFound: "Required BLE characteristic not found"
         case .writeTimedOut: "Write operation timed out"
+        case .frameTooLarge: "Frame exceeds MeshCore size limit"
+        case let .writeFailed(error): "Write failed: \(error.localizedDescription)"
         }
     }
 }
