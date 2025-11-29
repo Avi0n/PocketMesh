@@ -50,22 +50,22 @@ public final class Message {
     }
 }
 
-public enum DeliveryStatus: String, Codable {
+public enum DeliveryStatus: String, CaseIterable, Codable, Sendable {
     case queued
     case sending
     case sent
-    case acknowledged
+    case delivered
     case failed
     case received
 }
 
-public enum MessageType: String, Codable {
+public enum MessageType: String, CaseIterable, Codable, Sendable {
     case direct
     case channel
 }
 
-public enum MessageRoutingMode: String, Codable {
-    case direct // Sent via direct path
-    case flood // Sent via flood routing
-    case unknown // For incoming messages
+public enum MessageRoutingMode: String, CaseIterable, Codable, Sendable {
+    case direct
+    case storeAndForward
+    case meshBroadcast
 }

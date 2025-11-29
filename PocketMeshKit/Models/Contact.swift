@@ -3,7 +3,7 @@ import SwiftData
 import SwiftUI
 
 @Model
-public final class Contact: Identifiable {
+public final class Contact: @unchecked Sendable, Identifiable {
     public var id: UUID
     @Attribute(.unique) public var publicKey: Data // 32 bytes
     public var name: String
@@ -32,7 +32,7 @@ public final class Contact: Identifiable {
     public init(
         publicKey: Data,
         name: String,
-        type: ContactType = .companion,
+        type: ContactType = .chat,
         device: Device? = nil,
         isPending: Bool = false,
     ) {
@@ -49,38 +49,35 @@ public final class Contact: Identifiable {
 
 public enum ContactType: String, Codable, Sendable {
     case none = "NONE"
-    case companion = "COMPANION" // Type 1 - companion/client (was "CHAT")
+    case chat = "CHAT" // Type 1 - chat/client (per MeshCore spec)
     case repeater = "REPEATER"
     case room = "ROOM" // Type 3
-    case sensor = "SENSOR" // Type 4 - NEW
+    // Note: SENSOR type does not exist in MeshCore specification
 
     public var displayName: String {
         switch self {
         case .none: "Unknown"
-        case .companion: "Companion"
+        case .chat: "Chat"
         case .repeater: "Repeater"
         case .room: "Room"
-        case .sensor: "Sensor"
         }
     }
 
     public var iconName: String {
         switch self {
         case .none: "questionmark.circle"
-        case .companion: "iphone"
+        case .chat: "iphone"
         case .repeater: "antenna.radiowaves.left.and.right"
         case .room: "building.2"
-        case .sensor: "sensor"
         }
     }
 
     public var color: Color {
         switch self {
         case .none: .gray
-        case .companion: .blue
+        case .chat: .blue
         case .repeater: .purple
         case .room: .cyan
-        case .sensor: .orange
         }
     }
 }

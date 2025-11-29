@@ -10,10 +10,10 @@ public final class Device {
     public var isActive: Bool // Currently connected device
 
     // Radio parameters
-    public var radioFrequency: UInt32 // Hz * 1000
-    public var radioBandwidth: UInt32 // kHz * 1000
-    public var radioSpreadingFactor: UInt8
-    public var radioCodingRate: UInt8
+    public var frequency: UInt32 // Hz
+    public var bandwidth: UInt32 // Hz
+    public var spreadingFactor: UInt8
+    public var codingRate: UInt8
     public var txPower: Int8 // dBm
 
     // Location (optional)
@@ -38,10 +38,10 @@ public final class Device {
         publicKey: Data,
         name: String,
         firmwareVersion: String,
-        radioFrequency: UInt32,
-        radioBandwidth: UInt32,
-        radioSpreadingFactor: UInt8,
-        radioCodingRate: UInt8,
+        frequency: UInt32,
+        bandwidth: UInt32,
+        spreadingFactor: UInt8,
+        codingRate: UInt8,
         txPower: Int8,
     ) {
         self.publicKey = publicKey
@@ -49,10 +49,10 @@ public final class Device {
         self.firmwareVersion = firmwareVersion
         lastConnected = Date()
         isActive = false
-        self.radioFrequency = radioFrequency
-        self.radioBandwidth = radioBandwidth
-        self.radioSpreadingFactor = radioSpreadingFactor
-        self.radioCodingRate = radioCodingRate
+        self.frequency = frequency
+        self.bandwidth = bandwidth
+        self.spreadingFactor = spreadingFactor
+        self.codingRate = codingRate
         self.txPower = txPower
     }
 }
