@@ -5,8 +5,8 @@ public struct SelfInfo: Codable, Sendable {
     public let txPower: Int8 // tx_power
     public let maxTxPower: Int8 // max_tx_power
     public let publicKey: Data // pub_key:32 bytes
-    public let latitude: Int32 // lat:4 (scaled by 1,000,000)
-    public let longitude: Int32 // lon:4 (scaled by 1,000,000)
+    public var latitude: Int32 // lat:4 (scaled by 1,000,000)
+    public var longitude: Int32 // lon:4 (scaled by 1,000,000)
     public let multiAcks: UInt8 // multi_acks
     public let advertLocationPolicy: UInt8 // advert_loc_policy
     public let telemetryModes: UInt8 // telemetry_modes (bitfield)
@@ -15,7 +15,7 @@ public struct SelfInfo: Codable, Sendable {
     public let bandwidth: UInt32 // bw:4 (in Hz)
     public let spreadingFactor: UInt8 // sf
     public let codingRate: UInt8 // cr
-    public let nodeName: String // node_name (null-terminated, variable length)
+    public var nodeName: String // node_name (null-terminated, variable length)
 
     // Computed properties for backward compatibility with existing code
     public var radioFrequency: UInt32 { frequency }
