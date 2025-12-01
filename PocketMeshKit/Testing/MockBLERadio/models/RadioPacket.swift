@@ -76,4 +76,6 @@ public enum RadioError: Error, Sendable {
     case notConnected
     case characteristicNotFound
     case mtuExceeded
+    case tableFull
+    case storageFull
 }
