@@ -1,0 +1,80 @@
+name: PocketMesh
+options:
+  bundleIdPrefix: com.pocketmesh
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.1"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  PocketMesh:
+    type: application
+    platform: iOS
+    sources:
+      - path: PocketMesh
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - target: PocketMeshKit
+    settings:
+      base:
+        INFOPLIST_FILE: PocketMesh/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        UIBackgroundModes:
+          - bluetooth-central
+        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging."
+        NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios."
+        NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
+
+  PocketMeshKit:
+    type: framework
+    platform: iOS
+    sources:
+      - path: PocketMeshKit
+    settings:
+      base:
+        INFOPLIST_FILE: PocketMeshKit/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.kit
+
+  PocketMeshTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PocketMeshTests
+    dependencies:
+      - target: PocketMesh
+      - target: PocketMeshKit
+    settings:
+      base:
+        INFOPLIST_FILE: PocketMeshTests/Info.plist
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  PocketMesh:
+    build:
+      targets:
+        PocketMesh: all
+        PocketMeshKit: all
+        PocketMeshTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PocketMeshTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
