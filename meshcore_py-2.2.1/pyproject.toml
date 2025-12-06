@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meshcore"
+version = "2.2.1"
+authors = [
+  { name="Florent de Lamotte", email="florent@frizoncorrea.fr" },
+  { name="Alex Wolden", email="awolden@gmail.com" },
+]
+description = "Base classes for communicating with meshcore companion radios"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dependencies = [ "bleak", "pyserial-asyncio", "pycayennelpp" ]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "black", "ruff"]
+
+[project.urls]
+Homepage = "https://github.com/fdlamotte/meshcore_py"
+Issues = "https://github.com/fdlamotte/meshcore_py/issues"

@@ -5,15 +5,11 @@
 .DS_Store
 
 # MeshCore examples
-meshcore_py-2.2.1
-MeshCore-firmware-examples
-meshcore-cli-example.xml
-meshcore-py-repo.xml
+#meshcore_py-2.2.1
+#MeshCore-firmware-example
 
 # AI
 .claude
-.claudiomiro
---glm
 thoughts/
 
 ## User settings
