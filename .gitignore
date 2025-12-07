@@ -15,6 +15,9 @@
 ## User settings
 xcuserdata/
 
+## Xcodegen
+PocketMesh.xcodeproj
+
 ## Obj-C/Swift specific
 *.hmap
 
