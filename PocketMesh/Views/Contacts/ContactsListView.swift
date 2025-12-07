@@ -27,7 +27,7 @@ struct ContactsListView: View {
             .navigationTitle("Contacts")
             .searchable(text: $searchText, prompt: "Search contacts")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .automatic) {
                     Menu {
                         Button {
                             showFavoritesOnly.toggle()
@@ -49,7 +49,7 @@ struct ContactsListView: View {
                         }
                         .disabled(viewModel.isSyncing)
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Label("Options", systemImage: "ellipsis.circle")
                     }
                 }
             }
