@@ -8,13 +8,10 @@ public final class AppState {
 
     // MARK: - Onboarding State
 
-    /// Whether the user has completed onboarding
-    var hasCompletedOnboarding: Bool {
-        get {
-            UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: "hasCompletedOnboarding")
+    /// Whether the user has completed onboarding (stored property for @Observable tracking)
+    var hasCompletedOnboarding: Bool = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+        didSet {
+            UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
         }
     }
 
