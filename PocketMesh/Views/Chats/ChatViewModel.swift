@@ -178,6 +178,35 @@ final class ChatViewModel {
         isSending = false
     }
 
+    /// Delete a single message
+    func deleteMessage(_ message: MessageDTO) async {
+        guard let dataStore else { return }
+
+        do {
+            try await dataStore.deleteMessage(id: message.id)
+
+            // Remove from local array
+            messages.removeAll { $0.id == message.id }
+
+            // Update last message date if needed
+            if let currentContact {
+                if let lastMessage = messages.last {
+                    try await dataStore.updateContactLastMessage(
+                        contactID: currentContact.id,
+                        date: lastMessage.date
+                    )
+                } else {
+                    try await dataStore.updateContactLastMessage(
+                        contactID: currentContact.id,
+                        date: Date.distantPast
+                    )
+                }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Delete all messages for a contact (conversation deletion)
     func deleteConversation(for contact: ContactDTO) async throws {
         guard let dataStore else { return }

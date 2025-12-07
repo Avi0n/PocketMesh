@@ -148,10 +148,29 @@ struct ChatView: View {
         ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
             MessageBubbleView(
                 message: message,
+                contactName: contact.displayName,
+                deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 showTimestamp: shouldShowTimestamp(at: index),
-                onRetry: message.hasFailed ? { retryMessage(message) } : nil
+                onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+                onReply: { replyText in
+                    setReplyText(replyText)
+                },
+                onDelete: {
+                    deleteMessage(message)
+                }
             )
             .id(message.id)
+        }
+    }
+
+    private func setReplyText(_ text: String) {
+        viewModel.composingText = text + "\n"
+        isInputFocused = true
+    }
+
+    private func deleteMessage(_ message: MessageDTO) {
+        Task {
+            await viewModel.deleteMessage(message)
         }
     }
 

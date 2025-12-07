@@ -4,13 +4,29 @@ import PocketMeshKit
 /// iMessage-style message bubble
 struct MessageBubbleView: View {
     let message: MessageDTO
+    let contactName: String
+    let deviceName: String
     let showTimestamp: Bool
     let onRetry: (() -> Void)?
+    let onReply: ((String) -> Void)?
+    let onDelete: (() -> Void)?
 
-    init(message: MessageDTO, showTimestamp: Bool = false, onRetry: (() -> Void)? = nil) {
+    init(
+        message: MessageDTO,
+        contactName: String,
+        deviceName: String = "Me",
+        showTimestamp: Bool = false,
+        onRetry: (() -> Void)? = nil,
+        onReply: ((String) -> Void)? = nil,
+        onDelete: (() -> Void)? = nil
+    ) {
         self.message = message
+        self.contactName = contactName
+        self.deviceName = deviceName
         self.showTimestamp = showTimestamp
         self.onRetry = onRetry
+        self.onReply = onReply
+        self.onDelete = onDelete
     }
 
     var body: some View {
@@ -36,7 +52,50 @@ struct MessageBubbleView: View {
                         .padding(.vertical, 8)
                         .background(bubbleColor)
                         .foregroundStyle(textColor)
-                        .clipShape(BubbleShape(isOutgoing: message.isOutgoing))
+                        .clipShape(.rect(cornerRadius: 16))
+                        .contextMenu {
+                            // Reply button
+                            Button {
+                                let replyText = buildReplyText()
+                                onReply?(replyText)
+                            } label: {
+                                Label("Reply", systemImage: "arrowshape.turn.up.left")
+                            }
+
+                            // Copy button
+                            Button {
+                                UIPasteboard.general.string = message.text
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
+
+                            // Details submenu
+                            Menu {
+                                // Time sent (always shown)
+                                Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
+
+                                // Time received (incoming only) - use createdAt as receive time
+                                if !message.isOutgoing {
+                                    Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                                }
+
+                                // SNR (incoming only)
+                                if !message.isOutgoing, let snrValue = message.snrValue {
+                                    Text("SNR: \(snrFormatted(snrValue))")
+                                }
+                            } label: {
+                                Label("Details", systemImage: "info.circle")
+                            }
+
+                            Divider()
+
+                            // Delete button
+                            Button(role: .destructive) {
+                                onDelete?()
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
 
                     // Status row for outgoing messages
                     if message.isOutgoing {
@@ -109,54 +168,35 @@ struct MessageBubbleView: View {
             return "Read"
         }
     }
-}
 
-// MARK: - Bubble Shape
+    // MARK: - Context Menu Helpers
 
-struct BubbleShape: Shape {
-    let isOutgoing: Bool
+    private func buildReplyText() -> String {
+        let senderName = message.isOutgoing ? deviceName : contactName
+        let words = message.text.split(separator: " ").prefix(3)
+        let preview = words.joined(separator: " ")
+        let suffix = message.text.split(separator: " ").count > 3 ? "..." : ""
+        return "> \(senderName): \(preview)\(suffix)"
+    }
 
-    func path(in rect: CGRect) -> Path {
-        let cornerRadius: CGFloat = 16
-        let tailSize: CGFloat = 6
-
-        var path = Path()
-
-        if isOutgoing {
-            // Outgoing bubble with tail on right
-            path.addRoundedRect(
-                in: CGRect(x: 0, y: 0, width: rect.width - tailSize, height: rect.height),
-                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
-            )
-
-            // Tail
-            path.move(to: CGPoint(x: rect.width - tailSize, y: rect.height - 20))
-            path.addCurve(
-                to: CGPoint(x: rect.width, y: rect.height),
-                control1: CGPoint(x: rect.width - tailSize, y: rect.height - 10),
-                control2: CGPoint(x: rect.width - tailSize + 2, y: rect.height)
-            )
-            path.addLine(to: CGPoint(x: rect.width - tailSize, y: rect.height))
-        } else {
-            // Incoming bubble with tail on left
-            path.addRoundedRect(
-                in: CGRect(x: tailSize, y: 0, width: rect.width - tailSize, height: rect.height),
-                cornerSize: CGSize(width: cornerRadius, height: cornerRadius)
-            )
-
-            // Tail
-            path.move(to: CGPoint(x: tailSize, y: rect.height - 20))
-            path.addCurve(
-                to: CGPoint(x: 0, y: rect.height),
-                control1: CGPoint(x: tailSize, y: rect.height - 10),
-                control2: CGPoint(x: tailSize - 2, y: rect.height)
-            )
-            path.addLine(to: CGPoint(x: tailSize, y: rect.height))
+    private func snrFormatted(_ snr: Float) -> String {
+        let quality: String
+        switch snr {
+        case 10...:
+            quality = "Excellent"
+        case 5..<10:
+            quality = "Good"
+        case 0..<5:
+            quality = "Fair"
+        case -10..<0:
+            quality = "Poor"
+        default:
+            quality = "Very Poor"
         }
-
-        return path
+        return String(format: "%.1f dB (%@)", snr, quality)
     }
 }
+
 
 // MARK: - Message Date Header
 
@@ -199,7 +239,7 @@ struct TypingIndicator: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color(.systemGray5))
-        .clipShape(BubbleShape(isOutgoing: false))
+        .clipShape(.rect(cornerRadius: 16))
         .onAppear {
             withAnimation(.easeInOut(duration: 0.4).repeatForever()) {
                 animationPhase = (animationPhase + 1) % 3
@@ -216,7 +256,11 @@ struct TypingIndicator: View {
         directionRawValue: MessageDirection.outgoing.rawValue,
         statusRawValue: MessageStatus.sent.rawValue
     )
-    return MessageBubbleView(message: MessageDTO(from: message))
+    return MessageBubbleView(
+        message: MessageDTO(from: message),
+        contactName: "Alice",
+        deviceName: "My Device"
+    )
 }
 
 #Preview("Outgoing - Delivered") {
@@ -228,7 +272,11 @@ struct TypingIndicator: View {
         statusRawValue: MessageStatus.delivered.rawValue,
         roundTripTime: 1234
     )
-    return MessageBubbleView(message: MessageDTO(from: message))
+    return MessageBubbleView(
+        message: MessageDTO(from: message),
+        contactName: "Bob",
+        deviceName: "My Device"
+    )
 }
 
 #Preview("Outgoing - Failed") {
@@ -239,9 +287,12 @@ struct TypingIndicator: View {
         directionRawValue: MessageDirection.outgoing.rawValue,
         statusRawValue: MessageStatus.failed.rawValue
     )
-    return MessageBubbleView(message: MessageDTO(from: message)) {
-        print("Retry tapped")
-    }
+    return MessageBubbleView(
+        message: MessageDTO(from: message),
+        contactName: "Charlie",
+        deviceName: "My Device",
+        onRetry: { print("Retry tapped") }
+    )
 }
 
 #Preview("Incoming") {
@@ -252,5 +303,9 @@ struct TypingIndicator: View {
         directionRawValue: MessageDirection.incoming.rawValue,
         statusRawValue: MessageStatus.delivered.rawValue
     )
-    return MessageBubbleView(message: MessageDTO(from: message))
+    return MessageBubbleView(
+        message: MessageDTO(from: message),
+        contactName: "Dana",
+        deviceName: "My Device"
+    )
 }
