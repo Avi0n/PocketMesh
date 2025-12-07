@@ -216,7 +216,21 @@ struct DevicePairView: View {
     }
 
     private func completeOnboarding() {
-        appState.completeOnboarding()
+        // Dismiss keyboard first to clean up text input state
+        // (focusedIndex is now managed by PINEntryView, so we just proceed)
+
+        // Small delay to let any keyboard dismiss and navigation settle
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+
+            // Use withTransaction to disable animation for this state change
+            // This prevents constraint conflicts during view hierarchy transition
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                appState.completeOnboarding()
+            }
+        }
     }
 }
 
