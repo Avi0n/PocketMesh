@@ -7,10 +7,16 @@ struct ChatView: View {
     @Environment(\.dismiss) private var dismiss
 
     let contact: ContactDTO
+    let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
     @State private var showingContactInfo = false
     @FocusState private var isInputFocused: Bool
+
+    init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
+        self.contact = contact
+        self.parentViewModel = parentViewModel
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,12 +47,27 @@ struct ChatView: View {
             }
         }
         .task {
+            viewModel.configure(appState: appState)
             await viewModel.loadMessages(for: contact)
         }
         .onDisappear {
-            // Clear unread when leaving
-            Task {
-                // Unread count is cleared in loadMessages
+            // Refresh parent conversation list when leaving
+            if let parent = parentViewModel {
+                Task {
+                    if let deviceID = appState.connectedDevice?.id {
+                        await parent.loadConversations(deviceID: deviceID)
+                        await parent.loadLastMessagePreviews()
+                    }
+                }
+            }
+        }
+        .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
+            // Check if the new message is for this contact
+            if case .directMessageReceived(let message, _) = appState.messageEventBroadcaster.latestEvent,
+               message.contactID == contact.id {
+                Task {
+                    await viewModel.loadMessages(for: contact)
+                }
             }
         }
     }
@@ -147,7 +168,9 @@ struct ChatView: View {
     }
 
     private func retryMessage(_ message: MessageDTO) {
-        // TODO: Implement retry logic
+        Task {
+            await viewModel.retryMessage(message)
+        }
     }
 
     // MARK: - Input Bar

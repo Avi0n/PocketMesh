@@ -32,7 +32,13 @@ final class ContactsViewModel {
 
     init() {}
 
-    /// Configure with services
+    /// Configure with services from AppState
+    func configure(appState: AppState) {
+        self.dataStore = appState.dataStore
+        self.contactService = appState.contactService
+    }
+
+    /// Configure with services (for testing)
     func configure(dataStore: DataStore, contactService: ContactService) {
         self.dataStore = dataStore
         self.contactService = contactService

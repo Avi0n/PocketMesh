@@ -7,6 +7,7 @@ struct ChatsListView: View {
     @State private var viewModel = ChatViewModel()
     @State private var searchText = ""
     @State private var showingNewChat = false
+    @State private var navigationPath = NavigationPath()
 
     private var filteredConversations: [ContactDTO] {
         if searchText.isEmpty {
@@ -18,7 +19,7 @@ struct ChatsListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if viewModel.isLoading && viewModel.conversations.isEmpty {
                     ProgressView()
@@ -45,13 +46,30 @@ struct ChatsListView: View {
                 }
             }
             .sheet(isPresented: $showingNewChat) {
-                NewChatView()
+                NewChatView(viewModel: viewModel)
             }
             .refreshable {
                 await refreshConversations()
             }
             .task {
+                viewModel.configure(appState: appState)
                 await loadConversations()
+            }
+            .navigationDestination(for: ContactDTO.self) { contact in
+                ChatView(contact: contact, parentViewModel: viewModel)
+            }
+            .onChange(of: appState.pendingChatContact) { _, newContact in
+                if let contact = newContact {
+                    // Clear existing navigation and navigate to chat
+                    navigationPath.removeLast(navigationPath.count)
+                    navigationPath.append(contact)
+                    appState.clearPendingNavigation()
+                }
+            }
+            .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
+                Task {
+                    await loadConversations()
+                }
             }
         }
     }
@@ -60,9 +78,9 @@ struct ChatsListView: View {
         List {
             ForEach(filteredConversations) { contact in
                 NavigationLink {
-                    ChatView(contact: contact)
+                    ChatView(contact: contact, parentViewModel: viewModel)
                 } label: {
-                    ConversationRow(contact: contact)
+                    ConversationRow(contact: contact, viewModel: viewModel)
                 }
             }
             .onDelete(perform: deleteConversations)
@@ -73,15 +91,22 @@ struct ChatsListView: View {
     private func loadConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.loadConversations(deviceID: deviceID)
+        await viewModel.loadLastMessagePreviews()
     }
 
     private func refreshConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.loadConversations(deviceID: deviceID)
+        await viewModel.loadLastMessagePreviews()
     }
 
     private func deleteConversations(at offsets: IndexSet) {
-        // TODO: Implement conversation deletion
+        let contactsToDelete = offsets.map { filteredConversations[$0] }
+        Task {
+            for contact in contactsToDelete {
+                try? await viewModel.deleteConversation(for: contact)
+            }
+        }
     }
 }
 
@@ -89,6 +114,7 @@ struct ChatsListView: View {
 
 struct ConversationRow: View {
     let contact: ContactDTO
+    let viewModel: ChatViewModel
 
     var body: some View {
         HStack(spacing: 12) {
@@ -112,8 +138,8 @@ struct ConversationRow: View {
                 }
 
                 HStack {
-                    // Last message preview would go here
-                    Text("Tap to view messages")
+                    // Last message preview
+                    Text(viewModel.lastMessagePreview(for: contact) ?? "No messages yet")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -187,15 +213,18 @@ struct ContactAvatar: View {
 struct NewChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    let viewModel: ChatViewModel
+
     @State private var contacts: [ContactDTO] = []
     @State private var searchText = ""
     @State private var isLoading = false
 
     private var filteredContacts: [ContactDTO] {
+        let nonBlocked = contacts.filter { !$0.isBlocked }
         if searchText.isEmpty {
-            return contacts
+            return nonBlocked
         }
-        return contacts.filter { contact in
+        return nonBlocked.filter { contact in
             contact.displayName.localizedStandardContains(searchText)
         }
     }
@@ -215,7 +244,7 @@ struct NewChatView: View {
                 } else {
                     List(filteredContacts) { contact in
                         NavigationLink {
-                            ChatView(contact: contact)
+                            ChatView(contact: contact, parentViewModel: viewModel)
                         } label: {
                             HStack(spacing: 12) {
                                 ContactAvatar(contact: contact, size: 40)
@@ -253,7 +282,11 @@ struct NewChatView: View {
         guard let deviceID = appState.connectedDevice?.id else { return }
 
         isLoading = true
-        // In a full implementation, we'd use a data store here
+        do {
+            contacts = try await appState.dataStore.fetchContacts(deviceID: deviceID)
+        } catch {
+            // Silently handle error
+        }
         isLoading = false
     }
 
