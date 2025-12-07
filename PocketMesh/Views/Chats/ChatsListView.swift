@@ -36,9 +36,11 @@ struct ChatsListView: View {
             .navigationTitle("Chats")
             .searchable(text: $searchText, prompt: "Search conversations")
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button("New Chat", systemImage: "square.and.pencil") {
+                ToolbarItem(placement: .automatic) {
+                    Button {
                         showingNewChat = true
+                    } label: {
+                        Label("New Chat", systemImage: "square.and.pencil")
                     }
                 }
             }

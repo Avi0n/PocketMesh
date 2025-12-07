@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -144,7 +144,7 @@
 		B4BC20AD728EB3A9DD89F86E /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		B5517D40AB55F2177D26BECD /* DevicePairView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairView.swift; sourceTree = "<group>"; };
 		BB748B4F281382C0C7E6C4BA /* AdvertisementServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvertisementServiceTests.swift; sourceTree = "<group>"; };
-		BDE5B1CA2B629437BD46D2A3 /* PocketMesh.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketMesh.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BDE5B1CA2B629437BD46D2A3 /* PocketMesh.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketMesh.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CC7DF5DECEFF69499561634E /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		D3E77E52AE4DE2E39C4361C4 /* TestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHelpers.swift; sourceTree = "<group>"; };
 		D600769D624EA8265AC39CF3 /* ContactService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactService.swift; sourceTree = "<group>"; };
@@ -485,9 +485,6 @@
 					BB58F0E7399C4FB41E74DC74 = {
 						DevelopmentTeam = "";
 					};
-					E0B5AABF144609984709AF9F = {
-						DevelopmentTeam = "";
-					};
 					E3CBC3B4D7D03D4012E98BBD = {
 						DevelopmentTeam = "";
 					};
@@ -503,7 +500,6 @@
 			);
 			mainGroup = 64E135D20031875E24002A21;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -756,6 +752,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = L6E4TF9NZ9;
 				INFOPLIST_FILE = PocketMesh/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -764,12 +761,10 @@
 				NSBluetoothAlwaysUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging.";
 				NSBluetoothPeripheralUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios.";
 				NSLocationWhenInUseUsageDescription = "PocketMesh can share your location with contacts on the mesh network.";
-				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nathanielchung.pocketmesh;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				UIBackgroundModes = (
-					"bluetooth-central",
-				);
+				UIBackgroundModes = "bluetooth-central";
 			};
 			name = Release;
 		};
@@ -845,6 +840,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = L6E4TF9NZ9;
 				INFOPLIST_FILE = PocketMesh/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -853,12 +849,10 @@
 				NSBluetoothAlwaysUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging.";
 				NSBluetoothPeripheralUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios.";
 				NSLocationWhenInUseUsageDescription = "PocketMesh can share your location with contacts on the mesh network.";
-				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nathanielchung.pocketmesh;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				UIBackgroundModes = (
-					"bluetooth-central",
-				);
+				UIBackgroundModes = "bluetooth-central";
 			};
 			name = Debug;
 		};

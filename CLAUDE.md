@@ -78,3 +78,6 @@ If SwiftData is configured to use CloudKit:
 ## PR instructions
 
 - If installed, make sure SwiftLint returns no warnings or errors before committing.
+
+## Building
+- When building, use destination "platform=iOS Simulator,name=iPhone 17"
