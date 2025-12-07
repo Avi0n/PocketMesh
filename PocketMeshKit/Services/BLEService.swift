@@ -90,6 +90,9 @@ public actor BLEService: NSObject, BLETransport {
     private var pendingResponse: CheckedContinuation<Data?, Never>?
     private var responseBuffer: Data = Data()
 
+    // Disconnection handling
+    private var disconnectionHandler: (@Sendable (UUID, Error?) -> Void)?
+
     // Connection handling
     private var connectionContinuation: CheckedContinuation<Void, Error>?
     private var scanContinuation: AsyncStream<DiscoveredDevice>.Continuation?
@@ -309,6 +312,11 @@ public actor BLEService: NSObject, BLETransport {
         responseHandler = handler
     }
 
+    /// Sets a handler for disconnection events
+    public func setDisconnectionHandler(_ handler: @escaping @Sendable (UUID, Error?) -> Void) async {
+        disconnectionHandler = handler
+    }
+
     // MARK: - Protocol Helpers
 
     /// Performs device initialization sequence (device query + app start)
@@ -437,15 +445,19 @@ extension BLEService: CBCentralManagerDelegate {
         error: Error?
     ) {
         Task {
-            await handleDisconnection()
+            await handleDisconnection(peripheral: peripheral, error: error)
         }
     }
 
-    private func handleDisconnection() {
+    private func handleDisconnection(peripheral: CBPeripheral, error: Error?) {
+        let deviceID = peripheral.identifier
         connectedPeripheral = nil
         txCharacteristic = nil
         rxCharacteristic = nil
         _connectionState = .disconnected
+
+        // Notify about disconnection
+        disconnectionHandler?(deviceID, error)
     }
 
     nonisolated public func centralManager(
