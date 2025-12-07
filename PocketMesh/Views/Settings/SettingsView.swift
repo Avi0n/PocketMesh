@@ -64,8 +64,11 @@ struct SettingsView: View {
                     // No device connected
                     Section {
                         Button {
-                            // Return to device scan
-                            appState.resetOnboarding()
+                            Task {
+                                // Force disconnect any existing connection before scanning
+                                await appState.disconnectForNewConnection()
+                                appState.resetOnboarding()
+                            }
                         } label: {
                             Label("Connect Device", systemImage: "antenna.radiowaves.left.and.right")
                         }

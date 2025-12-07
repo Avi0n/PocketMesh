@@ -136,7 +136,11 @@ struct DeviceScanView: View {
             .padding(.bottom)
         }
         .onAppear {
-            startScanning()
+            Task {
+                // Ensure any stale BLE connection is disconnected before scanning
+                await appState.disconnectForNewConnection()
+                startScanning()
+            }
         }
         .onDisappear {
             stopScanning()

@@ -1,16 +1,18 @@
 import SwiftUI
 @preconcurrency import CoreBluetooth
 @preconcurrency import CoreLocation
+import UserNotifications
 
 // MARK: - Permissions Coordinator
 
-/// Coordinator for managing Bluetooth and Location permission requests and state observation.
+/// Coordinator for managing Bluetooth, Location, and Notification permission requests and state observation.
 /// Uses delegate callbacks to update permission state immediately when user responds.
 @MainActor
 @Observable
 private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, CLLocationManagerDelegate {
     var bluetoothAuthorization: CBManagerAuthorization = .notDetermined
     var locationAuthorization: CLAuthorizationStatus = .notDetermined
+    var notificationAuthorization: UNAuthorizationStatus = .notDetermined
 
     private var centralManager: CBCentralManager?
     private var locationManager: CLLocationManager?
@@ -23,6 +25,11 @@ private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, 
         locationManager = CLLocationManager()
         locationManager?.delegate = self
         locationAuthorization = locationManager?.authorizationStatus ?? .notDetermined
+
+        // Check notification authorization
+        Task {
+            await checkNotificationAuthorization()
+        }
     }
 
     func requestBluetooth() {
@@ -37,11 +44,32 @@ private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, 
         locationManager?.requestWhenInUseAuthorization()
     }
 
+    func requestNotifications() {
+        Task {
+            do {
+                let granted = try await UNUserNotificationCenter.current().requestAuthorization(
+                    options: [.alert, .sound, .badge]
+                )
+                notificationAuthorization = granted ? .authorized : .denied
+            } catch {
+                notificationAuthorization = .denied
+            }
+        }
+    }
+
     func checkPermissions() {
         bluetoothAuthorization = CBCentralManager.authorization
         if let lm = locationManager {
             locationAuthorization = lm.authorizationStatus
         }
+        Task {
+            await checkNotificationAuthorization()
+        }
+    }
+
+    private func checkNotificationAuthorization() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        notificationAuthorization = settings.authorizationStatus
     }
 
     // MARK: - CBCentralManagerDelegate
@@ -103,6 +131,15 @@ struct PermissionsView: View {
                     isGranted: coordinator.bluetoothAuthorization == .allowedAlways,
                     isDenied: coordinator.bluetoothAuthorization == .denied,
                     action: coordinator.requestBluetooth
+                )
+
+                PermissionCard(
+                    icon: "bell.fill",
+                    title: "Notifications",
+                    description: "Receive alerts for new messages",
+                    isGranted: coordinator.notificationAuthorization == .authorized,
+                    isDenied: coordinator.notificationAuthorization == .denied,
+                    action: coordinator.requestNotifications
                 )
 
                 PermissionCard(
