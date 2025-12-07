@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import PocketMeshKit
 
 /// App-wide state management using Observable
@@ -43,10 +44,57 @@ public final class AppState {
     /// Whether scanning is in progress
     var isScanning: Bool = false
 
+    // MARK: - Data Services
+
+    /// The SwiftData model container
+    let modelContainer: ModelContainer
+
+    /// The data store for persistence operations
+    let dataStore: PocketMeshKit.DataStore
+
+    /// The message service for sending messages
+    let messageService: MessageService
+
+    /// The contact service for managing contacts
+    let contactService: ContactService
+
+    /// The message polling service for handling incoming messages
+    let messagePollingService: MessagePollingService
+
+    /// The message event broadcaster for UI updates
+    let messageEventBroadcaster = MessageEventBroadcaster()
+
+    // MARK: - Navigation State
+
+    /// Currently selected tab index
+    var selectedTab: Int = 0
+
+    /// Contact to navigate to in chat (for cross-tab navigation)
+    var pendingChatContact: ContactDTO?
+
     // MARK: - Initialization
 
-    init(bleService: BLEService = BLEService()) {
+    init(bleService: BLEService = BLEService(), modelContainer: ModelContainer? = nil) {
         self.bleService = bleService
+
+        // Create or use provided model container
+        if let container = modelContainer {
+            self.modelContainer = container
+        } else {
+            do {
+                self.modelContainer = try DataStore.createContainer()
+            } catch {
+                fatalError("Failed to create model container: \(error)")
+            }
+        }
+
+        // Create data store
+        self.dataStore = DataStore(modelContainer: self.modelContainer)
+
+        // Create services
+        self.messageService = MessageService(bleTransport: bleService, dataStore: dataStore)
+        self.contactService = ContactService(bleTransport: bleService, dataStore: dataStore)
+        self.messagePollingService = MessagePollingService(bleTransport: bleService, dataStore: dataStore)
     }
 
     // MARK: - Scanning
@@ -130,6 +178,9 @@ public final class AppState {
                     isActive: true
                 )
             )
+
+            // Connect message polling for real-time updates
+            await connectMessagePolling()
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -141,6 +192,44 @@ public final class AppState {
         await bleService.disconnect()
         connectionState = .disconnected
         connectedDevice = nil
+    }
+
+    // MARK: - Message Polling
+
+    /// Connects the BLE response handler to the message polling service.
+    /// Call this after device connection is established.
+    func connectMessagePolling() async {
+        guard let deviceID = connectedDevice?.id else { return }
+
+        // Set the active device on the polling service
+        await messagePollingService.setActiveDevice(deviceID)
+
+        // Set the delegate for message events
+        await messagePollingService.setDelegate(messageEventBroadcaster)
+
+        // Connect BLE push notifications to the polling service
+        await bleService.setResponseHandler { [weak self] data in
+            guard let self else { return }
+            Task {
+                try? await self.messagePollingService.processPushData(data)
+            }
+        }
+
+        // Perform initial sync of any waiting messages
+        await messagePollingService.syncMessageQueue()
+    }
+
+    // MARK: - Navigation
+
+    /// Navigates to the chat tab and opens a conversation with the specified contact
+    func navigateToChat(with contact: ContactDTO) {
+        pendingChatContact = contact
+        selectedTab = 0
+    }
+
+    /// Clears the pending navigation after it's been handled
+    func clearPendingNavigation() {
+        pendingChatContact = nil
     }
 
     // MARK: - Onboarding Completion
