@@ -1,228 +1,417 @@
-import Combine
 import Foundation
-import OSLog
-import SwiftData
 
-private let logger = Logger(subsystem: "com.pocketmesh.app", category: "Messaging")
+// MARK: - Message Service Errors
 
-@MainActor
-public final class MessageService: ObservableObject {
-    private let `protocol`: MeshCoreProtocol
-    private let modelContext: ModelContext
+public enum MessageServiceError: Error, Sendable {
+    case notConnected
+    case contactNotFound
+    case channelNotFound
+    case sendFailed(String)
+    case maxRetriesExceeded
+    case invalidRecipient
+    case messageTooLong
+    case protocolError(ProtocolError)
+}
 
-    // Python spec defaults: max_attempts=3, flood_after=2, max_flood_attempts=2
-    /// Total attempt limit (attempts 0, 1, 2)
-    public var maxAttempts: Int = 3
+// MARK: - Message Send Result
 
-    /// Switch to flood after this many attempts
-    public var floodAfter: Int = 2
+public struct MessageSendResult: Sendable, Equatable {
+    public let messageID: UUID
+    public let ackCode: UInt32
+    public let isFlood: Bool
+    public let estimatedTimeout: UInt32
+    public let attemptCount: UInt8
 
-    /// Flood-specific limit
-    public var maxFloodAttempts: Int = 2
-
-    /// Timeout configuration (matching Python spec)
-    public var timeoutMultiplier: Double = 1.2 // 20% buffer over suggested timeout
-
-    /// Enable multi-ACK duplicate detection
-    public var multiAckEnabled: Bool = true
-
-    private var sendTasks: [UUID: Task<Void, Never>] = [:]
-
-    @Published var sendingMessages: Set<UUID> = []
-
-    public init(protocol: MeshCoreProtocol, modelContext: ModelContext) {
-        self.protocol = `protocol`
-        self.modelContext = modelContext
-
-        // Subscribe to ACK confirmations
-        Task {
-            await self.protocol.subscribeToPushNotifications { [weak self] code, payload in
-                guard let self else { return }
-
-                if code == PushCode.sendConfirmed.rawValue {
-                    await handleSendConfirmedPush(payload: payload)
-                }
-            }
-        }
-    }
-
-    /// Send a direct message to a contact
-    public func sendMessage(text: String, to contact: Contact, device: Device, scope: String? = nil) async throws {
-        // Validate message length (160 bytes max per protocol)
-        guard text.utf8.count <= 160 else {
-            throw MessageError.messageTooLong
-        }
-
-        // Create message record
-        let message = Message(
-            text: text,
-            isOutgoing: true,
-            contact: contact,
-            channel: nil,
-            device: device,
-        )
-        modelContext.insert(message)
-        try modelContext.save()
-
-        // Attempt to send
-        await sendMessageWithRetry(message, contact: contact, scope: scope)
-    }
-
-    private func sendMessageWithRetry(_ message: Message, contact: Contact, scope: String? = nil) async {
-        let messageId = message.id
-        sendingMessages.insert(messageId)
-        defer { sendingMessages.remove(messageId) }
-
-        var attempts = 0
-        var floodAttempts = 0
-        var isFloodMode = false
-
-        // Unified retry loop per Python spec:
-        // while attempts < max_attempts AND (not flood OR flood_attempts < max_flood_attempts)
-        while attempts < maxAttempts, !isFloodMode || floodAttempts < maxFloodAttempts {
-            do {
-                // Switch to flood mode at floodAfter threshold
-                if attempts >= floodAfter, !isFloodMode {
-                    logger.info("[Messaging] Switching to flood mode after \(attempts) attempts")
-                    isFloodMode = true
-                    floodAttempts = 0
-
-                    // CRITICAL: Call resetPath() when switching to flood
-                    do {
-                        try await self.protocol.resetPath(publicKey: contact.publicKey)
-                    } catch {
-                        logger.warning("[Messaging] Failed to reset path: \(error.localizedDescription)")
-                        // Continue even if resetPath fails
-                    }
-                }
-
-                // Update message status
-                message.deliveryStatus = .sending
-                message.retryCount = attempts
-                message.lastRetryDate = Date()
-                try modelContext.save()
-
-                logger.info("[Messaging] Attempt \(attempts + 1)/\(self.maxAttempts) (\(isFloodMode ? "flood" : "direct"))")
-
-                // Send message (flood mode controlled by previous setFloodScope call)
-                let result = try await self.protocol.sendTextMessage(
-                    text: message.text,
-                    recipientPublicKey: contact.publicKey,
-                    floodMode: isFloodMode,
-                    scope: scope,
-                    attempt: UInt8(attempts),
-                )
-
-                // Update message with delivery info
-                message.ackCode = result.expectedAck
-                let timeoutInterval = TimeInterval(result.estimatedTimeout) / 1000.0 * timeoutMultiplier
-                message.expectedAckTimeout = Date().addingTimeInterval(timeoutInterval)
-                message.deliveryStatus = .sent
-                message.routingMode = isFloodMode ? .meshBroadcast : .direct
-                message.retryCount = attempts + 1
-                try modelContext.save()
-
-                logger.info("[Messaging] Message sent (\(isFloodMode ? "flood" : "direct")), ACK: \(String(format: "%08X", result.expectedAck))")
-
-                // Success!
-                return
-
-            } catch {
-                attempts += 1
-                if isFloodMode {
-                    floodAttempts += 1
-                }
-
-                logger.warning("[Messaging] Attempt \(attempts) failed: \(error.localizedDescription)")
-
-                // Exponential backoff before retry
-                if attempts < maxAttempts {
-                    let delay = pow(2.0, Double(attempts - 1)) // 2^(attempt-1) seconds
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                }
-            }
-        }
-
-        // All attempts failed
-        message.deliveryStatus = .failed
-        message.retryCount = attempts
-        try? modelContext.save()
-
-        logger.error("[Messaging] Message delivery failed after \(attempts) total attempts")
-    }
-
-    /// Handle incoming ACK confirmation
-    func handleAckConfirmation(ackCode: UInt32, roundTripMs: UInt32) {
-        do {
-            // Find message with matching ACK code (sent or already delivered)
-            let sentStatus = DeliveryStatus.sent
-            let deliveredStatus = DeliveryStatus.delivered
-            let descriptor = FetchDescriptor<Message>(
-                predicate: #Predicate { message in
-                    message.ackCode == ackCode &&
-                        (message.deliveryStatus == sentStatus || message.deliveryStatus == deliveredStatus)
-                },
-            )
-
-            guard let message = try modelContext.fetch(descriptor).first as? Message else {
-                // In multi-ACK mode, duplicate ACKs are expected
-                logger.debug("Received ACK for code \(String(format: "%08X", ackCode)) - already processed or unknown")
-                return
-            }
-
-            // Update status only if not already delivered
-            if message.deliveryStatus == sentStatus {
-                message.deliveryStatus = .delivered
-                try modelContext.save()
-                logger.info("Message acknowledged in \(roundTripMs)ms (ACK code: \(String(format: "%08X", ackCode)))")
-            } else {
-                logger.debug(
-                    "Duplicate ACK received for code \(String(format: "%08X", ackCode)) - multi-ACK mode active",
-                )
-            }
-
-        } catch {
-            logger.error("Failed to handle ACK: \(error.localizedDescription)")
-        }
-    }
-
-    /// Handle sendConfirmed push notification
-    private func handleSendConfirmedPush(payload: Data) async {
-        // Decode push payload
-        guard payload.count >= 8 else {
-            logger.error("Invalid sendConfirmed push payload size: \(payload.count)")
-            return
-        }
-
-        // Extract ACK code (UInt32 little-endian) and round-trip time (UInt32 little-endian)
-        let ackCode = payload.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 0, as: UInt32.self) }
-        let roundTripMs = payload.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: 4, as: UInt32.self) }
-
-        logger.info("Received sendConfirmed push - ACK: \(String(format: "%08X", ackCode)), RTT: \(roundTripMs)ms")
-
-        // Use existing ACK handling logic
-        await MainActor.run {
-            self.handleAckConfirmation(ackCode: ackCode, roundTripMs: roundTripMs)
-        }
-    }
-
-    /// Delete a queued message
-    public func deleteMessage(_ message: Message) throws {
-        modelContext.delete(message)
-        try modelContext.save()
+    public init(messageID: UUID, ackCode: UInt32, isFlood: Bool, estimatedTimeout: UInt32, attemptCount: UInt8) {
+        self.messageID = messageID
+        self.ackCode = ackCode
+        self.isFlood = isFlood
+        self.estimatedTimeout = estimatedTimeout
+        self.attemptCount = attemptCount
     }
 }
 
-public enum MessageError: LocalizedError {
-    case messageTooLong
-    case noActiveDevice
-    case contactNotFound
+// MARK: - Message Service Configuration
 
-    public var errorDescription: String? {
-        switch self {
-        case .messageTooLong: "Message exceeds 160 byte limit"
-        case .noActiveDevice: "No active device connected"
-        case .contactNotFound: "Contact not found"
+public struct MessageServiceConfig: Sendable {
+    public let maxRetries: UInt8
+    public let initialRetryDelay: TimeInterval
+    public let maxRetryDelay: TimeInterval
+    public let retryBackoffMultiplier: Double
+    public let floodFallbackEnabled: Bool
+
+    public init(
+        maxRetries: UInt8 = 3,
+        initialRetryDelay: TimeInterval = 1.0,
+        maxRetryDelay: TimeInterval = 8.0,
+        retryBackoffMultiplier: Double = 2.0,
+        floodFallbackEnabled: Bool = true
+    ) {
+        self.maxRetries = maxRetries
+        self.initialRetryDelay = initialRetryDelay
+        self.maxRetryDelay = maxRetryDelay
+        self.retryBackoffMultiplier = retryBackoffMultiplier
+        self.floodFallbackEnabled = floodFallbackEnabled
+    }
+
+    public static let `default` = MessageServiceConfig()
+}
+
+// MARK: - Pending ACK Tracker
+
+/// Tracks pending ACKs for message delivery confirmation
+public struct PendingAck: Sendable {
+    public let messageID: UUID
+    public let ackCode: UInt32
+    public let sentAt: Date
+    public let timeout: TimeInterval
+
+    public init(messageID: UUID, ackCode: UInt32, sentAt: Date, timeout: TimeInterval) {
+        self.messageID = messageID
+        self.ackCode = ackCode
+        self.sentAt = sentAt
+        self.timeout = timeout
+    }
+
+    public var isExpired: Bool {
+        Date().timeIntervalSince(sentAt) > timeout
+    }
+}
+
+// MARK: - Message Service Actor
+
+/// Actor-isolated service for sending messages with retry logic and ACK tracking.
+public actor MessageService {
+
+    // MARK: - Properties
+
+    private let bleTransport: any BLETransport
+    private let dataStore: DataStore
+    private let config: MessageServiceConfig
+
+    /// Currently tracked pending ACKs
+    private var pendingAcks: [UInt32: PendingAck] = [:]
+
+    /// ACK confirmation callback
+    private var ackConfirmationHandler: (@Sendable (UInt32, UInt32) -> Void)?
+
+    // MARK: - Initialization
+
+    public init(
+        bleTransport: any BLETransport,
+        dataStore: DataStore,
+        config: MessageServiceConfig = .default
+    ) {
+        self.bleTransport = bleTransport
+        self.dataStore = dataStore
+        self.config = config
+    }
+
+    // MARK: - Send Direct Message
+
+    /// Sends a direct message to a contact with retry logic.
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - contact: The recipient contact
+    ///   - textType: The text type (default: plain)
+    ///   - replyToID: Optional message ID to reply to
+    /// - Returns: The send result with ACK code and tracking info
+    public func sendDirectMessage(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain,
+        replyToID: UUID? = nil
+    ) async throws -> MessageSendResult {
+        // Validate message length
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
         }
+
+        // Check connection state
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            throw MessageServiceError.notConnected
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        // Save message to store as pending
+        let messageDTO = createOutgoingMessage(
+            id: messageID,
+            deviceID: contact.deviceID,
+            contactID: contact.id,
+            text: text,
+            timestamp: timestamp,
+            textType: textType,
+            replyToID: replyToID
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        // Attempt to send with retries
+        var attemptCount: UInt8 = 0
+        var useFlood = contact.isFloodRouted
+
+        for attempt in 1...Int(config.maxRetries) {
+            attemptCount = UInt8(attempt)
+
+            do {
+                let result = try await sendTextMessageAttempt(
+                    text: text,
+                    recipientKeyPrefix: contact.publicKeyPrefix,
+                    textType: textType,
+                    attempt: attemptCount,
+                    timestamp: timestamp
+                )
+
+                // Update message with ACK code
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: result.ackCode,
+                    status: .sent
+                )
+
+                // Track pending ACK for confirmation
+                let timeout = TimeInterval(result.estimatedTimeout) / 1000.0
+                trackPendingAck(messageID: messageID, ackCode: result.ackCode, timeout: timeout)
+
+                // Update contact's last message date
+                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+                return MessageSendResult(
+                    messageID: messageID,
+                    ackCode: result.ackCode,
+                    isFlood: result.isFlood,
+                    estimatedTimeout: result.estimatedTimeout,
+                    attemptCount: attemptCount
+                )
+            } catch {
+                // If not flood and flood fallback enabled, try flood on last attempt
+                if !useFlood && config.floodFallbackEnabled && attempt == Int(config.maxRetries) - 1 {
+                    useFlood = true
+                }
+
+                // Wait before retrying with exponential backoff
+                if attempt < Int(config.maxRetries) {
+                    let delay = calculateRetryDelay(attempt: attempt)
+                    try await Task.sleep(for: .seconds(delay))
+                }
+            }
+        }
+
+        // Mark message as failed after all retries exhausted
+        try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+
+        throw MessageServiceError.maxRetriesExceeded
+    }
+
+    /// Sends a channel message (broadcast, no ACK expected).
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - channelIndex: The channel index (0-7)
+    ///   - deviceID: The device ID
+    ///   - textType: The text type (default: plain)
+    public func sendChannelMessage(
+        text: String,
+        channelIndex: UInt8,
+        deviceID: UUID,
+        textType: TextType = .plain
+    ) async throws -> UUID {
+        // Validate message length
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        // Validate channel index
+        guard channelIndex < ProtocolLimits.maxChannels else {
+            throw MessageServiceError.channelNotFound
+        }
+
+        // Check connection state
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            throw MessageServiceError.notConnected
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        // Encode and send
+        let frameData = FrameCodec.encodeSendChannelMessage(
+            textType: textType,
+            channelIndex: channelIndex,
+            timestamp: timestamp,
+            text: text
+        )
+
+        guard let response = try await bleTransport.send(frameData),
+              !response.isEmpty,
+              response[0] == ResponseCode.ok.rawValue else {
+            throw MessageServiceError.sendFailed("Channel message send failed")
+        }
+
+        // Save message (channel messages are immediately "sent" - no ACK for broadcasts)
+        let messageDTO = createOutgoingChannelMessage(
+            id: messageID,
+            deviceID: deviceID,
+            channelIndex: channelIndex,
+            text: text,
+            timestamp: timestamp,
+            textType: textType
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        // Update channel's last message date
+        if let channel = try await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) {
+            try await dataStore.updateChannelLastMessage(channelID: channel.id, date: Date())
+        }
+
+        return messageID
+    }
+
+    // MARK: - ACK Handling
+
+    /// Processes a send confirmation (ACK) from the device.
+    /// Called when PUSH_CODE_SEND_CONFIRMED is received.
+    public func handleSendConfirmation(_ confirmation: SendConfirmation) async throws {
+        guard pendingAcks.removeValue(forKey: confirmation.ackCode) != nil else {
+            return
+        }
+
+        // Update message to delivered status
+        try await dataStore.updateMessageByAckCode(
+            confirmation.ackCode,
+            status: .delivered,
+            roundTripTime: confirmation.roundTripTime
+        )
+
+        // Notify handler
+        ackConfirmationHandler?(confirmation.ackCode, confirmation.roundTripTime)
+    }
+
+    /// Sets a callback for ACK confirmations.
+    public func setAckConfirmationHandler(_ handler: @escaping @Sendable (UInt32, UInt32) -> Void) {
+        ackConfirmationHandler = handler
+    }
+
+    /// Checks for expired ACKs and marks their messages as failed.
+    public func checkExpiredAcks() async throws {
+        let now = Date()
+        var expiredCodes: [UInt32] = []
+
+        for (code, pending) in pendingAcks {
+            if now.timeIntervalSince(pending.sentAt) > pending.timeout {
+                expiredCodes.append(code)
+            }
+        }
+
+        for code in expiredCodes {
+            if let pending = pendingAcks.removeValue(forKey: code) {
+                try await dataStore.updateMessageStatus(id: pending.messageID, status: .failed)
+            }
+        }
+    }
+
+    /// Returns current pending ACK count.
+    public var pendingAckCount: Int {
+        pendingAcks.count
+    }
+
+    /// Gets pending ACK info for a message.
+    public func getPendingAck(for messageID: UUID) -> PendingAck? {
+        pendingAcks.values.first { $0.messageID == messageID }
+    }
+
+    // MARK: - Private Helpers
+
+    private func sendTextMessageAttempt(
+        text: String,
+        recipientKeyPrefix: Data,
+        textType: TextType,
+        attempt: UInt8,
+        timestamp: UInt32
+    ) async throws -> SentResponse {
+        let frameData = FrameCodec.encodeSendTextMessage(
+            textType: textType,
+            attempt: attempt,
+            timestamp: timestamp,
+            recipientKeyPrefix: recipientKeyPrefix,
+            text: text
+        )
+
+        guard let response = try await bleTransport.send(frameData),
+              !response.isEmpty else {
+            throw MessageServiceError.sendFailed("No response received")
+        }
+
+        // Check for error response
+        if response[0] == ResponseCode.error.rawValue {
+            if response.count >= 2, let error = ProtocolError(rawValue: response[1]) {
+                throw MessageServiceError.protocolError(error)
+            }
+            throw MessageServiceError.sendFailed("Unknown protocol error")
+        }
+
+        // Decode sent response
+        return try FrameCodec.decodeSentResponse(from: response)
+    }
+
+    private func calculateRetryDelay(attempt: Int) -> TimeInterval {
+        let delay = config.initialRetryDelay * pow(config.retryBackoffMultiplier, Double(attempt - 1))
+        return min(delay, config.maxRetryDelay)
+    }
+
+    private func trackPendingAck(messageID: UUID, ackCode: UInt32, timeout: TimeInterval) {
+        let pending = PendingAck(
+            messageID: messageID,
+            ackCode: ackCode,
+            sentAt: Date(),
+            timeout: timeout
+        )
+        pendingAcks[ackCode] = pending
+    }
+
+    private func createOutgoingMessage(
+        id: UUID,
+        deviceID: UUID,
+        contactID: UUID,
+        text: String,
+        timestamp: UInt32,
+        textType: TextType,
+        replyToID: UUID?
+    ) -> MessageDTO {
+        let message = Message(
+            id: id,
+            deviceID: deviceID,
+            contactID: contactID,
+            text: text,
+            timestamp: timestamp,
+            directionRawValue: MessageDirection.outgoing.rawValue,
+            statusRawValue: MessageStatus.pending.rawValue,
+            textTypeRawValue: textType.rawValue,
+            replyToID: replyToID
+        )
+        return MessageDTO(from: message)
+    }
+
+    private func createOutgoingChannelMessage(
+        id: UUID,
+        deviceID: UUID,
+        channelIndex: UInt8,
+        text: String,
+        timestamp: UInt32,
+        textType: TextType
+    ) -> MessageDTO {
+        let message = Message(
+            id: id,
+            deviceID: deviceID,
+            channelIndex: channelIndex,
+            text: text,
+            timestamp: timestamp,
+            directionRawValue: MessageDirection.outgoing.rawValue,
+            statusRawValue: MessageStatus.sent.rawValue,
+            textTypeRawValue: textType.rawValue
+        )
+        return MessageDTO(from: message)
     }
 }

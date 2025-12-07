@@ -1,206 +1,276 @@
-import PocketMeshKit
-import SwiftData
 import SwiftUI
+import PocketMeshKit
 
+/// List of all contacts discovered on the mesh network
 struct ContactsListView: View {
-    @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var coordinator: AppCoordinator
-
-    @Query(
-        filter: #Predicate<Contact> { contact in
-            contact.isPending == false
-        },
-        sort: \Contact.name,
-    ) private var contacts: [Contact]
-
-    @Query(
-        filter: #Predicate<Contact> { contact in
-            contact.isPending == true
-        },
-    ) private var pendingContacts: [Contact]
-
+    @Environment(AppState.self) private var appState
+    @State private var viewModel = ContactsViewModel()
     @State private var searchText = ""
-    @State private var isSendingAdvertisement = false
-    @State private var showSendSuccess = false
-    @State private var showingPendingContacts = false
+    @State private var showFavoritesOnly = false
+
+    private var filteredContacts: [ContactDTO] {
+        viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredContacts) { contact in
-                    NavigationLink(value: contact) {
-                        ContactRow(contact: contact)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            deleteContact(contact)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
+            Group {
+                if viewModel.isLoading && viewModel.contacts.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if viewModel.contacts.isEmpty {
+                    emptyView
+                } else {
+                    contactsList
                 }
             }
-            .searchable(text: $searchText, prompt: "Search contacts")
             .navigationTitle("Contacts")
-            .navigationDestination(for: Contact.self) { contact in
-                ContactDetailView(contact: contact)
-            }
+            .searchable(text: $searchText, prompt: "Search contacts")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showingPendingContacts = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.crop.circle.badge.questionmark")
-                                .symbolVariant(pendingContacts.isEmpty ? .none : .fill)
-                            if !pendingContacts.isEmpty {
-                                Text("\(pendingContacts.count)")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                            }
-                        }
-                        .foregroundColor(pendingContacts.isEmpty ? .secondary : .blue)
-                    }
-                }
-
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItem(placement: .automatic) {
                     Menu {
                         Button {
-                            sendAdvertisement(floodMode: false)
+                            showFavoritesOnly.toggle()
                         } label: {
-                            Label("Nearby (Zero Hop)", systemImage: "antenna.radiowaves.left.and.right")
+                            Label(
+                                showFavoritesOnly ? "Show All" : "Show Favorites",
+                                systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
+                            )
                         }
+
+                        Divider()
 
                         Button {
-                            sendAdvertisement(floodMode: true)
+                            Task {
+                                await syncContacts()
+                            }
                         } label: {
-                            Label("Network-wide (Flood)", systemImage: "network")
+                            Label("Sync Contacts", systemImage: "arrow.triangle.2.circlepath")
                         }
+                        .disabled(viewModel.isSyncing)
                     } label: {
-                        Image(systemName: isSendingAdvertisement
-                            ? "antenna.radiowaves.left.and.right.slash"
-                            : "antenna.radiowaves.left.and.right")
+                        Label("Options", systemImage: "ellipsis.circle")
                     }
-                    .disabled(isSendingAdvertisement)
                 }
-            }
-            .alert("Advertisement Sent", isPresented: $showSendSuccess) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Your advertisement has been broadcast to the mesh network.")
             }
             .overlay {
-                if contacts.isEmpty {
-                    ContentUnavailableView(
-                        "No Contacts",
-                        systemImage: "person.2",
-                        description: Text("Send an advertisement to discover nearby mesh contacts"),
-                    )
+                if viewModel.isSyncing {
+                    syncOverlay
                 }
             }
-            .sheet(isPresented: $showingPendingContacts) {
-                PendingContactsView()
-                    .environmentObject(coordinator)
+            .refreshable {
+                await syncContacts()
+            }
+            .task {
+                viewModel.configure(appState: appState)
+                await loadContacts()
             }
         }
     }
 
-    private var filteredContacts: [Contact] {
-        if searchText.isEmpty {
-            contacts
-        } else {
-            contacts.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        }
+    // MARK: - Views
+
+    private var emptyView: some View {
+        ContentUnavailableView(
+            "No Contacts",
+            systemImage: "person.2",
+            description: Text("Contacts will appear when discovered on the mesh network. Pull to refresh or tap Sync.")
+        )
     }
 
-    private func deleteContact(_ contact: Contact) {
-        modelContext.delete(contact)
-        try? modelContext.save()
-    }
-
-    private func sendAdvertisement(floodMode: Bool) {
-        guard let advertisementService = coordinator.advertisementService else { return }
-
-        isSendingAdvertisement = true
-
-        Task {
-            do {
-                try await advertisementService.sendAdvertisement(floodMode: floodMode)
-                await MainActor.run {
-                    isSendingAdvertisement = false
-                    showSendSuccess = true
+    private var contactsList: some View {
+        List {
+            // Favorites section
+            let favorites = filteredContacts.filter(\.isFavorite)
+            if !favorites.isEmpty && !showFavoritesOnly {
+                Section {
+                    ForEach(favorites) { contact in
+                        contactRow(contact)
+                    }
+                } header: {
+                    Label("Favorites", systemImage: "star.fill")
                 }
-            } catch {
-                print("Failed to send advertisement: \(error)")
-                await MainActor.run {
-                    isSendingAdvertisement = false
+            }
+
+            // All contacts section
+            let nonFavorites = showFavoritesOnly ? favorites : filteredContacts.filter { !$0.isFavorite }
+            if !nonFavorites.isEmpty {
+                Section {
+                    ForEach(showFavoritesOnly ? favorites : nonFavorites) { contact in
+                        contactRow(contact)
+                    }
+                } header: {
+                    if !showFavoritesOnly && !favorites.isEmpty {
+                        Text("All Contacts")
+                    }
                 }
             }
         }
+        .listStyle(.insetGrouped)
+    }
+
+    private func contactRow(_ contact: ContactDTO) -> some View {
+        NavigationLink {
+            ContactDetailView(contact: contact)
+        } label: {
+            ContactRowView(contact: contact)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.deleteContact(contact)
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+
+            Button {
+                Task {
+                    await viewModel.toggleBlocked(contact: contact)
+                }
+            } label: {
+                Label(
+                    contact.isBlocked ? "Unblock" : "Block",
+                    systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                )
+            }
+            .tint(.orange)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                Task {
+                    await viewModel.toggleFavorite(contact: contact)
+                }
+            } label: {
+                Label(
+                    contact.isFavorite ? "Unfavorite" : "Favorite",
+                    systemImage: contact.isFavorite ? "star.slash" : "star.fill"
+                )
+            }
+            .tint(.yellow)
+        }
+    }
+
+    private var syncOverlay: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+
+            Text("Syncing Contacts...")
+                .font(.headline)
+
+            if let progress = viewModel.syncProgress {
+                Text("\(progress.0) of \(progress.1)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ProgressView(value: Double(progress.0), total: Double(max(progress.1, 1)))
+                    .progressViewStyle(.linear)
+                    .frame(width: 200)
+            }
+        }
+        .padding(32)
+        .background(.regularMaterial, in: .rect(cornerRadius: 16))
+    }
+
+    // MARK: - Actions
+
+    private func loadContacts() async {
+        guard let deviceID = appState.connectedDevice?.id else { return }
+        await viewModel.loadContacts(deviceID: deviceID)
+    }
+
+    private func syncContacts() async {
+        guard let deviceID = appState.connectedDevice?.id else { return }
+        await viewModel.syncContacts(deviceID: deviceID)
     }
 }
 
-struct ContactRow: View {
-    let contact: Contact
+// MARK: - Contact Row View
 
-    private var contactIcon: String {
-        switch contact.type {
-        case .chat:
-            "person.circle.fill"
-        case .repeater:
-            "antenna.radiowaves.left.and.right"
-        case .room:
-            "person.3.fill"
-        case .none:
-            "questionmark.circle"
-        }
-    }
-
-    private var contactColor: Color {
-        switch contact.type {
-        case .chat:
-            .blue
-        case .repeater:
-            .purple
-        case .room:
-            .green
-        case .none:
-            .gray
-        }
-    }
+struct ContactRowView: View {
+    let contact: ContactDTO
 
     var body: some View {
-        HStack {
-            // Avatar
-            Image(systemName: contactIcon)
-                .font(.title3)
-                .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
-                .background(contactColor)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.8), lineWidth: 1.5),
-                )
+        HStack(spacing: 12) {
+            ContactAvatar(contact: contact, size: 44)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(contact.name)
-                    .font(.headline)
+                HStack {
+                    Text(contact.displayName)
+                        .font(.body)
+                        .fontWeight(.medium)
 
-                if let lastAdvert = contact.lastAdvertisement {
-                    Text("Last seen \(lastAdvert, style: .relative)")
+                    if contact.isBlocked {
+                        Image(systemName: "hand.raised.fill")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    // Contact type
+                    Label(contactTypeLabel, systemImage: contactTypeIcon)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+
+                    // Location indicator
+                    if contact.hasLocation {
+                        Label("Location", systemImage: "location.fill")
+                            .labelStyle(.iconOnly)
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
                 }
             }
 
             Spacer()
 
-            if contact.latitude != nil, contact.longitude != nil {
-                Image(systemName: "mappin.circle.fill")
-                    .foregroundStyle(.blue)
+            // Route indicator
+            VStack(alignment: .trailing, spacing: 2) {
+                if contact.isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.caption)
+                        .foregroundStyle(.yellow)
+                }
+
+                Text(routeLabel)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 4)
     }
+
+    private var contactTypeLabel: String {
+        switch contact.type {
+        case .chat: return "Chat"
+        case .repeater: return "Repeater"
+        case .room: return "Room"
+        }
+    }
+
+    private var contactTypeIcon: String {
+        switch contact.type {
+        case .chat: return "person.fill"
+        case .repeater: return "antenna.radiowaves.left.and.right"
+        case .room: return "door.left.hand.open"
+        }
+    }
+
+    private var routeLabel: String {
+        if contact.isFloodRouted {
+            return "Flood"
+        } else if contact.outPathLength == 0 {
+            return "Direct"
+        } else if contact.outPathLength > 0 {
+            return "\(contact.outPathLength) hops"
+        }
+        return ""
+    }
+}
+
+#Preview {
+    ContactsListView()
+        .environment(AppState())
 }

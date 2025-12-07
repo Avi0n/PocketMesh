@@ -1,65 +1,103 @@
 import SwiftUI
 
+/// First screen of onboarding - introduces the app
 struct WelcomeView: View {
-    let onContinue: () -> Void
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 40) {
             Spacer()
 
-            // App logo/icon
-            Image(systemName: "antenna.radiowaves.left.and.right")
-                .font(.system(size: 80))
-                .foregroundStyle(.blue)
-
+            // App icon and title
             VStack(spacing: 16) {
-                Text("Welcome to PocketMesh")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 80))
+                    .foregroundStyle(.tint)
+                    .symbolEffect(.pulse.wholeSymbol, options: .repeating)
 
-                Text("Off-grid messaging via MeshCore BLE devices")
+                Text("PocketMesh")
+                    .font(.largeTitle)
+                    .bold()
+
+                Text("Off-grid mesh messaging")
                     .font(.title3)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
             }
-
-            VStack(alignment: .leading, spacing: 12) {
-                FeatureRow(icon: "message.fill", text: "Simple iMessage-style messaging")
-                FeatureRow(icon: "antenna.radiowaves.left.and.right", text: "Connect to MeshCore radios via Bluetooth")
-                FeatureRow(icon: "person.2.fill", text: "Discover contacts in your mesh network")
-                FeatureRow(icon: "map.fill", text: "Share location with mesh contacts")
-            }
-            .padding(.horizontal, 40)
 
             Spacer()
 
-            Button(action: onContinue) {
+            // Features list
+            VStack(alignment: .leading, spacing: 20) {
+                FeatureRow(
+                    icon: "message.fill",
+                    title: "Mesh Messaging",
+                    description: "Send messages without cellular or WiFi"
+                )
+
+                FeatureRow(
+                    icon: "person.2.fill",
+                    title: "Contact Discovery",
+                    description: "Find other mesh users nearby"
+                )
+
+                FeatureRow(
+                    icon: "map.fill",
+                    title: "Location Sharing",
+                    description: "See your contacts on a map"
+                )
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            // Continue button
+            Button {
+                withAnimation {
+                    appState.onboardingStep = .permissions
+                }
+            } label: {
                 Text("Get Started")
                     .font(.headline)
-                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
-                    .cornerRadius(12)
             }
-            .padding(.horizontal, 40)
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal)
+            .padding(.bottom)
         }
-        .padding()
     }
 }
 
-struct FeatureRow: View {
+// MARK: - Feature Row
+
+private struct FeatureRow: View {
     let icon: String
-    let text: String
+    let title: String
+    let description: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             Image(systemName: icon)
-                .foregroundStyle(.blue)
-                .frame(width: 24)
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 44, height: 44)
+                .background(.tint.opacity(0.1), in: .circle)
 
-            Text(text)
-                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
         }
     }
+}
+
+#Preview {
+    WelcomeView()
+        .environment(AppState())
 }

@@ -1,319 +1,263 @@
-import CoreBluetooth
-import CoreLocation
 import SwiftUI
-import UserNotifications
+@preconcurrency import CoreBluetooth
+@preconcurrency import CoreLocation
 
-struct PermissionsView: View {
-    @Binding var hasBluetoothPermission: Bool
-    @Binding var hasNotificationPermission: Bool
-    @Binding var hasLocationPermission: Bool
+// MARK: - Permissions Coordinator
 
-    let onContinue: () -> Void
+/// Coordinator for managing Bluetooth and Location permission requests and state observation.
+/// Uses delegate callbacks to update permission state immediately when user responds.
+@MainActor
+@Observable
+private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, CLLocationManagerDelegate {
+    var bluetoothAuthorization: CBManagerAuthorization = .notDetermined
+    var locationAuthorization: CLAuthorizationStatus = .notDetermined
 
-    @StateObject private var bluetoothManager = BluetoothPermissionManager()
-    @StateObject private var locationManager = LocationPermissionManager()
+    private var centralManager: CBCentralManager?
+    private var locationManager: CLLocationManager?
+    private let bluetoothQueue = DispatchQueue(label: "com.pocketmesh.permissions.bluetooth")
 
-    var body: some View {
-        VStack(spacing: 24) {
-            Text("Permissions")
-                .font(.largeTitle)
-                .fontWeight(.bold)
+    override init() {
+        super.init()
+        bluetoothAuthorization = CBCentralManager.authorization
+        // Create location manager early to check current authorization
+        locationManager = CLLocationManager()
+        locationManager?.delegate = self
+        locationAuthorization = locationManager?.authorizationStatus ?? .notDetermined
+    }
 
-            Text("PocketMesh needs a few permissions to work")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            VStack(spacing: 16) {
-                PermissionRow(
-                    icon: "antenna.radiowaves.left.and.right",
-                    title: "Bluetooth",
-                    description: "Connect to MeshCore devices",
-                    isGranted: hasBluetoothPermission,
-                    action: {
-                        bluetoothManager.requestPermission()
-                    },
-                )
-
-                PermissionRow(
-                    icon: "bell.fill",
-                    title: "Notifications",
-                    description: "Alert you of new messages",
-                    isGranted: hasNotificationPermission,
-                    action: requestNotificationPermission,
-                )
-
-                PermissionRow(
-                    icon: "location.fill",
-                    title: "Location",
-                    description: "Share your location with contacts",
-                    isGranted: hasLocationPermission,
-                    action: {
-                        locationManager.requestPermission()
-                        hasLocationPermission = locationManager.hasPermission
-                    },
-                )
-            }
-
-            Spacer()
-
-            Button(action: onContinue) {
-                Text("Continue")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(allPermissionsGranted ? Color.blue : Color.gray)
-                    .cornerRadius(12)
-            }
-            .disabled(!allPermissionsGranted)
-            .padding(.horizontal, 40)
-        }
-        .padding()
-        .onChange(of: bluetoothManager.hasPermission) { _, newValue in
-            hasBluetoothPermission = newValue
-        }
-        .onChange(of: locationManager.hasPermission) { _, newValue in
-            hasLocationPermission = newValue
-        }
-        .onAppear {
-            hasBluetoothPermission = bluetoothManager.hasPermission
-            hasLocationPermission = locationManager.hasPermission
+    func requestBluetooth() {
+        if centralManager == nil {
+            // Use a dedicated queue (not main) to avoid synchronous callbacks on MainActor
+            // The delegate will dispatch back to main actor as needed
+            centralManager = CBCentralManager(delegate: self, queue: bluetoothQueue)
         }
     }
 
-    private var allPermissionsGranted: Bool {
-        hasBluetoothPermission && hasNotificationPermission && hasLocationPermission
+    func requestLocation() {
+        locationManager?.requestWhenInUseAuthorization()
     }
 
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-            DispatchQueue.main.async {
-                hasNotificationPermission = granted
-            }
+    func checkPermissions() {
+        bluetoothAuthorization = CBCentralManager.authorization
+        if let lm = locationManager {
+            locationAuthorization = lm.authorizationStatus
+        }
+    }
+
+    // MARK: - CBCentralManagerDelegate
+
+    nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        Task { @MainActor in
+            self.bluetoothAuthorization = CBCentralManager.authorization
+        }
+    }
+
+    // MARK: - CLLocationManagerDelegate
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            self.locationAuthorization = status
         }
     }
 }
 
-struct PermissionRow: View {
+// MARK: - Permissions View
+
+/// Second screen of onboarding - requests necessary permissions
+struct PermissionsView: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
+    @State private var coordinator = PermissionsCoordinator()
+    @State private var showingLocationAlert = false
+
+    var body: some View {
+        VStack(spacing: 32) {
+            // Header
+            VStack(spacing: 12) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 60))
+                    .foregroundStyle(.tint)
+
+                Text("Permissions")
+                    .font(.largeTitle)
+                    .bold()
+
+                Text("PocketMesh needs your permission to work properly")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding(.top, 40)
+
+            Spacer()
+
+            // Permission cards
+            VStack(spacing: 16) {
+                PermissionCard(
+                    icon: "antenna.radiowaves.left.and.right",
+                    title: "Bluetooth",
+                    description: "Connect to MeshCore radio devices",
+                    isGranted: coordinator.bluetoothAuthorization == .allowedAlways,
+                    isDenied: coordinator.bluetoothAuthorization == .denied,
+                    action: coordinator.requestBluetooth
+                )
+
+                PermissionCard(
+                    icon: "location.fill",
+                    title: "Location",
+                    description: "Share your location with mesh contacts (optional)",
+                    isGranted: coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways,
+                    isDenied: coordinator.locationAuthorization == .denied,
+                    isOptional: true,
+                    action: {
+                        if coordinator.locationAuthorization == .denied {
+                            showingLocationAlert = true
+                        } else {
+                            coordinator.requestLocation()
+                        }
+                    }
+                )
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            // Navigation buttons
+            VStack(spacing: 12) {
+                Button {
+                    withAnimation {
+                        appState.onboardingStep = .deviceScan
+                    }
+                } label: {
+                    Text(canProceed ? "Continue" : "Skip for Now")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canProceed && coordinator.bluetoothAuthorization == .notDetermined)
+
+                Button {
+                    withAnimation {
+                        appState.onboardingStep = .welcome
+                    }
+                } label: {
+                    Text("Back")
+                        .font(.subheadline)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal)
+            .padding(.bottom)
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                coordinator.checkPermissions()
+            }
+        }
+        .alert("Location Permission", isPresented: $showingLocationAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: "app-settings:") {
+                    openURL(url)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Location permission was previously denied. Please enable it in Settings to share your location with mesh contacts.")
+        }
+    }
+
+    private var canProceed: Bool {
+        coordinator.bluetoothAuthorization == .allowedAlways
+    }
+}
+
+// MARK: - Permission Card
+
+private struct PermissionCard: View {
+    @Environment(\.openURL) private var openURL
+
     let icon: String
     let title: String
     let description: String
     let isGranted: Bool
+    let isDenied: Bool
+    var isOptional: Bool = false
     let action: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 16) {
+            // Icon
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(.blue)
-                .frame(width: 32)
+                .foregroundStyle(iconColor)
+                .frame(width: 44, height: 44)
+                .background(iconColor.opacity(0.1), in: .circle)
 
+            // Text
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.headline)
+                HStack {
+                    Text(title)
+                        .font(.headline)
+
+                    if isOptional {
+                        Text("Optional")
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.secondary.opacity(0.2), in: .capsule)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Text(description)
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
+            // Status/Action
             if isGranted {
                 Image(systemName: "checkmark.circle.fill")
+                    .font(.title2)
                     .foregroundStyle(.green)
+            } else if isDenied {
+                Button("Settings") {
+                    if let url = URL(string: "app-settings:") {
+                        openURL(url)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             } else {
-                Button("Allow", action: action)
-                    .buttonStyle(.bordered)
+                Button("Allow") {
+                    action()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             }
         }
         .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
-    }
-}
-
-@MainActor
-final class BluetoothPermissionManager: NSObject, ObservableObject, CBCentralManagerDelegate {
-    private var centralManager: CBCentralManager?
-    @Published var hasPermission = false
-
-    #if DEBUG
-
-        // MARK: - Simulator Bypass Properties
-
-        private var allowButtonTapCount = 0
-        private var lastTapTime: Date?
-        private let tapTimeout: TimeInterval = 2.0 // Reset counter after 2 seconds
-        private let requiredTapCount = 3
-
-        // MARK: - Simulator Detection
-
-        private var isRunningInSimulator: Bool {
-            #if targetEnvironment(simulator)
-                return true
-            #else
-                return false
-            #endif
-        }
-    #endif
-
-    override init() {
-        super.init()
-        // Start with permission = false
-        // Only grant after user taps "Allow" and Bluetooth scan is initiated
+        .background(.regularMaterial, in: .rect(cornerRadius: 12))
     }
 
-    func requestPermission() {
-        #if DEBUG
-            if isRunningInSimulator {
-                handleSimulatorPermissionRequest()
-            } else {
-                handleDevicePermissionRequest()
-            }
-        #else
-            handleDevicePermissionRequest()
-        #endif
-    }
-
-    #if DEBUG
-        private func handleSimulatorPermissionRequest() {
-            // In simulator, increment tap counter and check for bypass
-            incrementTapCounter()
-
-            // Still attempt to create CBCentralManager for consistency
-            // This will always fail with .unsupported state in simulator
-            if centralManager == nil {
-                centralManager = CBCentralManager(delegate: self, queue: .main)
-            }
-        }
-    #endif
-
-    private func handleDevicePermissionRequest() {
-        // Original device permission logic
-        if centralManager == nil {
-            centralManager = CBCentralManager(delegate: self, queue: .main)
-        }
-    }
-
-    #if DEBUG
-        private func incrementTapCounter() {
-            let now = Date()
-
-            // Reset counter if too much time has passed
-            if let lastTap = lastTapTime, now.timeIntervalSince(lastTap) > tapTimeout {
-                allowButtonTapCount = 0
-            }
-
-            allowButtonTapCount += 1
-            lastTapTime = now
-
-            // Check for bypass condition
-            if allowButtonTapCount >= requiredTapCount {
-                enableSimulatorBypass()
-            }
-        }
-
-        private func enableSimulatorBypass() {
-            hasPermission = true
-            allowButtonTapCount = 0
-
-            // Log bypass activation for debugging
-            print("🔧 Bluetooth permission bypass enabled for simulator testing")
-        }
-    #endif
-
-    private func startScanToTriggerPermission() {
-        // Start scanning for any BLE devices
-        // This triggers iOS to show the Bluetooth permission prompt
-        centralManager?.scanForPeripherals(withServices: nil, options: nil)
-
-        // Stop scanning after a short delay - we just need to trigger the permission
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.centralManager?.stopScan()
-        }
-    }
-
-    private func updatePermissionStatus() {
-        guard let manager = centralManager else {
-            hasPermission = false
-            return
-        }
-
-        #if DEBUG
-            if isRunningInSimulator {
-                // In simulator, only update if we haven't already enabled bypass
-                if hasPermission {
-                    return // Keep bypass state
-                }
-            }
-        #endif
-
-        switch manager.state {
-        case .poweredOn:
-            // Bluetooth is powered on and ready
-            // Start scan to trigger iOS permission prompt
-            startScanToTriggerPermission()
-            // Mark as permitted
-            hasPermission = true
-        case .poweredOff, .resetting:
-            // Bluetooth is off or restarting
-            hasPermission = false
-        case .unauthorized:
-            // App is not authorized to use Bluetooth
-            hasPermission = false
-        case .unsupported:
-            #if DEBUG
-                // In simulator, this is expected - don't change permission state
-                if !isRunningInSimulator {
-                    hasPermission = false
-                }
-            #else
-                // Device doesn't support Bluetooth
-                hasPermission = false
-            #endif
-        case .unknown:
-            // State not determined yet - wait
-            hasPermission = false
-        @unknown default:
-            hasPermission = false
-        }
-    }
-
-    nonisolated func centralManagerDidUpdateState(_: CBCentralManager) {
-        Task { @MainActor in
-            updatePermissionStatus()
+    private var iconColor: Color {
+        if isGranted {
+            return .green
+        } else if isDenied {
+            return .orange
+        } else {
+            return .accentColor
         }
     }
 }
 
-@MainActor
-final class LocationPermissionManager: NSObject, ObservableObject, CLLocationManagerDelegate {
-    private let manager = CLLocationManager()
-    @Published var hasPermission = false
-
-    override init() {
-        super.init()
-        manager.delegate = self
-        checkPermission()
-    }
-
-    func requestPermission() {
-        manager.requestWhenInUseAuthorization()
-    }
-
-    private func checkPermission() {
-        switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            hasPermission = true
-        default:
-            hasPermission = false
-        }
-    }
-
-    nonisolated func locationManagerDidChangeAuthorization(_: CLLocationManager) {
-        Task { @MainActor in
-            checkPermission()
-        }
-    }
+#Preview {
+    PermissionsView()
+        .environment(AppState())
 }

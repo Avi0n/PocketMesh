@@ -2,69 +2,52 @@ name: PocketMesh
 options:
   bundleIdPrefix: com.pocketmesh
   deploymentTarget:
-    iOS: "17.0"
-  developmentLanguage: en
-  xcodeVersion: "16.0"
-  groupOrdering:
-    - order: [App, Views, Services, Models, Protocol, BLE, Persistence, Resources, Tests]
+    iOS: "18.0"
+  xcodeVersion: "16.1"
+  generateEmptyDirectories: true
 
 settings:
   base:
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
     SWIFT_VERSION: "6.0"
-    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: ""
 
 targets:
   PocketMesh:
     type: application
     platform: iOS
-    deploymentTarget: "17.0"
     sources:
       - path: PocketMesh
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.nathanielchung.pocketmesh
-        INFOPLIST_FILE: PocketMesh/Info.plist
-        DEVELOPMENT_TEAM: L6E4TF9NZ9
-        CODE_SIGN_STYLE: Automatic
-        ENABLE_PREVIEWS: YES
+        excludes:
+          - "**/*.md"
     dependencies:
       - target: PocketMeshKit
-    info:
-      path: PocketMesh/Info.plist
-      properties:
-        CFBundleDisplayName: PocketMesh
-        UILaunchScreen: {}
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationLandscapeLeft
-          - UIInterfaceOrientationLandscapeRight
-        NSBluetoothAlwaysUsageDescription: "PocketMesh needs Bluetooth to connect to your MeshCore radio device for off-grid messaging."
-        NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to communicate with MeshCore mesh network devices."
-        NSLocationWhenInUseUsageDescription: "PocketMesh uses your location to share it with contacts in your mesh network."
+    settings:
+      base:
+        INFOPLIST_FILE: PocketMesh/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         UIBackgroundModes:
           - bluetooth-central
-        LSRequiresIPhoneOS: true
-        UIRequiredDeviceCapabilities:
-          - armv7
+        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging."
+        NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios."
+        NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
 
   PocketMeshKit:
     type: framework
     platform: iOS
-    deploymentTarget: "17.0"
     sources:
       - path: PocketMeshKit
     settings:
       base:
+        INFOPLIST_FILE: PocketMeshKit/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.kit
-        ENABLE_TESTING_SEARCH_PATHS: YES
-        GENERATE_INFOPLIST_FILE: YES
 
   PocketMeshTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "17.0"
     sources:
       - path: PocketMeshTests
     dependencies:
@@ -72,19 +55,26 @@ targets:
       - target: PocketMeshKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pocketmesh.tests
-        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: PocketMeshTests/Info.plist
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
 schemes:
   PocketMesh:
     build:
       targets:
         PocketMesh: all
+        PocketMeshKit: all
+        PocketMeshTests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
         - PocketMeshTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
     archive:
       config: Release
