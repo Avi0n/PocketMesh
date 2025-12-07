@@ -41,6 +41,7 @@
 		9FD2BD6DBF14E4BA9F7390D8 /* MockBLEPeripheral.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46D889A65BB4BE14B1040B93 /* MockBLEPeripheral.swift */; };
 		A053B5EE63D2377CAA63D87B /* PocketMeshKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; };
 		A44A1D3DD95BE4B50F0B5B92 /* MockBLEIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62824D52A06E174ECA49CC7E /* MockBLEIntegrationTests.swift */; };
+		A9518A5E7DFCFF815A32E8B7 /* MessageEventBroadcaster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B14228EB1FCE90AA77C37A9 /* MessageEventBroadcaster.swift */; };
 		AAC1A30644146E3D4FE8D152 /* MockBLEPeripheralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43419ED4BA89974E1F577448 /* MockBLEPeripheralTests.swift */; };
 		BA0500A707AA4D1D6C17FA36 /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C643DA1AD15A734272472EE /* Contact.swift */; };
 		BB5C395031835BDAD0DBA667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC87FED40F6C89C41DB04A8 /* ContentView.swift */; };
@@ -109,6 +110,7 @@
 /* Begin PBXFileReference section */
 		0D1B9546AAAA951D4E679E55 /* PocketMeshTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketMeshTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		19636F60B0605513BF191CBF /* ChannelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelService.swift; sourceTree = "<group>"; };
+		1B14228EB1FCE90AA77C37A9 /* MessageEventBroadcaster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageEventBroadcaster.swift; sourceTree = "<group>"; };
 		1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsListView.swift; sourceTree = "<group>"; };
 		1DCADFDA38F997A471312DFA /* ContactDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDetailView.swift; sourceTree = "<group>"; };
 		206E5B5D75096680AC2FAADA /* ContactServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactServiceTests.swift; sourceTree = "<group>"; };
@@ -210,6 +212,7 @@
 				7B3A8D9589A690BFF13B4561 /* Info.plist */,
 				3A66D48C3CFFD92C24C17897 /* PocketMeshApp.swift */,
 				A20E5CF8F22B25ADA27247FC /* Resources */,
+				88BC850137318AB4F413859C /* Services */,
 				E8FB57A8551FD3E69BF0FAD9 /* Views */,
 			);
 			path = PocketMesh;
@@ -309,6 +312,14 @@
 				669D183762BEF5F7898B5882 /* Services */,
 			);
 			path = PocketMeshTests;
+			sourceTree = "<group>";
+		};
+		88BC850137318AB4F413859C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				1B14228EB1FCE90AA77C37A9 /* MessageEventBroadcaster.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		8D8BDE997D80A71EF89C26E6 /* Onboarding */ = {
@@ -560,6 +571,7 @@
 				117D4736D37BA56F722C5C93 /* DevicePairView.swift in Sources */,
 				4C9FA854D051D93BE884C158 /* DeviceScanView.swift in Sources */,
 				32D290F806572B495A69C1C4 /* MessageBubbleView.swift in Sources */,
+				A9518A5E7DFCFF815A32E8B7 /* MessageEventBroadcaster.swift in Sources */,
 				29E4752CA180354A31575E76 /* PermissionsView.swift in Sources */,
 				3FDA2D675069A169B815058C /* PocketMeshApp.swift in Sources */,
 				E9883B997FDCF3DCC25F85C3 /* RadioConfigView.swift in Sources */,
@@ -761,7 +773,7 @@
 				NSBluetoothAlwaysUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging.";
 				NSBluetoothPeripheralUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios.";
 				NSLocationWhenInUseUsageDescription = "PocketMesh can share your location with contacts on the mesh network.";
-				PRODUCT_BUNDLE_IDENTIFIER = com.nathanielchung.pocketmesh;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				UIBackgroundModes = "bluetooth-central";
@@ -849,7 +861,7 @@
 				NSBluetoothAlwaysUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging.";
 				NSBluetoothPeripheralUsageDescription = "PocketMesh uses Bluetooth to connect to MeshCore radios.";
 				NSLocationWhenInUseUsageDescription = "PocketMesh can share your location with contacts on the mesh network.";
-				PRODUCT_BUNDLE_IDENTIFIER = com.nathanielchung.pocketmesh;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pocketmesh.app;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				UIBackgroundModes = "bluetooth-central";

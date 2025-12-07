@@ -1,0 +1,75 @@
+import Foundation
+import PocketMeshKit
+
+/// Events broadcast when messages arrive
+public enum MessageEvent: Sendable, Equatable {
+    case directMessageReceived(message: MessageDTO, contact: ContactDTO)
+    case channelMessageReceived(message: MessageDTO, channelIndex: UInt8)
+    case unknownSender(keyPrefix: Data)
+    case error(String)
+}
+
+/// Broadcasts message events from MessagePollingService to SwiftUI views.
+/// This bridges actor isolation to @MainActor context.
+@Observable
+@MainActor
+public final class MessageEventBroadcaster: MessagePollingDelegate {
+
+    // MARK: - Properties
+
+    /// Latest received message (for simple observation)
+    var latestMessage: MessageDTO?
+
+    /// Latest event for reactive updates
+    var latestEvent: MessageEvent?
+
+    /// Count of new messages (triggers view updates)
+    var newMessageCount: Int = 0
+
+    // MARK: - Initialization
+
+    public init() {}
+
+    // MARK: - MessagePollingDelegate
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveDirectMessage message: MessageDTO,
+        from contact: ContactDTO
+    ) async {
+        await MainActor.run {
+            self.latestMessage = message
+            self.latestEvent = .directMessageReceived(message: message, contact: contact)
+            self.newMessageCount += 1
+        }
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveChannelMessage message: MessageDTO,
+        channelIndex: UInt8
+    ) async {
+        await MainActor.run {
+            self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
+            self.newMessageCount += 1
+        }
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveUnknownSender keyPrefix: Data
+    ) async {
+        await MainActor.run {
+            self.latestEvent = .unknownSender(keyPrefix: keyPrefix)
+        }
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didEncounterError error: MessagePollingError
+    ) async {
+        await MainActor.run {
+            self.latestEvent = .error(error.localizedDescription)
+        }
+    }
+}

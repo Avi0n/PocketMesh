@@ -184,7 +184,7 @@ public extension Contact {
 // MARK: - Sendable DTO
 
 /// A sendable snapshot of Contact for cross-actor transfers
-public struct ContactDTO: Sendable, Equatable, Identifiable {
+public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let id: UUID
     public let deviceID: UUID
     public let publicKey: Data
