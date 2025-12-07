@@ -188,6 +188,43 @@ public enum FrameCodec {
         return data
     }
 
+    public static func encodeAddUpdateContact(_ contact: ContactFrame) -> Data {
+        var data = Data([CommandCode.addUpdateContact.rawValue])
+        data.append(contact.publicKey.prefix(32))
+        data.append(contact.type.rawValue)
+        data.append(contact.flags)
+        data.append(UInt8(bitPattern: Int8(contact.outPathLength)))
+
+        // Pad path to 64 bytes
+        var pathData = contact.outPath.prefix(64)
+        pathData.append(Data(repeating: 0, count: max(0, 64 - pathData.count)))
+        data.append(pathData)
+
+        // Pad name to 32 bytes
+        var nameData = (contact.name.data(using: .utf8) ?? Data()).prefix(32)
+        nameData.append(Data(repeating: 0, count: max(0, 32 - nameData.count)))
+        data.append(nameData)
+
+        data.append(contentsOf: withUnsafeBytes(of: contact.lastAdvertTimestamp.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: contact.latitude) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: contact.longitude) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: contact.lastModified.littleEndian) { Array($0) })
+
+        return data
+    }
+
+    public static func encodeResetPath(publicKey: Data) -> Data {
+        var data = Data([CommandCode.resetPath.rawValue])
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
+    public static func encodeShareContact(publicKey: Data) -> Data {
+        var data = Data([CommandCode.shareContact.rawValue])
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
     // MARK: - Decoding
 
     public static func decodeDeviceInfo(from data: Data) throws -> DeviceInfo {
