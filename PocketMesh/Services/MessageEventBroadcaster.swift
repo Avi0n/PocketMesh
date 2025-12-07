@@ -26,6 +26,12 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
 
+    /// Reference to notification service for posting notifications
+    var notificationService: NotificationService?
+
+    /// Channel name lookup function (set by AppState)
+    var channelNameLookup: ((_ deviceID: UUID, _ channelIndex: UInt8) async -> String?)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -41,6 +47,16 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
             self.latestMessage = message
             self.latestEvent = .directMessageReceived(message: message, contact: contact)
             self.newMessageCount += 1
+
+            // Post notification
+            Task {
+                await self.notificationService?.postDirectMessageNotification(
+                    from: contact.displayName,
+                    contactID: contact.id,
+                    messageText: message.text,
+                    messageID: message.id
+                )
+            }
         }
     }
 
@@ -52,6 +68,18 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         await MainActor.run {
             self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
             self.newMessageCount += 1
+
+            // Post notification
+            Task {
+                let channelName = await self.channelNameLookup?(message.deviceID, channelIndex) ?? "Channel \(channelIndex)"
+                await self.notificationService?.postChannelMessageNotification(
+                    channelName: channelName,
+                    channelIndex: channelIndex,
+                    senderName: nil,
+                    messageText: message.text,
+                    messageID: message.id
+                )
+            }
         }
     }
 
