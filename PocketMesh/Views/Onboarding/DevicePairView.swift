@@ -72,16 +72,16 @@ struct DevicePairView: View {
                     // Hidden text field for keyboard input
                     TextField("", text: $pinCode)
                         .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
                         .focused($pinFieldFocused)
                         .opacity(0)
                         .frame(height: 1)
                         .onChange(of: pinCode) { _, newValue in
                             // Limit to digits only and max length
-                            let filtered = newValue.filter { $0.isNumber }
-                            if filtered.count <= pinLength {
-                                pinCode = filtered
-                            } else {
-                                pinCode = String(filtered.prefix(pinLength))
+                            let filtered = newValue.filter(\.isNumber)
+                            let limited = filtered.count <= pinLength ? filtered : String(filtered.prefix(pinLength))
+                            if limited != newValue {
+                                pinCode = limited
                             }
                         }
 
@@ -174,7 +174,9 @@ struct DevicePairView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
-        .onAppear {
+        .task {
+            // Delay focus to allow view hierarchy to settle and avoid gesture gate timeout
+            try? await Task.sleep(for: .milliseconds(300))
             pinFieldFocused = true
         }
     }

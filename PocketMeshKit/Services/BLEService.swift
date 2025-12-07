@@ -93,6 +93,7 @@ public actor BLEService: NSObject, BLETransport {
     // Connection handling
     private var connectionContinuation: CheckedContinuation<Void, Error>?
     private var scanContinuation: AsyncStream<DiscoveredDevice>.Continuation?
+    private var bluetoothReadyContinuation: CheckedContinuation<Void, Never>?
 
     // State restoration
     private let stateRestorationID = "com.pocketmesh.ble.central"
@@ -122,11 +123,37 @@ public actor BLEService: NSObject, BLETransport {
         centralManager = CBCentralManager(delegate: self, queue: nil, options: options)
     }
 
+    /// Wait for Bluetooth to be powered on
+    public func waitForBluetoothReady() async {
+        guard let centralManager else { return }
+
+        // Already ready
+        if centralManager.state == .poweredOn { return }
+
+        // Wait for state change
+        await withCheckedContinuation { continuation in
+            self.bluetoothReadyContinuation = continuation
+        }
+    }
+
     // MARK: - Scanning
 
     public func startScanning() async throws {
         guard let centralManager else {
             throw BLEError.bluetoothUnavailable
+        }
+
+        // Wait for Bluetooth to be ready (with timeout)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await self.waitForBluetoothReady()
+            }
+            group.addTask {
+                try await Task.sleep(for: .seconds(5))
+                throw BLEError.operationTimeout
+            }
+            try await group.next()
+            group.cancelAll()
         }
 
         guard centralManager.state == .poweredOn else {
@@ -342,8 +369,9 @@ extension BLEService: CBCentralManagerDelegate {
     private func handleStateUpdate(_ state: CBManagerState) {
         switch state {
         case .poweredOn:
-            // Ready to scan/connect
-            break
+            // Resume any waiting task
+            bluetoothReadyContinuation?.resume()
+            bluetoothReadyContinuation = nil
         case .poweredOff, .unauthorized, .unsupported:
             Task {
                 await disconnect()
