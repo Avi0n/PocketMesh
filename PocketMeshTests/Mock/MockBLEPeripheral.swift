@@ -138,6 +138,10 @@ public actor MockBLEPeripheral {
             return handleAddUpdateContact(data)
         case .removeContact:
             return handleRemoveContact(data)
+        case .resetPath:
+            return handleResetPath(data)
+        case .shareContact:
+            return handleShareContact(data)
         case .getContactByKey:
             return handleGetContactByKey(data)
         case .setOtherParams:
@@ -474,6 +478,50 @@ public actor MockBLEPeripheral {
         }
 
         return makeErrorFrame(.notFound)
+    }
+
+    private func handleResetPath(_ data: Data) -> Data {
+        guard data.count >= 33 else {
+            return makeErrorFrame(.illegalArgument)
+        }
+
+        let publicKey = data.subdata(in: 1..<33)
+
+        guard var contact = contacts[publicKey] else {
+            return makeErrorFrame(.notFound)
+        }
+
+        // Reset path to flood routing
+        let updatedContact = ContactFrame(
+            publicKey: contact.publicKey,
+            type: contact.type,
+            flags: contact.flags,
+            outPathLength: -1,  // Flood routing
+            outPath: Data(),
+            name: contact.name,
+            lastAdvertTimestamp: contact.lastAdvertTimestamp,
+            latitude: contact.latitude,
+            longitude: contact.longitude,
+            lastModified: UInt32(Date().timeIntervalSince1970)
+        )
+        contacts[publicKey] = updatedContact
+
+        return Data([ResponseCode.ok.rawValue])
+    }
+
+    private func handleShareContact(_ data: Data) -> Data {
+        guard data.count >= 33 else {
+            return makeErrorFrame(.illegalArgument)
+        }
+
+        let publicKey = data.subdata(in: 1..<33)
+
+        guard contacts[publicKey] != nil else {
+            return makeErrorFrame(.notFound)
+        }
+
+        // In a real device, this would broadcast the contact
+        return Data([ResponseCode.ok.rawValue])
     }
 
     private func handleGetContactByKey(_ data: Data) -> Data {

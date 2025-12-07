@@ -7,28 +7,54 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		04B4CC1542206F66EAC3E590 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0F7970153742CC033CB038 /* WelcomeView.swift */; };
+		101D57DF73BFB85F0A1F6B48 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F740C752C0197768FB92BA /* ChatViewModel.swift */; };
+		117D4736D37BA56F722C5C93 /* DevicePairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5517D40AB55F2177D26BECD /* DevicePairView.swift */; };
+		1F485C2E5BEF877B7F03B8F5 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC7DF5DECEFF69499561634E /* AppState.swift */; };
+		29E4752CA180354A31575E76 /* PermissionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4445AFF3A5E0066EFD18401D /* PermissionsView.swift */; };
 		2B8F73E3DBC0975E31317609 /* PocketMeshKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2CA072AD8EC4C3F945A4B36A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EF934C07C46A9674FD925784 /* Assets.xcassets */; };
+		3132F03A344F9B71E2690E0A /* ChannelServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E8FA457AE0B7266FB38B12 /* ChannelServiceTests.swift */; };
+		32D290F806572B495A69C1C4 /* MessageBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C1B1474CD149416639204AF /* MessageBubbleView.swift */; };
 		383FCA279E650EA9D5A1D32C /* PocketMeshKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8902D89C5A5FE78B691B76E4 /* PocketMeshKit.swift */; };
+		39AB293F43B5F56A43335757 /* ChatsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A15BABD9F5ACB43C7C3E412 /* ChatsListView.swift */; };
 		3FDA2D675069A169B815058C /* PocketMeshApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A66D48C3CFFD92C24C17897 /* PocketMeshApp.swift */; };
+		45DD5683BA0C088BA5351036 /* ChannelService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19636F60B0605513BF191CBF /* ChannelService.swift */; };
 		48CB29597EA0E92A2F79C701 /* ProtocolCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDCDF5D41D3F7E16BF1E541E /* ProtocolCodecTests.swift */; };
+		49B3F234A11390FDD61D250E /* ContactsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE3A9ED13CBEF9480A4D994 /* ContactsViewModel.swift */; };
+		4C520E41C7E2EA0AE002028D /* MessageServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5B5C75224189FCD108E88D /* MessageServiceTests.swift */; };
+		4C9FA854D051D93BE884C158 /* DeviceScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5698E0B384B37810824668E2 /* DeviceScanView.swift */; };
+		52639A52279F01B020CE2E9F /* MessagePollingServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F86645257892287CDE8675EF /* MessagePollingServiceTests.swift */; };
 		55605992566F8CF5F667803F /* PocketMeshKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		55CA0C342B8743CF61DA447D /* PocketMeshKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; };
 		56C6A39C21F2D6E6093ED2E8 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D00CDA3DB460ED521289CFC /* Message.swift */; };
+		64FEA9FB06289559C4470956 /* ContactDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DCADFDA38F997A471312DFA /* ContactDetailView.swift */; };
 		6CFA793F6255681B950E726F /* FrameCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8F2F2CD94815F27EA8B7C0F /* FrameCodec.swift */; };
+		73E1844F85A15DD9B31CC82B /* MessageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9705E3FDD538F1DC42221E7E /* MessageService.swift */; };
 		762510836621381B17040D31 /* DataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35FD782A98811CC11A3E98B4 /* DataStore.swift */; };
 		814489C4A65B4621B426664E /* BLEService.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD3F52D0E53A62FFECE5F034 /* BLEService.swift */; };
+		8822B111C017F76F51D00FD8 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 931F156D79A538146149D5DB /* ChatView.swift */; };
 		8A2C2B4166266BD21E91D2BB /* ProtocolFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47744966A1DF74C21D0300F2 /* ProtocolFrames.swift */; };
 		8C58D03BABF51C6468D6131C /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4BC20AD728EB3A9DD89F86E /* Device.swift */; };
+		92041E155082F000A2CF01AC /* MessagePollingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4ADBD01EE65C7E16CEC224 /* MessagePollingService.swift */; };
+		9754301A49FA5FC7525EF51D /* TestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E77E52AE4DE2E39C4361C4 /* TestHelpers.swift */; };
 		9FD2BD6DBF14E4BA9F7390D8 /* MockBLEPeripheral.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46D889A65BB4BE14B1040B93 /* MockBLEPeripheral.swift */; };
 		A053B5EE63D2377CAA63D87B /* PocketMeshKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */; };
 		A44A1D3DD95BE4B50F0B5B92 /* MockBLEIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62824D52A06E174ECA49CC7E /* MockBLEIntegrationTests.swift */; };
 		AAC1A30644146E3D4FE8D152 /* MockBLEPeripheralTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43419ED4BA89974E1F577448 /* MockBLEPeripheralTests.swift */; };
 		BA0500A707AA4D1D6C17FA36 /* Contact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C643DA1AD15A734272472EE /* Contact.swift */; };
 		BB5C395031835BDAD0DBA667 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC87FED40F6C89C41DB04A8 /* ContentView.swift */; };
+		BC39AE7B285634F050593F66 /* ContactsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */; };
+		CA95F21F141C81818A6A20AE /* ContactServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 206E5B5D75096680AC2FAADA /* ContactServiceTests.swift */; };
 		CB2B542E08B1C5703924FC00 /* Channel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD9C35244A7297C10AAEBF3 /* Channel.swift */; };
+		D84690CB702227813F6D7B79 /* ContactService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D600769D624EA8265AC39CF3 /* ContactService.swift */; };
 		DC6EA18B237883620AB7D35C /* DataStoreIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E75ED4CDC3DEABC87851D4 /* DataStoreIntegrationTests.swift */; };
+		E0CFD16DEACE6514DCE49E38 /* DeviceInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 249625267698F9995F728A66 /* DeviceInfoView.swift */; };
 		E4F44C0F7328AEF2E0A4B3B3 /* ProtocolConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B6488EABF68E6393C20E67 /* ProtocolConstants.swift */; };
+		E93DBDA789A72640D418765E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 433E7925F6AF25F51DAFE548 /* SettingsView.swift */; };
+		E9883B997FDCF3DCC25F85C3 /* RadioConfigView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE1E3AA80BEB087A3E5687D3 /* RadioConfigView.swift */; };
+		F16160A8EA0B38BFEB9F73C8 /* AdvertisementServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB748B4F281382C0C7E6C4BA /* AdvertisementServiceTests.swift */; };
+		F6D1450EFD8C75428F630E71 /* AdvertisementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 448DAB29DF80063E788E82C5 /* AdvertisementService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,28 +108,54 @@
 
 /* Begin PBXFileReference section */
 		0D1B9546AAAA951D4E679E55 /* PocketMeshTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PocketMeshTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		19636F60B0605513BF191CBF /* ChannelService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelService.swift; sourceTree = "<group>"; };
+		1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsListView.swift; sourceTree = "<group>"; };
+		1DCADFDA38F997A471312DFA /* ContactDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactDetailView.swift; sourceTree = "<group>"; };
+		206E5B5D75096680AC2FAADA /* ContactServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactServiceTests.swift; sourceTree = "<group>"; };
+		249625267698F9995F728A66 /* DeviceInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceInfoView.swift; sourceTree = "<group>"; };
+		2A15BABD9F5ACB43C7C3E412 /* ChatsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatsListView.swift; sourceTree = "<group>"; };
+		2FE3A9ED13CBEF9480A4D994 /* ContactsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsViewModel.swift; sourceTree = "<group>"; };
 		35FD782A98811CC11A3E98B4 /* DataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStore.swift; sourceTree = "<group>"; };
 		3A66D48C3CFFD92C24C17897 /* PocketMeshApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PocketMeshApp.swift; sourceTree = "<group>"; };
+		3D0F7970153742CC033CB038 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		433E7925F6AF25F51DAFE548 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		43419ED4BA89974E1F577448 /* MockBLEPeripheralTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEPeripheralTests.swift; sourceTree = "<group>"; };
+		4445AFF3A5E0066EFD18401D /* PermissionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsView.swift; sourceTree = "<group>"; };
+		448DAB29DF80063E788E82C5 /* AdvertisementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvertisementService.swift; sourceTree = "<group>"; };
 		46D889A65BB4BE14B1040B93 /* MockBLEPeripheral.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEPeripheral.swift; sourceTree = "<group>"; };
 		47744966A1DF74C21D0300F2 /* ProtocolFrames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolFrames.swift; sourceTree = "<group>"; };
+		5698E0B384B37810824668E2 /* DeviceScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceScanView.swift; sourceTree = "<group>"; };
+		5C1B1474CD149416639204AF /* MessageBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubbleView.swift; sourceTree = "<group>"; };
 		5FD9C35244A7297C10AAEBF3 /* Channel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Channel.swift; sourceTree = "<group>"; };
 		62824D52A06E174ECA49CC7E /* MockBLEIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockBLEIntegrationTests.swift; sourceTree = "<group>"; };
 		67239BEC5DAD1D89F559414B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6C643DA1AD15A734272472EE /* Contact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Contact.swift; sourceTree = "<group>"; };
+		76F740C752C0197768FB92BA /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		7B3A8D9589A690BFF13B4561 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7E5B5C75224189FCD108E88D /* MessageServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageServiceTests.swift; sourceTree = "<group>"; };
 		84E75ED4CDC3DEABC87851D4 /* DataStoreIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStoreIntegrationTests.swift; sourceTree = "<group>"; };
 		8902D89C5A5FE78B691B76E4 /* PocketMeshKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PocketMeshKit.swift; sourceTree = "<group>"; };
+		931F156D79A538146149D5DB /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		9705E3FDD538F1DC42221E7E /* MessageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageService.swift; sourceTree = "<group>"; };
+		99E8FA457AE0B7266FB38B12 /* ChannelServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelServiceTests.swift; sourceTree = "<group>"; };
 		9D00CDA3DB460ED521289CFC /* Message.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		9FC87FED40F6C89C41DB04A8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A8F2F2CD94815F27EA8B7C0F /* FrameCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameCodec.swift; sourceTree = "<group>"; };
 		B4BC20AD728EB3A9DD89F86E /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
+		B5517D40AB55F2177D26BECD /* DevicePairView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePairView.swift; sourceTree = "<group>"; };
+		BB748B4F281382C0C7E6C4BA /* AdvertisementServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvertisementServiceTests.swift; sourceTree = "<group>"; };
 		BDE5B1CA2B629437BD46D2A3 /* PocketMesh.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PocketMesh.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC7DF5DECEFF69499561634E /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		D3E77E52AE4DE2E39C4361C4 /* TestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHelpers.swift; sourceTree = "<group>"; };
+		D600769D624EA8265AC39CF3 /* ContactService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactService.swift; sourceTree = "<group>"; };
 		D78DD1714916D3FD90923B36 /* PocketMeshKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PocketMeshKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB18057F4B67B3A3C4211AA7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		DD3F52D0E53A62FFECE5F034 /* BLEService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEService.swift; sourceTree = "<group>"; };
 		E3B6488EABF68E6393C20E67 /* ProtocolConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolConstants.swift; sourceTree = "<group>"; };
+		EB4ADBD01EE65C7E16CEC224 /* MessagePollingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePollingService.swift; sourceTree = "<group>"; };
+		EE1E3AA80BEB087A3E5687D3 /* RadioConfigView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioConfigView.swift; sourceTree = "<group>"; };
 		EF934C07C46A9674FD925784 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F86645257892287CDE8675EF /* MessagePollingServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagePollingServiceTests.swift; sourceTree = "<group>"; };
 		FDCDF5D41D3F7E16BF1E541E /* ProtocolCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolCodecTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -130,8 +182,13 @@
 		1C239E83B8A6A39062228C61 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				448DAB29DF80063E788E82C5 /* AdvertisementService.swift */,
 				DD3F52D0E53A62FFECE5F034 /* BLEService.swift */,
+				19636F60B0605513BF191CBF /* ChannelService.swift */,
+				D600769D624EA8265AC39CF3 /* ContactService.swift */,
 				35FD782A98811CC11A3E98B4 /* DataStore.swift */,
+				EB4ADBD01EE65C7E16CEC224 /* MessagePollingService.swift */,
+				9705E3FDD538F1DC42221E7E /* MessageService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -148,6 +205,7 @@
 		228A1D8135CF6436785C8466 /* PocketMesh */ = {
 			isa = PBXGroup;
 			children = (
+				CC7DF5DECEFF69499561634E /* AppState.swift */,
 				9FC87FED40F6C89C41DB04A8 /* ContentView.swift */,
 				7B3A8D9589A690BFF13B4561 /* Info.plist */,
 				3A66D48C3CFFD92C24C17897 /* PocketMeshApp.swift */,
@@ -167,6 +225,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		42EA536B49FA256B0174896F /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				D3E77E52AE4DE2E39C4361C4 /* TestHelpers.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
 		48922D6465C2927C27363D6C /* Map */ = {
 			isa = PBXGroup;
 			children = (
@@ -184,6 +250,9 @@
 		627A1D685A96273F3C39D201 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				249625267698F9995F728A66 /* DeviceInfoView.swift */,
+				EE1E3AA80BEB087A3E5687D3 /* RadioConfigView.swift */,
+				433E7925F6AF25F51DAFE548 /* SettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -201,6 +270,11 @@
 		669D183762BEF5F7898B5882 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				BB748B4F281382C0C7E6C4BA /* AdvertisementServiceTests.swift */,
+				99E8FA457AE0B7266FB38B12 /* ChannelServiceTests.swift */,
+				206E5B5D75096680AC2FAADA /* ContactServiceTests.swift */,
+				F86645257892287CDE8675EF /* MessagePollingServiceTests.swift */,
+				7E5B5C75224189FCD108E88D /* MessageServiceTests.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -208,6 +282,10 @@
 		69C6DDBE9B630FB515D26899 /* Chats */ = {
 			isa = PBXGroup;
 			children = (
+				2A15BABD9F5ACB43C7C3E412 /* ChatsListView.swift */,
+				931F156D79A538146149D5DB /* ChatView.swift */,
+				76F740C752C0197768FB92BA /* ChatViewModel.swift */,
+				5C1B1474CD149416639204AF /* MessageBubbleView.swift */,
 			);
 			path = Chats;
 			sourceTree = "<group>";
@@ -223,6 +301,7 @@
 			isa = PBXGroup;
 			children = (
 				DB18057F4B67B3A3C4211AA7 /* Info.plist */,
+				42EA536B49FA256B0174896F /* Helpers */,
 				217731F688EB8BBC495DBDDB /* Integration */,
 				94FBF8DF1F5087158A4DDCEA /* Mock */,
 				6BCFE73F53AA9DBDA3400D05 /* Performance */,
@@ -235,6 +314,10 @@
 		8D8BDE997D80A71EF89C26E6 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				B5517D40AB55F2177D26BECD /* DevicePairView.swift */,
+				5698E0B384B37810824668E2 /* DeviceScanView.swift */,
+				4445AFF3A5E0066EFD18401D /* PermissionsView.swift */,
+				3D0F7970153742CC033CB038 /* WelcomeView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -259,6 +342,9 @@
 		96B6E6745BC2E8E0407E9C66 /* Contacts */ = {
 			isa = PBXGroup;
 			children = (
+				1DCADFDA38F997A471312DFA /* ContactDetailView.swift */,
+				1B7D790C0AA1F3E034391AF0 /* ContactsListView.swift */,
+				2FE3A9ED13CBEF9480A4D994 /* ContactsViewModel.swift */,
 			);
 			path = Contacts;
 			sourceTree = "<group>";
@@ -444,13 +530,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F6D1450EFD8C75428F630E71 /* AdvertisementService.swift in Sources */,
 				814489C4A65B4621B426664E /* BLEService.swift in Sources */,
 				CB2B542E08B1C5703924FC00 /* Channel.swift in Sources */,
+				45DD5683BA0C088BA5351036 /* ChannelService.swift in Sources */,
 				BA0500A707AA4D1D6C17FA36 /* Contact.swift in Sources */,
+				D84690CB702227813F6D7B79 /* ContactService.swift in Sources */,
 				762510836621381B17040D31 /* DataStore.swift in Sources */,
 				8C58D03BABF51C6468D6131C /* Device.swift in Sources */,
 				6CFA793F6255681B950E726F /* FrameCodec.swift in Sources */,
 				56C6A39C21F2D6E6093ED2E8 /* Message.swift in Sources */,
+				92041E155082F000A2CF01AC /* MessagePollingService.swift in Sources */,
+				73E1844F85A15DD9B31CC82B /* MessageService.swift in Sources */,
 				383FCA279E650EA9D5A1D32C /* PocketMeshKit.swift in Sources */,
 				E4F44C0F7328AEF2E0A4B3B3 /* ProtocolConstants.swift in Sources */,
 				8A2C2B4166266BD21E91D2BB /* ProtocolFrames.swift in Sources */,
@@ -461,8 +552,23 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1F485C2E5BEF877B7F03B8F5 /* AppState.swift in Sources */,
+				8822B111C017F76F51D00FD8 /* ChatView.swift in Sources */,
+				101D57DF73BFB85F0A1F6B48 /* ChatViewModel.swift in Sources */,
+				39AB293F43B5F56A43335757 /* ChatsListView.swift in Sources */,
+				64FEA9FB06289559C4470956 /* ContactDetailView.swift in Sources */,
+				BC39AE7B285634F050593F66 /* ContactsListView.swift in Sources */,
+				49B3F234A11390FDD61D250E /* ContactsViewModel.swift in Sources */,
 				BB5C395031835BDAD0DBA667 /* ContentView.swift in Sources */,
+				E0CFD16DEACE6514DCE49E38 /* DeviceInfoView.swift in Sources */,
+				117D4736D37BA56F722C5C93 /* DevicePairView.swift in Sources */,
+				4C9FA854D051D93BE884C158 /* DeviceScanView.swift in Sources */,
+				32D290F806572B495A69C1C4 /* MessageBubbleView.swift in Sources */,
+				29E4752CA180354A31575E76 /* PermissionsView.swift in Sources */,
 				3FDA2D675069A169B815058C /* PocketMeshApp.swift in Sources */,
+				E9883B997FDCF3DCC25F85C3 /* RadioConfigView.swift in Sources */,
+				E93DBDA789A72640D418765E /* SettingsView.swift in Sources */,
+				04B4CC1542206F66EAC3E590 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,11 +576,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F16160A8EA0B38BFEB9F73C8 /* AdvertisementServiceTests.swift in Sources */,
+				3132F03A344F9B71E2690E0A /* ChannelServiceTests.swift in Sources */,
+				CA95F21F141C81818A6A20AE /* ContactServiceTests.swift in Sources */,
 				DC6EA18B237883620AB7D35C /* DataStoreIntegrationTests.swift in Sources */,
+				52639A52279F01B020CE2E9F /* MessagePollingServiceTests.swift in Sources */,
+				4C520E41C7E2EA0AE002028D /* MessageServiceTests.swift in Sources */,
 				A44A1D3DD95BE4B50F0B5B92 /* MockBLEIntegrationTests.swift in Sources */,
 				9FD2BD6DBF14E4BA9F7390D8 /* MockBLEPeripheral.swift in Sources */,
 				AAC1A30644146E3D4FE8D152 /* MockBLEPeripheralTests.swift in Sources */,
 				48CB29597EA0E92A2F79C701 /* ProtocolCodecTests.swift in Sources */,
+				9754301A49FA5FC7525EF51D /* TestHelpers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
