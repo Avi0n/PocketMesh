@@ -29,6 +29,9 @@ final class ChatViewModel {
     /// Whether a message is being sent
     var isSending = false
 
+    /// Last message previews cache
+    private var lastMessageCache: [UUID: MessageDTO] = [:]
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -38,7 +41,13 @@ final class ChatViewModel {
 
     init() {}
 
-    /// Configure with services
+    /// Configure with services from AppState
+    func configure(appState: AppState) {
+        self.dataStore = appState.dataStore
+        self.messageService = appState.messageService
+    }
+
+    /// Configure with services (for testing)
     func configure(dataStore: DataStore, messageService: MessageService) {
         self.dataStore = dataStore
         self.messageService = messageService
@@ -122,10 +131,70 @@ final class ChatViewModel {
 
     /// Get the last message preview for a contact
     func lastMessagePreview(for contact: ContactDTO) -> String? {
-        // This would need a separate query in a full implementation
-        // For now, we'll just show an indicator
-        guard contact.lastMessageDate != nil else { return nil }
-        return "Message"
+        // Check cache first
+        if let cached = lastMessageCache[contact.id] {
+            return cached.text
+        }
+        return nil
+    }
+
+    /// Load last message previews for all conversations
+    func loadLastMessagePreviews() async {
+        guard let dataStore else { return }
+
+        for contact in conversations {
+            do {
+                let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 1)
+                if let lastMessage = messages.last {
+                    lastMessageCache[contact.id] = lastMessage
+                }
+            } catch {
+                // Silently ignore errors for preview loading
+            }
+        }
+    }
+
+    /// Retry sending a failed message
+    func retryMessage(_ message: MessageDTO) async {
+        guard let messageService,
+              let contact = currentContact else { return }
+
+        isSending = true
+        errorMessage = nil
+
+        do {
+            // Delete the failed message
+            try await dataStore?.deleteMessage(id: message.id)
+
+            // Send a new message with the same text
+            _ = try await messageService.sendDirectMessage(text: message.text, to: contact)
+
+            // Reload messages
+            await loadMessages(for: contact)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isSending = false
+    }
+
+    /// Delete all messages for a contact (conversation deletion)
+    func deleteConversation(for contact: ContactDTO) async throws {
+        guard let dataStore else { return }
+
+        // Fetch all messages for this contact
+        let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 10000)
+
+        // Delete each message
+        for message in messages {
+            try await dataStore.deleteMessage(id: message.id)
+        }
+
+        // Clear last message date on contact
+        try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date.distantPast)
+
+        // Reload conversations
+        await loadConversations(deviceID: contact.deviceID)
     }
 
     // MARK: - Message Status Helpers

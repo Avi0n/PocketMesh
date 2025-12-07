@@ -62,6 +62,7 @@ struct ContactsListView: View {
                 await syncContacts()
             }
             .task {
+                viewModel.configure(appState: appState)
                 await loadContacts()
             }
         }

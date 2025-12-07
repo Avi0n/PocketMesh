@@ -46,10 +46,11 @@ struct OnboardingView: View {
 
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
-    @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        @Bindable var appState = appState
+
+        TabView(selection: $appState.selectedTab) {
             Tab("Chats", systemImage: "message.fill", value: 0) {
                 ChatsListView()
             }

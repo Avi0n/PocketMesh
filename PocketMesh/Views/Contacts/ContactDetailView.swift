@@ -9,12 +9,19 @@ struct ContactDetailView: View {
 
     let contact: ContactDTO
 
+    @State private var currentContact: ContactDTO
     @State private var nickname = ""
     @State private var isEditingNickname = false
     @State private var showingBlockAlert = false
     @State private var showingDeleteAlert = false
     @State private var showingShareSheet = false
     @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    init(contact: ContactDTO) {
+        self.contact = contact
+        self._currentContact = State(initialValue: contact)
+    }
 
     var body: some View {
         List {
@@ -28,7 +35,7 @@ struct ContactDetailView: View {
             infoSection
 
             // Location section (if available)
-            if contact.hasLocation {
+            if currentContact.hasLocation {
                 locationSection
             }
 
@@ -42,31 +49,99 @@ struct ContactDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Message", systemImage: "message.fill") {
-                    // Navigate to chat
-                    dismiss()
+                Button {
+                    appState.navigateToChat(with: currentContact)
+                } label: {
+                    Label("Message", systemImage: "message.fill")
                 }
             }
         }
         .alert("Block Contact", isPresented: $showingBlockAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Block", role: .destructive) {
-                // Handle blocking
+                Task {
+                    await toggleBlocked()
+                }
             }
         } message: {
-            Text("You won't receive messages from \(contact.displayName). You can unblock them later.")
+            Text("You won't receive messages from \(currentContact.displayName). You can unblock them later.")
         }
         .alert("Delete Contact", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
-                // Handle deletion
-                dismiss()
+                Task {
+                    await deleteContact()
+                }
             }
         } message: {
-            Text("This will remove \(contact.displayName) from your contacts. This action cannot be undone.")
+            Text("This will remove \(currentContact.displayName) from your contacts. This action cannot be undone.")
         }
         .onAppear {
-            nickname = contact.nickname ?? ""
+            nickname = currentContact.nickname ?? ""
+        }
+    }
+
+    // MARK: - Actions
+
+    private func toggleFavorite() async {
+        do {
+            try await appState.contactService.updateContactPreferences(
+                contactID: currentContact.id,
+                isFavorite: !currentContact.isFavorite
+            )
+            await refreshContact()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func toggleBlocked() async {
+        do {
+            try await appState.contactService.updateContactPreferences(
+                contactID: currentContact.id,
+                isBlocked: !currentContact.isBlocked
+            )
+            await refreshContact()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteContact() async {
+        do {
+            try await appState.contactService.removeContact(
+                deviceID: currentContact.deviceID,
+                publicKey: currentContact.publicKey
+            )
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func resetPath() async {
+        do {
+            try await appState.contactService.resetPath(
+                deviceID: currentContact.deviceID,
+                publicKey: currentContact.publicKey
+            )
+            await refreshContact()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func shareContact() async {
+        do {
+            try await appState.contactService.shareContact(publicKey: currentContact.publicKey)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func refreshContact() async {
+        if let updated = try? await appState.dataStore.fetchContact(id: currentContact.id) {
+            currentContact = updated
         }
     }
 
@@ -75,10 +150,10 @@ struct ContactDetailView: View {
     private var profileSection: some View {
         Section {
             VStack(spacing: 16) {
-                ContactAvatar(contact: contact, size: 100)
+                ContactAvatar(contact: currentContact, size: 100)
 
                 VStack(spacing: 4) {
-                    Text(contact.displayName)
+                    Text(currentContact.displayName)
                         .font(.title2)
                         .bold()
 
@@ -88,19 +163,19 @@ struct ContactDetailView: View {
 
                     // Status indicators
                     HStack(spacing: 12) {
-                        if contact.isFavorite {
+                        if currentContact.isFavorite {
                             Label("Favorite", systemImage: "star.fill")
                                 .font(.caption)
                                 .foregroundStyle(.yellow)
                         }
 
-                        if contact.isBlocked {
+                        if currentContact.isBlocked {
                             Label("Blocked", systemImage: "hand.raised.fill")
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
 
-                        if contact.hasLocation {
+                        if currentContact.hasLocation {
                             Label("Has Location", systemImage: "location.fill")
                                 .font(.caption)
                                 .foregroundStyle(.green)
@@ -117,26 +192,30 @@ struct ContactDetailView: View {
 
     private var actionsSection: some View {
         Section {
-            // Send message
-            NavigationLink {
-                ChatView(contact: contact)
+            // Send message - switches to Chats tab
+            Button {
+                appState.navigateToChat(with: currentContact)
             } label: {
                 Label("Send Message", systemImage: "message.fill")
             }
 
             // Toggle favorite
             Button {
-                // Toggle favorite
+                Task {
+                    await toggleFavorite()
+                }
             } label: {
                 Label(
-                    contact.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                    systemImage: contact.isFavorite ? "star.slash" : "star"
+                    currentContact.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                    systemImage: currentContact.isFavorite ? "star.slash" : "star"
                 )
             }
 
             // Share contact
             Button {
-                showingShareSheet = true
+                Task {
+                    await shareContact()
+                }
             } label: {
                 Label("Share Contact", systemImage: "square.and.arrow.up")
             }
@@ -158,15 +237,19 @@ struct ContactDetailView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 150)
                         .onSubmit {
-                            saveNickname()
+                            Task {
+                                await saveNickname()
+                            }
                         }
 
                     Button("Save") {
-                        saveNickname()
+                        Task {
+                            await saveNickname()
+                        }
                     }
                     .disabled(isSaving)
                 } else {
-                    Text(contact.nickname ?? "None")
+                    Text(currentContact.nickname ?? "None")
                         .foregroundStyle(.secondary)
 
                     Button("Edit") {
@@ -180,26 +263,26 @@ struct ContactDetailView: View {
             HStack {
                 Text("Name")
                 Spacer()
-                Text(contact.name)
+                Text(currentContact.name)
                     .foregroundStyle(.secondary)
             }
 
             // Last seen
-            if contact.lastAdvertTimestamp > 0 {
+            if currentContact.lastAdvertTimestamp > 0 {
                 HStack {
                     Text("Last Seen")
                     Spacer()
-                    Text(Date(timeIntervalSince1970: TimeInterval(contact.lastAdvertTimestamp)), style: .relative)
+                    Text(Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)), style: .relative)
                         .foregroundStyle(.secondary)
                 }
             }
 
             // Unread count
-            if contact.unreadCount > 0 {
+            if currentContact.unreadCount > 0 {
                 HStack {
                     Text("Unread Messages")
                     Spacer()
-                    Text(contact.unreadCount, format: .number)
+                    Text(currentContact.unreadCount, format: .number)
                         .foregroundStyle(.blue)
                 }
             }
@@ -214,7 +297,7 @@ struct ContactDetailView: View {
         Section {
             // Mini map
             Map {
-                Marker(contact.displayName, coordinate: contactCoordinate)
+                Marker(currentContact.displayName, coordinate: contactCoordinate)
             }
             .frame(height: 200)
             .clipShape(.rect(cornerRadius: 12))
@@ -225,7 +308,7 @@ struct ContactDetailView: View {
             HStack {
                 Text("Coordinates")
                 Spacer()
-                Text("\(contact.latitude, format: .number.precision(.fractionLength(4))), \(contact.longitude, format: .number.precision(.fractionLength(4)))")
+                Text("\(currentContact.latitude, format: .number.precision(.fractionLength(4))), \(currentContact.longitude, format: .number.precision(.fractionLength(4)))")
                     .foregroundStyle(.secondary)
                     .font(.caption)
             }
@@ -243,14 +326,14 @@ struct ContactDetailView: View {
 
     private var contactCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(
-            latitude: CLLocationDegrees(contact.latitude),
-            longitude: CLLocationDegrees(contact.longitude)
+            latitude: CLLocationDegrees(currentContact.latitude),
+            longitude: CLLocationDegrees(currentContact.longitude)
         )
     }
 
     private func openInMaps() {
         let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: contactCoordinate))
-        mapItem.name = contact.displayName
+        mapItem.name = currentContact.displayName
         mapItem.openInMaps()
     }
 
@@ -276,11 +359,11 @@ struct ContactDetailView: View {
             }
 
             // Path length
-            if !contact.isFloodRouted && contact.outPathLength >= 0 {
+            if !currentContact.isFloodRouted && currentContact.outPathLength >= 0 {
                 HStack {
                     Text("Hops")
                     Spacer()
-                    Text(contact.outPathLength, format: .number)
+                    Text(currentContact.outPathLength, format: .number)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -295,7 +378,9 @@ struct ContactDetailView: View {
 
             // Reset path button
             Button {
-                // Reset path
+                Task {
+                    await resetPath()
+                }
             } label: {
                 Label("Reset Path", systemImage: "arrow.triangle.2.circlepath")
             }
@@ -310,15 +395,19 @@ struct ContactDetailView: View {
 
     private var dangerSection: some View {
         Section {
-            Button(role: contact.isBlocked ? nil : .destructive) {
-                if !contact.isBlocked {
+            Button(role: currentContact.isBlocked ? nil : .destructive) {
+                if currentContact.isBlocked {
+                    // Unblock directly
+                    Task {
+                        await toggleBlocked()
+                    }
+                } else {
                     showingBlockAlert = true
                 }
-                // Else unblock directly
             } label: {
                 Label(
-                    contact.isBlocked ? "Unblock Contact" : "Block Contact",
-                    systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                    currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
+                    systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
                 )
             }
 
@@ -335,7 +424,7 @@ struct ContactDetailView: View {
     // MARK: - Helpers
 
     private var contactTypeLabel: String {
-        switch contact.type {
+        switch currentContact.type {
         case .chat: return "Chat Contact"
         case .repeater: return "Repeater"
         case .room: return "Room"
@@ -343,22 +432,30 @@ struct ContactDetailView: View {
     }
 
     private var publicKeyHex: String {
-        contact.publicKeyPrefix.map { String(format: "%02X", $0) }.joined(separator: " ")
+        currentContact.publicKeyPrefix.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 
     private var routingInfo: String {
-        if contact.isFloodRouted {
+        if currentContact.isFloodRouted {
             return "Flood (broadcast)"
-        } else if contact.outPathLength == 0 {
+        } else if currentContact.outPathLength == 0 {
             return "Direct"
         } else {
             return "Multi-hop"
         }
     }
 
-    private func saveNickname() {
+    private func saveNickname() async {
         isSaving = true
-        // Save nickname through view model
+        do {
+            try await appState.contactService.updateContactPreferences(
+                contactID: currentContact.id,
+                nickname: nickname.isEmpty ? nil : nickname
+            )
+            await refreshContact()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         isEditingNickname = false
         isSaving = false
     }
