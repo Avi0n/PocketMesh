@@ -604,6 +604,17 @@ public actor DataStore {
         return try modelContext.fetch(descriptor).first.map { ChannelDTO(from: $0) }
     }
 
+    /// Fetch a channel by ID
+    public func fetchChannel(id: UUID) throws -> ChannelDTO? {
+        let targetID = id
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { ChannelDTO(from: $0) }
+    }
+
     /// Save or update a channel from ChannelInfo
     public func saveChannel(deviceID: UUID, from info: ChannelInfo) throws -> UUID {
         let targetDeviceID = deviceID
