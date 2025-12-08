@@ -697,6 +697,38 @@ public actor DataStore {
         }
     }
 
+    // MARK: - Channel Unread Count
+
+    /// Increment unread count for a channel
+    public func incrementChannelUnreadCount(channelID: UUID) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let channel = try modelContext.fetch(descriptor).first {
+            channel.unreadCount += 1
+            try modelContext.save()
+        }
+    }
+
+    /// Clear unread count for a channel
+    public func clearChannelUnreadCount(channelID: UUID) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let channel = try modelContext.fetch(descriptor).first {
+            channel.unreadCount = 0
+            try modelContext.save()
+        }
+    }
+
     // MARK: - Database Warm-up
 
     /// Forces SwiftData to initialize the database.

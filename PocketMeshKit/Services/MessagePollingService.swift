@@ -223,9 +223,10 @@ public actor MessagePollingService {
         let messageDTO = MessageDTO(from: message)
         try await dataStore.saveMessage(messageDTO)
 
-        // Update channel's last message date
+        // Update channel's last message date and increment unread count
         if let channel = try await dataStore.fetchChannel(deviceID: deviceID, index: frame.channelIndex) {
             try await dataStore.updateChannelLastMessage(channelID: channel.id, date: Date())
+            try await dataStore.incrementChannelUnreadCount(channelID: channel.id)
         }
 
         // Notify delegate

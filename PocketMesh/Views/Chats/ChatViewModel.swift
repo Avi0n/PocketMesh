@@ -11,11 +11,25 @@ final class ChatViewModel {
     /// Current conversations (contacts with messages)
     var conversations: [ContactDTO] = []
 
+    /// Current channels with messages
+    var channels: [ChannelDTO] = []
+
+    /// Combined conversations (contacts + channels)
+    var allConversations: [Conversation] {
+        let contactConversations = conversations.map { Conversation.direct($0) }
+        let channelConversations = channels.filter { $0.lastMessageDate != nil }.map { Conversation.channel($0) }
+        return (contactConversations + channelConversations)
+            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+    }
+
     /// Messages for the current conversation
     var messages: [MessageDTO] = []
 
     /// Current contact being chatted with
     var currentContact: ContactDTO?
+
+    /// Current channel being viewed
+    var currentChannel: ChannelDTO?
 
     /// Loading state
     var isLoading = false
@@ -37,6 +51,7 @@ final class ChatViewModel {
     private var dataStore: DataStore?
     private var messageService: MessageService?
     private var notificationService: NotificationService?
+    private var channelService: ChannelService?
 
     // MARK: - Initialization
 
@@ -47,6 +62,7 @@ final class ChatViewModel {
         self.dataStore = appState.dataStore
         self.messageService = appState.messageService
         self.notificationService = appState.notificationService
+        self.channelService = appState.channelService
     }
 
     /// Configure with services (for testing)
@@ -71,6 +87,24 @@ final class ChatViewModel {
         }
 
         isLoading = false
+    }
+
+    /// Load channels for a device
+    func loadChannels(deviceID: UUID) async {
+        guard let dataStore else { return }
+
+        do {
+            channels = try await dataStore.fetchChannels(deviceID: deviceID)
+        } catch {
+            // Silently handle - channels are optional
+        }
+    }
+
+    /// Load all conversations (contacts + channels) for unified display
+    func loadAllConversations(deviceID: UUID) async {
+        await loadConversations(deviceID: deviceID)
+        await loadChannels(deviceID: deviceID)
+        await loadLastMessagePreviews()
     }
 
     // MARK: - Messages
@@ -143,6 +177,61 @@ final class ChatViewModel {
         await loadMessages(for: contact)
     }
 
+    /// Load messages for a channel
+    func loadChannelMessages(for channel: ChannelDTO) async {
+        guard let dataStore else { return }
+
+        currentChannel = channel
+        currentContact = nil
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+
+            // Clear unread count
+            try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isLoading = false
+    }
+
+    /// Send a channel message
+    func sendChannelMessage() async {
+        guard let channel = currentChannel,
+              let messageService,
+              !composingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+
+        let text = composingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        composingText = ""
+        isSending = true
+        errorMessage = nil
+
+        do {
+            _ = try await messageService.sendChannelMessage(
+                text: text,
+                channelIndex: channel.index,
+                deviceID: channel.deviceID
+            )
+
+            // Reload messages to show the sent message
+            await loadChannelMessages(for: channel)
+
+            // Reload channels to update conversation list
+            await loadChannels(deviceID: channel.deviceID)
+        } catch {
+            errorMessage = error.localizedDescription
+            // Restore the text so user can retry
+            composingText = text
+        }
+
+        isSending = false
+    }
+
     /// Get the last message preview for a contact
     func lastMessagePreview(for contact: ContactDTO) -> String? {
         // Check cache first
@@ -156,6 +245,7 @@ final class ChatViewModel {
     func loadLastMessagePreviews() async {
         guard let dataStore else { return }
 
+        // Load contact message previews
         for contact in conversations {
             do {
                 let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 1)
@@ -166,6 +256,26 @@ final class ChatViewModel {
                 // Silently ignore errors for preview loading
             }
         }
+
+        // Load channel message previews
+        for channel in channels {
+            do {
+                let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 1)
+                if let lastMessage = messages.last {
+                    lastMessageCache[channel.id] = lastMessage
+                }
+            } catch {
+                // Silently ignore errors for preview loading
+            }
+        }
+    }
+
+    /// Get the last message preview for a channel
+    func lastMessagePreview(for channel: ChannelDTO) -> String? {
+        if let cached = lastMessageCache[channel.id] {
+            return cached.text
+        }
+        return nil
     }
 
     /// Retry sending a failed message

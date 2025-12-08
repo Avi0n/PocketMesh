@@ -89,7 +89,7 @@ public extension Channel {
 // MARK: - Sendable DTO
 
 /// A sendable snapshot of Channel for cross-actor transfers
-public struct ChannelDTO: Sendable, Equatable, Identifiable {
+public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
     public let id: UUID
     public let deviceID: UUID
     public let index: UInt8

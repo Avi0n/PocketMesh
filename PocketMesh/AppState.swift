@@ -70,6 +70,9 @@ public final class AppState {
     /// The message polling service for handling incoming messages
     let messagePollingService: MessagePollingService
 
+    /// The channel service for managing channels
+    let channelService: ChannelService
+
     /// The message event broadcaster for UI updates
     let messageEventBroadcaster = MessageEventBroadcaster()
 
@@ -112,6 +115,7 @@ public final class AppState {
         self.messageService = MessageService(bleTransport: bleService, dataStore: dataStore)
         self.contactService = ContactService(bleTransport: bleService, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(bleTransport: bleService, dataStore: dataStore)
+        self.channelService = ChannelService(bleTransport: bleService, dataStore: dataStore)
 
         // Wire up notification service to message event broadcaster
         messageEventBroadcaster.notificationService = notificationService
