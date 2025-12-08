@@ -66,10 +66,10 @@ struct ContactsListView: View {
                 await loadContacts()
             }
             .onChange(of: appState.connectionState) { oldState, newState in
-                // Refresh when device reconnects (state changes to .ready)
+                // Sync from device when reconnecting (state changes to .ready)
                 if newState == .ready && oldState != .ready {
                     Task {
-                        await loadContacts()
+                        await syncContacts()
                     }
                 }
             }
