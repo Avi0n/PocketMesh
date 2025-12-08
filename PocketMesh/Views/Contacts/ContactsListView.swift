@@ -54,7 +54,7 @@ struct ContactsListView: View {
                 }
             }
             .overlay {
-                if viewModel.isSyncing {
+                if viewModel.isSyncing || appState.isContactsSyncing {
                     syncOverlay
                 }
             }
@@ -64,14 +64,6 @@ struct ContactsListView: View {
             .task {
                 viewModel.configure(appState: appState)
                 await loadContacts()
-            }
-            .onChange(of: appState.connectionState) { oldState, newState in
-                // Sync from device when reconnecting (state changes to .ready)
-                if newState == .ready && oldState != .ready {
-                    Task {
-                        await syncContacts()
-                    }
-                }
             }
         }
     }
@@ -167,12 +159,13 @@ struct ContactsListView: View {
             Text("Syncing Contacts...")
                 .font(.headline)
 
-            if let progress = viewModel.syncProgress {
+            if let progress = appState.contactsSyncProgress ?? viewModel.syncProgress {
                 Text("\(progress.0) of \(progress.1)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                ProgressView(value: Double(progress.0), total: Double(max(progress.1, 1)))
+                let displayProgress = appState.contactsSyncProgress ?? viewModel.syncProgress
+                ProgressView(value: Double(displayProgress?.0 ?? 0), total: Double(max(displayProgress?.1 ?? 1, 1)))
                     .progressViewStyle(.linear)
                     .frame(width: 200)
             }

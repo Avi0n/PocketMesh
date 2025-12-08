@@ -48,6 +48,14 @@ public final class AppState {
     /// Whether scanning is in progress
     var isScanning: Bool = false
 
+    // MARK: - Contact Sync State
+
+    /// Whether contacts are currently syncing (for UI overlay)
+    var isContactsSyncing: Bool = false
+
+    /// Contact sync progress (current, total)
+    var contactsSyncProgress: (Int, Int)?
+
     // MARK: - Device Pairing State
 
     /// Device selected for pairing (set when proceeding from scan to pair)
@@ -213,13 +221,12 @@ public final class AppState {
         // Wait briefly for Bluetooth to be ready
         await bleService.waitForBluetoothReady()
 
+        // Pre-warm database to avoid lazy initialization freeze
+        // Must complete before any database operations
+        try? await dataStore.warmUp()
+
         // Check if we need to reconnect
         await attemptAutoReconnect()
-
-        // Pre-warm database to avoid lazy initialization freeze
-        Task {
-            try? await dataStore.warmUp()
-        }
     }
 
     // MARK: - App Lifecycle
@@ -351,6 +358,9 @@ public final class AppState {
 
             // Connect message polling for real-time updates
             await connectMessagePolling()
+
+            // Auto-sync contacts from device
+            await syncContactsFromDevice()
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -407,6 +417,33 @@ public final class AppState {
 
         // Perform initial sync of any waiting messages
         await messagePollingService.syncMessageQueue()
+    }
+
+    // MARK: - Contact Sync
+
+    /// Syncs contacts from the connected device
+    /// Updates isContactsSyncing and contactsSyncProgress for UI
+    func syncContactsFromDevice() async {
+        guard let deviceID = connectedDevice?.id else { return }
+
+        isContactsSyncing = true
+        contactsSyncProgress = nil
+
+        // Set up progress handler
+        await contactService.setSyncProgressHandler { [weak self] current, total in
+            Task { @MainActor in
+                self?.contactsSyncProgress = (current, total)
+            }
+        }
+
+        do {
+            _ = try await contactService.syncContacts(deviceID: deviceID)
+        } catch {
+            // Silently ignore sync errors - contacts can be synced manually
+        }
+
+        contactsSyncProgress = nil
+        isContactsSyncing = false
     }
 
     // MARK: - Navigation
@@ -557,6 +594,9 @@ extension AppState: BLEStateRestorationDelegate {
                 persistConnectedDevice(connectedDevice!)
                 await connectMessagePolling()
 
+                // Auto-sync contacts from device
+                await syncContactsFromDevice()
+
             } catch {
                 // Initialization failed - need to reconnect fresh
                 connectionState = .disconnected
@@ -615,6 +655,9 @@ extension AppState: BLEStateRestorationDelegate {
 
             // Start message polling
             await connectMessagePolling()
+
+            // Auto-sync contacts from device
+            await syncContactsFromDevice()
 
         } catch {
             connectionState = .disconnected
