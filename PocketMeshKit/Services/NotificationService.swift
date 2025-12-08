@@ -31,9 +31,6 @@ public final class NotificationService: NSObject {
     /// Whether notification permissions are authorized
     public private(set) var isAuthorized: Bool = false
 
-    /// Whether permissions have been requested
-    public private(set) var hasRequestedPermission: Bool = false
-
     /// Current authorization status
     public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
@@ -99,8 +96,6 @@ public final class NotificationService: NSObject {
     /// Requests notification authorization.
     @discardableResult
     public func requestAuthorization() async -> Bool {
-        hasRequestedPermission = true
-
         do {
             let options: UNAuthorizationOptions = [.alert, .sound, .badge]
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: options)
@@ -119,9 +114,6 @@ public final class NotificationService: NSObject {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         authorizationStatus = settings.authorizationStatus
         isAuthorized = settings.authorizationStatus == .authorized
-
-        // Check if we've requested before
-        hasRequestedPermission = settings.authorizationStatus != .notDetermined
     }
 
     // MARK: - Category Registration
@@ -354,38 +346,6 @@ public final class NotificationService: NSObject {
         }
     }
 
-    // MARK: - Badge Management
-
-    /// Clears the badge count.
-    public func clearBadge() async {
-        badgeCount = 0
-        do {
-            try await UNUserNotificationCenter.current().setBadgeCount(0)
-        } catch {
-            // Badge update failed
-        }
-    }
-
-    /// Decrements the badge count by a specific amount.
-    public func decrementBadge(by count: Int = 1) async {
-        badgeCount = max(0, badgeCount - count)
-        do {
-            try await UNUserNotificationCenter.current().setBadgeCount(badgeCount)
-        } catch {
-            // Badge update failed
-        }
-    }
-
-    /// Sets the badge count to a specific value.
-    public func setBadge(count: Int) async {
-        badgeCount = count
-        do {
-            try await UNUserNotificationCenter.current().setBadgeCount(count)
-        } catch {
-            // Badge update failed
-        }
-    }
-
     // MARK: - Draft Message Storage
 
     /// Saves a draft message for a contact when quick reply fails.
@@ -413,47 +373,6 @@ public final class NotificationService: NSObject {
         return draft
     }
 
-    /// Checks if there's a pending draft for a contact.
-    ///
-    /// Useful for UI indicators or conditional logic before consuming the draft.
-    ///
-    /// - Parameter contactID: The UUID of the contact
-    /// - Returns: `true` if a draft exists, `false` otherwise
-    @MainActor public func hasDraft(for contactID: UUID) -> Bool {
-        pendingDrafts[contactID.uuidString] != nil
-    }
-
-    // MARK: - Notification Management
-
-    /// Removes all pending notifications for a contact.
-    public func removeNotifications(for contactID: UUID) {
-        UNUserNotificationCenter.current().removeDeliveredNotifications(
-            withIdentifiers: [contactID.uuidString]
-        )
-    }
-
-    /// Removes all pending notifications for a channel.
-    public func removeChannelNotifications(channelIndex: UInt8) {
-        let threadID = "channel-\(channelIndex)"
-        UNUserNotificationCenter.current().getDeliveredNotifications { notifications in
-            let idsToRemove = notifications
-                .filter { $0.request.content.threadIdentifier == threadID }
-                .map { $0.request.identifier }
-            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: idsToRemove)
-        }
-    }
-
-    /// Removes all delivered notifications.
-    public func removeAllNotifications() {
-        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-    }
-
-    // MARK: - User Preferences
-
-    /// Enables or disables notifications (user preference, not system permission).
-    public func setNotificationsEnabled(_ enabled: Bool) {
-        notificationsEnabled = enabled
-    }
 }
 
 // MARK: - UNUserNotificationCenterDelegate
