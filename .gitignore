@@ -6,11 +6,11 @@
 
 # MeshCore examples
 #meshcore_py-2.2.1
-#MeshCore-firmware-example
+MeshCore-firmware-example
 
 # AI
 .claude
-#thoughts/
+thoughts/
 
 ## User settings
 xcuserdata/
