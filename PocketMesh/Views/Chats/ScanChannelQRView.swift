@@ -170,10 +170,11 @@ struct ScanChannelQRView: View {
     // MARK: - Private Methods
 
     private func handleScanResult(_ result: String) {
-        // Parse URL: pocketmesh://channel?name=<name>&secret=<hex>
+        // Parse URL: meshcore://channel/add?name=<name>&secret=<hex>
         guard let url = URL(string: result),
-              url.scheme == "pocketmesh",
+              url.scheme == "meshcore",
               url.host == "channel",
+              url.path == "/add",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             errorMessage = "Invalid QR code format"

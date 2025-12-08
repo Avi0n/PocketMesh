@@ -30,7 +30,7 @@ struct CreatePrivateChannelView: View {
                 shareChannelView
             }
         }
-        .navigationTitle("Create Private Channel")
+        .navigationTitle(isCreated ? "Share Private Channel" : "Create Private Channel")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isCreated {
@@ -198,8 +198,8 @@ struct CreatePrivateChannelView: View {
     private func generateQRCode() -> UIImage? {
         guard let secret = generatedSecret else { return nil }
 
-        // Format: pocketmesh://channel?name=<name>&secret=<hex>
-        let urlString = "pocketmesh://channel?name=\(channelName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(secret.hexString)"
+        // Format: meshcore://channel/add?name=<name>&secret=<hex>
+        let urlString = "meshcore://channel/add?name=\(channelName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(secret.hexString)"
 
         let context = CIContext()
         let filter = CIFilter.qrCodeGenerator()

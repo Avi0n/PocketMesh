@@ -189,8 +189,8 @@ struct ChannelInfoSheet: View {
     // MARK: - Private Methods
 
     private func generateQRCode() -> UIImage? {
-        // Format: pocketmesh://channel?name=<name>&secret=<hex>
-        let urlString = "pocketmesh://channel?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString)"
+        // Format: meshcore://channel/add?name=<name>&secret=<hex>
+        let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString)"
 
         let context = CIContext()
         let filter = CIFilter.qrCodeGenerator()
