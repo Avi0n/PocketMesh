@@ -330,6 +330,73 @@ struct ProtocolCodecTests {
         #expect(result.directReceived == 25)
     }
 
+    @Test("Decode contact with location coordinates")
+    func decodeContactWithLocation() throws {
+        var testData = Data([ResponseCode.contact.rawValue])
+
+        // Public key (32 bytes)
+        testData.append(Data(repeating: 0xAB, count: 32))
+
+        // Type, flags, path length
+        testData.append(ContactType.chat.rawValue)
+        testData.append(0) // flags
+        testData.append(0xFF) // path length (-1 = flood)
+
+        // Path (64 bytes)
+        testData.append(Data(repeating: 0, count: 64))
+
+        // Name (32 bytes)
+        var nameData = "TestContact".data(using: .utf8)!
+        nameData.append(Data(repeating: 0, count: 32 - nameData.count))
+        testData.append(nameData)
+
+        // Last advert timestamp
+        let timestamp: UInt32 = 1733500000
+        testData.append(contentsOf: withUnsafeBytes(of: timestamp.littleEndian) { Array($0) })
+
+        // Latitude as Int32 * 1E6 (37.7749 = 37774900)
+        let latInt: Int32 = 37_774_900
+        testData.append(contentsOf: withUnsafeBytes(of: latInt.littleEndian) { Array($0) })
+
+        // Longitude as Int32 * 1E6 (-122.4194 = -122419400)
+        let lonInt: Int32 = -122_419_400
+        testData.append(contentsOf: withUnsafeBytes(of: lonInt.littleEndian) { Array($0) })
+
+        // Last modified timestamp
+        testData.append(contentsOf: withUnsafeBytes(of: timestamp.littleEndian) { Array($0) })
+
+        let result = try FrameCodec.decodeContact(from: testData)
+
+        // Verify coordinates are decoded correctly
+        #expect(abs(result.latitude - 37.7749) < 0.0001)
+        #expect(abs(result.longitude - (-122.4194)) < 0.0001)
+    }
+
+    @Test("Encode contact preserves location coordinates")
+    func encodeContactWithLocation() throws {
+        let contact = ContactFrame(
+            publicKey: Data(repeating: 0xAB, count: 32),
+            type: .chat,
+            flags: 0,
+            outPathLength: -1,
+            outPath: Data(repeating: 0, count: 64),
+            name: "TestContact",
+            lastAdvertTimestamp: 1733500000,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            lastModified: 1733500000
+        )
+
+        let encoded = FrameCodec.encodeAddUpdateContact(contact)
+
+        // Latitude should be at bytes 136-139 (1 + 32 + 1 + 1 + 1 + 64 + 32 + 4 = 136)
+        let latInt = encoded.subdata(in: 136..<140).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
+        let lonInt = encoded.subdata(in: 140..<144).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
+
+        #expect(latInt == 37_774_900)
+        #expect(lonInt == -122_419_400)
+    }
+
     // MARK: - Error Cases
 
     @Test("Decode with wrong response code throws error")

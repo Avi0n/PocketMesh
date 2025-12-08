@@ -206,8 +206,10 @@ public enum FrameCodec {
         data.append(nameData)
 
         data.append(contentsOf: withUnsafeBytes(of: contact.lastAdvertTimestamp.littleEndian) { Array($0) })
-        data.append(contentsOf: withUnsafeBytes(of: contact.latitude) { Array($0) })
-        data.append(contentsOf: withUnsafeBytes(of: contact.longitude) { Array($0) })
+        let latInt = Int32(contact.latitude * 1_000_000)
+        let lonInt = Int32(contact.longitude * 1_000_000)
+        data.append(contentsOf: withUnsafeBytes(of: latInt.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: lonInt.littleEndian) { Array($0) })
         data.append(contentsOf: withUnsafeBytes(of: contact.lastModified.littleEndian) { Array($0) })
 
         return data
@@ -327,11 +329,14 @@ public enum FrameCodec {
         let timestamp = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
         offset += 4
 
-        let lat = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Float.self) }
+        let latRaw = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
         offset += 4
 
-        let lon = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Float.self) }
+        let lonRaw = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
         offset += 4
+
+        let lat = Float(latRaw) / 1_000_000.0
+        let lon = Float(lonRaw) / 1_000_000.0
 
         let lastMod = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
 
