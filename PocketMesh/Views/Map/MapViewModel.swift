@@ -7,10 +7,6 @@ import PocketMeshKit
 @MainActor
 final class MapViewModel {
 
-    // MARK: - Cache Constants
-
-    private static let cacheRefreshInterval: TimeInterval = 30
-
     // MARK: - Properties
 
     /// All contacts with valid locations
@@ -21,12 +17,6 @@ final class MapViewModel {
 
     /// Error message if any
     var errorMessage: String?
-
-    /// Last cache refresh time
-    private var lastRefreshTime: Date?
-
-    /// Auto-refresh timer task
-    private var refreshTask: Task<Void, Never>?
 
     /// Selected contact for detail display
     var selectedContact: ContactDTO?
@@ -67,47 +57,11 @@ final class MapViewModel {
         do {
             let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
             contactsWithLocation = allContacts.filter(\.hasLocation)
-            lastRefreshTime = Date()
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
-    }
-
-    /// Refresh contacts if cache is stale
-    func refreshIfNeeded() async {
-        guard shouldRefresh else { return }
-        await loadContactsWithLocation()
-    }
-
-    /// Whether the cache needs refresh
-    private var shouldRefresh: Bool {
-        guard let lastRefreshTime else { return true }
-        return Date().timeIntervalSince(lastRefreshTime) >= Self.cacheRefreshInterval
-    }
-
-    // MARK: - Auto-Refresh
-
-    /// Start auto-refresh timer
-    func startAutoRefresh() {
-        stopAutoRefresh()
-
-        refreshTask = Task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(Self.cacheRefreshInterval))
-
-                if Task.isCancelled { break }
-
-                await loadContactsWithLocation()
-            }
-        }
-    }
-
-    /// Stop auto-refresh timer
-    func stopAutoRefresh() {
-        refreshTask?.cancel()
-        refreshTask = nil
     }
 
     // MARK: - Map Interaction

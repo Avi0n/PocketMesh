@@ -69,12 +69,6 @@ struct MapView: View {
                 await viewModel.loadContactsWithLocation()
                 viewModel.centerOnAllContacts()
             }
-            .onAppear {
-                viewModel.startAutoRefresh()
-            }
-            .onDisappear {
-                viewModel.stopAutoRefresh()
-            }
             .sheet(isPresented: $showingContactDetail) {
                 if let contact = selectedContactForDetail {
                     ContactDetailSheet(
