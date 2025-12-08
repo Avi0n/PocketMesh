@@ -141,9 +141,9 @@ public enum ProtocolLimits {
 // MARK: - Contact Types
 
 public enum ContactType: UInt8, Sendable, Codable {
-    case chat = 0x00
-    case repeater = 0x01
-    case room = 0x02
+    case chat = 0x01
+    case repeater = 0x02
+    case room = 0x03
 }
 
 // MARK: - Text Types
