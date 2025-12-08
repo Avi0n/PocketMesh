@@ -51,8 +51,10 @@ struct ContactServiceTests {
         response.append(nameData.prefix(32))
 
         response.append(contentsOf: withUnsafeBytes(of: contact.lastAdvertTimestamp.littleEndian) { Array($0) })
-        response.append(contentsOf: withUnsafeBytes(of: contact.latitude) { Array($0) })
-        response.append(contentsOf: withUnsafeBytes(of: contact.longitude) { Array($0) })
+        let latInt = Int32(contact.latitude * 1_000_000)
+        let lonInt = Int32(contact.longitude * 1_000_000)
+        response.append(contentsOf: withUnsafeBytes(of: latInt.littleEndian) { Array($0) })
+        response.append(contentsOf: withUnsafeBytes(of: lonInt.littleEndian) { Array($0) })
         response.append(contentsOf: withUnsafeBytes(of: contact.lastModified.littleEndian) { Array($0) })
 
         return response
