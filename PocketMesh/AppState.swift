@@ -420,6 +420,13 @@ public final class AppState {
         onboardingStep = .welcome
     }
 
+    /// Navigate directly to device scan (skip welcome/permissions)
+    /// Used when user already completed onboarding but wants to connect a new device
+    func startDeviceScan() {
+        onboardingStep = .deviceScan
+        hasCompletedOnboarding = false
+    }
+
     // MARK: - Device Persistence
 
     /// Persists connected device info for restoration
