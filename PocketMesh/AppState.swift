@@ -229,6 +229,11 @@ public final class AppState {
 
         // Check if we need to reconnect
         await attemptAutoReconnect()
+
+        // Pre-warm database to avoid lazy initialization freeze
+        Task {
+            try? await dataStore.warmUp()
+        }
     }
 
     // MARK: - App Lifecycle

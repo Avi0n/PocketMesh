@@ -696,4 +696,13 @@ public actor DataStore {
             try modelContext.save()
         }
     }
+
+    // MARK: - Database Warm-up
+
+    /// Forces SwiftData to initialize the database.
+    /// Call this early in app lifecycle to avoid lazy initialization during user operations.
+    public func warmUp() throws {
+        // Perform a simple fetch to trigger modelContext initialization
+        _ = try modelContext.fetchCount(FetchDescriptor<Device>())
+    }
 }
