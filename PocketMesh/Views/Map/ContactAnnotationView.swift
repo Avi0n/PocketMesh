@@ -106,22 +106,24 @@ struct ContactAnnotationCallout: View {
 
             Divider()
 
-            // Action buttons
-            HStack(spacing: 16) {
+            // Action buttons - use HStack with flexible sizing
+            HStack(spacing: 12) {
                 Button(action: onMessageTap) {
                     Label("Message", systemImage: "message.fill")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
 
                 Button(action: onDetailTap) {
                     Label("Details", systemImage: "info.circle")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
             }
         }
         .padding()
-        .frame(width: 240)
-        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+        .frame(width: 280) // Increased from 240
+        .adaptiveGlassBackground(in: .rect(cornerRadius: 12))
         .shadow(radius: 4)
     }
 
@@ -157,6 +159,20 @@ struct ContactAnnotationCallout: View {
             "Repeater"
         case .room:
             "Room"
+        }
+    }
+}
+
+// MARK: - Glass Effect Extension
+
+extension View {
+    /// Applies Liquid Glass effect on iOS 26+, falls back to solid color on older versions
+    @ViewBuilder
+    func adaptiveGlassBackground(in shape: some Shape = .rect(cornerRadius: 12)) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(Color(.secondarySystemBackground), in: shape)
         }
     }
 }

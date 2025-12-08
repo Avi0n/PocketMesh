@@ -63,14 +63,29 @@ struct MapView: View {
                         coordinate: contact.coordinate,
                         anchor: .bottom
                     ) {
-                        ContactAnnotationView(
-                            contact: contact,
-                            isSelected: viewModel.selectedContact?.id == contact.id
-                        )
+                        VStack(spacing: 0) {
+                            // Callout appears above the pin when selected
+                            if viewModel.selectedContact?.id == contact.id {
+                                ContactAnnotationCallout(
+                                    contact: contact,
+                                    onMessageTap: { navigateToChat(with: contact) },
+                                    onDetailTap: { showContactDetail(contact) }
+                                )
+                                .transition(.scale.combined(with: .opacity))
+                            }
+
+                            // Pin is always visible
+                            ContactAnnotationView(
+                                contact: contact,
+                                isSelected: viewModel.selectedContact?.id == contact.id
+                            )
+                        }
+                        .animation(.spring(response: 0.3), value: viewModel.selectedContact?.id)
                         .onTapGesture {
                             handleAnnotationTap(contact)
                         }
                     }
+                    .annotationTitles(.hidden)
                 }
             }
             .mapStyle(.standard(elevation: .realistic))
@@ -83,11 +98,6 @@ struct MapView: View {
             .overlay {
                 if viewModel.isLoading {
                     loadingOverlay
-                }
-            }
-            .overlay(alignment: .top) {
-                if let contact = viewModel.selectedContact {
-                    contactCallout(for: contact)
                 }
             }
         }
@@ -171,22 +181,6 @@ struct MapView: View {
             }
         }
         .disabled(viewModel.isLoading)
-    }
-
-    // MARK: - Contact Callout
-
-    private func contactCallout(for contact: ContactDTO) -> some View {
-        ContactAnnotationCallout(
-            contact: contact,
-            onMessageTap: { navigateToChat(with: contact) },
-            onDetailTap: { showContactDetail(contact) }
-        )
-        .padding(.top, 60)
-        .transition(.move(edge: .top).combined(with: .opacity))
-        .animation(.easeInOut, value: viewModel.selectedContact?.id)
-        .onTapGesture {
-            // Tapping outside should dismiss
-        }
     }
 
     // MARK: - Actions
