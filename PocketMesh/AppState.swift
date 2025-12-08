@@ -126,33 +126,23 @@ public final class AppState {
             // Look up the contact
             guard let contact = try? await self.dataStore.fetchContact(id: contactID) else { return }
 
-            // Check if BLE is connected
+            // Check if BLE is connected and try to send
             let connectionState = await self.bleService.connectionState
-
             if connectionState == .ready {
-                // Connected - try to send the message
                 do {
                     _ = try await self.messageService.sendDirectMessage(text: text, to: contact)
+                    return  // Success - exit early
                 } catch {
-                    // Send failed - save draft and notify user
-                    self.notificationService.saveDraft(for: contactID, text: text)
-                    Task {
-                        await self.notificationService.postQuickReplyFailedNotification(
-                            contactName: contact.name ?? "Contact",
-                            contactID: contactID
-                        )
-                    }
-                }
-            } else {
-                // Not connected - save draft and notify user
-                self.notificationService.saveDraft(for: contactID, text: text)
-                Task {
-                    await self.notificationService.postQuickReplyFailedNotification(
-                        contactName: contact.name ?? "Contact",
-                        contactID: contactID
-                    )
+                    // Send failed - fall through to error handling
                 }
             }
+
+            // Not connected or send failed - save draft and notify user
+            self.notificationService.saveDraft(for: contactID, text: text)
+            await self.notificationService.postQuickReplyFailedNotification(
+                contactName: contact.name,
+                contactID: contactID
+            )
         }
 
         // Set up notification tap handler
@@ -180,7 +170,7 @@ public final class AppState {
                 // Clear unread count for the contact
                 try await self.dataStore.clearUnreadCount(contactID: contactID)
             } catch {
-                // Log error but don't crash - mark as read is not critical
+                // Silently ignore - mark as read is not critical
             }
         }
 
