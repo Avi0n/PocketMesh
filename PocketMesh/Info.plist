@@ -26,6 +26,8 @@
 	<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PocketMesh uses your location to share coordinates with mesh contacts.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>PocketMesh needs camera access to scan channel QR codes.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>bluetooth-central</string>
