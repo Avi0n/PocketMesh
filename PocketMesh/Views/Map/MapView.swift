@@ -1,6 +1,43 @@
 import SwiftUI
 import MapKit
 import PocketMeshKit
+import CoreLocation
+
+/// Handles location permission for the map view
+@MainActor
+@Observable
+final class MapLocationCoordinator: NSObject, CLLocationManagerDelegate {
+    private let locationManager = CLLocationManager()
+    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    var showingDeniedAlert = false
+
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        authorizationStatus = locationManager.authorizationStatus
+    }
+
+    func handleLocationButtonTap() {
+        switch authorizationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .denied, .restricted:
+            showingDeniedAlert = true
+        case .authorizedWhenInUse, .authorizedAlways:
+            // Permission granted - MapUserLocationButton handles centering
+            break
+        @unknown default:
+            break
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            self.authorizationStatus = status
+        }
+    }
+}
 
 /// Map view displaying contacts with their locations
 struct MapView: View {
@@ -9,6 +46,7 @@ struct MapView: View {
     @State private var showingContactDetail = false
     @State private var selectedContactForDetail: ContactDTO?
     @Namespace private var mapScope
+    @State private var locationCoordinator = MapLocationCoordinator()
 
     var body: some View {
         NavigationStack {
@@ -21,7 +59,6 @@ struct MapView: View {
                     mapControls
                 }
             }
-            .navigationTitle("Map")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     refreshButton
@@ -45,6 +82,16 @@ struct MapView: View {
                         onMessage: { navigateToChat(with: contact) }
                     )
                 }
+            }
+            .alert("Location Access Required", isPresented: $locationCoordinator.showingDeniedAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("PocketMesh needs location access to show your current location on the map. Please enable it in Settings.")
             }
         }
     }
@@ -92,8 +139,29 @@ struct MapView: View {
             .mapScope(mapScope)
             .mapControls {
                 MapCompass(scope: mapScope)
-                MapUserLocationButton(scope: mapScope)
+                // Only show system location button if authorized
+                if locationCoordinator.authorizationStatus == .authorizedWhenInUse ||
+                   locationCoordinator.authorizationStatus == .authorizedAlways {
+                    MapUserLocationButton(scope: mapScope)
+                }
                 MapScaleView(scope: mapScope)
+            }
+            .overlay(alignment: .topTrailing) {
+                // Show custom button only when not authorized
+                if locationCoordinator.authorizationStatus != .authorizedWhenInUse &&
+                   locationCoordinator.authorizationStatus != .authorizedAlways {
+                    Button {
+                        locationCoordinator.handleLocationButtonTap()
+                    } label: {
+                        Image(systemName: "location")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.blue)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: .circle)
+                    }
+                    .padding(.trailing, 8)
+                    .padding(.top, 52)
+                }
             }
             .overlay {
                 if viewModel.isLoading {
@@ -151,16 +219,6 @@ struct MapView: View {
                         .background(.regularMaterial, in: .circle)
                 }
                 .disabled(viewModel.contactsWithLocation.isEmpty)
-
-                // Contact count badge
-                if !viewModel.contactsWithLocation.isEmpty {
-                    Text("\(viewModel.contactsWithLocation.count)")
-                        .font(.caption.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.blue, in: .capsule)
-                }
             }
             .padding()
         }
