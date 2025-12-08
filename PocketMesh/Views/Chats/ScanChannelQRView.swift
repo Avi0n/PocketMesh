@@ -1,5 +1,6 @@
 import SwiftUI
-import AVFoundation
+import VisionKit
+import AudioToolbox
 import PocketMeshKit
 
 /// View for scanning a channel QR code to join
@@ -44,10 +45,19 @@ struct ScanChannelQRView: View {
 
     private var scannerView: some View {
         ZStack {
-            QRScannerView { result in
-                handleScanResult(result)
-            } onPermissionDenied: {
-                cameraPermissionDenied = true
+            if QRDataScannerView.isSupported && QRDataScannerView.isAvailable {
+                QRDataScannerView { result in
+                    handleScanResult(result)
+                } onPermissionDenied: {
+                    cameraPermissionDenied = true
+                }
+            } else {
+                // Fallback for unsupported devices
+                ContentUnavailableView(
+                    "Scanner Not Available",
+                    systemImage: "qrcode.viewfinder",
+                    description: Text("QR scanning is not supported on this device")
+                )
             }
 
             // Overlay with scan frame
@@ -208,98 +218,76 @@ struct ScanChannelQRView: View {
     }
 }
 
-// MARK: - QR Scanner UIViewRepresentable
+// MARK: - QR Scanner using DataScannerViewController
 
-struct QRScannerView: UIViewRepresentable {
+struct QRDataScannerView: UIViewControllerRepresentable {
     let onScan: (String) -> Void
     let onPermissionDenied: () -> Void
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.backgroundColor = .black
-
-        let captureSession = AVCaptureSession()
-
-        guard let videoCaptureDevice = AVCaptureDevice.default(for: .video) else {
-            onPermissionDenied()
-            return view
-        }
-
-        let videoInput: AVCaptureDeviceInput
-
-        do {
-            videoInput = try AVCaptureDeviceInput(device: videoCaptureDevice)
-        } catch {
-            onPermissionDenied()
-            return view
-        }
-
-        if captureSession.canAddInput(videoInput) {
-            captureSession.addInput(videoInput)
-        } else {
-            onPermissionDenied()
-            return view
-        }
-
-        let metadataOutput = AVCaptureMetadataOutput()
-
-        if captureSession.canAddOutput(metadataOutput) {
-            captureSession.addOutput(metadataOutput)
-
-            metadataOutput.setMetadataObjectsDelegate(context.coordinator, queue: DispatchQueue.main)
-            metadataOutput.metadataObjectTypes = [.qr]
-        } else {
-            onPermissionDenied()
-            return view
-        }
-
-        let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-        previewLayer.frame = view.layer.bounds
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-
-        context.coordinator.previewLayer = previewLayer
-
-        Task {
-            captureSession.startRunning()
-        }
-
-        context.coordinator.captureSession = captureSession
-
-        return view
+    static var isSupported: Bool {
+        DataScannerViewController.isSupported
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = uiView.bounds
+    static var isAvailable: Bool {
+        DataScannerViewController.isAvailable
+    }
+
+    func makeUIViewController(context: Context) -> DataScannerViewController {
+        let scanner = DataScannerViewController(
+            recognizedDataTypes: [.barcode(symbologies: [.qr])],
+            qualityLevel: .balanced,
+            recognizesMultipleItems: false,
+            isHighFrameRateTrackingEnabled: false,
+            isHighlightingEnabled: true
+        )
+        scanner.delegate = context.coordinator
+        return scanner
+    }
+
+    func updateUIViewController(_ controller: DataScannerViewController, context: Context) {
+        // Start scanning when view appears
+        if !controller.isScanning {
+            try? controller.startScanning()
+        }
+    }
+
+    static func dismantleUIViewController(_ controller: DataScannerViewController, coordinator: Coordinator) {
+        controller.stopScanning()
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onScan: onScan)
     }
 
-    class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
+    @MainActor
+    class Coordinator: NSObject, DataScannerViewControllerDelegate {
         let onScan: (String) -> Void
-        var captureSession: AVCaptureSession?
-        var previewLayer: AVCaptureVideoPreviewLayer?
-        var hasScanned = false
+        private var hasScanned = false
 
         init(onScan: @escaping (String) -> Void) {
             self.onScan = onScan
         }
 
-        func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-            guard !hasScanned,
-                  let metadataObject = metadataObjects.first,
-                  let readableObject = metadataObject as? AVMetadataMachineReadableCodeObject,
-                  let stringValue = readableObject.stringValue else {
-                return
+        func dataScanner(_ dataScanner: DataScannerViewController, didTapOn item: RecognizedItem) {
+            processItem(item, scanner: dataScanner)
+        }
+
+        func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
+            // Auto-capture first QR code detected
+            guard !hasScanned, let item = addedItems.first else { return }
+            processItem(item, scanner: dataScanner)
+        }
+
+        private func processItem(_ item: RecognizedItem, scanner: DataScannerViewController) {
+            guard !hasScanned else { return }
+
+            if case .barcode(let barcode) = item,
+               let payload = barcode.payloadStringValue {
+                hasScanned = true
+                scanner.stopScanning()
+                AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
+                onScan(payload)
             }
-
-            hasScanned = true
-            captureSession?.stopRunning()
-
-            AudioServicesPlaySystemSound(SystemSoundID(kSystemSoundID_Vibrate))
-            onScan(stringValue)
         }
     }
 }
