@@ -30,8 +30,6 @@ struct OnboardingView: View {
                 PermissionsView()
             case .deviceScan:
                 DeviceScanView()
-            case .devicePair:
-                DevicePairView()
             }
         }
         .transition(.asymmetric(

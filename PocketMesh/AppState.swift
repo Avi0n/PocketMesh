@@ -53,24 +53,6 @@ public final class AppState {
     /// Device selected for pairing (set when proceeding from scan to pair)
     var selectedDeviceForPairing: DiscoveredDevice?
 
-    /// Device info from the selected device (available after initial connection)
-    var pendingDeviceInfo: DeviceInfo?
-
-    /// Self info from the selected device (available after initial connection)
-    var pendingSelfInfo: SelfInfo?
-
-    /// Whether PIN is required for the pending device
-    var isPinRequired: Bool {
-        guard let blePin = pendingDeviceInfo?.blePin else { return false }
-        return blePin != 0
-    }
-
-    /// Whether we have a stored PIN for the pending device
-    var hasStoredPIN: Bool {
-        guard let device = selectedDeviceForPairing else { return false }
-        return KeychainHelper.shared.hasPIN(forDeviceUUID: device.id)
-    }
-
     // MARK: - Data Services
 
     /// The SwiftData model container
@@ -371,129 +353,14 @@ public final class AppState {
         }
     }
 
-    /// Performs initial connection to detect if PIN is required
-    /// Returns deviceInfo so caller can check blePin status
-    func connectAndCheckPinRequired(to device: DiscoveredDevice) async throws -> DeviceInfo {
-        isConnecting = true
-        lastError = nil
-
-        defer { isConnecting = false }
-
-        // Stop scanning first
-        await stopScanning()
-
-        // Connect to the device
-        try await bleService.connect(to: device.id)
-
-        // Initialize device and get info
-        let (deviceInfo, selfInfo) = try await bleService.initializeDevice()
-
-        // Store for later use
-        pendingDeviceInfo = deviceInfo
-        pendingSelfInfo = selfInfo
-
-        return deviceInfo
-    }
-
-    /// Authenticates with the device using a PIN
-    /// - Parameters:
-    ///   - device: The device to authenticate with
-    ///   - pin: The PIN to use
-    ///   - storePin: Whether to store the PIN in Keychain for future use
-    func authenticateWithPIN(device: DiscoveredDevice, pin: String, storePin: Bool = true) async throws {
-        guard let selfInfo = pendingSelfInfo else {
-            throw BLEError.notConnected
-        }
-
-        let loginResult = try await bleService.sendLogin(
-            publicKey: selfInfo.publicKey,
-            pin: pin
-        )
-
-        guard loginResult.success else {
-            throw BLEError.authenticationFailed
-        }
-
-        // Store PIN in Keychain for future connections
-        if storePin {
-            try? KeychainHelper.shared.savePIN(pin, forDeviceUUID: device.id)
-        }
-    }
-
-    /// Completes connection after authentication (or skips auth if not required)
-    func completeConnection(to device: DiscoveredDevice) async throws {
-        isConnecting = true
-        lastError = nil
-
-        defer { isConnecting = false }
-
-        guard let deviceInfo = pendingDeviceInfo,
-              let selfInfo = pendingSelfInfo else {
-            throw BLEError.notConnected
-        }
-
-        // Update connection state
-        connectionState = await bleService.connectionState
-
-        // Create device DTO from the info
-        connectedDevice = DeviceDTO(
-            from: Device(
-                id: device.id,
-                publicKey: selfInfo.publicKey,
-                nodeName: selfInfo.nodeName,
-                firmwareVersion: deviceInfo.firmwareVersion,
-                firmwareVersionString: deviceInfo.firmwareVersionString,
-                manufacturerName: deviceInfo.manufacturerName,
-                buildDate: deviceInfo.buildDate,
-                maxContacts: deviceInfo.maxContacts,
-                maxChannels: deviceInfo.maxChannels,
-                frequency: selfInfo.frequency,
-                bandwidth: selfInfo.bandwidth,
-                spreadingFactor: selfInfo.spreadingFactor,
-                codingRate: selfInfo.codingRate,
-                txPower: selfInfo.txPower,
-                maxTxPower: selfInfo.maxTxPower,
-                latitude: selfInfo.latitude,
-                longitude: selfInfo.longitude,
-                blePin: deviceInfo.blePin,
-                manualAddContacts: selfInfo.manualAddContacts > 0,
-                isActive: true
-            )
-        )
-
-        // Record connection for state restoration
-        bleStateRestoration.recordConnection(deviceID: device.id)
-        persistConnectedDevice(connectedDevice!)
-
-        // Clear pending state
-        pendingDeviceInfo = nil
-        pendingSelfInfo = nil
-        selectedDeviceForPairing = nil
-
-        // Connect message polling for real-time updates
-        await connectMessagePolling()
-    }
-
-    /// Clears stored PIN for a device (called on explicit disconnect)
-    func clearStoredPIN(for deviceID: UUID) {
-        KeychainHelper.shared.deletePIN(forDeviceUUID: deviceID)
-    }
 
     /// Disconnect from the current device
-    /// - Parameter forgetDevice: If true, also clears stored PIN
-    func disconnect(forgetDevice: Bool = false) async {
-        let deviceID = connectedDevice?.id
-
+    func disconnect() async {
         bleStateRestoration.recordDisconnection(intentional: true)
         clearPersistedDevice()
         await bleService.disconnect()
         connectionState = .disconnected
         connectedDevice = nil
-
-        // Clear stored PIN if forgetting device
-        if forgetDevice, let deviceID {
-            clearStoredPIN(for: deviceID)
-        }
     }
 
     /// Disconnects any existing connection and prepares for new device scan
@@ -598,7 +465,6 @@ enum OnboardingStep: Int, CaseIterable {
     case welcome
     case permissions
     case deviceScan
-    case devicePair
 
     var next: OnboardingStep? {
         guard let index = OnboardingStep.allCases.firstIndex(of: self),
