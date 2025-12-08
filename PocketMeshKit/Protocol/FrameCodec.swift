@@ -446,7 +446,13 @@ public enum FrameCodec {
 
         let index = data[1]
         let nameData = data.subdata(in: 2..<34)
-        let name = String(data: nameData, encoding: .utf8)?.trimmingCharacters(in: .controlCharacters) ?? ""
+        let nullTerminatedData: Data
+        if let nullIndex = nameData.firstIndex(of: 0) {
+            nullTerminatedData = nameData.prefix(upTo: nullIndex)
+        } else {
+            nullTerminatedData = nameData
+        }
+        let name = String(data: nullTerminatedData, encoding: .utf8) ?? ""
         let secret = data.subdata(in: 34..<50)
 
         return ChannelInfo(index: index, name: name, secret: secret)

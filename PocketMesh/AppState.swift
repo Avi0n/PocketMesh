@@ -359,8 +359,9 @@ public final class AppState {
             // Connect message polling for real-time updates
             await connectMessagePolling()
 
-            // Auto-sync contacts from device
+            // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
+            await syncChannelsFromDevice()
         } catch {
             lastError = error.localizedDescription
             throw error
@@ -444,6 +445,20 @@ public final class AppState {
 
         contactsSyncProgress = nil
         isContactsSyncing = false
+    }
+
+    // MARK: - Channel Sync
+
+    /// Syncs channels from the connected device
+    /// Called after contact sync to ensure contact names are available
+    func syncChannelsFromDevice() async {
+        guard let deviceID = connectedDevice?.id else { return }
+
+        do {
+            _ = try await channelService.syncChannels(deviceID: deviceID)
+        } catch {
+            // Silently ignore sync errors - channels can be synced manually
+        }
     }
 
     // MARK: - Navigation
@@ -594,8 +609,9 @@ extension AppState: BLEStateRestorationDelegate {
                 persistConnectedDevice(connectedDevice!)
                 await connectMessagePolling()
 
-                // Auto-sync contacts from device
+                // Auto-sync contacts then channels from device
                 await syncContactsFromDevice()
+                await syncChannelsFromDevice()
 
             } catch {
                 // Initialization failed - need to reconnect fresh
@@ -656,8 +672,9 @@ extension AppState: BLEStateRestorationDelegate {
             // Start message polling
             await connectMessagePolling()
 
-            // Auto-sync contacts from device
+            // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
+            await syncChannelsFromDevice()
 
         } catch {
             connectionState = .disconnected

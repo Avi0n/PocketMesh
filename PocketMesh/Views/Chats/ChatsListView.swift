@@ -60,7 +60,11 @@ struct ChatsListView: View {
             .sheet(isPresented: $showingNewChat) {
                 NewChatView(viewModel: viewModel)
             }
-            .sheet(isPresented: $showingChannelOptions) {
+            .sheet(isPresented: $showingChannelOptions, onDismiss: {
+                Task {
+                    await loadConversations()
+                }
+            }) {
                 ChannelOptionsSheet()
             }
             .refreshable {
