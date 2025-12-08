@@ -45,7 +45,7 @@ struct DevicePairView: View {
                             .multilineTextAlignment(.center)
                     }
                 } else {
-                    Text("Enter the PIN shown on your device, or leave blank if no PIN is set")
+                    Text("Enter the 6-digit PIN shown on your device")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -93,17 +93,6 @@ struct DevicePairView: View {
                 .onTapGesture {
                     pinFieldFocused = true
                 }
-
-                // Skip PIN option
-                Button {
-                    pinCode = ""
-                    startPairing()
-                } label: {
-                    Text("No PIN set on device")
-                        .font(.subheadline)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.tint)
 
                 Spacer()
             } else {
@@ -195,18 +184,25 @@ struct DevicePairView: View {
 
         Task {
             do {
-                // Get the first discovered device (the one user selected)
-                guard let device = appState.discoveredDevices.first else {
+                // Use the selected device from appState
+                guard let device = appState.selectedDeviceForPairing else {
                     pairingError = "No device selected"
                     isPairing = false
                     return
                 }
 
-                try await appState.connect(to: device)
+                // Authenticate with PIN (will be stored in Keychain)
+                try await appState.authenticateWithPIN(device: device, pin: pinCode)
+
+                // Complete connection
+                try await appState.completeConnection(to: device)
 
                 withAnimation {
                     pairingSuccess = true
                 }
+            } catch BLEError.authenticationFailed {
+                pairingError = "Incorrect PIN. Please try again."
+                pinCode = ""  // Clear PIN for retry
             } catch {
                 pairingError = "Connection failed: \(error.localizedDescription)"
             }

@@ -165,12 +165,48 @@ struct DeviceScanView: View {
     private func proceedWithDevice() {
         guard let device = selectedDevice else { return }
 
-        // Stop scanning and proceed to pairing
+        // Stop scanning and proceed
         stopScanning()
 
-        // Store the selected device and move to pair screen
-        withAnimation {
-            appState.onboardingStep = .devicePair
+        // Store the selected device
+        appState.selectedDeviceForPairing = device
+
+        Task {
+            do {
+                // Connect and check if PIN is required
+                let deviceInfo = try await appState.connectAndCheckPinRequired(to: device)
+
+                if deviceInfo.blePin == 0 {
+                    // No PIN required - complete connection directly
+                    try await appState.completeConnection(to: device)
+                    withAnimation {
+                        appState.completeOnboarding()
+                    }
+                } else if let storedPIN = KeychainHelper.shared.retrievePIN(forDeviceUUID: device.id) {
+                    // Have stored PIN - authenticate silently
+                    do {
+                        try await appState.authenticateWithPIN(device: device, pin: storedPIN, storePin: false)
+                        try await appState.completeConnection(to: device)
+                        withAnimation {
+                            appState.completeOnboarding()
+                        }
+                    } catch BLEError.authenticationFailed {
+                        // Stored PIN no longer valid - clear it and show PIN entry
+                        KeychainHelper.shared.deletePIN(forDeviceUUID: device.id)
+                        withAnimation {
+                            appState.onboardingStep = .devicePair
+                        }
+                    }
+                } else {
+                    // PIN required but not stored - show PIN entry screen
+                    withAnimation {
+                        appState.onboardingStep = .devicePair
+                    }
+                }
+            } catch {
+                appState.lastError = error.localizedDescription
+                // Stay on scan screen to let user retry
+            }
         }
     }
 }

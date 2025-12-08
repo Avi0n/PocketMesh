@@ -5,6 +5,7 @@ import PocketMeshKit
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @State private var showingDisconnectAlert = false
+    @State private var showingForgetAlert = false
     @State private var showingResetAlert = false
 
     var body: some View {
@@ -127,6 +128,12 @@ struct SettingsView: View {
                         }
 
                         Button(role: .destructive) {
+                            showingForgetAlert = true
+                        } label: {
+                            Label("Forget Device", systemImage: "trash.fill")
+                        }
+
+                        Button(role: .destructive) {
                             showingResetAlert = true
                         } label: {
                             Label("Factory Reset Device", systemImage: "exclamationmark.triangle.fill")
@@ -134,7 +141,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Danger Zone")
                     } footer: {
-                        Text("Factory reset will erase all contacts and settings on the device.")
+                        Text("Forget Device will also remove the stored PIN. Factory reset will erase all contacts and settings on the device.")
                     }
                 }
 
@@ -161,6 +168,16 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("Are you sure you want to disconnect from this device?")
+            }
+            .alert("Forget Device", isPresented: $showingForgetAlert) {
+                Button("Cancel", role: .cancel) { }
+                Button("Forget", role: .destructive) {
+                    Task {
+                        await appState.disconnect(forgetDevice: true)
+                    }
+                }
+            } message: {
+                Text("This will disconnect and remove the stored PIN. You'll need to enter the PIN again next time you connect.")
             }
             .alert("Factory Reset", isPresented: $showingResetAlert) {
                 Button("Cancel", role: .cancel) { }
