@@ -60,7 +60,7 @@ struct MainTabView: View {
             }
 
             Tab("Map", systemImage: "map.fill", value: 2) {
-                MapPlaceholderView()
+                MapView()
             }
 
             Tab("Settings", systemImage: "gear", value: 3) {
@@ -98,18 +98,6 @@ struct ContactsPlaceholderView: View {
     }
 }
 
-struct MapPlaceholderView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "Map Coming Soon",
-                systemImage: "map",
-                description: Text("View your contacts on a map")
-            )
-            .navigationTitle("Map")
-        }
-    }
-}
 
 #Preview("Content View - Onboarding") {
     ContentView()
