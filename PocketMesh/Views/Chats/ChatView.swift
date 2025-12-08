@@ -49,6 +49,7 @@ struct ChatView: View {
         .task {
             viewModel.configure(appState: appState)
             await viewModel.loadMessages(for: contact)
+            viewModel.loadDraftIfExists()
         }
         .onDisappear {
             // Refresh parent conversation list when leaving

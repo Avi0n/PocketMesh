@@ -118,24 +118,69 @@ public final class AppState {
         }
 
         // Set up quick reply handler
-        notificationService.onQuickReply = { [messageService, dataStore] contactID, text in
-            // Look up the contact to get the device ID and public key
-            guard let contact = try? await dataStore.fetchContact(id: contactID) else { return }
-            // Send the reply message
-            _ = try? await messageService.sendDirectMessage(
-                text: text,
-                to: contact
-            )
+        // The callback is @MainActor @Sendable, so it executes on MainActor.
+        // We need to capture self to access bleService for connection state.
+        notificationService.onQuickReply = { [weak self] contactID, text in
+            guard let self else { return }
+
+            // Look up the contact
+            guard let contact = try? await self.dataStore.fetchContact(id: contactID) else { return }
+
+            // Check if BLE is connected
+            let connectionState = await self.bleService.connectionState
+
+            if connectionState == .ready {
+                // Connected - try to send the message
+                do {
+                    _ = try await self.messageService.sendDirectMessage(text: text, to: contact)
+                } catch {
+                    // Send failed - save draft and notify user
+                    self.notificationService.saveDraft(for: contactID, text: text)
+                    Task {
+                        await self.notificationService.postQuickReplyFailedNotification(
+                            contactName: contact.name ?? "Contact",
+                            contactID: contactID
+                        )
+                    }
+                }
+            } else {
+                // Not connected - save draft and notify user
+                self.notificationService.saveDraft(for: contactID, text: text)
+                Task {
+                    await self.notificationService.postQuickReplyFailedNotification(
+                        contactName: contact.name ?? "Contact",
+                        contactID: contactID
+                    )
+                }
+            }
         }
 
         // Set up notification tap handler
+        // The callback is @MainActor @Sendable, so it executes on MainActor.
+        // We can access self directly and call navigateToChat without MainActor.run.
         notificationService.onNotificationTapped = { [weak self] contactID in
             guard let self else { return }
-            // Look up the contact and navigate to chat
-            if let contact = try? await dataStore.fetchContact(id: contactID) {
-                await MainActor.run {
-                    self.navigateToChat(with: contact)
-                }
+
+            // Look up the contact
+            guard let contact = try? await self.dataStore.fetchContact(id: contactID) else { return }
+
+            // Navigate to chat - we're already on MainActor, so just call directly
+            self.navigateToChat(with: contact)
+        }
+
+        // Set up mark as read handler
+        // The callback is @MainActor @Sendable, so it executes on MainActor.
+        // We can access self directly since we're on MainActor.
+        notificationService.onMarkAsRead = { [weak self] contactID, messageID in
+            guard let self else { return }
+            do {
+                // Mark the specific message as read
+                // Note: await hops to DataStore actor, then returns to MainActor
+                try await self.dataStore.markMessageAsRead(id: messageID)
+                // Clear unread count for the contact
+                try await self.dataStore.clearUnreadCount(contactID: contactID)
+            } catch {
+                // Log error but don't crash - mark as read is not critical
             }
         }
 

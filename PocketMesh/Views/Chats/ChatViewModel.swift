@@ -36,6 +36,7 @@ final class ChatViewModel {
 
     private var dataStore: DataStore?
     private var messageService: MessageService?
+    private var notificationService: NotificationService?
 
     // MARK: - Initialization
 
@@ -45,6 +46,7 @@ final class ChatViewModel {
     func configure(appState: AppState) {
         self.dataStore = appState.dataStore
         self.messageService = appState.messageService
+        self.notificationService = appState.notificationService
     }
 
     /// Configure with services (for testing)
@@ -91,6 +93,18 @@ final class ChatViewModel {
         }
 
         isLoading = false
+    }
+
+    /// Load any saved draft for the current contact
+    /// Drafts are consumed (removed) after loading to prevent re-display
+    /// If no draft exists, this method does nothing
+    func loadDraftIfExists() {
+        guard let contact = currentContact,
+              let notificationService,
+              let draft = notificationService.consumeDraft(for: contact.id) else {
+            return
+        }
+        composingText = draft
     }
 
     /// Send a message to the current contact
