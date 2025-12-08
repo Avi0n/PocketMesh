@@ -141,7 +141,7 @@ struct SettingsView: View {
                     } header: {
                         Text("Danger Zone")
                     } footer: {
-                        Text("Forget Device will also remove the stored PIN. Factory reset will erase all contacts and settings on the device.")
+                        Text("Factory reset will erase all contacts and settings on the device.")
                     }
                 }
 
@@ -173,11 +173,11 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) { }
                 Button("Forget", role: .destructive) {
                     Task {
-                        await appState.disconnect(forgetDevice: true)
+                        await appState.disconnect()
                     }
                 }
             } message: {
-                Text("This will disconnect and remove the stored PIN. You'll need to enter the PIN again next time you connect.")
+                Text("This will disconnect from the device. You can reconnect anytime from the settings screen.")
             }
             .alert("Factory Reset", isPresented: $showingResetAlert) {
                 Button("Cancel", role: .cancel) { }
