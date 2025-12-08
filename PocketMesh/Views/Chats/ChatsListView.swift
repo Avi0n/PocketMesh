@@ -71,6 +71,14 @@ struct ChatsListView: View {
                     await loadConversations()
                 }
             }
+            .onChange(of: appState.connectionState) { oldState, newState in
+                // Refresh when device reconnects (state changes to .ready)
+                if newState == .ready && oldState != .ready {
+                    Task {
+                        await loadConversations()
+                    }
+                }
+            }
         }
     }
 
