@@ -28,6 +28,8 @@ public enum BLEError: Error, Sendable {
     case protocolError(ProtocolError)
     case invalidResponse
     case operationTimeout
+    case authenticationFailed
+    case authenticationRequired
 }
 
 // MARK: - Discovered Device
@@ -343,6 +345,98 @@ public actor BLEService: NSObject, BLETransport {
 
         _connectionState = .ready
         return (deviceInfo, selfInfo)
+    }
+
+    // MARK: - Login Support
+
+    /// Pending login continuation for handling async login response
+    private var loginContinuation: CheckedContinuation<LoginResult, Error>?
+
+    /// Original response handler to restore after login
+    private var originalResponseHandler: (@Sendable (Data) -> Void)?
+
+    /// Sends login command to authenticate with the device
+    /// - Parameters:
+    ///   - publicKey: The device's public key (32 bytes, from selfInfo)
+    ///   - pin: The PIN password (6 digits as string)
+    /// - Returns: LoginResult indicating success/failure
+    public func sendLogin(publicKey: Data, pin: String) async throws -> LoginResult {
+        guard _connectionState == .ready else {
+            throw BLEError.notConnected
+        }
+
+        let loginData = FrameCodec.encodeSendLogin(publicKey: publicKey, password: pin)
+
+        // Login response comes as a push notification (0x85 or 0x86)
+        return try await withCheckedThrowingContinuation { continuation in
+            // Store the original handler and continuation
+            self.originalResponseHandler = self.responseHandler
+            self.loginContinuation = continuation
+
+            // Set up a one-time handler for login response
+            self.responseHandler = { [weak self] data in
+                guard let self else { return }
+                Task {
+                    await self.handleLoginResponse(data)
+                }
+            }
+
+            // Send the login command and set up timeout
+            Task {
+                do {
+                    _ = try await self.send(loginData)
+
+                    // Set up timeout after sending
+                    Task {
+                        try? await Task.sleep(for: .seconds(5))
+                        await self.handleLoginTimeout()
+                    }
+                } catch {
+                    await self.completeLogin(with: .failure(error))
+                }
+            }
+        }
+    }
+
+    /// Handles incoming data that might be a login response
+    private func handleLoginResponse(_ data: Data) {
+        // Check if this is a login response
+        if data.first == PushCode.loginSuccess.rawValue ||
+           data.first == PushCode.loginFail.rawValue {
+            do {
+                let result = try FrameCodec.decodeLoginResult(from: data)
+                completeLogin(with: .success(result))
+            } catch {
+                completeLogin(with: .failure(error))
+            }
+        } else {
+            // Pass through to original handler
+            originalResponseHandler?(data)
+        }
+    }
+
+    /// Handles login timeout
+    private func handleLoginTimeout() {
+        if loginContinuation != nil {
+            completeLogin(with: .failure(BLEError.operationTimeout))
+        }
+    }
+
+    /// Completes the login operation with a result
+    private func completeLogin(with result: Result<LoginResult, Error>) {
+        guard let continuation = loginContinuation else { return }
+
+        // Restore original handler
+        responseHandler = originalResponseHandler
+        originalResponseHandler = nil
+        loginContinuation = nil
+
+        switch result {
+        case .success(let loginResult):
+            continuation.resume(returning: loginResult)
+        case .failure(let error):
+            continuation.resume(throwing: error)
+        }
     }
 
     // MARK: - Private Helpers

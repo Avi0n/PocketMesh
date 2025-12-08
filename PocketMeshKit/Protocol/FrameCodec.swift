@@ -528,4 +528,41 @@ public enum FrameCodec {
             directReceived: directRecv
         )
     }
+
+    public static func decodeLoginResult(from data: Data) throws -> LoginResult {
+        // Login success: 0x85 + isAdmin(1) + pubKeyPrefix(6) + timestamp(4) + aclPerms(1) + fwLevel(1)
+        // Login fail: 0x86
+        guard !data.isEmpty else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let code = data[0]
+
+        if code == PushCode.loginFail.rawValue {
+            return LoginResult(
+                success: false,
+                isAdmin: false,
+                publicKeyPrefix: Data()
+            )
+        }
+
+        guard code == PushCode.loginSuccess.rawValue, data.count >= 14 else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let isAdmin = data[1] != 0
+        let publicKeyPrefix = data.subdata(in: 2..<8)
+        let serverTimestamp = data.subdata(in: 8..<12).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        let aclPermissions = data[12]
+        let firmwareLevel = data[13]
+
+        return LoginResult(
+            success: true,
+            isAdmin: isAdmin,
+            publicKeyPrefix: publicKeyPrefix,
+            serverTimestamp: serverTimestamp,
+            aclPermissions: aclPermissions,
+            firmwareLevel: firmwareLevel
+        )
+    }
 }
