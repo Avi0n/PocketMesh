@@ -244,8 +244,14 @@ struct ChannelMessageBubbleView: View {
         }
     }
 
-    /// Resolve sender name from known contacts, fallback to hex key prefix
+    /// Resolve sender name from parsed channel message or fallback to key prefix lookup
     private var senderLabel: String {
+        // First, try to use the parsed sender name from the message
+        if let senderName = message.senderNodeName, !senderName.isEmpty {
+            return senderName
+        }
+
+        // Fallback: try key prefix lookup (for direct messages shown in channel context, if any)
         guard let prefix = message.senderKeyPrefix else {
             return "Unknown"
         }

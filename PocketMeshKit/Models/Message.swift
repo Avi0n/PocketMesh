@@ -67,6 +67,9 @@ public final class Message {
     /// Sender public key prefix (6 bytes, for incoming messages)
     public var senderKeyPrefix: Data?
 
+    /// Sender node name (for channel messages, parsed from "NodeName: MessageText" format)
+    public var senderNodeName: String?
+
     /// Whether this message has been read locally
     public var isRead: Bool
 
@@ -92,6 +95,7 @@ public final class Message {
         pathLength: UInt8 = 0,
         snr: Int8? = nil,
         senderKeyPrefix: Data? = nil,
+        senderNodeName: String? = nil,
         isRead: Bool = false,
         replyToID: UUID? = nil,
         roundTripTime: UInt32? = nil
@@ -111,6 +115,7 @@ public final class Message {
         self.pathLength = pathLength
         self.snr = snr
         self.senderKeyPrefix = senderKeyPrefix
+        self.senderNodeName = senderNodeName
         self.isRead = isRead
         self.replyToID = replyToID
         self.roundTripTime = roundTripTime
@@ -137,13 +142,14 @@ public final class Message {
         self.init(
             deviceID: deviceID,
             channelIndex: frame.channelIndex,
-            text: frame.text,
+            text: frame.text,  // Now contains parsed message text (without sender prefix)
             timestamp: frame.timestamp,
             directionRawValue: MessageDirection.incoming.rawValue,
             statusRawValue: MessageStatus.delivered.rawValue,
             textTypeRawValue: frame.textType.rawValue,
             pathLength: frame.pathLength,
-            snr: frame.snr
+            snr: frame.snr,
+            senderNodeName: frame.senderNodeName  // NEW: Store parsed sender name
         )
     }
 }
@@ -218,6 +224,7 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
     public let pathLength: UInt8
     public let snr: Int8?
     public let senderKeyPrefix: Data?
+    public let senderNodeName: String?  // NEW - add after senderKeyPrefix
     public let isRead: Bool
     public let replyToID: UUID?
     public let roundTripTime: UInt32?
@@ -238,6 +245,7 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
         self.pathLength = message.pathLength
         self.snr = message.snr
         self.senderKeyPrefix = message.senderKeyPrefix
+        self.senderNodeName = message.senderNodeName  // NEW
         self.isRead = message.isRead
         self.replyToID = message.replyToID
         self.roundTripTime = message.roundTripTime

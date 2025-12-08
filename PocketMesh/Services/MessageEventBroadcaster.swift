@@ -75,7 +75,7 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
                 await self.notificationService?.postChannelMessageNotification(
                     channelName: channelName,
                     channelIndex: channelIndex,
-                    senderName: nil,
+                    senderName: message.senderNodeName,  // CHANGED: Use parsed sender name instead of nil
                     messageText: message.text,
                     messageID: message.id
                 )

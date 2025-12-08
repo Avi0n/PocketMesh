@@ -416,7 +416,10 @@ public enum FrameCodec {
         let timestamp = data.subdata(in: 7..<11).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
 
         let textData = data.suffix(from: 11)
-        let text = String(data: textData, encoding: .utf8) ?? ""
+        let rawText = String(data: textData, encoding: .utf8) ?? ""
+
+        // Parse "NodeName: MessageText" format
+        let (senderNodeName, text) = parseChannelMessageText(rawText)
 
         return ChannelMessageFrame(
             channelIndex: channelIdx,
@@ -424,8 +427,30 @@ public enum FrameCodec {
             textType: txtType,
             timestamp: timestamp,
             text: text,
-            snr: snr
+            snr: snr,
+            senderNodeName: senderNodeName
         )
+    }
+
+    /// Parses channel message text in "NodeName: MessageText" format
+    /// Returns (senderNodeName, messageText) tuple
+    private static func parseChannelMessageText(_ rawText: String) -> (String?, String) {
+        // Find the first occurrence of ": " (colon followed by space)
+        guard let separatorRange = rawText.range(of: ": ") else {
+            // No separator found - return full text with nil sender
+            return (nil, rawText)
+        }
+
+        let senderName = String(rawText[..<separatorRange.lowerBound])
+        let messageText = String(rawText[separatorRange.upperBound...])
+
+        // Validate sender name is reasonable (not empty, not too long)
+        // MeshCore node names are typically 1-32 characters
+        guard !senderName.isEmpty, senderName.count <= 32 else {
+            return (nil, rawText)
+        }
+
+        return (senderName, messageText)
     }
 
     public static func decodeSendConfirmation(from data: Data) throws -> SendConfirmation {

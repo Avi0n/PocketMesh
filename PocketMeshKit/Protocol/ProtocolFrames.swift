@@ -154,6 +154,7 @@ public struct ChannelMessageFrame: Sendable, Equatable {
     public let timestamp: UInt32
     public let text: String
     public let snr: Int8?
+    public let senderNodeName: String?  // NEW: Parsed from "NodeName: MessageText" format
 
     public init(
         channelIndex: UInt8,
@@ -161,7 +162,8 @@ public struct ChannelMessageFrame: Sendable, Equatable {
         textType: TextType,
         timestamp: UInt32,
         text: String,
-        snr: Int8? = nil
+        snr: Int8? = nil,
+        senderNodeName: String? = nil  // NEW
     ) {
         self.channelIndex = channelIndex
         self.pathLength = pathLength
@@ -169,6 +171,7 @@ public struct ChannelMessageFrame: Sendable, Equatable {
         self.timestamp = timestamp
         self.text = text
         self.snr = snr
+        self.senderNodeName = senderNodeName
     }
 }
 

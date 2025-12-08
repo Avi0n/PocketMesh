@@ -480,6 +480,7 @@ public actor DataStore {
             pathLength: dto.pathLength,
             snr: dto.snr,
             senderKeyPrefix: dto.senderKeyPrefix,
+            senderNodeName: dto.senderNodeName,
             isRead: dto.isRead,
             replyToID: dto.replyToID,
             roundTripTime: dto.roundTripTime
