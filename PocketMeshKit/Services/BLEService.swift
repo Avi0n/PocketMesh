@@ -191,6 +191,7 @@ public actor BLEService: NSObject, BLETransport {
     private var connectionContinuation: CheckedContinuation<Void, Error>?
     private var scanContinuation: AsyncStream<DiscoveredDevice>.Continuation?
     private var bluetoothReadyContinuation: CheckedContinuation<Void, Never>?
+    private var notificationContinuation: CheckedContinuation<Void, Error>?
 
     // State restoration
     private let stateRestorationID = "com.pocketmesh.ble.central"
@@ -298,8 +299,23 @@ public actor BLEService: NSObject, BLETransport {
     // MARK: - Connection
 
     public func connect(to deviceID: UUID) async throws {
+        // Ensure Bluetooth is powered on before using centralManager
+        await waitForBluetoothReady()
+
         guard let centralManager else {
             throw BLEError.bluetoothUnavailable
+        }
+
+        // Verify Bluetooth is actually powered on (required for retrievePeripherals)
+        guard centralManager.state == .poweredOn else {
+            switch centralManager.state {
+            case .unauthorized:
+                throw BLEError.bluetoothUnauthorized
+            case .poweredOff:
+                throw BLEError.bluetoothPoweredOff
+            default:
+                throw BLEError.bluetoothUnavailable
+            }
         }
 
         // Find the peripheral
@@ -334,6 +350,17 @@ public actor BLEService: NSObject, BLETransport {
                 // Now initiate connection - delegate may fire immediately
                 let options = isolatedSelf.connectionOptions()
                 isolatedSelf.centralManager?.connect(peripheral, options: options)
+            }
+        }
+    }
+
+    /// Subscribes to notifications and waits for confirmation
+    /// This may trigger the iOS pairing dialog - we wait for subscription to complete
+    private func awaitNotificationSubscription(for characteristic: CBCharacteristic) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.assumeIsolated { isolatedSelf in
+                isolatedSelf.notificationContinuation = continuation
+                isolatedSelf.connectedPeripheral?.setNotifyValue(true, for: characteristic)
             }
         }
     }
@@ -394,6 +421,10 @@ public actor BLEService: NSObject, BLETransport {
     }
 
     public func disconnect() async {
+        // Clean up pending response to avoid continuation leaks
+        // This is critical when Bluetooth is toggled off during an active send()
+        resumePendingResponse(with: nil)
+
         // Unsubscribe from characteristics before disconnecting
         // This ensures clean teardown and prevents undefined peripheral behavior
         if let peripheral = connectedPeripheral {
@@ -423,6 +454,11 @@ public actor BLEService: NSObject, BLETransport {
         }
 
         guard _connectionState == .connected || _connectionState == .ready else {
+            throw BLEError.notConnected
+        }
+
+        // Verify peripheral is actually connected at CoreBluetooth level
+        guard peripheral.state == .connected else {
             throw BLEError.notConnected
         }
 
@@ -800,7 +836,7 @@ extension BLEService: CBPeripheralDelegate {
         }
     }
 
-    private func handleCharacteristicDiscovery(service: CBService, error: Error?) {
+    private func handleCharacteristicDiscovery(service: CBService, error: Error?) async {
         // Guard against multiple calls - only process if we haven't completed connection
         guard connectionContinuation != nil else { return }
 
@@ -816,14 +852,28 @@ extension BLEService: CBPeripheralDelegate {
                 txCharacteristic = characteristic
             case rxCharacteristicUUID:
                 rxCharacteristic = characteristic
-                // Subscribe to notifications
-                connectedPeripheral?.setNotifyValue(true, for: characteristic)
             default:
                 break
             }
         }
 
         if txCharacteristic != nil && rxCharacteristic != nil {
+            // Subscribe to notifications - this triggers pairing dialog if needed
+            // We must wait for the subscription to complete before marking connected
+            if let rx = rxCharacteristic {
+                do {
+                    // Wait for notification subscription with timeout
+                    // This ensures pairing completes before we try to send data
+                    try await withThrowingTimeout(seconds: initialSetupTimeout) {
+                        try await self.awaitNotificationSubscription(for: rx)
+                    }
+                } catch {
+                    connectionContinuation?.resume(throwing: error)
+                    connectionContinuation = nil
+                    return
+                }
+            }
+
             _connectionState = .connected
             connectionContinuation?.resume()
             connectionContinuation = nil
@@ -856,6 +906,27 @@ extension BLEService: CBPeripheralDelegate {
                 await handleWriteError(error)
             }
         }
+    }
+
+    nonisolated public func peripheral(
+        _ peripheral: CBPeripheral,
+        didUpdateNotificationStateFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        Task {
+            await handleNotificationStateUpdate(characteristic: characteristic, error: error)
+        }
+    }
+
+    private func handleNotificationStateUpdate(characteristic: CBCharacteristic, error: Error?) {
+        guard characteristic.uuid == rxCharacteristicUUID else { return }
+
+        if let error {
+            notificationContinuation?.resume(throwing: BLEError.characteristicNotFound)
+        } else {
+            notificationContinuation?.resume()
+        }
+        notificationContinuation = nil
     }
 
     private func handleWriteError(_ error: Error) {
