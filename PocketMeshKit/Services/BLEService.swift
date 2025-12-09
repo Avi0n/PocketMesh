@@ -481,7 +481,7 @@ public actor BLEService: NSObject, BLETransport {
         responseTimeoutTask = nil
 
         // Exit pairing window but preserve error for diagnosis
-        exitPairingWindow(clearError: false)
+        exitPairingWindow()
         pending.resume(returning: data)
     }
 
@@ -492,12 +492,9 @@ public actor BLEService: NSObject, BLETransport {
     }
 
     /// Exits the pairing window (called when operation completes or pairing fails)
-    private func exitPairingWindow(clearError: Bool = false) {
+    private func exitPairingWindow() {
         inPairingWindow = false
         pairingWindowStart = nil
-        if clearError {
-            lastPairingError = nil
-        }
     }
 
     /// Returns a specific BLEError based on the last pairing error encountered
@@ -692,16 +689,6 @@ extension BLEService: CBCentralManagerDelegate {
         _connectionState = .disconnected
         connectionContinuation?.resume(throwing: BLEError.connectionFailed(error?.localizedDescription ?? "Unknown error"))
         connectionContinuation = nil
-    }
-
-    nonisolated public func centralManager(
-        _ central: CBCentralManager,
-        didDisconnectPeripheral peripheral: CBPeripheral,
-        error: Error?
-    ) {
-        Task {
-            await handleDisconnection(peripheral: peripheral, error: error)
-        }
     }
 
     /// iOS 17+ delegate method that indicates whether the system is auto-reconnecting
