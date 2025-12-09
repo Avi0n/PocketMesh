@@ -562,16 +562,6 @@ enum OnboardingStep: Int, CaseIterable {
 // MARK: - BLEStateRestorationDelegate
 
 extension AppState: BLEStateRestorationDelegate {
-    public func bleStateRestoration(_ restoration: BLEStateRestoration, didRestoreConnection deviceID: UUID) async {
-        // iOS restored connection - need to complete initialization
-        await handleRestoredConnection(deviceID: deviceID)
-    }
-
-    public func bleStateRestoration(_ restoration: BLEStateRestoration, shouldReconnectTo deviceID: UUID) async -> Bool {
-        // Always try to reconnect to last device
-        return true
-    }
-
     public func bleStateRestoration(_ restoration: BLEStateRestoration, didLoseConnection deviceID: UUID, error: Error?) async {
         // Handle unexpected disconnection
         connectionState = .disconnected
@@ -589,15 +579,6 @@ extension AppState: BLEStateRestorationDelegate {
         try? await Task.sleep(for: .milliseconds(100))
 
         // Attempt auto-reconnect after the delay
-        await attemptAutoReconnect()
-    }
-
-    public func bleStateRestorationDidBecomeAvailable(_ restoration: BLEStateRestoration) async {
-        // Small delay after BLE becomes available to avoid CoreBluetooth state machine issues
-        // Apple documentation recommends waiting at least 20ms after disconnect
-        try? await Task.sleep(for: .milliseconds(50))
-
-        // BLE is ready - attempt reconnection if we have a last device
         await attemptAutoReconnect()
     }
 
@@ -673,8 +654,10 @@ extension AppState: BLEStateRestorationDelegate {
         guard bleStateRestoration.shouldAttemptReconnection() else { return }
 
         // Attempt reconnection
+        isConnecting = true
+        defer { isConnecting = false }
+
         do {
-            isConnecting = true
             connectionState = .connecting
 
             try await bleService.connect(to: lastDeviceID)
@@ -724,7 +707,5 @@ extension AppState: BLEStateRestorationDelegate {
                 await notificationService.postConnectionLostNotification(deviceName: deviceName)
             }
         }
-
-        isConnecting = false
     }
 }

@@ -5,17 +5,8 @@ import Foundation
 
 /// Protocol for receiving BLE state restoration events.
 public protocol BLEStateRestorationDelegate: AnyObject, Sendable {
-    /// Called when BLE connection is restored after app termination.
-    func bleStateRestoration(_ restoration: BLEStateRestoration, didRestoreConnection deviceID: UUID) async
-
-    /// Called when restoration detects a previously connected device that needs reconnection.
-    func bleStateRestoration(_ restoration: BLEStateRestoration, shouldReconnectTo deviceID: UUID) async -> Bool
-
     /// Called when the connection is lost unexpectedly.
     func bleStateRestoration(_ restoration: BLEStateRestoration, didLoseConnection deviceID: UUID, error: Error?) async
-
-    /// Called when background BLE processing is available.
-    func bleStateRestorationDidBecomeAvailable(_ restoration: BLEStateRestoration) async
 }
 
 // MARK: - BLE State Restoration
@@ -63,7 +54,6 @@ public final class BLEStateRestoration {
     private let userDefaultsKey = "com.pocketmesh.ble.lastConnectedDevice"
     private var reconnectionAttempts: Int = 0
     private let maxReconnectionAttempts: Int = 3
-    private let reconnectionDelay: TimeInterval = 2.0
 
     // MARK: - Initialization
 
@@ -76,17 +66,6 @@ public final class BLEStateRestoration {
     }
 
     // MARK: - Public Methods
-
-    /// Enables state restoration with the given BLE service.
-    public func enable() {
-        isEnabled = true
-    }
-
-    /// Disables state restoration.
-    public func disable() {
-        isEnabled = false
-        lastConnectedDeviceID = nil
-    }
 
     /// Records a successful connection for state restoration.
     public func recordConnection(deviceID: UUID) {
@@ -116,33 +95,6 @@ public final class BLEStateRestoration {
         isBackgroundActive = false
     }
 
-    /// Called by BLEService when state is restored from iOS.
-    /// Returns the device ID if we should attempt reconnection.
-    public func handleStateRestoration(restoredPeripheralIDs: [UUID]) async -> UUID? {
-        guard isEnabled else { return nil }
-
-        isRestoring = true
-        defer { isRestoring = false }
-
-        // Check if any restored peripheral matches our last connected device
-        if let lastDevice = lastConnectedDeviceID,
-           restoredPeripheralIDs.contains(lastDevice) {
-            await delegate?.bleStateRestoration(self, didRestoreConnection: lastDevice)
-            return lastDevice
-        }
-
-        // If we have a last connected device but it wasn't in the restored list,
-        // ask delegate if we should attempt reconnection
-        if let lastDevice = lastConnectedDeviceID {
-            let shouldReconnect = await delegate?.bleStateRestoration(self, shouldReconnectTo: lastDevice) ?? false
-            if shouldReconnect {
-                return lastDevice
-            }
-        }
-
-        return nil
-    }
-
     /// Handles unexpected connection loss.
     public func handleConnectionLoss(deviceID: UUID, error: Error?) async {
         guard isEnabled else { return }
@@ -167,56 +119,8 @@ public final class BLEStateRestoration {
         return true
     }
 
-    /// Gets the delay before the next reconnection attempt.
-    public func getReconnectionDelay() -> TimeInterval {
-        // Exponential backoff: 2s, 4s, 8s
-        return reconnectionDelay * pow(2.0, Double(reconnectionAttempts - 1))
-    }
-
     /// Resets reconnection attempt counter (call after successful connection).
     public func resetReconnectionAttempts() {
         reconnectionAttempts = 0
-    }
-
-    /// Called when background BLE becomes available.
-    public func backgroundBLEDidBecomeAvailable() async {
-        await delegate?.bleStateRestorationDidBecomeAvailable(self)
-    }
-
-    // MARK: - State Persistence
-
-    /// Returns info about the last connection for display purposes.
-    public func getLastConnectionInfo() -> (deviceID: UUID, date: Date)? {
-        guard let deviceID = lastConnectedDeviceID,
-              let date = lastConnectionDate else {
-            return nil
-        }
-        return (deviceID, date)
-    }
-
-    /// Clears all persisted state.
-    public func clearPersistedState() {
-        lastConnectedDeviceID = nil
-        lastConnectionDate = nil
-        reconnectionAttempts = 0
-        UserDefaults.standard.removeObject(forKey: userDefaultsKey)
-    }
-}
-
-// MARK: - Background Task Support
-
-public extension BLEStateRestoration {
-
-    /// Identifier for background BLE processing task.
-    static let backgroundTaskIdentifier = "com.pocketmesh.ble.background-refresh"
-
-    /// Schedules background processing if available.
-    func scheduleBackgroundProcessing() {
-        // Note: Background app refresh must be enabled in capabilities
-        // and registered in the app delegate or scene delegate
-
-        // For iOS 13+, use BGTaskScheduler instead of deprecated methods
-        // This is a placeholder - actual implementation depends on iOS version
-        // and app architecture (UIKit vs SwiftUI lifecycle)
     }
 }
