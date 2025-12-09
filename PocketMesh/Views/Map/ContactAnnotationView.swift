@@ -106,23 +106,25 @@ struct ContactAnnotationCallout: View {
 
             Divider()
 
-            // Action buttons - use HStack with flexible sizing
-            HStack(spacing: 12) {
-                Button(action: onMessageTap) {
-                    Label("Message", systemImage: "message.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
+            // Action buttons - stacked vertically for smaller screens
+            VStack(spacing: 8) {
                 Button(action: onDetailTap) {
                     Label("Details", systemImage: "info.circle")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+
+                if contact.type == .chat || contact.type == .room {
+                    Button(action: onMessageTap) {
+                        Label("Message", systemImage: "message.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
         .padding()
-        .frame(width: 280) // Increased from 240
+        .frame(width: 200)
         .adaptiveGlassBackground(in: .rect(cornerRadius: 12))
         .shadow(radius: 4)
     }
