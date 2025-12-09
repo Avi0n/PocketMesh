@@ -11,6 +11,7 @@ struct ChatView: View {
 
     @State private var viewModel = ChatViewModel()
     @State private var showingContactInfo = false
+    @State private var scrollPosition = ScrollPosition(edge: .bottom)
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
@@ -103,28 +104,30 @@ struct ChatView: View {
     // MARK: - Messages View
 
     private var messagesView: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    if viewModel.isLoading && viewModel.messages.isEmpty {
-                        ProgressView()
-                            .padding()
-                    } else if viewModel.messages.isEmpty {
-                        emptyMessagesView
-                    } else {
-                        messagesContent
-                    }
+        ScrollView {
+            LazyVStack(spacing: 8) {
+                if viewModel.isLoading && viewModel.messages.isEmpty {
+                    ProgressView()
+                        .padding()
+                } else if viewModel.messages.isEmpty {
+                    emptyMessagesView
+                } else {
+                    messagesContent
                 }
-                .padding(.vertical)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .onChange(of: viewModel.messages.count) { _, _ in
-                // Scroll to bottom when new messages arrive
-                if let lastMessage = viewModel.messages.last {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                    }
-                }
+            .padding(.vertical)
+        }
+        .defaultScrollAnchor(.bottom)
+        .scrollPosition($scrollPosition)
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: viewModel.messages.count) { _, _ in
+            // Scroll to bottom when new messages arrive
+            scrollPosition.scrollTo(edge: .bottom)
+        }
+        .onChange(of: isInputFocused) { _, isFocused in
+            // Scroll to bottom when keyboard appears
+            if isFocused {
+                scrollPosition.scrollTo(edge: .bottom)
             }
         }
     }
@@ -166,7 +169,6 @@ struct ChatView: View {
                     deleteMessage(message)
                 }
             )
-            .id(message.id)
         }
     }
 
