@@ -4,6 +4,7 @@ import PocketMeshKit
 /// Main settings screen for the app
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @State private var showingDeviceSelection = false
     @State private var showingDisconnectAlert = false
     @State private var showingForgetAlert = false
     @State private var showingResetAlert = false
@@ -65,11 +66,7 @@ struct SettingsView: View {
                     // No device connected
                     Section {
                         Button {
-                            Task {
-                                // Force disconnect any existing connection before scanning
-                                await appState.disconnectForNewConnection()
-                                appState.startDeviceScan()
-                            }
+                            showingDeviceSelection = true
                         } label: {
                             Label("Connect Device", systemImage: "antenna.radiowaves.left.and.right")
                         }
@@ -186,6 +183,9 @@ struct SettingsView: View {
                 }
             } message: {
                 Text("This will erase all data on the device including contacts, messages, and settings. This action cannot be undone.")
+            }
+            .sheet(isPresented: $showingDeviceSelection) {
+                DeviceSelectionSheet()
             }
         }
     }

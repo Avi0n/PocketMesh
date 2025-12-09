@@ -365,6 +365,9 @@ public final class AppState {
             bleStateRestoration.recordConnection(deviceID: device.id)
             persistConnectedDevice(connectedDevice!)
 
+            // Save device to SwiftData for reconnection list
+            try await dataStore.saveDevice(connectedDevice!)
+
             // Connect message polling for real-time updates
             await connectMessagePolling()
 
@@ -379,6 +382,71 @@ public final class AppState {
         }
     }
 
+    /// Reconnect to a previously paired device by ID
+    func reconnectToDevice(id deviceID: UUID) async throws {
+        isConnecting = true
+        lastError = nil
+
+        defer { isConnecting = false }
+
+        do {
+            // Ensure BLE is initialized
+            await bleService.initialize()
+
+            // Connect to the device
+            try await bleService.connect(to: deviceID)
+
+            // Initialize device and get info
+            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
+
+            // Update connection state
+            connectionState = await bleService.connectionState
+
+            // Create device DTO from the info
+            connectedDevice = DeviceDTO(
+                from: Device(
+                    id: deviceID,
+                    publicKey: selfInfo.publicKey,
+                    nodeName: selfInfo.nodeName,
+                    firmwareVersion: deviceInfo.firmwareVersion,
+                    firmwareVersionString: deviceInfo.firmwareVersionString,
+                    manufacturerName: deviceInfo.manufacturerName,
+                    buildDate: deviceInfo.buildDate,
+                    maxContacts: deviceInfo.maxContacts,
+                    maxChannels: deviceInfo.maxChannels,
+                    frequency: selfInfo.frequency,
+                    bandwidth: selfInfo.bandwidth,
+                    spreadingFactor: selfInfo.spreadingFactor,
+                    codingRate: selfInfo.codingRate,
+                    txPower: selfInfo.txPower,
+                    maxTxPower: selfInfo.maxTxPower,
+                    latitude: selfInfo.latitude,
+                    longitude: selfInfo.longitude,
+                    blePin: deviceInfo.blePin,
+                    manualAddContacts: selfInfo.manualAddContacts > 0,
+                    isActive: true
+                )
+            )
+
+            // Record connection for state restoration
+            bleStateRestoration.recordConnection(deviceID: deviceID)
+            persistConnectedDevice(connectedDevice!)
+
+            // Update device in SwiftData (updates lastConnected timestamp)
+            try await dataStore.saveDevice(connectedDevice!)
+
+            // Connect message polling for real-time updates
+            await connectMessagePolling()
+
+            // Auto-sync contacts then channels from device
+            await syncContactsFromDevice()
+            await syncChannelsFromDevice()
+        } catch {
+            lastError = error.localizedDescription
+            connectionState = .disconnected
+            throw error
+        }
+    }
 
     /// Disconnect from the current device
     func disconnect() async {
@@ -622,6 +690,10 @@ extension AppState: BLEStateRestorationDelegate {
 
                 connectionState = .ready
                 persistConnectedDevice(connectedDevice!)
+
+                // Update device in SwiftData (updates lastConnected timestamp)
+                try await dataStore.saveDevice(connectedDevice!)
+
                 await connectMessagePolling()
 
                 // Auto-sync contacts then channels from device
@@ -642,6 +714,9 @@ extension AppState: BLEStateRestorationDelegate {
     func attemptAutoReconnect() async {
         // Don't attempt if another connection is already in progress
         guard !isConnecting else { return }
+
+        // Ensure BLE is initialized
+        await bleService.initialize()
 
         // Check if already connected (iOS restored connection)
         if await bleService.connectionState == .connected {
@@ -691,6 +766,9 @@ extension AppState: BLEStateRestorationDelegate {
 
             connectionState = .ready
             bleStateRestoration.resetReconnectionAttempts()
+
+            // Update device in SwiftData (updates lastConnected timestamp)
+            try await dataStore.saveDevice(connectedDevice!)
 
             // Start message polling
             await connectMessagePolling()
