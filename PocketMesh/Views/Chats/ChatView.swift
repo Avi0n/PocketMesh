@@ -44,6 +44,7 @@ struct ChatView: View {
                 ContactDetailView(contact: contact)
             }
         }
+        .toolbarVisibility(.hidden, for: .tabBar)
         .task {
             viewModel.configure(appState: appState)
             await viewModel.loadMessages(for: contact)
