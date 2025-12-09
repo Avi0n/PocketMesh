@@ -329,7 +329,7 @@ public final class AppState {
             try await bleService.connect(to: device.id)
 
             // Initialize device and get info
-            let (deviceInfo, selfInfo) = try await bleService.initializeDevice()
+            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
 
             // Update connection state
             connectionState = await bleService.connectionState
@@ -373,6 +373,8 @@ public final class AppState {
             await syncChannelsFromDevice()
         } catch {
             lastError = error.localizedDescription
+            connectionState = .disconnected
+            isConnecting = false
             throw error
         }
     }
@@ -596,7 +598,7 @@ extension AppState: BLEStateRestorationDelegate {
         // Complete device initialization if needed
         if await bleService.connectionState == .connected {
             do {
-                let (deviceInfo, selfInfo) = try await bleService.initializeDevice()
+                let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
 
                 connectedDevice = DeviceDTO(
                     from: Device(
@@ -656,7 +658,7 @@ extension AppState: BLEStateRestorationDelegate {
             connectionState = .connecting
 
             try await bleService.connect(to: lastDeviceID)
-            let (deviceInfo, selfInfo) = try await bleService.initializeDevice()
+            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
 
             // Restore device info
             connectedDevice = DeviceDTO(

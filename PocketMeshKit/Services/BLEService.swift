@@ -30,7 +30,72 @@ public enum BLEError: Error, Sendable {
     case operationTimeout
     case authenticationFailed
     case authenticationRequired
+    case pairingCancelled
+    case pairingFailed(String)
 }
+
+// MARK: - BLEError LocalizedError Conformance
+
+extension BLEError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .bluetoothUnavailable:
+            return "Bluetooth is not available on this device."
+        case .bluetoothUnauthorized:
+            return "Bluetooth permission is required. Please enable it in Settings."
+        case .bluetoothPoweredOff:
+            return "Bluetooth is turned off. Please enable Bluetooth to connect."
+        case .deviceNotFound:
+            return "Device not found. Please make sure it's powered on and nearby."
+        case .connectionFailed(let message):
+            return "Connection failed: \(message)"
+        case .connectionTimeout:
+            return "Connection timed out. Please try again."
+        case .notConnected:
+            return "Not connected to a device."
+        case .characteristicNotFound:
+            return "Unable to communicate with device. Please try reconnecting."
+        case .writeError(let message):
+            return "Failed to send data: \(message)"
+        case .protocolError(let error):
+            return "Device communication error: \(error)"
+        case .invalidResponse:
+            return "Invalid response from device. Please try again."
+        case .operationTimeout:
+            return "Operation timed out. Please try again."
+        case .authenticationFailed:
+            return "Authentication failed. Please check your device's PIN."
+        case .authenticationRequired:
+            return "Authentication required. Please enter the device PIN when prompted."
+        case .pairingCancelled:
+            return "Bluetooth pairing was cancelled. Please try again."
+        case .pairingFailed(let reason):
+            return "Bluetooth pairing failed: \(reason)"
+        }
+    }
+}
+
+// MARK: - Pairing Failure Detection
+
+/// CBATTError codes that indicate pairing/authentication failure
+/// These errors mean pairing was cancelled, failed, or never completed
+private let pairingFailureErrorCodes: Set<Int> = [
+    5,   // insufficientAuthentication - pairing required but not completed
+    8,   // insufficientAuthorization - authorization failed
+    14,  // unlikelyError - peer removed pairing information
+    15   // insufficientEncryption - encryption failed
+]
+
+/// Checks if an error indicates a BLE pairing failure
+/// - Parameter error: The error from a BLE write/read operation
+/// - Returns: true if this error indicates pairing failed or was cancelled
+private func isPairingFailureError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    // CBATTErrorDomain errors indicate ATT-level failures
+    guard nsError.domain == "CBATTErrorDomain" else { return false }
+    return pairingFailureErrorCodes.contains(nsError.code)
+}
+
 
 // MARK: - Discovered Device
 
@@ -92,6 +157,21 @@ public actor BLEService: NSObject, BLETransport {
     private var pendingResponse: CheckedContinuation<Data?, Never>?
     private var responseBuffer: Data = Data()
 
+    // Thread safety for continuation handling
+    private var pendingResponseLock = NSLock()
+
+    /// Tracks whether we're in the initial pairing window where transient errors are expected
+    private var inPairingWindow: Bool = false
+
+    /// Timestamp when pairing window started (for timeout calculation)
+    private var pairingWindowStart: Date?
+
+    /// Duration of the pairing window - slightly longer than iOS's ~30s pairing dialog timeout
+    private let pairingWindowDuration: TimeInterval = 35.0
+
+    /// Stores the last pairing error for more specific error messages
+    private var lastPairingError: Error?
+
     // Disconnection handling
     private var disconnectionHandler: (@Sendable (UUID, Error?) -> Void)?
 
@@ -111,6 +191,7 @@ public actor BLEService: NSObject, BLETransport {
     // Timeouts
     private let connectionTimeout: TimeInterval = 10.0
     private let responseTimeout: TimeInterval = 5.0
+    private let initialSetupTimeout: TimeInterval = 40.0  // Reduced from 60s - just past iOS's ~30s pairing dialog
 
     // MARK: - Initialization
 
@@ -274,6 +355,11 @@ public actor BLEService: NSObject, BLETransport {
     // MARK: - Data Transfer
 
     public func send(_ data: Data) async throws -> Data? {
+        try await send(data, timeout: responseTimeout, forPairing: false)
+    }
+
+    /// Internal send method with configurable timeout and pairing window handling
+    private func send(_ data: Data, timeout: TimeInterval, forPairing: Bool) async throws -> Data? {
         guard let peripheral = connectedPeripheral,
               let txCharacteristic else {
             throw BLEError.notConnected
@@ -281,6 +367,12 @@ public actor BLEService: NSObject, BLETransport {
 
         guard _connectionState == .connected || _connectionState == .ready else {
             throw BLEError.notConnected
+        }
+
+        // Set pairing window if this is an initial pairing operation
+        if forPairing {
+            inPairingWindow = true
+            pairingWindowStart = Date()
         }
 
         // Write data in chunks if needed (BLE MTU typically ~185-512 bytes)
@@ -293,18 +385,16 @@ public actor BLEService: NSObject, BLETransport {
             peripheral.writeValue(chunk, for: txCharacteristic, type: .withResponse)
         }
 
-        // Wait for response with timeout
+        // Wait for response with timeout (thread-safe via resumePendingResponse)
         return await withCheckedContinuation { continuation in
             Task {
                 self.pendingResponse = continuation
 
-                // Set up timeout
+                // Set up timeout with effective duration
                 Task {
-                    try? await Task.sleep(for: .seconds(self.responseTimeout))
-                    if let pending = self.pendingResponse {
-                        self.pendingResponse = nil
-                        pending.resume(returning: nil)
-                    }
+                    try? await Task.sleep(for: .seconds(timeout))
+                    // Use thread-safe method to avoid race conditions
+                    self.resumePendingResponse(with: nil)
                 }
             }
         }
@@ -319,6 +409,57 @@ public actor BLEService: NSObject, BLETransport {
         disconnectionHandler = handler
     }
 
+    // MARK: - Continuation Safety
+
+    /// Thread-safe method to resume the pending response continuation.
+    /// Prevents race conditions between timeout, response, write error, and disconnection handlers.
+    private func resumePendingResponse(with data: Data?) {
+        pendingResponseLock.lock()
+        defer { pendingResponseLock.unlock() }
+
+        guard let pending = pendingResponse else { return }
+        pendingResponse = nil
+        // Exit pairing window but preserve error for diagnosis
+        exitPairingWindow(clearError: false)
+        pending.resume(returning: data)
+    }
+
+    /// Checks if we're still within the pairing window where transient errors are tolerated
+    private func isWithinPairingWindow() -> Bool {
+        guard inPairingWindow, let start = pairingWindowStart else { return false }
+        return Date().timeIntervalSince(start) < pairingWindowDuration
+    }
+
+    /// Exits the pairing window (called when operation completes or pairing fails)
+    private func exitPairingWindow(clearError: Bool = false) {
+        inPairingWindow = false
+        pairingWindowStart = nil
+        if clearError {
+            lastPairingError = nil
+        }
+    }
+
+    /// Returns a specific BLEError based on the last pairing error encountered
+    private func getPairingError() -> BLEError {
+        guard let error = lastPairingError else {
+            return .pairingCancelled
+        }
+
+        let nsError = error as NSError
+        switch nsError.code {
+        case 5:  // insufficientAuthentication
+            return .pairingCancelled
+        case 14: // unlikelyError - peer removed pairing
+            return .pairingFailed("Device pairing data mismatch. Please go to Settings > Bluetooth, find the device, and tap 'Forget This Device', then try again.")
+        case 15: // insufficientEncryption
+            return .pairingFailed("Encryption setup failed. Please try again.")
+        case 8:  // insufficientAuthorization
+            return .pairingFailed("Authorization failed. Please try again.")
+        default:
+            return .pairingCancelled
+        }
+    }
+
     // MARK: - Protocol Helpers
 
     /// Performs device initialization sequence (device query + app start)
@@ -327,17 +468,27 @@ public actor BLEService: NSObject, BLETransport {
             throw BLEError.notConnected
         }
 
+        // Use longer timeout and ignore write errors for initial setup (pairing may occur)
+        // iOS pairing dialog can cause temporary write failures that resolve after PIN entry
+        let setupTimeout = initialSetupTimeout
+
         // Send device query
         let queryData = FrameCodec.encodeDeviceQuery(protocolVersion: 8)
-        guard let queryResponse = try await send(queryData),
+        guard let queryResponse = try await send(queryData, timeout: setupTimeout, forPairing: true),
               queryResponse.first == ResponseCode.deviceInfo.rawValue else {
+            // Get specific pairing error if available
+            if lastPairingError != nil {
+                let error = getPairingError()
+                lastPairingError = nil  // Clear for next attempt
+                throw error
+            }
             throw BLEError.invalidResponse
         }
         let deviceInfo = try FrameCodec.decodeDeviceInfo(from: queryResponse)
 
-        // Send app start
+        // Send app start (pairing should be complete by now, but keep the longer timeout)
         let appStartData = FrameCodec.encodeAppStart(appName: "PocketMesh")
-        guard let selfResponse = try await send(appStartData),
+        guard let selfResponse = try await send(appStartData, timeout: setupTimeout, forPairing: false),
               selfResponse.first == ResponseCode.selfInfo.rawValue else {
             throw BLEError.invalidResponse
         }
@@ -345,6 +496,45 @@ public actor BLEService: NSObject, BLETransport {
 
         _connectionState = .ready
         return (deviceInfo, selfInfo)
+    }
+
+    /// Performs device initialization with retry logic for handling transient failures
+    /// - Parameter maxRetries: Maximum number of retry attempts (default: 1 for pairing, retrying won't help if cancelled)
+    /// - Parameter retryDelay: Delay between retries in seconds (default: 2.0)
+    /// - Returns: Tuple of DeviceInfo and SelfInfo on success
+    public func initializeDeviceWithRetry(
+        maxRetries: Int = 1,  // Reduced from 3 - retrying won't help if user cancelled pairing
+        retryDelay: TimeInterval = 2.0
+    ) async throws -> (DeviceInfo, SelfInfo) {
+        var lastError: Error = BLEError.invalidResponse
+
+        for attempt in 1...maxRetries {
+            // Support Swift's cooperative cancellation model
+            try Task.checkCancellation()
+
+            do {
+                return try await initializeDevice()
+            } catch BLEError.pairingCancelled {
+                // Don't retry if pairing was explicitly cancelled
+                throw BLEError.pairingCancelled
+            } catch {
+                lastError = error
+
+                // Don't retry if we're no longer connected
+                guard _connectionState == .connected else {
+                    throw error
+                }
+
+                // Don't retry on the last attempt
+                if attempt < maxRetries {
+                    // Check cancellation before sleeping
+                    try Task.checkCancellation()
+                    try await Task.sleep(for: .seconds(retryDelay))
+                }
+            }
+        }
+
+        throw lastError
     }
 
 
@@ -360,10 +550,7 @@ public actor BLEService: NSObject, BLETransport {
         }
 
         // Otherwise, this is a response to a command
-        if let pending = pendingResponse {
-            pendingResponse = nil
-            pending.resume(returning: data)
-        }
+        resumePendingResponse(with: data)
     }
 }
 
@@ -454,6 +641,14 @@ extension BLEService: CBCentralManagerDelegate {
 
     private func handleDisconnection(peripheral: CBPeripheral, error: Error?) {
         let deviceID = peripheral.identifier
+
+        // Clean up pairing window state
+        exitPairingWindow()
+
+        // Clean up pending response to avoid continuation leaks
+        // This is critical - the callback will never be called for a disconnected device
+        resumePendingResponse(with: nil)
+
         connectedPeripheral = nil
         txCharacteristic = nil
         rxCharacteristic = nil
@@ -577,10 +772,24 @@ extension BLEService: CBPeripheralDelegate {
     }
 
     private func handleWriteError(_ error: Error) {
-        // Resume pending response with nil on write error
-        if let pending = pendingResponse {
-            pendingResponse = nil
-            pending.resume(returning: nil)
+        // Check if this is a pairing failure error
+        if isPairingFailureError(error) {
+            lastPairingError = error
+            // Pairing failed - exit pairing window and fail immediately
+            // Don't wait for timeout - we know pairing won't succeed
+            exitPairingWindow()
+            resumePendingResponse(with: nil)
+            return
         }
+
+        // If we're in the pairing window, ignore transient write errors
+        // iOS pairing can cause temporary write failures that resolve after PIN entry
+        if isWithinPairingWindow() {
+            // Transient error during pairing - ignore and let timeout handle it
+            return
+        }
+
+        // Outside pairing window - treat as real error
+        resumePendingResponse(with: nil)
     }
 }
