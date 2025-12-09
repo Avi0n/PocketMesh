@@ -63,12 +63,18 @@ struct ChatView: View {
             }
         }
         .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
-            // Check if the new message is for this contact
-            if case .directMessageReceived(let message, _) = appState.messageEventBroadcaster.latestEvent,
-               message.contactID == contact.id {
+            switch appState.messageEventBroadcaster.latestEvent {
+            case .directMessageReceived(let message, _) where message.contactID == contact.id:
                 Task {
                     await viewModel.loadMessages(for: contact)
                 }
+            case .messageStatusUpdated:
+                // Reload to pick up status changes (Sent -> Delivered, etc.)
+                Task {
+                    await viewModel.loadMessages(for: contact)
+                }
+            default:
+                break
             }
         }
     }
@@ -147,11 +153,12 @@ struct ChatView: View {
 
     private var messagesContent: some View {
         ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
-            MessageBubbleView(
+            UnifiedMessageBubble(
                 message: message,
                 contactName: contact.displayName,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
-                showTimestamp: shouldShowTimestamp(at: index),
+                configuration: .directMessage,
+                showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
                 onRetry: message.hasFailed ? { retryMessage(message) } : nil,
                 onReply: { replyText in
                     setReplyText(replyText)
@@ -175,18 +182,6 @@ struct ChatView: View {
         }
     }
 
-    private func shouldShowTimestamp(at index: Int) -> Bool {
-        // Show timestamp for first message or when there's a gap
-        guard index > 0 else { return true }
-
-        let currentMessage = viewModel.messages[index]
-        let previousMessage = viewModel.messages[index - 1]
-
-        // Show if more than 5 minutes apart
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > 300
-    }
-
     private func retryMessage(_ message: MessageDTO) {
         Task {
             await viewModel.retryMessage(message)
@@ -196,37 +191,17 @@ struct ChatView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            // Text field
-            TextField("Message", text: $viewModel.composingText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .clipShape(.rect(cornerRadius: 20))
-                .lineLimit(1...5)
-                .focused($isInputFocused)
-
-            // Send button
-            Button {
-                Task {
-                    await viewModel.sendMessage()
-                }
-            } label: {
-                Image(systemName: viewModel.isSending ? "hourglass" : "arrow.up.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(canSend ? .blue : .secondary)
+        ChatInputBar(
+            text: $viewModel.composingText,
+            isFocused: $isInputFocused,
+            placeholder: "Message",
+            accentColor: .blue,
+            isSending: viewModel.isSending
+        ) {
+            Task {
+                await viewModel.sendMessage()
             }
-            .disabled(!canSend)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.bar)
-    }
-
-    private var canSend: Bool {
-        !viewModel.composingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !viewModel.isSending
     }
 }
 

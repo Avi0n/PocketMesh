@@ -303,6 +303,40 @@ final class ChatViewModel {
         isSending = false
     }
 
+    /// Retry sending a failed channel message.
+    /// This resends the message text to MeshCore - the UI should NOT change
+    /// during retry. Only the status will update (Sent -> Delivered or Failed).
+    func retryChannelMessage(_ message: MessageDTO) async {
+        guard let messageService,
+              let channel = currentChannel else { return }
+
+        // Update status to pending
+        try? await dataStore?.updateMessageStatus(id: message.id, status: .pending)
+
+        // Reload to show updated status
+        await loadChannelMessages(for: channel)
+
+        do {
+            // Resend the message text
+            _ = try await messageService.sendChannelMessage(
+                text: message.text,
+                channelIndex: channel.index,
+                deviceID: channel.deviceID
+            )
+
+            // Delete the old failed message since a new one was created
+            try await dataStore?.deleteMessage(id: message.id)
+
+            // Reload messages
+            await loadChannelMessages(for: channel)
+        } catch {
+            // Restore failed status
+            try? await dataStore?.updateMessageStatus(id: message.id, status: .failed)
+            await loadChannelMessages(for: channel)
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Delete a single message
     func deleteMessage(_ message: MessageDTO) async {
         guard let dataStore else { return }
@@ -385,5 +419,19 @@ final class ChatViewModel {
         case .read:
             return .purple
         }
+    }
+
+    // MARK: - Timestamp Helpers
+
+    /// Determines if a timestamp should be shown for a message at the given index.
+    /// Shows timestamp for first message or when there's a gap > 5 minutes.
+    static func shouldShowTimestamp(at index: Int, in messages: [MessageDTO]) -> Bool {
+        guard index > 0 else { return true }
+
+        let currentMessage = messages[index]
+        let previousMessage = messages[index - 1]
+
+        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
+        return gap > 300
     }
 }

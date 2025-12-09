@@ -64,13 +64,19 @@ struct ChannelChatView: View {
             }
         }
         .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
-            // Check if the new message is for this channel (verify both deviceID and channelIndex)
-            if case .channelMessageReceived(let message, let channelIndex) = appState.messageEventBroadcaster.latestEvent,
-               channelIndex == channel.index,
-               message.deviceID == channel.deviceID {
+            switch appState.messageEventBroadcaster.latestEvent {
+            case .channelMessageReceived(let message, let channelIndex)
+                where channelIndex == channel.index && message.deviceID == channel.deviceID:
                 Task {
                     await viewModel.loadChannelMessages(for: channel)
                 }
+            case .messageStatusUpdated:
+                // Reload to pick up status changes (Sent -> Delivered, etc.)
+                Task {
+                    await viewModel.loadChannelMessages(for: channel)
+                }
+            default:
+                break
             }
         }
     }
@@ -137,138 +143,59 @@ struct ChannelChatView: View {
     }
 
     private var messagesContent: some View {
-        ForEach(viewModel.messages.indices, id: \.self) { index in
-            let message = viewModel.messages[index]
-            ChannelMessageBubbleView(
+        ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
+            UnifiedMessageBubble(
                 message: message,
-                contacts: viewModel.conversations, // For sender name resolution
+                contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
-                showTimestamp: shouldShowTimestamp(at: index)
+                configuration: .channel(
+                    isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
+                    contacts: viewModel.conversations
+                ),
+                showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+                onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+                onReply: { replyText in
+                    setReplyText(replyText)
+                },
+                onDelete: {
+                    deleteMessage(message)
+                }
             )
             .id(message.id)
         }
     }
 
-    private func shouldShowTimestamp(at index: Int) -> Bool {
-        // Show timestamp for first message or when there's a gap
-        guard index > 0 else { return true }
+    private func setReplyText(_ text: String) {
+        viewModel.composingText = text + "\n"
+        isInputFocused = true
+    }
 
-        let currentMessage = viewModel.messages[index]
-        let previousMessage = viewModel.messages[index - 1]
+    private func deleteMessage(_ message: MessageDTO) {
+        Task {
+            await viewModel.deleteMessage(message)
+        }
+    }
 
-        // Show if more than 5 minutes apart
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > 300
+    private func retryMessage(_ message: MessageDTO) {
+        Task {
+            await viewModel.retryChannelMessage(message)
+        }
     }
 
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(spacing: 12) {
-            // Text field
-            TextField("Broadcast message", text: $viewModel.composingText, axis: .vertical)
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .clipShape(.rect(cornerRadius: 20))
-                .lineLimit(1...5)
-                .focused($isInputFocused)
-
-            // Send button
-            Button {
-                Task {
-                    await viewModel.sendChannelMessage()
-                }
-            } label: {
-                Image(systemName: viewModel.isSending ? "hourglass" : "arrow.up.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(canSend ? .green : .secondary)
+        ChatInputBar(
+            text: $viewModel.composingText,
+            isFocused: $isInputFocused,
+            placeholder: "Broadcast message",
+            accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
+            isSending: viewModel.isSending
+        ) {
+            Task {
+                await viewModel.sendChannelMessage()
             }
-            .disabled(!canSend)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.bar)
-    }
-
-    private var canSend: Bool {
-        !viewModel.composingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !viewModel.isSending
-    }
-}
-
-// MARK: - Channel Message Bubble
-
-struct ChannelMessageBubbleView: View {
-    let message: MessageDTO
-    let contacts: [ContactDTO] // For sender name resolution
-    let deviceName: String
-    let showTimestamp: Bool
-
-    var body: some View {
-        VStack(spacing: 4) {
-            if showTimestamp {
-                Text(message.date, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 8)
-            }
-
-            HStack {
-                if message.isOutgoing {
-                    Spacer(minLength: 60)
-                }
-
-                VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
-                    if !message.isOutgoing {
-                        // Show sender name (resolved from contacts) or key prefix
-                        Text(senderLabel)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text(message.text)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(message.isOutgoing ? Color.green : Color(.systemGray5))
-                        .foregroundStyle(message.isOutgoing ? .white : .primary)
-                        .clipShape(.rect(cornerRadius: 16))
-                }
-
-                if !message.isOutgoing {
-                    Spacer(minLength: 60)
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
-
-    /// Resolve sender name from parsed channel message or fallback to key prefix lookup
-    private var senderLabel: String {
-        // First, try to use the parsed sender name from the message
-        if let senderName = message.senderNodeName, !senderName.isEmpty {
-            return senderName
-        }
-
-        // Fallback: try key prefix lookup (for direct messages shown in channel context, if any)
-        guard let prefix = message.senderKeyPrefix else {
-            return "Unknown"
-        }
-
-        // Try to find matching contact by public key prefix
-        if let contact = contacts.first(where: { contact in
-            contact.publicKey.count >= prefix.count &&
-            Array(contact.publicKey.prefix(prefix.count)) == Array(prefix)
-        }) {
-            return contact.displayName
-        }
-
-        // Fallback to hex representation of key prefix
-        if prefix.count >= 2 {
-            return prefix.prefix(2).map { String(format: "%02X", $0) }.joined()
-        }
-        return "Unknown"
     }
 }
 
