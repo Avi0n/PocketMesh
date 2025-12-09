@@ -179,6 +179,11 @@ struct UnifiedMessageBubble: View {
                 Text("SNR: \(snrFormatted(snrValue))")
             }
 
+            // Show hop count for incoming messages
+            if !message.isOutgoing {
+                Text("Hops: \(hopCountFormatted(message.pathLength))")
+            }
+
             // Show heard repeats for outgoing delivered messages
             if message.isOutgoing && message.status == .delivered && message.heardRepeats > 0 {
                 Text("Heard: \(message.heardRepeats) repeat\(message.heardRepeats == 1 ? "" : "s")")
@@ -316,6 +321,15 @@ struct UnifiedMessageBubble: View {
             quality = "Very Poor"
         }
         return String(format: "%.1f dB (%@)", snr, quality)
+    }
+
+    private func hopCountFormatted(_ pathLength: UInt8) -> String {
+        switch pathLength {
+        case 0, 0xFF:  // 0 = zero hops, 0xFF = direct/unknown (no route tracking)
+            return "Direct"
+        default:
+            return "\(pathLength)"
+        }
     }
 }
 
