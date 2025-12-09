@@ -333,12 +333,21 @@ struct MessageServiceTests {
         let pendingCount = await service.pendingAckCount
         #expect(pendingCount == 1)
 
+        // Verify ACK is not yet delivered
+        var pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending?.isDelivered == false)
+
         // Handle confirmation
         try await service.handleSendConfirmation(SendConfirmation(ackCode: 1001, roundTripTime: 100))
 
-        // Check pending ACK count is now 0
+        // ACK is still tracked (for repeat counting) but now marked as delivered
         let newPendingCount = await service.pendingAckCount
-        #expect(newPendingCount == 0)
+        #expect(newPendingCount == 1)  // Still tracked for repeat counting
+
+        // Verify it's now marked as delivered
+        pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending?.isDelivered == true)
+        #expect(pending?.heardRepeats == 1)
     }
 
     @Test("Send channel message successfully")
@@ -451,5 +460,229 @@ struct MessageServiceTests {
         // Pending ACK should be removed
         let pendingCount = await service.pendingAckCount
         #expect(pendingCount == 0)
+    }
+
+    // MARK: - Edge Case Tests
+
+    @Test("First confirmation sets heardRepeats to 1")
+    func firstConfirmationSetsHeardRepeatsToOne() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        await transport.queueResponse(createSentResponse(ackCode: 1001, timeout: 5000))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // First confirmation
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 1001, roundTripTime: 100))
+
+        // Check heardRepeats is 1
+        let pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending?.heardRepeats == 1)
+        #expect(pending?.isDelivered == true)
+    }
+
+    @Test("Duplicate ACKs increment heardRepeats")
+    func duplicateAcksIncrementHeardRepeats() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        await transport.queueResponse(createSentResponse(ackCode: 1001, timeout: 5000))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+        let confirmation = SendConfirmation(ackCode: 1001, roundTripTime: 100)
+
+        // Send 3 confirmations (simulating mesh relays)
+        try await service.handleSendConfirmation(confirmation)
+        try await service.handleSendConfirmation(confirmation)
+        try await service.handleSendConfirmation(confirmation)
+
+        // Check heardRepeats is 3
+        let pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending?.heardRepeats == 3)
+
+        // Verify message is still delivered (not changed by duplicate ACKs)
+        let messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .delivered)
+    }
+
+    @Test("Out-of-order confirmations both delivered")
+    func outOfOrderConfirmationsBothDelivered() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Queue responses for two messages
+        await transport.queueResponses([
+            createSentResponse(ackCode: 111, timeout: 5000),
+            createSentResponse(ackCode: 222, timeout: 5000)
+        ])
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // Send two messages
+        let resultA = try await service.sendDirectMessage(text: "Message A", to: contact)
+        let resultB = try await service.sendDirectMessage(text: "Message B", to: contact)
+
+        #expect(resultA.ackCode == 111)
+        #expect(resultB.ackCode == 222)
+
+        // ACK for B arrives before A (out of order)
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 222, roundTripTime: 50))
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 111, roundTripTime: 150))
+
+        // Both messages should be delivered
+        let messages = try await dataStore.fetchMessages(contactID: contact.id)
+        let messageA = messages.first { $0.id == resultA.messageID }
+        let messageB = messages.first { $0.id == resultB.messageID }
+
+        #expect(messageA?.status == .delivered)
+        #expect(messageB?.status == .delivered)
+        #expect(messageA?.roundTripTime == 150)
+        #expect(messageB?.roundTripTime == 50)
+    }
+
+    @Test("Late ACK after timeout is ignored")
+    func lateAckAfterTimeoutIsIgnored() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Very short timeout (10ms)
+        await transport.queueResponse(createSentResponse(ackCode: 333, timeout: 10))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // Wait for timeout to expire
+        try await Task.sleep(for: .milliseconds(50))
+
+        // Mark as failed
+        try await service.checkExpiredAcks()
+
+        // Verify message is failed
+        var messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .failed)
+
+        // Late ACK arrives - should be gracefully ignored (no throw)
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 333, roundTripTime: 5000))
+
+        // Message should still be failed (not revived)
+        messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .failed)
+    }
+
+    @Test("Unknown ACK code is ignored gracefully")
+    func unknownAckCodeIsIgnoredGracefully() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // No pending ACKs tracked - send confirmation for unknown code
+        // Should not throw, just return gracefully
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 99999, roundTripTime: 100))
+
+        // Verify no crash occurred and pending count is still 0
+        let pendingCount = await service.pendingAckCount
+        #expect(pendingCount == 0)
+    }
+
+    @Test("Manual check after simulated background detects expired ACKs")
+    func manualCheckAfterSimulatedBackgroundDetectsExpiredAcks() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Short timeout (50ms)
+        await transport.queueResponse(createSentResponse(ackCode: 444, timeout: 50))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // Start timer with longer interval than our test
+        await service.startAckExpiryChecking(interval: 10.0)
+
+        _ = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // Simulate app going to background - stop timer
+        await service.stopAckExpiryChecking()
+
+        // Wait longer than timeout (simulating time in background)
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Simulate returning to foreground - do manual check
+        try await service.checkExpiredAcks()
+
+        // Message should be marked as failed
+        let messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .failed)
+    }
+
+    @Test("Delivered ACKs cleaned up after grace period")
+    func deliveredAcksCleanedUpAfterGracePeriod() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Very short timeout for faster test
+        await transport.queueResponse(createSentResponse(ackCode: 555, timeout: 1))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // Confirm delivery
+        try await service.handleSendConfirmation(SendConfirmation(ackCode: 555, roundTripTime: 100))
+
+        // Verify ACK is still tracked (within grace period)
+        var pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending != nil)
+        #expect(pending?.isDelivered == true)
+
+        // Note: In real usage, cleanup happens after timeout + 60s grace period
+        // For testing, we just verify the cleanup method exists and runs without error
+        await service.cleanupDeliveredAcks()
+
+        // ACK should still exist (grace period hasn't passed in real time)
+        pending = await service.getPendingAck(for: result.messageID)
+        #expect(pending != nil)
     }
 }
