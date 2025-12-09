@@ -73,6 +73,8 @@ struct ChatsListView: View {
             .task {
                 viewModel.configure(appState: appState)
                 await loadConversations()
+                // Handle pending navigation from other tabs (e.g., Map)
+                handlePendingNavigation()
             }
             .navigationDestination(for: ContactDTO.self) { contact in
                 ChatView(contact: contact, parentViewModel: viewModel)
@@ -80,13 +82,8 @@ struct ChatsListView: View {
             .navigationDestination(for: ChannelDTO.self) { channel in
                 ChannelChatView(channel: channel, parentViewModel: viewModel)
             }
-            .onChange(of: appState.pendingChatContact) { _, newContact in
-                if let contact = newContact {
-                    // Clear existing navigation and navigate to chat
-                    navigationPath.removeLast(navigationPath.count)
-                    navigationPath.append(contact)
-                    appState.clearPendingNavigation()
-                }
+            .onChange(of: appState.pendingChatContact) { _, _ in
+                handlePendingNavigation()
             }
             .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
                 Task {
@@ -130,6 +127,14 @@ struct ChatsListView: View {
     private func loadConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.loadAllConversations(deviceID: deviceID)
+    }
+
+    private func handlePendingNavigation() {
+        guard let contact = appState.pendingChatContact else { return }
+        // Clear existing navigation and navigate to chat
+        navigationPath.removeLast(navigationPath.count)
+        navigationPath.append(contact)
+        appState.clearPendingNavigation()
     }
 
     private func refreshConversations() async {
