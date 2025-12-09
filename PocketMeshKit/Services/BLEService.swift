@@ -8,8 +8,12 @@ public enum BLEConnectionState: Sendable, Equatable {
     case disconnected
     case scanning
     case connecting
+    /// BLE connection established, characteristics discovered.
+    /// Device initialization (initializeDevice) may still fail - caller should
+    /// disconnect if initialization fails.
     case connected
-    case ready  // After device query and app start complete
+    /// Device fully initialized and ready for communication.
+    case ready
 }
 
 // MARK: - BLE Errors
@@ -140,7 +144,15 @@ public actor BLEService: NSObject, BLETransport {
     private var txCharacteristic: CBCharacteristic?
     private var rxCharacteristic: CBCharacteristic?
 
-    private var _connectionState: BLEConnectionState = .disconnected
+    private var _connectionState: BLEConnectionState = .disconnected {
+        didSet {
+            #if DEBUG
+            if oldValue != _connectionState {
+                print("[BLE] State: \(oldValue) → \(_connectionState)")
+            }
+            #endif
+        }
+    }
     public var connectionState: BLEConnectionState {
         _connectionState
     }
@@ -156,9 +168,9 @@ public actor BLEService: NSObject, BLETransport {
     private var responseHandler: (@Sendable (Data) -> Void)?
     private var pendingResponse: CheckedContinuation<Data?, Never>?
     private var responseBuffer: Data = Data()
+    /// Task for pending response timeout (cancelled when response arrives)
+    private var responseTimeoutTask: Task<Void, Never>?
 
-    // Thread safety for continuation handling
-    private var pendingResponseLock = NSLock()
 
     /// Tracks whether we're in the initial pairing window where transient errors are expected
     private var inPairingWindow: Bool = false
@@ -299,39 +311,64 @@ public actor BLEService: NSObject, BLETransport {
         await stopScanning()
         _connectionState = .connecting
 
-        // Connect with timeout
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                    Task { @MainActor in
-                        await self.setConnectionContinuation(continuation)
-                        centralManager.connect(peripheral, options: nil)
-                    }
-                }
+        // Connect with timeout using race pattern
+        do {
+            try await withThrowingTimeout(seconds: connectionTimeout) {
+                try await self.awaitConnection(to: peripheral)
             }
+        } catch {
+            handleConnectionFailure()
+            throw error
+        }
+    }
 
-            group.addTask {
-                try await Task.sleep(for: .seconds(self.connectionTimeout))
-                throw BLEError.connectionTimeout
-            }
+    /// Initiates connection and waits for completion
+    private func awaitConnection(to peripheral: CBPeripheral) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            // Use assumeIsolated to safely access actor state from continuation closure
+            // This is safe because we're still executing on the actor's executor
+            self.assumeIsolated { isolatedSelf in
+                // Set continuation BEFORE calling connect to avoid race condition
+                isolatedSelf.connectionContinuation = continuation
 
-            // Wait for either connection or timeout
-            do {
-                try await group.next()
-                group.cancelAll()
-            } catch {
-                group.cancelAll()
-                await self.handleConnectionFailure()
-                throw error
+                // Now initiate connection - delegate may fire immediately
+                let options = isolatedSelf.connectionOptions()
+                isolatedSelf.centralManager?.connect(peripheral, options: options)
             }
         }
     }
 
-    private func setConnectionContinuation(_ continuation: CheckedContinuation<Void, Error>) {
-        connectionContinuation = continuation
+    /// Executes an async operation with a timeout
+    private func withThrowingTimeout<T: Sendable>(
+        seconds: TimeInterval,
+        operation: @escaping @Sendable () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+
+            group.addTask {
+                try await Task.sleep(for: .seconds(seconds))
+                throw BLEError.connectionTimeout
+            }
+
+            guard let result = try await group.next() else {
+                throw BLEError.connectionTimeout
+            }
+            group.cancelAll()
+            return result
+        }
     }
 
     private func handleConnectionFailure() {
+        #if DEBUG
+        print("[BLE] Connection failed: \(_connectionState) → disconnected")
+        #endif
+
+        // Clear continuation to prevent double-resume from late callbacks
+        connectionContinuation = nil
+
         _connectionState = .disconnected
         if let peripheral = connectedPeripheral {
             centralManager?.cancelPeripheralConnection(peripheral)
@@ -341,8 +378,28 @@ public actor BLEService: NSObject, BLETransport {
         rxCharacteristic = nil
     }
 
+    /// Returns connection options including iOS 17+ auto-reconnect
+    private func connectionOptions() -> [String: Any] {
+        var options: [String: Any] = [
+            // Notify user when connection drops in background
+            CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
+            // Notify user when notifications arrive in background
+            CBConnectPeripheralOptionNotifyOnNotificationKey: true
+        ]
+
+        // Add auto-reconnect (iOS 17+, but we target iOS 26 so always available)
+        options[CBConnectPeripheralOptionEnableAutoReconnect] = true
+
+        return options
+    }
+
     public func disconnect() async {
+        // Unsubscribe from characteristics before disconnecting
+        // This ensures clean teardown and prevents undefined peripheral behavior
         if let peripheral = connectedPeripheral {
+            if let rx = rxCharacteristic {
+                peripheral.setNotifyValue(false, for: rx)
+            }
             centralManager?.cancelPeripheralConnection(peripheral)
         }
         connectedPeripheral = nil
@@ -390,8 +447,8 @@ public actor BLEService: NSObject, BLETransport {
             Task {
                 self.pendingResponse = continuation
 
-                // Set up timeout with effective duration
-                Task {
+                // Set up timeout with effective duration (stored for cancellation)
+                self.responseTimeoutTask = Task {
                     try? await Task.sleep(for: .seconds(timeout))
                     // Use thread-safe method to avoid race conditions
                     self.resumePendingResponse(with: nil)
@@ -411,14 +468,16 @@ public actor BLEService: NSObject, BLETransport {
 
     // MARK: - Continuation Safety
 
-    /// Thread-safe method to resume the pending response continuation.
-    /// Prevents race conditions between timeout, response, write error, and disconnection handlers.
+    /// Resumes the pending response continuation safely.
+    /// Must be called from actor-isolated context (all callers already hop via Task { await ... }).
     private func resumePendingResponse(with data: Data?) {
-        pendingResponseLock.lock()
-        defer { pendingResponseLock.unlock() }
-
         guard let pending = pendingResponse else { return }
         pendingResponse = nil
+
+        // Cancel the timeout task to avoid resource leak
+        responseTimeoutTask?.cancel()
+        responseTimeoutTask = nil
+
         // Exit pairing window but preserve error for diagnosis
         exitPairingWindow(clearError: false)
         pending.resume(returning: data)
@@ -567,10 +626,14 @@ extension BLEService: CBCentralManagerDelegate {
     private func handleStateUpdate(_ state: CBManagerState) {
         switch state {
         case .poweredOn:
-            // Resume any waiting task
+            // Resume any waiting task - Bluetooth is ready
             bluetoothReadyContinuation?.resume()
             bluetoothReadyContinuation = nil
         case .poweredOff, .unauthorized, .unsupported:
+            // Resume continuation so waiters don't hang indefinitely
+            // They will check the state and throw appropriate errors
+            bluetoothReadyContinuation?.resume()
+            bluetoothReadyContinuation = nil
             Task {
                 await disconnect()
             }
@@ -637,6 +700,39 @@ extension BLEService: CBCentralManagerDelegate {
         Task {
             await handleDisconnection(peripheral: peripheral, error: error)
         }
+    }
+
+    /// iOS 17+ delegate method that indicates whether the system is auto-reconnecting
+    nonisolated public func centralManager(
+        _ central: CBCentralManager,
+        didDisconnectPeripheral peripheral: CBPeripheral,
+        timestamp: CFAbsoluteTime,
+        isReconnecting: Bool,
+        error: Error?
+    ) {
+        Task {
+            await handleDisconnectionWithReconnect(
+                peripheral: peripheral,
+                isReconnecting: isReconnecting,
+                error: error
+            )
+        }
+    }
+
+    private func handleDisconnectionWithReconnect(
+        peripheral: CBPeripheral,
+        isReconnecting: Bool,
+        error: Error?
+    ) {
+        // If system is auto-reconnecting, don't fully clean up
+        if isReconnecting {
+            // System is handling reconnection - update state but keep references
+            _connectionState = .connecting
+            return
+        }
+
+        // Full disconnection - delegate to normal handler
+        handleDisconnection(peripheral: peripheral, error: error)
     }
 
     private func handleDisconnection(peripheral: CBPeripheral, error: Error?) {
@@ -716,6 +812,9 @@ extension BLEService: CBPeripheralDelegate {
     }
 
     private func handleCharacteristicDiscovery(service: CBService, error: Error?) {
+        // Guard against multiple calls - only process if we haven't completed connection
+        guard connectionContinuation != nil else { return }
+
         guard error == nil else {
             connectionContinuation?.resume(throwing: BLEError.characteristicNotFound)
             connectionContinuation = nil
@@ -739,10 +838,9 @@ extension BLEService: CBPeripheralDelegate {
             _connectionState = .connected
             connectionContinuation?.resume()
             connectionContinuation = nil
-        } else {
-            connectionContinuation?.resume(throwing: BLEError.characteristicNotFound)
-            connectionContinuation = nil
         }
+        // Note: Don't fail here if characteristics not found yet -
+        // multi-service devices may need multiple discovery calls
     }
 
     nonisolated public func peripheral(

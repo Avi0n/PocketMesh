@@ -584,9 +584,19 @@ extension AppState: BLEStateRestorationDelegate {
         if let deviceName {
             await notificationService.postConnectionLostNotification(deviceName: deviceName)
         }
+
+        // Wait before attempting reconnection to avoid CoreBluetooth state machine issues
+        try? await Task.sleep(for: .milliseconds(100))
+
+        // Attempt auto-reconnect after the delay
+        await attemptAutoReconnect()
     }
 
     public func bleStateRestorationDidBecomeAvailable(_ restoration: BLEStateRestoration) async {
+        // Small delay after BLE becomes available to avoid CoreBluetooth state machine issues
+        // Apple documentation recommends waiting at least 20ms after disconnect
+        try? await Task.sleep(for: .milliseconds(50))
+
         // BLE is ready - attempt reconnection if we have a last device
         await attemptAutoReconnect()
     }
@@ -634,8 +644,11 @@ extension AppState: BLEStateRestorationDelegate {
                 await syncChannelsFromDevice()
 
             } catch {
-                // Initialization failed - need to reconnect fresh
+                // Initialization failed - disconnect and reset to clean state
+                // This handles the "connected but not usable" scenario
+                await bleService.disconnect()
                 connectionState = .disconnected
+                connectedDevice = nil
             }
         }
     }
