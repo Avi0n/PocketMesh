@@ -65,6 +65,8 @@ public struct PendingAck: Sendable {
     public let ackCode: UInt32
     public let sentAt: Date
     public let timeout: TimeInterval
+    public var heardRepeats: Int = 0  // Count of duplicate confirmations
+    public var isDelivered: Bool = false  // Track if first confirmation received
 
     public init(messageID: UUID, ackCode: UInt32, sentAt: Date, timeout: TimeInterval) {
         self.messageID = messageID
@@ -74,7 +76,7 @@ public struct PendingAck: Sendable {
     }
 
     public var isExpired: Bool {
-        Date().timeIntervalSince(sentAt) > timeout
+        !isDelivered && Date().timeIntervalSince(sentAt) > timeout
     }
 }
 
@@ -94,6 +96,12 @@ public actor MessageService {
 
     /// ACK confirmation callback
     private var ackConfirmationHandler: (@Sendable (UInt32, UInt32) -> Void)?
+
+    /// Task for periodic ACK expiry checking
+    private var ackCheckTask: Task<Void, Never>?
+
+    /// Interval between ACK expiry checks (in seconds)
+    private var checkInterval: TimeInterval = 5.0
 
     // MARK: - Initialization
 
@@ -273,20 +281,54 @@ public actor MessageService {
 
     /// Processes a send confirmation (ACK) from the device.
     /// Called when PUSH_CODE_SEND_CONFIRMED is received.
+    ///
+    /// This method handles duplicate confirmations - MeshCore may send the same
+    /// ACK multiple times as the message is relayed through the mesh network.
     public func handleSendConfirmation(_ confirmation: SendConfirmation) async throws {
-        guard pendingAcks.removeValue(forKey: confirmation.ackCode) != nil else {
+        let ackCode = confirmation.ackCode
+
+        // CRITICAL: Atomic read-modify-write BEFORE any await points
+        // This prevents actor reentrancy issues with rapid duplicate ACKs
+        guard pendingAcks[ackCode] != nil else {
+            // Unknown ACK - might be from before app launched
+            print("[MessageService] Received confirmation for unknown ACK: \(ackCode)")
             return
         }
 
-        // Update message to delivered status
-        try await dataStore.updateMessageByAckCode(
-            confirmation.ackCode,
-            status: .delivered,
-            roundTripTime: confirmation.roundTripTime
-        )
+        let isFirstConfirmation = pendingAcks[ackCode]?.isDelivered == false
 
-        // Notify handler
-        ackConfirmationHandler?(confirmation.ackCode, confirmation.roundTripTime)
+        if isFirstConfirmation {
+            // Atomically mark as delivered and set initial repeat count
+            pendingAcks[ackCode]?.isDelivered = true
+            pendingAcks[ackCode]?.heardRepeats = 1
+
+            // Now safe to perform async operations
+            try await dataStore.updateMessageByAckCode(
+                ackCode,
+                status: .delivered,
+                roundTripTime: confirmation.roundTripTime
+            )
+
+            // Notify handler
+            ackConfirmationHandler?(ackCode, confirmation.roundTripTime)
+
+            print("[MessageService] Message delivered - ack: \(ackCode), rtt: \(confirmation.roundTripTime)ms")
+        } else {
+            // Atomically increment repeat count
+            pendingAcks[ackCode]?.heardRepeats += 1
+
+            // Get values before await
+            guard let tracking = pendingAcks[ackCode] else { return }
+            let repeatCount = tracking.heardRepeats
+
+            // Update persisted repeat count
+            try await dataStore.updateMessageHeardRepeats(
+                id: tracking.messageID,
+                heardRepeats: repeatCount
+            )
+
+            print("[MessageService] Heard repeat #\(repeatCount) for ack: \(ackCode)")
+        }
     }
 
     /// Sets a callback for ACK confirmations.
@@ -294,22 +336,88 @@ public actor MessageService {
         ackConfirmationHandler = handler
     }
 
-    /// Checks for expired ACKs and marks their messages as failed.
+    /// Grace period for tracking repeats after delivery (60 seconds)
+    private let repeatTrackingGracePeriod: TimeInterval = 60.0
+
+    /// Checks for expired ACKs (no confirmation received within timeout).
+    /// Marks their messages as failed and removes from tracking.
     public func checkExpiredAcks() async throws {
         let now = Date()
-        var expiredCodes: [UInt32] = []
 
-        for (code, pending) in pendingAcks {
-            if now.timeIntervalSince(pending.sentAt) > pending.timeout {
-                expiredCodes.append(code)
+        // Collect expired entries (not delivered and past timeout)
+        let expiredCodes = pendingAcks.filter { _, tracking in
+            !tracking.isDelivered && now.timeIntervalSince(tracking.sentAt) > tracking.timeout
+        }.keys
+
+        for ackCode in expiredCodes {
+            if let tracking = pendingAcks.removeValue(forKey: ackCode) {
+                try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
+                print("[MessageService] Message failed - ack: \(ackCode), timeout exceeded")
             }
         }
+    }
 
-        for code in expiredCodes {
-            if let pending = pendingAcks.removeValue(forKey: code) {
-                try await dataStore.updateMessageStatus(id: pending.messageID, status: .failed)
+    /// Cleans up old delivered ACK tracking entries.
+    /// Called periodically to prevent memory growth.
+    public func cleanupDeliveredAcks() {
+        let now = Date()
+
+        // Remove delivered entries past their grace period
+        let staleDeliveredCodes = pendingAcks.filter { _, tracking in
+            tracking.isDelivered &&
+            now.timeIntervalSince(tracking.sentAt) > (tracking.timeout + repeatTrackingGracePeriod)
+        }.keys
+
+        for ackCode in staleDeliveredCodes {
+            pendingAcks.removeValue(forKey: ackCode)
+        }
+    }
+
+    // MARK: - Periodic ACK Checking
+
+    /// Starts periodic checking for expired ACKs.
+    /// - Parameter interval: Check interval in seconds (default: 5.0)
+    ///
+    /// **Note:** This creates a long-running task. The actor ensures thread safety,
+    /// but the task holds a strong reference to self until cancelled.
+    public func startAckExpiryChecking(interval: TimeInterval = 5.0) {
+        self.checkInterval = interval
+        ackCheckTask?.cancel()
+
+        ackCheckTask = Task { [weak self] in
+            // CRITICAL: Early exit if actor deallocated
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(self.checkInterval))
+                } catch {
+                    // Task was cancelled during sleep
+                    break
+                }
+
+                // Re-check cancellation after await
+                guard !Task.isCancelled else { break }
+
+                // Check for expired ACKs
+                try? await self.checkExpiredAcks()
+
+                // Cleanup old delivered entries
+                await self.cleanupDeliveredAcks()
             }
         }
+    }
+
+    /// Stops the periodic ACK checking.
+    public func stopAckExpiryChecking() {
+        ackCheckTask?.cancel()
+        ackCheckTask = nil
+    }
+
+    /// Updates the check interval for future iterations.
+    /// Takes effect on the next cycle.
+    public func setCheckInterval(_ interval: TimeInterval) {
+        self.checkInterval = max(1.0, interval)  // Minimum 1 second
     }
 
     /// Returns current pending ACK count.

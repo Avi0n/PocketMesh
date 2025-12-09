@@ -128,6 +128,9 @@ public final class AppState {
         // Wire up notification service to message event broadcaster
         messageEventBroadcaster.notificationService = notificationService
 
+        // Wire up message service for send confirmation handling
+        messageEventBroadcaster.messageService = messageService
+
         // Set up channel name lookup for notifications
         messageEventBroadcaster.channelNameLookup = { [dataStore] deviceID, channelIndex in
             let channel = try? await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
@@ -242,6 +245,12 @@ public final class AppState {
 
         // Sync connection state with actual BLE state
         await syncConnectionState()
+
+        // Force immediate check for expired ACKs when returning from background
+        // This catches any timeouts that occurred while the app was suspended
+        if connectionState == .ready {
+            try? await messageService.checkExpiredAcks()
+        }
     }
 
     /// Syncs UI connection state with actual BLE service state
@@ -371,6 +380,9 @@ public final class AppState {
 
     /// Disconnect from the current device
     func disconnect() async {
+        // Stop periodic ACK checking
+        await messageService.stopAckExpiryChecking()
+
         bleStateRestoration.recordDisconnection(intentional: true)
         clearPersistedDevice()
         await bleService.disconnect()
@@ -380,6 +392,9 @@ public final class AppState {
 
     /// Disconnects any existing connection and prepares for new device scan
     func disconnectForNewConnection() async {
+        // Stop periodic ACK checking
+        await messageService.stopAckExpiryChecking()
+
         // Check if there's an existing BLE connection (even if UI doesn't know)
         let actualState = await bleService.connectionState
 
@@ -415,6 +430,9 @@ public final class AppState {
                 try? await self.messagePollingService.processPushData(data)
             }
         }
+
+        // Start periodic ACK expiry checking (every 5 seconds)
+        await messageService.startAckExpiryChecking(interval: 5.0)
 
         // Perform initial sync of any waiting messages
         await messagePollingService.syncMessageQueue()

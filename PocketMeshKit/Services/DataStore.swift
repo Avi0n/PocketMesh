@@ -483,7 +483,8 @@ public actor DataStore {
             senderNodeName: dto.senderNodeName,
             isRead: dto.isRead,
             replyToID: dto.replyToID,
-            roundTripTime: dto.roundTripTime
+            roundTripTime: dto.roundTripTime,
+            heardRepeats: dto.heardRepeats
         )
         modelContext.insert(message)
         try modelContext.save()
@@ -548,6 +549,21 @@ public actor DataStore {
 
         if let message = try modelContext.fetch(descriptor).first {
             message.isRead = true
+            try modelContext.save()
+        }
+    }
+
+    /// Updates the heard repeats count for a message
+    public func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.heardRepeats = heardRepeats
             try modelContext.save()
         }
     }

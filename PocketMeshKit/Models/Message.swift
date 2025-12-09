@@ -79,6 +79,9 @@ public final class Message {
     /// Round-trip time in ms (when ACK received)
     public var roundTripTime: UInt32?
 
+    /// Count of mesh repeats heard for this message (outgoing only)
+    public var heardRepeats: Int
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -98,7 +101,8 @@ public final class Message {
         senderNodeName: String? = nil,
         isRead: Bool = false,
         replyToID: UUID? = nil,
-        roundTripTime: UInt32? = nil
+        roundTripTime: UInt32? = nil,
+        heardRepeats: Int = 0
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -119,6 +123,7 @@ public final class Message {
         self.isRead = isRead
         self.replyToID = replyToID
         self.roundTripTime = roundTripTime
+        self.heardRepeats = heardRepeats
     }
 
     /// Creates an incoming message from a MessageFrame
@@ -228,6 +233,7 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
     public let isRead: Bool
     public let replyToID: UUID?
     public let roundTripTime: UInt32?
+    public let heardRepeats: Int
 
     public init(from message: Message) {
         self.id = message.id
@@ -249,6 +255,7 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
         self.isRead = message.isRead
         self.replyToID = message.replyToID
         self.roundTripTime = message.roundTripTime
+        self.heardRepeats = message.heardRepeats
     }
 
     public var isOutgoing: Bool {

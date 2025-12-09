@@ -52,6 +52,7 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
     func messagePollingService(_ service: MessagePollingService, didReceiveChannelMessage message: MessageDTO, channelIndex: UInt8) async
     func messagePollingService(_ service: MessagePollingService, didReceiveUnknownSender keyPrefix: Data) async
     func messagePollingService(_ service: MessagePollingService, didEncounterError error: MessagePollingError) async
+    func messagePollingService(_ service: MessagePollingService, didReceiveSendConfirmation confirmation: SendConfirmation) async
 }
 
 // MARK: - Message Polling Service Actor
@@ -245,8 +246,14 @@ public actor MessagePollingService {
             await handleMessageWaiting()
 
         case PushCode.sendConfirmed.rawValue:
-            // ACK confirmation - handled by MessageService
-            break
+            // ACK confirmation - route to delegate
+            do {
+                let confirmation = try FrameCodec.decodeSendConfirmation(from: data)
+                await delegate?.messagePollingService(self, didReceiveSendConfirmation: confirmation)
+            } catch {
+                // Log but don't crash - confirmation may be for message sent before app launch
+                print("[MessagePollingService] Failed to decode send confirmation: \(error)")
+            }
 
         case PushCode.advert.rawValue, PushCode.newAdvert.rawValue:
             // Advertisement - handled by AdvertisementService

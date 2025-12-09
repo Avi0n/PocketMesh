@@ -1,10 +1,11 @@
 import Foundation
 import PocketMeshKit
 
-/// Events broadcast when messages arrive
+/// Events broadcast when messages arrive or status changes
 public enum MessageEvent: Sendable, Equatable {
     case directMessageReceived(message: MessageDTO, contact: ContactDTO)
     case channelMessageReceived(message: MessageDTO, channelIndex: UInt8)
+    case messageStatusUpdated(ackCode: UInt32)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -31,6 +32,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
 
     /// Channel name lookup function (set by AppState)
     var channelNameLookup: ((_ deviceID: UUID, _ channelIndex: UInt8) async -> String?)?
+
+    /// Reference to message service for handling send confirmations
+    var messageService: MessageService?
 
     // MARK: - Initialization
 
@@ -98,6 +102,31 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     ) async {
         await MainActor.run {
             self.latestEvent = .error(error.localizedDescription)
+        }
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveSendConfirmation confirmation: SendConfirmation
+    ) async {
+        // Access messageService on MainActor then call into the actor
+        let msgService = await MainActor.run { self.messageService }
+
+        guard let msgService else {
+            print("[MessageEventBroadcaster] Received send confirmation but MessageService not ready - ack: \(confirmation.ackCode)")
+            return
+        }
+
+        do {
+            try await msgService.handleSendConfirmation(confirmation)
+
+            // Notify views of status update so they refresh
+            await MainActor.run {
+                self.latestEvent = .messageStatusUpdated(ackCode: confirmation.ackCode)
+                self.newMessageCount += 1
+            }
+        } catch {
+            print("[MessageEventBroadcaster] Failed to handle send confirmation: \(error)")
         }
     }
 }
