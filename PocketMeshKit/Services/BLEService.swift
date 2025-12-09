@@ -442,16 +442,18 @@ public actor BLEService: NSObject, BLETransport {
             peripheral.writeValue(chunk, for: txCharacteristic, type: .withResponse)
         }
 
-        // Wait for response with timeout (thread-safe via resumePendingResponse)
+        // Wait for response with timeout
         return await withCheckedContinuation { continuation in
-            Task {
-                self.pendingResponse = continuation
+            // Use assumeIsolated to safely access actor state from continuation closure
+            // This avoids the race condition where Task { } delays setting pendingResponse
+            self.assumeIsolated { isolatedSelf in
+                isolatedSelf.pendingResponse = continuation
 
                 // Set up timeout with effective duration (stored for cancellation)
-                self.responseTimeoutTask = Task {
+                isolatedSelf.responseTimeoutTask = Task {
                     try? await Task.sleep(for: .seconds(timeout))
-                    // Use thread-safe method to avoid race conditions
-                    self.resumePendingResponse(with: nil)
+                    // Resume with nil on timeout
+                    await isolatedSelf.resumePendingResponse(with: nil)
                 }
             }
         }

@@ -605,6 +605,10 @@ extension AppState: BLEStateRestorationDelegate {
     private func handleRestoredConnection(deviceID: UUID?) async {
         guard let deviceID else { return }
 
+        // Don't initialize if another connection attempt is in progress
+        // This prevents race conditions between connect() and state restoration
+        guard !isConnecting else { return }
+
         // Complete device initialization if needed
         if await bleService.connectionState == .connected {
             do {
@@ -655,6 +659,9 @@ extension AppState: BLEStateRestorationDelegate {
 
     /// Attempts to reconnect to the last connected device
     func attemptAutoReconnect() async {
+        // Don't attempt if another connection is already in progress
+        guard !isConnecting else { return }
+
         // Check if already connected (iOS restored connection)
         if await bleService.connectionState == .connected {
             await handleRestoredConnection(deviceID: await bleService.connectedDeviceID)
