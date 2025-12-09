@@ -19,14 +19,12 @@ struct ChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Messages
-            messagesView
-
-            // Input bar
-            inputBar
-        }
-        .navigationTitle(contact.displayName)
+        messagesView
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                inputBar
+            }
+            .keyboardAwareScrollEdgeEffect(isFocused: isInputFocused)
+            .navigationTitle(contact.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {

@@ -19,14 +19,12 @@ struct ChannelChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Messages
-            messagesView
-
-            // Input bar
-            inputBar
-        }
-        .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+        messagesView
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                inputBar
+            }
+            .keyboardAwareScrollEdgeEffect(isFocused: isInputFocused)
+            .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
