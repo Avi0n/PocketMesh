@@ -85,12 +85,20 @@ struct DeviceScanView: View {
                 .listStyle(.insetGrouped)
             }
 
-            // Error message
+            // Error message - show above buttons with clear call to action
             if let error = appState.lastError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal)
+                VStack(spacing: 4) {
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                    Text("Please try again.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color.red.opacity(0.1), in: .rect(cornerRadius: 8))
+                .padding(.horizontal)
             }
 
             // Navigation buttons
@@ -99,12 +107,22 @@ struct DeviceScanView: View {
                     Button {
                         proceedWithDevice()
                     } label: {
-                        Text("Connect")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                        HStack(spacing: 8) {
+                            if appState.isConnecting {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.white)
+                                Text("Connecting...")
+                            } else {
+                                Text("Connect")
+                            }
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(appState.isConnecting)
                 } else if !appState.discoveredDevices.isEmpty || appState.isScanning {
                     Button {
                         if appState.isScanning {
@@ -164,6 +182,9 @@ struct DeviceScanView: View {
 
     private func proceedWithDevice() {
         guard let device = selectedDevice else { return }
+
+        // Clear any previous error before attempting connection
+        appState.lastError = nil
 
         stopScanning()
         appState.selectedDeviceForPairing = device
