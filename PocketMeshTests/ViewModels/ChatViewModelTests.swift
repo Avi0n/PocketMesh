@@ -136,27 +136,4 @@ struct ChatViewModelTests {
         #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == true)
     }
 
-    // MARK: - Status Helper Tests
-
-    @Test("Status icons are correct")
-    func statusIconsAreCorrect() {
-        #expect(ChatViewModel.statusIcon(for: .pending) == "clock")
-        #expect(ChatViewModel.statusIcon(for: .sending) == "arrow.up.circle")
-        #expect(ChatViewModel.statusIcon(for: .sent) == "checkmark")
-        #expect(ChatViewModel.statusIcon(for: .delivered) == "checkmark.circle.fill")
-        #expect(ChatViewModel.statusIcon(for: .failed) == "exclamationmark.circle")
-        #expect(ChatViewModel.statusIcon(for: .read) == "eye")
-    }
-
-    @Test("Status colors are correct")
-    func statusColorsAreCorrect() {
-        // Just verify the function returns without crashing
-        // Color comparison is tricky in tests
-        _ = ChatViewModel.statusColor(for: .pending)
-        _ = ChatViewModel.statusColor(for: .sending)
-        _ = ChatViewModel.statusColor(for: .sent)
-        _ = ChatViewModel.statusColor(for: .delivered)
-        _ = ChatViewModel.statusColor(for: .failed)
-        _ = ChatViewModel.statusColor(for: .read)
-    }
 }

@@ -385,42 +385,6 @@ final class ChatViewModel {
         await loadConversations(deviceID: contact.deviceID)
     }
 
-    // MARK: - Message Status Helpers
-
-    /// Returns a system image name for the message status
-    static func statusIcon(for status: MessageStatus) -> String {
-        switch status {
-        case .pending:
-            return "clock"
-        case .sending:
-            return "arrow.up.circle"
-        case .sent:
-            return "checkmark"
-        case .delivered:
-            return "checkmark.circle.fill"
-        case .failed:
-            return "exclamationmark.circle"
-        case .read:
-            return "eye"
-        }
-    }
-
-    /// Returns a color for the message status
-    static func statusColor(for status: MessageStatus) -> Color {
-        switch status {
-        case .pending, .sending:
-            return .secondary
-        case .sent:
-            return .blue
-        case .delivered:
-            return .green
-        case .failed:
-            return .red
-        case .read:
-            return .purple
-        }
-    }
-
     // MARK: - Timestamp Helpers
 
     /// Determines if a timestamp should be shown for a message at the given index.

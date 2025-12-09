@@ -222,10 +222,12 @@ struct UnifiedMessageBubble: View {
                 .buttonStyle(.borderless)
             }
 
-            // Use ChatViewModel static helpers for status display
-            Image(systemName: ChatViewModel.statusIcon(for: message.status))
-                .font(.caption2)
-                .foregroundStyle(ChatViewModel.statusColor(for: message.status))
+            // Only show icon for failed status
+            if message.status == .failed {
+                Image(systemName: "exclamationmark.circle")
+                    .font(.caption2)
+                    .foregroundStyle(.red)
+            }
 
             Text(statusText)
                 .font(.caption2)
@@ -243,9 +245,6 @@ struct UnifiedMessageBubble: View {
         case .sent:
             return "Sent"
         case .delivered:
-            if let rtt = message.roundTripTime {
-                return "Delivered \u{2022} \(rtt)ms"
-            }
             return "Delivered"
         case .failed:
             return "Failed"
