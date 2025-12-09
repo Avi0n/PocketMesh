@@ -185,13 +185,20 @@ struct ChannelChatView: View {
 
     // MARK: - Input Bar
 
+    /// Calculate max channel message length based on device's advertised name
+    private var maxChannelMessageLength: Int {
+        let nodeNameLength = appState.connectedDevice?.nodeName.count ?? 0
+        return ProtocolLimits.maxChannelMessageLength(nodeNameLength: nodeNameLength)
+    }
+
     private var inputBar: some View {
         ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: "Broadcast message",
             accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
-            isSending: viewModel.isSending
+            isSending: viewModel.isSending,
+            maxCharacters: maxChannelMessageLength
         ) {
             Task {
                 await viewModel.sendChannelMessage()

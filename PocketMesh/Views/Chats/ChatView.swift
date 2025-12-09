@@ -197,7 +197,8 @@ struct ChatView: View {
             isFocused: $isInputFocused,
             placeholder: "Message",
             accentColor: .blue,
-            isSending: viewModel.isSending
+            isSending: viewModel.isSending,
+            maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
             Task {
                 await viewModel.sendMessage()

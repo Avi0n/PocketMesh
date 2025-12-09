@@ -136,6 +136,15 @@ public enum ProtocolLimits {
     public static let maxNameLength = 32
     public static let channelSecretSize = 16
     public static let maxMessageLength = 160
+
+    /// Maximum characters for direct messages (app-enforced limit per MeshCore spec)
+    public static let maxDirectMessageLength = 150
+
+    /// Calculate max channel message length based on node name
+    /// Formula: 160 - nodeNameLength - 2
+    public static func maxChannelMessageLength(nodeNameLength: Int) -> Int {
+        max(0, 160 - nodeNameLength - 2)
+    }
 }
 
 // MARK: - Contact Types

@@ -1,4 +1,5 @@
 import SwiftUI
+import PocketMeshKit
 
 /// Reusable chat input bar with configurable styling
 struct ChatInputBar: View {
@@ -7,12 +8,26 @@ struct ChatInputBar: View {
     let placeholder: String
     let accentColor: Color
     let isSending: Bool
+    let maxCharacters: Int
     let onSend: () -> Void
 
+    private var characterCount: Int {
+        text.utf8.count
+    }
+
+    private var isOverLimit: Bool {
+        characterCount > maxCharacters
+    }
+
+    private var shouldShowCharacterCount: Bool {
+        // Show when within 20 characters of limit or over limit
+        characterCount >= maxCharacters - 20
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .bottom, spacing: 12) {
             textField
-            sendButton
+            sendButtonWithCounter
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -31,6 +46,23 @@ struct ChatInputBar: View {
             .accessibilityHint("Type your message here")
     }
 
+    private var sendButtonWithCounter: some View {
+        VStack(spacing: 4) {
+            sendButton
+            if shouldShowCharacterCount {
+                characterCountLabel
+            }
+        }
+    }
+
+    private var characterCountLabel: some View {
+        Text("\(characterCount)/\(maxCharacters)")
+            .font(.caption2)
+            .monospacedDigit()
+            .foregroundStyle(isOverLimit ? .red : .secondary)
+            .accessibilityLabel("\(characterCount) of \(maxCharacters) characters")
+    }
+
     @ViewBuilder
     private var sendButton: some View {
         if #available(iOS 26.0, *) {
@@ -41,8 +73,8 @@ struct ChatInputBar: View {
             }
             .buttonStyle(.glass)
             .disabled(!canSend)
-            .accessibilityLabel(isSending ? "Sending message" : "Send message")
-            .accessibilityHint(canSend ? "Tap to send your message" : "Type a message first")
+            .accessibilityLabel(sendAccessibilityLabel)
+            .accessibilityHint(sendAccessibilityHint)
         } else {
             Button(action: onSend) {
                 Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
@@ -50,13 +82,33 @@ struct ChatInputBar: View {
                     .foregroundStyle(canSend ? accentColor : .secondary)
             }
             .disabled(!canSend)
-            .accessibilityLabel(isSending ? "Sending message" : "Send message")
-            .accessibilityHint(canSend ? "Tap to send your message" : "Type a message first")
+            .accessibilityLabel(sendAccessibilityLabel)
+            .accessibilityHint(sendAccessibilityHint)
+        }
+    }
+
+    private var sendAccessibilityLabel: String {
+        if isSending {
+            return "Sending message"
+        } else if isOverLimit {
+            return "Message too long"
+        } else {
+            return "Send message"
+        }
+    }
+
+    private var sendAccessibilityHint: String {
+        if isOverLimit {
+            return "Remove \(characterCount - maxCharacters) characters to send"
+        } else if canSend {
+            return "Tap to send your message"
+        } else {
+            return "Type a message first"
         }
     }
 
     private var canSend: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending && !isOverLimit
     }
 }
 
