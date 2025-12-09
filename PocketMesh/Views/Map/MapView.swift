@@ -43,7 +43,6 @@ final class MapLocationCoordinator: NSObject, CLLocationManagerDelegate {
 struct MapView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = MapViewModel()
-    @State private var showingContactDetail = false
     @State private var selectedContactForDetail: ContactDTO?
     @Namespace private var mapScope
     @State private var locationCoordinator = MapLocationCoordinator()
@@ -69,13 +68,11 @@ struct MapView: View {
                 await viewModel.loadContactsWithLocation()
                 viewModel.centerOnAllContacts()
             }
-            .sheet(isPresented: $showingContactDetail) {
-                if let contact = selectedContactForDetail {
-                    ContactDetailSheet(
-                        contact: contact,
-                        onMessage: { navigateToChat(with: contact) }
-                    )
-                }
+            .sheet(item: $selectedContactForDetail) { contact in
+                ContactDetailSheet(
+                    contact: contact,
+                    onMessage: { navigateToChat(with: contact) }
+                )
             }
             .alert("Location Access Required", isPresented: $locationCoordinator.showingDeniedAlert) {
                 Button("Open Settings") {
@@ -254,7 +251,6 @@ struct MapView: View {
 
     private func showContactDetail(_ contact: ContactDTO) {
         selectedContactForDetail = contact
-        showingContactDetail = true
     }
 }
 
