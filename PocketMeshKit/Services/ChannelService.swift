@@ -97,10 +97,12 @@ public actor ChannelService {
                     if let dto = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
                         channels.append(dto)
                     }
+                } else {
+                    // Channel not configured on device - delete any stale local entry
+                    if let staleChannel = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
+                        try await dataStore.deleteChannel(id: staleChannel.id)
+                    }
                 }
-            } catch ChannelServiceError.channelNotFound {
-                // Channel not configured on device, skip
-                continue
             } catch {
                 errorIndices.append(index)
             }
@@ -143,7 +145,15 @@ public actor ChannelService {
             throw ChannelServiceError.sendFailed("Unknown protocol error")
         }
 
-        return try FrameCodec.decodeChannelInfo(from: response)
+        let channelInfo = try FrameCodec.decodeChannelInfo(from: response)
+
+        // Treat empty channels (cleared slots) as not configured
+        // The device returns channelInfo with empty name for cleared slots
+        if channelInfo.name.isEmpty {
+            return nil
+        }
+
+        return channelInfo
     }
 
     /// Sets (creates or updates) a channel on the device.

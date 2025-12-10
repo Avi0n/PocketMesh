@@ -609,4 +609,143 @@ struct ChannelServiceTests {
             }
         }
     }
+
+    // MARK: - Stale Entry Cleanup Tests
+
+    @Test("Fetch channel returns nil for empty-name channels")
+    func fetchChannelReturnsNilForEmptyNameChannels() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        await transport.setConnectionState(.ready)
+
+        // Device returns channelInfo with empty name (cleared slot)
+        let emptySecret = Data(repeating: 0, count: 16)
+        await transport.queueResponse(createChannelInfoResponse(index: 3, name: "", secret: emptySecret))
+
+        let service = ChannelService(bleTransport: transport, dataStore: dataStore)
+
+        // Empty-name channels should be treated as not configured
+        let channelInfo = try await service.fetchChannel(index: 3)
+        #expect(channelInfo == nil)
+    }
+
+    @Test("Sync channels deletes stale entries when device returns empty-name channels")
+    func syncChannelsDeletesStaleEntriesForEmptyNameChannels() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        let deviceID = UUID()
+        await transport.setConnectionState(.ready)
+
+        // Pre-populate local database with a channel that was deleted on device
+        let staleChannelInfo = ChannelInfo(
+            index: 3,
+            name: "Deleted Channel",
+            secret: Data(repeating: 0xAB, count: 16)
+        )
+        _ = try await dataStore.saveChannel(deviceID: deviceID, from: staleChannelInfo)
+
+        // Verify stale channel exists locally
+        let beforeChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+        #expect(beforeChannels.count == 1)
+
+        // Device returns empty-name channelInfo for cleared slot 3 (common behavior)
+        let publicSecret = Data(repeating: 0, count: 16)
+        let emptySecret = Data(repeating: 0, count: 16)
+        await transport.queueResponses([
+            createChannelInfoResponse(index: 0, name: "Public", secret: publicSecret),
+            createChannelInfoResponse(index: 1, name: "", secret: emptySecret),  // Cleared
+            createChannelInfoResponse(index: 2, name: "", secret: emptySecret),  // Cleared
+            createChannelInfoResponse(index: 3, name: "", secret: emptySecret),  // Cleared - should delete local
+            createChannelInfoResponse(index: 4, name: "", secret: emptySecret),  // Cleared
+            createChannelInfoResponse(index: 5, name: "", secret: emptySecret),  // Cleared
+            createChannelInfoResponse(index: 6, name: "", secret: emptySecret),  // Cleared
+            createChannelInfoResponse(index: 7, name: "", secret: emptySecret)   // Cleared
+        ])
+
+        let service = ChannelService(bleTransport: transport, dataStore: dataStore)
+
+        let result = try await service.syncChannels(deviceID: deviceID)
+
+        // Only public channel should be synced
+        #expect(result.channelsSynced == 1)
+        #expect(result.errors.isEmpty)
+
+        // Verify stale channel was deleted
+        let afterChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+        #expect(afterChannels.count == 1)
+        #expect(afterChannels.first?.index == 0)
+        #expect(afterChannels.first?.name == "Public")
+
+        // Slot 3 should be deleted
+        let slot3 = try await dataStore.fetchChannel(deviceID: deviceID, index: 3)
+        #expect(slot3 == nil)
+    }
+
+    @Test("Sync channels deletes stale local entries")
+    func syncChannelsDeletesStaleLocalEntries() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        let deviceID = UUID()
+        await transport.setConnectionState(.ready)
+
+        // Pre-populate local database with a channel that doesn't exist on device
+        let staleChannelInfo = ChannelInfo(
+            index: 3,
+            name: "Stale Channel",
+            secret: Data(repeating: 0xAB, count: 16)
+        )
+        _ = try await dataStore.saveChannel(deviceID: deviceID, from: staleChannelInfo)
+
+        // Verify stale channel exists locally
+        let beforeChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+        #expect(beforeChannels.count == 1)
+        #expect(beforeChannels.first?.index == 3)
+
+        // Device only has public channel (slot 0) - all other slots return not found
+        let publicSecret = Data(repeating: 0, count: 16)
+        await transport.queueResponses([
+            createChannelInfoResponse(index: 0, name: "Public", secret: publicSecret),
+            createErrorResponse(.notFound),  // Slot 1 empty
+            createErrorResponse(.notFound),  // Slot 2 empty
+            createErrorResponse(.notFound),  // Slot 3 empty - this should delete local entry
+            createErrorResponse(.notFound),  // Slot 4 empty
+            createErrorResponse(.notFound),  // Slot 5 empty
+            createErrorResponse(.notFound),  // Slot 6 empty
+            createErrorResponse(.notFound)   // Slot 7 empty
+        ])
+
+        let service = ChannelService(bleTransport: transport, dataStore: dataStore)
+
+        // Verify we can find the stale channel before sync (using same pattern as syncChannels)
+        let staleBeforeSync = try await dataStore.fetchChannel(deviceID: deviceID, index: 3)
+        #expect(staleBeforeSync != nil, "Stale channel should be findable before sync")
+        #expect(staleBeforeSync?.name == "Stale Channel")
+
+        // Also verify via service's own method
+        let staleViaService = try await service.getChannel(deviceID: deviceID, index: 3)
+        #expect(staleViaService != nil, "Stale channel should be findable via service before sync")
+
+        let result = try await service.syncChannels(deviceID: deviceID)
+
+        // Verify sync result
+        #expect(result.channelsSynced == 1)
+        #expect(result.errors.isEmpty)
+
+        // Check via service method immediately after sync
+        let staleViaServiceAfter = try await service.getChannel(deviceID: deviceID, index: 3)
+        #expect(staleViaServiceAfter == nil, "Stale channel should be deleted via service after sync")
+
+        // Verify stale channel was deleted
+        let afterChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+        #expect(afterChannels.count == 1, "Expected 1 channel after sync, got \(afterChannels.count). Indices: \(afterChannels.map(\.index))")
+        #expect(afterChannels.first?.index == 0)  // Only public channel remains
+        #expect(afterChannels.first?.name == "Public")
+
+        // Verify slot 3 no longer exists
+        let slot3 = try await dataStore.fetchChannel(deviceID: deviceID, index: 3)
+        #expect(slot3 == nil)
+    }
 }
