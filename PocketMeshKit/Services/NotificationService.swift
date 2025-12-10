@@ -8,7 +8,6 @@ public enum NotificationCategory: String, Sendable {
     case directMessage = "DIRECT_MESSAGE"
     case channelMessage = "CHANNEL_MESSAGE"
     case lowBattery = "LOW_BATTERY"
-    case connectionLost = "CONNECTION_LOST"
 }
 
 /// Notification action identifiers
@@ -160,19 +159,10 @@ public final class NotificationService: NSObject {
             options: []
         )
 
-        // Connection lost category
-        let connectionLostCategory = UNNotificationCategory(
-            identifier: NotificationCategory.connectionLost.rawValue,
-            actions: [],
-            intentIdentifiers: [],
-            options: []
-        )
-
         let categories: Set<UNNotificationCategory> = [
             directMessageCategory,
             channelMessageCategory,
-            lowBatteryCategory,
-            connectionLostCategory
+            lowBatteryCategory
         ]
 
         UNUserNotificationCenter.current().setNotificationCategories(categories)
@@ -279,32 +269,6 @@ public final class NotificationService: NSObject {
         // Use device name as identifier to avoid duplicate notifications
         let request = UNNotificationRequest(
             identifier: "low-battery-\(deviceName)",
-            content: content,
-            trigger: nil
-        )
-
-        do {
-            try await UNUserNotificationCenter.current().add(request)
-        } catch {
-            // Notification failed to post
-        }
-    }
-
-    /// Posts a connection lost notification.
-    public func postConnectionLostNotification(deviceName: String) async {
-        guard isAuthorized else { return }
-
-        let content = UNMutableNotificationContent()
-        content.title = "Connection Lost"
-        content.body = "Lost connection to \(deviceName)"
-        content.sound = .default
-        content.categoryIdentifier = NotificationCategory.connectionLost.rawValue
-        content.userInfo = [
-            "type": "connectionLost"
-        ]
-
-        let request = UNNotificationRequest(
-            identifier: "connection-lost",
             content: content,
             trigger: nil
         )

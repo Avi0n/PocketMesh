@@ -877,14 +877,7 @@ extension AppState: BLEStateRestorationDelegate {
         // Handle unexpected disconnection
         connectionState = .disconnected
 
-        // Get device name for notification (check current device first, then UserDefaults)
-        let deviceName = connectedDevice?.nodeName ?? UserDefaults.standard.string(forKey: lastDeviceNameKey)
         connectedDevice = nil
-
-        // Post notification if we have device name
-        if let deviceName {
-            await notificationService.postConnectionLostNotification(deviceName: deviceName)
-        }
 
         // Wait before attempting reconnection to avoid CoreBluetooth state machine issues
         try? await Task.sleep(for: .milliseconds(100))
@@ -1022,11 +1015,6 @@ extension AppState: BLEStateRestorationDelegate {
 
         } catch {
             connectionState = .disconnected
-
-            // Show notification for failed reconnection
-            if let deviceName = UserDefaults.standard.string(forKey: lastDeviceNameKey) {
-                await notificationService.postConnectionLostNotification(deviceName: deviceName)
-            }
         }
     }
 }
