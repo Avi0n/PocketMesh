@@ -487,37 +487,36 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     // MARK: - Connection
 
     /// Reconnect to a previously paired device by ID
+    /// Validates ASK pairing, uses retry pattern, and handles stale entries gracefully
     func reconnectToDevice(id deviceID: UUID) async throws {
         isConnecting = true
         lastError = nil
 
         defer { isConnecting = false }
 
+        // 1. Validate device is still registered with AccessorySetupKit
+        // If user removed device from Settings > Accessories while app wasn't running,
+        // we need to clean up our stale database entry
+        if accessorySetupKit.isSessionActive {
+            let isRegisteredWithASK = accessorySetupKit.pairedAccessories.contains {
+                $0.bluetoothIdentifier == deviceID
+            }
+
+            if !isRegisteredWithASK {
+                #if DEBUG
+                print("[AppState] reconnectToDevice: device \(deviceID) not found in ASK pairedAccessories, removing stale entry")
+                #endif
+
+                // Clean up stale database entry
+                await removeStaleDevice(id: deviceID)
+
+                throw ReconnectionError.deviceNoLongerPaired
+            }
+        }
+
+        // 2. Attempt connection with retry pattern
         do {
-            // Ensure BLE is initialized
-            await bleService.initialize()
-
-            // Always disconnect first to ensure clean state
-            // This handles: stale connections, transitional states, Bluetooth toggle scenarios
-            await bleService.disconnect()
-
-            #if DEBUG
-            print("[AppState] reconnectToDevice: disconnected, waiting for stabilization")
-            #endif
-
-            // Brief stabilization delay for BLE stack and radio to reset
-            // This is critical after Bluetooth toggle or quick reconnect scenarios
-            try await Task.sleep(for: .milliseconds(200))
-
-            #if DEBUG
-            print("[AppState] reconnectToDevice: stabilization complete, connecting to \(deviceID)")
-            #endif
-
-            // Connect to the device
-            try await bleService.connect(to: deviceID)
-
-            // Initialize device and get info
-            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
+            let (deviceInfo, selfInfo) = try await reconnectWithRetry(deviceID: deviceID, maxAttempts: 4)
 
             // Update connection state
             connectionState = await bleService.connectionState
@@ -561,13 +560,111 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
             await syncChannelsFromDevice()
+
+        } catch BLEError.deviceNotFound {
+            // 3. Handle stale database entry - device no longer known to CoreBluetooth
+            #if DEBUG
+            print("[AppState] reconnectToDevice: device \(deviceID) not found by CoreBluetooth, removing stale entry")
+            #endif
+
+            await removeStaleDevice(id: deviceID)
+            throw ReconnectionError.deviceNoLongerPaired
+
         } catch {
             lastError = error.localizedDescription
             connectionState = .disconnected
-            // Clean up BLE connection on initialization failure
             await bleService.disconnect()
             throw error
         }
+    }
+
+    /// Reconnects to a device with retry pattern and exponential backoff
+    /// Similar to connectWithRetry but optimized for reconnection scenarios
+    private func reconnectWithRetry(
+        deviceID: UUID,
+        maxAttempts: Int
+    ) async throws -> (DeviceInfo, SelfInfo) {
+        var lastError: Error = BLEError.connectionFailed("Unknown")
+
+        for attempt in 1...maxAttempts {
+            do {
+                // Ensure BLE is initialized
+                await bleService.initialize()
+
+                // Set up disconnection handler
+                await bleService.setDisconnectionHandler { [weak self] deviceID, error in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
+                    }
+                }
+
+                // Disconnect first to ensure clean state
+                await bleService.disconnect()
+
+                // Wait for Bluetooth to be ready
+                await bleService.waitForBluetoothReady()
+
+                // Attempt connection
+                connectionState = .connecting
+                try await bleService.connect(to: deviceID)
+
+                // Verify connection is stable by attempting initialization
+                let result = try await bleService.initializeDeviceWithRetry()
+
+                #if DEBUG
+                if attempt > 1 {
+                    print("[AppState] reconnectWithRetry: succeeded on attempt \(attempt)")
+                }
+                #endif
+
+                return result
+
+            } catch BLEError.deviceNotFound {
+                // Don't retry deviceNotFound - it won't resolve with retries
+                throw BLEError.deviceNotFound
+
+            } catch {
+                lastError = error
+
+                #if DEBUG
+                print("[AppState] reconnectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
+                #endif
+
+                // Clean up failed connection
+                await bleService.disconnect()
+                connectionState = .disconnected
+
+                if attempt < maxAttempts {
+                    // Exponential backoff with jitter
+                    let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
+                    let jitter = Double.random(in: 0...0.1) * baseDelay
+
+                    #if DEBUG
+                    print("[AppState] reconnectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
+                    #endif
+
+                    try await Task.sleep(for: .seconds(baseDelay + jitter))
+                }
+            }
+        }
+
+        throw lastError
+    }
+
+    /// Removes a stale device entry from the database and clears related state
+    private func removeStaleDevice(id deviceID: UUID) async {
+        // Clear from state restoration
+        bleStateRestoration.clearConnection(deviceID: deviceID)
+
+        // Clear persisted device if it matches
+        if let uuidString = UserDefaults.standard.string(forKey: lastDeviceIDKey),
+           UUID(uuidString: uuidString) == deviceID {
+            clearPersistedDevice()
+        }
+
+        // Remove from SwiftData
+        try? await dataStore.deleteDevice(id: deviceID)
     }
 
     /// Disconnect from the current device
@@ -731,6 +828,21 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     func getLastConnectedDeviceID() -> UUID? {
         guard let uuidString = UserDefaults.standard.string(forKey: lastDeviceIDKey) else { return nil }
         return UUID(uuidString: uuidString)
+    }
+}
+
+// MARK: - Reconnection Errors
+
+/// Errors specific to device reconnection
+enum ReconnectionError: LocalizedError {
+    /// Device was removed from Settings > Accessories or is no longer paired
+    case deviceNoLongerPaired
+
+    var errorDescription: String? {
+        switch self {
+        case .deviceNoLongerPaired:
+            return "This device is no longer paired. Please pair it again using 'Scan for New Device'."
+        }
     }
 }
 

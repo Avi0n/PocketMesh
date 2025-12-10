@@ -132,6 +132,12 @@ struct DeviceSelectionSheet: View {
         do {
             try await appState.reconnectToDevice(id: device.id)
             dismiss()
+        } catch ReconnectionError.deviceNoLongerPaired {
+            // Device was removed from system - refresh list and show message
+            errorMessage = "This device is no longer paired. It has been removed from the list. Please pair it again."
+            selectedDevice = nil
+            await loadDevices()
+            showingError = true
         } catch {
             errorMessage = error.localizedDescription
             showingError = true
