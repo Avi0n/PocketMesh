@@ -59,6 +59,9 @@ struct MapView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     refreshButton
                 }

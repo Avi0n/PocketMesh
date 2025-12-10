@@ -27,6 +27,9 @@ struct ContactsListView: View {
             .navigationTitle("Contacts")
             .searchable(text: $searchText, prompt: "Search contacts")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
                 ToolbarItem(placement: .automatic) {
                     Menu {
                         Button {

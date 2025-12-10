@@ -39,6 +39,9 @@ struct ChatsListView: View {
             .navigationTitle("Chats")
             .searchable(text: $searchText, prompt: "Search conversations")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
                 ToolbarItem(placement: .automatic) {
                     Menu {
                         Button {
