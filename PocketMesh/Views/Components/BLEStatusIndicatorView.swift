@@ -47,6 +47,8 @@ struct BLEStatusIndicatorView: View {
         .accessibilityHint("Shows device connection options")
         .sheet(isPresented: $showingDeviceSelection) {
             DeviceSelectionSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
         }
     }
 

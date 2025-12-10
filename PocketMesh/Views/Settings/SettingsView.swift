@@ -186,6 +186,8 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingDeviceSelection) {
                 DeviceSelectionSheet()
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
