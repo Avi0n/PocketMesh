@@ -364,30 +364,16 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             connectionState = .disconnected
         }
 
-        // 4. NOW initialize CBCentralManager (safe after ASK pairing)
-        await bleService.initialize()
+        // 4. Connect with retry pattern
+        // - Don't use fixed delays - they're guessing at timing
+        // - Use retry with exponential backoff - adapts to actual conditions
+        // - Peripheral may need stabilization time after ASK bonding
+        let (deviceInfo, selfInfo) = try await connectWithRetry(deviceID: deviceID, maxAttempts: 4)
 
-        // Set up disconnection handler
-        await bleService.setDisconnectionHandler { [weak self] deviceID, error in
-            Task { @MainActor in
-                guard let self else { return }
-                await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
-            }
-        }
-
-        // Wait briefly for Bluetooth to be ready
-        await bleService.waitForBluetoothReady()
-
-        // 5. Connect using existing CoreBluetooth flow
-        try await bleService.connect(to: deviceID)
-
-        // 6. Initialize device and complete setup
-        let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
-
-        // 7. Update connection state
+        // 5. Update connection state
         connectionState = await bleService.connectionState
 
-        // 8. Create DeviceDTO from device info
+        // 6. Create DeviceDTO from device info
         connectedDevice = DeviceDTO(
             from: Device(
                 id: deviceID,
@@ -413,18 +399,89 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             )
         )
 
-        // 9. Store and persist
+        // 7. Store and persist
         connectionState = .ready
         persistConnectedDevice(connectedDevice!)
         try await dataStore.saveDevice(connectedDevice!)
         bleStateRestoration.recordConnection(deviceID: deviceID)
 
-        // 10. Start message polling
+        // 8. Start message polling
         await connectMessagePolling()
 
-        // 11. Sync contacts and channels
+        // 9. Sync contacts and channels
         await syncContactsFromDevice()
         await syncChannelsFromDevice()
+    }
+
+    /// Connects to a device with retry pattern and exponential backoff
+    /// - Peripheral may need stabilization time after ASK bonding
+    /// - "fence tx observer timed out" indicates link-layer supervision timeout
+    /// - Retry pattern adapts to actual conditions rather than guessing at timing
+    private func connectWithRetry(
+        deviceID: UUID,
+        maxAttempts: Int
+    ) async throws -> (DeviceInfo, SelfInfo) {
+        var lastError: Error = BLEError.connectionFailed("Unknown")
+
+        for attempt in 1...maxAttempts {
+            do {
+                // Initialize BLE service
+                await bleService.initialize()
+
+                // Set up disconnection handler
+                await bleService.setDisconnectionHandler { [weak self] deviceID, error in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
+                    }
+                }
+
+                // Wait for Bluetooth to be ready
+                await bleService.waitForBluetoothReady()
+
+                // Attempt connection
+                connectionState = .connecting
+                try await bleService.connect(to: deviceID)
+
+                // Verify connection is stable by attempting initialization
+                // If connection dropped (supervision timeout), this will fail
+                let result = try await bleService.initializeDeviceWithRetry()
+
+                #if DEBUG
+                if attempt > 1 {
+                    print("[AppState] connectWithRetry: succeeded on attempt \(attempt)")
+                }
+                #endif
+
+                return result
+
+            } catch {
+                lastError = error
+
+                #if DEBUG
+                print("[AppState] connectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
+                #endif
+
+                // Clean up failed connection
+                await bleService.disconnect()
+                connectionState = .disconnected
+
+                if attempt < maxAttempts {
+                    // Exponential backoff with jitter
+                    // Base delays: 300ms, 600ms, 1200ms
+                    let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
+                    let jitter = Double.random(in: 0...0.1) * baseDelay
+
+                    #if DEBUG
+                    print("[AppState] connectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
+                    #endif
+
+                    try await Task.sleep(for: .seconds(baseDelay + jitter))
+                }
+            }
+        }
+
+        throw lastError
     }
 
     // MARK: - Connection
