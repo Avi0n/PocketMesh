@@ -171,9 +171,17 @@ public actor BLEService: NSObject, BLETransport {
     /// Task for pending response timeout (cancelled when response arrives)
     private var responseTimeoutTask: Task<Void, Never>?
 
+    /// Whether a send operation is currently in progress
+    private var sendInProgress = false
+
+    /// Queue of callers waiting to send (FIFO)
+    private var sendQueue: [CheckedContinuation<Void, Never>] = []
 
     /// Tracks whether we're in the initial pairing window where transient errors are expected
     private var inPairingWindow: Bool = false
+
+    /// Tracks whether we need to re-subscribe to RX after an isReconnecting disconnection
+    private var needsResubscriptionAfterReconnect: Bool = false
 
     /// Timestamp when pairing window started (for timeout calculation)
     private var pairingWindowStart: Date?
@@ -403,6 +411,7 @@ public actor BLEService: NSObject, BLETransport {
         connectedPeripheral = nil
         txCharacteristic = nil
         rxCharacteristic = nil
+        clearSendQueue()  // Prevents hangs if sends were queued during connection attempt
     }
 
     /// Returns connection options including iOS 17+ auto-reconnect
@@ -424,6 +433,7 @@ public actor BLEService: NSObject, BLETransport {
         // Clean up pending response to avoid continuation leaks
         // This is critical when Bluetooth is toggled off during an active send()
         resumePendingResponse(with: nil)
+        clearSendQueue()
 
         // Unsubscribe from characteristics before disconnecting
         // This ensures clean teardown and prevents undefined peripheral behavior
@@ -440,6 +450,45 @@ public actor BLEService: NSObject, BLETransport {
         responseBuffer.removeAll()
     }
 
+    // MARK: - Send Queue Serialization
+
+    /// Acquires exclusive access to the send operation.
+    /// If a send is already in progress, suspends until it's our turn.
+    private func acquireSendLock() async {
+        if !sendInProgress {
+            sendInProgress = true
+            return
+        }
+
+        // Another send is in progress - wait our turn
+        #if DEBUG
+        print("[BLE] Send queued, waiting for previous operation (\(sendQueue.count + 1) waiting)")
+        #endif
+        await withCheckedContinuation { continuation in
+            sendQueue.append(continuation)
+        }
+    }
+
+    /// Releases the send lock, resuming the next queued caller if any.
+    private func releaseSendLock() {
+        if let next = sendQueue.first {
+            sendQueue.removeFirst()
+            next.resume()
+        } else {
+            sendInProgress = false
+        }
+    }
+
+    /// Clears all queued send operations, unblocking waiting callers.
+    /// Called on disconnect to prevent hangs.
+    private func clearSendQueue() {
+        while let queued = sendQueue.first {
+            sendQueue.removeFirst()
+            queued.resume()  // Unblocks waiters; they'll see disconnected state and throw
+        }
+        sendInProgress = false
+    }
+
     // MARK: - Data Transfer
 
     public func send(_ data: Data) async throws -> Data? {
@@ -448,6 +497,10 @@ public actor BLEService: NSObject, BLETransport {
 
     /// Internal send method with configurable timeout and pairing window handling
     private func send(_ data: Data, timeout: TimeInterval, forPairing: Bool) async throws -> Data? {
+        // Serialize send operations - only one in flight at a time
+        await acquireSendLock()
+        defer { releaseSendLock() }  // CRITICAL: Ensures cleanup on ALL paths (timeout, error, success)
+
         guard let peripheral = connectedPeripheral,
               let txCharacteristic else {
             throw BLEError.notConnected
@@ -597,8 +650,8 @@ public actor BLEService: NSObject, BLETransport {
     /// - Parameter retryDelay: Delay between retries in seconds (default: 2.0)
     /// - Returns: Tuple of DeviceInfo and SelfInfo on success
     public func initializeDeviceWithRetry(
-        maxRetries: Int = 1,  // Reduced from 3 - retrying won't help if user cancelled pairing
-        retryDelay: TimeInterval = 2.0
+        maxRetries: Int = 2,  // Increased from 1 - allows recovery from transient failures
+        retryDelay: TimeInterval = 1.0  // Reduced from 2.0 - faster recovery
     ) async throws -> (DeviceInfo, SelfInfo) {
         var lastError: Error = BLEError.invalidResponse
 
@@ -611,15 +664,31 @@ public actor BLEService: NSObject, BLETransport {
             } catch BLEError.pairingCancelled {
                 // Don't retry if pairing was explicitly cancelled
                 throw BLEError.pairingCancelled
+            } catch BLEError.invalidResponse {
+                // Retry on invalid response - could be transient during pairing reconnection
+                lastError = BLEError.invalidResponse
+
+                // Don't retry if we're no longer connected
+                guard _connectionState == .connected || _connectionState == .ready else {
+                    throw BLEError.invalidResponse
+                }
+
+                #if DEBUG
+                print("[BLE] initializeDevice attempt \(attempt) failed with invalidResponse, retrying...")
+                #endif
+
+                if attempt < maxRetries {
+                    try Task.checkCancellation()
+                    try await Task.sleep(for: .seconds(retryDelay))
+                }
             } catch {
                 lastError = error
 
                 // Don't retry if we're no longer connected
-                guard _connectionState == .connected else {
+                guard _connectionState == .connected || _connectionState == .ready else {
                     throw error
                 }
 
-                // Don't retry on the last attempt
                 if attempt < maxRetries {
                     // Check cancellation before sleeping
                     try Task.checkCancellation()
@@ -669,6 +738,7 @@ extension BLEService: CBCentralManagerDelegate {
             // They will check the state and throw appropriate errors
             bluetoothReadyContinuation?.resume()
             bluetoothReadyContinuation = nil
+            clearSendQueue()  // Clear BEFORE async disconnect to prevent race condition (idempotent, safe to call twice)
             Task {
                 await disconnect()
             }
@@ -749,10 +819,20 @@ extension BLEService: CBCentralManagerDelegate {
         isReconnecting: Bool,
         error: Error?
     ) {
-        // If system is auto-reconnecting, don't fully clean up
+        // If system is auto-reconnecting, prepare for re-subscription
         if isReconnecting {
             // System is handling reconnection - update state but keep references
             _connectionState = .connecting
+
+            // Mark that we need to re-subscribe after reconnection
+            // The RX subscription is invalidated on disconnect
+            needsResubscriptionAfterReconnect = true
+
+            // Clear characteristic references - they become invalid on disconnect
+            // We'll get new ones after re-discovery
+            txCharacteristic = nil
+            rxCharacteristic = nil
+
             return
         }
 
@@ -766,9 +846,13 @@ extension BLEService: CBCentralManagerDelegate {
         // Clean up pairing window state
         exitPairingWindow()
 
+        // Clear reconnection flag
+        needsResubscriptionAfterReconnect = false
+
         // Clean up pending response to avoid continuation leaks
         // This is critical - the callback will never be called for a disconnected device
         resumePendingResponse(with: nil)
+        clearSendQueue()
 
         connectedPeripheral = nil
         txCharacteristic = nil
@@ -837,12 +921,12 @@ extension BLEService: CBPeripheralDelegate {
     }
 
     private func handleCharacteristicDiscovery(service: CBService, error: Error?) async {
-        // Guard against multiple calls - only process if we haven't completed connection
-        guard connectionContinuation != nil else { return }
-
         guard error == nil else {
-            connectionContinuation?.resume(throwing: BLEError.characteristicNotFound)
-            connectionContinuation = nil
+            // Only fail the connection if we're in initial connection
+            if connectionContinuation != nil {
+                connectionContinuation?.resume(throwing: BLEError.characteristicNotFound)
+                connectionContinuation = nil
+            }
             return
         }
 
@@ -857,29 +941,53 @@ extension BLEService: CBPeripheralDelegate {
             }
         }
 
-        if txCharacteristic != nil && rxCharacteristic != nil {
-            // Subscribe to notifications - this triggers pairing dialog if needed
-            // We must wait for the subscription to complete before marking connected
-            if let rx = rxCharacteristic {
-                do {
-                    // Wait for notification subscription with timeout
-                    // This ensures pairing completes before we try to send data
-                    try await withThrowingTimeout(seconds: initialSetupTimeout) {
-                        try await self.awaitNotificationSubscription(for: rx)
-                    }
-                } catch {
+        // Check if we have both characteristics
+        guard txCharacteristic != nil && rxCharacteristic != nil else {
+            // Not all characteristics found yet - wait for more discovery calls
+            return
+        }
+
+        // Determine if this is initial connection or reconnection
+        let isInitialConnection = connectionContinuation != nil
+        let isReconnection = needsResubscriptionAfterReconnect
+
+        // Clear reconnection flag
+        needsResubscriptionAfterReconnect = false
+
+        guard isInitialConnection || isReconnection else {
+            // Neither initial connection nor reconnection - nothing to do
+            return
+        }
+
+        // Subscribe to notifications - this triggers pairing dialog if needed
+        // We must wait for the subscription to complete before marking connected
+        if let rx = rxCharacteristic {
+            do {
+                // Wait for notification subscription with timeout
+                // This ensures pairing completes before we try to send data
+                try await withThrowingTimeout(seconds: initialSetupTimeout) {
+                    try await self.awaitNotificationSubscription(for: rx)
+                }
+            } catch {
+                if isInitialConnection {
                     connectionContinuation?.resume(throwing: error)
                     connectionContinuation = nil
-                    return
                 }
+                // For reconnection, just log the error - we'll fail on next send
+                return
             }
+        }
 
+        // Only update state and resume continuation for initial connection
+        if isInitialConnection {
             _connectionState = .connected
             connectionContinuation?.resume()
             connectionContinuation = nil
+        } else if isReconnection {
+            // For reconnection, just restore to connected state
+            // (We were already connected before the isReconnecting disconnect)
+            _connectionState = .connected
         }
-        // Note: Don't fail here if characteristics not found yet -
-        // multi-service devices may need multiple discovery calls
     }
 
     nonisolated public func peripheral(

@@ -377,6 +377,9 @@ public final class AppState {
         } catch {
             lastError = error.localizedDescription
             connectionState = .disconnected
+            // Clean up BLE connection on initialization failure
+            // This prevents stale connections that confuse subsequent attempts
+            await bleService.disconnect()
             isConnecting = false
             throw error
         }
@@ -444,6 +447,8 @@ public final class AppState {
         } catch {
             lastError = error.localizedDescription
             connectionState = .disconnected
+            // Clean up BLE connection on initialization failure
+            await bleService.disconnect()
             throw error
         }
     }
