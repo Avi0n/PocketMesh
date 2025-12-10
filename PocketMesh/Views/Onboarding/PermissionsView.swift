@@ -1,26 +1,21 @@
 import SwiftUI
-@preconcurrency import CoreBluetooth
 @preconcurrency import CoreLocation
 import UserNotifications
 
 // MARK: - Permissions Coordinator
 
-/// Coordinator for managing Bluetooth, Location, and Notification permission requests and state observation.
+/// Coordinator for managing Location and Notification permission requests and state observation.
 /// Uses delegate callbacks to update permission state immediately when user responds.
 @MainActor
 @Observable
-private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, CLLocationManagerDelegate {
-    var bluetoothAuthorization: CBManagerAuthorization = .notDetermined
+private final class PermissionsCoordinator: NSObject, CLLocationManagerDelegate {
     var locationAuthorization: CLAuthorizationStatus = .notDetermined
     var notificationAuthorization: UNAuthorizationStatus = .notDetermined
 
-    private var centralManager: CBCentralManager?
     private var locationManager: CLLocationManager?
-    private let bluetoothQueue = DispatchQueue(label: "com.pocketmesh.permissions.bluetooth")
 
     override init() {
         super.init()
-        bluetoothAuthorization = CBCentralManager.authorization
         // Create location manager early to check current authorization
         locationManager = CLLocationManager()
         locationManager?.delegate = self
@@ -29,14 +24,6 @@ private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, 
         // Check notification authorization
         Task {
             await checkNotificationAuthorization()
-        }
-    }
-
-    func requestBluetooth() {
-        if centralManager == nil {
-            // Use a dedicated queue (not main) to avoid synchronous callbacks on MainActor
-            // The delegate will dispatch back to main actor as needed
-            centralManager = CBCentralManager(delegate: self, queue: bluetoothQueue)
         }
     }
 
@@ -58,7 +45,6 @@ private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, 
     }
 
     func checkPermissions() {
-        bluetoothAuthorization = CBCentralManager.authorization
         if let lm = locationManager {
             locationAuthorization = lm.authorizationStatus
         }
@@ -70,14 +56,6 @@ private final class PermissionsCoordinator: NSObject, CBCentralManagerDelegate, 
     private func checkNotificationAuthorization() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         notificationAuthorization = settings.authorizationStatus
-    }
-
-    // MARK: - CBCentralManagerDelegate
-
-    nonisolated func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        Task { @MainActor in
-            self.bluetoothAuthorization = CBCentralManager.authorization
-        }
     }
 
     // MARK: - CLLocationManagerDelegate
@@ -125,27 +103,19 @@ struct PermissionsView: View {
             // Permission cards
             VStack(spacing: 16) {
                 PermissionCard(
-                    icon: "antenna.radiowaves.left.and.right",
-                    title: "Bluetooth",
-                    description: "Connect to MeshCore radio devices",
-                    isGranted: coordinator.bluetoothAuthorization == .allowedAlways,
-                    isDenied: coordinator.bluetoothAuthorization == .denied,
-                    action: coordinator.requestBluetooth
-                )
-
-                PermissionCard(
                     icon: "bell.fill",
                     title: "Notifications",
                     description: "Receive alerts for new messages",
                     isGranted: coordinator.notificationAuthorization == .authorized,
                     isDenied: coordinator.notificationAuthorization == .denied,
+                    isOptional: true,
                     action: coordinator.requestNotifications
                 )
 
                 PermissionCard(
                     icon: "location.fill",
                     title: "Location",
-                    description: "Share your location with mesh contacts (optional)",
+                    description: "Share your location with mesh contacts",
                     isGranted: coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways,
                     isDenied: coordinator.locationAuthorization == .denied,
                     isOptional: true,
@@ -169,13 +139,12 @@ struct PermissionsView: View {
                         appState.onboardingStep = .deviceScan
                     }
                 } label: {
-                    Text(canProceed ? "Continue" : "Skip for Now")
+                    Text(allPermissionsGranted ? "Continue" : "Skip for Now")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!canProceed && coordinator.bluetoothAuthorization == .notDetermined)
 
                 Button {
                     withAnimation {
@@ -208,8 +177,10 @@ struct PermissionsView: View {
         }
     }
 
-    private var canProceed: Bool {
-        coordinator.bluetoothAuthorization == .allowedAlways
+    private var allPermissionsGranted: Bool {
+        let notificationsGranted = coordinator.notificationAuthorization == .authorized
+        let locationGranted = coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways
+        return notificationsGranted && locationGranted
     }
 }
 
