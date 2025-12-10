@@ -21,16 +21,6 @@ public actor MockBLETransport: BLETransport {
         self.mockPeripheral = peripheral
     }
 
-    public func startScanning() async throws {
-        _connectionState = .scanning
-    }
-
-    public func stopScanning() async {
-        if _connectionState == .scanning {
-            _connectionState = .disconnected
-        }
-    }
-
     public func connect(to deviceID: UUID) async throws {
         _connectionState = .connecting
         await mockPeripheral.connect()

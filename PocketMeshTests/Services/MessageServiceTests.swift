@@ -28,16 +28,6 @@ public actor TestBLETransport: BLETransport {
 
     public init() {}
 
-    public func startScanning() async throws {
-        _connectionState = .scanning
-    }
-
-    public func stopScanning() async {
-        if _connectionState == .scanning {
-            _connectionState = .disconnected
-        }
-    }
-
     public func connect(to deviceID: UUID) async throws {
         _connectedDeviceID = deviceID
         _connectionState = .connected

@@ -54,7 +54,7 @@ struct BLEStatusIndicatorView: View {
 
     private var iconName: String {
         switch appState.connectionState {
-        case .disconnected, .scanning:
+        case .disconnected:
             "antenna.radiowaves.left.and.right.slash"
         case .connecting, .connected, .ready:
             "antenna.radiowaves.left.and.right"
@@ -63,7 +63,7 @@ struct BLEStatusIndicatorView: View {
 
     private var iconColor: Color {
         switch appState.connectionState {
-        case .disconnected, .scanning:
+        case .disconnected:
             .secondary
         case .connecting, .connected:
             .blue
@@ -73,15 +73,13 @@ struct BLEStatusIndicatorView: View {
     }
 
     private var isAnimating: Bool {
-        appState.connectionState == .connecting || appState.connectionState == .scanning
+        appState.connectionState == .connecting
     }
 
     private var statusTitle: String {
         switch appState.connectionState {
         case .disconnected:
             "Disconnected"
-        case .scanning:
-            "Scanning..."
         case .connecting:
             "Connecting..."
         case .connected:
