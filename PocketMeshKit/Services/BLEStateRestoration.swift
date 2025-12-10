@@ -85,6 +85,16 @@ public final class BLEStateRestoration {
         reconnectionAttempts = 0
     }
 
+    /// Clears connection state for a specific device ID
+    /// Called when device is removed from system settings via AccessorySetupKit
+    public func clearConnection(deviceID: UUID) {
+        if lastConnectedDeviceID == deviceID {
+            lastConnectedDeviceID = nil
+            lastConnectionDate = nil
+            reconnectionAttempts = 0
+        }
+    }
+
     /// Called when the app enters background.
     public func appDidEnterBackground() {
         isBackgroundActive = true

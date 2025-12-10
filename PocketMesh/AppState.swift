@@ -6,7 +6,7 @@ import PocketMeshKit
 /// App-wide state management using Observable
 @Observable
 @MainActor
-public final class AppState {
+public final class AppState: AccessorySetupKitServiceDelegate {
 
     // MARK: - Onboarding State
 
@@ -28,6 +28,9 @@ public final class AppState {
     /// The BLE state restoration service
     let bleStateRestoration = BLEStateRestoration()
 
+    /// The AccessorySetupKit service for device discovery/pairing
+    let accessorySetupKit = AccessorySetupKitService()
+
     /// Current connection state
     var connectionState: BLEConnectionState = .disconnected
 
@@ -40,14 +43,6 @@ public final class AppState {
     /// Whether we're currently connecting to a device
     var isConnecting: Bool = false
 
-    // MARK: - Discovered Devices
-
-    /// Devices discovered during scanning
-    var discoveredDevices: [DiscoveredDevice] = []
-
-    /// Whether scanning is in progress
-    var isScanning: Bool = false
-
     // MARK: - Contact Sync State
 
     /// Whether contacts are currently syncing (for UI overlay)
@@ -55,11 +50,6 @@ public final class AppState {
 
     /// Contact sync progress (current, total)
     var contactsSyncProgress: (Int, Int)?
-
-    // MARK: - Device Pairing State
-
-    /// Device selected for pairing (set when proceeding from scan to pair)
-    var selectedDeviceForPairing: DiscoveredDevice?
 
     // MARK: - Data Services
 
@@ -205,12 +195,35 @@ public final class AppState {
 
     // MARK: - BLE Initialization
 
-    /// Called when app finishes launching to initialize BLE
+    /// Initialize Bluetooth services
     func initializeBLE() async {
-        // Set up delegate
+        // Set up delegates
         bleStateRestoration.delegate = self
+        accessorySetupKit.delegate = self
 
-        // Initialize the central manager - this triggers state restoration
+        // Pre-warm database to avoid lazy initialization freeze
+        // Must complete before any database operations
+        try? await dataStore.warmUp()
+
+        // Activate AccessorySetupKit session FIRST (before any CBCentralManager usage)
+        do {
+            try await accessorySetupKit.activateSession()
+        } catch {
+            // Propagate error state for UI to display
+            lastError = "Bluetooth setup failed. Please ensure Bluetooth is enabled."
+            return  // Don't proceed with reconnection if ASK failed
+        }
+
+        // If we have a previously connected device, initialize BLE and reconnect
+        // NOTE: BLEService.initialize() is safe here because device was already paired via ASK
+        if let deviceID = bleStateRestoration.lastConnectedDeviceID {
+            await initializeBLEForReconnection()
+            await attemptReconnection(to: deviceID)
+        }
+    }
+
+    /// Initialize BLE service for reconnection (called after ASK session is active)
+    private func initializeBLEForReconnection() async {
         await bleService.initialize()
 
         // Set up disconnection handler
@@ -223,13 +236,63 @@ public final class AppState {
 
         // Wait briefly for Bluetooth to be ready
         await bleService.waitForBluetoothReady()
+    }
 
-        // Pre-warm database to avoid lazy initialization freeze
-        // Must complete before any database operations
-        try? await dataStore.warmUp()
+    /// Attempt reconnection to a previously paired device
+    private func attemptReconnection(to deviceID: UUID) async {
+        guard bleStateRestoration.shouldAttemptReconnection() else { return }
 
-        // Check if we need to reconnect
-        await attemptAutoReconnect()
+        isConnecting = true
+        defer { isConnecting = false }
+
+        do {
+            connectionState = .connecting
+            try await bleService.connect(to: deviceID)
+            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
+
+            // Restore device info
+            connectedDevice = DeviceDTO(
+                from: Device(
+                    id: deviceID,
+                    publicKey: selfInfo.publicKey,
+                    nodeName: selfInfo.nodeName,
+                    firmwareVersion: deviceInfo.firmwareVersion,
+                    firmwareVersionString: deviceInfo.firmwareVersionString,
+                    manufacturerName: deviceInfo.manufacturerName,
+                    buildDate: deviceInfo.buildDate,
+                    maxContacts: deviceInfo.maxContacts,
+                    maxChannels: deviceInfo.maxChannels,
+                    frequency: selfInfo.frequency,
+                    bandwidth: selfInfo.bandwidth,
+                    spreadingFactor: selfInfo.spreadingFactor,
+                    codingRate: selfInfo.codingRate,
+                    txPower: selfInfo.txPower,
+                    maxTxPower: selfInfo.maxTxPower,
+                    latitude: selfInfo.latitude,
+                    longitude: selfInfo.longitude,
+                    blePin: deviceInfo.blePin,
+                    manualAddContacts: selfInfo.manualAddContacts > 0,
+                    isActive: true
+                )
+            )
+
+            connectionState = .ready
+            bleStateRestoration.resetReconnectionAttempts()
+            persistConnectedDevice(connectedDevice!)
+
+            // Update device in SwiftData (updates lastConnected timestamp)
+            try await dataStore.saveDevice(connectedDevice!)
+
+            // Start message polling
+            await connectMessagePolling()
+
+            // Auto-sync contacts then channels from device
+            await syncContactsFromDevice()
+            await syncChannelsFromDevice()
+
+        } catch {
+            connectionState = .disconnected
+        }
     }
 
     // MARK: - App Lifecycle
@@ -274,116 +337,97 @@ public final class AppState {
                 await handleRestoredConnection(deviceID: actualDeviceID)
             }
 
-        case .scanning, .connecting:
+        case .connecting:
             connectionState = actualState
         }
     }
 
-    // MARK: - Scanning
+    // MARK: - Device Pairing
 
-    /// Start scanning for MeshCore devices
-    func startScanning() async {
-        guard !isScanning else { return }
+    /// Shows AccessorySetupKit picker for new device pairing
+    /// IMPORTANT: BLEService.initialize() is called AFTER showPicker() to avoid ASError 550
+    /// WARNING: showPicker() causes CBCentralManager state cycling which disconnects existing peripherals
+    func pairNewDevice() async throws {
+        // 1. Store current connection info BEFORE showing picker (for logging)
+        // Note: showPicker() will disconnect any existing peripheral due to CBCentralManager state cycling
+        let previousDeviceID = connectedDevice?.id
+        let hadPreviousConnection = connectionState == .ready
 
-        isScanning = true
-        discoveredDevices = []
-        lastError = nil
+        // 2. Show ASK picker FIRST (before any CBCentralManager usage)
+        // This triggers CBCentralManager state cycling: poweredOn → poweredOff → poweredOn
+        let deviceID = try await accessorySetupKit.showPicker()
 
-        do {
-            await bleService.initialize()
-            try await bleService.startScanning()
-
-            // Listen for discovered devices
-            for await device in await bleService.scanForDevices() {
-                if !discoveredDevices.contains(where: { $0.id == device.id }) {
-                    discoveredDevices.append(device)
-                }
-                discoveredDevices.sort { $0.rssi > $1.rssi }
-            }
-        } catch {
-            lastError = error.localizedDescription
-            isScanning = false
+        // 3. Clear previous connection state if needed
+        if hadPreviousConnection, let previousID = previousDeviceID, previousID != deviceID {
+            // Previous device was disconnected during ASK picker state cycling
+            connectedDevice = nil
+            connectionState = .disconnected
         }
-    }
 
-    /// Stop scanning for devices
-    func stopScanning() async {
-        await bleService.stopScanning()
-        isScanning = false
+        // 4. NOW initialize CBCentralManager (safe after ASK pairing)
+        await bleService.initialize()
+
+        // Set up disconnection handler
+        await bleService.setDisconnectionHandler { [weak self] deviceID, error in
+            Task { @MainActor in
+                guard let self else { return }
+                await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
+            }
+        }
+
+        // Wait briefly for Bluetooth to be ready
+        await bleService.waitForBluetoothReady()
+
+        // 5. Connect using existing CoreBluetooth flow
+        try await bleService.connect(to: deviceID)
+
+        // 6. Initialize device and complete setup
+        let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
+
+        // 7. Update connection state
+        connectionState = await bleService.connectionState
+
+        // 8. Create DeviceDTO from device info
+        connectedDevice = DeviceDTO(
+            from: Device(
+                id: deviceID,
+                publicKey: selfInfo.publicKey,
+                nodeName: selfInfo.nodeName,
+                firmwareVersion: deviceInfo.firmwareVersion,
+                firmwareVersionString: deviceInfo.firmwareVersionString,
+                manufacturerName: deviceInfo.manufacturerName,
+                buildDate: deviceInfo.buildDate,
+                maxContacts: deviceInfo.maxContacts,
+                maxChannels: deviceInfo.maxChannels,
+                frequency: selfInfo.frequency,
+                bandwidth: selfInfo.bandwidth,
+                spreadingFactor: selfInfo.spreadingFactor,
+                codingRate: selfInfo.codingRate,
+                txPower: selfInfo.txPower,
+                maxTxPower: selfInfo.maxTxPower,
+                latitude: selfInfo.latitude,
+                longitude: selfInfo.longitude,
+                blePin: deviceInfo.blePin,
+                manualAddContacts: selfInfo.manualAddContacts > 0,
+                isActive: true
+            )
+        )
+
+        // 9. Store and persist
+        connectionState = .ready
+        persistConnectedDevice(connectedDevice!)
+        try await dataStore.saveDevice(connectedDevice!)
+        bleStateRestoration.recordConnection(deviceID: deviceID)
+
+        // 10. Start message polling
+        await connectMessagePolling()
+
+        // 11. Sync contacts and channels
+        await syncContactsFromDevice()
+        await syncChannelsFromDevice()
     }
 
     // MARK: - Connection
-
-    /// Connect to a discovered device
-    func connect(to device: DiscoveredDevice) async throws {
-        isConnecting = true
-        lastError = nil
-
-        defer { isConnecting = false }
-
-        do {
-            // Stop scanning first
-            await stopScanning()
-
-            // Connect to the device
-            try await bleService.connect(to: device.id)
-
-            // Initialize device and get info
-            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
-
-            // Update connection state
-            connectionState = await bleService.connectionState
-
-            // Create device DTO from the info
-            // Note: In a full implementation, we'd save this to SwiftData
-            connectedDevice = DeviceDTO(
-                from: Device(
-                    id: device.id,
-                    publicKey: selfInfo.publicKey,
-                    nodeName: selfInfo.nodeName,
-                    firmwareVersion: deviceInfo.firmwareVersion,
-                    firmwareVersionString: deviceInfo.firmwareVersionString,
-                    manufacturerName: deviceInfo.manufacturerName,
-                    buildDate: deviceInfo.buildDate,
-                    maxContacts: deviceInfo.maxContacts,
-                    maxChannels: deviceInfo.maxChannels,
-                    frequency: selfInfo.frequency,
-                    bandwidth: selfInfo.bandwidth,
-                    spreadingFactor: selfInfo.spreadingFactor,
-                    codingRate: selfInfo.codingRate,
-                    txPower: selfInfo.txPower,
-                    maxTxPower: selfInfo.maxTxPower,
-                    latitude: selfInfo.latitude,
-                    longitude: selfInfo.longitude,
-                    blePin: deviceInfo.blePin,
-                    manualAddContacts: selfInfo.manualAddContacts > 0,
-                    isActive: true
-                )
-            )
-
-            // Record connection for state restoration
-            bleStateRestoration.recordConnection(deviceID: device.id)
-            persistConnectedDevice(connectedDevice!)
-
-            // Save device to SwiftData for reconnection list
-            try await dataStore.saveDevice(connectedDevice!)
-
-            // Connect message polling for real-time updates
-            await connectMessagePolling()
-
-            // Auto-sync contacts then channels from device
-            await syncContactsFromDevice()
-            await syncChannelsFromDevice()
-        } catch {
-            lastError = error.localizedDescription
-            connectionState = .disconnected
-            // Clean up BLE connection on initialization failure
-            // This prevents stale connections that confuse subsequent attempts
-            await bleService.disconnect()
-            isConnecting = false
-            throw error
-        }
-    }
 
     /// Reconnect to a previously paired device by ID
     func reconnectToDevice(id deviceID: UUID) async throws {
@@ -596,11 +640,20 @@ public final class AppState {
         onboardingStep = .welcome
     }
 
-    /// Navigate directly to device scan (skip welcome/permissions)
-    /// Used when user already completed onboarding but wants to connect a new device
+    /// Trigger device pairing flow (called from UI)
     func startDeviceScan() {
-        onboardingStep = .deviceScan
-        hasCompletedOnboarding = false
+        Task {
+            do {
+                try await pairNewDevice()
+                completeOnboarding()
+            } catch AccessorySetupKitError.pickerDismissed {
+                // User cancelled - no error to show
+            } catch AccessorySetupKitError.pickerRestricted {
+                lastError = "Cannot show device picker. Please check Bluetooth permissions."
+            } catch {
+                lastError = error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Device Persistence
@@ -805,6 +858,31 @@ extension AppState: BLEStateRestorationDelegate {
             if let deviceName = UserDefaults.standard.string(forKey: lastDeviceNameKey) {
                 await notificationService.postConnectionLostNotification(deviceName: deviceName)
             }
+        }
+    }
+}
+
+// MARK: - AccessorySetupKitServiceDelegate
+
+extension AppState {
+    public func accessorySetupKitService(_ service: AccessorySetupKitService, didRemoveAccessoryWithID bluetoothID: UUID) {
+        // Called when accessory is removed from Settings > Accessories
+
+        // Clear stored connection state if this was our device
+        if connectedDevice?.id == bluetoothID {
+            Task {
+                await bleService.disconnect()
+                connectedDevice = nil
+                connectionState = .disconnected
+            }
+        }
+
+        // Clear from state restoration
+        bleStateRestoration.clearConnection(deviceID: bluetoothID)
+
+        // Remove from SwiftData
+        Task {
+            try? await dataStore.deleteDevice(id: bluetoothID)
         }
     }
 }

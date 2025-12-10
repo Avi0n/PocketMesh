@@ -20,10 +20,20 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
+	<key>NSAccessorySetupKitSupports</key>
+	<array>
+		<string>Bluetooth</string>
+	</array>
+	<key>NSAccessorySetupBluetoothServices</key>
+	<array>
+		<string>6E400001-B5A3-F393-E0A9-E50E24DCCA9E</string>
+	</array>
+	<key>NSAccessorySetupBluetoothNames</key>
+	<array>
+		<string>MeshCore-</string>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>PocketMesh uses your location to share coordinates with mesh contacts.</string>
 	<key>NSCameraUsageDescription</key>

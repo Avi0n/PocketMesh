@@ -6,7 +6,6 @@ import Foundation
 /// Connection state for BLE devices
 public enum BLEConnectionState: Sendable, Equatable {
     case disconnected
-    case scanning
     case connecting
     /// BLE connection established, characteristics discovered.
     /// Device initialization (initializeDevice) may still fail - caller should
@@ -101,21 +100,6 @@ private func isPairingFailureError(_ error: Error) -> Bool {
 }
 
 
-// MARK: - Discovered Device
-
-/// A discovered MeshCore device during scanning
-public struct DiscoveredDevice: Sendable, Identifiable, Equatable {
-    public let id: UUID
-    public let name: String
-    public let rssi: Int
-
-    public init(id: UUID, name: String, rssi: Int) {
-        self.id = id
-        self.name = name
-        self.rssi = rssi
-    }
-}
-
 // MARK: - BLE Service Protocol
 
 /// Protocol for BLE transport (allows mock injection for testing)
@@ -123,8 +107,6 @@ public protocol BLETransport: Actor {
     var connectionState: BLEConnectionState { get async }
     var connectedDeviceID: UUID? { get async }
 
-    func startScanning() async throws
-    func stopScanning() async
     func connect(to deviceID: UUID) async throws
     func disconnect() async
     func send(_ data: Data) async throws -> Data?
@@ -134,7 +116,7 @@ public protocol BLETransport: Actor {
 // MARK: - BLE Service Actor
 
 /// Actor-isolated BLE service for CoreBluetooth operations.
-/// Handles scanning, connection, and Nordic UART communication.
+/// Handles connection and Nordic UART communication.
 public actor BLEService: NSObject, BLETransport {
 
     // MARK: - Properties
@@ -160,9 +142,6 @@ public actor BLEService: NSObject, BLETransport {
     public var connectedDeviceID: UUID? {
         connectedPeripheral?.identifier
     }
-
-    // Discovered devices during scanning
-    private var discoveredDevices: [UUID: DiscoveredDevice] = [:]
 
     // Response handling
     private var responseHandler: (@Sendable (Data) -> Void)?
@@ -203,7 +182,6 @@ public actor BLEService: NSObject, BLETransport {
 
     // Connection handling
     private var connectionContinuation: CheckedContinuation<Void, Error>?
-    private var scanContinuation: AsyncStream<DiscoveredDevice>.Continuation?
     private var bluetoothReadyContinuation: CheckedContinuation<Void, Never>?
     private var notificationContinuation: CheckedContinuation<Void, Error>?
 
@@ -249,67 +227,6 @@ public actor BLEService: NSObject, BLETransport {
         }
     }
 
-    // MARK: - Scanning
-
-    public func startScanning() async throws {
-        guard let centralManager else {
-            throw BLEError.bluetoothUnavailable
-        }
-
-        // Wait for Bluetooth to be ready (with timeout)
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                await self.waitForBluetoothReady()
-            }
-            group.addTask {
-                try await Task.sleep(for: .seconds(5))
-                throw BLEError.operationTimeout
-            }
-            try await group.next()
-            group.cancelAll()
-        }
-
-        guard centralManager.state == .poweredOn else {
-            switch centralManager.state {
-            case .unauthorized:
-                throw BLEError.bluetoothUnauthorized
-            case .poweredOff:
-                throw BLEError.bluetoothPoweredOff
-            default:
-                throw BLEError.bluetoothUnavailable
-            }
-        }
-
-        discoveredDevices.removeAll()
-        _connectionState = .scanning
-
-        centralManager.scanForPeripherals(
-            withServices: [nordicUARTServiceUUID],
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
-        )
-    }
-
-    public func stopScanning() async {
-        centralManager?.stopScan()
-        if _connectionState == .scanning {
-            _connectionState = .disconnected
-        }
-        scanContinuation?.finish()
-        scanContinuation = nil
-    }
-
-    /// Returns an async stream of discovered devices
-    public func scanForDevices() -> AsyncStream<DiscoveredDevice> {
-        AsyncStream { continuation in
-            self.scanContinuation = continuation
-        }
-    }
-
-    /// Get current list of discovered devices
-    public func getDiscoveredDevices() -> [DiscoveredDevice] {
-        Array(discoveredDevices.values).sorted { $0.rssi > $1.rssi }
-    }
-
     // MARK: - Connection
 
     public func connect(to deviceID: UUID) async throws {
@@ -341,7 +258,6 @@ public actor BLEService: NSObject, BLETransport {
             throw BLEError.deviceNotFound
         }
 
-        await stopScanning()
         _connectionState = .connecting
 
         // Connect with timeout using race pattern
@@ -788,25 +704,6 @@ extension BLEService: CBCentralManagerDelegate {
         default:
             break
         }
-    }
-
-    nonisolated public func centralManager(
-        _ central: CBCentralManager,
-        didDiscover peripheral: CBPeripheral,
-        advertisementData: [String: Any],
-        rssi RSSI: NSNumber
-    ) {
-        let name = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown"
-        let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
-
-        Task {
-            await handleDiscoveredDevice(device)
-        }
-    }
-
-    private func handleDiscoveredDevice(_ device: DiscoveredDevice) {
-        discoveredDevices[device.id] = device
-        scanContinuation?.yield(device)
     }
 
     nonisolated public func centralManager(

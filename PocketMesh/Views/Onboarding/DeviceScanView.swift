@@ -1,42 +1,22 @@
 import SwiftUI
 import PocketMeshKit
 
-/// Third screen of onboarding - scans for MeshCore devices
+/// Third screen of onboarding - pairs MeshCore device via AccessorySetupKit
 struct DeviceScanView: View {
     @Environment(AppState.self) private var appState
-    @State private var selectedDevice: DiscoveredDevice?
-    @State private var scanTask: Task<Void, Never>?
+    @State private var isPairing = false
+    @State private var showTroubleshooting = false
 
     var body: some View {
         VStack(spacing: 24) {
             // Header
             VStack(spacing: 12) {
-                ZStack {
-                    // Scanning animation rings
-                    if appState.isScanning {
-                        ForEach(0..<3, id: \.self) { index in
-                            Circle()
-                                .stroke(lineWidth: 2)
-                                .foregroundStyle(.tint.opacity(0.3))
-                                .scaleEffect(appState.isScanning ? 2 : 1)
-                                .opacity(appState.isScanning ? 0 : 1)
-                                .animation(
-                                    .easeOut(duration: 2)
-                                    .repeatForever(autoreverses: false)
-                                    .delay(Double(index) * 0.5),
-                                    value: appState.isScanning
-                                )
-                        }
-                        .frame(width: 60, height: 60)
-                    }
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 50))
+                    .foregroundStyle(.tint)
+                    .frame(height: 120)
 
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.system(size: 50))
-                        .foregroundStyle(.tint)
-                }
-                .frame(height: 120)
-
-                Text("Find Your Device")
+                Text("Pair Your Device")
                     .font(.largeTitle)
                     .bold()
 
@@ -47,45 +27,22 @@ struct DeviceScanView: View {
                     .padding(.horizontal)
             }
 
-            // Device list
-            if appState.discoveredDevices.isEmpty && !appState.isScanning {
-                // Empty state
-                ContentUnavailableView {
-                    Label("No Devices Found", systemImage: "antenna.radiowaves.left.and.right.slash")
-                } description: {
-                    Text("Tap Scan to search for nearby MeshCore devices")
-                } actions: {
-                    Button("Scan for Devices") {
-                        startScanning()
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .frame(maxHeight: .infinity)
-            } else {
-                List {
-                    if appState.isScanning {
-                        HStack {
-                            ProgressView()
-                            Text("Scanning...")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+            Spacer()
 
-                    ForEach(appState.discoveredDevices) { device in
-                        DeviceRow(
-                            device: device,
-                            isSelected: selectedDevice?.id == device.id
-                        )
-                        .contentShape(.rect)
-                        .onTapGesture {
-                            selectedDevice = device
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
+            // Instructions
+            VStack(alignment: .leading, spacing: 16) {
+                instructionRow(number: 1, text: "Power on your MeshCore device")
+                instructionRow(number: 2, text: "Tap \"Add Device\" below")
+                instructionRow(number: 3, text: "Select your device from the list")
+                instructionRow(number: 4, text: "Enter the PIN when prompted")
             }
+            .padding()
+            .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 12))
+            .padding(.horizontal)
 
-            // Error message - show above buttons with clear call to action
+            Spacer()
+
+            // Error message
             if let error = appState.lastError {
                 VStack(spacing: 4) {
                     Text(error)
@@ -101,43 +58,34 @@ struct DeviceScanView: View {
                 .padding(.horizontal)
             }
 
-            // Navigation buttons
+            // Action buttons
             VStack(spacing: 12) {
-                if selectedDevice != nil {
-                    Button {
-                        proceedWithDevice()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if appState.isConnecting {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .tint(.white)
-                                Text("Connecting...")
-                            } else {
-                                Text("Connect")
-                            }
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(appState.isConnecting)
-                } else if !appState.discoveredDevices.isEmpty || appState.isScanning {
-                    Button {
-                        if appState.isScanning {
-                            stopScanning()
+                Button {
+                    startPairing()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isPairing {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.white)
+                            Text("Connecting...")
                         } else {
-                            startScanning()
+                            Image(systemName: "plus.circle.fill")
+                            Text("Add Device")
                         }
-                    } label: {
-                        Text(appState.isScanning ? "Stop Scanning" : "Scan Again")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
                     }
-                    .buttonStyle(.bordered)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
                 }
+                .buttonStyle(.borderedProminent)
+                .disabled(isPairing)
+
+                Button("Device not appearing?") {
+                    showTroubleshooting = true
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
                 Button {
                     withAnimation {
@@ -153,49 +101,49 @@ struct DeviceScanView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
-        .onAppear {
-            Task {
-                // Ensure any stale BLE connection is disconnected before scanning
-                await appState.disconnectForNewConnection()
-                startScanning()
-            }
-        }
-        .onDisappear {
-            stopScanning()
+        .sheet(isPresented: $showTroubleshooting) {
+            TroubleshootingSheet()
         }
     }
 
-    private func startScanning() {
-        scanTask?.cancel()
-        scanTask = Task {
-            await appState.startScanning()
+    private func instructionRow(number: Int, text: String) -> some View {
+        HStack(spacing: 12) {
+            Text("\(number)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .frame(width: 24, height: 24)
+                .background(.tint, in: .circle)
+
+            Text(text)
+                .font(.subheadline)
         }
     }
 
-    private func stopScanning() {
-        scanTask?.cancel()
-        scanTask = nil
-        Task {
-            await appState.stopScanning()
-        }
-    }
-
-    private func proceedWithDevice() {
-        guard let device = selectedDevice else { return }
-
-        // Clear any previous error before attempting connection
+    private func startPairing() {
+        isPairing = true
         appState.lastError = nil
 
-        stopScanning()
-        appState.selectedDeviceForPairing = device
-
         Task {
+            defer { isPairing = false }
+
             do {
-                // Connect directly - iOS handles BLE pairing automatically
-                try await appState.connect(to: device)
+                try await appState.pairNewDevice()
                 withAnimation {
                     appState.completeOnboarding()
                 }
+            } catch AccessorySetupKitError.pickerDismissed {
+                // User cancelled - no error to show
+            } catch AccessorySetupKitError.pickerRestricted {
+                // CBCentralManager was initialized before ASK - should not happen with correct implementation
+                appState.lastError = "Cannot show device picker. Please restart the app and try again."
+            } catch AccessorySetupKitError.pickerAlreadyActive {
+                // Picker is already showing - ignore
+            } catch AccessorySetupKitError.pairingFailed(let reason) {
+                appState.lastError = "Pairing failed: \(reason). Please try again."
+            } catch AccessorySetupKitError.discoveryTimeout {
+                appState.lastError = "No devices found. Make sure your device is powered on and nearby."
+            } catch AccessorySetupKitError.connectionFailed {
+                appState.lastError = "Could not connect to the device. Please try again."
             } catch {
                 appState.lastError = error.localizedDescription
             }
@@ -203,70 +151,101 @@ struct DeviceScanView: View {
     }
 }
 
-// MARK: - Device Row
-
-private struct DeviceRow: View {
-    let device: DiscoveredDevice
-    let isSelected: Bool
-
-    var body: some View {
-        HStack(spacing: 12) {
-            // Device icon
-            Image(systemName: "cpu")
-                .font(.title2)
-                .foregroundStyle(.tint)
-                .frame(width: 40, height: 40)
-                .background(.tint.opacity(0.1), in: .circle)
-
-            // Device info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(device.name)
-                    .font(.headline)
-
-                Text(device.id.uuidString.prefix(8) + "...")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            // Signal strength
-            SignalStrengthIndicator(rssi: device.rssi)
-
-            // Selection indicator
-            if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.tint)
-            }
-        }
-        .padding(.vertical, 4)
-        .background(isSelected ? Color.accentColor.opacity(0.1) : .clear, in: .rect(cornerRadius: 8))
-    }
-}
-
-// MARK: - Signal Strength Indicator
-
-private struct SignalStrengthIndicator: View {
-    let rssi: Int
+/// Troubleshooting sheet for when devices don't appear in the ASK picker
+/// Per Apple Developer Forums: Factory-reset devices won't appear until the stale
+/// system pairing is removed via removeAccessory()
+private struct TroubleshootingSheet: View {
+    @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
+    @State private var isClearing = false
 
     var body: some View {
-        HStack(spacing: 2) {
-            ForEach(0..<4) { index in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(index < signalBars ? Color.green : Color.secondary.opacity(0.3))
-                    .frame(width: 4, height: CGFloat(6 + index * 3))
+        NavigationStack {
+            List {
+                Section {
+                    Label("Make sure your device is powered on", systemImage: "power")
+                    Label("Move the device closer to your phone", systemImage: "iphone.radiowaves.left.and.right")
+                    Label("Restart the MeshCore device", systemImage: "arrow.clockwise")
+                } header: {
+                    Text("Basic Checks")
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("If you factory-reset your MeshCore device, iOS may still have the old pairing stored. Clearing this allows the device to appear again.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Text("Tapping below will ask you to confirm removing the old pairing. This is normal — it allows your reset device to appear again.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Button {
+                            clearStalePairings()
+                        } label: {
+                            HStack {
+                                if isClearing {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "trash")
+                                }
+                                Text("Clear Previous Pairing")
+                            }
+                        }
+                        .disabled(isClearing || appState.accessorySetupKit.pairedAccessories.isEmpty)
+                    }
+                } header: {
+                    Text("Factory Reset Device?")
+                } footer: {
+                    if appState.accessorySetupKit.pairedAccessories.isEmpty {
+                        Text("No previous pairings found.")
+                    } else {
+                        Text("Found \(appState.accessorySetupKit.pairedAccessories.count) previous pairing(s).")
+                    }
+                }
+
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("You can also manage Bluetooth accessories in:")
+                            .font(.subheadline)
+                        Text("Settings → Privacy & Security → Accessories")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("System Settings")
+                }
+            }
+            .navigationTitle("Troubleshooting")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
             }
         }
     }
 
-    private var signalBars: Int {
-        switch rssi {
-        case -50...0: return 4    // Excellent
-        case -60..<(-50): return 3  // Good
-        case -70..<(-60): return 2  // Fair
-        case -80..<(-70): return 1  // Poor
-        default: return 0           // Very poor
+    private func clearStalePairings() {
+        isClearing = true
+
+        Task {
+            defer { isClearing = false }
+
+            // Remove all stale pairings
+            // Note: iOS 26 shows a confirmation dialog for each removal
+            for accessory in appState.accessorySetupKit.pairedAccessories {
+                do {
+                    try await appState.accessorySetupKit.removeAccessory(accessory)
+                } catch {
+                    // Continue trying to remove others even if one fails
+                }
+            }
+
+            dismiss()
         }
     }
 }

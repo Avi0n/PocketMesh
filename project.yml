@@ -31,9 +31,14 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         UIBackgroundModes:
           - bluetooth-central
-        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios for off-grid messaging."
         NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios."
         NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
+        NSAccessorySetupKitSupports:
+          - Bluetooth
+        NSAccessorySetupBluetoothServices:
+          - "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+        NSAccessorySetupBluetoothNames:
+          - "MeshCore-"
 
   PocketMeshKit:
     type: framework

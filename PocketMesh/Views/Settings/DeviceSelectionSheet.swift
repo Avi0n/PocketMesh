@@ -142,7 +142,24 @@ struct DeviceSelectionSheet: View {
         dismiss()
         Task {
             await appState.disconnectForNewConnection()
-            appState.startDeviceScan()
+            // Trigger ASK picker flow
+            do {
+                try await appState.pairNewDevice()
+            } catch AccessorySetupKitError.pickerDismissed {
+                // User cancelled - no error to show
+            } catch AccessorySetupKitError.pickerRestricted {
+                appState.lastError = "Cannot show device picker. Please restart the app."
+            } catch AccessorySetupKitError.pickerAlreadyActive {
+                // Picker already showing - ignore
+            } catch AccessorySetupKitError.pairingFailed(let reason) {
+                appState.lastError = "Pairing failed: \(reason)"
+            } catch AccessorySetupKitError.discoveryTimeout {
+                appState.lastError = "No devices found. Make sure your device is powered on and nearby."
+            } catch AccessorySetupKitError.connectionFailed {
+                appState.lastError = "Could not connect to the device. Please try again."
+            } catch {
+                appState.lastError = error.localizedDescription
+            }
         }
     }
 }
