@@ -17,6 +17,9 @@ struct ChannelInfoSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Channel Header Section
+                channelHeaderSection
+
                 // Channel Info Section
                 channelInfoSection
 
@@ -67,9 +70,9 @@ struct ChannelInfoSheet: View {
         }
     }
 
-    // MARK: - Channel Info Section
+    // MARK: - Channel Header Section
 
-    private var channelInfoSection: some View {
+    private var channelHeaderSection: some View {
         Section {
             HStack {
                 Spacer()
@@ -87,7 +90,13 @@ struct ChannelInfoSheet: View {
                 Spacer()
             }
             .listRowBackground(Color.clear)
+        }
+    }
 
+    // MARK: - Channel Info Section
+
+    private var channelInfoSection: some View {
+        Section {
             LabeledContent("Slot", value: "\(channel.index)")
 
             if let lastMessage = channel.lastMessageDate {

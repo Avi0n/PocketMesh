@@ -42,7 +42,7 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showingContactInfo) {
             NavigationStack {
-                ContactDetailView(contact: contact)
+                ContactDetailView(contact: contact, showFromDirectChat: true)
             }
         }
         .toolbarVisibility(.hidden, for: .tabBar)

@@ -8,6 +8,7 @@ struct ContactDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let contact: ContactDTO
+    let showFromDirectChat: Bool
 
     @State private var currentContact: ContactDTO
     @State private var nickname = ""
@@ -18,8 +19,9 @@ struct ContactDetailView: View {
     @State private var isSaving = false
     @State private var errorMessage: String?
 
-    init(contact: ContactDTO) {
+    init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
+        self.showFromDirectChat = showFromDirectChat
         self._currentContact = State(initialValue: contact)
     }
 
@@ -47,15 +49,6 @@ struct ContactDetailView: View {
         }
         .navigationTitle("Contact")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    appState.navigateToChat(with: currentContact)
-                } label: {
-                    Label("Message", systemImage: "message.fill")
-                }
-            }
-        }
         .alert("Block Contact", isPresented: $showingBlockAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Block", role: .destructive) {
@@ -192,11 +185,13 @@ struct ContactDetailView: View {
 
     private var actionsSection: some View {
         Section {
-            // Send message - switches to Chats tab
-            Button {
-                appState.navigateToChat(with: currentContact)
-            } label: {
-                Label("Send Message", systemImage: "message.fill")
+            // Send message - only show when NOT from direct chat
+            if !showFromDirectChat {
+                Button {
+                    appState.navigateToChat(with: currentContact)
+                } label: {
+                    Label("Send Message", systemImage: "message.fill")
+                }
             }
 
             // Toggle favorite
@@ -461,7 +456,7 @@ struct ContactDetailView: View {
     }
 }
 
-#Preview {
+#Preview("Default") {
     NavigationStack {
         ContactDetailView(contact: ContactDTO(from: Contact(
             deviceID: UUID(),
@@ -471,6 +466,23 @@ struct ContactDetailView: View {
             longitude: -122.4194,
             isFavorite: true
         )))
+    }
+    .environment(AppState())
+}
+
+#Preview("From Direct Chat") {
+    NavigationStack {
+        ContactDetailView(
+            contact: ContactDTO(from: Contact(
+                deviceID: UUID(),
+                publicKey: Data(repeating: 0x42, count: 32),
+                name: "Alice",
+                latitude: 37.7749,
+                longitude: -122.4194,
+                isFavorite: true
+            )),
+            showFromDirectChat: true
+        )
     }
     .environment(AppState())
 }
