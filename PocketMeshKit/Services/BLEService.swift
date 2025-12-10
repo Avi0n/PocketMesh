@@ -162,6 +162,10 @@ public actor BLEService: NSObject, BLETransport {
     /// Tracks whether we need to re-subscribe to RX after an isReconnecting disconnection
     private var needsResubscriptionAfterReconnect: Bool = false
 
+    /// Tracks whether iOS is auto-reconnecting (isReconnecting=true from didDisconnectPeripheral)
+    /// Used to prevent invalid state transitions and coordinate cleanup
+    private var isAutoReconnecting: Bool = false
+
     /// Tracks whether a disconnect operation is currently in progress
     private var disconnectInProgress = false
 
@@ -326,8 +330,13 @@ public actor BLEService: NSObject, BLETransport {
         print("[BLE] Connection failed: \(_connectionState) → disconnected")
         #endif
 
-        // Clear continuation to prevent double-resume from late callbacks
+        // Clear all continuations to prevent double-resume from late callbacks
         connectionContinuation = nil
+        cancelPendingNotificationContinuation()
+
+        // Clear reconnection tracking
+        isAutoReconnecting = false
+        needsResubscriptionAfterReconnect = false
 
         _connectionState = .disconnected
         if let peripheral = connectedPeripheral {
@@ -367,10 +376,15 @@ public actor BLEService: NSObject, BLETransport {
             }
         }
 
-        // Clean up pending response to avoid continuation leaks
-        // This is critical when Bluetooth is toggled off during an active send()
+        // Clean up all pending continuations to avoid leaks
+        // This is critical when Bluetooth is toggled off during an active operation
+        cancelPendingNotificationContinuation()
         resumePendingResponse(with: nil)
         clearSendQueue()
+
+        // Clear reconnection tracking
+        isAutoReconnecting = false
+        needsResubscriptionAfterReconnect = false
 
         // Unsubscribe from characteristics before disconnecting
         // This ensures clean teardown and prevents undefined peripheral behavior
@@ -533,6 +547,15 @@ public actor BLEService: NSObject, BLETransport {
     private func exitPairingWindow() {
         inPairingWindow = false
         pairingWindowStart = nil
+    }
+
+    /// Cancels any pending notification continuation to prevent leaks
+    /// Called before starting a new subscription or during unexpected disconnection
+    /// Uses BLEError.connectionFailed so callers can handle it appropriately
+    private func cancelPendingNotificationContinuation() {
+        guard let continuation = notificationContinuation else { return }
+        notificationContinuation = nil
+        continuation.resume(throwing: BLEError.connectionFailed("Operation cancelled during reconnection"))
     }
 
     /// Returns a specific BLEError based on the last pairing error encountered
@@ -765,8 +788,32 @@ extension BLEService: CBCentralManagerDelegate {
     ) {
         // If system is auto-reconnecting, prepare for re-subscription
         if isReconnecting {
-            // System is handling reconnection - update state but keep references
-            _connectionState = .connecting
+            #if DEBUG
+            print("[BLE] System auto-reconnecting, preparing for re-subscription")
+            #endif
+
+            // Track that we're in auto-reconnection mode
+            isAutoReconnecting = true
+
+            // Cancel any pending notification continuation BEFORE clearing state
+            // This prevents "leaked continuation" warnings when subscription is retried
+            cancelPendingNotificationContinuation()
+
+            // Cancel pending connection continuation if we were mid-connection
+            // (This can happen if isReconnecting fires during initial connect)
+            if let cc = connectionContinuation {
+                connectionContinuation = nil
+                cc.resume(throwing: BLEError.connectionFailed("Connection interrupted by system reconnection"))
+            }
+
+            // Clear response buffer - may contain stale data from previous session
+            responseBuffer.removeAll()
+
+            // Only transition to .connecting if not already there
+            // (State restoration may have already set .connecting)
+            if _connectionState != .connecting {
+                _connectionState = .connecting
+            }
 
             // Mark that we need to re-subscribe after reconnection
             // The RX subscription is invalidated on disconnect
@@ -790,11 +837,13 @@ extension BLEService: CBCentralManagerDelegate {
         // Clean up pairing window state
         exitPairingWindow()
 
-        // Clear reconnection flag
+        // Clear reconnection tracking
+        isAutoReconnecting = false
         needsResubscriptionAfterReconnect = false
 
-        // Clean up pending response to avoid continuation leaks
-        // This is critical - the callback will never be called for a disconnected device
+        // Clean up all pending continuations to avoid leaks
+        // These callbacks will never be called for a disconnected device
+        cancelPendingNotificationContinuation()
         resumePendingResponse(with: nil)
         clearSendQueue()
 
@@ -825,7 +874,15 @@ extension BLEService: CBCentralManagerDelegate {
         peripheral.delegate = self
 
         if peripheral.state == .connected {
-            _connectionState = .connected
+            // Don't set .connected yet - peripheral.state may be stale
+            // iOS may fire isReconnecting disconnect immediately after restoration
+            // Stay in .connecting until characteristic discovery completes successfully
+            _connectionState = .connecting
+
+            #if DEBUG
+            print("[BLE] State restoration: peripheral reports connected, starting service discovery")
+            #endif
+
             // Re-discover services to get characteristics
             peripheral.discoverServices([nordicUARTServiceUUID])
         }
@@ -916,6 +973,11 @@ extension BLEService: CBPeripheralDelegate {
         // We must wait for the subscription to complete before marking connected
         if let rx = rxCharacteristic {
             do {
+                // Cancel any pending notification continuation BEFORE starting new subscription
+                // This prevents race conditions during reconnection where old and new
+                // subscription attempts interleave
+                cancelPendingNotificationContinuation()
+
                 // Wait for notification subscription with timeout
                 // This ensures pairing completes before we try to send data
                 try await withThrowingTimeout(seconds: initialSetupTimeout) {
@@ -937,6 +999,11 @@ extension BLEService: CBPeripheralDelegate {
                     connectionContinuation = nil
                 }
                 // For reconnection, just log the error - we'll fail on next send
+                #if DEBUG
+                if isReconnection {
+                    print("[BLE] Reconnection: subscription failed - \(error.localizedDescription)")
+                }
+                #endif
                 return
             }
         }
@@ -947,9 +1014,15 @@ extension BLEService: CBPeripheralDelegate {
             connectionContinuation?.resume()
             connectionContinuation = nil
         } else if isReconnection {
-            // For reconnection, just restore to connected state
-            // (We were already connected before the isReconnecting disconnect)
+            // For reconnection, restore to connected state
             _connectionState = .connected
+
+            // Clear auto-reconnection flag now that we're fully reconnected
+            isAutoReconnecting = false
+
+            #if DEBUG
+            print("[BLE] Auto-reconnection complete, state restored to connected")
+            #endif
         }
     }
 
@@ -992,12 +1065,21 @@ extension BLEService: CBPeripheralDelegate {
     private func handleNotificationStateUpdate(characteristic: CBCharacteristic, error: Error?) {
         guard characteristic.uuid == rxCharacteristicUUID else { return }
 
-        if let error {
-            notificationContinuation?.resume(throwing: BLEError.characteristicNotFound)
-        } else {
-            notificationContinuation?.resume()
+        // Guard against already-cancelled continuation (e.g., during reconnection race)
+        // If continuation is nil, the subscription request was cancelled - nothing to resume
+        guard let continuation = notificationContinuation else {
+            #if DEBUG
+            print("[BLE] Notification state update arrived but continuation was already cancelled")
+            #endif
+            return
         }
         notificationContinuation = nil
+
+        if let error {
+            continuation.resume(throwing: BLEError.characteristicNotFound)
+        } else {
+            continuation.resume()
+        }
     }
 
     private func handleWriteError(_ error: Error) {
