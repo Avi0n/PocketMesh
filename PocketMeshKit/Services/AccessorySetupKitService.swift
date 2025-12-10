@@ -159,7 +159,6 @@ public final class AccessorySetupKitService {
 
         case .accessoryDiscovered:
             // Used for custom filtering with filterDiscoveryResults option
-            // PocketMesh doesn't use custom filtering, so just log
             logger.debug("Accessory discovered (custom filtering not enabled)")
 
         case .unknown:
@@ -184,7 +183,6 @@ public final class AccessorySetupKitService {
         }
 
         // Configure picker display settings (iOS 26+ only)
-        // Default 30-second timeout is sufficient for most devices
         if #available(iOS 26.0, *) {
             if session.pickerDisplaySettings == nil {
                 session.pickerDisplaySettings = ASPickerDisplaySettings()
@@ -197,6 +195,8 @@ public final class AccessorySetupKitService {
             productImage: createGenericProductImage(),
             descriptor: discoveryDescriptor
         )
+        // Enable rename step so user can customize the device name
+        displayItem.setupOptions = .rename
 
         return try await withCheckedThrowingContinuation { continuation in
             self.pickerContinuation = continuation
