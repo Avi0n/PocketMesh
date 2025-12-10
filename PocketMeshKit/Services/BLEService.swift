@@ -184,6 +184,9 @@ public actor BLEService: NSObject, BLETransport {
     // Disconnection handling
     private var disconnectionHandler: (@Sendable (UUID, Error?) -> Void)?
 
+    /// Callback when send activity state changes (busy/idle)
+    private var sendActivityHandler: (@Sendable (Bool) -> Void)?
+
     // Connection handling
     private var connectionContinuation: CheckedContinuation<Void, Error>?
     private var bluetoothReadyContinuation: CheckedContinuation<Void, Never>?
@@ -420,6 +423,7 @@ public actor BLEService: NSObject, BLETransport {
     private func acquireSendLock() async {
         if !sendInProgress {
             sendInProgress = true
+            sendActivityHandler?(true)  // Notify: now busy
             return
         }
 
@@ -439,6 +443,7 @@ public actor BLEService: NSObject, BLETransport {
             next.resume()
         } else {
             sendInProgress = false
+            sendActivityHandler?(false)  // Notify: no longer busy
         }
     }
 
@@ -518,6 +523,12 @@ public actor BLEService: NSObject, BLETransport {
     /// Sets a handler for disconnection events
     public func setDisconnectionHandler(_ handler: @escaping @Sendable (UUID, Error?) -> Void) async {
         disconnectionHandler = handler
+    }
+
+    /// Set handler for send activity changes
+    /// - Parameter handler: Called with `true` when BLE becomes busy, `false` when idle
+    public func setSendActivityHandler(_ handler: (@Sendable (Bool) -> Void)?) async {
+        sendActivityHandler = handler
     }
 
     // MARK: - Continuation Safety

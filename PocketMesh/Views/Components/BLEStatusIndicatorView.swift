@@ -75,7 +75,7 @@ struct BLEStatusIndicatorView: View {
     }
 
     private var isAnimating: Bool {
-        appState.connectionState == .connecting
+        appState.connectionState == .connecting || appState.isBLEBusy
     }
 
     private var statusTitle: String {
