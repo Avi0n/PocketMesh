@@ -396,6 +396,22 @@ public final class AppState {
             // Ensure BLE is initialized
             await bleService.initialize()
 
+            // Always disconnect first to ensure clean state
+            // This handles: stale connections, transitional states, Bluetooth toggle scenarios
+            await bleService.disconnect()
+
+            #if DEBUG
+            print("[AppState] reconnectToDevice: disconnected, waiting for stabilization")
+            #endif
+
+            // Brief stabilization delay for BLE stack and radio to reset
+            // This is critical after Bluetooth toggle or quick reconnect scenarios
+            try await Task.sleep(for: .milliseconds(200))
+
+            #if DEBUG
+            print("[AppState] reconnectToDevice: stabilization complete, connecting to \(deviceID)")
+            #endif
+
             // Connect to the device
             try await bleService.connect(to: deviceID)
 

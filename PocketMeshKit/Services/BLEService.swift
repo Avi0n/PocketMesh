@@ -183,6 +183,12 @@ public actor BLEService: NSObject, BLETransport {
     /// Tracks whether we need to re-subscribe to RX after an isReconnecting disconnection
     private var needsResubscriptionAfterReconnect: Bool = false
 
+    /// Tracks whether a disconnect operation is currently in progress
+    private var disconnectInProgress = false
+
+    /// Continuation for callers waiting for disconnect to complete
+    private var disconnectWaiters: [CheckedContinuation<Void, Never>] = []
+
     /// Timestamp when pairing window started (for timeout calculation)
     private var pairingWindowStart: Date?
 
@@ -310,6 +316,9 @@ public actor BLEService: NSObject, BLETransport {
         // Ensure Bluetooth is powered on before using centralManager
         await waitForBluetoothReady()
 
+        // Wait for any pending disconnect to complete (prevents race conditions)
+        await waitForDisconnectCompletion()
+
         guard let centralManager else {
             throw BLEError.bluetoothUnavailable
         }
@@ -430,6 +439,18 @@ public actor BLEService: NSObject, BLETransport {
     }
 
     public func disconnect() async {
+        // Mark disconnect in progress
+        disconnectInProgress = true
+        defer {
+            disconnectInProgress = false
+            // Resume any callers waiting for disconnect to complete
+            let waiters = disconnectWaiters
+            disconnectWaiters.removeAll()
+            for waiter in waiters {
+                waiter.resume()
+            }
+        }
+
         // Clean up pending response to avoid continuation leaks
         // This is critical when Bluetooth is toggled off during an active send()
         resumePendingResponse(with: nil)
@@ -438,7 +459,9 @@ public actor BLEService: NSObject, BLETransport {
         // Unsubscribe from characteristics before disconnecting
         // This ensures clean teardown and prevents undefined peripheral behavior
         if let peripheral = connectedPeripheral {
-            if let rx = rxCharacteristic {
+            // Only try to unsubscribe if peripheral is actually connected
+            // Prevents API MISUSE warning when Bluetooth is toggled off
+            if peripheral.state == .connected, let rx = rxCharacteristic {
                 peripheral.setNotifyValue(false, for: rx)
             }
             centralManager?.cancelPeripheralConnection(peripheral)
@@ -448,6 +471,16 @@ public actor BLEService: NSObject, BLETransport {
         rxCharacteristic = nil
         _connectionState = .disconnected
         responseBuffer.removeAll()
+    }
+
+    /// Waits for any in-progress disconnect to complete
+    /// Call this before starting a new connection to avoid race conditions
+    public func waitForDisconnectCompletion() async {
+        guard disconnectInProgress else { return }
+
+        await withCheckedContinuation { continuation in
+            disconnectWaiters.append(continuation)
+        }
     }
 
     // MARK: - Send Queue Serialization
@@ -646,12 +679,12 @@ public actor BLEService: NSObject, BLETransport {
     }
 
     /// Performs device initialization with retry logic for handling transient failures
-    /// - Parameter maxRetries: Maximum number of retry attempts (default: 1 for pairing, retrying won't help if cancelled)
-    /// - Parameter retryDelay: Delay between retries in seconds (default: 2.0)
+    /// - Parameter maxRetries: Maximum number of retry attempts (default: 3)
+    /// - Parameter initialDelay: Initial delay between retries in seconds (default: 0.5)
     /// - Returns: Tuple of DeviceInfo and SelfInfo on success
     public func initializeDeviceWithRetry(
-        maxRetries: Int = 2,  // Increased from 1 - allows recovery from transient failures
-        retryDelay: TimeInterval = 1.0  // Reduced from 2.0 - faster recovery
+        maxRetries: Int = 3,  // Increased from 2 - better handles device boot scenarios
+        initialDelay: TimeInterval = 0.5  // Start with shorter delay, increase exponentially
     ) async throws -> (DeviceInfo, SelfInfo) {
         var lastError: Error = BLEError.invalidResponse
 
@@ -664,8 +697,11 @@ public actor BLEService: NSObject, BLETransport {
             } catch BLEError.pairingCancelled {
                 // Don't retry if pairing was explicitly cancelled
                 throw BLEError.pairingCancelled
+            } catch BLEError.pairingFailed(let reason) {
+                // Don't retry pairing failures - they won't resolve with retries
+                throw BLEError.pairingFailed(reason)
             } catch BLEError.invalidResponse {
-                // Retry on invalid response - could be transient during pairing reconnection
+                // Retry on invalid response - could be transient during reconnection
                 lastError = BLEError.invalidResponse
 
                 // Don't retry if we're no longer connected
@@ -679,7 +715,9 @@ public actor BLEService: NSObject, BLETransport {
 
                 if attempt < maxRetries {
                     try Task.checkCancellation()
-                    try await Task.sleep(for: .seconds(retryDelay))
+                    // Exponential backoff: 0.5s, 1.0s, 2.0s (capped at 3s)
+                    let delay = min(initialDelay * pow(2.0, Double(attempt - 1)), 3.0)
+                    try await Task.sleep(for: .seconds(delay))
                 }
             } catch {
                 lastError = error
@@ -689,10 +727,15 @@ public actor BLEService: NSObject, BLETransport {
                     throw error
                 }
 
+                #if DEBUG
+                print("[BLE] initializeDevice attempt \(attempt) failed with \(error), retrying...")
+                #endif
+
                 if attempt < maxRetries {
-                    // Check cancellation before sleeping
                     try Task.checkCancellation()
-                    try await Task.sleep(for: .seconds(retryDelay))
+                    // Exponential backoff for other errors too
+                    let delay = min(initialDelay * pow(2.0, Double(attempt - 1)), 3.0)
+                    try await Task.sleep(for: .seconds(delay))
                 }
             }
         }
@@ -778,6 +821,10 @@ extension BLEService: CBCentralManagerDelegate {
     private func handleConnection(_ peripheral: CBPeripheral) {
         connectedPeripheral = peripheral
         peripheral.delegate = self
+
+        // Clear any stale data from previous session
+        responseBuffer.removeAll()
+
         peripheral.discoverServices([nordicUARTServiceUUID])
     }
 
@@ -930,6 +977,9 @@ extension BLEService: CBPeripheralDelegate {
             return
         }
 
+        // Clear response buffer for fresh start (handles reconnection case)
+        responseBuffer.removeAll()
+
         for characteristic in service.characteristics ?? [] {
             switch characteristic.uuid {
             case txCharacteristicUUID:
@@ -951,6 +1001,12 @@ extension BLEService: CBPeripheralDelegate {
         let isInitialConnection = connectionContinuation != nil
         let isReconnection = needsResubscriptionAfterReconnect
 
+        #if DEBUG
+        if isReconnection {
+            print("[BLE] Reconnection: re-subscribing to notifications")
+        }
+        #endif
+
         // Clear reconnection flag
         needsResubscriptionAfterReconnect = false
 
@@ -968,6 +1024,16 @@ extension BLEService: CBPeripheralDelegate {
                 try await withThrowingTimeout(seconds: initialSetupTimeout) {
                     try await self.awaitNotificationSubscription(for: rx)
                 }
+
+                // Allow device firmware to stabilize after BLE reconnection
+                // MeshCore radios need brief delay before UART is ready for commands
+                try await Task.sleep(for: .milliseconds(150))
+
+                #if DEBUG
+                if isReconnection {
+                    print("[BLE] Reconnection: stabilization complete, ready for initialization")
+                }
+                #endif
             } catch {
                 if isInitialConnection {
                     connectionContinuation?.resume(throwing: error)
