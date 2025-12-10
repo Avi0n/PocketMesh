@@ -108,7 +108,7 @@ struct SettingsView: View {
                         Label("About PocketMesh", systemImage: "info.circle.fill")
                     }
 
-                    Link(destination: URL(string: "https://meshcore.co")!) {
+                    Link(destination: URL(string: "https://meshcore.co.uk")!) {
                         Label("MeshCore Website", systemImage: "globe")
                     }
                 } header: {
@@ -342,9 +342,9 @@ struct AboutView: View {
             }
 
             Section {
-                Link("Privacy Policy", destination: URL(string: "https://meshcore.co/privacy")!)
-                Link("Terms of Service", destination: URL(string: "https://meshcore.co/terms")!)
-                Link("Open Source Licenses", destination: URL(string: "https://meshcore.co/licenses")!)
+                Link("Privacy Policy", destination: URL(string: "https://meshcore.co.uk/privacy")!)
+                Link("Terms of Service", destination: URL(string: "https://meshcore.co.uk/terms")!)
+                Link("Open Source Licenses", destination: URL(string: "https://meshcore.co.uk/licenses")!)
             }
         }
         .navigationTitle("About")
