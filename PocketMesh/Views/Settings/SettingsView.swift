@@ -1,145 +1,55 @@
 import SwiftUI
 import PocketMeshKit
+import MapKit
 
-/// Main settings screen for the app
+/// Main settings screen prioritizing new user experience
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @State private var showingAdvancedSettings = false
     @State private var showingDeviceSelection = false
-    @State private var showingDisconnectAlert = false
-    @State private var showingForgetAlert = false
-    @State private var showingResetAlert = false
 
     var body: some View {
         NavigationStack {
             List {
-                // Connected device section
                 if let device = appState.connectedDevice {
-                    Section {
-                        NavigationLink {
-                            DeviceInfoView()
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "cpu.fill")
-                                    .font(.title2)
-                                    .foregroundStyle(.tint)
-                                    .frame(width: 40, height: 40)
-                                    .background(.tint.opacity(0.1), in: .circle)
+                    // Device Info Header (read-only)
+                    DeviceInfoSection(device: device)
 
-                                VStack(alignment: .leading) {
-                                    Text(device.nodeName)
-                                        .font(.headline)
+                    // Radio Preset
+                    RadioPresetSection()
 
-                                    Text("Connected")
-                                        .font(.caption)
-                                        .foregroundStyle(.green)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    } header: {
-                        Text("Device")
-                    }
+                    // Node Settings
+                    NodeSettingsSection()
 
-                    // Radio settings
-                    Section {
-                        NavigationLink {
-                            RadioConfigView()
-                        } label: {
-                            Label("Radio Configuration", systemImage: "antenna.radiowaves.left.and.right")
-                        }
+                    // Bluetooth
+                    BluetoothSection()
 
-                        NavigationLink {
-                            NodeSettingsView()
-                        } label: {
-                            Label("Node Settings", systemImage: "slider.horizontal.3")
-                        }
+                    // Notifications
+                    NotificationSettingsSection()
 
-                        NavigationLink {
-                            ChannelSettingsView()
-                        } label: {
-                            Label("Channels", systemImage: "person.3.fill")
-                        }
-                    } header: {
-                        Text("Configuration")
-                    }
-                } else {
-                    // No device connected
+                    // Advanced Settings Link
                     Section {
                         Button {
-                            showingDeviceSelection = true
+                            showingAdvancedSettings = true
                         } label: {
-                            Label("Connect Device", systemImage: "antenna.radiowaves.left.and.right")
+                            HStack {
+                                Label("Advanced Settings", systemImage: "gearshape.2")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
-                    } header: {
-                        Text("Device")
+                        .foregroundStyle(.primary)
                     } footer: {
-                        Text("No MeshCore device connected")
-                    }
-                }
-
-                // App settings
-                Section {
-                    NavigationLink {
-                        NotificationSettingsView()
-                    } label: {
-                        Label("Notifications", systemImage: "bell.fill")
+                        Text("Radio tuning, telemetry, contact settings, and device management")
                     }
 
-                    NavigationLink {
-                        AppearanceSettingsView()
-                    } label: {
-                        Label("Appearance", systemImage: "paintbrush.fill")
-                    }
+                    // About
+                    AboutSection()
 
-                    NavigationLink {
-                        PrivacySettingsView()
-                    } label: {
-                        Label("Privacy", systemImage: "hand.raised.fill")
-                    }
-                } header: {
-                    Text("App Settings")
-                }
-
-                // About section
-                Section {
-                    NavigationLink {
-                        AboutView()
-                    } label: {
-                        Label("About PocketMesh", systemImage: "info.circle.fill")
-                    }
-
-                    Link(destination: URL(string: "https://meshcore.co.uk")!) {
-                        Label("MeshCore Website", systemImage: "globe")
-                    }
-                } header: {
-                    Text("About")
-                }
-
-                // Danger zone
-                if appState.connectedDevice != nil {
-                    Section {
-                        Button(role: .destructive) {
-                            showingDisconnectAlert = true
-                        } label: {
-                            Label("Disconnect Device", systemImage: "eject.fill")
-                        }
-
-                        Button(role: .destructive) {
-                            showingForgetAlert = true
-                        } label: {
-                            Label("Forget Device", systemImage: "trash.fill")
-                        }
-
-                        Button(role: .destructive) {
-                            showingResetAlert = true
-                        } label: {
-                            Label("Factory Reset Device", systemImage: "exclamationmark.triangle.fill")
-                        }
-                    } header: {
-                        Text("Danger Zone")
-                    } footer: {
-                        Text("Factory reset will erase all contacts and settings on the device.")
-                    }
+                } else {
+                    NoDeviceSection(showingDeviceSelection: $showingDeviceSelection)
                 }
 
                 #if DEBUG
@@ -156,33 +66,8 @@ struct SettingsView: View {
                 #endif
             }
             .navigationTitle("Settings")
-            .alert("Disconnect Device", isPresented: $showingDisconnectAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Disconnect", role: .destructive) {
-                    Task {
-                        await appState.disconnect()
-                    }
-                }
-            } message: {
-                Text("Are you sure you want to disconnect from this device?")
-            }
-            .alert("Forget Device", isPresented: $showingForgetAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Forget", role: .destructive) {
-                    Task {
-                        await appState.disconnect()
-                    }
-                }
-            } message: {
-                Text("This will disconnect from the device. You can reconnect anytime from the settings screen.")
-            }
-            .alert("Factory Reset", isPresented: $showingResetAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Reset", role: .destructive) {
-                    // TODO: Implement factory reset
-                }
-            } message: {
-                Text("This will erase all data on the device including contacts, messages, and settings. This action cannot be undone.")
+            .sheet(isPresented: $showingAdvancedSettings) {
+                AdvancedSettingsView()
             }
             .sheet(isPresented: $showingDeviceSelection) {
                 DeviceSelectionSheet()
@@ -193,101 +78,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Placeholder Views for Navigation
-
-struct NodeSettingsView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        Form {
-            if let device = appState.connectedDevice {
-                Section {
-                    HStack {
-                        Text("Node Name")
-                        Spacer()
-                        Text(device.nodeName)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Text("Manual Contact Add")
-                        Spacer()
-                        Text(device.manualAddContacts ? "On" : "Off")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Text("Multi-ACK")
-                        Spacer()
-                        Text(device.multiAcks ? "On" : "Off")
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Node")
-                }
-
-                Section {
-                    HStack {
-                        Text("Location Sharing")
-                        Spacer()
-                        Text(device.advertLocationPolicy == 1 ? "Enabled" : "Disabled")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if device.latitude != 0 || device.longitude != 0 {
-                        HStack {
-                            Text("Latitude")
-                            Spacer()
-                            Text(device.latitude, format: .number.precision(.fractionLength(6)))
-                                .foregroundStyle(.secondary)
-                        }
-
-                        HStack {
-                            Text("Longitude")
-                            Spacer()
-                            Text(device.longitude, format: .number.precision(.fractionLength(6)))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Location")
-                }
-            }
-        }
-        .navigationTitle("Node Settings")
-    }
-}
-
-struct ChannelSettingsView: View {
-    var body: some View {
-        List {
-            Section {
-                Text("Channel configuration will be available in a future update")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .navigationTitle("Channels")
-    }
-}
-
-struct NotificationSettingsView: View {
-    @AppStorage("notificationsEnabled") private var notificationsEnabled = true
-    @AppStorage("soundEnabled") private var soundEnabled = true
-    @AppStorage("badgeEnabled") private var badgeEnabled = true
-
-    var body: some View {
-        Form {
-            Section {
-                Toggle("Enable Notifications", isOn: $notificationsEnabled)
-                Toggle("Sound", isOn: $soundEnabled)
-                    .disabled(!notificationsEnabled)
-                Toggle("Badge", isOn: $badgeEnabled)
-                    .disabled(!notificationsEnabled)
-            }
-        }
-        .navigationTitle("Notifications")
-    }
-}
+// MARK: - Appearance Settings (Preserved for separate access)
 
 struct AppearanceSettingsView: View {
     @AppStorage("colorScheme") private var colorScheme = 0
@@ -307,22 +98,7 @@ struct AppearanceSettingsView: View {
     }
 }
 
-struct PrivacySettingsView: View {
-    @AppStorage("shareLocation") private var shareLocation = false
-    @AppStorage("shareReadReceipts") private var shareReadReceipts = true
-
-    var body: some View {
-        Form {
-            Section {
-                Toggle("Share Location", isOn: $shareLocation)
-                Toggle("Send Read Receipts", isOn: $shareReadReceipts)
-            } footer: {
-                Text("Location sharing allows contacts to see your position on the map.")
-            }
-        }
-        .navigationTitle("Privacy")
-    }
-}
+// MARK: - About View
 
 struct AboutView: View {
     var body: some View {
