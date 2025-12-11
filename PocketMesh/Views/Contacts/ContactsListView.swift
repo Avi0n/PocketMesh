@@ -214,7 +214,7 @@ struct ContactRowView: View {
 
                 HStack(spacing: 8) {
                     // Contact type
-                    Label(contactTypeLabel, systemImage: contactTypeIcon)
+                    Text(contactTypeLabel)
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -226,6 +226,9 @@ struct ContactRowView: View {
                             .foregroundStyle(.green)
                     }
                 }
+            }
+            .alignmentGuide(.listRowSeparatorLeading) { d in
+                d[.leading]
             }
 
             Spacer()
@@ -251,14 +254,6 @@ struct ContactRowView: View {
         case .chat: return "Chat"
         case .repeater: return "Repeater"
         case .room: return "Room"
-        }
-    }
-
-    private var contactTypeIcon: String {
-        switch contact.type {
-        case .chat: return "person.fill"
-        case .repeater: return "antenna.radiowaves.left.and.right"
-        case .room: return "door.left.hand.open"
         }
     }
 

@@ -177,7 +177,7 @@ struct ConversationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            ContactAvatar(contact: contact, size: 50)
+            ContactAvatar(contact: contact, size: 44)
 
             // Content
             VStack(alignment: .leading, spacing: 4) {
@@ -214,6 +214,9 @@ struct ConversationRow: View {
                     }
                 }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { d in
+                d[.leading]
+            }
         }
         .padding(.vertical, 4)
     }
@@ -233,16 +236,6 @@ struct ContactAvatar: View {
             Text(initials)
                 .font(.system(size: size * 0.4, weight: .semibold))
                 .foregroundStyle(.white)
-
-            // Contact type indicator
-            if contact.type == .repeater {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: size * 0.25))
-                    .foregroundStyle(.white)
-                    .padding(4)
-                    .background(.blue, in: .circle)
-                    .offset(x: size * 0.35, y: size * 0.35)
-            }
         }
         .frame(width: size, height: size)
     }
@@ -367,7 +360,7 @@ struct ChannelConversationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Channel avatar
-            ChannelAvatar(channel: channel, size: 50)
+            ChannelAvatar(channel: channel, size: 44)
 
             // Content
             VStack(alignment: .leading, spacing: 4) {
@@ -404,6 +397,9 @@ struct ChannelConversationRow: View {
                     }
                 }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { d in
+                d[.leading]
+            }
         }
         .padding(.vertical, 4)
     }
@@ -416,30 +412,15 @@ struct ChannelAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            ZStack {
-                Circle()
-                    .fill(avatarColor)
+        ZStack {
+            Circle()
+                .fill(avatarColor)
 
-                Image(systemName: channel.isPublicChannel ? "globe" : "number")
-                    .font(.system(size: size * 0.4, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-            .frame(width: size, height: size)
-
-            // Public channel indicator badge
-            if channel.isPublicChannel {
-                Circle()
-                    .fill(.white)
-                    .frame(width: size * 0.35, height: size * 0.35)
-                    .overlay {
-                        Image(systemName: "globe")
-                            .font(.system(size: size * 0.2, weight: .bold))
-                            .foregroundStyle(.green)
-                    }
-                    .offset(x: size * 0.1, y: size * 0.1)
-            }
+            Image(systemName: channel.isPublicChannel ? "globe" : "number")
+                .font(.system(size: size * 0.4, weight: .bold))
+                .foregroundStyle(.white)
         }
+        .frame(width: size, height: size)
     }
 
     private var avatarColor: Color {
