@@ -89,6 +89,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// The notification service for local notifications
     let notificationService = NotificationService()
 
+    /// The settings service for device configuration
+    let settingsService: SettingsService
+
     // MARK: - Navigation State
 
     /// Currently selected tab index
@@ -126,6 +129,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         self.contactService = ContactService(bleTransport: bleService, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(bleTransport: bleService, dataStore: dataStore)
         self.channelService = ChannelService(bleTransport: bleService, dataStore: dataStore)
+        self.settingsService = SettingsService(bleTransport: bleService)
 
         // Set up BLE activity tracking for UI animation
         Task {
@@ -868,6 +872,54 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             _ = try await channelService.syncChannels(deviceID: deviceID)
         } catch {
             // Silently ignore sync errors - channels can be synced manually
+        }
+    }
+
+    // MARK: - Device Info Refresh
+
+    /// Refreshes device info from the connected device after settings changes
+    /// Call this after making settings changes to update the UI with the new values
+    func refreshDeviceInfo() async {
+        guard await bleService.connectionState == .ready else { return }
+        guard let currentDevice = connectedDevice else { return }
+
+        do {
+            let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry(maxRetries: 1, initialDelay: 0.1)
+
+            connectedDevice = DeviceDTO(
+                from: Device(
+                    id: currentDevice.id,
+                    publicKey: selfInfo.publicKey,
+                    nodeName: selfInfo.nodeName,
+                    firmwareVersion: deviceInfo.firmwareVersion,
+                    firmwareVersionString: deviceInfo.firmwareVersionString,
+                    manufacturerName: deviceInfo.manufacturerName,
+                    buildDate: deviceInfo.buildDate,
+                    maxContacts: deviceInfo.maxContacts,
+                    maxChannels: deviceInfo.maxChannels,
+                    frequency: selfInfo.frequency,
+                    bandwidth: selfInfo.bandwidth,
+                    spreadingFactor: selfInfo.spreadingFactor,
+                    codingRate: selfInfo.codingRate,
+                    txPower: selfInfo.txPower,
+                    maxTxPower: selfInfo.maxTxPower,
+                    latitude: selfInfo.latitude,
+                    longitude: selfInfo.longitude,
+                    blePin: deviceInfo.blePin,
+                    manualAddContacts: selfInfo.manualAddContacts > 0,
+                    multiAcks: selfInfo.multiAcks > 0,
+                    telemetryModeBase: selfInfo.telemetryModes & 0x03,
+                    telemetryModeLoc: (selfInfo.telemetryModes >> 2) & 0x03,
+                    telemetryModeEnv: (selfInfo.telemetryModes >> 4) & 0x03,
+                    advertLocationPolicy: selfInfo.advertLocationPolicy.rawValue,
+                    isActive: true
+                )
+            )
+
+            persistConnectedDevice(connectedDevice!)
+            try await dataStore.saveDevice(connectedDevice!)
+        } catch {
+            // Silently fail - device info will refresh on next sync
         }
     }
 

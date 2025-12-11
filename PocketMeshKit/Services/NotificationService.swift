@@ -7,6 +7,7 @@ import UserNotifications
 public enum NotificationCategory: String, Sendable {
     case directMessage = "DIRECT_MESSAGE"
     case channelMessage = "CHANNEL_MESSAGE"
+    case roomMessage = "ROOM_MESSAGE"
     case lowBattery = "LOW_BATTERY"
 }
 
@@ -151,6 +152,14 @@ public final class NotificationService: NSObject {
             options: [.customDismissAction]
         )
 
+        // Room message category (no reply action)
+        let roomMessageCategory = UNNotificationCategory(
+            identifier: NotificationCategory.roomMessage.rawValue,
+            actions: [markReadAction],
+            intentIdentifiers: [],
+            options: [.customDismissAction]
+        )
+
         // Low battery category
         let lowBatteryCategory = UNNotificationCategory(
             identifier: NotificationCategory.lowBattery.rawValue,
@@ -162,6 +171,7 @@ public final class NotificationService: NSObject {
         let categories: Set<UNNotificationCategory> = [
             directMessageCategory,
             channelMessageCategory,
+            roomMessageCategory,
             lowBatteryCategory
         ]
 
@@ -238,6 +248,76 @@ public final class NotificationService: NSObject {
 
         let request = UNNotificationRequest(
             identifier: messageID.uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            // Notification failed to post
+        }
+    }
+
+    /// Posts a notification for a room message.
+    public func postRoomMessageNotification(
+        roomName: String,
+        senderName: String?,
+        messageText: String,
+        messageID: UUID
+    ) async {
+        guard isAuthorized && notificationsEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = roomName
+        if let sender = senderName {
+            content.body = "\(sender): \(messageText)"
+        } else {
+            content.body = messageText
+        }
+        content.sound = .default
+        content.categoryIdentifier = NotificationCategory.roomMessage.rawValue
+        content.userInfo = [
+            "roomName": roomName,
+            "messageID": messageID.uuidString,
+            "type": "roomMessage"
+        ]
+        content.threadIdentifier = "room-\(roomName)"
+
+        badgeCount += 1
+        content.badge = NSNumber(value: badgeCount)
+
+        let request = UNNotificationRequest(
+            identifier: messageID.uuidString,
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            // Notification failed to post
+        }
+    }
+
+    /// Posts a notification that a new contact was discovered.
+    public func postNewContactNotification(
+        contactName: String,
+        contactID: UUID
+    ) async {
+        guard isAuthorized && notificationsEnabled else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "New Contact Discovered"
+        content.body = "\(contactName) is now available on the mesh"
+        content.sound = .default
+        content.userInfo = [
+            "contactID": contactID.uuidString,
+            "type": "newContact"
+        ]
+
+        let request = UNNotificationRequest(
+            identifier: "new-contact-\(contactID.uuidString)",
             content: content,
             trigger: nil
         )
