@@ -38,6 +38,9 @@ final class ChatViewModel {
     /// Error message if any
     var errorMessage: String?
 
+    /// Whether to show retry error alert
+    var showRetryError = false
+
     /// Message text being composed
     var composingText = ""
 
@@ -313,6 +316,7 @@ final class ChatViewModel {
         } catch {
             print("[ChatViewModel] retryMessage: error - \(error)")
             errorMessage = error.localizedDescription
+            showRetryError = true
             // Reload to show the new failed message (if one was created)
             await loadMessages(for: contact)
         }
@@ -351,6 +355,7 @@ final class ChatViewModel {
             try? await dataStore?.updateMessageStatus(id: message.id, status: .failed)
             await loadChannelMessages(for: channel)
             errorMessage = error.localizedDescription
+            showRetryError = true
         }
     }
 

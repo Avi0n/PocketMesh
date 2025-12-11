@@ -1006,7 +1006,12 @@ extension AppState: BLEStateRestorationDelegate {
         // Complete device initialization if needed
         if await bleService.connectionState == .connected {
             do {
-                let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry()
+                // Device may have rebooted - use more patient retry settings
+                // Allows up to ~12 seconds for device to finish booting
+                let (deviceInfo, selfInfo) = try await bleService.initializeDeviceWithRetry(
+                    maxRetries: 5,
+                    initialDelay: 1.0
+                )
 
                 connectedDevice = DeviceDTO(
                     from: Device(

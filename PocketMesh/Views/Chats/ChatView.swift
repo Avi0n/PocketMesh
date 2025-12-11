@@ -85,6 +85,11 @@ struct ChatView: View {
                 break
             }
         }
+        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please ensure your device is connected and try again.")
+        }
     }
 
     // MARK: - Header
