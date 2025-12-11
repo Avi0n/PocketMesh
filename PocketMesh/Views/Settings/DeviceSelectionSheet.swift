@@ -8,9 +8,6 @@ struct DeviceSelectionSheet: View {
 
     @State private var savedDevices: [DeviceDTO] = []
     @State private var selectedDevice: DeviceDTO?
-    @State private var isConnecting = false
-    @State private var errorMessage: String?
-    @State private var showingError = false
 
     var body: some View {
         NavigationStack {
@@ -32,21 +29,16 @@ struct DeviceSelectionSheet: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Connect") {
-                        Task {
-                            await connectToSelectedDevice()
-                        }
+                        guard let device = selectedDevice else { return }
+                        dismiss()
+                        appState.initiateReconnection(to: device.id)
                     }
                     .fontWeight(.semibold)
-                    .disabled(selectedDevice == nil || isConnecting)
+                    .disabled(selectedDevice == nil)
                 }
             }
             .task {
                 await loadDevices()
-            }
-            .alert("Connection Failed", isPresented: $showingError) {
-                Button("OK") { }
-            } message: {
-                Text(errorMessage ?? "Unable to connect to device.")
             }
         }
     }
@@ -77,11 +69,6 @@ struct DeviceSelectionSheet: View {
                 }
             }
         }
-        .overlay {
-            if isConnecting {
-                connectingOverlay
-            }
-        }
     }
 
     private var emptyStateView: some View {
@@ -97,22 +84,6 @@ struct DeviceSelectionSheet: View {
         }
     }
 
-    private var connectingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .ignoresSafeArea()
-
-            VStack(spacing: 16) {
-                ProgressView()
-                    .scaleEffect(1.5)
-                Text("Connecting...")
-                    .font(.headline)
-            }
-            .padding(32)
-            .background(.regularMaterial, in: .rect(cornerRadius: 16))
-        }
-    }
-
     // MARK: - Actions
 
     private func loadDevices() async {
@@ -120,27 +91,6 @@ struct DeviceSelectionSheet: View {
             savedDevices = try await appState.dataStore.fetchDevices()
         } catch {
             savedDevices = []
-        }
-    }
-
-    private func connectToSelectedDevice() async {
-        guard let device = selectedDevice else { return }
-
-        isConnecting = true
-        defer { isConnecting = false }
-
-        do {
-            try await appState.reconnectToDevice(id: device.id)
-            dismiss()
-        } catch ReconnectionError.deviceNoLongerPaired {
-            // Device was removed from system - refresh list and show message
-            errorMessage = "This device is no longer paired. It has been removed from the list. Please pair it again."
-            selectedDevice = nil
-            await loadDevices()
-            showingError = true
-        } catch {
-            errorMessage = error.localizedDescription
-            showingError = true
         }
     }
 

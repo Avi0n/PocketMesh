@@ -65,6 +65,20 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
+        .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
+            if appState.pendingReconnectDeviceID != nil {
+                Button("Try Again") {
+                    appState.retryPendingReconnection()
+                }
+                Button("Cancel", role: .cancel) {
+                    appState.pendingReconnectDeviceID = nil
+                }
+            } else {
+                Button("OK", role: .cancel) { }
+            }
+        } message: {
+            Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
+        }
     }
 }
 

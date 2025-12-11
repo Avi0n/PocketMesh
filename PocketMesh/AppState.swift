@@ -43,6 +43,18 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Whether we're currently connecting to a device
     var isConnecting: Bool = false
 
+    /// Whether BLE has operations in progress (for activity indicator animation)
+    var isBLEBusy: Bool = false
+
+    /// Device ID to retry connection after failure
+    var pendingReconnectDeviceID: UUID?
+
+    /// Whether to show the connection failure alert
+    var showingConnectionFailedAlert: Bool = false
+
+    /// Message for connection failure alert
+    var connectionFailedMessage: String?
+
     // MARK: - Contact Sync State
 
     /// Whether contacts are currently syncing (for UI overlay)
@@ -114,6 +126,15 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         self.contactService = ContactService(bleTransport: bleService, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(bleTransport: bleService, dataStore: dataStore)
         self.channelService = ChannelService(bleTransport: bleService, dataStore: dataStore)
+
+        // Set up BLE activity tracking for UI animation
+        Task {
+            await bleService.setSendActivityHandler { [weak self] isBusy in
+                Task { @MainActor in
+                    self?.isBLEBusy = isBusy
+                }
+            }
+        }
 
         // Wire up notification service to message event broadcaster
         messageEventBroadcaster.notificationService = notificationService
@@ -576,6 +597,30 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             await bleService.disconnect()
             throw error
         }
+    }
+
+    /// Initiates device reconnection without blocking the caller
+    /// Shows error alert on failure with retry option
+    func initiateReconnection(to deviceID: UUID) {
+        Task {
+            do {
+                try await reconnectToDevice(id: deviceID)
+            } catch ReconnectionError.deviceNoLongerPaired {
+                connectionFailedMessage = "This device is no longer paired. Please pair it again using 'Scan for New Device'."
+                showingConnectionFailedAlert = true
+                pendingReconnectDeviceID = nil  // Can't retry - device removed
+            } catch {
+                connectionFailedMessage = error.localizedDescription
+                pendingReconnectDeviceID = deviceID  // Store for retry
+                showingConnectionFailedAlert = true
+            }
+        }
+    }
+
+    /// Retries the pending reconnection
+    func retryPendingReconnection() {
+        guard let deviceID = pendingReconnectDeviceID else { return }
+        initiateReconnection(to: deviceID)
     }
 
     /// Reconnects to a device with retry pattern and exponential backoff
