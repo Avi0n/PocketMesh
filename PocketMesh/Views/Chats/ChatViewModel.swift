@@ -156,7 +156,7 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            let result = try await messageService.sendDirectMessage(text: text, to: contact)
+            _ = try await messageService.sendDirectMessage(text: text, to: contact)
 
             // Reload messages to show the sent message
             await loadMessages(for: contact)
@@ -279,25 +279,42 @@ final class ChatViewModel {
         return nil
     }
 
-    /// Retry sending a failed message
+    /// Retry sending a failed message with flood routing enabled
     func retryMessage(_ message: MessageDTO) async {
-        guard let messageService,
-              let contact = currentContact else { return }
+        print("[ChatViewModel] retryMessage called for message: \(message.id)")
+
+        guard let messageService else {
+            print("[ChatViewModel] retryMessage: messageService is nil")
+            return
+        }
+
+        guard let contact = currentContact else {
+            print("[ChatViewModel] retryMessage: currentContact is nil")
+            return
+        }
+
+        print("[ChatViewModel] retryMessage: starting retry for contact \(contact.displayName)")
 
         isSending = true
         errorMessage = nil
 
         do {
-            // Delete the failed message
+            // Delete the failed message first
+            print("[ChatViewModel] retryMessage: deleting old message")
             try await dataStore?.deleteMessage(id: message.id)
 
-            // Send a new message with the same text
-            _ = try await messageService.sendDirectMessage(text: message.text, to: contact)
+            // Retry with flood fallback enabled (always creates a new message)
+            print("[ChatViewModel] retryMessage: calling retryDirectMessage")
+            _ = try await messageService.retryDirectMessage(text: message.text, to: contact)
+            print("[ChatViewModel] retryMessage: retryDirectMessage succeeded")
 
-            // Reload messages
+            // Reload messages to show the new message
             await loadMessages(for: contact)
         } catch {
+            print("[ChatViewModel] retryMessage: error - \(error)")
             errorMessage = error.localizedDescription
+            // Reload to show the new failed message (if one was created)
+            await loadMessages(for: contact)
         }
 
         isSending = false

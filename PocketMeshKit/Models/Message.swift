@@ -55,9 +55,6 @@ public final class Message {
     /// ACK code for tracking delivery (outgoing only)
     public var ackCode: UInt32?
 
-    /// Retry attempt count
-    public var attemptCount: UInt8
-
     /// Path length when received
     public var pathLength: UInt8
 
@@ -94,7 +91,6 @@ public final class Message {
         statusRawValue: Int = MessageStatus.pending.rawValue,
         textTypeRawValue: UInt8 = TextType.plain.rawValue,
         ackCode: UInt32? = nil,
-        attemptCount: UInt8 = 0,
         pathLength: UInt8 = 0,
         snr: Int8? = nil,
         senderKeyPrefix: Data? = nil,
@@ -115,7 +111,6 @@ public final class Message {
         self.statusRawValue = statusRawValue
         self.textTypeRawValue = textTypeRawValue
         self.ackCode = ackCode
-        self.attemptCount = attemptCount
         self.pathLength = pathLength
         self.snr = snr
         self.senderKeyPrefix = senderKeyPrefix
@@ -225,7 +220,6 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
     public let status: MessageStatus
     public let textType: TextType
     public let ackCode: UInt32?
-    public let attemptCount: UInt8
     public let pathLength: UInt8
     public let snr: Int8?
     public let senderKeyPrefix: Data?
@@ -247,7 +241,6 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
         self.status = message.status
         self.textType = message.textType
         self.ackCode = message.ackCode
-        self.attemptCount = message.attemptCount
         self.pathLength = message.pathLength
         self.snr = message.snr
         self.senderKeyPrefix = message.senderKeyPrefix

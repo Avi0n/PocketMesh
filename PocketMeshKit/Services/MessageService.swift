@@ -7,51 +7,21 @@ public enum MessageServiceError: Error, Sendable {
     case contactNotFound
     case channelNotFound
     case sendFailed(String)
-    case maxRetriesExceeded
     case invalidRecipient
     case messageTooLong
     case protocolError(ProtocolError)
 }
 
-// MARK: - Message Send Result
-
-public struct MessageSendResult: Sendable, Equatable {
-    public let messageID: UUID
-    public let ackCode: UInt32
-    public let isFlood: Bool
-    public let estimatedTimeout: UInt32
-    public let attemptCount: UInt8
-
-    public init(messageID: UUID, ackCode: UInt32, isFlood: Bool, estimatedTimeout: UInt32, attemptCount: UInt8) {
-        self.messageID = messageID
-        self.ackCode = ackCode
-        self.isFlood = isFlood
-        self.estimatedTimeout = estimatedTimeout
-        self.attemptCount = attemptCount
-    }
-}
-
 // MARK: - Message Service Configuration
 
 public struct MessageServiceConfig: Sendable {
-    public let maxRetries: UInt8
-    public let initialRetryDelay: TimeInterval
-    public let maxRetryDelay: TimeInterval
-    public let retryBackoffMultiplier: Double
-    public let floodFallbackEnabled: Bool
+    /// Whether to use flood routing when user manually retries a failed message
+    public let floodFallbackOnRetry: Bool
 
     public init(
-        maxRetries: UInt8 = 3,
-        initialRetryDelay: TimeInterval = 1.0,
-        maxRetryDelay: TimeInterval = 8.0,
-        retryBackoffMultiplier: Double = 2.0,
-        floodFallbackEnabled: Bool = true
+        floodFallbackOnRetry: Bool = true
     ) {
-        self.maxRetries = maxRetries
-        self.initialRetryDelay = initialRetryDelay
-        self.maxRetryDelay = maxRetryDelay
-        self.retryBackoffMultiplier = retryBackoffMultiplier
-        self.floodFallbackEnabled = floodFallbackEnabled
+        self.floodFallbackOnRetry = floodFallbackOnRetry
     }
 
     public static let `default` = MessageServiceConfig()
@@ -117,34 +87,31 @@ public actor MessageService {
 
     // MARK: - Send Direct Message
 
-    /// Sends a direct message to a contact with retry logic.
+    /// Sends a direct message to a contact with a single send attempt.
     /// - Parameters:
     ///   - text: The message text
     ///   - contact: The recipient contact
     ///   - textType: The text type (default: plain)
     ///   - replyToID: Optional message ID to reply to
-    /// - Returns: The send result with ACK code and tracking info
+    ///   - useFlood: Whether to use flood routing (default: false, uses contact's setting)
+    /// - Returns: The saved message
     public func sendDirectMessage(
         text: String,
         to contact: ContactDTO,
         textType: TextType = .plain,
-        replyToID: UUID? = nil
-    ) async throws -> MessageSendResult {
-        // Validate message length
+        replyToID: UUID? = nil,
+        useFlood: Bool = false
+    ) async throws -> MessageDTO {
+        // Validate message length (throw early - no message saved)
         guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
             throw MessageServiceError.messageTooLong
-        }
-
-        // Check connection state
-        let connectionState = await bleTransport.connectionState
-        guard connectionState == .ready else {
-            throw MessageServiceError.notConnected
         }
 
         let messageID = UUID()
         let timestamp = UInt32(Date().timeIntervalSince1970)
 
-        // Save message to store as pending
+        // Save message to store as pending FIRST
+        // This ensures retry flow always has a message to show
         let messageDTO = createOutgoingMessage(
             id: messageID,
             deviceID: contact.deviceID,
@@ -156,61 +123,68 @@ public actor MessageService {
         )
         try await dataStore.saveMessage(messageDTO)
 
-        // Attempt to send with retries
-        var attemptCount: UInt8 = 0
-        var useFlood = contact.isFloodRouted
-
-        for attempt in 1...Int(config.maxRetries) {
-            attemptCount = UInt8(attempt)
-
-            do {
-                let result = try await sendTextMessageAttempt(
-                    text: text,
-                    recipientKeyPrefix: contact.publicKeyPrefix,
-                    textType: textType,
-                    attempt: attemptCount,
-                    timestamp: timestamp
-                )
-
-                // Update message with ACK code
-                try await dataStore.updateMessageAck(
-                    id: messageID,
-                    ackCode: result.ackCode,
-                    status: .sent
-                )
-
-                // Track pending ACK for confirmation
-                let timeout = TimeInterval(result.estimatedTimeout) / 1000.0
-                trackPendingAck(messageID: messageID, ackCode: result.ackCode, timeout: timeout)
-
-                // Update contact's last message date
-                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
-
-                return MessageSendResult(
-                    messageID: messageID,
-                    ackCode: result.ackCode,
-                    isFlood: result.isFlood,
-                    estimatedTimeout: result.estimatedTimeout,
-                    attemptCount: attemptCount
-                )
-            } catch {
-                // If not flood and flood fallback enabled, try flood on last attempt
-                if !useFlood && config.floodFallbackEnabled && attempt == Int(config.maxRetries) - 1 {
-                    useFlood = true
-                }
-
-                // Wait before retrying with exponential backoff
-                if attempt < Int(config.maxRetries) {
-                    let delay = calculateRetryDelay(attempt: attempt)
-                    try await Task.sleep(for: .seconds(delay))
-                }
-            }
+        // Check connection state - mark as failed if not connected
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.notConnected
         }
 
-        // Mark message as failed after all retries exhausted
-        try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+        // Single send attempt
+        do {
+            let result = try await sendTextMessageAttempt(
+                text: text,
+                recipientKeyPrefix: contact.publicKeyPrefix,
+                textType: textType,
+                attempt: 1,
+                timestamp: timestamp
+            )
 
-        throw MessageServiceError.maxRetriesExceeded
+            // Update message with ACK code
+            try await dataStore.updateMessageAck(
+                id: messageID,
+                ackCode: result.ackCode,
+                status: .sent
+            )
+
+            // Track pending ACK for confirmation with device timeout + 20% buffer
+            let timeout = TimeInterval(result.estimatedTimeout) / 1000.0 * 1.2
+            trackPendingAck(messageID: messageID, ackCode: result.ackCode, timeout: timeout)
+
+            // Update contact's last message date
+            try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+            // Return the saved message
+            guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                throw MessageServiceError.sendFailed("Failed to fetch saved message")
+            }
+            return message
+        } catch {
+            // Mark as failed immediately on error
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw error
+        }
+    }
+
+    /// Retry a failed message with flood routing enabled.
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - contact: The recipient contact
+    ///   - textType: The text type (default: plain)
+    /// - Returns: The saved message
+    public func retryDirectMessage(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain
+    ) async throws -> MessageDTO {
+        // Always use flood on retry if enabled in config
+        let useFlood = config.floodFallbackOnRetry
+        return try await sendDirectMessage(
+            text: text,
+            to: contact,
+            textType: textType,
+            useFlood: useFlood
+        )
     }
 
     /// Sends a channel message (broadcast, no ACK expected).
@@ -462,11 +436,6 @@ public actor MessageService {
 
         // Decode sent response
         return try FrameCodec.decodeSentResponse(from: response)
-    }
-
-    private func calculateRetryDelay(attempt: Int) -> TimeInterval {
-        let delay = config.initialRetryDelay * pow(config.retryBackoffMultiplier, Double(attempt - 1))
-        return min(delay, config.maxRetryDelay)
     }
 
     private func trackPendingAck(messageID: UUID, ackCode: UInt32, timeout: TimeInterval) {

@@ -476,7 +476,6 @@ public actor DataStore {
             statusRawValue: dto.status.rawValue,
             textTypeRawValue: dto.textType.rawValue,
             ackCode: dto.ackCode,
-            attemptCount: dto.attemptCount,
             pathLength: dto.pathLength,
             snr: dto.snr,
             senderKeyPrefix: dto.senderKeyPrefix,

@@ -154,8 +154,7 @@ struct MessageServiceTests {
         )
 
         #expect(result.ackCode == 1001)
-        #expect(result.attemptCount == 1)
-        #expect(!result.isFlood)
+        #expect(result.status == .sent)
 
         // Verify message was saved
         let messages = try await dataStore.fetchMessages(contactID: contact.id)
@@ -201,8 +200,8 @@ struct MessageServiceTests {
         }
     }
 
-    @Test("Retry logic with exponential backoff")
-    func retryLogicWithExponentialBackoff() async throws {
+    @Test("Send failure marks message as failed immediately")
+    func sendFailureMarksMessageAsFailed() async throws {
         let transport = TestBLETransport()
         let container = try DataStore.createContainer(inMemory: true)
         let dataStore = DataStore(modelContainer: container)
@@ -213,61 +212,23 @@ struct MessageServiceTests {
 
         await transport.setConnectionState(.ready)
 
-        // Queue: fail, fail, succeed
-        await transport.queueResponses([
-            createErrorResponse(.badState),
-            createErrorResponse(.badState),
-            createSentResponse(ackCode: 1001)
-        ])
+        // Single failure response (no retry)
+        await transport.queueResponse(createErrorResponse(.badState))
 
-        let config = MessageServiceConfig(
-            maxRetries: 3,
-            initialRetryDelay: 0.01,
-            maxRetryDelay: 0.1,
-            retryBackoffMultiplier: 2.0
-        )
-        let service = MessageService(bleTransport: transport, dataStore: dataStore, config: config)
-
-        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
-
-        #expect(result.attemptCount == 3)
-        #expect(result.ackCode == 1001)
-
-        // Verify 3 attempts were made
-        let sentData = await transport.getSentData()
-        #expect(sentData.count == 3)
-    }
-
-    @Test("Max retries exceeded marks message as failed")
-    func maxRetriesExceededMarksMessageAsFailed() async throws {
-        let transport = TestBLETransport()
-        let container = try DataStore.createContainer(inMemory: true)
-        let dataStore = DataStore(modelContainer: container)
-
-        let deviceID = UUID()
-        let contact = createTestContact(deviceID: deviceID)
-        try await dataStore.saveContact(contact)
-
-        await transport.setConnectionState(.ready)
-
-        // All attempts fail
-        await transport.queueResponses([
-            createErrorResponse(.badState),
-            createErrorResponse(.badState),
-            createErrorResponse(.badState)
-        ])
-
-        let config = MessageServiceConfig(maxRetries: 3, initialRetryDelay: 0.01)
-        let service = MessageService(bleTransport: transport, dataStore: dataStore, config: config)
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
 
         await #expect(throws: MessageServiceError.self) {
             try await service.sendDirectMessage(text: "Hello!", to: contact)
         }
 
-        // Verify message was saved and marked as failed
+        // Verify message was saved and marked as failed immediately
         let messages = try await dataStore.fetchMessages(contactID: contact.id)
         #expect(messages.count == 1)
         #expect(messages.first?.status == .failed)
+
+        // Verify only one attempt was made
+        let sentData = await transport.getSentData()
+        #expect(sentData.count == 1)
     }
 
     @Test("ACK confirmation updates message to delivered")
@@ -324,7 +285,7 @@ struct MessageServiceTests {
         #expect(pendingCount == 1)
 
         // Verify ACK is not yet delivered
-        var pending = await service.getPendingAck(for: result.messageID)
+        var pending = await service.getPendingAck(for: result.id)
         #expect(pending?.isDelivered == false)
 
         // Handle confirmation
@@ -335,7 +296,7 @@ struct MessageServiceTests {
         #expect(newPendingCount == 1)  // Still tracked for repeat counting
 
         // Verify it's now marked as delivered
-        pending = await service.getPendingAck(for: result.messageID)
+        pending = await service.getPendingAck(for: result.id)
         #expect(pending?.isDelivered == true)
         #expect(pending?.heardRepeats == 1)
     }
@@ -475,7 +436,7 @@ struct MessageServiceTests {
         try await service.handleSendConfirmation(SendConfirmation(ackCode: 1001, roundTripTime: 100))
 
         // Check heardRepeats is 1
-        let pending = await service.getPendingAck(for: result.messageID)
+        let pending = await service.getPendingAck(for: result.id)
         #expect(pending?.heardRepeats == 1)
         #expect(pending?.isDelivered == true)
     }
@@ -504,7 +465,7 @@ struct MessageServiceTests {
         try await service.handleSendConfirmation(confirmation)
 
         // Check heardRepeats is 3
-        let pending = await service.getPendingAck(for: result.messageID)
+        let pending = await service.getPendingAck(for: result.id)
         #expect(pending?.heardRepeats == 3)
 
         // Verify message is still delivered (not changed by duplicate ACKs)
@@ -544,8 +505,8 @@ struct MessageServiceTests {
 
         // Both messages should be delivered
         let messages = try await dataStore.fetchMessages(contactID: contact.id)
-        let messageA = messages.first { $0.id == resultA.messageID }
-        let messageB = messages.first { $0.id == resultB.messageID }
+        let messageA = messages.first { $0.id == resultA.id }
+        let messageB = messages.first { $0.id == resultB.id }
 
         #expect(messageA?.status == .delivered)
         #expect(messageB?.status == .delivered)
@@ -663,7 +624,7 @@ struct MessageServiceTests {
         try await service.handleSendConfirmation(SendConfirmation(ackCode: 555, roundTripTime: 100))
 
         // Verify ACK is still tracked (within grace period)
-        var pending = await service.getPendingAck(for: result.messageID)
+        var pending = await service.getPendingAck(for: result.id)
         #expect(pending != nil)
         #expect(pending?.isDelivered == true)
 
@@ -672,7 +633,7 @@ struct MessageServiceTests {
         await service.cleanupDeliveredAcks()
 
         // ACK should still exist (grace period hasn't passed in real time)
-        pending = await service.getPendingAck(for: result.messageID)
+        pending = await service.getPendingAck(for: result.id)
         #expect(pending != nil)
     }
 }
