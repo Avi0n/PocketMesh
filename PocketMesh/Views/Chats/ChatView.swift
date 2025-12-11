@@ -73,6 +73,14 @@ struct ChatView: View {
                 Task {
                     await viewModel.loadMessages(for: contact)
                 }
+            case .messageFailed(let messageID):
+                // Only reload if this message belongs to the current conversation
+                // This prevents multiple reloads when several messages fail at once
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadMessages(for: contact)
+                    }
+                }
             default:
                 break
             }

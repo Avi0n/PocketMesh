@@ -184,6 +184,9 @@ public actor BLEService: NSObject, BLETransport {
     // Disconnection handling
     private var disconnectionHandler: (@Sendable (UUID, Error?) -> Void)?
 
+    /// Reconnection completion callback - called when iOS auto-reconnect succeeds
+    private var reconnectionHandler: (@Sendable (UUID) -> Void)?
+
     /// Callback when send activity state changes (busy/idle)
     private var sendActivityHandler: (@Sendable (Bool) -> Void)?
 
@@ -523,6 +526,11 @@ public actor BLEService: NSObject, BLETransport {
     /// Sets a handler for disconnection events
     public func setDisconnectionHandler(_ handler: @escaping @Sendable (UUID, Error?) -> Void) async {
         disconnectionHandler = handler
+    }
+
+    /// Sets a handler for reconnection events (iOS auto-reconnect completion)
+    public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID) -> Void) async {
+        reconnectionHandler = handler
     }
 
     /// Set handler for send activity changes
@@ -1034,6 +1042,11 @@ extension BLEService: CBPeripheralDelegate {
             #if DEBUG
             print("[BLE] Auto-reconnection complete, state restored to connected")
             #endif
+
+            // Notify that reconnection completed - device may have rebooted
+            if let peripheral = connectedPeripheral {
+                reconnectionHandler?(peripheral.identifier)
+            }
         }
     }
 

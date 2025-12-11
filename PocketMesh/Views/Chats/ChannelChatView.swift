@@ -75,6 +75,14 @@ struct ChannelChatView: View {
                 Task {
                     await viewModel.loadChannelMessages(for: channel)
                 }
+            case .messageFailed(let messageID):
+                // Only reload if this message belongs to the current channel
+                // This prevents multiple reloads when several messages fail at once
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadChannelMessages(for: channel)
+                    }
+                }
             default:
                 break
             }

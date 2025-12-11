@@ -142,6 +142,16 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up message service for send confirmation handling
         messageEventBroadcaster.messageService = messageService
 
+        // Set up message failure handler to notify UI
+        Task {
+            await messageService.setMessageFailedHandler { [weak self] messageID in
+                guard let self else { return }
+                await MainActor.run {
+                    self.messageEventBroadcaster.handleMessageFailed(messageID: messageID)
+                }
+            }
+        }
+
         // Set up channel name lookup for notifications
         messageEventBroadcaster.channelNameLookup = { [dataStore] deviceID, channelIndex in
             let channel = try? await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
@@ -252,6 +262,26 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             Task { @MainActor in
                 guard let self else { return }
                 await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
+            }
+        }
+
+        // Set up reconnection handler - initialize device after iOS auto-reconnect
+        await bleService.setReconnectionHandler { [weak self] deviceID in
+            Task { @MainActor in
+                guard let self else { return }
+                print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+
+                // Device may have rebooted - fail any pending messages first
+                // They won't receive ACKs since device lost state
+                do {
+                    try await self.messageService.failAllPendingMessages()
+                } catch {
+                    print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                }
+
+                // Initialize device to transition from .connected to .ready
+                // This also restarts message polling and syncs contacts/channels
+                await self.handleRestoredConnection(deviceID: deviceID)
             }
         }
 
@@ -457,6 +487,20 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                     }
                 }
 
+                // Set up reconnection handler - initialize device after iOS auto-reconnect
+                await bleService.setReconnectionHandler { [weak self] deviceID in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+                        do {
+                            try await self.messageService.failAllPendingMessages()
+                        } catch {
+                            print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                        }
+                        await self.handleRestoredConnection(deviceID: deviceID)
+                    }
+                }
+
                 // Wait for Bluetooth to be ready
                 await bleService.waitForBluetoothReady()
 
@@ -641,6 +685,20 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                     Task { @MainActor in
                         guard let self else { return }
                         await self.bleStateRestoration.handleConnectionLoss(deviceID: deviceID, error: error)
+                    }
+                }
+
+                // Set up reconnection handler - initialize device after iOS auto-reconnect
+                await bleService.setReconnectionHandler { [weak self] deviceID in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+                        do {
+                            try await self.messageService.failAllPendingMessages()
+                        } catch {
+                            print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                        }
+                        await self.handleRestoredConnection(deviceID: deviceID)
                     }
                 }
 
@@ -921,8 +979,14 @@ extension AppState: BLEStateRestorationDelegate {
     public func bleStateRestoration(_ restoration: BLEStateRestoration, didLoseConnection deviceID: UUID, error: Error?) async {
         // Handle unexpected disconnection
         connectionState = .disconnected
-
         connectedDevice = nil
+
+        // Atomically stop ACK checking and fail all pending messages
+        do {
+            try await messageService.stopAndFailAllPending()
+        } catch {
+            print("[AppState] Failed to mark pending messages as failed: \(error)")
+        }
 
         // Wait before attempting reconnection to avoid CoreBluetooth state machine issues
         try? await Task.sleep(for: .milliseconds(100))

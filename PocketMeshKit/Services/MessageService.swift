@@ -67,6 +67,9 @@ public actor MessageService {
     /// ACK confirmation callback
     private var ackConfirmationHandler: (@Sendable (UInt32, UInt32) -> Void)?
 
+    /// Message failure callback (messageID)
+    private var messageFailedHandler: (@Sendable (UUID) async -> Void)?
+
     /// Task for periodic ACK expiry checking
     private var ackCheckTask: Task<Void, Never>?
 
@@ -310,6 +313,11 @@ public actor MessageService {
         ackConfirmationHandler = handler
     }
 
+    /// Sets a callback for message failures (timeout or send error).
+    public func setMessageFailedHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
+        messageFailedHandler = handler
+    }
+
     /// Grace period for tracking repeats after delivery (60 seconds)
     private let repeatTrackingGracePeriod: TimeInterval = 60.0
 
@@ -327,6 +335,59 @@ public actor MessageService {
             if let tracking = pendingAcks.removeValue(forKey: ackCode) {
                 try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
                 print("[MessageService] Message failed - ack: \(ackCode), timeout exceeded")
+
+                // Handler is called after updating pendingAcks to ensure consistent state
+                // if handler triggers re-entrant calls to MessageService
+                await messageFailedHandler?(tracking.messageID)
+            }
+        }
+    }
+
+    /// Fails all pending (undelivered) messages without stopping ACK checking.
+    /// Called when iOS auto-reconnect completes - device may have rebooted and lost state.
+    public func failAllPendingMessages() async throws {
+        // Collect all undelivered entries
+        let pendingCodes = pendingAcks.filter { _, tracking in
+            !tracking.isDelivered
+        }.keys
+
+        guard !pendingCodes.isEmpty else {
+            print("[MessageService] No pending messages to fail after reconnect")
+            return
+        }
+
+        for ackCode in pendingCodes {
+            if let tracking = pendingAcks.removeValue(forKey: ackCode) {
+                try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
+                print("[MessageService] Message failed - ack: \(ackCode), device reconnected (may have rebooted)")
+
+                // Handler is called after updating pendingAcks to ensure consistent state
+                await messageFailedHandler?(tracking.messageID)
+            }
+        }
+    }
+
+    /// Atomically stops ACK checking and fails all pending messages.
+    /// Called when BLE connection is lost to provide instant feedback.
+    /// Combines both operations to prevent race conditions.
+    public func stopAndFailAllPending() async throws {
+        // Stop ACK checking first to prevent race with checkExpiredAcks()
+        ackCheckTask?.cancel()
+        ackCheckTask = nil
+
+        // Collect all undelivered entries
+        let pendingCodes = pendingAcks.filter { _, tracking in
+            !tracking.isDelivered
+        }.keys
+
+        for ackCode in pendingCodes {
+            if let tracking = pendingAcks.removeValue(forKey: ackCode) {
+                try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
+                print("[MessageService] Message failed - ack: \(ackCode), BLE disconnected")
+
+                // Handler is called after updating pendingAcks to ensure consistent state
+                // if handler triggers re-entrant calls to MessageService
+                await messageFailedHandler?(tracking.messageID)
             }
         }
     }
@@ -397,6 +458,11 @@ public actor MessageService {
     /// Returns current pending ACK count.
     public var pendingAckCount: Int {
         pendingAcks.count
+    }
+
+    /// Returns whether ACK expiry checking is currently active.
+    public var isAckExpiryCheckingActive: Bool {
+        ackCheckTask != nil
     }
 
     /// Gets pending ACK info for a message.

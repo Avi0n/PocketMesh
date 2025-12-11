@@ -636,4 +636,174 @@ struct MessageServiceTests {
         pending = await service.getPendingAck(for: result.id)
         #expect(pending != nil)
     }
+
+    // MARK: - Message Failure Handler Tests
+
+    @Test("Message failed handler callback on timeout")
+    func messageFailedHandlerCalledOnTimeout() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Very short timeout (10ms)
+        await transport.queueResponse(createSentResponse(ackCode: 666, timeout: 10))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let failedMessageIDs = MutableBox<[UUID]>([])
+        await service.setMessageFailedHandler { messageID in
+            failedMessageIDs.value.append(messageID)
+        }
+
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // Wait for timeout to expire
+        try await Task.sleep(for: .milliseconds(50))
+
+        // Check expired ACKs
+        try await service.checkExpiredAcks()
+
+        // Verify handler was called with correct message ID
+        #expect(failedMessageIDs.value.count == 1)
+        #expect(failedMessageIDs.value.first == result.id)
+
+        // Verify message is marked as failed
+        let messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .failed)
+    }
+
+    @Test("stopAndFailAllPending marks messages as failed and stops ACK checking")
+    func stopAndFailAllPendingMarksMessagesAsFailed() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Queue responses for two messages with long timeout
+        await transport.queueResponses([
+            createSentResponse(ackCode: 777, timeout: 60000),
+            createSentResponse(ackCode: 778, timeout: 60000)
+        ])
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let failedMessageIDs = MutableBox<[UUID]>([])
+        await service.setMessageFailedHandler { messageID in
+            failedMessageIDs.value.append(messageID)
+        }
+
+        // Start ACK checking
+        await service.startAckExpiryChecking(interval: 5.0)
+        var isActive = await service.isAckExpiryCheckingActive
+        #expect(isActive)
+
+        // Send two messages
+        let resultA = try await service.sendDirectMessage(text: "Message A", to: contact)
+        let resultB = try await service.sendDirectMessage(text: "Message B", to: contact)
+
+        // Verify both messages are in sent/pending status
+        var messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.count == 2)
+        #expect(messages.allSatisfy { $0.status == .sent })
+
+        // Atomically stop and fail all pending
+        try await service.stopAndFailAllPending()
+
+        // Verify ACK checking is stopped
+        isActive = await service.isAckExpiryCheckingActive
+        #expect(!isActive)
+
+        // Verify both messages are now failed
+        messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.allSatisfy { $0.status == .failed })
+
+        // Verify handler was called for both messages
+        #expect(failedMessageIDs.value.count == 2)
+        #expect(failedMessageIDs.value.contains(resultA.id))
+        #expect(failedMessageIDs.value.contains(resultB.id))
+
+        // Verify pending ACK count is 0
+        let pendingCount = await service.pendingAckCount
+        #expect(pendingCount == 0)
+    }
+
+    @Test("failAllPendingMessages marks messages as failed but keeps ACK checking active")
+    func failAllPendingMessagesKeepsAckCheckingActive() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        await transport.queueResponse(createSentResponse(ackCode: 888, timeout: 60000))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let failedMessageIDs = MutableBox<[UUID]>([])
+        await service.setMessageFailedHandler { messageID in
+            failedMessageIDs.value.append(messageID)
+        }
+
+        // Start ACK checking
+        await service.startAckExpiryChecking(interval: 5.0)
+        var isActive = await service.isAckExpiryCheckingActive
+        #expect(isActive)
+
+        // Send a message
+        let result = try await service.sendDirectMessage(text: "Hello!", to: contact)
+
+        // Verify message is in sent status
+        var messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .sent)
+
+        // Fail all pending (reconnection scenario - keeps ACK checking active)
+        try await service.failAllPendingMessages()
+
+        // Verify ACK checking is STILL active
+        isActive = await service.isAckExpiryCheckingActive
+        #expect(isActive)
+
+        // Verify message is now failed
+        messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.first?.status == .failed)
+
+        // Verify handler was called
+        #expect(failedMessageIDs.value.count == 1)
+        #expect(failedMessageIDs.value.first == result.id)
+
+        // Clean up
+        await service.stopAckExpiryChecking()
+    }
+
+    @Test("failAllPendingMessages with no pending messages does nothing")
+    func failAllPendingMessagesWithNoPendingDoesNothing() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        let failedMessageIDs = MutableBox<[UUID]>([])
+        await service.setMessageFailedHandler { messageID in
+            failedMessageIDs.value.append(messageID)
+        }
+
+        // Call failAllPendingMessages with no pending messages - should not throw
+        try await service.failAllPendingMessages()
+
+        // Verify handler was not called
+        #expect(failedMessageIDs.value.isEmpty)
+    }
 }

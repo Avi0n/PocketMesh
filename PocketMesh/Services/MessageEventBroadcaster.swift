@@ -6,6 +6,7 @@ public enum MessageEvent: Sendable, Equatable {
     case directMessageReceived(message: MessageDTO, contact: ContactDTO)
     case channelMessageReceived(message: MessageDTO, channelIndex: UInt8)
     case messageStatusUpdated(ackCode: UInt32)
+    case messageFailed(messageID: UUID)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -128,5 +129,11 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         } catch {
             print("[MessageEventBroadcaster] Failed to handle send confirmation: \(error)")
         }
+    }
+
+    /// Called when a message fails due to ACK timeout
+    func handleMessageFailed(messageID: UUID) {
+        self.latestEvent = .messageFailed(messageID: messageID)
+        self.newMessageCount += 1
     }
 }
