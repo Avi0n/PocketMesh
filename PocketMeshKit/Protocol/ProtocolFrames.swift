@@ -310,3 +310,212 @@ public struct TuningParams: Sendable, Equatable {
         self.airtimeFactor = airtimeFactor
     }
 }
+
+// MARK: - Binary Protocol Frames
+
+/// Remote node status from binary protocol request
+public struct RemoteNodeStatus: Sendable, Equatable {
+    public let publicKeyPrefix: Data
+    public let batteryMillivolts: UInt16
+    public let txQueueLength: UInt16
+    public let noiseFloor: Int16
+    public let lastRssi: Int16
+    public let packetsReceived: UInt32
+    public let packetsSent: UInt32
+    public let airtimeSeconds: UInt32
+    public let uptimeSeconds: UInt32
+    public let sentFlood: UInt32
+    public let sentDirect: UInt32
+    public let receivedFlood: UInt32
+    public let receivedDirect: UInt32
+    public let fullEvents: UInt16
+    public let lastSnr: Float  // Stored as Int16 * 4 in protocol
+    public let directDuplicates: UInt16
+    public let floodDuplicates: UInt16
+    public let rxAirtimeSeconds: UInt32
+
+    public init(
+        publicKeyPrefix: Data,
+        batteryMillivolts: UInt16,
+        txQueueLength: UInt16,
+        noiseFloor: Int16,
+        lastRssi: Int16,
+        packetsReceived: UInt32,
+        packetsSent: UInt32,
+        airtimeSeconds: UInt32,
+        uptimeSeconds: UInt32,
+        sentFlood: UInt32,
+        sentDirect: UInt32,
+        receivedFlood: UInt32,
+        receivedDirect: UInt32,
+        fullEvents: UInt16,
+        lastSnr: Float,
+        directDuplicates: UInt16,
+        floodDuplicates: UInt16,
+        rxAirtimeSeconds: UInt32
+    ) {
+        self.publicKeyPrefix = publicKeyPrefix
+        self.batteryMillivolts = batteryMillivolts
+        self.txQueueLength = txQueueLength
+        self.noiseFloor = noiseFloor
+        self.lastRssi = lastRssi
+        self.packetsReceived = packetsReceived
+        self.packetsSent = packetsSent
+        self.airtimeSeconds = airtimeSeconds
+        self.uptimeSeconds = uptimeSeconds
+        self.sentFlood = sentFlood
+        self.sentDirect = sentDirect
+        self.receivedFlood = receivedFlood
+        self.receivedDirect = receivedDirect
+        self.fullEvents = fullEvents
+        self.lastSnr = lastSnr
+        self.directDuplicates = directDuplicates
+        self.floodDuplicates = floodDuplicates
+        self.rxAirtimeSeconds = rxAirtimeSeconds
+    }
+}
+
+/// Neighbor information from binary protocol request
+public struct NeighbourInfo: Sendable, Equatable {
+    public let publicKeyPrefix: Data
+    public let secondsAgo: Int32
+    public let snr: Float
+
+    public init(publicKeyPrefix: Data, secondsAgo: Int32, snr: Float) {
+        self.publicKeyPrefix = publicKeyPrefix
+        self.secondsAgo = secondsAgo
+        self.snr = snr
+    }
+}
+
+/// Neighbours response from binary protocol
+public struct NeighboursResponse: Sendable, Equatable {
+    public let tag: Data
+    public let totalCount: Int16
+    public let resultsCount: Int16
+    public let neighbours: [NeighbourInfo]
+
+    public init(tag: Data, totalCount: Int16, resultsCount: Int16, neighbours: [NeighbourInfo]) {
+        self.tag = tag
+        self.totalCount = totalCount
+        self.resultsCount = resultsCount
+        self.neighbours = neighbours
+    }
+}
+
+/// Binary response with raw data and optional parsed content
+public struct BinaryResponse: Sendable, Equatable {
+    public let tag: Data
+    public let rawData: Data
+
+    public init(tag: Data, rawData: Data) {
+        self.tag = tag
+        self.rawData = rawData
+    }
+}
+
+// MARK: - Telemetry Frames
+
+/// Telemetry response containing LPP sensor data
+public struct TelemetryResponse: Sendable, Equatable {
+    public let publicKeyPrefix: Data
+    public let dataPoints: [LPPDataPoint]
+
+    public init(publicKeyPrefix: Data, dataPoints: [LPPDataPoint]) {
+        self.publicKeyPrefix = publicKeyPrefix
+        self.dataPoints = dataPoints
+    }
+}
+
+// MARK: - Path Discovery Frames
+
+/// Path discovery response containing outbound and inbound paths
+public struct PathDiscoveryResponse: Sendable, Equatable {
+    public let publicKeyPrefix: Data
+    public let outboundPath: Data
+    public let inboundPath: Data
+
+    public init(publicKeyPrefix: Data, outboundPath: Data, inboundPath: Data) {
+        self.publicKeyPrefix = publicKeyPrefix
+        self.outboundPath = outboundPath
+        self.inboundPath = inboundPath
+    }
+}
+
+// MARK: - Trace Frames
+
+/// A single node in a trace path with its hash byte and SNR
+public struct TracePathNode: Sendable, Equatable {
+    public let hashByte: UInt8
+    public let snr: Float
+
+    public init(hashByte: UInt8, snr: Float) {
+        self.hashByte = hashByte
+        self.snr = snr
+    }
+}
+
+/// Trace data response containing path diagnostics
+public struct TraceData: Sendable, Equatable {
+    public let tag: UInt32
+    public let authCode: UInt32
+    public let flags: UInt8
+    public let path: [TracePathNode]
+    public let finalSnr: Float
+
+    public init(tag: UInt32, authCode: UInt32, flags: UInt8, path: [TracePathNode], finalSnr: Float) {
+        self.tag = tag
+        self.authCode = authCode
+        self.flags = flags
+        self.path = path
+        self.finalSnr = finalSnr
+    }
+}
+
+// MARK: - Control Data Frames
+
+/// Control data packet received from mesh network
+public struct ControlDataPacket: Sendable, Equatable {
+    public let snr: Float
+    public let rssi: Int8
+    public let pathLength: UInt8
+    public let payloadType: UInt8
+    public let payload: Data
+
+    public init(snr: Float, rssi: Int8, pathLength: UInt8, payloadType: UInt8, payload: Data) {
+        self.snr = snr
+        self.rssi = rssi
+        self.pathLength = pathLength
+        self.payloadType = payloadType
+        self.payload = payload
+    }
+}
+
+/// Node discovery response from control data protocol
+public struct NodeDiscoverResponse: Sendable, Equatable {
+    public let snr: Float
+    public let rssi: Int8
+    public let pathLength: UInt8
+    public let nodeType: UInt8
+    public let snrIn: Float
+    public let tag: Data
+    public let publicKey: Data
+
+    public init(
+        snr: Float,
+        rssi: Int8,
+        pathLength: UInt8,
+        nodeType: UInt8,
+        snrIn: Float,
+        tag: Data,
+        publicKey: Data
+    ) {
+        self.snr = snr
+        self.rssi = rssi
+        self.pathLength = pathLength
+        self.nodeType = nodeType
+        self.snrIn = snrIn
+        self.tag = tag
+        self.publicKey = publicKey
+    }
+}

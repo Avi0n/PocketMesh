@@ -90,6 +90,7 @@ public enum ResponseCode: UInt8, Sendable {
     case advertPath = 0x16
     case tuningParams = 0x17
     case stats = 0x18
+    case hasConnection = 0x19
 }
 
 // MARK: - Push Codes (Device → Client, Unsolicited)
@@ -184,4 +185,24 @@ public enum TelemetryMode: UInt8, Sendable, Codable {
 public enum AdvertLocationPolicy: UInt8, Sendable, Codable {
     case none = 0
     case share = 1
+}
+
+// MARK: - Binary Request Types
+
+/// Binary request types for querying remote nodes
+public enum BinaryRequestType: UInt8, Sendable {
+    case status = 0x01
+    case keepAlive = 0x02
+    case telemetry = 0x03
+    case mma = 0x04  // Min/Max/Avg historical data
+    case acl = 0x05  // Access Control List
+    case neighbours = 0x06
+}
+
+// MARK: - Control Data Types
+
+/// Control data message types for node discovery
+public enum ControlDataType: UInt8, Sendable {
+    case nodeDiscoverRequest = 0x80
+    case nodeDiscoverResponse = 0x90
 }

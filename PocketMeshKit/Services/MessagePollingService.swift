@@ -53,6 +53,7 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
     func messagePollingService(_ service: MessagePollingService, didReceiveUnknownSender keyPrefix: Data) async
     func messagePollingService(_ service: MessagePollingService, didEncounterError error: MessagePollingError) async
     func messagePollingService(_ service: MessagePollingService, didReceiveSendConfirmation confirmation: SendConfirmation) async
+    func messagePollingService(_ service: MessagePollingService, didReceiveStatusResponse status: RemoteNodeStatus) async
 }
 
 // MARK: - Message Polling Service Actor
@@ -262,6 +263,15 @@ public actor MessagePollingService {
         case PushCode.pathUpdated.rawValue:
             // Path update - handled by ContactService
             break
+
+        case PushCode.statusResponse.rawValue:
+            // Status response from remote node
+            do {
+                let status = try FrameCodec.decodeStatusResponse(from: data)
+                await delegate?.messagePollingService(self, didReceiveStatusResponse: status)
+            } catch {
+                print("[MessagePollingService] Failed to decode status response: \(error)")
+            }
 
         default:
             // Other push codes handled elsewhere

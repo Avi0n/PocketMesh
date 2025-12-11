@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 public enum FrameCodec {
@@ -224,6 +225,118 @@ public enum FrameCodec {
     public static func encodeShareContact(publicKey: Data) -> Data {
         var data = Data([CommandCode.shareContact.rawValue])
         data.append(publicKey.prefix(32))
+        return data
+    }
+
+    // MARK: - Binary Protocol Encoding
+
+    /// Encode a binary protocol request
+    /// - Parameters:
+    ///   - recipientPublicKey: Full 32-byte public key of recipient
+    ///   - requestType: Type of binary request
+    ///   - additionalData: Optional additional data for the request
+    /// - Returns: Encoded frame data
+    public static func encodeBinaryRequest(
+        recipientPublicKey: Data,
+        requestType: BinaryRequestType,
+        additionalData: Data? = nil
+    ) -> Data {
+        var data = Data([CommandCode.sendBinaryRequest.rawValue])
+        data.append(recipientPublicKey.prefix(32))
+        data.append(requestType.rawValue)
+        if let additional = additionalData {
+            data.append(additional)
+        }
+        return data
+    }
+
+    /// Encode a neighbours request with pagination
+    /// - Parameters:
+    ///   - recipientPublicKey: Full 32-byte public key of recipient
+    ///   - count: Number of neighbours to return (max 255)
+    ///   - offset: Offset for pagination
+    ///   - orderBy: Sort order (0 = default)
+    ///   - pubkeyPrefixLength: Length of public key prefix in response (4-32)
+    ///   - tag: Optional correlation tag (random if not provided)
+    /// - Returns: Encoded frame data
+    public static func encodeNeighboursRequest(
+        recipientPublicKey: Data,
+        count: UInt8 = 255,
+        offset: UInt16 = 0,
+        orderBy: UInt8 = 0,
+        pubkeyPrefixLength: UInt8 = 4,
+        tag: UInt32? = nil
+    ) -> Data {
+        var additionalData = Data()
+        additionalData.append(0x00)  // version
+        additionalData.append(count)
+        additionalData.append(contentsOf: withUnsafeBytes(of: offset.littleEndian) { Array($0) })
+        additionalData.append(orderBy)
+        additionalData.append(pubkeyPrefixLength)
+        // Random tag for correlation if not provided
+        let actualTag = tag ?? UInt32.random(in: 1...UInt32.max)
+        additionalData.append(contentsOf: withUnsafeBytes(of: actualTag.littleEndian) { Array($0) })
+
+        return encodeBinaryRequest(
+            recipientPublicKey: recipientPublicKey,
+            requestType: .neighbours,
+            additionalData: additionalData
+        )
+    }
+
+    // MARK: - Telemetry Encoding
+
+    /// Encode telemetry request (get self telemetry)
+    public static func encodeSelfTelemetryRequest() -> Data {
+        // 0x27 0x00 0x00 0x00 - request own telemetry
+        Data([CommandCode.sendTelemetryRequest.rawValue, 0x00, 0x00, 0x00])
+    }
+
+    /// Encode telemetry request to a remote node
+    /// - Parameter recipientPublicKey: Full 32-byte public key of recipient
+    public static func encodeTelemetryRequest(recipientPublicKey: Data) -> Data {
+        var data = Data([CommandCode.sendTelemetryRequest.rawValue, 0x00, 0x00, 0x00])
+        data.append(recipientPublicKey.prefix(32))
+        return data
+    }
+
+    // MARK: - Path Discovery Encoding
+
+    /// Encode path discovery request
+    /// - Parameter recipientPublicKey: Full 32-byte public key of recipient
+    /// - Returns: Encoded frame data
+    public static func encodePathDiscovery(recipientPublicKey: Data) -> Data {
+        var data = Data([CommandCode.sendPathDiscoveryRequest.rawValue, 0x00])
+        data.append(recipientPublicKey.prefix(32))
+        return data
+    }
+
+    // MARK: - Trace Encoding
+
+    /// Encode trace packet request for route diagnostics
+    /// - Parameters:
+    ///   - tag: Optional correlation tag (random if not provided)
+    ///   - authCode: Authentication code (default 0)
+    ///   - flags: Trace flags (default 0)
+    ///   - path: Optional path data to trace through
+    /// - Returns: Encoded frame data
+    public static func encodeTrace(
+        tag: UInt32? = nil,
+        authCode: UInt32 = 0,
+        flags: UInt8 = 0,
+        path: Data? = nil
+    ) -> Data {
+        let actualTag = tag ?? UInt32.random(in: 1...UInt32.max)
+
+        var data = Data([CommandCode.sendTracePath.rawValue])
+        data.append(contentsOf: withUnsafeBytes(of: actualTag.littleEndian) { Array($0) })
+        data.append(contentsOf: withUnsafeBytes(of: authCode.littleEndian) { Array($0) })
+        data.append(flags)
+
+        if let pathData = path {
+            data.append(pathData)
+        }
+
         return data
     }
 
@@ -594,6 +707,499 @@ public enum FrameCodec {
             serverTimestamp: serverTimestamp,
             aclPermissions: aclPermissions,
             firmwareLevel: firmwareLevel
+        )
+    }
+
+    // MARK: - Binary Protocol Decoding
+
+    /// Decode a binary response push
+    /// - Parameter data: Raw push data starting with PushCode.binaryResponse
+    /// - Returns: Parsed BinaryResponse with tag and raw data
+    public static func decodeBinaryResponse(from data: Data) throws -> BinaryResponse {
+        guard data.count >= 6, data[0] == PushCode.binaryResponse.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        // Skip reserved byte at index 1
+        let tag = data.subdata(in: 2..<6)
+        let rawData = data.suffix(from: 6)
+
+        return BinaryResponse(tag: tag, rawData: Data(rawData))
+    }
+
+    /// Decode remote node status from binary response data
+    /// - Parameters:
+    ///   - data: Raw response data (without tag)
+    ///   - publicKeyPrefix: Public key prefix of the responding node
+    /// - Returns: Parsed RemoteNodeStatus
+    public static func decodeRemoteNodeStatus(from data: Data, publicKeyPrefix: Data) throws -> RemoteNodeStatus {
+        guard data.count >= 52 else {
+            throw ProtocolError.illegalArgument
+        }
+
+        var offset = 0
+
+        let batteryMillivolts = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+        offset += 2
+
+        let txQueueLength = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+        offset += 2
+
+        let noiseFloor = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
+        offset += 2
+
+        let lastRssi = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
+        offset += 2
+
+        let packetsReceived = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let packetsSent = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let airtimeSeconds = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let uptimeSeconds = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let sentFlood = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let sentDirect = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let receivedFlood = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let receivedDirect = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        offset += 4
+
+        let fullEvents = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+        offset += 2
+
+        let lastSnrRaw = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
+        let lastSnr = Float(lastSnrRaw) / 4.0
+        offset += 2
+
+        let directDuplicates = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+        offset += 2
+
+        let floodDuplicates = data.subdata(in: offset..<(offset + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+        offset += 2
+
+        let rxAirtimeSeconds = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+
+        return RemoteNodeStatus(
+            publicKeyPrefix: publicKeyPrefix,
+            batteryMillivolts: batteryMillivolts,
+            txQueueLength: txQueueLength,
+            noiseFloor: noiseFloor,
+            lastRssi: lastRssi,
+            packetsReceived: packetsReceived,
+            packetsSent: packetsSent,
+            airtimeSeconds: airtimeSeconds,
+            uptimeSeconds: uptimeSeconds,
+            sentFlood: sentFlood,
+            sentDirect: sentDirect,
+            receivedFlood: receivedFlood,
+            receivedDirect: receivedDirect,
+            fullEvents: fullEvents,
+            lastSnr: lastSnr,
+            directDuplicates: directDuplicates,
+            floodDuplicates: floodDuplicates,
+            rxAirtimeSeconds: rxAirtimeSeconds
+        )
+    }
+
+    /// Decode neighbours response from binary response data
+    /// - Parameters:
+    ///   - data: Raw response data (without tag)
+    ///   - tag: Response tag for correlation
+    ///   - pubkeyPrefixLength: Expected length of public key prefixes
+    /// - Returns: Parsed NeighboursResponse
+    public static func decodeNeighboursResponse(
+        from data: Data,
+        tag: Data,
+        pubkeyPrefixLength: Int
+    ) throws -> NeighboursResponse {
+        guard data.count >= 4 else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let totalCount = data.subdata(in: 0..<2).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
+        let resultsCount = data.subdata(in: 2..<4).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
+
+        var neighbours: [NeighbourInfo] = []
+        var offset = 4
+        let entrySize = pubkeyPrefixLength + 5  // pubkey + 4 bytes secondsAgo + 1 byte SNR
+
+        for _ in 0..<resultsCount {
+            guard offset + entrySize <= data.count else { break }
+
+            let pubkey = data.subdata(in: offset..<(offset + pubkeyPrefixLength))
+            offset += pubkeyPrefixLength
+
+            let secondsAgo = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
+            offset += 4
+
+            let snrRaw = Int8(bitPattern: data[offset])
+            let snr = Float(snrRaw) / 4.0
+            offset += 1
+
+            neighbours.append(NeighbourInfo(
+                publicKeyPrefix: pubkey,
+                secondsAgo: secondsAgo,
+                snr: snr
+            ))
+        }
+
+        return NeighboursResponse(
+            tag: tag,
+            totalCount: totalCount,
+            resultsCount: resultsCount,
+            neighbours: neighbours
+        )
+    }
+
+    // MARK: - Status Response Decoding
+
+    /// Decode status response push (0x87)
+    /// - Parameter data: Raw push data starting with PushCode.statusResponse
+    /// - Returns: Parsed RemoteNodeStatus
+    public static func decodeStatusResponse(from data: Data) throws -> RemoteNodeStatus {
+        guard data.count >= 60, data[0] == PushCode.statusResponse.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        // Format: 0x87, reserved(1), pubkey_prefix(6), status_data(52)
+        let publicKeyPrefix = data.subdata(in: 2..<8)
+        let statusData = data.suffix(from: 8)
+
+        return try decodeRemoteNodeStatus(from: Data(statusData), publicKeyPrefix: publicKeyPrefix)
+    }
+
+    // MARK: - Telemetry Decoding
+
+    /// Decode telemetry response push
+    /// - Parameter data: Raw push data starting with PushCode.telemetryResponse
+    /// - Returns: Parsed TelemetryResponse with LPP data points
+    public static func decodeTelemetryResponse(from data: Data) throws -> TelemetryResponse {
+        guard data.count >= 8, data[0] == PushCode.telemetryResponse.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        // Format: 0x8B, reserved(1), pubkey_prefix(6), lpp_data(...)
+        let publicKeyPrefix = data.subdata(in: 2..<8)
+        let lppData = data.suffix(from: 8)
+
+        let dataPoints = LPPDecoder.decode(Data(lppData))
+
+        return TelemetryResponse(
+            publicKeyPrefix: publicKeyPrefix,
+            dataPoints: dataPoints
+        )
+    }
+
+    // MARK: - Path Discovery Decoding
+
+    /// Decode path discovery response push
+    /// - Parameter data: Raw push data starting with PushCode.pathDiscoveryResponse
+    /// - Returns: Parsed PathDiscoveryResponse with outbound and inbound paths
+    public static func decodePathDiscoveryResponse(from data: Data) throws -> PathDiscoveryResponse {
+        guard data.count >= 10, data[0] == PushCode.pathDiscoveryResponse.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        // Format: 0x8D, reserved(1), pubkey_prefix(6), outPathLen(1), outPath(...), inPathLen(1), inPath(...)
+        let publicKeyPrefix = data.subdata(in: 2..<8)
+        var offset = 8
+
+        let outPathLen = Int(data[offset])
+        offset += 1
+
+        guard offset + outPathLen < data.count else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let outPath = data.subdata(in: offset..<(offset + outPathLen))
+        offset += outPathLen
+
+        guard offset < data.count else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let inPathLen = Int(data[offset])
+        offset += 1
+
+        guard offset + inPathLen <= data.count else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let inPath = data.subdata(in: offset..<(offset + inPathLen))
+
+        return PathDiscoveryResponse(
+            publicKeyPrefix: publicKeyPrefix,
+            outboundPath: outPath,
+            inboundPath: inPath
+        )
+    }
+
+    // MARK: - Trace Decoding
+
+    /// Decode trace data push containing path diagnostics
+    /// - Parameter data: Raw push data starting with PushCode.traceData
+    /// - Returns: Parsed TraceData with path nodes and SNR values
+    public static func decodeTraceData(from data: Data) throws -> TraceData {
+        // Format: 0x89, reserved(1), pathLen(1), flags(1), tag(4), authCode(4), [hashBytes...], [snrBytes...], finalSnr(1)
+        guard data.count >= 12, data[0] == PushCode.traceData.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        // Skip reserved byte at index 1
+        let pathLen = Int(data[2])
+        let flags = data[3]
+        let tag = data.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        let authCode = data.subdata(in: 8..<12).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+
+        var path: [TracePathNode] = []
+
+        // Parse path nodes: hashBytes followed by snrBytes
+        if pathLen > 0 && data.count >= 12 + pathLen * 2 + 1 {
+            for i in 0..<pathLen {
+                let hashByte = data[12 + i]
+                let snrRaw = Int8(bitPattern: data[12 + pathLen + i])
+                let snr = Float(snrRaw) / 4.0
+                path.append(TracePathNode(hashByte: hashByte, snr: snr))
+            }
+        }
+
+        // Final SNR is the last byte after all path data
+        let finalSnrIndex = 12 + pathLen * 2
+        let finalSnrByte = data.count > finalSnrIndex ? Int8(bitPattern: data[finalSnrIndex]) : 0
+        let finalSnr = Float(finalSnrByte) / 4.0
+
+        return TraceData(tag: tag, authCode: authCode, flags: flags, path: path, finalSnr: finalSnr)
+    }
+
+    // MARK: - Control Data Encoding
+
+    /// Encode control data packet
+    /// - Parameters:
+    ///   - controlType: Control data type byte
+    ///   - payload: Payload data for the control message
+    /// - Returns: Encoded frame data
+    public static func encodeControlData(controlType: UInt8, payload: Data) -> Data {
+        var data = Data([CommandCode.sendControlData.rawValue, controlType])
+        data.append(payload)
+        return data
+    }
+
+    /// Encode node discover request for finding nodes in the mesh
+    /// - Parameters:
+    ///   - filter: Node type filter (0 = all types)
+    ///   - prefixOnly: If true, responses contain only public key prefix; otherwise full key
+    ///   - tag: Optional correlation tag (random if not provided)
+    ///   - since: Optional timestamp to filter nodes seen after this time
+    /// - Returns: Encoded frame data
+    public static func encodeNodeDiscoverRequest(
+        filter: UInt8 = 0,
+        prefixOnly: Bool = true,
+        tag: UInt32? = nil,
+        since: UInt32? = nil
+    ) -> Data {
+        let actualTag = tag ?? UInt32.random(in: 1...UInt32.max)
+
+        var payload = Data()
+        payload.append(filter)
+        payload.append(contentsOf: withUnsafeBytes(of: actualTag.littleEndian) { Array($0) })
+
+        if let sinceValue = since {
+            payload.append(contentsOf: withUnsafeBytes(of: sinceValue.littleEndian) { Array($0) })
+        }
+
+        let flags: UInt8 = prefixOnly ? 1 : 0
+        let controlType = ControlDataType.nodeDiscoverRequest.rawValue | flags
+
+        return encodeControlData(controlType: controlType, payload: payload)
+    }
+
+    // MARK: - Flood Scope Encoding
+
+    /// Encode set flood scope command to limit flood routing
+    /// - Parameter scope: Scope identifier with the following behaviors:
+    ///   - If starts with "#": Hash the scope string using SHA256 and use first 16 bytes
+    ///   - If empty, "0", "None", or "*": Disable scope (16 zero bytes)
+    ///   - Otherwise: Use as raw key (padded to 16 bytes or truncated)
+    /// - Returns: Encoded frame data
+    public static func encodeSetFloodScope(_ scope: String) -> Data {
+        let scopeKey: Data
+
+        if scope.hasPrefix("#") {
+            // Hash the scope string
+            let hash = SHA256.hash(data: Data(scope.utf8))
+            scopeKey = Data(hash.prefix(16))
+        } else if scope.isEmpty || scope == "0" || scope == "None" || scope == "*" {
+            // Disable scope
+            scopeKey = Data(repeating: 0, count: 16)
+        } else {
+            // Use as raw key (padded/truncated to 16 bytes)
+            var keyData = Data(scope.utf8)
+            if keyData.count < 16 {
+                keyData.append(Data(repeating: 0, count: 16 - keyData.count))
+            } else if keyData.count > 16 {
+                keyData = keyData.prefix(16)
+            }
+            scopeKey = keyData
+        }
+
+        var data = Data([CommandCode.setFloodScope.rawValue, 0x00])
+        data.append(scopeKey)
+        return data
+    }
+
+    // MARK: - Custom Variables Encoding/Decoding
+
+    /// Encode get custom variables request
+    /// - Returns: Encoded frame data
+    public static func encodeGetCustomVars() -> Data {
+        Data([CommandCode.getCustomVars.rawValue])
+    }
+
+    /// Encode set custom variable command
+    /// - Parameters:
+    ///   - key: Variable key name
+    ///   - value: Variable value
+    /// - Returns: Encoded frame data
+    public static func encodeSetCustomVar(key: String, value: String) -> Data {
+        var data = Data([CommandCode.setCustomVar.rawValue])
+        data.append(Data("\(key):\(value)".utf8))
+        return data
+    }
+
+    /// Decode custom variables response
+    /// - Parameter data: Response data starting with ResponseCode.customVars
+    /// - Returns: Dictionary of key-value pairs
+    public static func decodeCustomVars(from data: Data) throws -> [String: String] {
+        guard data.count >= 1, data[0] == ResponseCode.customVars.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let rawData = data.suffix(from: 1)
+        guard let rawString = String(data: Data(rawData), encoding: .utf8), !rawString.isEmpty else {
+            return [:]
+        }
+
+        var result: [String: String] = [:]
+        for pair in rawString.split(separator: ",") {
+            let parts = pair.split(separator: ":", maxSplits: 1)
+            if parts.count == 2 {
+                result[String(parts[0])] = String(parts[1])
+            }
+        }
+
+        return result
+    }
+
+    // MARK: - Status Request Encoding
+
+    /// Encode status request to a contact
+    /// - Parameter recipientPublicKey: Full 32-byte public key of the recipient
+    /// - Returns: Encoded frame data
+    public static func encodeStatusRequest(recipientPublicKey: Data) -> Data {
+        var data = Data([CommandCode.sendStatusRequest.rawValue])
+        data.append(recipientPublicKey.prefix(32))
+        return data
+    }
+
+    // MARK: - Has Connection Encoding/Decoding
+
+    /// Encode has connection query to check if a contact has an active persistent connection
+    /// - Parameter recipientPublicKey: Full 32-byte public key of the contact
+    /// - Returns: Encoded frame data
+    public static func encodeHasConnection(recipientPublicKey: Data) -> Data {
+        var data = Data([CommandCode.hasConnection.rawValue])
+        data.append(recipientPublicKey.prefix(32))
+        return data
+    }
+
+    /// Decode has connection response
+    /// - Parameter data: Response data starting with ResponseCode.hasConnection
+    /// - Returns: true if the contact has an active connection, false otherwise
+    public static func decodeHasConnectionResponse(from data: Data) throws -> Bool {
+        guard data.count >= 2, data[0] == ResponseCode.hasConnection.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+        return data[1] != 0
+    }
+
+    // MARK: - Logout Encoding
+
+    /// Encode logout command to terminate a persistent connection with a contact
+    /// - Parameter recipientPublicKey: Full 32-byte public key of the contact
+    /// - Returns: Encoded frame data
+    public static func encodeLogout(recipientPublicKey: Data) -> Data {
+        var data = Data([CommandCode.logout.rawValue])
+        data.append(recipientPublicKey.prefix(32))
+        return data
+    }
+
+    // MARK: - Control Data Decoding
+
+    /// Decode control data push
+    /// - Parameter data: Raw push data starting with PushCode.controlData
+    /// - Returns: Parsed ControlDataPacket
+    public static func decodeControlData(from data: Data) throws -> ControlDataPacket {
+        // Format: 0x8E, snr(1), rssi(1), pathLength(1), payload(...)
+        guard data.count >= 4, data[0] == PushCode.controlData.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let snrRaw = Int8(bitPattern: data[1])
+        let snr = Float(snrRaw) / 4.0
+        let rssi = Int8(bitPattern: data[2])
+        let pathLength = data[3]
+        let payload = Data(data.suffix(from: 4))
+        let payloadType = payload.first ?? 0
+
+        return ControlDataPacket(
+            snr: snr,
+            rssi: rssi,
+            pathLength: pathLength,
+            payloadType: payloadType,
+            payload: payload
+        )
+    }
+
+    /// Decode node discover response from control data packet
+    /// - Parameter controlData: Previously decoded ControlDataPacket
+    /// - Returns: Parsed NodeDiscoverResponse if this is a node discover response, nil otherwise
+    public static func decodeNodeDiscoverResponse(from controlData: ControlDataPacket) throws -> NodeDiscoverResponse? {
+        // Check if this is a node discover response (high nibble = 0x90)
+        guard controlData.payloadType & 0xF0 == ControlDataType.nodeDiscoverResponse.rawValue else {
+            return nil
+        }
+
+        let payload = controlData.payload
+        // Minimum: type(1) + snrIn(1) + tag(4) = 6 bytes
+        guard payload.count >= 6 else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let nodeType = controlData.payloadType & 0x0F
+        let snrInRaw = Int8(bitPattern: payload[1])
+        let snrIn = Float(snrInRaw) / 4.0
+        let tag = payload.subdata(in: 2..<6)
+        let publicKey = Data(payload.suffix(from: 6))
+
+        return NodeDiscoverResponse(
+            snr: controlData.snr,
+            rssi: controlData.rssi,
+            pathLength: controlData.pathLength,
+            nodeType: nodeType,
+            snrIn: snrIn,
+            tag: tag,
+            publicKey: publicKey
         )
     }
 }

@@ -131,6 +131,16 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         }
     }
 
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveStatusResponse status: RemoteNodeStatus
+    ) async {
+        // Status responses can be used for node health monitoring
+        // For now, just log the receipt - future implementation could update contact status
+        let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
+        print("[MessageEventBroadcaster] Received status response from node: \(prefixHex)")
+    }
+
     /// Called when a message fails due to ACK timeout
     func handleMessageFailed(messageID: UUID) {
         self.latestEvent = .messageFailed(messageID: messageID)
