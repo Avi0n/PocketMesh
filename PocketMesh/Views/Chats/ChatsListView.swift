@@ -189,9 +189,7 @@ struct ConversationRow: View {
                     Spacer()
 
                     if let date = contact.lastMessageDate {
-                        Text(date, style: .relative)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        ConversationTimestamp(date: date)
                     }
                 }
 
@@ -381,9 +379,7 @@ struct ChannelConversationRow: View {
                     Spacer()
 
                     if let date = channel.lastMessageDate {
-                        Text(date, style: .relative)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        ConversationTimestamp(date: date)
                     }
                 }
 
@@ -453,6 +449,39 @@ struct ChannelAvatar: View {
         }
         let colors: [Color] = [.blue, .orange, .purple, .pink, .cyan, .indigo, .mint]
         return colors[Int(channel.index - 1) % colors.count]
+    }
+}
+
+// MARK: - Conversation Timestamp
+
+/// Formats timestamps for the chat list with absolute time display
+/// - Today: Time only (e.g., "1:14 PM")
+/// - Yesterday: "Yesterday"
+/// - Older: Date only (e.g., "Nov 15")
+struct ConversationTimestamp: View {
+    let date: Date
+
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            Text(formattedDate(relativeTo: context.date))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func formattedDate(relativeTo now: Date) -> String {
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(date) {
+            // Today: show time only (e.g., "1:14 PM")
+            return date.formatted(date: .omitted, time: .shortened)
+        } else if calendar.isDateInYesterday(date) {
+            // Yesterday: just show "Yesterday"
+            return "Yesterday"
+        } else {
+            // Older: show date only (e.g., "Nov 15")
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
     }
 }
 
