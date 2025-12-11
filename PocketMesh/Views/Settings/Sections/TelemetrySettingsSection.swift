@@ -4,11 +4,14 @@ import PocketMeshKit
 /// Telemetry sharing configuration
 struct TelemetrySettingsSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var allowTelemetryRequests = false
     @State private var includeLocation = false
     @State private var includeEnvironment = false
     @State private var filterByTrusted = false
     @State private var showError: String?
+    @State private var retryAlert = RetryAlertState()
+    @State private var isSaving = false
 
     var body: some View {
         Section {
@@ -23,6 +26,7 @@ struct TelemetrySettingsSection: View {
             .onChange(of: allowTelemetryRequests) { _, _ in
                 updateTelemetry()
             }
+            .disabled(isSaving)
 
             if allowTelemetryRequests {
                 Toggle(isOn: $includeLocation) {
@@ -36,6 +40,7 @@ struct TelemetrySettingsSection: View {
                 .onChange(of: includeLocation) { _, _ in
                     updateTelemetry()
                 }
+                .disabled(isSaving)
 
                 Toggle(isOn: $includeEnvironment) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -48,6 +53,7 @@ struct TelemetrySettingsSection: View {
                 .onChange(of: includeEnvironment) { _, _ in
                     updateTelemetry()
                 }
+                .disabled(isSaving)
 
                 Toggle(isOn: $filterByTrusted) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -57,6 +63,7 @@ struct TelemetrySettingsSection: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .disabled(isSaving)
 
                 if filterByTrusted {
                     NavigationLink {
@@ -75,6 +82,7 @@ struct TelemetrySettingsSection: View {
             loadCurrentSettings()
         }
         .errorAlert($showError)
+        .retryAlert(retryAlert)
     }
 
     private func loadCurrentSettings() {
@@ -87,6 +95,7 @@ struct TelemetrySettingsSection: View {
     private func updateTelemetry() {
         guard let device = appState.connectedDevice else { return }
 
+        isSaving = true
         Task {
             do {
                 let modes = TelemetryModes(
@@ -94,17 +103,28 @@ struct TelemetrySettingsSection: View {
                     location: includeLocation ? .allowAll : .deny,
                     environment: includeEnvironment ? .allowAll : .deny
                 )
-                try await appState.settingsService.setOtherParams(
-                    autoAddContacts: !device.manualAddContacts,
-                    telemetryModes: modes,
-                    shareLocationPublicly: device.advertLocationPolicy == 1,
-                    multiAcks: device.multiAcks
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.setOtherParamsVerified(
+                        autoAddContacts: !device.manualAddContacts,
+                        telemetryModes: modes,
+                        shareLocationPublicly: device.advertLocationPolicy == 1,
+                        multiAcks: device.multiAcks
+                    )
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                loadCurrentSettings() // Revert on error
+                retryAlert.show(
+                    message: error.localizedDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { updateTelemetry() },
+                    onMaxRetriesExceeded: { dismiss() }
                 )
-                await appState.refreshDeviceInfo()
             } catch {
                 loadCurrentSettings() // Revert on error
                 showError = error.localizedDescription
             }
+            isSaving = false
         }
     }
 }

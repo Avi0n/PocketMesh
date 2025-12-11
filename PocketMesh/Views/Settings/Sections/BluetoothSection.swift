@@ -158,7 +158,18 @@ struct BluetoothSection: View {
         isChangingPin = true
         Task {
             do {
-                try await appState.settingsService.setBlePin(pinValue)
+                try await appState.withSyncActivity {
+                    // Send PIN change command (written to RAM until reboot)
+                    try await appState.settingsService.setBlePin(pinValue)
+
+                    // Reboot device to apply PIN change
+                    try await appState.settingsService.reboot()
+                }
+
+                // Wait for device to start rebooting
+                try await Task.sleep(for: .milliseconds(500))
+
+                // Trigger re-pairing flow
                 await triggerRepairingFlow()
             } catch {
                 showError = error.localizedDescription
@@ -189,7 +200,18 @@ struct BluetoothSection: View {
         isChangingPin = true
         Task {
             do {
-                try await appState.settingsService.setBlePin(pin)
+                try await appState.withSyncActivity {
+                    // Send PIN change command (written to RAM until reboot)
+                    try await appState.settingsService.setBlePin(pin)
+
+                    // Reboot device to apply PIN change
+                    try await appState.settingsService.reboot()
+                }
+
+                // Wait for device to start rebooting
+                try await Task.sleep(for: .milliseconds(500))
+
+                // Trigger re-pairing flow
                 await triggerRepairingFlow()
             } catch {
                 showError = error.localizedDescription

@@ -11,6 +11,7 @@ struct LocationPickerView: View {
     @State private var selectedCoordinate: CLLocationCoordinate2D?
     @State private var isSaving = false
     @State private var showError: String?
+    @State private var retryAlert = RetryAlertState()
 
     var body: some View {
         NavigationStack {
@@ -74,6 +75,7 @@ struct LocationPickerView: View {
                 loadCurrentLocation()
             }
             .errorAlert($showError)
+            .retryAlert(retryAlert)
         }
     }
 
@@ -103,9 +105,21 @@ struct LocationPickerView: View {
         isSaving = true
         Task {
             do {
-                try await appState.settingsService.setLocation(latitude: coord.latitude, longitude: coord.longitude)
-                await appState.refreshDeviceInfo()
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.setLocationVerified(
+                        latitude: coord.latitude,
+                        longitude: coord.longitude
+                    )
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
                 dismiss()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                retryAlert.show(
+                    message: error.localizedDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { saveLocation() },
+                    onMaxRetriesExceeded: { dismiss() }
+                )
             } catch {
                 showError = error.localizedDescription
             }

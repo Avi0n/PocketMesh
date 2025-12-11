@@ -4,8 +4,11 @@ import PocketMeshKit
 /// Auto-add contacts toggle
 struct ContactsSettingsSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var autoAddContacts = true
     @State private var showError: String?
+    @State private var retryAlert = RetryAlertState()
+    @State private var isSaving = false
 
     var body: some View {
         Section {
@@ -20,6 +23,7 @@ struct ContactsSettingsSection: View {
             .onChange(of: autoAddContacts) { _, newValue in
                 updateAutoAdd(newValue)
             }
+            .disabled(isSaving)
         } header: {
             Text("Contacts")
         }
@@ -30,11 +34,13 @@ struct ContactsSettingsSection: View {
             }
         }
         .errorAlert($showError)
+        .retryAlert(retryAlert)
     }
 
     private func updateAutoAdd(_ enabled: Bool) {
         guard let device = appState.connectedDevice else { return }
 
+        isSaving = true
         Task {
             do {
                 let telemetryModes = TelemetryModes(
@@ -42,17 +48,28 @@ struct ContactsSettingsSection: View {
                     location: TelemetryMode(rawValue: device.telemetryModeLoc) ?? .deny,
                     environment: TelemetryMode(rawValue: device.telemetryModeEnv) ?? .deny
                 )
-                try await appState.settingsService.setOtherParams(
-                    autoAddContacts: enabled,
-                    telemetryModes: telemetryModes,
-                    shareLocationPublicly: device.advertLocationPolicy == 1,
-                    multiAcks: device.multiAcks
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.setOtherParamsVerified(
+                        autoAddContacts: enabled,
+                        telemetryModes: telemetryModes,
+                        shareLocationPublicly: device.advertLocationPolicy == 1,
+                        multiAcks: device.multiAcks
+                    )
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                autoAddContacts = !enabled // Revert
+                retryAlert.show(
+                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { updateAutoAdd(enabled) },
+                    onMaxRetriesExceeded: { dismiss() }
                 )
-                await appState.refreshDeviceInfo()
             } catch {
                 autoAddContacts = !enabled // Revert
                 showError = error.localizedDescription
             }
+            isSaving = false
         }
     }
 }

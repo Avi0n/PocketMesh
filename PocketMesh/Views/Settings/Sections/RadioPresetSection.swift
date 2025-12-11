@@ -4,10 +4,12 @@ import PocketMeshKit
 /// Radio preset selector with region-based filtering
 struct RadioPresetSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedPresetID: String?
     @State private var isApplying = false
     @State private var showError: String?
     @State private var hasInitialized = false
+    @State private var retryAlert = RetryAlertState()
 
     private var presets: [RadioPreset] {
         RadioPresets.presetsForLocale()
@@ -71,6 +73,7 @@ struct RadioPresetSection: View {
             }
         }
         .errorAlert($showError)
+        .retryAlert(retryAlert)
     }
 
     private func applyPreset(id: String) {
@@ -79,8 +82,18 @@ struct RadioPresetSection: View {
         isApplying = true
         Task {
             do {
-                try await appState.settingsService.applyRadioPreset(preset)
-                await appState.refreshDeviceInfo()
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.applyRadioPresetVerified(preset)
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                selectedPresetID = currentPreset?.id // Revert
+                retryAlert.show(
+                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { applyPreset(id: id) },
+                    onMaxRetriesExceeded: { dismiss() }
+                )
             } catch {
                 showError = error.localizedDescription
                 selectedPresetID = currentPreset?.id // Revert

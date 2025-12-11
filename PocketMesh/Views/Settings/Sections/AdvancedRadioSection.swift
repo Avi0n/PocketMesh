@@ -4,6 +4,7 @@ import PocketMeshKit
 /// Manual radio parameter configuration
 struct AdvancedRadioSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var frequency: String = ""
     @State private var bandwidth: String = ""
     @State private var spreadingFactor: String = ""
@@ -12,6 +13,7 @@ struct AdvancedRadioSection: View {
     @State private var isApplying = false
     @State private var showError: String?
     @State private var showConfirmation = false
+    @State private var retryAlert = RetryAlertState()
 
     var body: some View {
         Section {
@@ -89,6 +91,7 @@ struct AdvancedRadioSection: View {
             Text("Ensure all devices in your mesh use identical radio settings.")
         }
         .errorAlert($showError)
+        .retryAlert(retryAlert)
     }
 
     private func loadCurrentSettings() {
@@ -123,14 +126,30 @@ struct AdvancedRadioSection: View {
         isApplying = true
         Task {
             do {
-                try await appState.settingsService.setRadioParams(
-                    frequencyKHz: UInt32(freqMHz * 1000),
-                    bandwidthKHz: UInt32(bwKHz * 1000),
-                    spreadingFactor: sf,
-                    codingRate: cr
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    // Set radio params first
+                    var deviceInfo: DeviceInfo
+                    var selfInfo: SelfInfo
+                    (deviceInfo, selfInfo) = try await appState.settingsService.setRadioParamsVerified(
+                        frequencyKHz: UInt32(freqMHz * 1000),
+                        bandwidthKHz: UInt32(bwKHz * 1000),
+                        spreadingFactor: sf,
+                        codingRate: cr
+                    )
+
+                    // Then set TX power
+                    (deviceInfo, selfInfo) = try await appState.settingsService.setTxPowerVerified(power)
+                    return (deviceInfo, selfInfo)
+                }
+
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                retryAlert.show(
+                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { applySettings() },
+                    onMaxRetriesExceeded: { dismiss() }
                 )
-                try await appState.settingsService.setTxPower(power)
-                await appState.refreshDeviceInfo()
             } catch {
                 showError = error.localizedDescription
             }

@@ -65,6 +65,14 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
+        .overlay(alignment: .top) {
+            if appState.shouldShowSyncingPill {
+                SyncingPillView()
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(duration: 0.3), value: appState.shouldShowSyncingPill)
+            }
+        }
         .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
             if appState.pendingReconnectDeviceID != nil {
                 Button("Try Again") {

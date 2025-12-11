@@ -63,6 +63,20 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Contact sync progress (current, total)
     var contactsSyncProgress: (Int, Int)?
 
+    // MARK: - Activity Tracking
+
+    /// Counter for sync/settings operations (on-demand) - shows pill
+    private var syncActivityCount: Int = 0
+
+    /// Counter for message polling operations (event-driven) - shows pill
+    private var pollingActivityCount: Int = 0
+
+    /// Whether the syncing pill should be displayed
+    /// Only true for on-demand (sync/settings) and event-driven (polling) operations
+    var shouldShowSyncingPill: Bool {
+        syncActivityCount > 0 || pollingActivityCount > 0
+    }
+
     // MARK: - Data Services
 
     /// The SwiftData model container
@@ -819,6 +833,18 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Set the delegate for message events
         await messagePollingService.setDelegate(messageEventBroadcaster)
 
+        // Set up polling activity handler for syncing pill
+        await messagePollingService.setPollingActivityHandler { [weak self] isPolling in
+            Task { @MainActor in
+                guard let self else { return }
+                if isPolling {
+                    self.pollingActivityCount += 1
+                } else {
+                    self.pollingActivityCount -= 1
+                }
+            }
+        }
+
         // Connect BLE push notifications to the polling service
         await bleService.setResponseHandler { [weak self] data in
             guard let self else { return }
@@ -844,15 +870,17 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         isContactsSyncing = true
         contactsSyncProgress = nil
 
-        // Set up progress handler
-        await contactService.setSyncProgressHandler { [weak self] current, total in
-            Task { @MainActor in
-                self?.contactsSyncProgress = (current, total)
-            }
-        }
-
         do {
-            _ = try await contactService.syncContacts(deviceID: deviceID)
+            try await withSyncActivity {
+                // Set up progress handler
+                await contactService.setSyncProgressHandler { [weak self] current, total in
+                    Task { @MainActor in
+                        self?.contactsSyncProgress = (current, total)
+                    }
+                }
+
+                _ = try await contactService.syncContacts(deviceID: deviceID)
+            }
         } catch {
             // Silently ignore sync errors - contacts can be synced manually
         }
@@ -869,7 +897,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         guard let deviceID = connectedDevice?.id else { return }
 
         do {
-            _ = try await channelService.syncChannels(deviceID: deviceID)
+            try await withSyncActivity {
+                _ = try await channelService.syncChannels(deviceID: deviceID)
+            }
         } catch {
             // Silently ignore sync errors - channels can be synced manually
         }
@@ -921,6 +951,67 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         } catch {
             // Silently fail - device info will refresh on next sync
         }
+    }
+
+    // MARK: - Device Info Update
+
+    /// Update connected device from verification results
+    /// Call this after a verified settings change succeeds
+    func updateDeviceInfo(_ deviceInfo: DeviceInfo, _ selfInfo: SelfInfo) {
+        guard let currentDevice = connectedDevice else { return }
+
+        connectedDevice = DeviceDTO(
+            from: Device(
+                id: currentDevice.id,
+                publicKey: selfInfo.publicKey,
+                nodeName: selfInfo.nodeName,
+                firmwareVersion: deviceInfo.firmwareVersion,
+                firmwareVersionString: deviceInfo.firmwareVersionString,
+                manufacturerName: deviceInfo.manufacturerName,
+                buildDate: deviceInfo.buildDate,
+                maxContacts: deviceInfo.maxContacts,
+                maxChannels: deviceInfo.maxChannels,
+                frequency: selfInfo.frequency,
+                bandwidth: selfInfo.bandwidth,
+                spreadingFactor: selfInfo.spreadingFactor,
+                codingRate: selfInfo.codingRate,
+                txPower: selfInfo.txPower,
+                maxTxPower: selfInfo.maxTxPower,
+                latitude: selfInfo.latitude,
+                longitude: selfInfo.longitude,
+                blePin: deviceInfo.blePin,
+                manualAddContacts: selfInfo.manualAddContacts > 0,
+                multiAcks: selfInfo.multiAcks > 0,
+                telemetryModeBase: selfInfo.telemetryModes & 0x03,
+                telemetryModeLoc: (selfInfo.telemetryModes >> 2) & 0x03,
+                telemetryModeEnv: (selfInfo.telemetryModes >> 4) & 0x03,
+                advertLocationPolicy: selfInfo.advertLocationPolicy.rawValue,
+                isActive: true
+            )
+        )
+
+        persistConnectedDevice(connectedDevice!)
+        Task {
+            try? await dataStore.saveDevice(connectedDevice!)
+        }
+    }
+
+    // MARK: - Activity Tracking Methods
+
+    /// Execute an operation while tracking it as sync activity (shows pill)
+    /// Use for: settings changes, contact sync, channel sync, device initialization
+    func withSyncActivity<T>(_ operation: () async throws -> T) async rethrows -> T {
+        syncActivityCount += 1
+        defer { syncActivityCount -= 1 }
+        return try await operation()
+    }
+
+    /// Execute an operation while tracking it as polling activity (shows pill)
+    /// Use for: message polling when device signals waiting messages
+    func withPollingActivity<T>(_ operation: () async throws -> T) async rethrows -> T {
+        pollingActivityCount += 1
+        defer { pollingActivityCount -= 1 }
+        return try await operation()
     }
 
     // MARK: - Navigation

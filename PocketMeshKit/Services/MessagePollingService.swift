@@ -77,6 +77,9 @@ public actor MessagePollingService {
     /// Count of messages waiting on device (from push notification)
     private var messagesWaiting: Int = 0
 
+    /// Handler called when polling activity starts/stops (for UI activity indicators)
+    private var pollingActivityHandler: (@Sendable (Bool) async -> Void)?
+
     // MARK: - Initialization
 
     public init(
@@ -95,6 +98,12 @@ public actor MessagePollingService {
     /// Sets the active device ID for message context.
     public func setActiveDevice(_ deviceID: UUID) {
         self.activeDeviceID = deviceID
+    }
+
+    /// Sets the handler for polling activity changes.
+    /// Called with `true` when polling starts, `false` when polling ends.
+    public func setPollingActivityHandler(_ handler: @escaping @Sendable (Bool) async -> Void) {
+        self.pollingActivityHandler = handler
     }
 
     // MARK: - Push Notification Handling
@@ -129,7 +138,13 @@ public actor MessagePollingService {
         }
 
         isSyncing = true
-        defer { isSyncing = false }
+        await pollingActivityHandler?(true)
+        defer {
+            isSyncing = false
+            Task { [pollingActivityHandler] in
+                await pollingActivityHandler?(false)
+            }
+        }
 
         do {
             while true {

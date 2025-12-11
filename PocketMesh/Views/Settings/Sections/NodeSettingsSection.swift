@@ -5,11 +5,14 @@ import PocketMeshKit
 /// Node name and location settings
 struct NodeSettingsSection: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var nodeName: String = ""
     @State private var isEditingName = false
     @State private var showingLocationPicker = false
     @State private var shareLocation = false
     @State private var showError: String?
+    @State private var retryAlert = RetryAlertState()
+    @State private var isSaving = false
 
     var body: some View {
         Section {
@@ -22,6 +25,7 @@ struct NodeSettingsSection: View {
                     isEditingName = true
                 }
                 .foregroundStyle(.secondary)
+                .disabled(isSaving)
             }
 
             // Public Key (copy)
@@ -61,6 +65,7 @@ struct NodeSettingsSection: View {
                 }
             }
             .foregroundStyle(.primary)
+            .disabled(isSaving)
 
             // Share Location Toggle
             Toggle(isOn: $shareLocation) {
@@ -69,6 +74,7 @@ struct NodeSettingsSection: View {
             .onChange(of: shareLocation) { _, newValue in
                 updateShareLocation(newValue)
             }
+            .disabled(isSaving)
 
         } header: {
             Text("Node")
@@ -91,25 +97,38 @@ struct NodeSettingsSection: View {
             LocationPickerView()
         }
         .errorAlert($showError)
+        .retryAlert(retryAlert)
     }
 
     private func saveNodeName() {
         let name = nodeName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
 
+        isSaving = true
         Task {
             do {
-                try await appState.settingsService.setNodeName(name)
-                await appState.refreshDeviceInfo()
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.setNodeNameVerified(name)
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                retryAlert.show(
+                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { saveNodeName() },
+                    onMaxRetriesExceeded: { dismiss() }
+                )
             } catch {
                 showError = error.localizedDescription
             }
+            isSaving = false
         }
     }
 
     private func updateShareLocation(_ share: Bool) {
         guard let device = appState.connectedDevice else { return }
 
+        isSaving = true
         Task {
             do {
                 let telemetryModes = TelemetryModes(
@@ -117,17 +136,28 @@ struct NodeSettingsSection: View {
                     location: TelemetryMode(rawValue: device.telemetryModeLoc) ?? .deny,
                     environment: TelemetryMode(rawValue: device.telemetryModeEnv) ?? .deny
                 )
-                try await appState.settingsService.setOtherParams(
-                    autoAddContacts: !device.manualAddContacts,
-                    telemetryModes: telemetryModes,
-                    shareLocationPublicly: share,
-                    multiAcks: device.multiAcks
+                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                    try await appState.settingsService.setOtherParamsVerified(
+                        autoAddContacts: !device.manualAddContacts,
+                        telemetryModes: telemetryModes,
+                        shareLocationPublicly: share,
+                        multiAcks: device.multiAcks
+                    )
+                }
+                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                shareLocation = !share // Revert
+                retryAlert.show(
+                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    onRetry: { updateShareLocation(share) },
+                    onMaxRetriesExceeded: { dismiss() }
                 )
-                await appState.refreshDeviceInfo()
             } catch {
                 shareLocation = !share // Revert
                 showError = error.localizedDescription
             }
+            isSaving = false
         }
     }
 }
