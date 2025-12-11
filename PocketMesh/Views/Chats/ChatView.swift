@@ -195,7 +195,7 @@ struct ChatView: View {
         ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Message",
+            placeholder: "Private Message",
             accentColor: .blue,
             isSending: viewModel.isSending,
             maxCharacters: ProtocolLimits.maxDirectMessageLength

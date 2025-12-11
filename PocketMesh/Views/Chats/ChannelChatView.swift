@@ -88,7 +88,7 @@ struct ChannelChatView: View {
             Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
                 .font(.headline)
 
-            Text(channel.isPublicChannel ? "Public Channel" : "Private Channel")
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -136,7 +136,7 @@ struct ChannelChatView: View {
             Text("No messages yet")
                 .foregroundStyle(.secondary)
 
-            Text(channel.isPublicChannel ? "This is a public broadcast channel" : "This is a private channel")
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "This is a public broadcast channel" : "This is a private channel")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -195,7 +195,7 @@ struct ChannelChatView: View {
         ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Broadcast message",
+            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
             accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
             isSending: viewModel.isSending,
             maxCharacters: maxChannelMessageLength
