@@ -28,7 +28,10 @@ struct RadioPresetSection: View {
     var body: some View {
         Section {
             Picker("Radio Preset", selection: $selectedPresetID) {
-                Text("Custom").tag(nil as String?)
+                // Only show Custom when device is not using a preset
+                if currentPreset == nil {
+                    Text("Custom").tag(nil as String?)
+                }
 
                 ForEach(RadioRegion.allCases, id: \.self) { region in
                     let regionPresets = presets.filter { $0.region == region }
@@ -51,10 +54,24 @@ struct RadioPresetSection: View {
             .disabled(isApplying)
 
             if let preset = presets.first(where: { $0.id == selectedPresetID }) {
+                // Display preset settings
                 VStack(alignment: .leading, spacing: 4) {
                     Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)))
                         .font(.caption.monospacedDigit()) +
+                    // swiftlint:disable:next line_length
                     Text(" MHz \u{2022} SF\(preset.spreadingFactor) \u{2022} BW\(preset.bandwidthKHz, format: .number) \u{2022} CR\(preset.codingRate)")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+            } else if let device = appState.connectedDevice {
+                // Display device's current custom settings
+                let freqMHz = Double(device.frequency) / 1000.0
+                let bwKHz = Double(device.bandwidth) / 1000.0
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(freqMHz, format: .number.precision(.fractionLength(3)))
+                        .font(.caption.monospacedDigit()) +
+                    // swiftlint:disable:next line_length
+                    Text(" MHz \u{2022} SF\(device.spreadingFactor) \u{2022} BW\(bwKHz, format: .number) \u{2022} CR\(device.codingRate)")
                         .font(.caption)
                 }
                 .foregroundStyle(.secondary)

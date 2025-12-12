@@ -12,8 +12,16 @@ struct AdvancedRadioSection: View {
     @State private var txPower: String = ""
     @State private var isApplying = false
     @State private var showError: String?
-    @State private var showConfirmation = false
     @State private var retryAlert = RetryAlertState()
+    @FocusState private var focusedField: RadioField?
+
+    private enum RadioField: Hashable {
+        case frequency
+        case bandwidth
+        case spreadingFactor
+        case codingRate
+        case txPower
+    }
 
     var body: some View {
         Section {
@@ -24,6 +32,7 @@ struct AdvancedRadioSection: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 100)
+                    .focused($focusedField, equals: .frequency)
             }
 
             HStack {
@@ -33,6 +42,7 @@ struct AdvancedRadioSection: View {
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 100)
+                    .focused($focusedField, equals: .bandwidth)
             }
 
             HStack {
@@ -42,6 +52,7 @@ struct AdvancedRadioSection: View {
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
+                    .focused($focusedField, equals: .spreadingFactor)
             }
 
             HStack {
@@ -51,6 +62,7 @@ struct AdvancedRadioSection: View {
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
+                    .focused($focusedField, equals: .codingRate)
             }
 
             HStack {
@@ -60,10 +72,11 @@ struct AdvancedRadioSection: View {
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
+                    .focused($focusedField, equals: .txPower)
             }
 
             Button {
-                showConfirmation = true
+                applySettings()
             } label: {
                 HStack {
                     Spacer()
@@ -84,14 +97,16 @@ struct AdvancedRadioSection: View {
         .onAppear {
             loadCurrentSettings()
         }
-        .alert("Apply Radio Settings?", isPresented: $showConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Apply") { applySettings() }
-        } message: {
-            Text("Ensure all devices in your mesh use identical radio settings.")
-        }
         .errorAlert($showError)
         .retryAlert(retryAlert)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                }
+            }
+        }
     }
 
     private func loadCurrentSettings() {
@@ -143,6 +158,7 @@ struct AdvancedRadioSection: View {
                 }
 
                 appState.updateDeviceInfo(deviceInfo, selfInfo)
+                focusedField = nil  // Dismiss keyboard on success
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(

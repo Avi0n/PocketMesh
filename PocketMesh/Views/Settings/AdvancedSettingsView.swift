@@ -21,6 +21,15 @@ struct AdvancedSettingsView: View {
                 // Danger Zone
                 DangerZoneSection()
             }
+            .scrollDismissesKeyboard(.immediately)
+            .keyboardDoneButton {
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil,
+                    from: nil,
+                    for: nil
+                )
+            }
             .navigationTitle("Advanced Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
