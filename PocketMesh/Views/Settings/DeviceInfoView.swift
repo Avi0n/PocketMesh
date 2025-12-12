@@ -188,14 +188,7 @@ struct DeviceInfoView: View {
     }
 
     private func formatStorage(used: UInt32, total: UInt32) -> String {
-        let usedMB = Double(used) / 1024.0
-        let totalMB = Double(total) / 1024.0
-
-        if totalMB >= 1024 {
-            return String(format: "%.1f / %.1f GB", usedMB / 1024, totalMB / 1024)
-        } else {
-            return String(format: "%.1f / %.1f MB", usedMB, totalMB)
-        }
+        "\(used) / \(total) KB"
     }
 
     private func refreshBatteryInfo() {
@@ -205,20 +198,10 @@ struct DeviceInfoView: View {
 
         Task {
             do {
-                // TODO: Implement actual battery fetch via BLE
-                // batteryInfo = try await appState.bleService.getBatteryAndStorage()
-
-                // Simulated data for now
-                try await Task.sleep(for: .seconds(0.5))
-                batteryInfo = BatteryAndStorage(
-                    batteryMillivolts: 3850,
-                    storageUsedKB: 128,
-                    storageTotalKB: 4096
-                )
-
+                batteryInfo = try await appState.settingsService.getBatteryAndStorage()
                 lastRefresh = Date()
             } catch {
-                // Handle error silently
+                // Leave batteryInfo as nil to show refresh button
             }
 
             isLoadingBattery = false
@@ -270,7 +253,7 @@ private struct BatteryRow: View {
             Text(batteryPercentage)
                 .foregroundStyle(batteryColor)
 
-            Text("(\(millivolts) mV)")
+            Text(voltageString)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -289,6 +272,11 @@ private struct BatteryRow: View {
 
     private var batteryPercentage: String {
         "\(estimatedPercentage)%"
+    }
+
+    private var voltageString: String {
+        let volts = Double(millivolts) / 1000.0
+        return String(format: "(%.2fV)", volts)
     }
 
     private var batteryColor: Color {

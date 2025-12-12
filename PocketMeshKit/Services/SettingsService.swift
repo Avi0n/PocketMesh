@@ -201,6 +201,29 @@ public actor SettingsService {
         _ = try await bleTransport.send(command)
     }
 
+    // MARK: - Device Info
+
+    /// Fetch battery and storage information from device
+    /// - Returns: BatteryAndStorage struct with current values
+    /// - Throws: SettingsServiceError if not connected or communication fails
+    public func getBatteryAndStorage() async throws -> BatteryAndStorage {
+        guard await bleTransport.connectionState == .ready else {
+            throw SettingsServiceError.notConnected
+        }
+
+        let command = FrameCodec.encodeGetBatteryAndStorage()
+        guard let response = try await bleTransport.send(command),
+              response.first == ResponseCode.batteryAndStorage.rawValue else {
+            throw SettingsServiceError.invalidResponse
+        }
+
+        do {
+            return try FrameCodec.decodeBatteryAndStorage(from: response)
+        } catch let error as ProtocolError {
+            throw SettingsServiceError.protocolError(error)
+        }
+    }
+
     // MARK: - Verified Settings Methods
 
     /// Read current device state for verification
