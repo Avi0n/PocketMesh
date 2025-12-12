@@ -17,8 +17,8 @@ struct BluetoothSection: View {
     @State private var pendingPinType: BluetoothPinType?
 
     enum BluetoothPinType: String, CaseIterable {
-        case random = "Random (Screen Required)"
         case `default` = "Default (123456)"
+        case random = "Random (Screen Required)"
         case custom = "Custom PIN"
     }
 
