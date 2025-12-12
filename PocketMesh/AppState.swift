@@ -46,6 +46,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Whether BLE has operations in progress (for activity indicator animation)
     var isBLEBusy: Bool = false
 
+    /// Current device battery level in millivolts (nil if not fetched)
+    var deviceBatteryMillivolts: UInt16?
+
     /// Device ID to retry connection after failure
     var pendingReconnectDeviceID: UUID?
 
@@ -355,6 +358,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             // Start message polling
             await connectMessagePolling()
 
+            // Fetch battery info
+            await fetchDeviceBattery()
+
             // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
             await syncChannelsFromDevice()
@@ -477,7 +483,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // 8. Start message polling
         await connectMessagePolling()
 
-        // 9. Sync contacts and channels
+        // 9. Fetch battery info
+        await fetchDeviceBattery()
+
+        // 10. Sync contacts and channels
         await syncContactsFromDevice()
         await syncChannelsFromDevice()
     }
@@ -640,6 +649,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             // Connect message polling for real-time updates
             await connectMessagePolling()
 
+            // Fetch battery info
+            await fetchDeviceBattery()
+
             // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
             await syncChannelsFromDevice()
@@ -798,6 +810,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         await bleService.disconnect()
         connectionState = .disconnected
         connectedDevice = nil
+        deviceBatteryMillivolts = nil
     }
 
     /// Disconnects any existing connection and prepares for new device scan
@@ -818,6 +831,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         clearPersistedDevice()
         connectionState = .disconnected
         connectedDevice = nil
+        deviceBatteryMillivolts = nil
     }
 
     // MARK: - Message Polling
@@ -996,6 +1010,21 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         }
     }
 
+    // MARK: - Battery Info
+
+    /// Fetches current battery info from connected device
+    func fetchDeviceBattery() async {
+        guard connectionState == .ready else { return }
+
+        do {
+            let battery = try await settingsService.getBatteryAndStorage()
+            deviceBatteryMillivolts = battery.batteryMillivolts
+        } catch {
+            // Silently fail - battery info is optional
+            deviceBatteryMillivolts = nil
+        }
+    }
+
     // MARK: - Activity Tracking Methods
 
     /// Execute an operation while tracking it as sync activity (shows pill)
@@ -1123,6 +1152,7 @@ extension AppState: BLEStateRestorationDelegate {
         // Handle unexpected disconnection
         connectionState = .disconnected
         connectedDevice = nil
+        deviceBatteryMillivolts = nil
 
         // Atomically stop ACK checking and fail all pending messages
         do {
@@ -1188,6 +1218,9 @@ extension AppState: BLEStateRestorationDelegate {
                 try await dataStore.saveDevice(connectedDevice!)
 
                 await connectMessagePolling()
+
+                // Fetch battery info
+                await fetchDeviceBattery()
 
                 // Auto-sync contacts then channels from device
                 await syncContactsFromDevice()
@@ -1266,6 +1299,9 @@ extension AppState: BLEStateRestorationDelegate {
             // Start message polling
             await connectMessagePolling()
 
+            // Fetch battery info
+            await fetchDeviceBattery()
+
             // Auto-sync contacts then channels from device
             await syncContactsFromDevice()
             await syncChannelsFromDevice()
@@ -1288,6 +1324,7 @@ extension AppState {
                 await bleService.disconnect()
                 connectedDevice = nil
                 connectionState = .disconnected
+                deviceBatteryMillivolts = nil
             }
         }
 

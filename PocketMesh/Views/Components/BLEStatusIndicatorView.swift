@@ -8,11 +8,55 @@ struct BLEStatusIndicatorView: View {
     @State private var showingDeviceSelection = false
 
     var body: some View {
+        Group {
+            if appState.connectedDevice != nil {
+                // Connected: show menu with device info and actions
+                connectedMenu
+            } else {
+                // Disconnected: button that directly opens device selection
+                disconnectedButton
+            }
+        }
+        .sheet(isPresented: $showingDeviceSelection) {
+            DeviceSelectionSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - View Components
+
+    /// Button shown when disconnected - tap to open device selection
+    private var disconnectedButton: some View {
+        Button {
+            showingDeviceSelection = true
+        } label: {
+            Image(systemName: iconName)
+                .foregroundStyle(iconColor)
+                .symbolEffect(.pulse, isActive: isAnimating)
+        }
+        .accessibilityLabel("Bluetooth connection status")
+        .accessibilityValue(statusTitle)
+        .accessibilityHint("Double tap to connect device")
+    }
+
+    /// Menu shown when connected - tap to show device info and actions
+    private var connectedMenu: some View {
         Menu {
-            // Device info section (informational)
+            // Device info section
             if let device = appState.connectedDevice {
                 Section {
-                    Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
+                    VStack(alignment: .leading) {
+                        Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
+                        if let percent = batteryPercentage, let voltage = batteryVoltage {
+                            Label(
+                                "\(percent)% (\(voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: batterySymbolName
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 
@@ -21,20 +65,15 @@ struct BLEStatusIndicatorView: View {
                 Button {
                     showingDeviceSelection = true
                 } label: {
-                    Label(
-                        appState.connectedDevice != nil ? "Change Device" : "Connect Device",
-                        systemImage: "gearshape"
-                    )
+                    Label("Change Device", systemImage: "gearshape")
                 }
 
-                if appState.connectedDevice != nil {
-                    Button(role: .destructive) {
-                        Task {
-                            await appState.disconnect()
-                        }
-                    } label: {
-                        Label("Disconnect", systemImage: "eject")
+                Button(role: .destructive) {
+                    Task {
+                        await appState.disconnect()
                     }
+                } label: {
+                    Label("Disconnect", systemImage: "eject")
                 }
             }
         } label: {
@@ -45,11 +84,6 @@ struct BLEStatusIndicatorView: View {
         .accessibilityLabel("Bluetooth connection status")
         .accessibilityValue(statusTitle)
         .accessibilityHint("Shows device connection options")
-        .sheet(isPresented: $showingDeviceSelection) {
-            DeviceSelectionSheet()
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-        }
     }
 
     // MARK: - Computed Properties
@@ -88,6 +122,34 @@ struct BLEStatusIndicatorView: View {
             "Connected"
         case .ready:
             "Ready"
+        }
+    }
+
+    /// Battery voltage in volts (e.g., 3.90)
+    private var batteryVoltage: Double? {
+        guard let millivolts = appState.deviceBatteryMillivolts else { return nil }
+        return Double(millivolts) / 1000.0
+    }
+
+    /// Estimated battery percentage from millivolts (LiPo curve)
+    private var batteryPercentage: Int? {
+        guard let voltage = batteryVoltage else { return nil }
+        // LiPo voltage to percentage: 4.2V = 100%, 3.0V = 0%
+        let minV = 3.0
+        let maxV = 4.2
+        let percent = ((voltage - minV) / (maxV - minV)) * 100
+        return Int(min(100, max(0, percent)))
+    }
+
+    /// SF Symbol name for current battery level
+    private var batterySymbolName: String {
+        guard let percent = batteryPercentage else { return "battery.0" }
+        switch percent {
+        case 88...100: return "battery.100"
+        case 63..<88: return "battery.75"
+        case 38..<63: return "battery.50"
+        case 13..<38: return "battery.25"
+        default: return "battery.0"
         }
     }
 }
