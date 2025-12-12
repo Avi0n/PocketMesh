@@ -12,6 +12,7 @@ struct BluetoothSection: View {
     @State private var isChangingPin = false
     @State private var showError: String?
     @State private var hasInitialized = false
+    @State private var isPinVisible = false
 
     // Track what the user intended before confirmation dialogs
     @State private var pendingPinType: BluetoothPinType?
@@ -47,13 +48,29 @@ struct BluetoothSection: View {
             .disabled(isChangingPin)
 
             if pinType == .custom, let device = appState.connectedDevice, device.blePin > 0 {
-                HStack {
-                    Text("Current PIN")
-                    Spacer()
-                    Text(device.blePin, format: .number.grouping(.never))
+                Button {
+                    isPinVisible.toggle()
+                } label: {
+                    HStack {
+                        Text("Current PIN")
+                        Spacer()
+                        Group {
+                            if isPinVisible {
+                                Text(device.blePin, format: .number.grouping(.never))
+                            } else {
+                                Text("••••••")
+                            }
+                        }
                         .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
+
+                        Image(systemName: isPinVisible ? "eye" : "eye.slash")
+                            .foregroundStyle(.tertiary)
+                            .imageScale(.small)
+                    }
+                    .contentShape(.rect)
                 }
+                .buttonStyle(.plain)
 
                 Button("Change PIN") {
                     customPin = ""
