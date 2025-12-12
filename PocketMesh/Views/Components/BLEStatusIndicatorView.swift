@@ -43,6 +43,15 @@ struct BLEStatusIndicatorView: View {
     /// Menu shown when connected - tap to show device info and actions
     private var connectedMenu: some View {
         Menu {
+            // Trigger battery refresh when menu opens
+            Color.clear
+                .frame(width: 0, height: 0)
+                .onAppear {
+                    Task {
+                        await appState.fetchDeviceBattery()
+                    }
+                }
+
             // Device info section
             if let device = appState.connectedDevice {
                 Section {
