@@ -4,9 +4,8 @@
 
 .DS_Store
 
-# MeshCore examples
-#meshcore_py-2.2.1
-#MeshCore-firmware-example
+# MeshCore references
+MeshCore-references/
 
 # AI
 .claude
