@@ -71,8 +71,8 @@ final class MapViewModel {
         guard contact.hasLocation else { return }
 
         let coordinate = CLLocationCoordinate2D(
-            latitude: Double(contact.latitude),
-            longitude: Double(contact.longitude)
+            latitude: contact.latitude,
+            longitude: contact.longitude
         )
 
         cameraPosition = .camera(
@@ -95,8 +95,8 @@ final class MapViewModel {
         var maxLon = -Double.greatestFiniteMagnitude
 
         for contact in contactsWithLocation {
-            let lat = Double(contact.latitude)
-            let lon = Double(contact.longitude)
+            let lat = contact.latitude
+            let lon = contact.longitude
             minLat = min(minLat, lat)
             maxLat = max(maxLat, lat)
             minLon = min(minLon, lon)
@@ -127,8 +127,8 @@ extension ContactDTO {
     /// The coordinate for MapKit
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(
-            latitude: Double(latitude),
-            longitude: Double(longitude)
+            latitude: latitude,
+            longitude: longitude
         )
     }
 }

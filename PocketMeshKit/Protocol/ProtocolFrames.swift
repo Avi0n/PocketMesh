@@ -90,8 +90,8 @@ public struct ContactFrame: Sendable, Equatable {
     public let outPath: Data
     public let name: String
     public let lastAdvertTimestamp: UInt32
-    public let latitude: Float
-    public let longitude: Float
+    public let latitude: Double
+    public let longitude: Double
     public let lastModified: UInt32
 
     public init(
@@ -102,8 +102,8 @@ public struct ContactFrame: Sendable, Equatable {
         outPath: Data,
         name: String,
         lastAdvertTimestamp: UInt32,
-        latitude: Float,
-        longitude: Float,
+        latitude: Double,
+        longitude: Double,
         lastModified: UInt32
     ) {
         self.publicKey = publicKey

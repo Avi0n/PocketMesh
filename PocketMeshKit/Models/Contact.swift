@@ -34,10 +34,10 @@ public final class Contact {
     public var lastAdvertTimestamp: UInt32
 
     /// Contact latitude
-    public var latitude: Float
+    public var latitude: Double
 
     /// Contact longitude
-    public var longitude: Float
+    public var longitude: Double
 
     /// Last modification timestamp (for sync watermarking)
     public var lastModified: UInt32
@@ -67,8 +67,8 @@ public final class Contact {
         outPathLength: Int8 = -1,
         outPath: Data = Data(),
         lastAdvertTimestamp: UInt32 = 0,
-        latitude: Float = 0,
-        longitude: Float = 0,
+        latitude: Double = 0,
+        longitude: Double = 0,
         lastModified: UInt32 = 0,
         nickname: String? = nil,
         isBlocked: Bool = false,
@@ -194,8 +194,8 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let outPathLength: Int8
     public let outPath: Data
     public let lastAdvertTimestamp: UInt32
-    public let latitude: Float
-    public let longitude: Float
+    public let latitude: Double
+    public let longitude: Double
     public let lastModified: UInt32
     public let nickname: String?
     public let isBlocked: Bool

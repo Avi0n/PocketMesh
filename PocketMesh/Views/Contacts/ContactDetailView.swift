@@ -321,8 +321,8 @@ struct ContactDetailView: View {
 
     private var contactCoordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(
-            latitude: CLLocationDegrees(currentContact.latitude),
-            longitude: CLLocationDegrees(currentContact.longitude)
+            latitude: currentContact.latitude,
+            longitude: currentContact.longitude
         )
     }
 

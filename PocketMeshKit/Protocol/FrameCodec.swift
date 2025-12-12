@@ -448,8 +448,8 @@ public enum FrameCodec {
         let lonRaw = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: Int32.self).littleEndian }
         offset += 4
 
-        let lat = Float(latRaw) / 1_000_000.0
-        let lon = Float(lonRaw) / 1_000_000.0
+        let lat = Double(latRaw) / 1_000_000.0
+        let lon = Double(lonRaw) / 1_000_000.0
 
         let lastMod = data.subdata(in: offset..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
 
