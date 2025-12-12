@@ -54,23 +54,28 @@ struct LocationPickerView: View {
                         }
                         .font(.caption.monospacedDigit())
                         .padding()
-                        .background(.ultraThinMaterial, in: .rect(cornerRadius: 8))
+                        .background {
+                            if #available(iOS 26.0, *) {
+                                Color.clear
+                            } else {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(.ultraThinMaterial)
+                            }
+                        }
+                        .modifier(CoordinateGlassModifier())
                     }
 
-                    HStack(spacing: 12) {
-                        if selectedCoordinate != nil {
-                            Button("Clear Location", role: .destructive) {
-                                selectedCoordinate = nil
+                    Group {
+                        if #available(iOS 26.0, *) {
+                            GlassEffectContainer {
+                                buttonContent
                             }
-                            .buttonStyle(.bordered)
+                        } else {
+                            buttonContent
                         }
-
-                        Button("Drop Pin at Center") {
-                            dropPinAtCenter()
-                        }
-                        .buttonStyle(.borderedProminent)
                     }
                     .padding()
+                    .padding(.bottom, 16)
                 }
             }
             .navigationTitle("Set Location")
@@ -140,6 +145,59 @@ struct LocationPickerView: View {
                 showError = error.localizedDescription
             }
             isSaving = false
+        }
+    }
+
+    @ViewBuilder
+    private var buttonContent: some View {
+        HStack(spacing: 12) {
+            if selectedCoordinate != nil {
+                Button("Clear Location", role: .destructive) {
+                    selectedCoordinate = nil
+                }
+                .modifier(GlassButtonModifier(isProminent: false))
+            }
+
+            Button("Drop Pin at Center") {
+                dropPinAtCenter()
+            }
+            .modifier(GlassButtonModifier(isProminent: true))
+        }
+    }
+}
+
+// MARK: - Liquid Glass Modifiers
+
+private struct CoordinateGlassModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular, in: .rect(cornerRadius: 8))
+        } else {
+            content
+        }
+    }
+}
+
+private struct GlassButtonModifier: ViewModifier {
+    let isProminent: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            if isProminent {
+                content
+                    .buttonStyle(.glassProminent)
+                    .controlSize(.regular)
+            } else {
+                content
+                    .buttonStyle(.glass)
+                    .controlSize(.regular)
+            }
+        } else {
+            if isProminent {
+                content.buttonStyle(.borderedProminent)
+            } else {
+                content.buttonStyle(.bordered)
+            }
         }
     }
 }
