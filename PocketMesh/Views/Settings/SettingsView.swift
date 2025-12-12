@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @State private var showingAdvancedSettings = false
     @State private var showingDeviceSelection = false
+    @State private var showingLocationPicker = false
 
     var body: some View {
         NavigationStack {
@@ -19,7 +20,7 @@ struct SettingsView: View {
                     RadioPresetSection()
 
                     // Node Settings
-                    NodeSettingsSection()
+                    NodeSettingsSection(showingLocationPicker: $showingLocationPicker)
 
                     // Bluetooth
                     BluetoothSection()
@@ -73,6 +74,9 @@ struct SettingsView: View {
                 DeviceSelectionSheet()
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showingLocationPicker) {
+                LocationPickerView()
             }
         }
     }

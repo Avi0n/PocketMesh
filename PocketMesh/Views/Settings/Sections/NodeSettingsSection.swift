@@ -6,9 +6,9 @@ import PocketMeshKit
 struct NodeSettingsSection: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Binding var showingLocationPicker: Bool
     @State private var nodeName: String = ""
     @State private var isEditingName = false
-    @State private var showingLocationPicker = false
     @State private var shareLocation = false
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
@@ -92,9 +92,6 @@ struct NodeSettingsSection: View {
             Button("Save") {
                 saveNodeName()
             }
-        }
-        .sheet(isPresented: $showingLocationPicker) {
-            LocationPickerView()
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)

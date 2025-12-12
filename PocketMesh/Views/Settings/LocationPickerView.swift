@@ -9,6 +9,7 @@ struct LocationPickerView: View {
 
     @State private var position: MapCameraPosition = .automatic
     @State private var selectedCoordinate: CLLocationCoordinate2D?
+    @State private var visibleRegion: MKCoordinateRegion?
     @State private var isSaving = false
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
@@ -27,6 +28,9 @@ struct LocationPickerView: View {
                         if let coordinate = proxy.convert(screenLocation, from: .local) {
                             selectedCoordinate = coordinate
                         }
+                    }
+                    .onMapCameraChange { context in
+                        visibleRegion = context.region
                     }
                     .mapControls {
                         MapUserLocationButton()
@@ -53,10 +57,19 @@ struct LocationPickerView: View {
                         .background(.ultraThinMaterial, in: .rect(cornerRadius: 8))
                     }
 
-                    Button("Drop Pin at Center") {
-                        dropPinAtCenter()
+                    HStack(spacing: 12) {
+                        if selectedCoordinate != nil {
+                            Button("Clear Location", role: .destructive) {
+                                selectedCoordinate = nil
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Button("Drop Pin at Center") {
+                            dropPinAtCenter()
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
-                    .buttonStyle(.borderedProminent)
                     .padding()
                 }
             }
@@ -68,7 +81,7 @@ struct LocationPickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveLocation() }
-                        .disabled(selectedCoordinate == nil || isSaving)
+                        .disabled(isSaving)
                 }
             }
             .onAppear {
@@ -93,22 +106,25 @@ struct LocationPickerView: View {
     }
 
     private func dropPinAtCenter() {
-        // Get center from current camera position
-        if let region = position.region {
+        // Get center from tracked visible region, falling back to position.region
+        if let region = visibleRegion {
+            selectedCoordinate = region.center
+        } else if let region = position.region {
             selectedCoordinate = region.center
         }
     }
 
     private func saveLocation() {
-        guard let coord = selectedCoordinate else { return }
+        let latitude = selectedCoordinate?.latitude ?? 0
+        let longitude = selectedCoordinate?.longitude ?? 0
 
         isSaving = true
         Task {
             do {
                 let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
                     try await appState.settingsService.setLocationVerified(
-                        latitude: coord.latitude,
-                        longitude: coord.longitude
+                        latitude: latitude,
+                        longitude: longitude
                     )
                 }
                 appState.updateDeviceInfo(deviceInfo, selfInfo)
