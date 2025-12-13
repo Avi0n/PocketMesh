@@ -58,6 +58,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Message for connection failure alert
     var connectionFailedMessage: String?
 
+    /// Tracks if connection failed after ASK pairing (potential multi-app issue)
+    private var connectionFailedAfterPairing: Bool = false
+
     // MARK: - Contact Sync State
 
     /// Whether contacts are currently syncing (for UI overlay)
@@ -432,6 +435,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // This triggers CBCentralManager state cycling: poweredOn → poweredOff → poweredOn
         let deviceID = try await accessorySetupKit.showPicker()
 
+        // Reset multi-app detection flag - we just got a fresh ASK pairing
+        connectionFailedAfterPairing = false
+
         // 3. Clear previous connection state if needed
         if hadPreviousConnection, let previousID = previousDeviceID, previousID != deviceID {
             // Previous device was disconnected during ASK picker state cycling
@@ -443,7 +449,15 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // - Don't use fixed delays - they're guessing at timing
         // - Use retry with exponential backoff - adapts to actual conditions
         // - Peripheral may need stabilization time after ASK bonding
-        let (deviceInfo, selfInfo) = try await connectWithRetry(deviceID: deviceID, maxAttempts: 4)
+        let deviceInfo: DeviceInfo
+        let selfInfo: SelfInfo
+        do {
+            (deviceInfo, selfInfo) = try await connectWithRetry(deviceID: deviceID, maxAttempts: 4)
+        } catch {
+            // If all retries failed after successful ASK pairing, likely another app has connection
+            connectionFailedAfterPairing = true
+            throw error
+        }
 
         // 5. Update connection state
         connectionState = await bleService.connectionState
@@ -1069,6 +1083,19 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         onboardingStep = .welcome
     }
 
+    /// Returns an appropriate error message based on the failure pattern
+    private func getConnectionFailureMessage(for error: Error) -> String {
+        // If we successfully paired via ASK but connection keeps failing,
+        // another app likely has an exclusive BLE connection to this device
+        if connectionFailedAfterPairing {
+            return "Could not connect to device. Another app may have an active connection. " +
+                   "Close other apps that use this device and try again, or go to " +
+                   "Settings > Bluetooth, forget this device, and pair again."
+        }
+
+        return error.localizedDescription
+    }
+
     /// Trigger device pairing flow (called from UI)
     func startDeviceScan() {
         Task {
@@ -1080,7 +1107,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             } catch AccessorySetupKitError.pickerRestricted {
                 lastError = "Cannot show device picker. Please check Bluetooth permissions."
             } catch {
-                lastError = error.localizedDescription
+                lastError = getConnectionFailureMessage(for: error)
             }
         }
     }

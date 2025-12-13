@@ -783,6 +783,32 @@ extension BLEService: CBCentralManagerDelegate {
         connectionContinuation = nil
     }
 
+    private func handleServiceDiscoveryFailure(_ error: Error?) {
+        #if DEBUG
+        print("[BLE] Service discovery failed: \(error?.localizedDescription ?? "unknown error")")
+        #endif
+
+        // If we were in a restoration/reconnection scenario, the "connected" peripheral
+        // may have been stale. Clear state and let the app layer handle reconnection.
+        if needsResubscriptionAfterReconnect {
+            needsResubscriptionAfterReconnect = false
+            _connectionState = .disconnected
+
+            // Notify via disconnection handler so AppState can attempt reconnection
+            if let peripheral = connectedPeripheral {
+                disconnectionHandler?(peripheral.identifier, error)
+            }
+
+            connectedPeripheral = nil
+            txCharacteristic = nil
+            rxCharacteristic = nil
+            return
+        }
+
+        // For initial connection, treat as connection error
+        handleConnectionError(error)
+    }
+
     /// iOS 17+ delegate method that indicates whether the system is auto-reconnecting
     nonisolated public func centralManager(
         _ central: CBCentralManager,
@@ -892,8 +918,12 @@ extension BLEService: CBCentralManagerDelegate {
         connectedPeripheral = peripheral
         peripheral.delegate = self
 
+        // Mark that this is a restoration scenario for appropriate stabilization delays
+        needsResubscriptionAfterReconnect = true
+
         if peripheral.state == .connected {
             // Don't set .connected yet - peripheral.state may be stale
+            // iOS 17+ can return new peripheral instances during restoration
             // iOS may fire isReconnecting disconnect immediately after restoration
             // Stay in .connecting until characteristic discovery completes successfully
             _connectionState = .connecting
@@ -903,7 +933,17 @@ extension BLEService: CBCentralManagerDelegate {
             #endif
 
             // Re-discover services to get characteristics
+            // This validates the connection is actually functional
             peripheral.discoverServices([nordicUARTServiceUUID])
+        } else if peripheral.state == .disconnected {
+            // Peripheral was restored in disconnected state
+            // This happens on manual app launch when willRestoreState isn't called
+            // but we retrieve the peripheral from CoreBluetooth cache
+            _connectionState = .disconnected
+
+            #if DEBUG
+            print("[BLE] State restoration: peripheral restored in disconnected state")
+            #endif
         }
     }
 }
@@ -919,7 +959,7 @@ extension BLEService: CBPeripheralDelegate {
         guard error == nil,
               let service = peripheral.services?.first(where: { $0.uuid == CBUUID(string: BLEServiceUUID.nordicUART) }) else {
             Task {
-                await handleConnectionError(error)
+                await handleServiceDiscoveryFailure(error)
             }
             return
         }
@@ -1003,9 +1043,12 @@ extension BLEService: CBPeripheralDelegate {
                     try await self.awaitNotificationSubscription(for: rx)
                 }
 
-                // Allow device firmware to stabilize after BLE reconnection
+                // Allow device firmware to stabilize after BLE connection
                 // MeshCore radios need brief delay before UART is ready for commands
-                try await Task.sleep(for: .milliseconds(150))
+                // Reconnection needs longer delay: bonded devices may have GATT cache sync issues
+                // per Nordic DevZone findings (up to 500ms for service discovery completion)
+                let stabilizationDelay = isReconnection ? 300 : 150
+                try await Task.sleep(for: .milliseconds(stabilizationDelay))
 
                 #if DEBUG
                 if isReconnection {
