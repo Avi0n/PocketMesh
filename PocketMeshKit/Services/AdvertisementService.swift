@@ -26,6 +26,9 @@ public actor AdvertisementService {
     /// Handler for path update events
     private var pathUpdateHandler: (@Sendable (Data, Int8) -> Void)?
 
+    /// Handler for path discovery response events
+    private var pathDiscoveryHandler: (@Sendable (PathDiscoveryResponse) -> Void)?
+
     // MARK: - Initialization
 
     public init(bleTransport: any BLETransport, dataStore: DataStore) {
@@ -43,6 +46,11 @@ public actor AdvertisementService {
     /// Set handler for path update events
     public func setPathUpdateHandler(_ handler: @escaping @Sendable (Data, Int8) -> Void) {
         pathUpdateHandler = handler
+    }
+
+    /// Set handler for path discovery response events
+    public func setPathDiscoveryHandler(_ handler: @escaping @Sendable (PathDiscoveryResponse) -> Void) {
+        pathDiscoveryHandler = handler
     }
 
     // MARK: - Send Advertisement
@@ -146,6 +154,8 @@ public actor AdvertisementService {
             return await handleNewAdvertPush(data, deviceID: deviceID)
         case .pathUpdated:
             return await handlePathUpdatedPush(data, deviceID: deviceID)
+        case .pathDiscoveryResponse:
+            return await handlePathDiscoveryResponsePush(data, deviceID: deviceID)
         default:
             return false
         }
@@ -230,6 +240,49 @@ public actor AdvertisementService {
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
                 pathUpdateHandler?(publicKeyPrefix, newPathLength)
             }
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Handle PUSH_CODE_PATH_DISCOVERY_RESPONSE (0x8D) - Path discovery result
+    ///
+    /// Note: We only store the outbound path (`out_path`), not the inbound path.
+    /// The firmware handles inbound routing automatically - the companion only
+    /// needs to specify how to reach the contact (outbound), not how the contact
+    /// reaches us (inbound). The inbound path in the response is informational only.
+    private func handlePathDiscoveryResponsePush(_ data: Data, deviceID: UUID) async -> Bool {
+        do {
+            let response = try FrameCodec.decodePathDiscoveryResponse(from: data)
+
+            // Debug logging for path discovery
+            let outPathHex = response.outboundPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
+            let inPathHex = response.inboundPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
+            let pubKeyHex = response.publicKeyPrefix.prefix(3).map { String(format: "%02X", $0) }.joined()
+            print("[PathDiscovery] Response for \(pubKeyHex)...")
+            print("[PathDiscovery]   Outbound path (\(response.outboundPath.count) hops): \(outPathHex.isEmpty ? "direct" : outPathHex)")
+            print("[PathDiscovery]   Inbound path (\(response.inboundPath.count) hops): \(inPathHex.isEmpty ? "direct" : inPathHex)")
+
+            // Update contact with discovered outbound path (inbound is handled by firmware)
+            if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKeyPrefix: response.publicKeyPrefix) {
+                let pathLength = Int8(response.outboundPath.count)
+                let frame = ContactFrame(
+                    publicKey: contact.publicKey,
+                    type: contact.type,
+                    flags: contact.flags,
+                    outPathLength: pathLength,
+                    outPath: response.outboundPath,
+                    name: contact.name,
+                    lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                    latitude: contact.latitude,
+                    longitude: contact.longitude,
+                    lastModified: UInt32(Date().timeIntervalSince1970)
+                )
+                _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+            }
+
+            pathDiscoveryHandler?(response)
             return true
         } catch {
             return false

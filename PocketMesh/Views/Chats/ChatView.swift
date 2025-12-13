@@ -6,7 +6,7 @@ struct ChatView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    let contact: ContactDTO
+    @State private var contact: ContactDTO
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
@@ -15,7 +15,7 @@ struct ChatView: View {
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
-        self.contact = contact
+        self._contact = State(initialValue: contact)
         self.parentViewModel = parentViewModel
     }
 
@@ -40,11 +40,15 @@ struct ChatView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingContactInfo) {
+        .sheet(isPresented: $showingContactInfo, onDismiss: {
+            Task {
+                await refreshContact()
+            }
+        }, content: {
             NavigationStack {
                 ContactDetailView(contact: contact, showFromDirectChat: true)
             }
-        }
+        })
         .toolbarVisibility(.hidden, for: .tabBar)
         .task {
             viewModel.configure(appState: appState)
@@ -89,6 +93,14 @@ struct ChatView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text("Please ensure your device is connected and try again.")
+        }
+    }
+
+    // MARK: - Contact Refresh
+
+    private func refreshContact() async {
+        if let updated = try? await appState.dataStore.fetchContact(id: contact.id) {
+            contact = updated
         }
     }
 

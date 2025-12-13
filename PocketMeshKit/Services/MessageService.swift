@@ -143,6 +143,19 @@ public actor MessageService {
                 timestamp: timestamp
             )
 
+            // Debug logging for message routing
+            let routeDescription: String
+            if contact.isFloodRouted {
+                routeDescription = "flood"
+            } else if contact.outPathLength == 0 {
+                routeDescription = "direct"
+            } else {
+                let pathHex = contact.outPath.prefix(Int(contact.outPathLength)).map { String(format: "%02X", $0) }.joined(separator: " → ")
+                routeDescription = "\(contact.outPathLength) hops: \(pathHex)"
+            }
+            let recipientHex = contact.publicKeyPrefix.prefix(3).map { String(format: "%02X", $0) }.joined()
+            print("[MessageRoute] Sent to \(recipientHex)... via \(routeDescription), ack=\(result.ackCode), timeout=\(result.estimatedTimeout)ms")
+
             // Update message with ACK code
             try await dataStore.updateMessageAck(
                 id: messageID,
@@ -289,7 +302,7 @@ public actor MessageService {
             // Notify handler
             ackConfirmationHandler?(ackCode, confirmation.roundTripTime)
 
-            print("[MessageService] Message delivered - ack: \(ackCode), rtt: \(confirmation.roundTripTime)ms")
+            print("[MessageService] ACK received - code: \(ackCode), rtt: \(confirmation.roundTripTime)ms (ACK routed back successfully)")
         } else {
             // Atomically increment repeat count
             pendingAcks[ackCode]?.heardRepeats += 1

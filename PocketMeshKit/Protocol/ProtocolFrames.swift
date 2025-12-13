@@ -427,6 +427,24 @@ public struct TelemetryResponse: Sendable, Equatable {
     }
 }
 
+// MARK: - Advert Path Frames
+
+/// Response from querying cached advertisement path
+public struct AdvertPathResponse: Sendable, Equatable {
+    /// Timestamp when this path was learned from an advertisement
+    public let timestamp: UInt32
+    /// Path length (0 = direct, >0 = via repeaters)
+    public let pathLength: UInt8
+    /// Path data (repeater hash bytes)
+    public let path: Data
+
+    public init(timestamp: UInt32, pathLength: UInt8, path: Data) {
+        self.timestamp = timestamp
+        self.pathLength = pathLength
+        self.path = path
+    }
+}
+
 // MARK: - Path Discovery Frames
 
 /// Path discovery response containing outbound and inbound paths

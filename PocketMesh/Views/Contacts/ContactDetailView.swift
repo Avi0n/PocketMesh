@@ -18,6 +18,8 @@ struct ContactDetailView: View {
     @State private var showingShareSheet = false
     @State private var isSaving = false
     @State private var errorMessage: String?
+    @State private var pathViewModel = PathManagementViewModel()
+    @State private var showAdvanced = false
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -40,6 +42,9 @@ struct ContactDetailView: View {
             if currentContact.hasLocation {
                 locationSection
             }
+
+            // Network path controls
+            networkPathSection
 
             // Technical details
             technicalSection
@@ -71,6 +76,46 @@ struct ContactDetailView: View {
         }
         .onAppear {
             nickname = currentContact.nickname ?? ""
+        }
+        .task {
+            pathViewModel.configure(appState: appState) {
+                Task { @MainActor in
+                    await refreshContact()
+                }
+            }
+            await pathViewModel.loadContacts(deviceID: currentContact.deviceID)
+
+            // Fetch fresh contact data from device to catch external changes
+            // (e.g., user modified path in official MeshCore app)
+            if let freshContact = try? await appState.contactService.getContact(
+                deviceID: currentContact.deviceID,
+                publicKey: currentContact.publicKey
+            ) {
+                currentContact = freshContact
+            }
+
+            // Wire up path discovery response handler to receive push notifications
+            await appState.advertisementService.setPathDiscoveryHandler { [weak pathViewModel] response in
+                Task { @MainActor in
+                    pathViewModel?.handleDiscoveryResponse(hopCount: response.outboundPath.count)
+                }
+            }
+        }
+        .onDisappear {
+            pathViewModel.cancelDiscovery()
+        }
+        .sheet(isPresented: $pathViewModel.showingPathEditor) {
+            PathEditingSheet(viewModel: pathViewModel, contact: currentContact)
+        }
+        .alert("Path Error", isPresented: $pathViewModel.showError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(pathViewModel.errorMessage ?? "An unknown error occurred")
+        }
+        .alert("Path Discovery", isPresented: $pathViewModel.showDiscoveryResult) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(pathViewModel.discoveryResult?.description ?? "")
         }
     }
 
@@ -107,18 +152,6 @@ struct ContactDetailView: View {
                 publicKey: currentContact.publicKey
             )
             dismiss()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    private func resetPath() async {
-        do {
-            try await appState.contactService.resetPath(
-                deviceID: currentContact.deviceID,
-                publicKey: currentContact.publicKey
-            )
-            await refreshContact()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -262,10 +295,10 @@ struct ContactDetailView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Last seen
+            // Last advert
             if currentContact.lastAdvertTimestamp > 0 {
                 HStack {
-                    Text("Last Seen")
+                    Text("Last Advert")
                     Spacer()
                     Text(Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)), style: .relative)
                         .foregroundStyle(.secondary)
@@ -332,6 +365,126 @@ struct ContactDetailView: View {
         mapItem.openInMaps()
     }
 
+    // MARK: - Network Path Section
+
+    private var networkPathSection: some View {
+        Section {
+            // Current routing path
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Route")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Text(routeDisplayText)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.primary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(pathAccessibilityLabel)
+
+            // Path Discovery button (prominent)
+            if pathViewModel.isDiscovering {
+                HStack {
+                    Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
+                    Spacer()
+                    ProgressView()
+                    Button("Cancel") {
+                        pathViewModel.cancelDiscovery()
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.subheadline)
+                }
+            } else {
+                Button {
+                    Task {
+                        await pathViewModel.discoverPath(for: currentContact)
+                    }
+                } label: {
+                    Label("Discover Path", systemImage: "antenna.radiowaves.left.and.right")
+                }
+            }
+
+            // Edit Path button (secondary)
+            Button {
+                Task {
+                    await pathViewModel.loadContacts(deviceID: currentContact.deviceID)
+                }
+                pathViewModel.initializeEditablePath(from: currentContact)
+                pathViewModel.showingPathEditor = true
+            } label: {
+                Label("Edit Path", systemImage: "pencil")
+            }
+
+            // Reset Path button (destructive, disabled when already flood)
+            Button(role: .destructive) {
+                Task {
+                    await pathViewModel.resetPath(for: currentContact)
+                    await refreshContact()
+                }
+            } label: {
+                HStack {
+                    Label("Reset Path", systemImage: "arrow.triangle.2.circlepath")
+                    if pathViewModel.isSettingPath {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                }
+            }
+            .disabled(pathViewModel.isSettingPath || currentContact.isFloodRouted)
+        } header: {
+            Text("Network Path")
+        } footer: {
+            Text(networkPathFooterText)
+        }
+    }
+
+    // Computed property for path display with resolved names
+    private var pathDisplayWithNames: String {
+        let pathData = currentContact.outPath
+        let pathLength = Int(max(0, currentContact.outPathLength))
+        guard pathLength > 0 else { return "Direct" }
+
+        let relevantPath = pathData.prefix(pathLength)
+        return relevantPath.map { byte in
+            if let name = pathViewModel.resolveHashToName(byte) {
+                return "\(name)"
+            }
+            return String(format: "%02X", byte)
+        }.joined(separator: " \u{2192} ")
+    }
+
+    // Route display text for simplified view
+    private var routeDisplayText: String {
+        if currentContact.isFloodRouted {
+            return "Flood"
+        } else if currentContact.outPathLength == 0 {
+            return "Direct"
+        } else {
+            return pathDisplayWithNames
+        }
+    }
+
+    // Footer text for network path section
+    private var networkPathFooterText: String {
+        if currentContact.isFloodRouted {
+            return "Messages are broadcast to all nodes. Discover Path to find an optimal route."
+        } else {
+            return "Messages route through the path shown. Reset Path to use flood routing instead."
+        }
+    }
+
+    // VoiceOver accessibility label for path
+    private var pathAccessibilityLabel: String {
+        if currentContact.isFloodRouted {
+            return "Route: Flood"
+        } else if currentContact.outPathLength == 0 {
+            return "Route: Direct"
+        } else {
+            return "Route: \(pathDisplayWithNames)"
+        }
+    }
+
     // MARK: - Technical Section
 
     private var technicalSection: some View {
@@ -345,24 +498,6 @@ struct ContactDetailView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Routing info
-            HStack {
-                Text("Routing")
-                Spacer()
-                Text(routingInfo)
-                    .foregroundStyle(.secondary)
-            }
-
-            // Path length
-            if !currentContact.isFloodRouted && currentContact.outPathLength >= 0 {
-                HStack {
-                    Text("Hops")
-                    Spacer()
-                    Text(currentContact.outPathLength, format: .number)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             // Contact type
             HStack {
                 Text("Type")
@@ -370,19 +505,8 @@ struct ContactDetailView: View {
                 Text(contactTypeLabel)
                     .foregroundStyle(.secondary)
             }
-
-            // Reset path button
-            Button {
-                Task {
-                    await resetPath()
-                }
-            } label: {
-                Label("Reset Path", systemImage: "arrow.triangle.2.circlepath")
-            }
         } header: {
             Text("Technical")
-        } footer: {
-            Text("Resetting the path will force the device to rediscover the best route to this contact.")
         }
     }
 
@@ -428,16 +552,6 @@ struct ContactDetailView: View {
 
     private var publicKeyHex: String {
         currentContact.publicKeyPrefix.map { String(format: "%02X", $0) }.joined(separator: " ")
-    }
-
-    private var routingInfo: String {
-        if currentContact.isFloodRouted {
-            return "Flood (broadcast)"
-        } else if currentContact.outPathLength == 0 {
-            return "Direct"
-        } else {
-            return "Multi-hop"
-        }
     }
 
     private func saveNickname() async {

@@ -320,6 +320,111 @@ public actor ContactService {
         }
     }
 
+    // MARK: - Path Discovery
+
+    /// Send a path discovery request to find optimal route to contact
+    /// - Parameters:
+    ///   - deviceID: The device ID
+    ///   - publicKey: The contact's 32-byte public key
+    public func sendPathDiscovery(deviceID: UUID, publicKey: Data) async throws {
+        guard await bleTransport.connectionState == .ready else {
+            throw ContactServiceError.notConnected
+        }
+
+        let command = FrameCodec.encodePathDiscovery(recipientPublicKey: publicKey)
+        guard let response = try await bleTransport.send(command) else {
+            throw ContactServiceError.sendFailed
+        }
+
+        // Check for error response
+        if response.first == ResponseCode.error.rawValue {
+            if response.count > 1 {
+                if response[1] == ProtocolError.notFound.rawValue {
+                    throw ContactServiceError.contactNotFound
+                }
+                if let error = ProtocolError(rawValue: response[1]) {
+                    throw ContactServiceError.protocolError(error)
+                }
+            }
+            throw ContactServiceError.invalidResponse
+        }
+
+        // Path discovery is async - response comes via PUSH_CODE_PATH_DISCOVERY_RESPONSE
+        // Firmware always returns SENT (0x06) with tag and timeout data
+        guard response.first == ResponseCode.sent.rawValue else {
+            throw ContactServiceError.invalidResponse
+        }
+    }
+
+    // MARK: - Advert Path Query
+
+    /// Query the radio's cached advertisement path for a contact
+    /// - Parameters:
+    ///   - deviceID: The device ID
+    ///   - publicKey: The contact's 32-byte public key
+    /// - Returns: The cached path info if available, nil if no cached path
+    public func getAdvertPath(deviceID: UUID, publicKey: Data) async throws -> AdvertPathResponse? {
+        guard await bleTransport.connectionState == .ready else {
+            throw ContactServiceError.notConnected
+        }
+
+        let command = FrameCodec.encodeGetAdvertPath(publicKey: publicKey)
+        guard let response = try await bleTransport.send(command) else {
+            throw ContactServiceError.sendFailed
+        }
+
+        // Check for not found (no cached path)
+        if response.first == ResponseCode.error.rawValue {
+            if response.count > 1 && response[1] == ProtocolError.notFound.rawValue {
+                return nil  // No cached path - this is expected
+            }
+            if response.count > 1, let error = ProtocolError(rawValue: response[1]) {
+                throw ContactServiceError.protocolError(error)
+            }
+            throw ContactServiceError.invalidResponse
+        }
+
+        guard response.first == ResponseCode.advertPath.rawValue else {
+            throw ContactServiceError.invalidResponse
+        }
+
+        return try FrameCodec.decodeAdvertPathResponse(from: response)
+    }
+
+    /// Set a specific path for a contact
+    /// - Parameters:
+    ///   - deviceID: The device ID
+    ///   - publicKey: The contact's 32-byte public key
+    ///   - path: The path data (repeater hashes)
+    ///   - pathLength: The path length (-1 for flood, 0 for direct, >0 for routed)
+    public func setPath(deviceID: UUID, publicKey: Data, path: Data, pathLength: Int8) async throws {
+        guard await bleTransport.connectionState == .ready else {
+            throw ContactServiceError.notConnected
+        }
+
+        // Get current contact to preserve other fields
+        guard let existingContact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) else {
+            throw ContactServiceError.contactNotFound
+        }
+
+        // Create updated contact frame with new path
+        let updatedFrame = ContactFrame(
+            publicKey: existingContact.publicKey,
+            type: existingContact.type,
+            flags: existingContact.flags,
+            outPathLength: pathLength,
+            outPath: path,
+            name: existingContact.name,
+            lastAdvertTimestamp: existingContact.lastAdvertTimestamp,
+            latitude: existingContact.latitude,
+            longitude: existingContact.longitude,
+            lastModified: UInt32(Date().timeIntervalSince1970)
+        )
+
+        // Send update to device
+        try await addOrUpdateContact(deviceID: deviceID, contact: updatedFrame)
+    }
+
     // MARK: - Share Contact
 
     /// Share a contact via zero-hop broadcast

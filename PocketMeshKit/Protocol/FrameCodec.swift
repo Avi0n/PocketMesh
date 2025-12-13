@@ -300,6 +300,17 @@ public enum FrameCodec {
         return data
     }
 
+    // MARK: - Advert Path Encoding
+
+    /// Encode get advert path request to query cached advertisement path
+    /// - Parameter publicKey: Full 32-byte public key of contact
+    /// - Returns: Encoded frame data
+    public static func encodeGetAdvertPath(publicKey: Data) -> Data {
+        var data = Data([CommandCode.getAdvertPath.rawValue, 0x00])  // reserved byte
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
     // MARK: - Path Discovery Encoding
 
     /// Encode path discovery request
@@ -899,6 +910,31 @@ public enum FrameCodec {
             publicKeyPrefix: publicKeyPrefix,
             dataPoints: dataPoints
         )
+    }
+
+    // MARK: - Advert Path Decoding
+
+    /// Decode advert path response
+    /// - Parameter data: Response data starting with ResponseCode.advertPath
+    /// - Returns: Parsed AdvertPathResponse
+    public static func decodeAdvertPathResponse(from data: Data) throws -> AdvertPathResponse {
+        // Format: [0x16][timestamp:4][path_len:1][path:path_len]
+        guard data.count >= 6, data[0] == ResponseCode.advertPath.rawValue else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let timestamp = data.subdata(in: 1..<5).withUnsafeBytes {
+            $0.load(as: UInt32.self).littleEndian
+        }
+        let pathLength = data[5]
+
+        guard data.count >= 6 + Int(pathLength) else {
+            throw ProtocolError.illegalArgument
+        }
+
+        let path = data.subdata(in: 6..<(6 + Int(pathLength)))
+
+        return AdvertPathResponse(timestamp: timestamp, pathLength: pathLength, path: path)
     }
 
     // MARK: - Path Discovery Decoding

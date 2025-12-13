@@ -112,6 +112,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// The settings service for device configuration
     let settingsService: SettingsService
 
+    /// The advertisement service for managing device advertisements and path discovery
+    let advertisementService: AdvertisementService
+
     // MARK: - Navigation State
 
     /// Currently selected tab index
@@ -150,6 +153,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         self.messagePollingService = MessagePollingService(bleTransport: bleService, dataStore: dataStore)
         self.channelService = ChannelService(bleTransport: bleService, dataStore: dataStore)
         self.settingsService = SettingsService(bleTransport: bleService)
+        self.advertisementService = AdvertisementService(bleTransport: bleService, dataStore: dataStore)
 
         // Set up BLE activity tracking for UI animation
         Task {
@@ -873,11 +877,15 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             }
         }
 
-        // Connect BLE push notifications to the polling service
+        // Connect BLE push notifications to the polling service and advertisement service
         await bleService.setResponseHandler { [weak self] data in
             guard let self else { return }
             Task {
+                // Route to message polling service for message-related pushes
                 try? await self.messagePollingService.processPushData(data)
+
+                // Route to advertisement service for advert/path-related pushes
+                _ = await self.advertisementService.handlePush(data, deviceID: deviceID)
             }
         }
 
