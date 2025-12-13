@@ -16,6 +16,7 @@ struct BluetoothSection: View {
 
     // Track what the user intended before confirmation dialogs
     @State private var pendingPinType: BluetoothPinType?
+    @State private var isRenaming = false
 
     enum BluetoothPinType: String, CaseIterable {
         case `default` = "Default (123456)"
@@ -77,10 +78,32 @@ struct BluetoothSection: View {
                     showingChangePinEntry = true
                 }
             }
+
+            if appState.connectionState == .ready,
+               let deviceID = appState.connectedDevice?.id,
+               appState.accessorySetupKit.accessory(for: deviceID) != nil {
+                Button {
+                    renameDevice()
+                } label: {
+                    HStack {
+                        Text("Rename Device")
+                        Spacer()
+                        if isRenaming {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+                }
+                .disabled(isRenaming)
+            }
         } header: {
             Text("Bluetooth")
         } footer: {
-            Text(pinTypeFooter)
+            if appState.connectionState == .ready,
+               let deviceID = appState.connectedDevice?.id,
+               appState.accessorySetupKit.accessory(for: deviceID) != nil {
+                Text("Renaming only changes how iOS displays this device.")
+            }
         }
         .onAppear {
             pinType = currentPinType
@@ -131,17 +154,6 @@ struct BluetoothSection: View {
             Text("You'll need to remove and re-pair the device after this change.")
         }
         .errorAlert($showError)
-    }
-
-    private var pinTypeFooter: String {
-        switch pinType {
-        case .random:
-            return "A random PIN will be displayed on the device screen during pairing."
-        case .default:
-            return "Use the default PIN of 123456."
-        case .custom:
-            return "Use a custom fixed PIN."
-        }
     }
 
     private func handlePinTypeChange(from oldValue: BluetoothPinType, to newValue: BluetoothPinType) {
@@ -257,6 +269,25 @@ struct BluetoothSection: View {
             try await appState.pairNewDevice()
         } catch {
             showError = "Re-pairing failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func renameDevice() {
+        guard let deviceID = appState.connectedDevice?.id,
+              let accessory = appState.accessorySetupKit.accessory(for: deviceID) else {
+            return
+        }
+
+        isRenaming = true
+        Task {
+            defer { isRenaming = false }
+
+            do {
+                try await appState.accessorySetupKit.renameAccessory(accessory)
+            } catch {
+                // User cancelled or rename failed - no error to show
+                // Rename is optional and user can try again
+            }
         }
     }
 }

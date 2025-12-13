@@ -195,8 +195,6 @@ public final class AccessorySetupKitService {
             productImage: createGenericProductImage(),
             descriptor: discoveryDescriptor
         )
-        // Enable rename step so user can customize the device name
-        displayItem.setupOptions = .rename
 
         return try await withCheckedThrowingContinuation { continuation in
             self.pickerContinuation = continuation
@@ -250,6 +248,24 @@ public final class AccessorySetupKitService {
         }
 
         pairedAccessories = session.accessories
+    }
+
+    /// Shows the system rename sheet for an accessory
+    /// - Parameter accessory: The accessory to rename
+    public func renameAccessory(_ accessory: ASAccessory) async throws {
+        guard let session else {
+            throw AccessorySetupKitError.sessionNotActive
+        }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            session.renameAccessory(accessory) { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 
     /// Find a paired accessory by its Bluetooth identifier
