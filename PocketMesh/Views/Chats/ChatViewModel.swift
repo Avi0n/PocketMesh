@@ -22,8 +22,8 @@ final class ChatViewModel {
         let contactConversations = conversations.map { Conversation.direct($0) }
         // Show channels that are configured (have a name OR have a non-zero secret)
         let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
-        // Show connected room sessions
-        let roomConversations = roomSessions.filter { $0.isConnected }.map { Conversation.room($0) }
+        // Show all room sessions (connected or disconnected)
+        let roomConversations = roomSessions.map { Conversation.room($0) }
         return (contactConversations + channelConversations + roomConversations)
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
     }

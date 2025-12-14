@@ -896,6 +896,17 @@ public actor DataStore {
         }
     }
 
+    /// Reset all remote node sessions to disconnected state.
+    /// Call this on app launch since connections don't persist across restarts.
+    public func resetAllRemoteNodeSessionConnections() throws {
+        let descriptor = FetchDescriptor<RemoteNodeSession>()
+        let sessions = try modelContext.fetch(descriptor)
+        for session in sessions {
+            session.isConnected = false
+        }
+        try modelContext.save()
+    }
+
     /// Delete remote node session and all associated room messages
     public func deleteRemoteNodeSession(id: UUID) throws {
         let targetID = id
