@@ -130,7 +130,47 @@ public actor RemoteNodeService {
 
     // MARK: - Session Management
 
-    /// Create a new session for a remote node
+    /// Create a session DTO for a contact, optionally preserving data from an existing session.
+    ///
+    /// - Parameters:
+    ///   - deviceID: The device ID for the session
+    ///   - contact: The contact to create a session for
+    ///   - role: The remote node role
+    ///   - existing: Optional existing session to preserve data from
+    /// - Returns: A new RemoteNodeSessionDTO
+    private func makeSessionDTO(
+        deviceID: UUID,
+        contact: ContactDTO,
+        role: RemoteNodeRole,
+        preserving existing: RemoteNodeSessionDTO? = nil
+    ) -> RemoteNodeSessionDTO {
+        RemoteNodeSessionDTO(
+            id: existing?.id ?? UUID(),
+            deviceID: deviceID,
+            publicKey: contact.publicKey,
+            name: contact.displayName,
+            role: role,
+            latitude: contact.latitude,
+            longitude: contact.longitude,
+            isConnected: false,
+            permissionLevel: existing?.permissionLevel ?? .guest,
+            lastConnectedDate: existing?.lastConnectedDate,
+            lastBatteryMillivolts: existing?.lastBatteryMillivolts,
+            lastUptimeSeconds: existing?.lastUptimeSeconds,
+            lastNoiseFloor: existing?.lastNoiseFloor,
+            unreadCount: existing?.unreadCount ?? 0,
+            lastRxAirtimeSeconds: existing?.lastRxAirtimeSeconds,
+            neighborCount: existing?.neighborCount ?? 0
+        )
+    }
+
+    /// Create a new session for a remote node.
+    ///
+    /// If a session already exists for this publicKey, updates the existing session
+    /// instead of creating a duplicate. Preserves unread count and telemetry data.
+    ///
+    /// - Note: Sessions are keyed by publicKey alone. Multi-device support is not
+    ///   implemented - each companion device has its own local session storage.
     public func createSession(
         deviceID: UUID,
         contact: ContactDTO,
@@ -142,21 +182,16 @@ public actor RemoteNodeService {
         }
 
         guard contact.publicKey.count == 32 else {
-            throw RemoteNodeError.loginFailed("Invalid public key length")
+            throw RemoteNodeError.loginFailed("Invalid public key length: expected 32 bytes, got \(contact.publicKey.count)")
         }
 
         if rememberPassword {
             try await keychainService.storePassword(password, forNodeKey: contact.publicKey)
         }
 
-        let dto = RemoteNodeSessionDTO(
-            deviceID: deviceID,
-            publicKey: contact.publicKey,
-            name: contact.displayName,
-            role: role,
-            latitude: contact.latitude,
-            longitude: contact.longitude
-        )
+        // Check for existing session - reuse to avoid duplicates
+        let existing = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
+        let dto = makeSessionDTO(deviceID: deviceID, contact: contact, role: role, preserving: existing)
 
         try await dataStore.saveRemoteNodeSessionDTO(dto)
         guard let saved = try await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey) else {
