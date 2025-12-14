@@ -110,11 +110,11 @@ struct RoomConversationView: View {
                 .font(.title2)
                 .bold()
 
-            Text("No messages yet")
+            Text("No public messages yet")
                 .foregroundStyle(.secondary)
 
             if session.canPost {
-                Text("Start the conversation")
+                Text("Be the first to post")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -138,7 +138,7 @@ struct RoomConversationView: View {
         ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Room Message",
+            placeholder: "Public Message",
             accentColor: .orange,
             isSending: viewModel.isSending,
             maxCharacters: ProtocolLimits.maxDirectMessageLength

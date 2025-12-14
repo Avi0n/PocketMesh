@@ -259,8 +259,6 @@ struct ContactDetailView: View {
                 } label: {
                     Label("Join Room", systemImage: "door.left.hand.open")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.orange)
 
             case .repeater:
                 // Repeater actions
@@ -269,8 +267,6 @@ struct ContactDetailView: View {
                 } label: {
                     Label("Admin Access", systemImage: "gearshape.2")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
 
             case .chat:
                 // Send message - only show when NOT from direct chat

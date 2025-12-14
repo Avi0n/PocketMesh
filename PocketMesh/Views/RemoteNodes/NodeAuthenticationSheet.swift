@@ -33,7 +33,6 @@ struct NodeAuthenticationSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
     }
 
     // MARK: - Sections
@@ -101,7 +100,7 @@ struct NodeAuthenticationSheet: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .disabled(isAuthenticating || password.isEmpty)
+            .disabled(isAuthenticating || (role == .repeater && password.isEmpty))
         }
     }
 
