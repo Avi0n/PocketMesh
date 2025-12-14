@@ -9,6 +9,10 @@ struct ChatsListView: View {
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
     @State private var navigationPath = NavigationPath()
+    @State private var roomToAuthenticate: RemoteNodeSessionDTO?
+    @State private var showRoomAuthSheet = false
+    @State private var roomToDelete: RemoteNodeSessionDTO?
+    @State private var showRoomDeleteAlert = false
 
     private var filteredConversations: [Conversation] {
         let conversations = viewModel.allConversations
@@ -104,7 +108,40 @@ struct ChatsListView: View {
                     }
                 }
             }
+            .onChange(of: appState.pendingRoomSession) { _, _ in
+                handlePendingRoomNavigation()
+            }
+            .sheet(isPresented: $showRoomAuthSheet) {
+                if let session = roomToAuthenticate {
+                    RoomAuthenticationSheet(session: session) { authenticatedSession in
+                        showRoomAuthSheet = false
+                        navigationPath.append(authenticatedSession)
+                    }
+                }
+            }
+            .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
+                Button("Cancel", role: .cancel) {
+                    roomToDelete = nil
+                }
+                Button("Leave Room", role: .destructive) {
+                    if let session = roomToDelete {
+                        Task {
+                            await deleteRoom(session)
+                            roomToDelete = nil
+                        }
+                    }
+                }
+            } message: {
+                Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
+            }
         }
+    }
+
+    private func handlePendingRoomNavigation() {
+        guard let session = appState.pendingRoomSession else { return }
+        navigationPath.removeLast(navigationPath.count)
+        navigationPath.append(session)
+        appState.clearPendingRoomNavigation()
     }
 
     private var conversationList: some View {
@@ -124,11 +161,17 @@ struct ChatsListView: View {
                         ChannelConversationRow(channel: channel, viewModel: viewModel)
                     }
                 case .room(let session):
-                    NavigationLink {
-                        RoomConversationView(session: session)
+                    Button {
+                        if session.isConnected {
+                            navigationPath.append(session)
+                        } else {
+                            roomToAuthenticate = session
+                            showRoomAuthSheet = true
+                        }
                     } label: {
                         RoomConversationRow(session: session)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .onDelete(perform: deleteConversations)
@@ -166,13 +209,42 @@ struct ChatsListView: View {
 
     private func deleteConversations(at offsets: IndexSet) {
         let conversationsToDelete = offsets.map { filteredConversations[$0] }
-        Task {
-            for conversation in conversationsToDelete {
-                if let contact = conversation.contact {
+
+        for conversation in conversationsToDelete {
+            switch conversation {
+            case .direct(let contact):
+                Task {
                     try? await viewModel.deleteConversation(for: contact)
                 }
+            case .room(let session):
+                // Show confirmation alert for room deletion
+                roomToDelete = session
+                showRoomDeleteAlert = true
+            case .channel:
                 // Channel deletion is handled via ChannelInfoSheet, not swipe-to-delete
+                break
             }
+        }
+    }
+
+    private func deleteRoom(_ session: RemoteNodeSessionDTO) async {
+        do {
+            // Leave room (sends logout and removes session)
+            try await appState.roomServerService.leaveRoom(
+                sessionID: session.id,
+                publicKey: session.publicKey
+            )
+
+            // Delete associated contact
+            try await appState.contactService.removeContact(
+                deviceID: session.deviceID,
+                publicKey: session.publicKey
+            )
+
+            // Refresh conversation list
+            await loadConversations()
+        } catch {
+            print("[ChatsListView] Failed to delete room: \(error)")
         }
     }
 }
@@ -473,7 +545,7 @@ struct RoomConversationRow: View {
                             .font(.caption)
                             .foregroundStyle(.green)
                     } else {
-                        Text("Disconnected")
+                        Text("Tap to reconnect")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -529,6 +601,48 @@ struct ConversationTimestamp: View {
         } else {
             // Older: show date only (e.g., "Nov 15")
             return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+    }
+}
+
+// MARK: - Room Authentication Sheet
+
+/// Helper sheet for re-authenticating to a disconnected room from the chat list
+struct RoomAuthenticationSheet: View {
+    @Environment(AppState.self) private var appState
+    let session: RemoteNodeSessionDTO
+    let onSuccess: (RemoteNodeSessionDTO) -> Void
+
+    @State private var contact: ContactDTO?
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let contact {
+                NodeAuthenticationSheet(
+                    contact: contact,
+                    role: .roomServer,
+                    hideNodeDetails: true,
+                    onSuccess: onSuccess
+                )
+            } else {
+                ContentUnavailableView(
+                    "Room Not Found",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text("Could not find the room contact")
+                )
+            }
+        }
+        .task {
+            // Fetch the contact associated with this room session
+            contact = try? await appState.dataStore.fetchContact(
+                deviceID: session.deviceID,
+                publicKey: session.publicKey
+            )
+            isLoading = false
         }
     }
 }

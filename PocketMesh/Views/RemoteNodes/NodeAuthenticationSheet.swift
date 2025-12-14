@@ -8,6 +8,8 @@ struct NodeAuthenticationSheet: View {
 
     let contact: ContactDTO
     let role: RemoteNodeRole
+    /// When true, hides the Node Details section (used when re-joining known rooms from chat list)
+    let hideNodeDetails: Bool
     let onSuccess: (RemoteNodeSessionDTO) -> Void
 
     @State private var password: String = ""
@@ -18,10 +20,24 @@ struct NodeAuthenticationSheet: View {
 
     private let maxPasswordLength = 15
 
+    init(
+        contact: ContactDTO,
+        role: RemoteNodeRole,
+        hideNodeDetails: Bool = false,
+        onSuccess: @escaping (RemoteNodeSessionDTO) -> Void
+    ) {
+        self.contact = contact
+        self.role = role
+        self.hideNodeDetails = hideNodeDetails
+        self.onSuccess = onSuccess
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                nodeDetailsSection
+                if !hideNodeDetails {
+                    nodeDetailsSection
+                }
                 authenticationSection
                 errorSection
                 connectButton

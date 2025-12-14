@@ -126,8 +126,8 @@ struct ContactDetailView: View {
         .sheet(isPresented: $showRoomJoinSheet) {
             if let role = RemoteNodeRole(contactType: currentContact.type) {
                 NodeAuthenticationSheet(contact: currentContact, role: role) { session in
-                    connectedRoomSession = session
-                    showRoomConversation = true
+                    // Navigate to Chats tab with the room conversation
+                    appState.navigateToRoom(with: session)
                 }
             }
         }

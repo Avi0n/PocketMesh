@@ -98,6 +98,10 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
         _loginResults.append((result, keyPrefix))
     }
 
+    nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveRoomMessage frame: MessageFrame, fromRoom contact: ContactDTO) async {
+        // Room messages are handled by RoomServerService, not tracked here
+    }
+
     func reset() {
         _directMessages.removeAll()
         _channelMessages.removeAll()

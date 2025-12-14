@@ -63,6 +63,13 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
     /// - Note: The delegate implementation must resolve the 6-byte prefix to the full
     ///   32-byte public key using the contact database before processing
     func messagePollingService(_ service: MessagePollingService, didReceiveLoginResult result: LoginResult, fromPublicKeyPrefix: Data) async
+
+    /// Called when a room message is received (signedPlain from room server)
+    /// - Parameters:
+    ///   - service: The service that received the message
+    ///   - frame: The decoded message frame containing text, timestamp, and author prefix in extraData
+    ///   - fromRoom: The room contact that sent the message
+    func messagePollingService(_ service: MessagePollingService, didReceiveRoomMessage frame: MessageFrame, fromRoom contact: ContactDTO) async
 }
 
 // MARK: - Message Polling Service Actor
@@ -219,6 +226,14 @@ public actor MessagePollingService {
         ) else {
             // Unknown sender - notify delegate
             await delegate?.messagePollingService(self, didReceiveUnknownSender: frame.senderPublicKeyPrefix)
+            return
+        }
+
+        // Check if this is a room server sending a signedPlain message
+        // Room messages use signedPlain with author prefix in extraData
+        if contact.type == .room && frame.textType == .signedPlain {
+            // Route to room message handler
+            await delegate?.messagePollingService(self, didReceiveRoomMessage: frame, fromRoom: contact)
             return
         }
 

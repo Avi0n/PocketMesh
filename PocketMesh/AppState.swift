@@ -135,6 +135,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Contact to navigate to in chat (for cross-tab navigation)
     var pendingChatContact: ContactDTO?
 
+    /// Room session to navigate to in chat (for cross-tab navigation after room join)
+    var pendingRoomSession: RemoteNodeSessionDTO?
+
     // MARK: - Device Persistence Keys
 
     private let lastDeviceNameKey = "lastConnectedDeviceName"
@@ -203,6 +206,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up remote node service for login result handling
         messageEventBroadcaster.remoteNodeService = remoteNodeService
         messageEventBroadcaster.dataStore = dataStore
+
+        // Wire up room server service for room message handling
+        messageEventBroadcaster.roomServerService = roomServerService
 
         // Set up message failure handler to notify UI
         Task {
@@ -297,6 +303,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Pre-warm database to avoid lazy initialization freeze
         // Must complete before any database operations
         try? await dataStore.warmUp()
+
+        // Reset all remote node sessions to disconnected since connections don't persist
+        try? await dataStore.resetAllRemoteNodeSessionConnections()
 
         // Activate AccessorySetupKit session FIRST (before any CBCentralManager usage)
         do {
@@ -1112,9 +1121,20 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         selectedTab = 0
     }
 
+    /// Navigates to the Chats tab and opens a room conversation
+    func navigateToRoom(with session: RemoteNodeSessionDTO) {
+        pendingRoomSession = session
+        selectedTab = 0
+    }
+
     /// Clears the pending navigation after it's been handled
     func clearPendingNavigation() {
         pendingChatContact = nil
+    }
+
+    /// Clears the pending room navigation after it's been handled
+    func clearPendingRoomNavigation() {
+        pendingRoomSession = nil
     }
 
     // MARK: - Onboarding Completion

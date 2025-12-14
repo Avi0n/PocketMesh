@@ -43,6 +43,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Reference to data store for resolving public key prefixes
     var dataStore: DataStore?
 
+    /// Reference to room server service for handling room messages
+    var roomServerService: RoomServerService?
+
     // MARK: - Initialization
 
     public init() {}
@@ -179,5 +182,38 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     func handleMessageFailed(messageID: UUID) {
         self.latestEvent = .messageFailed(messageID: messageID)
         self.newMessageCount += 1
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveRoomMessage frame: MessageFrame,
+        fromRoom contact: ContactDTO
+    ) async {
+        let roomService = await MainActor.run { self.roomServerService }
+
+        guard let roomService else {
+            print("[MessageEventBroadcaster] Room message received but RoomServerService not configured")
+            return
+        }
+
+        guard let authorPrefix = frame.extraData, authorPrefix.count >= 4 else {
+            print("[MessageEventBroadcaster] Room message missing author prefix")
+            return
+        }
+
+        do {
+            try await roomService.handleIncomingMessage(
+                senderPublicKeyPrefix: frame.senderPublicKeyPrefix,
+                timestamp: frame.timestamp,
+                authorPrefix: Data(authorPrefix.prefix(4)),
+                text: frame.text
+            )
+
+            await MainActor.run {
+                self.newMessageCount += 1
+            }
+        } catch {
+            print("[MessageEventBroadcaster] Failed to handle room message: \(error)")
+        }
     }
 }
