@@ -13,7 +13,6 @@ struct ChatsListView: View {
     @State private var showingChannelOptions = false
     @State private var navigationPath = NavigationPath()
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
-    @State private var showRoomAuthSheet = false
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
 
@@ -114,12 +113,10 @@ struct ChatsListView: View {
             .onChange(of: appState.pendingRoomSession) { _, _ in
                 handlePendingRoomNavigation()
             }
-            .sheet(isPresented: $showRoomAuthSheet) {
-                if let session = roomToAuthenticate {
-                    RoomAuthenticationSheet(session: session) { authenticatedSession in
-                        showRoomAuthSheet = false
-                        navigationPath.append(authenticatedSession)
-                    }
+            .sheet(item: $roomToAuthenticate) { session in
+                RoomAuthenticationSheet(session: session) { authenticatedSession in
+                    roomToAuthenticate = nil
+                    navigationPath.append(authenticatedSession)
                 }
             }
             .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
@@ -168,8 +165,7 @@ struct ChatsListView: View {
                         if session.isConnected {
                             navigationPath.append(session)
                         } else {
-                            roomToAuthenticate = session
-                            showRoomAuthSheet = true
+                            roomToAuthenticate = session  // Sheet will show automatically
                         }
                     } label: {
                         RoomConversationRow(session: session)

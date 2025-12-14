@@ -10,6 +10,19 @@ struct ContactDetailView: View {
     let contact: ContactDTO
     let showFromDirectChat: Bool
 
+    /// Sheet types for the contact detail view
+    private enum ActiveSheet: Identifiable, Hashable {
+        case repeaterAuth
+        case repeaterStatus(RemoteNodeSessionDTO)
+
+        var id: String {
+            switch self {
+            case .repeaterAuth: return "auth"
+            case .repeaterStatus(let session): return "status-\(session.id)"
+            }
+        }
+    }
+
     @State private var currentContact: ContactDTO
     @State private var nickname = ""
     @State private var isEditingNickname = false
@@ -21,11 +34,10 @@ struct ContactDetailView: View {
     @State private var pathViewModel = PathManagementViewModel()
     @State private var showAdvanced = false
     @State private var showRoomJoinSheet = false
-    @State private var showRepeaterAdminSheet = false
-    @State private var showRepeaterStatusSheet = false
+    @State private var activeSheet: ActiveSheet?
+    @State private var pendingSheet: ActiveSheet?
     @State private var showRoomConversation = false
     @State private var connectedRoomSession: RemoteNodeSessionDTO?
-    @State private var connectedRepeaterSession: RemoteNodeSessionDTO?
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -131,16 +143,16 @@ struct ContactDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showRepeaterAdminSheet) {
-            if let role = RemoteNodeRole(contactType: currentContact.type) {
-                NodeAuthenticationSheet(contact: currentContact, role: role) { session in
-                    connectedRepeaterSession = session
-                    showRepeaterStatusSheet = true
+        .sheet(item: $activeSheet, onDismiss: presentPendingSheet) { sheet in
+            switch sheet {
+            case .repeaterAuth:
+                if let role = RemoteNodeRole(contactType: currentContact.type) {
+                    NodeAuthenticationSheet(contact: currentContact, role: role) { session in
+                        pendingSheet = .repeaterStatus(session)
+                        activeSheet = nil  // Triggers dismissal, then onDismiss fires
+                    }
                 }
-            }
-        }
-        .sheet(isPresented: $showRepeaterStatusSheet) {
-            if let session = connectedRepeaterSession {
+            case .repeaterStatus(let session):
                 RepeaterStatusView(session: session)
             }
         }
@@ -148,6 +160,15 @@ struct ContactDetailView: View {
             if let session = connectedRoomSession {
                 RoomConversationView(session: session)
             }
+        }
+    }
+
+    // MARK: - Sheet Management
+
+    private func presentPendingSheet() {
+        if let next = pendingSheet {
+            pendingSheet = nil
+            activeSheet = next
         }
     }
 
@@ -263,7 +284,7 @@ struct ContactDetailView: View {
             case .repeater:
                 // Repeater actions
                 Button {
-                    showRepeaterAdminSheet = true
+                    activeSheet = .repeaterAuth
                 } label: {
                     Label("Admin Access", systemImage: "gearshape.2")
                 }
