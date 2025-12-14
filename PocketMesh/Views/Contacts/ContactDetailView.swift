@@ -562,13 +562,14 @@ struct ContactDetailView: View {
 
     private var technicalSection: some View {
         Section {
-            // Public key prefix
-            HStack {
+            // Public key
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Public Key")
-                Spacer()
-                Text(publicKeyHex)
-                    .font(.caption.monospaced())
+                    .font(.caption)
                     .foregroundStyle(.secondary)
+                Text(currentContact.publicKeyHex)
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
             }
 
             // Contact type
@@ -621,10 +622,6 @@ struct ContactDetailView: View {
         case .repeater: return "Repeater"
         case .room: return "Room"
         }
-    }
-
-    private var publicKeyHex: String {
-        currentContact.publicKeyPrefix.map { String(format: "%02X", $0) }.joined(separator: " ")
     }
 
     private func saveNickname() async {

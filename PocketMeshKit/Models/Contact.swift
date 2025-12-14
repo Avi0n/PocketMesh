@@ -242,4 +242,8 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public var hasLocation: Bool {
         latitude != 0 || longitude != 0
     }
+
+    public var publicKeyHex: String {
+        publicKey.map { String(format: "%02X", $0) }.joined()
+    }
 }
