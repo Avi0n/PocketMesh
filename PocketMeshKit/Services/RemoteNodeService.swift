@@ -15,6 +15,7 @@ public enum RemoteNodeError: Error, LocalizedError, Sendable {
     case floodRouted  // Keep-alive requires direct path
     case pathDiscoveryFailed
     case contactNotFound
+    case cancelled  // Login cancelled due to duplicate attempt or shutdown
 
     public var errorDescription: String? {
         switch self {
@@ -40,6 +41,8 @@ public enum RemoteNodeError: Error, LocalizedError, Sendable {
             return "Failed to establish direct path"
         case .contactNotFound:
             return "Contact not found in database"
+        case .cancelled:
+            return "Login cancelled"
         }
     }
 
@@ -89,7 +92,9 @@ public actor RemoteNodeService {
     private let keychainService: any KeychainServiceProtocol
     private let logger = Logger(subsystem: "com.pocketmesh", category: "RemoteNode")
 
-    /// Pending login continuations (keyed by full 32-byte public key to avoid prefix collisions)
+    /// Pending login continuations keyed by 6-byte public key prefix.
+    /// Using 6-byte prefix matches MeshCore protocol format for login results.
+    /// Collision risk is ~1 in 281 trillion per pair - negligible for practical use.
     private var pendingLogins: [Data: CheckedContinuation<LoginResult, Error>] = [:]
 
     /// Keep-alive timer tasks
@@ -216,13 +221,22 @@ public actor RemoteNodeService {
         // Calculate timeout based on path length
         let timeout = LoginTimeoutConfig.timeout(forPathLength: pathLength)
 
-        // Wait for login result push (keyed by full public key, not prefix)
+        // Wait for login result push (keyed by 6-byte prefix to match MeshCore protocol)
         return try await withCheckedThrowingContinuation { continuation in
-            pendingLogins[session.publicKey] = continuation
+            let prefix = Data(session.publicKey.prefix(6))
+
+            // Cancel any existing pending login for this prefix (collision or duplicate attempt)
+            if let existing = pendingLogins.removeValue(forKey: prefix) {
+                let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
+                logger.warning("Overwriting pending login for prefix \(prefixHex) - possible collision or duplicate attempt")
+                existing.resume(throwing: RemoteNodeError.cancelled)
+            }
+
+            pendingLogins[prefix] = continuation
 
             Task {
                 try await Task.sleep(for: timeout)
-                if let pending = pendingLogins.removeValue(forKey: session.publicKey) {
+                if let pending = pendingLogins.removeValue(forKey: prefix) {
                     logger.warning("Login timeout after \(timeout) for session \(sessionID) (path length: \(pathLength))")
                     pending.resume(throwing: RemoteNodeError.timeout)
                 }
@@ -232,17 +246,32 @@ public actor RemoteNodeService {
 
     /// Handle login result push from device.
     ///
-    /// The caller must resolve the 6-byte prefix from the push to the full 32-byte
-    /// public key using the contact database before calling this method.
-    public func handleLoginResult(_ result: LoginResult, fromPublicKey: Data) async {
-        guard let continuation = pendingLogins.removeValue(forKey: fromPublicKey) else {
-            logger.warning("Received login result with no pending request")
+    /// Accepts the 6-byte public key prefix directly from the protocol message.
+    /// No contact lookup needed - pending logins are keyed by prefix.
+    ///
+    /// - Parameters:
+    ///   - result: The login result from the remote node
+    ///   - fromPublicKeyPrefix: 6-byte public key prefix identifying the node
+    public func handleLoginResult(_ result: LoginResult, fromPublicKeyPrefix: Data) async {
+        guard fromPublicKeyPrefix.count >= 6 else {
+            logger.warning("Login result has invalid prefix length: \(fromPublicKeyPrefix.count)")
+            return
+        }
+
+        let prefix = Data(fromPublicKeyPrefix.prefix(6))
+        guard let continuation = pendingLogins.removeValue(forKey: prefix) else {
+            // This can happen if:
+            // 1. Response arrived after timeout
+            // 2. Prefix collision (astronomically unlikely)
+            // 3. Spurious login result from network
+            let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
+            logger.warning("Login result with no pending request. Prefix: \(prefixHex). Possible late response or collision.")
             return
         }
 
         if result.success {
-            // Update session state
-            if let session = try? await dataStore.fetchRemoteNodeSession(publicKey: fromPublicKey) {
+            // Update session state - use prefix-based lookup since we only have the prefix
+            if let session = try? await dataStore.fetchRemoteNodeSessionByPrefix(prefix) {
                 let permission = RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest
                 try? await dataStore.updateRemoteNodeSessionConnection(
                     id: session.id,

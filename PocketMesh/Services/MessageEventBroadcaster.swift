@@ -164,33 +164,22 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         didReceiveLoginResult result: LoginResult,
         fromPublicKeyPrefix: Data
     ) async {
-        let prefixHex = fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()
         await MainActor.run {
-            self.logger.info("Received login result from node: \(prefixHex), success: \(result.success)")
+            self.logger.debug("Received login result from node: \(fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()), success: \(result.success)")
         }
 
-        // Get service references from MainActor context
         let nodeService = await MainActor.run { self.remoteNodeService }
-        let store = await MainActor.run { self.dataStore }
 
-        guard let nodeService, let store else {
+        guard let nodeService else {
             await MainActor.run {
-                self.logger.warning("Cannot handle login result - services not configured")
+                self.logger.warning("Cannot handle login result - RemoteNodeService not configured")
             }
             return
         }
 
-        // Resolve 6-byte prefix to full 32-byte public key
-        guard let contact = try? await store.findContactByKeyPrefix(fromPublicKeyPrefix),
-              contact.publicKey.count == 32 else {
-            await MainActor.run {
-                self.logger.warning("Cannot resolve public key prefix to full key")
-            }
-            return
-        }
-
-        // Forward to RemoteNodeService to resume the waiting continuation
-        await nodeService.handleLoginResult(result, fromPublicKey: contact.publicKey)
+        // Forward to RemoteNodeService using the 6-byte prefix directly
+        // No contact lookup needed - RemoteNodeService keys pending logins by prefix
+        await nodeService.handleLoginResult(result, fromPublicKeyPrefix: fromPublicKeyPrefix)
     }
 
     /// Called when a message fails due to ACK timeout
