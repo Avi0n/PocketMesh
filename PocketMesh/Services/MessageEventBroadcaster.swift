@@ -37,6 +37,12 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Reference to message service for handling send confirmations
     var messageService: MessageService?
 
+    /// Reference to remote node service for handling login results
+    var remoteNodeService: RemoteNodeService?
+
+    /// Reference to data store for resolving public key prefixes
+    var dataStore: DataStore?
+
     // MARK: - Initialization
 
     public init() {}
@@ -146,10 +152,27 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         didReceiveLoginResult result: LoginResult,
         fromPublicKeyPrefix: Data
     ) async {
-        // Login results are handled by RemoteNodeService (to be implemented in Phase 3)
-        // For now, just log the receipt
         let prefixHex = fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()
         print("[MessageEventBroadcaster] Received login result from node: \(prefixHex), success: \(result.success)")
+
+        // Get service references from MainActor context
+        let nodeService = await MainActor.run { self.remoteNodeService }
+        let store = await MainActor.run { self.dataStore }
+
+        guard let nodeService, let store else {
+            print("[MessageEventBroadcaster] Cannot handle login result - services not configured")
+            return
+        }
+
+        // Resolve 6-byte prefix to full 32-byte public key
+        guard let contact = try? await store.findContactByKeyPrefix(fromPublicKeyPrefix),
+              contact.publicKey.count == 32 else {
+            print("[MessageEventBroadcaster] Cannot resolve public key prefix to full key")
+            return
+        }
+
+        // Forward to RemoteNodeService to resume the waiting continuation
+        await nodeService.handleLoginResult(result, fromPublicKey: contact.publicKey)
     }
 
     /// Called when a message fails due to ACK timeout

@@ -1015,6 +1015,16 @@ public actor DataStore {
         }?.displayName
     }
 
+    /// Find contact by 4-byte or 6-byte public key prefix.
+    /// Returns nil if no matching contact found.
+    public func findContactByKeyPrefix(_ prefix: Data) throws -> ContactDTO? {
+        let contacts = try modelContext.fetch(FetchDescriptor<Contact>())
+        let prefixLength = prefix.count
+        return contacts.first { contact in
+            contact.publicKey.prefix(prefixLength) == prefix
+        }.map { ContactDTO(from: $0) }
+    }
+
     /// Find contact by 32-byte public key
     public func findContactByPublicKey(_ publicKey: Data) throws -> ContactDTO? {
         let targetKey = publicKey

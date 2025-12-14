@@ -200,6 +200,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up message service for send confirmation handling
         messageEventBroadcaster.messageService = messageService
 
+        // Wire up remote node service for login result handling
+        messageEventBroadcaster.remoteNodeService = remoteNodeService
+        messageEventBroadcaster.dataStore = dataStore
+
         // Set up message failure handler to notify UI
         Task {
             await messageService.setMessageFailedHandler { [weak self] messageID in
