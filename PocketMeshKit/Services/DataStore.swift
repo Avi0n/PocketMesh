@@ -8,6 +8,7 @@ public enum DataStoreError: Error, Sendable {
     case contactNotFound
     case messageNotFound
     case channelNotFound
+    case remoteNodeSessionNotFound
     case saveFailed(String)
     case fetchFailed(String)
     case invalidData
@@ -25,7 +26,9 @@ public actor DataStore {
         Device.self,
         Contact.self,
         Message.self,
-        Channel.self
+        Channel.self,
+        RemoteNodeSession.self,
+        RoomMessage.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -752,5 +755,274 @@ public actor DataStore {
     public func warmUp() throws {
         // Perform a simple fetch to trigger modelContext initialization
         _ = try modelContext.fetchCount(FetchDescriptor<Device>())
+    }
+
+    // MARK: - RemoteNodeSession Operations
+
+    /// Fetch remote node session by UUID
+    public func fetchRemoteNodeSession(id: UUID) throws -> RemoteNodeSessionDTO? {
+        let targetID = id
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { RemoteNodeSessionDTO(from: $0) }
+    }
+
+    /// Fetch remote node session by 32-byte public key
+    public func fetchRemoteNodeSession(publicKey: Data) throws -> RemoteNodeSessionDTO? {
+        let targetKey = publicKey
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.publicKey == targetKey
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { RemoteNodeSessionDTO(from: $0) }
+    }
+
+    /// Fetch remote node session by 6-byte public key prefix
+    public func fetchRemoteNodeSessionByPrefix(_ prefix: Data) throws -> RemoteNodeSessionDTO? {
+        // SwiftData predicates don't support prefix matching directly
+        // Fetch all sessions and filter in memory
+        let sessions = try modelContext.fetch(FetchDescriptor<RemoteNodeSession>())
+        return sessions.first { $0.publicKey.prefix(6) == prefix }.map { RemoteNodeSessionDTO(from: $0) }
+    }
+
+    /// Fetch all connected sessions for re-authentication after BLE reconnection
+    public func fetchConnectedRemoteNodeSessions() throws -> [RemoteNodeSessionDTO] {
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.isConnected == true
+        }
+        let descriptor = FetchDescriptor(predicate: predicate)
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.map { RemoteNodeSessionDTO(from: $0) }
+    }
+
+    /// Fetch all remote node sessions for a device
+    public func fetchRemoteNodeSessions(deviceID: UUID) throws -> [RemoteNodeSessionDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.deviceID == targetDeviceID
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\RemoteNodeSession.name)]
+        )
+        let sessions = try modelContext.fetch(descriptor)
+        return sessions.map { RemoteNodeSessionDTO(from: $0) }
+    }
+
+    /// Save or update a remote node session (void version for cross-actor calls)
+    public func saveRemoteNodeSessionDTO(_ dto: RemoteNodeSessionDTO) throws {
+        _ = try saveRemoteNodeSession(dto)
+    }
+
+    /// Save or update a remote node session
+    @discardableResult
+    public func saveRemoteNodeSession(_ dto: RemoteNodeSessionDTO) throws -> RemoteNodeSession {
+        let targetID = dto.id
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            // Update existing
+            existing.deviceID = dto.deviceID
+            existing.publicKey = dto.publicKey
+            existing.name = dto.name
+            existing.roleRawValue = dto.role.rawValue
+            existing.latitude = dto.latitude
+            existing.longitude = dto.longitude
+            existing.isConnected = dto.isConnected
+            existing.permissionLevelRawValue = dto.permissionLevel.rawValue
+            existing.lastConnectedDate = dto.lastConnectedDate
+            existing.lastBatteryMillivolts = dto.lastBatteryMillivolts
+            existing.lastUptimeSeconds = dto.lastUptimeSeconds
+            existing.lastNoiseFloor = dto.lastNoiseFloor
+            existing.unreadCount = dto.unreadCount
+            existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
+            existing.neighborCount = dto.neighborCount
+            try modelContext.save()
+            return existing
+        } else {
+            // Create new
+            let session = RemoteNodeSession(
+                id: dto.id,
+                deviceID: dto.deviceID,
+                publicKey: dto.publicKey,
+                name: dto.name,
+                role: dto.role,
+                latitude: dto.latitude,
+                longitude: dto.longitude,
+                isConnected: dto.isConnected,
+                permissionLevel: dto.permissionLevel,
+                lastConnectedDate: dto.lastConnectedDate,
+                lastBatteryMillivolts: dto.lastBatteryMillivolts,
+                lastUptimeSeconds: dto.lastUptimeSeconds,
+                lastNoiseFloor: dto.lastNoiseFloor,
+                unreadCount: dto.unreadCount,
+                lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
+                neighborCount: dto.neighborCount
+            )
+            modelContext.insert(session)
+            try modelContext.save()
+            return session
+        }
+    }
+
+    /// Update session connection state
+    public func updateRemoteNodeSessionConnection(
+        id: UUID,
+        isConnected: Bool,
+        permissionLevel: RoomPermissionLevel
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let session = try modelContext.fetch(descriptor).first {
+            session.isConnected = isConnected
+            session.permissionLevelRawValue = permissionLevel.rawValue
+            if isConnected {
+                session.lastConnectedDate = Date()
+            }
+            try modelContext.save()
+        }
+    }
+
+    /// Delete remote node session and all associated room messages
+    public func deleteRemoteNodeSession(id: UUID) throws {
+        let targetID = id
+
+        // Delete associated room messages
+        let messagePredicate = #Predicate<RoomMessage> { message in
+            message.sessionID == targetID
+        }
+        let messages = try modelContext.fetch(FetchDescriptor(predicate: messagePredicate))
+        for message in messages {
+            modelContext.delete(message)
+        }
+
+        // Delete the session
+        let sessionPredicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        if let session = try modelContext.fetch(FetchDescriptor(predicate: sessionPredicate)).first {
+            modelContext.delete(session)
+        }
+
+        try modelContext.save()
+    }
+
+    // MARK: - RoomMessage Operations
+
+    /// Check for duplicate room message using deduplication key
+    public func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) throws -> Bool {
+        let targetSessionID = sessionID
+        let targetKey = deduplicationKey
+        let predicate = #Predicate<RoomMessage> { message in
+            message.sessionID == targetSessionID && message.deduplicationKey == targetKey
+        }
+        return try modelContext.fetchCount(FetchDescriptor(predicate: predicate)) > 0
+    }
+
+    /// Save room message (checks deduplication automatically)
+    public func saveRoomMessage(_ dto: RoomMessageDTO) throws {
+        // Check for duplicate first
+        if try isDuplicateRoomMessage(sessionID: dto.sessionID, deduplicationKey: dto.deduplicationKey) {
+            return  // Silently ignore duplicates
+        }
+
+        let message = RoomMessage(
+            id: dto.id,
+            sessionID: dto.sessionID,
+            authorKeyPrefix: dto.authorKeyPrefix,
+            authorName: dto.authorName,
+            text: dto.text,
+            timestamp: dto.timestamp,
+            isFromSelf: dto.isFromSelf
+        )
+        modelContext.insert(message)
+        try modelContext.save()
+    }
+
+    /// Increment unread message count for a room session
+    public func incrementRoomUnreadCount(_ sessionID: UUID) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let session = try modelContext.fetch(descriptor).first {
+            session.unreadCount += 1
+            try modelContext.save()
+        }
+    }
+
+    /// Reset unread count to zero (called when user views conversation)
+    public func resetRoomUnreadCount(_ sessionID: UUID) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let session = try modelContext.fetch(descriptor).first {
+            session.unreadCount = 0
+            try modelContext.save()
+        }
+    }
+
+    /// Fetch room messages for a session, ordered by timestamp
+    public func fetchRoomMessages(sessionID: UUID, limit: Int? = nil, offset: Int? = nil) throws -> [RoomMessageDTO] {
+        let targetSessionID = sessionID
+        let predicate = #Predicate<RoomMessage> { message in
+            message.sessionID == targetSessionID
+        }
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\RoomMessage.timestamp, order: .forward)]
+        )
+        if let limit {
+            descriptor.fetchLimit = limit
+        }
+        if let offset {
+            descriptor.fetchOffset = offset
+        }
+        let messages = try modelContext.fetch(descriptor)
+        return messages.map { RoomMessageDTO(from: $0) }
+    }
+
+    // MARK: - Contact Helper Methods
+
+    /// Find contact display name by 4-byte or 6-byte public key prefix.
+    /// Returns nil if no matching contact found.
+    public func findContactNameByKeyPrefix(_ prefix: Data) throws -> String? {
+        // Fetch all contacts and filter by prefix match
+        let contacts = try modelContext.fetch(FetchDescriptor<Contact>())
+        let prefixLength = prefix.count
+        return contacts.first { contact in
+            contact.publicKey.prefix(prefixLength) == prefix
+        }?.displayName
+    }
+
+    /// Find contact by 32-byte public key
+    public func findContactByPublicKey(_ publicKey: Data) throws -> ContactDTO? {
+        let targetKey = publicKey
+        let predicate = #Predicate<Contact> { contact in
+            contact.publicKey == targetKey
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { ContactDTO(from: $0) }
     }
 }
