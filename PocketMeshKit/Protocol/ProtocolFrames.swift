@@ -375,6 +375,35 @@ public struct RemoteNodeStatus: Sendable, Equatable {
     }
 }
 
+// MARK: - RemoteNodeStatus Role-Specific Interpretation
+
+extension RemoteNodeStatus {
+    /// Room server interpretation: total posts stored on the server
+    /// Bytes 48-49 of the status response (little-endian UInt16)
+    ///
+    /// Note: The underlying `rxAirtimeSeconds` is decoded as little-endian UInt32 by
+    /// `decodeRemoteNodeStatus()`. This property extracts the low 16 bits, which
+    /// corresponds to bytes 48-49 of the original frame in little-endian order.
+    public var roomPostsCount: UInt16 {
+        UInt16(truncatingIfNeeded: rxAirtimeSeconds & 0xFFFF)
+    }
+
+    /// Room server interpretation: total posts pushed to clients
+    /// Bytes 50-51 of the status response (little-endian UInt16)
+    ///
+    /// Note: Extracts the high 16 bits of `rxAirtimeSeconds`, corresponding to
+    /// bytes 50-51 of the original frame in little-endian order.
+    public var roomPostPushCount: UInt16 {
+        UInt16(truncatingIfNeeded: (rxAirtimeSeconds >> 16) & 0xFFFF)
+    }
+
+    /// Repeater interpretation: total receive airtime in seconds
+    /// This is the default interpretation (bytes 48-51 as little-endian UInt32)
+    public var repeaterRxAirtimeSeconds: UInt32 {
+        rxAirtimeSeconds
+    }
+}
+
 /// Neighbor information from binary protocol request
 public struct NeighbourInfo: Sendable, Equatable {
     public let publicKeyPrefix: Data

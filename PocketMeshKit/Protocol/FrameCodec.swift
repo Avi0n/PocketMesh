@@ -502,20 +502,38 @@ public enum FrameCodec {
         return BatteryAndStorage(batteryMillivolts: battery, storageUsedKB: used, storageTotalKB: total)
     }
 
+    /// Decode MessageV3 frame with support for signed messages
+    ///
+    /// For `TextType.signedPlain` messages from room servers:
+    /// - `senderPublicKeyPrefix` contains the room server's key prefix (6 bytes)
+    /// - `extraData` contains the original message author's key prefix (4 bytes)
     public static func decodeMessageV3(from data: Data) throws -> MessageFrame {
         guard data.count >= 16, data[0] == ResponseCode.contactMessageReceivedV3.rawValue else {
             throw ProtocolError.illegalArgument
         }
 
         let snr = Int8(bitPattern: data[1])
-
-        let senderPrefix = data.subdata(in: 4..<10)
+        let senderPrefix = data.subdata(in: 4..<10)  // Room server's key prefix
         let pathLen = data[10]
         let txtType = TextType(rawValue: data[11]) ?? .plain
-        let timestamp = data.subdata(in: 12..<16).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        let timestamp = data.subdata(in: 12..<16).withUnsafeBytes {
+            $0.load(as: UInt32.self).littleEndian
+        }
 
-        let textData = data.suffix(from: 16)
-        let text = String(data: textData, encoding: .utf8) ?? ""
+        let text: String
+        let authorPrefix: Data?
+
+        if txtType == .signedPlain && data.count >= 20 {
+            // Signed messages: extract 4-byte author key prefix, then text
+            authorPrefix = data.subdata(in: 16..<20)
+            text = String(data: data.suffix(from: 20), encoding: .utf8)?
+                .trimmingCharacters(in: .controlCharacters) ?? ""
+        } else {
+            // Standard messages: text starts immediately at byte 16
+            authorPrefix = nil
+            text = String(data: data.suffix(from: 16), encoding: .utf8)?
+                .trimmingCharacters(in: .controlCharacters) ?? ""
+        }
 
         return MessageFrame(
             senderPublicKeyPrefix: senderPrefix,
@@ -523,7 +541,8 @@ public enum FrameCodec {
             textType: txtType,
             timestamp: timestamp,
             text: text,
-            snr: snr
+            snr: snr,
+            extraData: authorPrefix
         )
     }
 

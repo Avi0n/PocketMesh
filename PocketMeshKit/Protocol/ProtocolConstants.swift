@@ -206,3 +206,50 @@ public enum ControlDataType: UInt8, Sendable {
     case nodeDiscoverRequest = 0x80
     case nodeDiscoverResponse = 0x90
 }
+
+// MARK: - Remote Node Role
+
+/// Discriminates between remote node types for role-specific handling
+public enum RemoteNodeRole: UInt8, Sendable, Codable {
+    case repeater = 0x02  // Matches ContactType.repeater
+    case roomServer = 0x03  // Matches ContactType.room
+
+    /// Initialize from ContactType
+    public init?(contactType: ContactType) {
+        switch contactType {
+        case .repeater: self = .repeater
+        case .room: self = .roomServer
+        case .chat: return nil
+        }
+    }
+}
+
+// MARK: - Room Permission Level
+
+/// Permission levels for room server access
+///
+/// These match the firmware PERM_ACL_* values. Note that firmware terminology
+/// differs from display names:
+/// - Firmware "guest_password" grants PERM_ACL_READ_WRITE (Member)
+/// - Firmware "password" (admin) grants PERM_ACL_ADMIN
+/// - No password with allow_read_only grants PERM_ACL_GUEST
+public enum RoomPermissionLevel: UInt8, Sendable, Comparable, Codable {
+    case guest = 0x00      // Read-only access (no posting)
+    case readWrite = 0x01  // Can post messages (granted by guest_password)
+    case admin = 0x02      // Full access including CLI commands
+
+    public var canPost: Bool { self >= .readWrite }
+    public var isAdmin: Bool { self == .admin }
+
+    public var displayName: String {
+        switch self {
+        case .guest: return "Guest"
+        case .readWrite: return "Member"
+        case .admin: return "Admin"
+        }
+    }
+
+    public static func < (lhs: RoomPermissionLevel, rhs: RoomPermissionLevel) -> Bool {
+        lhs.rawValue < rhs.rawValue
+    }
+}
