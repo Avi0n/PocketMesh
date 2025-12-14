@@ -806,4 +806,164 @@ struct MessageServiceTests {
         // Verify handler was not called
         #expect(failedMessageIDs.value.isEmpty)
     }
+
+    // MARK: - Retry Tests
+
+    @Test("sendMessageWithRetry succeeds on first ACK")
+    func sendMessageWithRetrySucceedsOnFirstAck() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        await transport.queueResponse(createSentResponse(ackCode: 1001, timeout: 1000))
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // Use async let for structured concurrency - ensures ACK task completes
+        async let ackTask: Void = {
+            try? await Task.sleep(for: .milliseconds(100))
+            try? await service.handleSendConfirmation(SendConfirmation(ackCode: 1001, roundTripTime: 50))
+        }()
+
+        let result = try await service.sendMessageWithRetry(text: "Hello!", to: contact)
+        _ = await ackTask  // Ensure cleanup
+
+        #expect(result.status == .delivered)
+
+        // Verify only one attempt was made
+        let sentData = await transport.getSentData()
+        #expect(sentData.count == 1)
+    }
+
+    @Test("sendMessageWithRetry retries on ACK timeout")
+    func sendMessageWithRetryRetriesOnAckTimeout() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Queue 3 responses for 3 attempts (very short timeout to speed up test)
+        await transport.queueResponses([
+            createSentResponse(ackCode: 1001, timeout: 50),
+            createSentResponse(ackCode: 1002, timeout: 50),
+            createSentResponse(ackCode: 1003, timeout: 50)
+        ])
+
+        let config = MessageServiceConfig(maxAttempts: 3, minTimeout: 0.05)
+        let service = MessageService(bleTransport: transport, dataStore: dataStore, config: config)
+
+        // No ACK sent - all attempts should timeout
+        let result = try await service.sendMessageWithRetry(text: "Hello!", to: contact)
+
+        // Should fail after max attempts
+        #expect(result.status == .failed)
+
+        // Verify all 3 attempts were made
+        let sentData = await transport.getSentData()
+        #expect(sentData.count == 3)
+    }
+
+    @Test("sendMessageWithRetry succeeds on second attempt")
+    func sendMessageWithRetrySucceedsOnSecondAttempt() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        await transport.queueResponses([
+            createSentResponse(ackCode: 1001, timeout: 50),
+            createSentResponse(ackCode: 1002, timeout: 500)
+        ])
+
+        let config = MessageServiceConfig(maxAttempts: 3, minTimeout: 0.05)
+        let service = MessageService(bleTransport: transport, dataStore: dataStore, config: config)
+
+        // Use task group for structured concurrency
+        let result = try await withThrowingTaskGroup(of: MessageDTO?.self) { group in
+            // Spawn ACK sender - sends ACK for second attempt after first times out
+            group.addTask {
+                // Wait for first timeout (~60ms with 1.2x multiplier) + backoff (~200ms) + some buffer
+                try? await Task.sleep(for: .milliseconds(350))
+                try? await service.handleSendConfirmation(
+                    SendConfirmation(ackCode: 1002, roundTripTime: 100)
+                )
+                return nil
+            }
+
+            // Spawn message sender
+            group.addTask {
+                try await service.sendMessageWithRetry(text: "Hello!", to: contact)
+            }
+
+            // Collect results
+            var message: MessageDTO?
+            for try await value in group {
+                if let msg = value {
+                    message = msg
+                }
+            }
+            return message
+        }
+
+        #expect(result?.status == .delivered)
+
+        // Verify 2 attempts were made
+        let sentData = await transport.getSentData()
+        #expect(sentData.count == 2)
+    }
+
+    @Test("sendMessageWithRetry respects task cancellation")
+    func sendMessageWithRetryRespectsTaskCancellation() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
+
+        await transport.setConnectionState(.ready)
+        // Queue responses with long timeout
+        await transport.queueResponses([
+            createSentResponse(ackCode: 1001, timeout: 5000),
+            createSentResponse(ackCode: 1002, timeout: 5000)
+        ])
+
+        let config = MessageServiceConfig(maxAttempts: 3, minTimeout: 5.0)
+        let service = MessageService(bleTransport: transport, dataStore: dataStore, config: config)
+
+        // Create a task that we'll cancel
+        let task = Task {
+            try await service.sendMessageWithRetry(text: "Hello!", to: contact)
+        }
+
+        // Give it time to start first attempt
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Cancel the task
+        task.cancel()
+
+        // The task should throw CancellationError
+        do {
+            _ = try await task.value
+            Issue.record("Expected CancellationError but task completed normally")
+        } catch is CancellationError {
+            // Expected
+        } catch {
+            Issue.record("Expected CancellationError but got: \(error)")
+        }
+    }
 }
