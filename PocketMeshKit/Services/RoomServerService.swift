@@ -64,6 +64,7 @@ public actor RoomServerService {
         // Login to the room with appropriate timeout
         _ = try await remoteNodeService.login(
             sessionID: session.id,
+            password: password,
             pathLength: pathLength
         )
 

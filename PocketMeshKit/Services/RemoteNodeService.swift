@@ -29,7 +29,7 @@ public enum RemoteNodeError: Error, LocalizedError, Sendable {
         case .permissionDenied:
             return "Permission denied"
         case .timeout:
-            return "Request timed out"
+            return "Request timed out or incorrect password"
         case .sessionNotFound:
             return "Remote node session not found"
         case .passwordNotFound:

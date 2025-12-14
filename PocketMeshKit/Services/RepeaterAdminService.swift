@@ -76,6 +76,7 @@ public actor RepeaterAdminService {
         // Login to the repeater with appropriate timeout
         _ = try await remoteNodeService.login(
             sessionID: session.id,
+            password: password,
             pathLength: pathLength
         )
 
