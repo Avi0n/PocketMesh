@@ -1,10 +1,11 @@
 import Foundation
 import PocketMeshKit
 
-/// Represents a conversation in the chat list - either a direct chat or channel
+/// Represents a conversation in the chat list - direct chat, channel, or room
 enum Conversation: Identifiable, Hashable {
     case direct(ContactDTO)
     case channel(ChannelDTO)
+    case room(RemoteNodeSessionDTO)
 
     var id: UUID {
         switch self {
@@ -12,6 +13,8 @@ enum Conversation: Identifiable, Hashable {
             return contact.id
         case .channel(let channel):
             return channel.id
+        case .room(let session):
+            return session.id
         }
     }
 
@@ -21,6 +24,8 @@ enum Conversation: Identifiable, Hashable {
             return contact.displayName
         case .channel(let channel):
             return channel.name.isEmpty ? "Channel \(channel.index)" : channel.name
+        case .room(let session):
+            return session.name
         }
     }
 
@@ -30,6 +35,8 @@ enum Conversation: Identifiable, Hashable {
             return contact.lastMessageDate
         case .channel(let channel):
             return channel.lastMessageDate
+        case .room(let session):
+            return session.lastConnectedDate
         }
     }
 
@@ -39,11 +46,18 @@ enum Conversation: Identifiable, Hashable {
             return contact.unreadCount
         case .channel(let channel):
             return channel.unreadCount
+        case .room(let session):
+            return session.unreadCount
         }
     }
 
     var isChannel: Bool {
         if case .channel = self { return true }
+        return false
+    }
+
+    var isRoom: Bool {
+        if case .room = self { return true }
         return false
     }
 
@@ -67,6 +81,14 @@ enum Conversation: Identifiable, Hashable {
     var channel: ChannelDTO? {
         if case .channel(let channel) = self {
             return channel
+        }
+        return nil
+    }
+
+    /// For rooms, returns the session
+    var roomSession: RemoteNodeSessionDTO? {
+        if case .room(let session) = self {
+            return session
         }
         return nil
     }

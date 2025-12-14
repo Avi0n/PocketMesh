@@ -115,6 +115,18 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// The advertisement service for managing device advertisements and path discovery
     let advertisementService: AdvertisementService
 
+    /// The binary protocol service for remote node communication
+    let binaryProtocolService: BinaryProtocolService
+
+    /// The remote node service for shared remote node operations
+    let remoteNodeService: RemoteNodeService
+
+    /// The room server service for room interactions
+    let roomServerService: RoomServerService
+
+    /// The repeater admin service for repeater management
+    let repeaterAdminService: RepeaterAdminService
+
     // MARK: - Navigation State
 
     /// Currently selected tab index
@@ -154,6 +166,24 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         self.channelService = ChannelService(bleTransport: bleService, dataStore: dataStore)
         self.settingsService = SettingsService(bleTransport: bleService)
         self.advertisementService = AdvertisementService(bleTransport: bleService, dataStore: dataStore)
+
+        // Remote node services
+        self.binaryProtocolService = BinaryProtocolService(bleTransport: bleService)
+        self.remoteNodeService = RemoteNodeService(
+            bleTransport: bleService,
+            binaryProtocol: binaryProtocolService,
+            dataStore: dataStore
+        )
+        self.roomServerService = RoomServerService(
+            remoteNodeService: remoteNodeService,
+            bleTransport: bleService,
+            dataStore: dataStore
+        )
+        self.repeaterAdminService = RepeaterAdminService(
+            remoteNodeService: remoteNodeService,
+            binaryProtocol: binaryProtocolService,
+            dataStore: dataStore
+        )
 
         // Set up BLE activity tracking for UI animation
         Task {
@@ -894,6 +924,11 @@ public final class AppState: AccessorySetupKitServiceDelegate {
 
         // Perform initial sync of any waiting messages
         await messagePollingService.syncMessageQueue()
+
+        // Set self public key prefix for room server service
+        if let publicKey = connectedDevice?.publicKey {
+            await roomServerService.setSelfPublicKeyPrefix(publicKey.prefix(4))
+        }
     }
 
     // MARK: - Contact Sync

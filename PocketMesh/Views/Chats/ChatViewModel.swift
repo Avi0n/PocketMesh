@@ -14,12 +14,17 @@ final class ChatViewModel {
     /// Current channels with messages
     var channels: [ChannelDTO] = []
 
-    /// Combined conversations (contacts + channels)
+    /// Current room sessions
+    var roomSessions: [RemoteNodeSessionDTO] = []
+
+    /// Combined conversations (contacts + channels + rooms)
     var allConversations: [Conversation] {
         let contactConversations = conversations.map { Conversation.direct($0) }
         // Show channels that are configured (have a name OR have a non-zero secret)
         let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
-        return (contactConversations + channelConversations)
+        // Show connected room sessions
+        let roomConversations = roomSessions.filter { $0.isConnected }.map { Conversation.room($0) }
+        return (contactConversations + channelConversations + roomConversations)
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
     }
 
@@ -56,6 +61,7 @@ final class ChatViewModel {
     private var messageService: MessageService?
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
+    private var roomServerService: RoomServerService?
 
     // MARK: - Initialization
 
@@ -67,6 +73,7 @@ final class ChatViewModel {
         self.messageService = appState.messageService
         self.notificationService = appState.notificationService
         self.channelService = appState.channelService
+        self.roomServerService = appState.roomServerService
     }
 
     /// Configure with services (for testing)
@@ -104,10 +111,22 @@ final class ChatViewModel {
         }
     }
 
-    /// Load all conversations (contacts + channels) for unified display
+    /// Load room sessions for a device
+    func loadRoomSessions(deviceID: UUID) async {
+        guard let roomServerService else { return }
+
+        do {
+            roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+        } catch {
+            // Silently handle - rooms are optional
+        }
+    }
+
+    /// Load all conversations (contacts + channels + rooms) for unified display
     func loadAllConversations(deviceID: UUID) async {
         await loadConversations(deviceID: deviceID)
         await loadChannels(deviceID: deviceID)
+        await loadRoomSessions(deviceID: deviceID)
         await loadLastMessagePreviews()
     }
 

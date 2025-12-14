@@ -20,6 +20,12 @@ struct ContactDetailView: View {
     @State private var errorMessage: String?
     @State private var pathViewModel = PathManagementViewModel()
     @State private var showAdvanced = false
+    @State private var showRoomJoinSheet = false
+    @State private var showRepeaterAdminSheet = false
+    @State private var showRepeaterStatusSheet = false
+    @State private var showRoomConversation = false
+    @State private var connectedRoomSession: RemoteNodeSessionDTO?
+    @State private var connectedRepeaterSession: RemoteNodeSessionDTO?
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -116,6 +122,32 @@ struct ContactDetailView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(pathViewModel.discoveryResult?.description ?? "")
+        }
+        .sheet(isPresented: $showRoomJoinSheet) {
+            if let role = RemoteNodeRole(contactType: currentContact.type) {
+                NodeAuthenticationSheet(contact: currentContact, role: role) { session in
+                    connectedRoomSession = session
+                    showRoomConversation = true
+                }
+            }
+        }
+        .sheet(isPresented: $showRepeaterAdminSheet) {
+            if let role = RemoteNodeRole(contactType: currentContact.type) {
+                NodeAuthenticationSheet(contact: currentContact, role: role) { session in
+                    connectedRepeaterSession = session
+                    showRepeaterStatusSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $showRepeaterStatusSheet) {
+            if let session = connectedRepeaterSession {
+                RepeaterStatusView(session: session)
+            }
+        }
+        .navigationDestination(isPresented: $showRoomConversation) {
+            if let session = connectedRoomSession {
+                RoomConversationView(session: session)
+            }
         }
     }
 
@@ -218,16 +250,40 @@ struct ContactDetailView: View {
 
     private var actionsSection: some View {
         Section {
-            // Send message - only show when NOT from direct chat
-            if !showFromDirectChat {
+            // Role-specific actions based on contact type
+            switch currentContact.type {
+            case .room:
+                // Room server actions
                 Button {
-                    appState.navigateToChat(with: currentContact)
+                    showRoomJoinSheet = true
                 } label: {
-                    Label("Send Message", systemImage: "message.fill")
+                    Label("Join Room", systemImage: "door.left.hand.open")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.orange)
+
+            case .repeater:
+                // Repeater actions
+                Button {
+                    showRepeaterAdminSheet = true
+                } label: {
+                    Label("Admin Access", systemImage: "gearshape.2")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.blue)
+
+            case .chat:
+                // Send message - only show when NOT from direct chat
+                if !showFromDirectChat {
+                    Button {
+                        appState.navigateToChat(with: currentContact)
+                    } label: {
+                        Label("Send Message", systemImage: "message.fill")
+                    }
                 }
             }
 
-            // Toggle favorite
+            // Toggle favorite (for all contact types)
             Button {
                 Task {
                     await toggleFavorite()
@@ -239,7 +295,7 @@ struct ContactDetailView: View {
                 )
             }
 
-            // Share contact
+            // Share contact (for all contact types)
             Button {
                 Task {
                     await shareContact()

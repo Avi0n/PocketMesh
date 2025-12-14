@@ -85,6 +85,9 @@ struct ChatsListView: View {
             .navigationDestination(for: ChannelDTO.self) { channel in
                 ChannelChatView(channel: channel, parentViewModel: viewModel)
             }
+            .navigationDestination(for: RemoteNodeSessionDTO.self) { session in
+                RoomConversationView(session: session)
+            }
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
             }
@@ -119,6 +122,12 @@ struct ChatsListView: View {
                         ChannelChatView(channel: channel, parentViewModel: viewModel)
                     } label: {
                         ChannelConversationRow(channel: channel, viewModel: viewModel)
+                    }
+                case .room(let session):
+                    NavigationLink {
+                        RoomConversationView(session: session)
+                    } label: {
+                        RoomConversationRow(session: session)
                     }
                 }
             }
@@ -430,6 +439,64 @@ struct ChannelAvatar: View {
         }
         let colors: [Color] = [.blue, .orange, .purple, .pink, .cyan, .indigo, .mint]
         return colors[Int(channel.index - 1) % colors.count]
+    }
+}
+
+// MARK: - Room Conversation Row
+
+struct RoomConversationRow: View {
+    let session: RemoteNodeSessionDTO
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Room avatar
+            NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 44)
+
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(session.name)
+                        .font(.headline)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    if let date = session.lastConnectedDate {
+                        ConversationTimestamp(date: date)
+                    }
+                }
+
+                HStack {
+                    // Status indicator
+                    if session.isConnected {
+                        Label("Connected", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Disconnected")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    // Unread badge
+                    if session.unreadCount > 0 {
+                        Text(session.unreadCount, format: .number)
+                            .font(.caption2)
+                            .bold()
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.orange, in: .capsule)
+                    }
+                }
+            }
+            .alignmentGuide(.listRowSeparatorLeading) { d in
+                d[.leading]
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
