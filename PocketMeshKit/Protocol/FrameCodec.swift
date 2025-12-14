@@ -672,7 +672,8 @@ public enum FrameCodec {
 
         let noise = data.subdata(in: 2..<4).withUnsafeBytes { $0.load(as: Int16.self).littleEndian }
         let rssi = Int8(bitPattern: data[4])
-        let snr = Int8(bitPattern: data[5])
+        let snrRaw = Int8(bitPattern: data[5])
+        let snr = Float(snrRaw) / 4.0
         let txAir = data.subdata(in: 6..<10).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
         let rxAir = data.subdata(in: 10..<14).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
 

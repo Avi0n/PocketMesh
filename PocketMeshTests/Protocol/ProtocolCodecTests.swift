@@ -308,7 +308,7 @@ struct ProtocolCodecTests {
         let result = try FrameCodec.decodeRadioStats(from: testData)
         #expect(result.noiseFloor == -120)
         #expect(result.lastRSSI == -60)
-        #expect(result.lastSNR == 40)
+        #expect(result.lastSNR == 10.0)
         #expect(result.txAirSeconds == 100)
         #expect(result.rxAirSeconds == 200)
     }

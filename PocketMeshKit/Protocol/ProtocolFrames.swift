@@ -263,11 +263,11 @@ public struct CoreStats: Sendable, Equatable {
 public struct RadioStats: Sendable, Equatable {
     public let noiseFloor: Int16
     public let lastRSSI: Int8
-    public let lastSNR: Int8
+    public let lastSNR: Float
     public let txAirSeconds: UInt32
     public let rxAirSeconds: UInt32
 
-    public init(noiseFloor: Int16, lastRSSI: Int8, lastSNR: Int8, txAirSeconds: UInt32, rxAirSeconds: UInt32) {
+    public init(noiseFloor: Int16, lastRSSI: Int8, lastSNR: Float, txAirSeconds: UInt32, rxAirSeconds: UInt32) {
         self.noiseFloor = noiseFloor
         self.lastRSSI = lastRSSI
         self.lastSNR = lastSNR
