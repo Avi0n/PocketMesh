@@ -141,6 +141,17 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         print("[MessageEventBroadcaster] Received status response from node: \(prefixHex)")
     }
 
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveLoginResult result: LoginResult,
+        fromPublicKeyPrefix: Data
+    ) async {
+        // Login results are handled by RemoteNodeService (to be implemented in Phase 3)
+        // For now, just log the receipt
+        let prefixHex = fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()
+        print("[MessageEventBroadcaster] Received login result from node: \(prefixHex), success: \(result.success)")
+    }
+
     /// Called when a message fails due to ACK timeout
     func handleMessageFailed(messageID: UUID) {
         self.latestEvent = .messageFailed(messageID: messageID)

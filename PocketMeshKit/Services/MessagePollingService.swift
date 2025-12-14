@@ -54,6 +54,15 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
     func messagePollingService(_ service: MessagePollingService, didEncounterError error: MessagePollingError) async
     func messagePollingService(_ service: MessagePollingService, didReceiveSendConfirmation confirmation: SendConfirmation) async
     func messagePollingService(_ service: MessagePollingService, didReceiveStatusResponse status: RemoteNodeStatus) async
+
+    /// Called when a login result is received from a remote node
+    /// - Parameters:
+    ///   - service: The service that received the result
+    ///   - result: The login result containing success/failure and permissions
+    ///   - fromPublicKeyPrefix: The 6-byte public key prefix of the remote node
+    /// - Note: The delegate implementation must resolve the 6-byte prefix to the full
+    ///   32-byte public key using the contact database before processing
+    func messagePollingService(_ service: MessagePollingService, didReceiveLoginResult result: LoginResult, fromPublicKeyPrefix: Data) async
 }
 
 // MARK: - Message Polling Service Actor
@@ -286,6 +295,17 @@ public actor MessagePollingService {
                 await delegate?.messagePollingService(self, didReceiveStatusResponse: status)
             } catch {
                 print("[MessagePollingService] Failed to decode status response: \(error)")
+            }
+
+        case PushCode.loginSuccess.rawValue,
+             PushCode.loginFail.rawValue:
+            // Login result from remote node (room server or repeater)
+            do {
+                let loginResult = try FrameCodec.decodeLoginResult(from: data)
+                let pubKeyPrefix = loginResult.publicKeyPrefix
+                await delegate?.messagePollingService(self, didReceiveLoginResult: loginResult, fromPublicKeyPrefix: pubKeyPrefix)
+            } catch {
+                print("[MessagePollingService] Failed to decode login result: \(error)")
             }
 
         default:

@@ -12,6 +12,7 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
     private var _errors: [MessagePollingError] = []
     private var _sendConfirmations: [SendConfirmation] = []
     private var _statusResponses: [RemoteNodeStatus] = []
+    private var _loginResults: [(LoginResult, Data)] = []
 
     var directMessages: [(MessageDTO, ContactDTO)] {
         _directMessages
@@ -35,6 +36,10 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
 
     var statusResponses: [RemoteNodeStatus] {
         _statusResponses
+    }
+
+    var loginResults: [(LoginResult, Data)] {
+        _loginResults
     }
 
     nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveDirectMessage message: MessageDTO, from contact: ContactDTO) async {
@@ -85,6 +90,14 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
         _statusResponses.append(status)
     }
 
+    nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveLoginResult result: LoginResult, fromPublicKeyPrefix: Data) async {
+        await appendLoginResult(result, fromPublicKeyPrefix)
+    }
+
+    private func appendLoginResult(_ result: LoginResult, _ keyPrefix: Data) {
+        _loginResults.append((result, keyPrefix))
+    }
+
     func reset() {
         _directMessages.removeAll()
         _channelMessages.removeAll()
@@ -92,6 +105,7 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
         _errors.removeAll()
         _sendConfirmations.removeAll()
         _statusResponses.removeAll()
+        _loginResults.removeAll()
     }
 }
 
