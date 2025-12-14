@@ -36,7 +36,7 @@ struct RoomConversationView: View {
                     Button {
                         showingRoomInfo = true
                     } label: {
-                        NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 32)
+                        Image(systemName: "info.circle")
                     }
                 }
             }

@@ -39,7 +39,7 @@ struct ChatView: View {
                 Button {
                     showingContactInfo = true
                 } label: {
-                    ContactAvatar(contact: contact, size: 32)
+                    Image(systemName: "info.circle")
                 }
             }
         }
