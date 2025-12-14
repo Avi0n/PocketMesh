@@ -19,10 +19,30 @@ public struct MessageServiceConfig: Sendable {
     /// Whether to use flood routing when user manually retries a failed message
     public let floodFallbackOnRetry: Bool
 
+    /// Maximum total send attempts for automatic retry
+    public let maxAttempts: Int
+
+    /// Maximum attempts to make after switching to flood routing
+    public let maxFloodAttempts: Int
+
+    /// Number of direct attempts before switching to flood routing
+    public let floodAfter: Int
+
+    /// Minimum timeout in seconds (floor for device-suggested timeout)
+    public let minTimeout: TimeInterval
+
     public init(
-        floodFallbackOnRetry: Bool = true
+        floodFallbackOnRetry: Bool = true,
+        maxAttempts: Int = 3,
+        maxFloodAttempts: Int = 2,
+        floodAfter: Int = 2,
+        minTimeout: TimeInterval = 0
     ) {
         self.floodFallbackOnRetry = floodFallbackOnRetry
+        self.maxAttempts = maxAttempts
+        self.maxFloodAttempts = maxFloodAttempts
+        self.floodAfter = floodAfter
+        self.minTimeout = minTimeout
     }
 
     public static let `default` = MessageServiceConfig()
@@ -39,11 +59,15 @@ public struct PendingAck: Sendable {
     public var heardRepeats: Int = 0  // Count of duplicate confirmations
     public var isDelivered: Bool = false  // Track if first confirmation received
 
-    public init(messageID: UUID, ackCode: UInt32, sentAt: Date, timeout: TimeInterval) {
+    /// When true, `checkExpiredAcks` will skip this ACK (retry loop manages expiry)
+    public var isRetryManaged: Bool = false
+
+    public init(messageID: UUID, ackCode: UInt32, sentAt: Date, timeout: TimeInterval, isRetryManaged: Bool = false) {
         self.messageID = messageID
         self.ackCode = ackCode
         self.sentAt = sentAt
         self.timeout = timeout
+        self.isRetryManaged = isRetryManaged
     }
 
     public var isExpired: Bool {
@@ -64,8 +88,14 @@ public actor MessageService {
     private let dataStore: DataStore
     private let config: MessageServiceConfig
 
+    /// Contact service for path management (optional - retry with reset requires this)
+    private var contactService: ContactService?
+
     /// Currently tracked pending ACKs
     private var pendingAcks: [UInt32: PendingAck] = [:]
+
+    /// Continuations waiting for specific ACK codes (for retry loop)
+    private var ackContinuations: [UInt32: CheckedContinuation<Bool, Never>] = [:]
 
     /// ACK confirmation callback
     private var ackConfirmationHandler: (@Sendable (UInt32, UInt32) -> Void)?
@@ -89,6 +119,12 @@ public actor MessageService {
         self.bleTransport = bleTransport
         self.dataStore = dataStore
         self.config = config
+    }
+
+    /// Set the contact service for path management during retry.
+    /// - Parameter service: The contact service to use for path reset operations.
+    public func setContactService(_ service: ContactService) {
+        self.contactService = service
     }
 
     // MARK: - Send Direct Message
@@ -185,7 +221,7 @@ public actor MessageService {
         }
     }
 
-    /// Retry a failed message with flood routing enabled.
+    /// Retry a failed message with flood routing enabled and automatic retry.
     /// - Parameters:
     ///   - text: The message text
     ///   - contact: The recipient contact
@@ -196,14 +232,169 @@ public actor MessageService {
         to contact: ContactDTO,
         textType: TextType = .plain
     ) async throws -> MessageDTO {
-        // Always use flood on retry if enabled in config
-        let useFlood = config.floodFallbackOnRetry
-        return try await sendDirectMessage(
+        // Use the retry method - it will handle flood fallback automatically
+        return try await sendMessageWithRetry(
             text: text,
             to: contact,
-            textType: textType,
-            useFlood: useFlood
+            textType: textType
         )
+    }
+
+    // MARK: - Send with Automatic Retry
+
+    /// Sends a direct message with automatic retry and flood fallback.
+    /// Matches the behavior of `send_msg_with_retry` in MeshCore Python.
+    ///
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - contact: The recipient contact
+    ///   - textType: The text type (default: plain)
+    ///   - replyToID: Optional message ID to reply to
+    ///   - timeout: Custom timeout per attempt (0 = use device suggested × 1.2)
+    /// - Returns: The saved message (status will be .delivered on success, .failed on exhaustion)
+    /// - Throws: CancellationError if the task is cancelled during retry
+    public func sendMessageWithRetry(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain,
+        replyToID: UUID? = nil,
+        timeout: TimeInterval = 0
+    ) async throws -> MessageDTO {
+        // Validate message length (throw early - no message saved)
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        let messageID = UUID()
+        // IMPORTANT: Timestamp must remain constant across all retry attempts
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        // Save message to store as pending FIRST
+        let messageDTO = createOutgoingMessage(
+            id: messageID,
+            deviceID: contact.deviceID,
+            contactID: contact.id,
+            text: text,
+            timestamp: timestamp,
+            textType: textType,
+            replyToID: replyToID
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        // Check connection state
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.notConnected
+        }
+
+        // Determine initial routing state
+        var isFlood = contact.isFloodRouted
+        var attempts = 0
+        var floodAttempts = 0
+
+        // Retry loop
+        while attempts < config.maxAttempts && (!isFlood || floodAttempts < config.maxFloodAttempts) {
+
+            // Check for task cancellation at loop start
+            guard !Task.isCancelled else {
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+                throw CancellationError()
+            }
+
+            // Small backoff delay between retries (not before first attempt)
+            // Gives network time to settle between attempts
+            if attempts > 0 {
+                let backoffMs = 200 * attempts  // 200ms, 400ms, 600ms...
+                try? await Task.sleep(for: .milliseconds(backoffMs))
+            }
+
+            // Switch to flood after floodAfter direct attempts
+            if attempts == config.floodAfter && !isFlood {
+                if let contactService {
+                    logger.info("Resetting path to flood after \(attempts) direct attempts")
+                    do {
+                        try await contactService.resetPath(
+                            deviceID: contact.deviceID,
+                            publicKey: contact.publicKey
+                        )
+                        isFlood = true
+                    } catch {
+                        logger.warning("Failed to reset path: \(error.localizedDescription)")
+                        // Continue anyway - firmware might handle it
+                    }
+                } else {
+                    logger.warning("Cannot reset path - ContactService not set")
+                }
+            }
+
+            if attempts > 0 {
+                logger.info("Retry sending message: attempt \(attempts + 1)")
+            }
+
+            // Send attempt
+            do {
+                let result = try await sendTextMessageAttempt(
+                    text: text,
+                    recipientKeyPrefix: contact.publicKeyPrefix,
+                    textType: textType,
+                    attempt: UInt8(attempts),
+                    timestamp: timestamp  // Same timestamp across all attempts
+                )
+
+                // Calculate timeout: use device suggested × 1.2, or custom, with minimum floor
+                let deviceTimeout = TimeInterval(result.estimatedTimeout) / 1000.0 * 1.2
+                var effectiveTimeout = timeout > 0 ? timeout : deviceTimeout
+                effectiveTimeout = max(effectiveTimeout, config.minTimeout)
+
+                // Update message with ACK code
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: result.ackCode,
+                    status: .sent
+                )
+
+                // Track pending ACK (marked as retry-managed to avoid conflict with checkExpiredAcks)
+                trackPendingAckForRetry(messageID: messageID, ackCode: result.ackCode, timeout: effectiveTimeout)
+
+                // Wait for ACK using continuation-based approach
+                let ackReceived = await waitForAck(ackCode: result.ackCode, timeout: effectiveTimeout)
+
+                if ackReceived {
+                    // Success! Update contact's last message date
+                    try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+                    // Return the saved message
+                    guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                        throw MessageServiceError.sendFailed("Failed to fetch saved message")
+                    }
+                    return message
+                }
+
+                // ACK timeout - remove from pending (it will be added fresh on next attempt)
+                pendingAcks.removeValue(forKey: result.ackCode)
+
+            } catch is CancellationError {
+                // Re-throw cancellation
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+                throw CancellationError()
+            } catch {
+                logger.warning("Send attempt \(attempts + 1) failed: \(error.localizedDescription)")
+            }
+
+            attempts += 1
+            if isFlood {
+                floodAttempts += 1
+            }
+        }
+
+        // All attempts exhausted
+        try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+
+        guard let message = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Failed to fetch saved message")
+        }
+        return message
     }
 
     /// Sends a channel message (broadcast, no ACK expected).
@@ -295,6 +486,11 @@ public actor MessageService {
             pendingAcks[ackCode]?.isDelivered = true
             pendingAcks[ackCode]?.heardRepeats = 1
 
+            // Resume any waiting continuation (for retry loop)
+            if let continuation = ackContinuations.removeValue(forKey: ackCode) {
+                continuation.resume(returning: true)
+            }
+
             // Now safe to perform async operations
             try await dataStore.updateMessageByAckCode(
                 ackCode,
@@ -339,12 +535,15 @@ public actor MessageService {
 
     /// Checks for expired ACKs (no confirmation received within timeout).
     /// Marks their messages as failed and removes from tracking.
+    /// Note: ACKs marked as `isRetryManaged` are skipped - retry loop handles expiry.
     public func checkExpiredAcks() async throws {
         let now = Date()
 
-        // Collect expired entries (not delivered and past timeout)
+        // Collect expired entries (not delivered, past timeout, not managed by retry loop)
         let expiredCodes = pendingAcks.filter { _, tracking in
-            !tracking.isDelivered && now.timeIntervalSince(tracking.sentAt) > tracking.timeout
+            !tracking.isRetryManaged &&
+            !tracking.isDelivered &&
+            now.timeIntervalSince(tracking.sentAt) > tracking.timeout
         }.keys
 
         for ackCode in expiredCodes {
@@ -486,6 +685,40 @@ public actor MessageService {
         pendingAcks.values.first { $0.messageID == messageID }
     }
 
+    // MARK: - ACK Waiting for Retry
+
+    /// Waits for a specific ACK code with timeout using continuations.
+    /// Returns true if ACK received, false if timeout.
+    /// This is more efficient than polling - provides immediate response when ACK arrives.
+    func waitForAck(
+        ackCode: UInt32,
+        timeout: TimeInterval
+    ) async -> Bool {
+        // Check if already delivered before waiting
+        if let pending = pendingAcks[ackCode], pending.isDelivered {
+            return true
+        }
+
+        return await withCheckedContinuation { continuation in
+            ackContinuations[ackCode] = continuation
+
+            // Spawn timeout task
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(timeout))
+                guard let self else { return }
+                // If continuation still exists, timeout occurred
+                if let cont = await self.removeAckContinuation(for: ackCode) {
+                    cont.resume(returning: false)
+                }
+            }
+        }
+    }
+
+    /// Removes and returns the continuation for an ACK code.
+    private func removeAckContinuation(for ackCode: UInt32) -> CheckedContinuation<Bool, Never>? {
+        ackContinuations.removeValue(forKey: ackCode)
+    }
+
     // MARK: - Private Helpers
 
     private func sendTextMessageAttempt(
@@ -526,6 +759,18 @@ public actor MessageService {
             ackCode: ackCode,
             sentAt: Date(),
             timeout: timeout
+        )
+        pendingAcks[ackCode] = pending
+    }
+
+    /// Track a pending ACK that is managed by the retry loop (not by checkExpiredAcks).
+    private func trackPendingAckForRetry(messageID: UUID, ackCode: UInt32, timeout: TimeInterval) {
+        let pending = PendingAck(
+            messageID: messageID,
+            ackCode: ackCode,
+            sentAt: Date(),
+            timeout: timeout,
+            isRetryManaged: true
         )
         pendingAcks[ackCode] = pending
     }

@@ -193,6 +193,11 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             dataStore: dataStore
         )
 
+        // Wire up message service to contact service for path reset during retry
+        Task {
+            await messageService.setContactService(contactService)
+        }
+
         // Set up BLE activity tracking for UI animation
         Task {
             await bleService.setSendActivityHandler { [weak self] isBusy in
