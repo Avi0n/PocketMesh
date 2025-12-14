@@ -705,7 +705,7 @@ public enum FrameCodec {
 
     public static func decodeLoginResult(from data: Data) throws -> LoginResult {
         // Login success: 0x85 + isAdmin(1) + pubKeyPrefix(6) + timestamp(4) + aclPerms(1) + fwLevel(1)
-        // Login fail: 0x86
+        // Login fail: 0x86 + reserved(1) + pubKeyPrefix(6)?
         guard !data.isEmpty else {
             throw ProtocolError.illegalArgument
         }
@@ -713,10 +713,16 @@ public enum FrameCodec {
         let code = data[0]
 
         if code == PushCode.loginFail.rawValue {
+            // Extract prefix from failure response if present (bytes 2-7)
+            // Format: 0x86 + reserved(1) + pubKeyPrefix(6)?
+            var publicKeyPrefix = Data()
+            if data.count >= 8 {
+                publicKeyPrefix = data.subdata(in: 2..<8)
+            }
             return LoginResult(
                 success: false,
                 isAdmin: false,
-                publicKeyPrefix: Data()
+                publicKeyPrefix: publicKeyPrefix
             )
         }
 

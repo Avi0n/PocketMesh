@@ -702,6 +702,7 @@ public actor BLEService: NSObject, BLETransport {
 
         // Check if this is a push notification (0x80+)
         if data[0] >= 0x80 {
+            logger.debug("Received push code: 0x\(String(format: "%02X", data[0])), length: \(data.count)")
             responseHandler?(data)
             return
         }
