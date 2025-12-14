@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // MARK: - Advertisement Errors
 
@@ -16,6 +17,8 @@ public enum AdvertisementError: Error, Sendable {
 public actor AdvertisementService {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "Advertisement")
 
     private let bleTransport: any BLETransport
     private let dataStore: DataStore
@@ -260,9 +263,7 @@ public actor AdvertisementService {
             let outPathHex = response.outboundPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
             let inPathHex = response.inboundPath.map { String(format: "%02X", $0) }.joined(separator: " → ")
             let pubKeyHex = response.publicKeyPrefix.prefix(3).map { String(format: "%02X", $0) }.joined()
-            print("[PathDiscovery] Response for \(pubKeyHex)...")
-            print("[PathDiscovery]   Outbound path (\(response.outboundPath.count) hops): \(outPathHex.isEmpty ? "direct" : outPathHex)")
-            print("[PathDiscovery]   Inbound path (\(response.inboundPath.count) hops): \(inPathHex.isEmpty ? "direct" : inPathHex)")
+            logger.info("Path discovery response for \(pubKeyHex)... - Outbound: \(response.outboundPath.count) hops (\(outPathHex.isEmpty ? "direct" : outPathHex)), Inbound: \(response.inboundPath.count) hops (\(inPathHex.isEmpty ? "direct" : inPathHex))")
 
             // Update contact with discovered outbound path (inbound is handled by firmware)
             if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKeyPrefix: response.publicKeyPrefix) {

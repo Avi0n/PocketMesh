@@ -1,5 +1,6 @@
 import Foundation
 import PocketMeshKit
+import OSLog
 
 /// Events broadcast when messages arrive or status changes
 public enum MessageEvent: Sendable, Equatable {
@@ -18,6 +19,8 @@ public enum MessageEvent: Sendable, Equatable {
 public final class MessageEventBroadcaster: MessagePollingDelegate {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessageEventBroadcaster")
 
     /// Latest received message (for simple observation)
     var latestMessage: MessageDTO?
@@ -123,7 +126,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         let msgService = await MainActor.run { self.messageService }
 
         guard let msgService else {
-            print("[MessageEventBroadcaster] Received send confirmation but MessageService not ready - ack: \(confirmation.ackCode)")
+            await MainActor.run {
+                self.logger.warning("Received send confirmation but MessageService not ready - ack: \(confirmation.ackCode)")
+            }
             return
         }
 
@@ -136,7 +141,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
                 self.newMessageCount += 1
             }
         } catch {
-            print("[MessageEventBroadcaster] Failed to handle send confirmation: \(error)")
+            await MainActor.run {
+                self.logger.error("Failed to handle send confirmation: \(error)")
+            }
         }
     }
 
@@ -147,7 +154,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         // Status responses can be used for node health monitoring
         // For now, just log the receipt - future implementation could update contact status
         let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
-        print("[MessageEventBroadcaster] Received status response from node: \(prefixHex)")
+        await MainActor.run {
+            self.logger.info("Received status response from node: \(prefixHex)")
+        }
     }
 
     nonisolated public func messagePollingService(
@@ -156,21 +165,27 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         fromPublicKeyPrefix: Data
     ) async {
         let prefixHex = fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()
-        print("[MessageEventBroadcaster] Received login result from node: \(prefixHex), success: \(result.success)")
+        await MainActor.run {
+            self.logger.info("Received login result from node: \(prefixHex), success: \(result.success)")
+        }
 
         // Get service references from MainActor context
         let nodeService = await MainActor.run { self.remoteNodeService }
         let store = await MainActor.run { self.dataStore }
 
         guard let nodeService, let store else {
-            print("[MessageEventBroadcaster] Cannot handle login result - services not configured")
+            await MainActor.run {
+                self.logger.warning("Cannot handle login result - services not configured")
+            }
             return
         }
 
         // Resolve 6-byte prefix to full 32-byte public key
         guard let contact = try? await store.findContactByKeyPrefix(fromPublicKeyPrefix),
               contact.publicKey.count == 32 else {
-            print("[MessageEventBroadcaster] Cannot resolve public key prefix to full key")
+            await MainActor.run {
+                self.logger.warning("Cannot resolve public key prefix to full key")
+            }
             return
         }
 
@@ -192,12 +207,16 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         let roomService = await MainActor.run { self.roomServerService }
 
         guard let roomService else {
-            print("[MessageEventBroadcaster] Room message received but RoomServerService not configured")
+            await MainActor.run {
+                self.logger.warning("Room message received but RoomServerService not configured")
+            }
             return
         }
 
         guard let authorPrefix = frame.extraData, authorPrefix.count >= 4 else {
-            print("[MessageEventBroadcaster] Room message missing author prefix")
+            await MainActor.run {
+                self.logger.warning("Room message missing author prefix")
+            }
             return
         }
 
@@ -213,7 +232,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
                 self.newMessageCount += 1
             }
         } catch {
-            print("[MessageEventBroadcaster] Failed to handle room message: \(error)")
+            await MainActor.run {
+                self.logger.error("Failed to handle room message: \(error)")
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // MARK: - Message Service Errors
 
@@ -56,6 +57,8 @@ public struct PendingAck: Sendable {
 public actor MessageService {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessageService")
 
     private let bleTransport: any BLETransport
     private let dataStore: DataStore
@@ -154,7 +157,7 @@ public actor MessageService {
                 routeDescription = "\(contact.outPathLength) hops: \(pathHex)"
             }
             let recipientHex = contact.publicKeyPrefix.prefix(3).map { String(format: "%02X", $0) }.joined()
-            print("[MessageRoute] Sent to \(recipientHex)... via \(routeDescription), ack=\(result.ackCode), timeout=\(result.estimatedTimeout)ms")
+            logger.info("Sent to \(recipientHex)... via \(routeDescription), ack=\(result.ackCode), timeout=\(result.estimatedTimeout)ms")
 
             // Update message with ACK code
             try await dataStore.updateMessageAck(
@@ -281,7 +284,7 @@ public actor MessageService {
         // This prevents actor reentrancy issues with rapid duplicate ACKs
         guard pendingAcks[ackCode] != nil else {
             // Unknown ACK - might be from before app launched
-            print("[MessageService] Received confirmation for unknown ACK: \(ackCode)")
+            logger.warning("Received confirmation for unknown ACK: \(ackCode)")
             return
         }
 
@@ -302,7 +305,7 @@ public actor MessageService {
             // Notify handler
             ackConfirmationHandler?(ackCode, confirmation.roundTripTime)
 
-            print("[MessageService] ACK received - code: \(ackCode), rtt: \(confirmation.roundTripTime)ms (ACK routed back successfully)")
+            logger.info("ACK received - code: \(ackCode), rtt: \(confirmation.roundTripTime)ms")
         } else {
             // Atomically increment repeat count
             pendingAcks[ackCode]?.heardRepeats += 1
@@ -317,7 +320,7 @@ public actor MessageService {
                 heardRepeats: repeatCount
             )
 
-            print("[MessageService] Heard repeat #\(repeatCount) for ack: \(ackCode)")
+            logger.debug("Heard repeat #\(repeatCount) for ack: \(ackCode)")
         }
     }
 
@@ -347,7 +350,7 @@ public actor MessageService {
         for ackCode in expiredCodes {
             if let tracking = pendingAcks.removeValue(forKey: ackCode) {
                 try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
-                print("[MessageService] Message failed - ack: \(ackCode), timeout exceeded")
+                logger.warning("Message failed - ack: \(ackCode), timeout exceeded")
 
                 // Handler is called after updating pendingAcks to ensure consistent state
                 // if handler triggers re-entrant calls to MessageService
@@ -365,14 +368,14 @@ public actor MessageService {
         }.keys
 
         guard !pendingCodes.isEmpty else {
-            print("[MessageService] No pending messages to fail after reconnect")
+            logger.debug("No pending messages to fail after reconnect")
             return
         }
 
         for ackCode in pendingCodes {
             if let tracking = pendingAcks.removeValue(forKey: ackCode) {
                 try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
-                print("[MessageService] Message failed - ack: \(ackCode), device reconnected (may have rebooted)")
+                logger.warning("Message failed - ack: \(ackCode), device reconnected (may have rebooted)")
 
                 // Handler is called after updating pendingAcks to ensure consistent state
                 await messageFailedHandler?(tracking.messageID)
@@ -396,7 +399,7 @@ public actor MessageService {
         for ackCode in pendingCodes {
             if let tracking = pendingAcks.removeValue(forKey: ackCode) {
                 try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
-                print("[MessageService] Message failed - ack: \(ackCode), BLE disconnected")
+                logger.warning("Message failed - ack: \(ackCode), BLE disconnected")
 
                 // Handler is called after updating pendingAcks to ensure consistent state
                 // if handler triggers re-entrant calls to MessageService

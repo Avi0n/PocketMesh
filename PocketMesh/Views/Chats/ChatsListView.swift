@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshKit
+import OSLog
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatsListView")
 
 /// List of active conversations
 struct ChatsListView: View {
@@ -244,7 +247,7 @@ struct ChatsListView: View {
             // Refresh conversation list
             await loadConversations()
         } catch {
-            print("[ChatsListView] Failed to delete room: \(error)")
+            logger.error("Failed to delete room: \(error)")
         }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 // MARK: - Message Polling Service Errors
 
@@ -79,6 +80,8 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
 public actor MessagePollingService {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessagePolling")
 
     private let bleTransport: any BLETransport
     private let dataStore: DataStore
@@ -292,7 +295,7 @@ public actor MessagePollingService {
                 await delegate?.messagePollingService(self, didReceiveSendConfirmation: confirmation)
             } catch {
                 // Log but don't crash - confirmation may be for message sent before app launch
-                print("[MessagePollingService] Failed to decode send confirmation: \(error)")
+                logger.error("Failed to decode send confirmation: \(error)")
             }
 
         case PushCode.advert.rawValue, PushCode.newAdvert.rawValue:
@@ -309,7 +312,7 @@ public actor MessagePollingService {
                 let status = try FrameCodec.decodeStatusResponse(from: data)
                 await delegate?.messagePollingService(self, didReceiveStatusResponse: status)
             } catch {
-                print("[MessagePollingService] Failed to decode status response: \(error)")
+                logger.error("Failed to decode status response: \(error)")
             }
 
         case PushCode.loginSuccess.rawValue,
@@ -320,7 +323,7 @@ public actor MessagePollingService {
                 let pubKeyPrefix = loginResult.publicKeyPrefix
                 await delegate?.messagePollingService(self, didReceiveLoginResult: loginResult, fromPublicKeyPrefix: pubKeyPrefix)
             } catch {
-                print("[MessagePollingService] Failed to decode login result: \(error)")
+                logger.error("Failed to decode login result: \(error)")
             }
 
         default:

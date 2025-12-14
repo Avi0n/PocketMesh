@@ -1,5 +1,6 @@
 @preconcurrency import CoreBluetooth
 import Foundation
+import OSLog
 
 // MARK: - BLE Connection State
 
@@ -121,6 +122,8 @@ public actor BLEService: NSObject, BLETransport {
 
     // MARK: - Properties
 
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "BLE")
+
     private var centralManager: CBCentralManager?
     private var connectedPeripheral: CBPeripheral?
     private var txCharacteristic: CBCharacteristic?
@@ -128,11 +131,9 @@ public actor BLEService: NSObject, BLETransport {
 
     private var _connectionState: BLEConnectionState = .disconnected {
         didSet {
-            #if DEBUG
             if oldValue != _connectionState {
-                print("[BLE] State: \(oldValue) → \(_connectionState)")
+                logger.debug("State: \(String(describing: oldValue)) → \(String(describing: self._connectionState))")
             }
-            #endif
         }
     }
     public var connectionState: BLEConnectionState {
@@ -332,9 +333,7 @@ public actor BLEService: NSObject, BLETransport {
     }
 
     private func handleConnectionFailure() {
-        #if DEBUG
-        print("[BLE] Connection failed: \(_connectionState) → disconnected")
-        #endif
+        logger.warning("Connection failed: \(String(describing: self._connectionState)) → disconnected")
 
         // Clear all continuations to prevent double-resume from late callbacks
         connectionContinuation = nil
@@ -431,9 +430,7 @@ public actor BLEService: NSObject, BLETransport {
         }
 
         // Another send is in progress - wait our turn
-        #if DEBUG
-        print("[BLE] Send queued, waiting for previous operation (\(sendQueue.count + 1) waiting)")
-        #endif
+        logger.debug("Send queued, waiting for previous operation (\(self.sendQueue.count + 1) waiting)")
         await withCheckedContinuation { continuation in
             sendQueue.append(continuation)
         }
@@ -667,9 +664,7 @@ public actor BLEService: NSObject, BLETransport {
                     throw BLEError.invalidResponse
                 }
 
-                #if DEBUG
-                print("[BLE] initializeDevice attempt \(attempt) failed with invalidResponse, retrying...")
-                #endif
+                logger.debug("initializeDevice attempt \(attempt) failed with invalidResponse, retrying...")
 
                 if attempt < maxRetries {
                     try Task.checkCancellation()
@@ -685,9 +680,7 @@ public actor BLEService: NSObject, BLETransport {
                     throw error
                 }
 
-                #if DEBUG
-                print("[BLE] initializeDevice attempt \(attempt) failed with \(error), retrying...")
-                #endif
+                logger.debug("initializeDevice attempt \(attempt) failed with \(error), retrying...")
 
                 if attempt < maxRetries {
                     try Task.checkCancellation()
@@ -784,9 +777,7 @@ extension BLEService: CBCentralManagerDelegate {
     }
 
     private func handleServiceDiscoveryFailure(_ error: Error?) {
-        #if DEBUG
-        print("[BLE] Service discovery failed: \(error?.localizedDescription ?? "unknown error")")
-        #endif
+        logger.error("Service discovery failed: \(error?.localizedDescription ?? "unknown error")")
 
         // If we were in a restoration/reconnection scenario, the "connected" peripheral
         // may have been stale. Clear state and let the app layer handle reconnection.
@@ -833,9 +824,7 @@ extension BLEService: CBCentralManagerDelegate {
     ) {
         // If system is auto-reconnecting, prepare for re-subscription
         if isReconnecting {
-            #if DEBUG
-            print("[BLE] System auto-reconnecting, preparing for re-subscription")
-            #endif
+            logger.info("System auto-reconnecting, preparing for re-subscription")
 
             // Track that we're in auto-reconnection mode
             isAutoReconnecting = true
@@ -928,9 +917,7 @@ extension BLEService: CBCentralManagerDelegate {
             // Stay in .connecting until characteristic discovery completes successfully
             _connectionState = .connecting
 
-            #if DEBUG
-            print("[BLE] State restoration: peripheral reports connected, starting service discovery")
-            #endif
+            logger.info("State restoration: peripheral reports connected, starting service discovery")
 
             // Re-discover services to get characteristics
             // This validates the connection is actually functional
@@ -941,9 +928,7 @@ extension BLEService: CBCentralManagerDelegate {
             // but we retrieve the peripheral from CoreBluetooth cache
             _connectionState = .disconnected
 
-            #if DEBUG
-            print("[BLE] State restoration: peripheral restored in disconnected state")
-            #endif
+            logger.info("State restoration: peripheral restored in disconnected state")
         }
     }
 }
@@ -1014,11 +999,9 @@ extension BLEService: CBPeripheralDelegate {
         let isInitialConnection = connectionContinuation != nil
         let isReconnection = needsResubscriptionAfterReconnect
 
-        #if DEBUG
         if isReconnection {
-            print("[BLE] Reconnection: re-subscribing to notifications")
+            logger.debug("Reconnection: re-subscribing to notifications")
         }
-        #endif
 
         // Clear reconnection flag
         needsResubscriptionAfterReconnect = false
@@ -1050,22 +1033,18 @@ extension BLEService: CBPeripheralDelegate {
                 let stabilizationDelay = isReconnection ? 300 : 150
                 try await Task.sleep(for: .milliseconds(stabilizationDelay))
 
-                #if DEBUG
                 if isReconnection {
-                    print("[BLE] Reconnection: stabilization complete, ready for initialization")
+                    logger.info("Reconnection: stabilization complete, ready for initialization")
                 }
-                #endif
             } catch {
                 if isInitialConnection {
                     connectionContinuation?.resume(throwing: error)
                     connectionContinuation = nil
                 }
                 // For reconnection, just log the error - we'll fail on next send
-                #if DEBUG
                 if isReconnection {
-                    print("[BLE] Reconnection: subscription failed - \(error.localizedDescription)")
+                    logger.warning("Reconnection: subscription failed - \(error.localizedDescription)")
                 }
-                #endif
                 return
             }
         }
@@ -1082,9 +1061,7 @@ extension BLEService: CBPeripheralDelegate {
             // Clear auto-reconnection flag now that we're fully reconnected
             isAutoReconnecting = false
 
-            #if DEBUG
-            print("[BLE] Auto-reconnection complete, state restored to connected")
-            #endif
+            logger.info("Auto-reconnection complete, state restored to connected")
 
             // Notify that reconnection completed - device may have rebooted
             if let peripheral = connectedPeripheral {
@@ -1135,9 +1112,7 @@ extension BLEService: CBPeripheralDelegate {
         // Guard against already-cancelled continuation (e.g., during reconnection race)
         // If continuation is nil, the subscription request was cancelled - nothing to resume
         guard let continuation = notificationContinuation else {
-            #if DEBUG
-            print("[BLE] Notification state update arrived but continuation was already cancelled")
-            #endif
+            logger.debug("Notification state update arrived but continuation was already cancelled")
             return
         }
         notificationContinuation = nil

@@ -2,11 +2,16 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 import PocketMeshKit
+import OSLog
 
 /// App-wide state management using Observable
 @Observable
 @MainActor
 public final class AppState: AccessorySetupKitServiceDelegate {
+
+    // MARK: - Logging
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "AppState")
 
     // MARK: - Onboarding State
 
@@ -340,14 +345,14 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         await bleService.setReconnectionHandler { [weak self] deviceID in
             Task { @MainActor in
                 guard let self else { return }
-                print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+                self.logger.info("iOS auto-reconnect completed for device: \(deviceID)")
 
                 // Device may have rebooted - fail any pending messages first
                 // They won't receive ACKs since device lost state
                 do {
                     try await self.messageService.failAllPendingMessages()
                 } catch {
-                    print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                    self.logger.error("Failed to mark pending messages as failed after reconnect: \(error)")
                 }
 
                 // Initialize device to transition from .connected to .ready
@@ -579,11 +584,11 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 await bleService.setReconnectionHandler { [weak self] deviceID in
                     Task { @MainActor in
                         guard let self else { return }
-                        print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+                        self.logger.info("iOS auto-reconnect completed for device: \(deviceID)")
                         do {
                             try await self.messageService.failAllPendingMessages()
                         } catch {
-                            print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                            self.logger.error("Failed to mark pending messages as failed after reconnect: \(error)")
                         }
                         await self.handleRestoredConnection(deviceID: deviceID)
                     }
@@ -600,20 +605,16 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 // If connection dropped (supervision timeout), this will fail
                 let result = try await bleService.initializeDeviceWithRetry()
 
-                #if DEBUG
                 if attempt > 1 {
-                    print("[AppState] connectWithRetry: succeeded on attempt \(attempt)")
+                    logger.info("connectWithRetry: succeeded on attempt \(attempt)")
                 }
-                #endif
 
                 return result
 
             } catch {
                 lastError = error
 
-                #if DEBUG
-                print("[AppState] connectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
-                #endif
+                logger.warning("connectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
 
                 // Clean up failed connection
                 await bleService.disconnect()
@@ -625,9 +626,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                     let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
                     let jitter = Double.random(in: 0...0.1) * baseDelay
 
-                    #if DEBUG
-                    print("[AppState] connectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
-                    #endif
+                    logger.debug("connectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
 
                     try await Task.sleep(for: .seconds(baseDelay + jitter))
                 }
@@ -656,9 +655,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             }
 
             if !isRegisteredWithASK {
-                #if DEBUG
-                print("[AppState] reconnectToDevice: device \(deviceID) not found in ASK pairedAccessories, removing stale entry")
-                #endif
+                logger.warning("reconnectToDevice: device \(deviceID) not found in ASK pairedAccessories, removing stale entry")
 
                 // Clean up stale database entry
                 await removeStaleDevice(id: deviceID)
@@ -719,9 +716,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
 
         } catch BLEError.deviceNotFound {
             // 3. Handle stale database entry - device no longer known to CoreBluetooth
-            #if DEBUG
-            print("[AppState] reconnectToDevice: device \(deviceID) not found by CoreBluetooth, removing stale entry")
-            #endif
+            logger.warning("reconnectToDevice: device \(deviceID) not found by CoreBluetooth, removing stale entry")
 
             await removeStaleDevice(id: deviceID)
             throw ReconnectionError.deviceNoLongerPaired
@@ -783,11 +778,11 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 await bleService.setReconnectionHandler { [weak self] deviceID in
                     Task { @MainActor in
                         guard let self else { return }
-                        print("[AppState] iOS auto-reconnect completed for device: \(deviceID)")
+                        self.logger.info("iOS auto-reconnect completed for device: \(deviceID)")
                         do {
                             try await self.messageService.failAllPendingMessages()
                         } catch {
-                            print("[AppState] Failed to mark pending messages as failed after reconnect: \(error)")
+                            self.logger.error("Failed to mark pending messages as failed after reconnect: \(error)")
                         }
                         await self.handleRestoredConnection(deviceID: deviceID)
                     }
@@ -806,11 +801,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 // Verify connection is stable by attempting initialization
                 let result = try await bleService.initializeDeviceWithRetry()
 
-                #if DEBUG
                 if attempt > 1 {
-                    print("[AppState] reconnectWithRetry: succeeded on attempt \(attempt)")
+                    logger.info("reconnectWithRetry: succeeded on attempt \(attempt)")
                 }
-                #endif
 
                 return result
 
@@ -821,9 +814,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             } catch {
                 lastError = error
 
-                #if DEBUG
-                print("[AppState] reconnectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
-                #endif
+                logger.warning("reconnectWithRetry: attempt \(attempt) failed - \(error.localizedDescription)")
 
                 // Clean up failed connection
                 await bleService.disconnect()
@@ -834,9 +825,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                     let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
                     let jitter = Double.random(in: 0...0.1) * baseDelay
 
-                    #if DEBUG
-                    print("[AppState] reconnectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
-                    #endif
+                    logger.debug("reconnectWithRetry: waiting \(Int((baseDelay + jitter) * 1000))ms before retry")
 
                     try await Task.sleep(for: .seconds(baseDelay + jitter))
                 }
@@ -1252,7 +1241,7 @@ extension AppState: BLEStateRestorationDelegate {
         do {
             try await messageService.stopAndFailAllPending()
         } catch {
-            print("[AppState] Failed to mark pending messages as failed: \(error)")
+            logger.error("Failed to mark pending messages as failed: \(error)")
         }
 
         // Wait before attempting reconnection to avoid CoreBluetooth state machine issues

@@ -26,7 +26,7 @@ This PRD documents the requirements and implementation of PocketMesh, a native i
 ### 2.1 Target Audience
 - Casual end users interested in off-grid messaging, such as emergency preppers, or communities in remote areas.
 - Age: 18+, tech-savvy but not developers; familiar with apps like iMessage or Signal.
-- Platform: iPhone users on iOS 18.0+; optimized for iOS 26.1; universal app for iPhone/iPad/macOS via Catalyst.
+- Platform: iPhone users on iOS 18.0+; optimized for iOS 26.2; universal app for iPhone/iPad/macOS via Catalyst.
 - Region: Primarily US/English, with design for easy future localization.
 
 ### 2.2 User Personas
@@ -158,8 +158,8 @@ Features are prioritized: MVP focuses on messaging and basic config; extensible 
 ## 5. Technical Requirements
 ### 5.1 Platform and Compatibility
 - **Minimum Deployment**: iOS 18.0
-- **Target**: iOS 26.1 with modern APIs
-- **Swift Version**: 6.1 with strict concurrency checking (async/await, actors, Sendable, @MainActor isolation)
+- **Target**: iOS 26.2 with modern APIs
+- **Swift Version**: 6.2 with strict concurrency checking (async/await, actors, Sendable, @MainActor isolation)
 - **Universal binary** for iPhone/iPad/macOS Catalyst
 - **Frameworks**:
    - SwiftUI (UI layer)
@@ -187,7 +187,7 @@ Features are prioritized: MVP focuses on messaging and basic config; extensible 
 - **Key Design Principles**:
    - BLE notifications over polling (use `setNotifyValue` for efficiency)
    - Per-device isolation: Database scoped by device public key
-   - Strict Swift 6.1 concurrency: All code concurrency-safe with Sendable types, actor isolation for shared state, @MainActor for UI updates
+   - Strict Swift 6.2 concurrency: All code concurrency-safe with Sendable types, actor isolation for shared state, @MainActor for UI updates
    - Async/await throughout with structured concurrency (TaskGroups, cancellation)
    - Background BLE with state preservation/restoration
    - Caching mechanisms
@@ -284,7 +284,7 @@ PocketMesh is in **early development** with planning completed for implementatio
 #### **Planned Implementation**
 - **Target: 5,000+ lines of Swift code** across multiple Swift files
 - **XcodeGen configuration** with proper entitlements
-- **iOS 18.0+ targeting** with iOS 26.1 optimization
+- **iOS 18.0+ targeting** with iOS 26.2 optimization
 - **Universal binary** for iPhone/iPad/macOS Catalyst
 
 #### **Feature Implementation Plan**
@@ -302,7 +302,7 @@ PocketMesh is in **early development** with planning completed for implementatio
 - **App Store submission readiness** with proper entitlements and configurations
 
 #### **Technical Architecture**
-- **Modern Swift 6.1** with strict concurrency checking and structured concurrency patterns
+- **Modern Swift 6.2** with strict concurrency checking and structured concurrency patterns
 - **Architecture** with separation of concerns
 - **Mock BLE Device** for protocol compliance testing
 - **Error Handling** with user-friendly messages

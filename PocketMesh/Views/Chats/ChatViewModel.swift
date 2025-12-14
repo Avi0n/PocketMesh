@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshKit
+import OSLog
 
 /// ViewModel for chat operations
 @Observable
@@ -7,6 +8,8 @@ import PocketMeshKit
 final class ChatViewModel {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatViewModel")
 
     /// Current conversations (contacts with messages)
     var conversations: [ContactDTO] = []
@@ -303,37 +306,37 @@ final class ChatViewModel {
 
     /// Retry sending a failed message with flood routing enabled
     func retryMessage(_ message: MessageDTO) async {
-        print("[ChatViewModel] retryMessage called for message: \(message.id)")
+        logger.debug("retryMessage called for message: \(message.id)")
 
         guard let messageService else {
-            print("[ChatViewModel] retryMessage: messageService is nil")
+            logger.warning("retryMessage: messageService is nil")
             return
         }
 
         guard let contact = currentContact else {
-            print("[ChatViewModel] retryMessage: currentContact is nil")
+            logger.warning("retryMessage: currentContact is nil")
             return
         }
 
-        print("[ChatViewModel] retryMessage: starting retry for contact \(contact.displayName)")
+        logger.debug("retryMessage: starting retry for contact \(contact.displayName)")
 
         isSending = true
         errorMessage = nil
 
         do {
             // Delete the failed message first
-            print("[ChatViewModel] retryMessage: deleting old message")
+            logger.debug("retryMessage: deleting old message")
             try await dataStore?.deleteMessage(id: message.id)
 
             // Retry with flood fallback enabled (always creates a new message)
-            print("[ChatViewModel] retryMessage: calling retryDirectMessage")
+            logger.debug("retryMessage: calling retryDirectMessage")
             _ = try await messageService.retryDirectMessage(text: message.text, to: contact)
-            print("[ChatViewModel] retryMessage: retryDirectMessage succeeded")
+            logger.info("retryMessage: retryDirectMessage succeeded")
 
             // Reload messages to show the new message
             await loadMessages(for: contact)
         } catch {
-            print("[ChatViewModel] retryMessage: error - \(error)")
+            logger.error("retryMessage: error - \(error)")
             errorMessage = error.localizedDescription
             showRetryError = true
             // Reload to show the new failed message (if one was created)

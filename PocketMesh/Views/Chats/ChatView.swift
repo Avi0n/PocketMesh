@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshKit
+import OSLog
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
 
 /// Individual chat conversation view with iMessage-style UI
 struct ChatView: View {
@@ -209,7 +212,7 @@ struct ChatView: View {
     }
 
     private func retryMessage(_ message: MessageDTO) {
-        print("[ChatView] retryMessage called for message: \(message.id)")
+        logger.debug("retryMessage called for message: \(message.id)")
         Task {
             await viewModel.retryMessage(message)
         }
