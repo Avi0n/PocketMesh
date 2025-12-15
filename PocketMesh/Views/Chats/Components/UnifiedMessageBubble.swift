@@ -212,7 +212,8 @@ struct UnifiedMessageBubble: View {
 
     private var statusRow: some View {
         HStack(spacing: 4) {
-            if message.hasFailed, let onRetry {
+            // Only show retry button for failed messages (not retrying)
+            if message.status == .failed, let onRetry {
                 Button {
                     onRetry()
                 } label: {
@@ -220,6 +221,12 @@ struct UnifiedMessageBubble: View {
                         .font(.caption2)
                 }
                 .buttonStyle(.borderless)
+            }
+
+            // Show spinner for retrying status
+            if message.status == .retrying {
+                ProgressView()
+                    .controlSize(.mini)
             }
 
             // Only show icon for failed status
@@ -248,8 +255,11 @@ struct UnifiedMessageBubble: View {
             return "Delivered"
         case .failed:
             return "Failed"
-        case .read:
-            return "Read"
+        case .retrying:
+            if message.maxRetryAttempts > 0 {
+                return "Retrying (\(message.retryAttempt + 1)/\(message.maxRetryAttempts))"
+            }
+            return "Retrying"
         }
     }
 

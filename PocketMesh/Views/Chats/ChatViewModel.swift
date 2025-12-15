@@ -181,17 +181,28 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            _ = try await messageService.sendDirectMessage(text: text, to: contact)
+            _ = try await messageService.sendMessageWithRetry(
+                text: text,
+                to: contact,
+                onMessageCreated: { [weak self] _ in
+                    // Reload messages immediately when message is saved (before retry loop starts)
+                    guard let self else { return }
+                    await MainActor.run {
+                        Task {
+                            await self.loadMessages(for: contact)
+                        }
+                    }
+                }
+            )
 
-            // Reload messages to show the sent message
+            // Final reload to show delivered status
             await loadMessages(for: contact)
 
             // Update conversations list to reflect new message
             await loadConversations(deviceID: contact.deviceID)
         } catch {
             errorMessage = error.localizedDescription
-            // Restore the text so user can retry
-            composingText = text
+            // Note: composingText already cleared - failed message can be retried from bubble
         }
 
         isSending = false
@@ -324,22 +335,18 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            // Delete the failed message first
-            logger.debug("retryMessage: deleting old message")
-            try await dataStore?.deleteMessage(id: message.id)
-
-            // Retry with flood fallback enabled (always creates a new message)
-            logger.debug("retryMessage: calling retryDirectMessage")
-            _ = try await messageService.retryDirectMessage(text: message.text, to: contact)
+            // Retry the existing message (preserves message identity)
+            logger.debug("retryMessage: calling retryDirectMessage with messageID")
+            _ = try await messageService.retryDirectMessage(messageID: message.id, to: contact)
             logger.info("retryMessage: retryDirectMessage succeeded")
 
-            // Reload messages to show the new message
+            // Reload messages to show updated status
             await loadMessages(for: contact)
         } catch {
             logger.error("retryMessage: error - \(error)")
             errorMessage = error.localizedDescription
             showRetryError = true
-            // Reload to show the new failed message (if one was created)
+            // Reload to show the failed status
             await loadMessages(for: contact)
         }
 

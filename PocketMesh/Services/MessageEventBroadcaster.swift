@@ -8,6 +8,8 @@ public enum MessageEvent: Sendable, Equatable {
     case channelMessageReceived(message: MessageDTO, channelIndex: UInt8)
     case messageStatusUpdated(ackCode: UInt32)
     case messageFailed(messageID: UUID)
+    case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
+    case routingChanged(contactID: UUID, isFlood: Bool)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -185,6 +187,19 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Called when a message fails due to ACK timeout
     func handleMessageFailed(messageID: UUID) {
         self.latestEvent = .messageFailed(messageID: messageID)
+        self.newMessageCount += 1
+    }
+
+    /// Called when a message enters retry state
+    func handleMessageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int) {
+        self.latestEvent = .messageRetrying(messageID: messageID, attempt: attempt, maxAttempts: maxAttempts)
+        self.newMessageCount += 1
+    }
+
+    /// Called when contact routing changes (e.g., direct -> flood)
+    func handleRoutingChanged(contactID: UUID, isFlood: Bool) {
+        logger.info("handleRoutingChanged called - contactID: \(contactID), isFlood: \(isFlood)")
+        self.latestEvent = .routingChanged(contactID: contactID, isFlood: isFlood)
         self.newMessageCount += 1
     }
 

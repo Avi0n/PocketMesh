@@ -196,6 +196,58 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up message service to contact service for path reset during retry
         Task {
             await messageService.setContactService(contactService)
+
+            // Wire up retry status events from MessageService
+            await messageService.setRetryStatusHandler { [weak self] messageID, attempt, maxAttempts in
+                await MainActor.run {
+                    self?.messageEventBroadcaster.handleMessageRetrying(
+                        messageID: messageID,
+                        attempt: attempt,
+                        maxAttempts: maxAttempts
+                    )
+                }
+            }
+
+            // Wire up routing change events from MessageService
+            await messageService.setRoutingChangedHandler { [weak self] contactID, isFlood in
+                await MainActor.run {
+                    self?.messageEventBroadcaster.handleRoutingChanged(
+                        contactID: contactID,
+                        isFlood: isFlood
+                    )
+                }
+            }
+
+            // Wire up routing change events from AdvertisementService (for path discovery responses)
+            await advertisementService.setRoutingChangedHandler { [weak self] contactID, isFlood in
+                await MainActor.run {
+                    self?.messageEventBroadcaster.handleRoutingChanged(
+                        contactID: contactID,
+                        isFlood: isFlood
+                    )
+                }
+            }
+
+            // Wire up path refresh handler for 0x81 push (fetch updated contact from device)
+            await advertisementService.setPathRefreshHandler { [weak self] deviceID, publicKey, contactID, wasFlood in
+                guard let self else { return }
+                do {
+                    // Fetch updated contact from device (saves to DB automatically)
+                    if let updated = try await self.contactService.getContact(deviceID: deviceID, publicKey: publicKey) {
+                        let isNowFlood = updated.isFloodRouted
+                        if wasFlood != isNowFlood {
+                            await MainActor.run {
+                                self.messageEventBroadcaster.handleRoutingChanged(
+                                    contactID: contactID,
+                                    isFlood: isNowFlood
+                                )
+                            }
+                        }
+                    }
+                } catch {
+                    // Silently ignore fetch failures - contact will update on next sync
+                }
+            }
         }
 
         // Set up BLE activity tracking for UI animation

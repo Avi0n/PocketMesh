@@ -88,6 +88,16 @@ struct ChatView: View {
                         await viewModel.loadMessages(for: contact)
                     }
                 }
+            case .routingChanged(let contactID, _) where contactID == contact.id:
+                // Refresh contact to update header when routing changes
+                Task {
+                    await refreshContact()
+                }
+            case .messageRetrying:
+                // Reload to pick up retry status changes
+                Task {
+                    await viewModel.loadMessages(for: contact)
+                }
             default:
                 break
             }
