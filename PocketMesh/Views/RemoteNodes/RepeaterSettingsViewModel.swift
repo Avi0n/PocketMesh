@@ -23,7 +23,9 @@ final class RepeaterSettingsViewModel {
     var longitude: Double = 0.0
     var isLoadingIdentity = false
     var identityError: String?
-    var identityLoaded = false
+    /// Tracks if ANY identity data has been received (not requiring ALL queries to complete)
+    private var hasReceivedIdentityData = false
+    var identityLoaded: Bool { hasReceivedIdentityData }
 
     // Radio settings (from get radio, get tx)
     var frequency: Double = 915.0  // MHz
@@ -33,7 +35,9 @@ final class RepeaterSettingsViewModel {
     var txPower: Int = 20  // dBm
     var isLoadingRadio = false
     var radioError: String?
-    var radioLoaded = false
+    /// Tracks if ANY radio data has been received (not requiring ALL queries to complete)
+    private var hasReceivedRadioData = false
+    var radioLoaded: Bool { hasReceivedRadioData }
 
     // Behavior settings (from get repeat, get advert.interval, get flood.max)
     var advertIntervalMinutes: Int = 15
@@ -42,7 +46,9 @@ final class RepeaterSettingsViewModel {
     var repeaterEnabled: Bool = true
     var isLoadingBehavior = false
     var behaviorError: String?
-    var behaviorLoaded = false
+    /// Tracks if ANY behavior data has been received (not requiring ALL queries to complete)
+    private var hasReceivedBehaviorData = false
+    var behaviorLoaded: Bool { hasReceivedBehaviorData }
 
     // Password change (no query available)
     var newPassword: String = ""
@@ -252,25 +258,37 @@ final class RepeaterSettingsViewModel {
                 switch section {
                 case "deviceInfo":
                     if isLoadingDeviceInfo {
-                        deviceInfoError = "Request timed out"
+                        // Only show error if no data was received at all
+                        if !deviceInfoLoaded {
+                            deviceInfoError = "Request timed out"
+                        }
                         isLoadingDeviceInfo = false
                         pendingQueries.removeAll { $0 == "ver" || $0 == "clock" }
                     }
                 case "identity":
                     if isLoadingIdentity {
-                        identityError = "Request timed out"
+                        // Only show error if no data was received at all
+                        if !hasReceivedIdentityData {
+                            identityError = "Request timed out"
+                        }
                         isLoadingIdentity = false
                         pendingQueries.removeAll { ["get name", "get lat", "get lon"].contains($0) }
                     }
                 case "radio":
                     if isLoadingRadio {
-                        radioError = "Request timed out"
+                        // Only show error if no data was received at all
+                        if !hasReceivedRadioData {
+                            radioError = "Request timed out"
+                        }
                         isLoadingRadio = false
                         pendingQueries.removeAll { $0 == "get radio" || $0 == "get tx" }
                     }
                 case "behavior":
                     if isLoadingBehavior {
-                        behaviorError = "Request timed out"
+                        // Only show error if no data was received at all
+                        if !hasReceivedBehaviorData {
+                            behaviorError = "Request timed out"
+                        }
                         isLoadingBehavior = false
                         pendingQueries.removeAll { ["get repeat", "get advert.interval", "get flood.advert.interval", "get flood.max"].contains($0) }
                     }
@@ -294,18 +312,31 @@ final class RepeaterSettingsViewModel {
         }
 
         // Determine which query this response is for based on pending queries
+        // IMPORTANT: Order matters - check specific patterns before broad ones
+        // Priority: specific patterns (ver, clock, radio) → numeric patterns (lat, lon, tx, intervals) → catch-all (name)
+        var trimmedText = frame.text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Strip MeshCore CLI prompt prefix if present (must match CLIResponse.parse() behavior)
+        // Firmware prepends "> " to all CLI command responses
+        if trimmedText.hasPrefix("> ") {
+            trimmedText = String(trimmedText.dropFirst(2))
+        }
+
         let queryHint = pendingQueries.first { query in
-            // Match response patterns to likely queries
             switch query {
+            // Most specific patterns first
             case "ver": return frame.text.contains("MeshCore") || (frame.text.hasPrefix("v") && frame.text.contains("("))
             case "clock": return frame.text.contains("UTC") || (frame.text.contains(":") && frame.text.contains("/"))
             case "get radio": return frame.text.contains(",") && frame.text.split(separator: ",").count >= 4
-            case "get tx": return Int(frame.text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil && !frame.text.contains(",")
-            case "get repeat": return frame.text.lowercased().contains("on") || frame.text.lowercased().contains("off")
+            case "get repeat": return trimmedText.lowercased() == "on" || trimmedText.lowercased() == "off"
+            // Numeric patterns - must check BEFORE "get name" since name pattern is too broad
+            case "get lat": return pendingQueries.contains("get lat") && Double(trimmedText) != nil && !frame.text.contains(",")
+            case "get lon": return pendingQueries.contains("get lon") && Double(trimmedText) != nil && !frame.text.contains(",")
+            case "get tx": return Int(trimmedText) != nil && !frame.text.contains(",")
             case "get advert.interval", "get flood.advert.interval", "get flood.max":
-                return Int(frame.text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-            case "get name": return !frame.text.contains(",") && !frame.text.contains("UTC") && !frame.text.contains("(")
-            case "get lat", "get lon": return Double(frame.text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
+                return Int(trimmedText) != nil && !frame.text.contains(",")
+            // Catch-all for text responses - checked LAST
+            case "get name": return !frame.text.contains(",") && !frame.text.contains("UTC") && !frame.text.contains("(") && Double(trimmedText) == nil
             default: return false
             }
         }
@@ -416,9 +447,13 @@ final class RepeaterSettingsViewModel {
     }
 
     private func checkIdentityComplete() {
+        // Mark as having received data (shows partial results immediately)
+        hasReceivedIdentityData = true
+        identityError = nil  // Clear error when we receive valid data
+
+        // Stop loading spinner when ALL queries complete
         let identityQueries = ["get name", "get lat", "get lon"]
         if identityQueries.allSatisfy({ !pendingQueries.contains($0) }) {
-            identityLoaded = true
             isLoadingIdentity = false
             timeoutTasks["identity"]?.cancel()
             timeoutTasks.removeValue(forKey: "identity")
@@ -426,8 +461,12 @@ final class RepeaterSettingsViewModel {
     }
 
     private func checkRadioComplete() {
+        // Mark as having received data (shows partial results immediately)
+        hasReceivedRadioData = true
+        radioError = nil  // Clear error when we receive valid data
+
+        // Stop loading spinner when ALL queries complete
         if !pendingQueries.contains("get radio") && !pendingQueries.contains("get tx") {
-            radioLoaded = true
             isLoadingRadio = false
             timeoutTasks["radio"]?.cancel()
             timeoutTasks.removeValue(forKey: "radio")
@@ -435,9 +474,13 @@ final class RepeaterSettingsViewModel {
     }
 
     private func checkBehaviorComplete() {
+        // Mark as having received data (shows partial results immediately)
+        hasReceivedBehaviorData = true
+        behaviorError = nil  // Clear error when we receive valid data
+
+        // Stop loading spinner when ALL queries complete
         let behaviorQueries = ["get repeat", "get advert.interval", "get flood.advert.interval", "get flood.max"]
         if behaviorQueries.allSatisfy({ !pendingQueries.contains($0) }) {
-            behaviorLoaded = true
             isLoadingBehavior = false
             timeoutTasks["behavior"]?.cancel()
             timeoutTasks.removeValue(forKey: "behavior")

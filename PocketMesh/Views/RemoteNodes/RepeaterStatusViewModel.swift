@@ -70,6 +70,15 @@ final class RepeaterStatusViewModel {
 
     // MARK: - Status
 
+    /// Timeout duration for status/neighbors requests
+    private static let requestTimeout: Duration = .seconds(15)
+
+    /// Timeout task for status request
+    private var statusTimeoutTask: Task<Void, Never>?
+
+    /// Timeout task for neighbors request
+    private var neighborsTimeoutTask: Task<Void, Never>?
+
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
@@ -78,15 +87,29 @@ final class RepeaterStatusViewModel {
         isLoadingStatus = true
         errorMessage = nil
 
+        // Start timeout
+        statusTimeoutTask?.cancel()
+        statusTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.requestTimeout)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                if self?.isLoadingStatus == true && self?.status == nil {
+                    self?.errorMessage = "Request timed out"
+                    self?.isLoadingStatus = false
+                }
+            }
+        }
+
         do {
             _ = try await repeaterAdminService.requestStatus(sessionID: session.id)
             // Status response arrives via push notification
-            // The handler will update status property
+            // The handler will set isLoadingStatus = false when response arrives
         } catch {
             errorMessage = error.localizedDescription
+            isLoadingStatus = false  // Only clear on error
+            statusTimeoutTask?.cancel()
         }
-
-        isLoadingStatus = false
+        // Note: Don't clear isLoadingStatus here - it's cleared by handleStatusResponse
     }
 
     /// Request neighbors from the repeater
@@ -97,15 +120,29 @@ final class RepeaterStatusViewModel {
         isLoadingNeighbors = true
         errorMessage = nil
 
+        // Start timeout
+        neighborsTimeoutTask?.cancel()
+        neighborsTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.requestTimeout)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                if self?.isLoadingNeighbors == true && (self?.neighbors.isEmpty ?? true) {
+                    self?.errorMessage = "Request timed out"
+                    self?.isLoadingNeighbors = false
+                }
+            }
+        }
+
         do {
             _ = try await repeaterAdminService.requestNeighbors(sessionID: session.id)
             // Neighbors response arrives via push notification
-            // The handler will update neighbors property
+            // The handler will set isLoadingNeighbors = false when response arrives
         } catch {
             errorMessage = error.localizedDescription
+            isLoadingNeighbors = false  // Only clear on error
+            neighborsTimeoutTask?.cancel()
         }
-
-        isLoadingNeighbors = false
+        // Note: Don't clear isLoadingNeighbors here - it's cleared by handleNeighboursResponse
     }
 
     /// Handle status response from push notification
@@ -116,6 +153,7 @@ final class RepeaterStatusViewModel {
               response.publicKeyPrefix == expectedPrefix else {
             return  // Ignore responses for other sessions
         }
+        statusTimeoutTask?.cancel()  // Cancel timeout on success
         self.status = response
         self.isLoadingStatus = false
     }
@@ -123,6 +161,7 @@ final class RepeaterStatusViewModel {
     /// Handle neighbours response from push notification
     func handleNeighboursResponse(_ response: NeighboursResponse) {
         // Note: NeighboursResponse may not include source prefix - validate if available
+        neighborsTimeoutTask?.cancel()  // Cancel timeout on success
         self.neighbors = response.neighbours
         self.isLoadingNeighbors = false
     }

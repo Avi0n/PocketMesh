@@ -10,6 +10,8 @@ struct NodeAuthenticationSheet: View {
     let role: RemoteNodeRole
     /// When true, hides the Node Details section (used when re-joining known rooms from chat list)
     let hideNodeDetails: Bool
+    /// Optional custom title. If nil, uses default based on role ("Join Room" or "Admin Access")
+    let customTitle: String?
     let onSuccess: (RemoteNodeSessionDTO) -> Void
 
     @State private var password: String = ""
@@ -24,11 +26,13 @@ struct NodeAuthenticationSheet: View {
         contact: ContactDTO,
         role: RemoteNodeRole,
         hideNodeDetails: Bool = false,
+        customTitle: String? = nil,
         onSuccess: @escaping (RemoteNodeSessionDTO) -> Void
     ) {
         self.contact = contact
         self.role = role
         self.hideNodeDetails = hideNodeDetails
+        self.customTitle = customTitle
         self.onSuccess = onSuccess
     }
 
@@ -42,7 +46,7 @@ struct NodeAuthenticationSheet: View {
                 errorSection
                 connectButton
             }
-            .navigationTitle(role == .roomServer ? "Join Room" : "Admin Access")
+            .navigationTitle(customTitle ?? (role == .roomServer ? "Join Room" : "Admin Access"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

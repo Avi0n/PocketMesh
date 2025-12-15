@@ -233,7 +233,19 @@ private struct TelemetryRow: View {
     let dataPoint: LPPDataPoint
 
     var body: some View {
-        LabeledContent(dataPoint.typeName, value: dataPoint.formattedValue)
+        if dataPoint.type == .voltage, let percentage = dataPoint.batteryPercentage {
+            // For voltage, show both voltage and calculated battery percentage
+            LabeledContent(dataPoint.typeName) {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(dataPoint.formattedValue)
+                    Text("\(percentage)%")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            LabeledContent(dataPoint.typeName, value: dataPoint.formattedValue)
+        }
     }
 }
 

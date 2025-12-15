@@ -17,7 +17,11 @@ struct ExpandableSettingsSection<Content: View>: View {
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $isExpanded) {
-                if isLoading {
+                // Priority: Show content as soon as ANY data is available
+                // This ensures partial data displays immediately while other queries complete
+                if isLoaded() {
+                    content()
+                } else if isLoading {
                     HStack {
                         Spacer()
                         ProgressView("Loading...")
@@ -37,8 +41,6 @@ struct ExpandableSettingsSection<Content: View>: View {
                         .buttonStyle(.bordered)
                     }
                     .padding(.vertical, 8)
-                } else if isLoaded() {
-                    content()
                 } else {
                     // Should auto-load, but show placeholder if not
                     HStack {
@@ -66,6 +68,13 @@ struct ExpandableSettingsSection<Content: View>: View {
         .onChange(of: isExpanded) { _, expanded in
             if expanded && !isLoaded() && !isLoading {
                 Task { await onLoad() }
+            }
+        }
+        .task {
+            // Trigger initial load if section starts expanded
+            // (onChange only fires when value changes, not on initial render)
+            if isExpanded && !isLoaded() && !isLoading {
+                await onLoad()
             }
         }
     }

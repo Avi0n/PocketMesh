@@ -151,7 +151,11 @@ struct ContactDetailView: View {
             switch sheet {
             case .repeaterAuth:
                 if let role = RemoteNodeRole(contactType: currentContact.type) {
-                    NodeAuthenticationSheet(contact: currentContact, role: role) { session in
+                    NodeAuthenticationSheet(
+                        contact: currentContact,
+                        role: role,
+                        customTitle: "Telemetry Access"
+                    ) { session in
                         pendingSheet = .repeaterStatus(session)
                         activeSheet = nil  // Triggers dismissal, then onDismiss fires
                     }
