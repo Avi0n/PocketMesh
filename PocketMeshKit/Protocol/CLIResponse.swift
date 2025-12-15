@@ -21,7 +21,13 @@ public enum CLIResponse: Sendable, Equatable {
     /// Parse a CLI response text into a structured type
     /// Note: Response correlation must be handled by the caller based on pending query tracking
     public static func parse(_ text: String, forQuery query: String? = nil) -> CLIResponse {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Strip MeshCore CLI prompt prefix if present
+        // Firmware prepends "> " to all CLI command responses
+        if trimmed.hasPrefix("> ") {
+            trimmed = String(trimmed.dropFirst(2))
+        }
 
         if trimmed == "OK" {
             return .ok

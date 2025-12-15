@@ -130,8 +130,9 @@ public enum LPPDecoder {
             return .float(Float(raw) / 10.0)
 
         case .voltage:
+            // MeshCore sends voltage in 0.1mV units (e.g., 38657 = 3.8657V)
             let raw = data.withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
-            return .float(Float(raw) / 100.0)
+            return .float(Float(raw) / 10000.0)
 
         case .illuminance:
             let raw = data.withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }

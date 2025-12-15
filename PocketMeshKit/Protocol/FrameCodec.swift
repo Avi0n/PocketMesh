@@ -731,7 +731,8 @@ public enum FrameCodec {
             throw ProtocolError.illegalArgument
         }
 
-        let isAdmin = data[1] != 0
+        // Per MeshCore protocol: byte 1 is a permissions bit field, bit 0 = admin
+        let isAdmin = (data[1] & 0x01) == 0x01
         let publicKeyPrefix = data.subdata(in: 2..<8)
         let serverTimestamp = data.subdata(in: 8..<12).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
         let aclPermissions = data[12]

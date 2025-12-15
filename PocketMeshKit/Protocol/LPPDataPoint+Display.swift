@@ -1,6 +1,21 @@
 import Foundation
 
 extension LPPDataPoint {
+
+    /// Calculate battery percentage from voltage (LiPo linear approximation)
+    /// Returns nil if this is not a voltage data point or value is invalid
+    public var batteryPercentage: Int? {
+        guard type == .voltage else { return nil }
+
+        guard case .float(let volts) = value else { return nil }
+
+        // LiPo voltage to percentage: 4.2V = 100%, 3.0V = 0%
+        let minV: Float = 3.0
+        let maxV: Float = 4.2
+        let percent = ((volts - minV) / (maxV - minV)) * 100
+        return Int(min(100, max(0, percent)))
+    }
+
     /// Human-readable name for the data point type
     public var typeName: String {
         switch type {

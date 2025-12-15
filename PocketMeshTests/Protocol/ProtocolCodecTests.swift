@@ -838,7 +838,7 @@ struct ProtocolCodecTests {
         var data = Data()
         data.append(0x04)  // channel
         data.append(LPPType.voltage.rawValue)
-        let voltageRaw: UInt16 = 420  // 4.20V * 100
+        let voltageRaw: UInt16 = 42000  // 4.20V * 10000 (MeshCore sends in 0.1mV units)
         data.append(contentsOf: withUnsafeBytes(of: voltageRaw.littleEndian) { Array($0) })
 
         let result = LPPDecoder.decode(data)
@@ -1149,7 +1149,7 @@ struct ProtocolCodecTests {
         // Voltage (battery)
         testData.append(0x03)
         testData.append(LPPType.voltage.rawValue)
-        let voltage: UInt16 = 385  // 3.85V
+        let voltage: UInt16 = 38500  // 3.85V * 10000 (MeshCore sends in 0.1mV units)
         testData.append(contentsOf: withUnsafeBytes(of: voltage.littleEndian) { Array($0) })
 
         let result = try FrameCodec.decodeTelemetryResponse(from: testData)
@@ -2354,5 +2354,88 @@ struct ProtocolCodecTests {
     @Test("Logout command code has correct value")
     func logoutCommandCode() {
         #expect(CommandCode.logout.rawValue == 0x1D)
+    }
+
+    // MARK: - Login Result Tests
+
+    /// Helper to create login success data with specified permissions byte
+    private func makeLoginSuccessData(permissionsByte: UInt8) -> Data {
+        var data = Data([PushCode.loginSuccess.rawValue])  // 0x85
+        data.append(permissionsByte)  // permissions byte
+        data.append(Data(repeating: 0xAB, count: 6))  // public key prefix
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(1234567890).littleEndian) { Array($0) })  // timestamp
+        data.append(0x01)  // ACL permissions
+        data.append(0x02)  // firmware level
+        return data
+    }
+
+    @Test("Decode login result with permissions byte 0x01 returns isAdmin true")
+    func decodeLoginResultPermissions0x01IsAdminTrue() throws {
+        let data = makeLoginSuccessData(permissionsByte: 0x01)
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.success == true)
+        #expect(result.isAdmin == true)
+    }
+
+    @Test("Decode login result with permissions byte 0x02 returns isAdmin false")
+    func decodeLoginResultPermissions0x02IsAdminFalse() throws {
+        // Edge case: byte 0x02 has bit 0 = 0, so isAdmin should be false
+        // This is the bug we fixed - old code would return true because 0x02 != 0
+        let data = makeLoginSuccessData(permissionsByte: 0x02)
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.success == true)
+        #expect(result.isAdmin == false)
+    }
+
+    @Test("Decode login result with permissions byte 0x03 returns isAdmin true")
+    func decodeLoginResultPermissions0x03IsAdminTrue() throws {
+        // Byte 0x03 has bit 0 = 1, so isAdmin should be true
+        let data = makeLoginSuccessData(permissionsByte: 0x03)
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.success == true)
+        #expect(result.isAdmin == true)
+    }
+
+    @Test("Decode login result with permissions byte 0x00 returns isAdmin false")
+    func decodeLoginResultPermissions0x00IsAdminFalse() throws {
+        let data = makeLoginSuccessData(permissionsByte: 0x00)
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.success == true)
+        #expect(result.isAdmin == false)
+    }
+
+    @Test("Decode login result failure")
+    func decodeLoginResultFailure() throws {
+        var data = Data([PushCode.loginFail.rawValue])  // 0x86
+        data.append(0x00)  // reserved
+        data.append(Data(repeating: 0xCD, count: 6))  // public key prefix
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.success == false)
+        #expect(result.isAdmin == false)
+    }
+
+    @Test("Decode login result extracts public key prefix correctly")
+    func decodeLoginResultExtractsPrefix() throws {
+        let prefix = Data([0x01, 0x02, 0x03, 0x04, 0x05, 0x06])
+        var data = Data([PushCode.loginSuccess.rawValue])
+        data.append(0x01)  // permissions
+        data.append(prefix)  // public key prefix
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(0).littleEndian) { Array($0) })  // timestamp
+        data.append(0x00)  // ACL permissions
+        data.append(0x00)  // firmware level
+
+        let result = try FrameCodec.decodeLoginResult(from: data)
+
+        #expect(result.publicKeyPrefix == prefix)
     }
 }

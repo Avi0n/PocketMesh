@@ -259,9 +259,12 @@ public actor MessagePollingService {
             return
         }
 
-        // Check if this is a CLI response (textType = .cliData)
-        // Route to CLI handler - don't save CLI responses to message database
-        if frame.textType == .cliData {
+        // Check if this is a CLI response
+        // Route to CLI handler if:
+        // 1. textType is explicitly .cliData, OR
+        // 2. Message is from a repeater (firmware sends CLI responses as .plain)
+        // The handler filters by session, so routing extra messages is safe.
+        if frame.textType == .cliData || contact.type == .repeater {
             await delegate?.messagePollingService(self, didReceiveCLIResponse: frame, fromContact: contact)
             return
         }

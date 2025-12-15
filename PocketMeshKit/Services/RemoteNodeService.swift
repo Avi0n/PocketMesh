@@ -307,7 +307,11 @@ public actor RemoteNodeService {
         if result.success {
             // Update session state - use prefix-based lookup since we only have the prefix
             if let session = try? await dataStore.fetchRemoteNodeSessionByPrefix(prefix) {
-                let permission = RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest
+                // Use isAdmin flag from login result - more reliable than aclPermissions
+                // The isAdmin boolean is set when admin authentication succeeds
+                // aclPermissions may not reflect admin status on all firmware versions
+                let permission: RoomPermissionLevel = result.isAdmin ? .admin :
+                    (RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest)
                 try? await dataStore.updateRemoteNodeSessionConnection(
                     id: session.id,
                     isConnected: true,
