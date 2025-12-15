@@ -621,6 +621,18 @@ public actor BLEService: NSObject, BLETransport {
         }
         let deviceInfo = try FrameCodec.decodeDeviceInfo(from: queryResponse)
 
+        // Sync device time to ensure login timestamps are current
+        // This prevents repeater replay attack false positives when the companion radio's RTC
+        // hasn't been synchronized (firmware requires sender_timestamp > last_timestamp)
+        let currentTimestamp = UInt32(Date().timeIntervalSince1970)
+        let setTimeData = FrameCodec.encodeSetDeviceTime(currentTimestamp)
+        if let timeResponse = try await send(setTimeData, timeout: setupTimeout, forPairing: false) {
+            // Response code 0x00 = OK, 0x01 = ERR (firmware only accepts forward time changes)
+            if timeResponse.first != ResponseCode.ok.rawValue {
+                logger.warning("Failed to set device time - device clock may be ahead")
+            }
+        }
+
         // Send app start (pairing should be complete by now, but keep the longer timeout)
         let appStartData = FrameCodec.encodeAppStart(appName: "PocketMesh")
         guard let selfResponse = try await send(appStartData, timeout: setupTimeout, forPairing: false),
