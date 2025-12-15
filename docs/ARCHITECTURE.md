@@ -73,16 +73,16 @@ PocketMesh follows a layered architecture with clear separation of concerns:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      UI Layer                           │
-│   SwiftUI Views + ViewModels + AppState                │
+│     SwiftUI Views + ViewModels + AppState               │
 ├─────────────────────────────────────────────────────────┤
 │                   Services Layer                        │
-│   MessageService, ContactService, ChannelService, etc. │
+│  MessageService, ContactService, ChannelService, etc.   │
 ├─────────────────────────────────────────────────────────┤
 │                   Protocol Layer                        │
-│   FrameCodec (encoding/decoding) + BLEService          │
+│     FrameCodec (encoding/decoding) + BLEService         │
 ├─────────────────────────────────────────────────────────┤
 │                    Data Layer                           │
-│   SwiftData Models + DataStore Actor                   │
+│         SwiftData Models + DataStore Actor              │
 └─────────────────────────────────────────────────────────┘
 ```
 
