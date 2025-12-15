@@ -14,6 +14,11 @@ settings:
     CODE_SIGN_IDENTITY: "Apple Development"
     DEVELOPMENT_TEAM: ""
 
+packages:
+  DataScoutCompanion:
+    url: https://github.com/alex566/DataScoutCompanion.git
+    from: "0.3.0"
+
 targets:
   PocketMesh:
     type: application
@@ -24,6 +29,7 @@ targets:
           - "**/*.md"
     dependencies:
       - target: PocketMeshKit
+      - package: DataScoutCompanion
     settings:
       base:
         INFOPLIST_FILE: PocketMesh/Info.plist

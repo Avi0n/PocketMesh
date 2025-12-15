@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshKit
+#if DEBUG
+import DataScoutCompanion
+#endif
 
 @main
 struct PocketMeshApp: App {
@@ -12,6 +15,9 @@ struct PocketMeshApp: App {
                 .environment(appState)
                 .task {
                     await appState.initializeBLE()
+                    #if DEBUG
+                    ConnectionService.shared.startAdvertising(container: appState.modelContainer)
+                    #endif
                 }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
                     handleScenePhaseChange(from: oldPhase, to: newPhase)

@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_datascout-sync._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>PocketMesh uses the local network to enable database debugging with DataScout.</string>
 </dict>
 </plist>
