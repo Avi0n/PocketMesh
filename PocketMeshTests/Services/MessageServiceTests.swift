@@ -91,13 +91,17 @@ public actor TestBLETransport: BLETransport {
 
 // MARK: - Test Helpers
 
-private func createTestContact(deviceID: UUID, name: String = "TestContact") -> ContactDTO {
+private func createTestContact(
+    deviceID: UUID,
+    name: String = "TestContact",
+    type: ContactType = .chat
+) -> ContactDTO {
     let contact = Contact(
         id: UUID(),
         deviceID: deviceID,
         publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
         name: name,
-        typeRawValue: ContactType.chat.rawValue,
+        typeRawValue: type.rawValue,
         flags: 0,
         outPathLength: 2,
         outPath: Data([0x01, 0x02]),
@@ -965,5 +969,81 @@ struct MessageServiceTests {
         } catch {
             Issue.record("Expected CancellationError but got: \(error)")
         }
+    }
+
+    // MARK: - Repeater Blocking Tests
+
+    @Test("Send direct message to repeater throws invalidRecipient")
+    func sendDirectMessageToRepeaterThrowsInvalidRecipient() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let repeater = createTestContact(deviceID: deviceID, name: "Test Repeater", type: .repeater)
+
+        await transport.setConnectionState(.ready)
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // Verify the specific error case is thrown
+        do {
+            _ = try await service.sendDirectMessage(text: "Hello!", to: repeater)
+            Issue.record("Expected invalidRecipient error but succeeded")
+        } catch let error as MessageServiceError {
+            switch error {
+            case .invalidRecipient:
+                break  // Expected case
+            default:
+                Issue.record("Expected invalidRecipient but got \(error)")
+            }
+        } catch {
+            Issue.record("Expected MessageServiceError but got \(error)")
+        }
+
+        // Verify no message was saved (error thrown before save)
+        let messages = try await dataStore.fetchMessages(contactID: repeater.id)
+        #expect(messages.isEmpty)
+
+        // Verify no data was sent to BLE
+        let sentData = await transport.getSentData()
+        #expect(sentData.isEmpty)
+    }
+
+    @Test("Send message with retry to repeater throws invalidRecipient")
+    func sendMessageWithRetryToRepeaterThrowsInvalidRecipient() async throws {
+        let transport = TestBLETransport()
+        let container = try DataStore.createContainer(inMemory: true)
+        let dataStore = DataStore(modelContainer: container)
+
+        let deviceID = UUID()
+        let repeater = createTestContact(deviceID: deviceID, name: "Test Repeater", type: .repeater)
+
+        await transport.setConnectionState(.ready)
+
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
+        // Verify the specific error case is thrown
+        do {
+            _ = try await service.sendMessageWithRetry(text: "Hello!", to: repeater)
+            Issue.record("Expected invalidRecipient error but succeeded")
+        } catch let error as MessageServiceError {
+            switch error {
+            case .invalidRecipient:
+                break  // Expected case
+            default:
+                Issue.record("Expected invalidRecipient but got \(error)")
+            }
+        } catch {
+            Issue.record("Expected MessageServiceError but got \(error)")
+        }
+
+        // Verify no message was saved
+        let messages = try await dataStore.fetchMessages(contactID: repeater.id)
+        #expect(messages.isEmpty)
+
+        // Verify no data was sent to BLE
+        let sentData = await transport.getSentData()
+        #expect(sentData.isEmpty)
     }
 }

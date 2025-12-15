@@ -5,6 +5,28 @@ import Foundation
 
 // MARK: - Test Helpers
 
+private func createTestContact(
+    deviceID: UUID = UUID(),
+    name: String = "TestContact",
+    type: ContactType = .chat
+) -> ContactDTO {
+    let contact = Contact(
+        id: UUID(),
+        deviceID: deviceID,
+        publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+        name: name,
+        typeRawValue: type.rawValue,
+        flags: 0,
+        outPathLength: 2,
+        outPath: Data([0x01, 0x02]),
+        lastAdvertTimestamp: UInt32(Date().timeIntervalSince1970),
+        latitude: 0,
+        longitude: 0,
+        lastModified: UInt32(Date().timeIntervalSince1970)
+    )
+    return ContactDTO(from: contact)
+}
+
 private func createTestMessage(
     timestamp: UInt32,
     text: String = "Test message"
@@ -134,6 +156,54 @@ struct ChatViewModelTests {
 
         #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
         #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == true)
+    }
+
+    // MARK: - Conversation Filtering Tests
+
+    @Test("allConversations excludes repeaters")
+    func allConversationsExcludesRepeaters() {
+        let viewModel = ChatViewModel()
+        let deviceID = UUID()
+
+        // Create a mix of contact types
+        let chatContact = createTestContact(deviceID: deviceID, name: "Alice", type: .chat)
+        let chatContact2 = createTestContact(deviceID: deviceID, name: "Bob", type: .chat)
+        let repeaterContact = createTestContact(deviceID: deviceID, name: "Repeater 1", type: .repeater)
+        let anotherRepeater = createTestContact(deviceID: deviceID, name: "Repeater 2", type: .repeater)
+
+        // Set conversations to include repeaters
+        viewModel.conversations = [chatContact, chatContact2, repeaterContact, anotherRepeater]
+
+        // Verify allConversations excludes repeaters
+        let conversations = viewModel.allConversations
+        #expect(conversations.count == 2)
+
+        // Verify only chat contacts are included
+        let names = conversations.compactMap { conversation -> String? in
+            if case .direct(let contact) = conversation {
+                return contact.displayName
+            }
+            return nil
+        }
+        #expect(names.contains("Alice"))
+        #expect(names.contains("Bob"))
+        #expect(!names.contains("Repeater 1"))
+        #expect(!names.contains("Repeater 2"))
+    }
+
+    @Test("allConversations returns empty when only repeaters exist")
+    func allConversationsReturnsEmptyWhenOnlyRepeatersExist() {
+        let viewModel = ChatViewModel()
+        let deviceID = UUID()
+
+        // Only repeaters in conversations
+        viewModel.conversations = [
+            createTestContact(deviceID: deviceID, name: "Repeater 1", type: .repeater),
+            createTestContact(deviceID: deviceID, name: "Repeater 2", type: .repeater)
+        ]
+
+        let conversations = viewModel.allConversations
+        #expect(conversations.isEmpty)
     }
 
 }

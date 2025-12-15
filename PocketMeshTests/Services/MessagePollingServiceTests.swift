@@ -102,6 +102,18 @@ actor TestMessagePollingDelegate: MessagePollingDelegate {
         // Room messages are handled by RoomServerService, not tracked here
     }
 
+    nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveBinaryResponse data: Data) async {
+        // Binary responses are handled by BinaryProtocolService, not tracked here
+    }
+
+    nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveTelemetryResponse response: TelemetryResponse) async {
+        // Telemetry responses are handled by RepeaterAdminService, not tracked here
+    }
+
+    nonisolated func messagePollingService(_ service: MessagePollingService, didReceiveCLIResponse frame: MessageFrame, fromContact contact: ContactDTO) async {
+        // CLI responses are handled by RepeaterAdminService, not tracked here
+    }
+
     func reset() {
         _directMessages.removeAll()
         _channelMessages.removeAll()
