@@ -1,0 +1,98 @@
+import SwiftUI
+
+/// A collapsible section that auto-loads data when expanded
+/// More iOS-native than explicit "Load" buttons
+struct ExpandableSettingsSection<Content: View>: View {
+    let title: String
+    let icon: String
+
+    @Binding var isExpanded: Bool
+    let isLoaded: () -> Bool  // Closure instead of binding (supports computed properties)
+    @Binding var isLoading: Bool
+    @Binding var error: String?
+
+    let onLoad: () async -> Void
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        Section {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                if isLoading {
+                    HStack {
+                        Spacer()
+                        ProgressView("Loading...")
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                } else if let error {
+                    VStack(spacing: 12) {
+                        Label("Failed to load", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Try Again") {
+                            Task { await onLoad() }
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.vertical, 8)
+                } else if isLoaded() {
+                    content()
+                } else {
+                    // Should auto-load, but show placeholder if not
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                }
+            } label: {
+                HStack {
+                    Label(title, systemImage: icon)
+                    Spacer()
+                    if isLoaded() && !isLoading {
+                        Button {
+                            Task { await onLoad() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+        }
+        .onChange(of: isExpanded) { _, expanded in
+            if expanded && !isLoaded() && !isLoading {
+                Task { await onLoad() }
+            }
+        }
+    }
+}
+
+#Preview {
+    @Previewable @State var isExpanded = false
+    @Previewable @State var isLoading = false
+    @Previewable @State var error: String? = nil
+    @Previewable @State var data: String? = nil
+
+    Form {
+        ExpandableSettingsSection(
+            title: "Device Info",
+            icon: "info.circle",
+            isExpanded: $isExpanded,
+            isLoaded: { data != nil },
+            isLoading: $isLoading,
+            error: $error,
+            onLoad: {
+                isLoading = true
+                try? await Task.sleep(for: .seconds(1))
+                data = "Loaded!"
+                isLoading = false
+            }
+        ) {
+            Text(data ?? "")
+        }
+    }
+}
