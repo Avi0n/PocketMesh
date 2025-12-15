@@ -31,18 +31,23 @@ public struct MessageServiceConfig: Sendable {
     /// Minimum timeout in seconds (floor for device-suggested timeout)
     public let minTimeout: TimeInterval
 
+    /// Whether to trigger path discovery after successful flood delivery
+    public let triggerPathDiscoveryAfterFlood: Bool
+
     public init(
         floodFallbackOnRetry: Bool = true,
-        maxAttempts: Int = 3,
+        maxAttempts: Int = 4,
         maxFloodAttempts: Int = 2,
         floodAfter: Int = 2,
-        minTimeout: TimeInterval = 0
+        minTimeout: TimeInterval = 0,
+        triggerPathDiscoveryAfterFlood: Bool = true
     ) {
         self.floodFallbackOnRetry = floodFallbackOnRetry
         self.maxAttempts = maxAttempts
         self.maxFloodAttempts = maxFloodAttempts
         self.floodAfter = floodAfter
         self.minTimeout = minTimeout
+        self.triggerPathDiscoveryAfterFlood = triggerPathDiscoveryAfterFlood
     }
 
     public static let `default` = MessageServiceConfig()
@@ -103,11 +108,20 @@ public actor MessageService {
     /// Message failure callback (messageID)
     private var messageFailedHandler: (@Sendable (UUID) async -> Void)?
 
+    /// Event broadcaster for retry status updates (messageID, attempt, maxAttempts)
+    private var retryStatusHandler: (@Sendable (UUID, Int, Int) async -> Void)?
+
+    /// Handler for routing change events (contactID, isFlood)
+    private var routingChangedHandler: (@Sendable (UUID, Bool) async -> Void)?
+
     /// Task for periodic ACK expiry checking
     private var ackCheckTask: Task<Void, Never>?
 
     /// Interval between ACK expiry checks (in seconds)
     private var checkInterval: TimeInterval = 5.0
+
+    /// Tracks message IDs currently being retried to prevent concurrent retry attempts
+    private var inFlightRetries: Set<UUID> = []
 
     // MARK: - Initialization
 
@@ -223,21 +237,213 @@ public actor MessageService {
 
     /// Retry a failed message with flood routing enabled and automatic retry.
     /// - Parameters:
-    ///   - text: The message text
+    ///   - messageID: The ID of the failed message to retry
     ///   - contact: The recipient contact
-    ///   - textType: The text type (default: plain)
-    /// - Returns: The saved message
+    /// - Returns: The updated message
     public func retryDirectMessage(
-        text: String,
-        to contact: ContactDTO,
-        textType: TextType = .plain
+        messageID: UUID,
+        to contact: ContactDTO
     ) async throws -> MessageDTO {
-        // Use the retry method - it will handle flood fallback automatically
-        return try await sendMessageWithRetry(
-            text: text,
-            to: contact,
-            textType: textType
+        return try await retryExistingMessage(
+            messageID: messageID,
+            contact: contact
         )
+    }
+
+    /// Retries an existing failed message with automatic retry and flood fallback.
+    /// Updates the existing message's status during retry instead of creating a new message.
+    ///
+    /// - Parameters:
+    ///   - messageID: The ID of the failed message to retry
+    ///   - contact: The recipient contact
+    ///   - timeout: Custom timeout per attempt (0 = use device suggested × 1.2)
+    /// - Returns: The updated message (status will be .delivered on success, .failed on exhaustion)
+    /// - Throws: CancellationError if the task is cancelled during retry
+    /// - Throws: MessageServiceError.sendFailed if retry is already in progress for this message
+    public func retryExistingMessage(
+        messageID: UUID,
+        contact: ContactDTO,
+        timeout: TimeInterval = 0
+    ) async throws -> MessageDTO {
+        // Guard against concurrent retries of the same message
+        guard !inFlightRetries.contains(messageID) else {
+            logger.warning("Retry already in progress for message: \(messageID)")
+            throw MessageServiceError.sendFailed("Retry already in progress")
+        }
+
+        inFlightRetries.insert(messageID)
+        defer { inFlightRetries.remove(messageID) }
+
+        // Fetch the existing message
+        guard let existingMessage = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Message not found")
+        }
+
+        let text = existingMessage.text
+        let textType = existingMessage.textType
+
+        // IMPORTANT: Timestamp must remain constant across all retry attempts
+        let timestamp = existingMessage.timestamp
+
+        // Check connection state
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.notConnected
+        }
+
+        // Determine initial routing state
+        var isFlood = contact.isFloodRouted
+        var attempts = 0
+        var floodAttempts = 0
+        var routingChangedToFlood = false
+
+        // Update message to show retry is starting
+        try await dataStore.updateMessageRetryStatus(
+            id: messageID,
+            status: .retrying,
+            retryAttempt: 0,
+            maxRetryAttempts: config.maxAttempts
+        )
+
+        // Retry loop
+        while attempts < config.maxAttempts && (!isFlood || floodAttempts < config.maxFloodAttempts) {
+
+            // Check for task cancellation at loop start
+            guard !Task.isCancelled else {
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+                throw CancellationError()
+            }
+
+            // Update retry status for UI
+            try await dataStore.updateMessageRetryStatus(
+                id: messageID,
+                status: .retrying,
+                retryAttempt: attempts,
+                maxRetryAttempts: config.maxAttempts
+            )
+
+            // Notify UI of retry status
+            await retryStatusHandler?(messageID, attempts, config.maxAttempts)
+
+            // Small backoff delay between retries (not before first attempt)
+            if attempts > 0 {
+                let backoffMs = 200 * attempts
+                try? await Task.sleep(for: .milliseconds(backoffMs))
+            }
+
+            // Switch to flood after floodAfter direct attempts
+            if attempts == config.floodAfter && !isFlood {
+                if let contactService {
+                    logger.info("Resetting path to flood after \(attempts) direct attempts")
+                    do {
+                        try await contactService.resetPath(
+                            deviceID: contact.deviceID,
+                            publicKey: contact.publicKey
+                        )
+                        isFlood = true
+                        routingChangedToFlood = true
+
+                        // Notify UI of routing change
+                        await routingChangedHandler?(contact.id, true)
+                    } catch {
+                        logger.warning("Failed to reset path: \(error.localizedDescription)")
+                    }
+                } else {
+                    logger.warning("Cannot reset path - ContactService not set")
+                }
+            }
+
+            if attempts > 0 {
+                logger.info("Retry sending message: attempt \(attempts + 1)")
+            }
+
+            // Send attempt
+            do {
+                let result = try await sendTextMessageAttempt(
+                    text: text,
+                    recipientKeyPrefix: contact.publicKeyPrefix,
+                    textType: textType,
+                    attempt: UInt8(attempts),
+                    timestamp: timestamp
+                )
+
+                // Calculate timeout
+                let deviceTimeout = TimeInterval(result.estimatedTimeout) / 1000.0 * 1.2
+                var effectiveTimeout = timeout > 0 ? timeout : deviceTimeout
+                effectiveTimeout = max(effectiveTimeout, config.minTimeout)
+
+                // Update message with ACK code
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: result.ackCode,
+                    status: .sent
+                )
+
+                // Track pending ACK
+                trackPendingAckForRetry(messageID: messageID, ackCode: result.ackCode, timeout: effectiveTimeout)
+
+                // Wait for ACK
+                let ackReceived = await waitForAck(ackCode: result.ackCode, timeout: effectiveTimeout)
+
+                if ackReceived {
+                    // Success! Update contact's last message date
+                    try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+                    // Trigger path discovery if we switched to flood routing
+                    if config.triggerPathDiscoveryAfterFlood && routingChangedToFlood {
+                        await triggerPathDiscovery(for: contact)
+                    }
+
+                    // Return the updated message
+                    guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                        throw MessageServiceError.sendFailed("Failed to fetch message")
+                    }
+                    return message
+                }
+
+                // ACK timeout - remove from pending
+                pendingAcks.removeValue(forKey: result.ackCode)
+
+            } catch is CancellationError {
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+                throw CancellationError()
+            } catch {
+                logger.warning("Send attempt \(attempts + 1) failed: \(error.localizedDescription)")
+            }
+
+            attempts += 1
+            if isFlood {
+                floodAttempts += 1
+            }
+        }
+
+        // All attempts exhausted
+        try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+
+        guard let message = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Failed to fetch message")
+        }
+        return message
+    }
+
+    /// Triggers path discovery after successful flood delivery
+    private func triggerPathDiscovery(for contact: ContactDTO) async {
+        guard let contactService else {
+            logger.warning("Cannot trigger path discovery - ContactService not set")
+            return
+        }
+
+        do {
+            try await contactService.sendPathDiscovery(
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey
+            )
+            logger.info("Path discovery triggered for \(contact.displayName)")
+        } catch {
+            logger.warning("Path discovery failed: \(error.localizedDescription)")
+            // Non-fatal - message was already delivered
+        }
     }
 
     // MARK: - Send with Automatic Retry
@@ -251,6 +457,7 @@ public actor MessageService {
     ///   - textType: The text type (default: plain)
     ///   - replyToID: Optional message ID to reply to
     ///   - timeout: Custom timeout per attempt (0 = use device suggested × 1.2)
+    ///   - onMessageCreated: Optional callback invoked immediately after message is saved to database
     /// - Returns: The saved message (status will be .delivered on success, .failed on exhaustion)
     /// - Throws: CancellationError if the task is cancelled during retry
     public func sendMessageWithRetry(
@@ -258,7 +465,8 @@ public actor MessageService {
         to contact: ContactDTO,
         textType: TextType = .plain,
         replyToID: UUID? = nil,
-        timeout: TimeInterval = 0
+        timeout: TimeInterval = 0,
+        onMessageCreated: (@Sendable (MessageDTO) async -> Void)? = nil
     ) async throws -> MessageDTO {
         // Validate message length (throw early - no message saved)
         guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
@@ -281,6 +489,9 @@ public actor MessageService {
         )
         try await dataStore.saveMessage(messageDTO)
 
+        // Notify caller that message is saved (allows immediate UI refresh)
+        await onMessageCreated?(messageDTO)
+
         // Check connection state
         let connectionState = await bleTransport.connectionState
         guard connectionState == .ready else {
@@ -292,6 +503,7 @@ public actor MessageService {
         var isFlood = contact.isFloodRouted
         var attempts = 0
         var floodAttempts = 0
+        var routingChangedToFlood = false
 
         // Retry loop
         while attempts < config.maxAttempts && (!isFlood || floodAttempts < config.maxFloodAttempts) {
@@ -300,6 +512,17 @@ public actor MessageService {
             guard !Task.isCancelled else {
                 try await dataStore.updateMessageStatus(id: messageID, status: .failed)
                 throw CancellationError()
+            }
+
+            // Update retry status for UI (only after first attempt)
+            if attempts > 0 {
+                try await dataStore.updateMessageRetryStatus(
+                    id: messageID,
+                    status: .retrying,
+                    retryAttempt: attempts,
+                    maxRetryAttempts: config.maxAttempts
+                )
+                await retryStatusHandler?(messageID, attempts, config.maxAttempts)
             }
 
             // Small backoff delay between retries (not before first attempt)
@@ -319,6 +542,10 @@ public actor MessageService {
                             publicKey: contact.publicKey
                         )
                         isFlood = true
+                        routingChangedToFlood = true
+
+                        // Notify UI of routing change
+                        await routingChangedHandler?(contact.id, true)
                     } catch {
                         logger.warning("Failed to reset path: \(error.localizedDescription)")
                         // Continue anyway - firmware might handle it
@@ -363,6 +590,11 @@ public actor MessageService {
                 if ackReceived {
                     // Success! Update contact's last message date
                     try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+                    // Trigger path discovery if we switched to flood routing during this retry sequence
+                    if config.triggerPathDiscoveryAfterFlood && routingChangedToFlood {
+                        await triggerPathDiscovery(for: contact)
+                    }
 
                     // Return the saved message
                     guard let message = try await dataStore.fetchMessage(id: messageID) else {
@@ -528,6 +760,16 @@ public actor MessageService {
     /// Sets a callback for message failures (timeout or send error).
     public func setMessageFailedHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
         messageFailedHandler = handler
+    }
+
+    /// Sets handler for retry status updates
+    public func setRetryStatusHandler(_ handler: @escaping @Sendable (UUID, Int, Int) async -> Void) {
+        retryStatusHandler = handler
+    }
+
+    /// Sets handler for routing change events
+    public func setRoutingChangedHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
+        routingChangedHandler = handler
     }
 
     /// Grace period for tracking repeats after delivery (60 seconds)

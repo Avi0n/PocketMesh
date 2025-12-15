@@ -259,7 +259,7 @@ All push codes have values >= `0x80`.
 |------|------|---------|
 | `0x80` | advert | `[publicKeyPrefix:6][timestamp:4]` |
 | `0x8A` | newAdvert | ContactFrame (147+ bytes) |
-| `0x81` | pathUpdated | `[publicKeyPrefix:6][pathLength:1]` |
+| `0x81` | pathUpdated | `[publicKey:32]` (full key, no path length - fetch contact for updated path) |
 | `0x83` | messageWaiting | - |
 | `0x82` | sendConfirmed | `[ackCode:4][roundTripTime:4]` |
 | `0x84` | rawData | `[data:variable]` |

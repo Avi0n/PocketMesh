@@ -8,7 +8,7 @@ public enum MessageStatus: Int, Sendable, Codable {
     case sent = 2         // ACK received from device (message left device)
     case delivered = 3    // Delivery confirmed by recipient
     case failed = 4       // Failed after retries
-    case read = 5         // Read by recipient (future use)
+    case retrying = 5     // Retry in progress
 }
 
 /// Message direction
@@ -79,6 +79,12 @@ public final class Message {
     /// Count of mesh repeats heard for this message (outgoing only)
     public var heardRepeats: Int
 
+    /// Current retry attempt (0 = first attempt, 1 = first retry, etc.)
+    public var retryAttempt: Int
+
+    /// Maximum retry attempts configured for this message
+    public var maxRetryAttempts: Int
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -98,7 +104,9 @@ public final class Message {
         isRead: Bool = false,
         replyToID: UUID? = nil,
         roundTripTime: UInt32? = nil,
-        heardRepeats: Int = 0
+        heardRepeats: Int = 0,
+        retryAttempt: Int = 0,
+        maxRetryAttempts: Int = 0
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -119,6 +127,8 @@ public final class Message {
         self.replyToID = replyToID
         self.roundTripTime = roundTripTime
         self.heardRepeats = heardRepeats
+        self.retryAttempt = retryAttempt
+        self.maxRetryAttempts = maxRetryAttempts
     }
 
     /// Creates an incoming message from a MessageFrame
@@ -228,6 +238,8 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
     public let replyToID: UUID?
     public let roundTripTime: UInt32?
     public let heardRepeats: Int
+    public let retryAttempt: Int
+    public let maxRetryAttempts: Int
 
     public init(from message: Message) {
         self.id = message.id
@@ -249,6 +261,8 @@ public struct MessageDTO: Sendable, Equatable, Identifiable {
         self.replyToID = message.replyToID
         self.roundTripTime = message.roundTripTime
         self.heardRepeats = message.heardRepeats
+        self.retryAttempt = message.retryAttempt
+        self.maxRetryAttempts = message.maxRetryAttempts
     }
 
     public var isOutgoing: Bool {

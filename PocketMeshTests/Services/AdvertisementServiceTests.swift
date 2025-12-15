@@ -254,32 +254,121 @@ struct AdvertisementServiceTests {
     }
 
     @Test("Handle path updated push updates path length")
-    func handlePathUpdatedPushUpdatesPathLength() async throws {
+    func handlePathUpdatedPushCallsRefreshHandler() async throws {
         let transport = createTestTransport()
         let dataStore = try await createTestDataStore()
 
         let deviceID = UUID()
         let contact = createTestContact(deviceID: deviceID)
-        _ = try await dataStore.saveContact(deviceID: deviceID, from: contact)
+        let savedID = try await dataStore.saveContact(deviceID: deviceID, from: contact)
 
         let service = AdvertisementService(bleTransport: transport, dataStore: dataStore)
 
-        let pathUpdateHandlerCalled = MutableBox(false)
-        let receivedPathLength = MutableBox<Int8>(0)
-        await service.setPathUpdateHandler { _, pathLength in
-            pathUpdateHandlerCalled.value = true
-            receivedPathLength.value = pathLength
+        let pathRefreshCalled = MutableBox(false)
+        let receivedDeviceID = MutableBox<UUID?>(nil)
+        let receivedPublicKey = MutableBox<Data?>(nil)
+        let receivedContactID = MutableBox<UUID?>(nil)
+        let receivedWasFlood = MutableBox<Bool?>(nil)
+        await service.setPathRefreshHandler { deviceID, publicKey, contactID, wasFlood in
+            pathRefreshCalled.value = true
+            receivedDeviceID.value = deviceID
+            receivedPublicKey.value = publicKey
+            receivedContactID.value = contactID
+            receivedWasFlood.value = wasFlood
         }
 
-        // Create path updated push: [0x81][pub_key_prefix:6][new_path_len:1]
+        // Create path updated push: [0x81][publicKey:32] = 33 bytes (per meshcore_py reference)
         var pushData = Data([PushCode.pathUpdated.rawValue])
-        pushData.append(contact.publicKey.prefix(6))
-        pushData.append(UInt8(bitPattern: Int8(3)))  // New path length
+        pushData.append(contact.publicKey)  // Full 32-byte public key
 
         let handled = await service.handlePush(pushData, deviceID: deviceID)
         #expect(handled == true)
-        #expect(pathUpdateHandlerCalled.value == true)
-        #expect(receivedPathLength.value == 3)
+        #expect(pathRefreshCalled.value == true)
+        #expect(receivedDeviceID.value == deviceID)
+        #expect(receivedPublicKey.value == contact.publicKey)
+        #expect(receivedContactID.value == savedID)
+        #expect(receivedWasFlood.value == false)  // Contact has outPathLength=2, not flood
+    }
+
+    @Test("Handle path updated push with flood contact passes wasFlood=true")
+    func handlePathUpdatedPushFloodContactPassesWasFloodTrue() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        let deviceID = UUID()
+        // Create flood-routed contact (outPathLength = -1)
+        let floodContact = ContactFrame(
+            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            type: .chat,
+            flags: 0,
+            outPathLength: -1,  // Flood routed
+            outPath: Data(),
+            name: "FloodContact",
+            lastAdvertTimestamp: UInt32(Date().timeIntervalSince1970),
+            latitude: 37.7749,
+            longitude: -122.4194,
+            lastModified: UInt32(Date().timeIntervalSince1970)
+        )
+        let savedID = try await dataStore.saveContact(deviceID: deviceID, from: floodContact)
+
+        let service = AdvertisementService(bleTransport: transport, dataStore: dataStore)
+
+        let pathRefreshCalled = MutableBox(false)
+        let receivedWasFlood = MutableBox<Bool?>(nil)
+        let receivedContactID = MutableBox<UUID?>(nil)
+        await service.setPathRefreshHandler { _, _, contactID, wasFlood in
+            pathRefreshCalled.value = true
+            receivedContactID.value = contactID
+            receivedWasFlood.value = wasFlood
+        }
+
+        // Create path updated push: [0x81][publicKey:32]
+        var pushData = Data([PushCode.pathUpdated.rawValue])
+        pushData.append(floodContact.publicKey)
+
+        let handled = await service.handlePush(pushData, deviceID: deviceID)
+        #expect(handled == true)
+        #expect(pathRefreshCalled.value == true)
+        #expect(receivedContactID.value == savedID)
+        #expect(receivedWasFlood.value == true)  // Was flood routed
+    }
+
+    @Test("Handle path updated push with unknown contact does not call refresh handler")
+    func handlePathUpdatedPushUnknownContactNoRefresh() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        let deviceID = UUID()
+        let service = AdvertisementService(bleTransport: transport, dataStore: dataStore)
+
+        let pathRefreshCalled = MutableBox(false)
+        await service.setPathRefreshHandler { _, _, _, _ in
+            pathRefreshCalled.value = true
+        }
+
+        // Create path updated push with unknown public key
+        var pushData = Data([PushCode.pathUpdated.rawValue])
+        pushData.append(Data(repeating: 0xAB, count: 32))  // Unknown key
+
+        let handled = await service.handlePush(pushData, deviceID: deviceID)
+        #expect(handled == true)  // Push was handled (just no contact found)
+        #expect(pathRefreshCalled.value == false)  // No refresh for unknown contact
+    }
+
+    @Test("Handle path updated push with short data returns false")
+    func handlePathUpdatedPushShortDataReturnsFalse() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+
+        let deviceID = UUID()
+        let service = AdvertisementService(bleTransport: transport, dataStore: dataStore)
+
+        // Create too-short path updated push (needs 33 bytes, only give 10)
+        var pushData = Data([PushCode.pathUpdated.rawValue])
+        pushData.append(Data(repeating: 0x42, count: 9))  // Only 10 bytes total
+
+        let handled = await service.handlePush(pushData, deviceID: deviceID)
+        #expect(handled == false)  // Too short
     }
 
     @Test("Handle unhandled push code returns false")

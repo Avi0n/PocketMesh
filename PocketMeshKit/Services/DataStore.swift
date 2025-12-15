@@ -486,7 +486,9 @@ public actor DataStore {
             isRead: dto.isRead,
             replyToID: dto.replyToID,
             roundTripTime: dto.roundTripTime,
-            heardRepeats: dto.heardRepeats
+            heardRepeats: dto.heardRepeats,
+            retryAttempt: dto.retryAttempt,
+            maxRetryAttempts: dto.maxRetryAttempts
         )
         modelContext.insert(message)
         try modelContext.save()
@@ -503,6 +505,28 @@ public actor DataStore {
 
         if let message = try modelContext.fetch(descriptor).first {
             message.status = status
+            try modelContext.save()
+        }
+    }
+
+    /// Update message status with retry attempt information
+    public func updateMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.status = status
+            message.retryAttempt = retryAttempt
+            message.maxRetryAttempts = maxRetryAttempts
             try modelContext.save()
         }
     }

@@ -32,6 +32,13 @@ public actor AdvertisementService {
     /// Handler for path discovery response events
     private var pathDiscoveryHandler: (@Sendable (PathDiscoveryResponse) -> Void)?
 
+    /// Handler for routing change events (set by AppState)
+    private var routingChangedHandler: (@Sendable (UUID, Bool) async -> Void)?
+
+    /// Handler for path refresh requests (deviceID, publicKey, contactID, wasFlood)
+    /// Called when 0x81 push received - AppState should fetch updated contact from device
+    private var pathRefreshHandler: (@Sendable (UUID, Data, UUID, Bool) async -> Void)?
+
     // MARK: - Initialization
 
     public init(bleTransport: any BLETransport, dataStore: DataStore) {
@@ -54,6 +61,16 @@ public actor AdvertisementService {
     /// Set handler for path discovery response events
     public func setPathDiscoveryHandler(_ handler: @escaping @Sendable (PathDiscoveryResponse) -> Void) {
         pathDiscoveryHandler = handler
+    }
+
+    /// Set handler for routing change events
+    public func setRoutingChangedHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
+        routingChangedHandler = handler
+    }
+
+    /// Set handler for path refresh requests (called when contact path may have changed)
+    public func setPathRefreshHandler(_ handler: @escaping @Sendable (UUID, Data, UUID, Bool) async -> Void) {
+        pathRefreshHandler = handler
     }
 
     // MARK: - Send Advertisement
@@ -218,33 +235,30 @@ public actor AdvertisementService {
     }
 
     /// Handle PUSH_CODE_PATH_UPDATED (0x81) - Contact path changed
+    /// Format: [0x81][publicKey:32] = 33 bytes total
+    /// The push doesn't contain the new path length - we must fetch the updated contact.
     private func handlePathUpdatedPush(_ data: Data, deviceID: UUID) async -> Bool {
-        // Format: [0x81][pub_key_prefix:6][new_path_len:1]
-        guard data.count >= 8 else { return false }
-
-        let publicKeyPrefix = data.subdata(in: 1..<7)
-        let newPathLength = Int8(bitPattern: data[7])
+        let publicKey = data.subdata(in: 1..<33)
+        let pubKeyHex = publicKey.prefix(3).map { String(format: "%02X", $0) }.joined()
+        logger.debug("Path updated push for \(pubKeyHex)... (full key)")
 
         do {
-            if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKeyPrefix: publicKeyPrefix) {
-                // Update the contact's path length
-                let frame = ContactFrame(
-                    publicKey: contact.publicKey,
-                    type: contact.type,
-                    flags: contact.flags,
-                    outPathLength: newPathLength,
-                    outPath: contact.outPath,
-                    name: contact.name,
-                    lastAdvertTimestamp: contact.lastAdvertTimestamp,
-                    latitude: contact.latitude,
-                    longitude: contact.longitude,
-                    lastModified: UInt32(Date().timeIntervalSince1970)
-                )
-                _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
-                pathUpdateHandler?(publicKeyPrefix, newPathLength)
+            // Look up contact by full public key to get old routing status
+            if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) {
+                let wasFlood = contact.isFloodRouted
+                logger.debug("Contact found: \(contact.name ?? "unnamed") - wasFlood: \(wasFlood)")
+
+                // Notify AppState to fetch updated contact from device
+                // The handler will fetch via ContactService.getContact() and emit routing changed if needed
+                await pathRefreshHandler?(deviceID, publicKey, contact.id, wasFlood)
+
+                pathUpdateHandler?(publicKey.prefix(6), contact.outPathLength)
+            } else {
+                logger.warning("Contact not found for public key \(pubKeyHex)...")
             }
             return true
         } catch {
+            logger.error("Error handling path updated push: \(error.localizedDescription)")
             return false
         }
     }
@@ -267,6 +281,8 @@ public actor AdvertisementService {
 
             // Update contact with discovered outbound path (inbound is handled by firmware)
             if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKeyPrefix: response.publicKeyPrefix) {
+                let wasFlood = contact.isFloodRouted  // Capture BEFORE database write
+
                 let pathLength = Int8(response.outboundPath.count)
                 let frame = ContactFrame(
                     publicKey: contact.publicKey,
@@ -281,6 +297,15 @@ public actor AdvertisementService {
                     lastModified: UInt32(Date().timeIntervalSince1970)
                 )
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                // Path discovery success = we have a direct route now (not flood)
+                // Note: outboundPath.count is always >= 0, so we cannot use pathLength < 0
+                let isNowFlood = false
+
+                // Notify UI if routing status changed (flood → direct after path discovery)
+                if wasFlood && !isNowFlood {
+                    await routingChangedHandler?(contact.id, isNowFlood)
+                }
             }
 
             pathDiscoveryHandler?(response)
