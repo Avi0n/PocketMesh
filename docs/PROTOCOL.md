@@ -65,6 +65,8 @@ All multi-byte integers use **little-endian** byte order.
 | `0x1E` | getContactByKey | `[publicKey:32]` |
 | `0x0D` | resetPath | `[publicKey:32]` |
 | `0x10` | shareContact | `[publicKey:32]` |
+| `0x11` | exportContact | `[publicKey:32]` |
+| `0x12` | importContact | See ContactFrame format |
 
 ### Radio Configuration
 
@@ -75,6 +77,10 @@ All multi-byte integers use **little-endian** byte order.
 | `0x07` | sendSelfAdvert | `[flood:1]` (0=zero-hop, 1=flood) |
 | `0x08` | setAdvertName | `[name:UTF-8]` (max 31 bytes) |
 | `0x0E` | setAdvertLatLon | `[latitude:4][longitude:4]` (microdegrees) |
+| `0x15` | setTuningParams | `[params:variable]` |
+| `0x2B` | getTuningParams | - |
+| `0x26` | setOtherParams | `[telemetryMode:1][locationPolicy:1]` |
+| `0x36` | setFloodScope | `[scope:1]` |
 
 ### Channel Management
 
@@ -90,6 +96,36 @@ All multi-byte integers use **little-endian** byte order.
 | `0x1A` | sendLogin | `[publicKey:32][password:UTF-8]` |
 | `0x1C` | hasConnection | `[publicKey:32]` |
 | `0x1D` | logout | `[publicKey:32]` |
+
+### Key Management
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x17` | exportPrivateKey | - |
+| `0x18` | importPrivateKey | `[privateKey:32]` |
+| `0x25` | setDevicePin | `[pin:UTF-8]` |
+
+### Message Signing
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x21` | signStart | `[messageLen:2]` |
+| `0x22` | signData | `[data:variable]` |
+| `0x23` | signFinish | - |
+
+### Custom Variables
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x28` | getCustomVars | - |
+| `0x29` | setCustomVar | `[index:1][value:variable]` |
+
+### Raw Data
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x19` | sendRawData | `[publicKey:32][data:variable]` |
+| `0x37` | sendControlData | `[controlType:1][data:variable]` |
 
 ### Binary Protocol
 
@@ -155,6 +191,8 @@ All multi-byte integers use **little-endian** byte order.
 | Code | Name | Payload |
 |------|------|---------|
 | `0x06` | sent | `[isFlood:1][ackCode:4][timeout:4]` |
+| `0x07` | contactMessageReceived | Legacy v2 format |
+| `0x08` | channelMessageReceived | Legacy v2 format |
 | `0x0A` | noMoreMessages | - |
 | `0x10` | contactMessageReceivedV3 | `[snr:1][reserved:2][senderPrefix:6][pathLen:1][textType:1][timestamp:4][extraData:4]?[text:variable]` |
 | `0x11` | channelMessageReceivedV3 | `[snr:1][reserved:2][channelIndex:1][pathLen:1][textType:1][timestamp:4][text:variable]` |
@@ -171,6 +209,44 @@ All multi-byte integers use **little-endian** byte order.
 |------|------|---------|
 | `0x19` | hasConnection | `[hasConnection:1]` |
 
+### Contact Export
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x0B` | exportContact | See ContactFrame format |
+
+### Key Management
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x0E` | privateKey | `[privateKey:32]` |
+
+### Message Signing
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x13` | signStart | `[sessionId:1]` |
+| `0x14` | signature | `[signature:64]` |
+
+### Custom Variables
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x15` | customVars | `[vars:variable]` |
+
+### Path Information
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x16` | advertPath | `[timestamp:4][pathLen:1][path:pathLen]` |
+
+### Configuration
+
+| Code | Name | Payload |
+|------|------|---------|
+| `0x17` | tuningParams | `[params:variable]` |
+| `0x18` | stats | `[statsType:1][data:variable]` |
+
 ---
 
 ## Push Codes (Device → App, Unsolicited)
@@ -186,6 +262,8 @@ All push codes have values >= `0x80`.
 | `0x81` | pathUpdated | `[publicKeyPrefix:6][pathLength:1]` |
 | `0x83` | messageWaiting | - |
 | `0x82` | sendConfirmed | `[ackCode:4][roundTripTime:4]` |
+| `0x84` | rawData | `[data:variable]` |
+| `0x88` | logRxData | `[data:variable]` |
 
 ### Authentication
 
@@ -255,22 +333,22 @@ All push codes have values >= `0x80`.
 | Field | Offset | Type | Description |
 |-------|--------|------|-------------|
 | batteryMillivolts | 0 | UInt16 | Battery voltage |
-| uptimeSeconds | 2 | UInt32 | Uptime |
-| queueLength | 6 | UInt8 | Message queue length |
-| errorFlags | 7 | UInt8 | Error flags |
-| neighbors | 8 | UInt16 | Neighbor count |
-| noiseFloor | 10 | Int16 | Noise floor dBm |
-| lastRSSI | 12 | Int8 | Last RSSI dBm |
-| lastSNR | 14 | Int16 | Last SNR × 4 |
-| packetsSent | 16 | UInt32 | Total packets sent |
-| packetsReceived | 20 | UInt32 | Total packets received |
+| txQueueLength | 2 | UInt16 | TX queue length |
+| noiseFloor | 4 | Int16 | Noise floor dBm |
+| lastRSSI | 6 | Int16 | Last RSSI dBm |
+| packetsReceived | 8 | UInt32 | Total packets received |
+| packetsSent | 12 | UInt32 | Total packets sent |
+| txAirtimeSeconds | 16 | UInt32 | TX airtime |
+| uptimeSeconds | 20 | UInt32 | Uptime |
 | floodSent | 24 | UInt32 | Flood packets sent |
 | directSent | 28 | UInt32 | Direct packets sent |
 | floodReceived | 32 | UInt32 | Flood packets received |
 | directReceived | 36 | UInt32 | Direct packets received |
-| txAirtimeSeconds | 40 | UInt32 | TX airtime |
-| rxAirtimeSeconds | 44 | UInt32 | RX airtime (or room post counts) |
-| lastSNRFloat | 46 | Int16 | SNR × 4 for float conversion |
+| fullEvents | 40 | UInt16 | Queue full events |
+| lastSNR | 42 | Int16 | Last SNR × 4 |
+| directDuplicates | 44 | UInt16 | Direct duplicate count |
+| floodDuplicates | 46 | UInt16 | Flood duplicate count |
+| rxAirtimeSeconds | 48 | UInt32 | RX airtime |
 
 ### NeighboursResponse
 

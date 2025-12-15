@@ -11,7 +11,7 @@ PocketMeshTests/
 │   ├── MockBLEPeripheralTests.swift
 │   └── MockKeychainService.swift
 ├── Services/                # Service layer tests
-│   ├── MessageServiceTests.swift
+│   ├── MessageServiceTests.swift   # Also defines TestBLETransport
 │   ├── ContactServiceTests.swift
 │   ├── ChannelServiceTests.swift
 │   ├── AdvertisementServiceTests.swift
@@ -24,7 +24,7 @@ PocketMeshTests/
 │   └── RemoteNodeProtocolTests.swift
 ├── Integration/             # Integration tests
 │   ├── DataStoreIntegrationTests.swift
-│   ├── MockBLEIntegrationTests.swift
+│   ├── MockBLEIntegrationTests.swift  # Also defines MockBLETransport
 │   └── RemoteNodeIntegrationTests.swift
 ├── ViewModels/              # ViewModel tests
 │   └── ChatViewModelTests.swift
@@ -32,8 +32,9 @@ PocketMeshTests/
 │   └── RemoteNodeModelTests.swift
 ├── BLE/                     # BLE-specific tests
 │   └── BLEReconnectionTests.swift
-└── Helpers/                 # Test utilities
-    └── TestHelpers.swift
+├── Helpers/                 # Test utilities
+│   └── TestHelpers.swift
+└── Performance/             # Performance tests (placeholder)
 ```
 
 ## Testing Framework
@@ -89,23 +90,35 @@ A complete simulator of a MeshCore BLE device located at `Mock/MockBLEPeripheral
 
 ```swift
 let mock = MockBLEPeripheral()
-let transport = MockBLETransport(mockPeripheral: mock)
+let transport = MockBLETransport(peripheral: mock)
 
-// Add test contacts
-await mock.addContact(publicKey: testKey, name: "Alice", type: .chat)
+// Add test contacts (using ContactFrame)
+let contact = ContactFrame(
+    publicKey: testKey,
+    type: .chat,
+    flags: 0,
+    outPathLength: 0,
+    outPath: Data(),
+    name: "Alice",
+    lastAdvertTimestamp: 0,
+    latitude: 0,
+    longitude: 0,
+    lastModified: 0
+)
+await mock.addContact(contact)
 
-// Queue incoming message
-await mock.queueIncomingMessage(
-    senderPrefix: alicePrefix,
+// Simulate incoming message (helper method)
+await mock.simulateMessageReceived(
+    from: alicePrefix,
     text: "Hello",
     timestamp: currentTimestamp
 )
 
 // Simulate push notification
-await mock.simulatePush(code: .messageWaiting)
+await mock.simulatePush(.messageWaiting, data: Data())
 
 // Simulate ACK confirmation
-await mock.simulateSendConfirmed(ackCode: 1001, roundTripTime: 250)
+await mock.simulateSendConfirmed(ackCode: 1001, roundTrip: 250)
 
 // Verify state
 let contactCount = await mock.contactCount
@@ -114,24 +127,28 @@ let contactCount = await mock.contactCount
 
 ### TestBLETransport
 
-A mock `BLETransport` implementation for service testing with queued responses.
+A mock `BLETransport` implementation for service unit testing with queued responses. Defined inline within `Services/MessageServiceTests.swift`.
 
 **Features:**
 - Pre-configured response queue
 - Failure injection
 - Sent data tracking
+- Connection state control
 
 **Usage:**
 
 ```swift
 let transport = TestBLETransport()
 
+// Set connection state
+await transport.setConnectionState(.ready)
+
 // Configure responses
 await transport.queueResponse(Data([0x00]))  // OK response
-await transport.queueResponse(Data([0x06, 0x00, ...]))  // Sent response
+await transport.queueResponse(createSentResponse(ackCode: 1001))
 
 // Inject failure
-await transport.setNextSendToFail(error: .disconnected)
+await transport.setNextSendToFail(with: BLEError.writeError("Test failure"))
 
 // Verify sent data
 let sentData = await transport.getSentData()
@@ -142,6 +159,26 @@ let sentData = await transport.getSentData()
 await transport.simulatePush(Data([0x82, ...]))  // sendConfirmed
 ```
 
+### MockBLETransport
+
+A mock `BLETransport` that wraps `MockBLEPeripheral` for integration testing. Defined in `Integration/MockBLEIntegrationTests.swift`.
+
+**Usage:**
+
+```swift
+let mock = MockBLEPeripheral(nodeName: "TestNode")
+let transport = MockBLETransport(peripheral: mock)
+
+try await transport.connect(to: UUID())
+
+// Send commands through to the mock peripheral
+let query = FrameCodec.encodeDeviceQuery(protocolVersion: 8)
+let response = try await transport.send(query)
+
+// Access underlying peripheral for test setup
+await transport.peripheral.addContact(contact)
+```
+
 ### MockKeychainService
 
 In-memory keychain for testing secure storage.
@@ -149,13 +186,13 @@ In-memory keychain for testing secure storage.
 ```swift
 let keychain = MockKeychainService()
 
-await keychain.storePassword("secret123", forPublicKey: nodeKey)
-let retrieved = try await keychain.retrievePassword(forPublicKey: nodeKey)
+try await keychain.storePassword("secret123", forNodeKey: nodeKey)
+let retrieved = try await keychain.retrievePassword(forNodeKey: nodeKey)
 #expect(retrieved == "secret123")
 
-// Verify storage
+// Verify storage (returns [Data], not [String])
 let allKeys = await keychain.getAllStoredKeys()
-#expect(allKeys.contains(nodeKey.base64EncodedString()))
+#expect(allKeys.contains(nodeKey))
 
 // Reset
 await keychain.clear()
@@ -168,88 +205,131 @@ await keychain.clear()
 ```swift
 @Suite("MessageService Tests")
 struct MessageServiceTests {
-    // Create test dependencies
-    private func createTestStack() async throws -> (
-        TestBLETransport,
-        DataStore,
-        MessageService
-    ) {
+
+    @Test("Send direct message successfully")
+    func sendDirectMessageSuccessfully() async throws {
         let transport = TestBLETransport()
         let container = try DataStore.createContainer(inMemory: true)
         let dataStore = DataStore(modelContainer: container)
-        let service = MessageService(transport: transport, dataStore: dataStore)
-        return (transport, dataStore, service)
-    }
 
-    @Test("Send message updates status on success")
-    func testSendMessageSuccess() async throws {
-        let (transport, dataStore, service) = try await createTestStack()
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID)
+        try await dataStore.saveContact(contact)
 
-        // Queue expected response
+        await transport.setConnectionState(.ready)
         await transport.queueResponse(createSentResponse(ackCode: 1001))
 
-        // Execute
+        let service = MessageService(bleTransport: transport, dataStore: dataStore)
+
         let result = try await service.sendDirectMessage(
-            deviceID: deviceID,
-            contactID: contactID,
-            text: "Hello",
-            timestamp: timestamp
+            text: "Hello!",
+            to: contact
         )
 
-        // Verify
         #expect(result.ackCode == 1001)
+        #expect(result.status == .sent)
 
-        // Check database state
-        let message = try await dataStore.fetchMessage(byId: messageID)
-        #expect(message?.status == .sent)
+        // Verify message was saved
+        let messages = try await dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.count == 1)
+        #expect(messages.first?.text == "Hello!")
+        #expect(messages.first?.status == .sent)
     }
+}
+
+// Private helper functions within each test file
+private func createTestContact(deviceID: UUID, name: String = "TestContact") -> ContactDTO {
+    let contact = Contact(
+        id: UUID(),
+        deviceID: deviceID,
+        publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+        name: name,
+        typeRawValue: ContactType.chat.rawValue,
+        // ...
+    )
+    return ContactDTO(from: contact)
+}
+
+private func createSentResponse(ackCode: UInt32, isFlood: Bool = false, timeout: UInt32 = 5000) -> Data {
+    var data = Data([ResponseCode.sent.rawValue])
+    data.append(isFlood ? 1 : 0)
+    data.append(contentsOf: withUnsafeBytes(of: ackCode.littleEndian) { Array($0) })
+    data.append(contentsOf: withUnsafeBytes(of: timeout.littleEndian) { Array($0) })
+    return data
 }
 ```
 
 ### Integration Test Pattern
 
+Integration tests use `MockBLETransport` with `MockBLEPeripheral` to test full service interactions:
+
 ```swift
-@Suite("Remote Node Integration")
+@Suite("Remote Node Integration Tests")
 struct RemoteNodeIntegrationTests {
-    private func createFullStack() async throws -> ServiceStack {
-        let mock = MockBLEPeripheral()
-        let transport = MockBLETransport(mockPeripheral: mock)
-        let container = try DataStore.createContainer(inMemory: true)
-        let dataStore = DataStore(modelContainer: container)
-        let keychain = MockKeychainService()
 
-        // Wire up services
-        let binaryService = BinaryProtocolService(transport: transport)
-        let remoteNodeService = RemoteNodeService(
-            transport: transport,
-            dataStore: dataStore,
-            binaryService: binaryService,
-            keychainService: keychain
-        )
-        // ... more services
-
-        return ServiceStack(...)
+    private func createTestTransport() -> TestBLETransport {
+        TestBLETransport()
     }
 
-    @Test("Room server flow")
-    func testRoomFlow() async throws {
-        let stack = try await createFullStack()
+    private func createTestDataStore() async throws -> DataStore {
+        let container = try DataStore.createContainer(inMemory: true)
+        return DataStore(modelContainer: container)
+    }
 
-        // Create room contact
-        let roomContact = createTestContact(type: .room)
-        await stack.mock.addContact(roomContact)
+    private func createFullTestStack(
+        transport: TestBLETransport,
+        dataStore: DataStore
+    ) -> (
+        RemoteNodeService,
+        RoomServerService,
+        RepeaterAdminService,
+        BinaryProtocolService,
+        MockKeychainService
+    ) {
+        let keychain = MockKeychainService()
+        let binaryProtocol = BinaryProtocolService(bleTransport: transport)
+        let remoteNodeService = RemoteNodeService(
+            bleTransport: transport,
+            binaryProtocol: binaryProtocol,
+            dataStore: dataStore,
+            keychainService: keychain
+        )
+        let roomServerService = RoomServerService(
+            remoteNodeService: remoteNodeService,
+            bleTransport: transport,
+            dataStore: dataStore
+        )
+        let repeaterAdminService = RepeaterAdminService(
+            remoteNodeService: remoteNodeService,
+            binaryProtocol: binaryProtocol,
+            dataStore: dataStore
+        )
+        return (remoteNodeService, roomServerService, repeaterAdminService, binaryProtocol, keychain)
+    }
 
-        // Configure login response
-        await stack.mock.configureLoginSuccess(isAdmin: true)
-
-        // Test join
-        let session = try await stack.roomService.joinRoom(
-            publicKey: roomContact.publicKey,
-            password: "secret"
+    @Test("Room flow: create session, post message, receive message")
+    func roomFlowCreateSessionPostReceive() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+        let (_, roomService, _, _, keychain) = createFullTestStack(
+            transport: transport,
+            dataStore: dataStore
         )
 
-        #expect(session.isConnected)
-        #expect(session.permissionLevel == .admin)
+        let deviceID = UUID()
+        let roomContact = createTestContact(deviceID: deviceID, name: "Chat Room", type: .room)
+
+        // Save contact to database (simulating discovery)
+        try await dataStore.saveContact(roomContact)
+
+        // Set up transport for responses
+        await transport.setConnectionState(.ready)
+        await transport.queueResponses([
+            Data([ResponseCode.sent.rawValue]),  // For login
+            Data([ResponseCode.sent.rawValue])   // For message post
+        ])
+
+        // ... test room operations
     }
 }
 ```
@@ -332,27 +412,33 @@ func testAckTimeout() async throws {
 ### Callback Capture Pattern
 
 ```swift
-@Test("Progress handler called for each contact")
+@Test("Sync progress handler called for each contact")
 func testSyncProgress() async throws {
-    let receivedProgress = MutableBox<[(Int, Int)]>([])
+    let transport = TestBLETransport()
+    let container = try DataStore.createContainer(inMemory: true)
+    let dataStore = DataStore(modelContainer: container)
+    let service = ContactService(bleTransport: transport, dataStore: dataStore)
 
-    await service.setProgressHandler { current, total in
-        receivedProgress.value.append((current, total))
+    let progressUpdates = MutableBox<[(Int, Int)]>([])
+    await service.setSyncProgressHandler { current, total in
+        progressUpdates.value.append((current, total))
     }
 
-    // Add test contacts
-    await mock.addContact(...)
-    await mock.addContact(...)
-    await mock.addContact(...)
+    // Queue responses for 3 contacts
+    await transport.queueResponse(createContactsStartResponse(count: 3))
+    await transport.queueResponse(encodeContactFrame(contact1))
+    await transport.queueResponse(encodeContactFrame(contact2))
+    await transport.queueResponse(encodeContactFrame(contact3))
+    await transport.queueResponse(createEndOfContactsResponse())
 
     // Trigger sync
     _ = try await service.syncContacts(deviceID: deviceID)
 
     // Verify progress callbacks
-    #expect(receivedProgress.value.count == 3)
-    #expect(receivedProgress.value[0] == (1, 3))
-    #expect(receivedProgress.value[1] == (2, 3))
-    #expect(receivedProgress.value[2] == (3, 3))
+    #expect(progressUpdates.value.count == 3)
+    #expect(progressUpdates.value[0] == (1, 3))
+    #expect(progressUpdates.value[1] == (2, 3))
+    #expect(progressUpdates.value[2] == (3, 3))
 }
 ```
 
@@ -389,34 +475,51 @@ await service.doSomething()
 
 ### Test Data Factories
 
+Each test file defines its own private helper functions for creating test data. Here are common patterns:
+
 ```swift
-// Create test contact
-func createTestContact(
+// Private helpers within a test file
+private func createTestContact(
     deviceID: UUID = UUID(),
     name: String = "Test",
     type: ContactType = .chat,
     publicKey: Data? = nil
 ) -> ContactDTO {
-    return ContactDTO(
+    let contact = Contact(
         id: UUID(),
         deviceID: deviceID,
         publicKey: publicKey ?? Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
         name: name,
         typeRawValue: type.rawValue,
-        // ...
+        flags: 0,
+        outPathLength: 2,
+        outPath: Data([0x01, 0x02]),
+        lastAdvertTimestamp: UInt32(Date().timeIntervalSince1970),
+        latitude: 0,
+        longitude: 0,
+        lastModified: UInt32(Date().timeIntervalSince1970)
     )
+    return ContactDTO(from: contact)
 }
 
-// Create response frames
-func createSentResponse(ackCode: UInt32) -> Data {
-    var data = Data([ResponseCode.sent.rawValue, 0])  // Not flood
+// Response frame creators
+private func createSentResponse(ackCode: UInt32, isFlood: Bool = false, timeout: UInt32 = 5000) -> Data {
+    var data = Data([ResponseCode.sent.rawValue])
+    data.append(isFlood ? 1 : 0)
     data.append(contentsOf: withUnsafeBytes(of: ackCode.littleEndian) { Array($0) })
-    data.append(contentsOf: withUnsafeBytes(of: UInt32(30000).littleEndian) { Array($0) })
+    data.append(contentsOf: withUnsafeBytes(of: timeout.littleEndian) { Array($0) })
     return data
 }
 
-func createErrorResponse(code: ProtocolError) -> Data {
-    return Data([ResponseCode.error.rawValue, code.rawValue])
+private func createErrorResponse(_ error: ProtocolError) -> Data {
+    Data([ResponseCode.error.rawValue, error.rawValue])
+}
+
+private func createSendConfirmation(ackCode: UInt32, roundTrip: UInt32 = 500) -> Data {
+    var data = Data([PushCode.sendConfirmed.rawValue])
+    data.append(contentsOf: withUnsafeBytes(of: ackCode.littleEndian) { Array($0) })
+    data.append(contentsOf: withUnsafeBytes(of: roundTrip.littleEndian) { Array($0) })
+    return data
 }
 ```
 
