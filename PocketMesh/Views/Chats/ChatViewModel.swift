@@ -22,7 +22,10 @@ final class ChatViewModel {
 
     /// Combined conversations (contacts + channels + rooms)
     var allConversations: [Conversation] {
-        let contactConversations = conversations.map { Conversation.direct($0) }
+        // Filter out repeaters from direct conversations - they should not appear in Chats
+        let contactConversations = conversations
+            .filter { $0.type != .repeater }
+            .map { Conversation.direct($0) }
         // Show channels that are configured (have a name OR have a non-zero secret)
         let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
         // Show all room sessions (connected or disconnected)

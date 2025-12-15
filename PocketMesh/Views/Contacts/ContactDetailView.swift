@@ -38,6 +38,10 @@ struct ContactDetailView: View {
     @State private var pendingSheet: ActiveSheet?
     @State private var showRoomConversation = false
     @State private var connectedRoomSession: RemoteNodeSessionDTO?
+    // Admin access navigation state (separate from telemetry sheet flow)
+    @State private var showRepeaterAdminAuth = false
+    @State private var adminSession: RemoteNodeSessionDTO?
+    @State private var navigateToSettings = false
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -161,6 +165,25 @@ struct ContactDetailView: View {
                 RoomConversationView(session: session)
             }
         }
+        .sheet(isPresented: $showRepeaterAdminAuth, onDismiss: {
+            // Trigger navigation after sheet is fully dismissed to avoid race conditions
+            if adminSession != nil {
+                navigateToSettings = true
+            }
+        }) {
+            if let role = RemoteNodeRole(contactType: currentContact.type) {
+                NodeAuthenticationSheet(contact: currentContact, role: role) { session in
+                    adminSession = session
+                    showRepeaterAdminAuth = false
+                    // Navigation triggers in onDismiss above
+                }
+            }
+        }
+        .navigationDestination(isPresented: $navigateToSettings) {
+            if let session = adminSession {
+                RepeaterSettingsView(session: session)
+            }
+        }
     }
 
     // MARK: - Sheet Management
@@ -282,9 +305,16 @@ struct ContactDetailView: View {
                 }
 
             case .repeater:
-                // Repeater actions
+                // Telemetry button - shows read-only status sheet after auth
                 Button {
                     activeSheet = .repeaterAuth
+                } label: {
+                    Label("Telemetry", systemImage: "chart.line.uptrend.xyaxis")
+                }
+
+                // Admin Access - navigates to settings view after auth
+                Button {
+                    showRepeaterAdminAuth = true
                 } label: {
                     Label("Admin Access", systemImage: "gearshape.2")
                 }

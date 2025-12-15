@@ -17,9 +17,13 @@ final class RepeaterStatusViewModel {
     /// Neighbor entries
     var neighbors: [NeighbourInfo] = []
 
+    /// Last received telemetry
+    var telemetry: TelemetryResponse?
+
     /// Loading states
     var isLoadingStatus = false
     var isLoadingNeighbors = false
+    var isLoadingTelemetry = false
 
     /// Error message if any
     var errorMessage: String?
@@ -35,6 +39,33 @@ final class RepeaterStatusViewModel {
     /// Configure with services from AppState
     func configure(appState: AppState) {
         self.repeaterAdminService = appState.repeaterAdminService
+        // Handler registration moved to registerHandlers() called from view's .task modifier
+    }
+
+    /// Register for push notification handlers
+    /// Called from view's .task modifier to ensure proper lifecycle management
+    /// This method is idempotent - it clears existing handlers before registering new ones
+    func registerHandlers(appState: AppState) async {
+        // Clear any existing handlers first (idempotent setup)
+        await appState.repeaterAdminService.clearHandlers()
+
+        await appState.repeaterAdminService.setStatusHandler { [weak self] status in
+            await MainActor.run {
+                self?.handleStatusResponse(status)
+            }
+        }
+
+        await appState.repeaterAdminService.setNeighboursHandler { [weak self] response in
+            await MainActor.run {
+                self?.handleNeighboursResponse(response)
+            }
+        }
+
+        await appState.repeaterAdminService.setTelemetryHandler { [weak self] response in
+            await MainActor.run {
+                self?.handleTelemetryResponse(response)
+            }
+        }
     }
 
     // MARK: - Status
@@ -78,13 +109,52 @@ final class RepeaterStatusViewModel {
     }
 
     /// Handle status response from push notification
+    /// Validates response matches current session before updating
     func handleStatusResponse(_ response: RemoteNodeStatus) {
+        // Session validation: only accept responses for our session
+        guard let expectedPrefix = session?.publicKeyPrefix,
+              response.publicKeyPrefix == expectedPrefix else {
+            return  // Ignore responses for other sessions
+        }
         self.status = response
+        self.isLoadingStatus = false
     }
 
-    /// Handle neighbors response from push notification
-    func handleNeighborsResponse(_ response: NeighboursResponse) {
+    /// Handle neighbours response from push notification
+    func handleNeighboursResponse(_ response: NeighboursResponse) {
+        // Note: NeighboursResponse may not include source prefix - validate if available
         self.neighbors = response.neighbours
+        self.isLoadingNeighbors = false
+    }
+
+    // MARK: - Telemetry
+
+    /// Request telemetry from the repeater
+    func requestTelemetry(for session: RemoteNodeSessionDTO) async {
+        guard let repeaterAdminService else { return }
+
+        self.session = session
+        isLoadingTelemetry = true
+        // Note: isLoadingTelemetry stays true until response arrives via handler
+
+        do {
+            try await repeaterAdminService.requestTelemetry(sessionID: session.id)
+            // Response arrives via push notification - handler will set isLoadingTelemetry = false
+        } catch {
+            errorMessage = error.localizedDescription
+            isLoadingTelemetry = false  // Only reset on error
+        }
+    }
+
+    /// Handle telemetry response from push notification
+    func handleTelemetryResponse(_ response: TelemetryResponse) {
+        // Session validation: only accept responses for our session
+        guard let expectedPrefix = session?.publicKeyPrefix,
+              response.publicKeyPrefix == expectedPrefix else {
+            return  // Ignore responses for other sessions
+        }
+        self.telemetry = response
+        self.isLoadingTelemetry = false
     }
 
     // MARK: - Computed Properties

@@ -51,6 +51,12 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Reference to room server service for handling room messages
     var roomServerService: RoomServerService?
 
+    /// Reference to binary protocol service for handling binary responses
+    var binaryProtocolService: BinaryProtocolService?
+
+    /// Reference to repeater admin service for telemetry and CLI handling
+    var repeaterAdminService: RepeaterAdminService?
+
     // MARK: - Initialization
 
     public init() {}
@@ -153,8 +159,10 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         _ service: MessagePollingService,
         didReceiveStatusResponse status: RemoteNodeStatus
     ) async {
-        // Status responses can be used for node health monitoring
-        // For now, just log the receipt - future implementation could update contact status
+        let adminService = await MainActor.run { self.repeaterAdminService }
+        // Use actor method invocation instead of direct property access
+        await adminService?.invokeStatusHandler(status)
+
         let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
         await MainActor.run {
             self.logger.info("Received status response from node: \(prefixHex)")
@@ -240,5 +248,34 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
                 self.logger.error("Failed to handle room message: \(error)")
             }
         }
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveBinaryResponse data: Data
+    ) async {
+        let binaryService = await MainActor.run { self.binaryProtocolService }
+        guard let binaryService else { return }
+
+        await binaryService.processBinaryResponse(data)
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveTelemetryResponse response: TelemetryResponse
+    ) async {
+        let adminService = await MainActor.run { self.repeaterAdminService }
+        // Use actor method invocation instead of direct property access
+        await adminService?.invokeTelemetryHandler(response)
+    }
+
+    nonisolated public func messagePollingService(
+        _ service: MessagePollingService,
+        didReceiveCLIResponse frame: MessageFrame,
+        fromContact contact: ContactDTO
+    ) async {
+        let adminService = await MainActor.run { self.repeaterAdminService }
+        // Route CLI responses to RepeaterAdminService for ViewModel handling
+        await adminService?.invokeCLIHandler(frame, fromContact: contact)
     }
 }

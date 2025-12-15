@@ -272,6 +272,26 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up room server service for room message handling
         messageEventBroadcaster.roomServerService = roomServerService
 
+        // Wire up binary protocol and repeater admin services for push notification handling
+        messageEventBroadcaster.binaryProtocolService = binaryProtocolService
+        messageEventBroadcaster.repeaterAdminService = repeaterAdminService
+
+        // Wire BinaryProtocolService (sync) handlers to RepeaterAdminService (async) using Task bridging
+        Task {
+            // BinaryProtocolService expects sync closures, so we bridge to async with Task { }
+            await binaryProtocolService.setStatusResponseHandler { [weak self] status in
+                Task { [weak self] in
+                    await self?.repeaterAdminService.invokeStatusHandler(status)
+                }
+            }
+
+            await binaryProtocolService.setNeighboursResponseHandler { [weak self] response in
+                Task { [weak self] in
+                    await self?.repeaterAdminService.invokeNeighboursHandler(response)
+                }
+            }
+        }
+
         // Set up message failure handler to notify UI
         Task {
             await messageService.setMessageFailedHandler { [weak self] messageID in

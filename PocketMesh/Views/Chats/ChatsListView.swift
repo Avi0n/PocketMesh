@@ -349,11 +349,12 @@ struct NewChatView: View {
     @State private var isLoading = false
 
     private var filteredContacts: [ContactDTO] {
-        let nonBlocked = contacts.filter { !$0.isBlocked }
+        // Filter out blocked contacts and repeaters (repeaters are infrastructure, not chat participants)
+        let eligible = contacts.filter { !$0.isBlocked && $0.type != .repeater }
         if searchText.isEmpty {
-            return nonBlocked
+            return eligible
         }
-        return nonBlocked.filter { contact in
+        return eligible.filter { contact in
             contact.displayName.localizedStandardContains(searchText)
         }
     }

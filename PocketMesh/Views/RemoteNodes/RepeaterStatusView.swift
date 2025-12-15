@@ -15,6 +15,7 @@ struct RepeaterStatusView: View {
                 headerSection
                 statusSection
                 neighborsSection
+                telemetrySection
             }
             .navigationTitle("Repeater Status")
             .navigationBarTitleDisplayMode(.inline)
@@ -29,17 +30,20 @@ struct RepeaterStatusView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors)
+                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry)
                 }
             }
             .task {
                 viewModel.configure(appState: appState)
+                await viewModel.registerHandlers(appState: appState)
                 await viewModel.requestStatus(for: session)
                 await viewModel.requestNeighbors(for: session)
+                await viewModel.requestTelemetry(for: session)
             }
             .refreshable {
                 await viewModel.requestStatus(for: session)
                 await viewModel.requestNeighbors(for: session)
+                await viewModel.requestTelemetry(for: session)
             }
         }
         .presentationDetents([.medium, .large])
@@ -136,12 +140,39 @@ struct RepeaterStatusView: View {
         }
     }
 
+    // MARK: - Telemetry Section
+
+    private var telemetrySection: some View {
+        Section("Telemetry") {
+            if viewModel.isLoadingTelemetry && viewModel.telemetry == nil {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+            } else if let telemetry = viewModel.telemetry {
+                if telemetry.dataPoints.isEmpty {
+                    Text("No sensor data")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(telemetry.dataPoints, id: \.channel) { dataPoint in
+                        TelemetryRow(dataPoint: dataPoint)
+                    }
+                }
+            } else {
+                Text("No telemetry data")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     // MARK: - Actions
 
     private func refresh() {
         Task {
             await viewModel.requestStatus(for: session)
             await viewModel.requestNeighbors(for: session)
+            await viewModel.requestTelemetry(for: session)
         }
     }
 }
@@ -193,6 +224,16 @@ private struct NeighborRow: View {
         } else {
             return .red
         }
+    }
+}
+
+// MARK: - Telemetry Row
+
+private struct TelemetryRow: View {
+    let dataPoint: LPPDataPoint
+
+    var body: some View {
+        LabeledContent(dataPoint.typeName, value: dataPoint.formattedValue)
     }
 }
 
