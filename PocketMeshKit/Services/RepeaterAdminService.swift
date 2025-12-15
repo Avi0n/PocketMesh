@@ -25,13 +25,16 @@ public actor RepeaterAdminService {
     private let logger = Logger(subsystem: "com.pocketmesh", category: "RepeaterAdmin")
 
     /// Handler for neighbor responses
-    public var neighborsResponseHandler: (@Sendable (NeighboursResponse) async -> Void)?
+    public var neighboursResponseHandler: (@Sendable (NeighboursResponse) async -> Void)?
 
     /// Handler for telemetry responses
     public var telemetryResponseHandler: (@Sendable (TelemetryResponse) async -> Void)?
 
     /// Handler for status responses
     public var statusResponseHandler: (@Sendable (RemoteNodeStatus) async -> Void)?
+
+    /// Handler for CLI text responses
+    public var cliResponseHandler: (@Sendable (MessageFrame, ContactDTO) async -> Void)?
 
     /// Default pubkey prefix length for neighbor queries.
     /// Stored to ensure response parsing uses matching length.
@@ -179,5 +182,74 @@ public actor RepeaterAdminService {
             return nil
         }
         return session
+    }
+
+    // MARK: - Handler Invocation
+
+    /// Invoke the status response handler safely from actor context
+    public func invokeStatusHandler(_ status: RemoteNodeStatus) async {
+        guard let handler = statusResponseHandler else {
+            let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
+            logger.debug("No status handler registered for response from \(prefixHex), ignoring")
+            return
+        }
+        await handler(status)
+    }
+
+    /// Invoke the neighbours response handler safely from actor context
+    public func invokeNeighboursHandler(_ response: NeighboursResponse) async {
+        guard let handler = neighboursResponseHandler else {
+            logger.debug("No neighbours handler registered, ignoring response with \(response.neighbours.count) neighbours")
+            return
+        }
+        await handler(response)
+    }
+
+    /// Invoke the telemetry response handler safely from actor context
+    public func invokeTelemetryHandler(_ response: TelemetryResponse) async {
+        guard let handler = telemetryResponseHandler else {
+            logger.debug("No telemetry handler registered, ignoring response with \(response.dataPoints.count) data points")
+            return
+        }
+        await handler(response)
+    }
+
+    /// Invoke the CLI response handler safely from actor context
+    public func invokeCLIHandler(_ frame: MessageFrame, fromContact contact: ContactDTO) async {
+        guard let handler = cliResponseHandler else {
+            logger.debug("No CLI handler registered, ignoring response from \(contact.displayName)")
+            return
+        }
+        await handler(frame, contact)
+    }
+
+    // MARK: - Handler Setters
+
+    /// Set handler for status responses
+    public func setStatusHandler(_ handler: @escaping @Sendable (RemoteNodeStatus) async -> Void) {
+        self.statusResponseHandler = handler
+    }
+
+    /// Set handler for neighbours responses
+    public func setNeighboursHandler(_ handler: @escaping @Sendable (NeighboursResponse) async -> Void) {
+        self.neighboursResponseHandler = handler
+    }
+
+    /// Set handler for telemetry responses
+    public func setTelemetryHandler(_ handler: @escaping @Sendable (TelemetryResponse) async -> Void) {
+        self.telemetryResponseHandler = handler
+    }
+
+    /// Set handler for CLI responses
+    public func setCLIHandler(_ handler: @escaping @Sendable (MessageFrame, ContactDTO) async -> Void) {
+        self.cliResponseHandler = handler
+    }
+
+    /// Clear all handlers (called when view disappears)
+    public func clearHandlers() {
+        self.statusResponseHandler = nil
+        self.neighboursResponseHandler = nil
+        self.telemetryResponseHandler = nil
+        self.cliResponseHandler = nil
     }
 }

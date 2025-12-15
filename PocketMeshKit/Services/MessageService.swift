@@ -158,6 +158,11 @@ public actor MessageService {
         replyToID: UUID? = nil,
         useFlood: Bool = false
     ) async throws -> MessageDTO {
+        // Prevent messaging repeaters - they are infrastructure nodes, not chat participants
+        guard contact.type != .repeater else {
+            throw MessageServiceError.invalidRecipient
+        }
+
         // Validate message length (throw early - no message saved)
         guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
             throw MessageServiceError.messageTooLong
@@ -468,6 +473,11 @@ public actor MessageService {
         timeout: TimeInterval = 0,
         onMessageCreated: (@Sendable (MessageDTO) async -> Void)? = nil
     ) async throws -> MessageDTO {
+        // Prevent messaging repeaters - they are infrastructure nodes, not chat participants
+        guard contact.type != .repeater else {
+            throw MessageServiceError.invalidRecipient
+        }
+
         // Validate message length (throw early - no message saved)
         guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
             throw MessageServiceError.messageTooLong

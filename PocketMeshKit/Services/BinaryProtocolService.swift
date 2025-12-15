@@ -201,6 +201,12 @@ public actor BinaryProtocolService {
         neighboursResponseHandler = handler
     }
 
+    /// Process binary response without returning a value
+    /// Use this when you don't need the parsed result and want to avoid Sendable issues
+    public func processBinaryResponse(_ data: Data) async {
+        _ = try? await handleBinaryResponse(data)
+    }
+
     // MARK: - Cleanup
 
     /// Clean up expired pending requests

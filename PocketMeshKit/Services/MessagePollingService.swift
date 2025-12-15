@@ -71,6 +71,25 @@ public protocol MessagePollingDelegate: AnyObject, Sendable {
     ///   - frame: The decoded message frame containing text, timestamp, and author prefix in extraData
     ///   - fromRoom: The room contact that sent the message
     func messagePollingService(_ service: MessagePollingService, didReceiveRoomMessage frame: MessageFrame, fromRoom contact: ContactDTO) async
+
+    /// Called when a binary response is received (0x8C push code)
+    /// - Parameters:
+    ///   - service: The service that received the response
+    ///   - data: Raw binary response data
+    func messagePollingService(_ service: MessagePollingService, didReceiveBinaryResponse data: Data) async
+
+    /// Called when a telemetry response is received (0x8B push code)
+    /// - Parameters:
+    ///   - service: The service that received the response
+    ///   - response: Parsed telemetry response with LPP data points
+    func messagePollingService(_ service: MessagePollingService, didReceiveTelemetryResponse response: TelemetryResponse) async
+
+    /// Called when a CLI response is received (textType = .cliData)
+    /// - Parameters:
+    ///   - service: The service that received the response
+    ///   - frame: The message frame containing CLI response text
+    ///   - fromContact: The contact that sent the CLI response
+    func messagePollingService(_ service: MessagePollingService, didReceiveCLIResponse frame: MessageFrame, fromContact contact: ContactDTO) async
 }
 
 // MARK: - Message Polling Service Actor
@@ -240,6 +259,13 @@ public actor MessagePollingService {
             return
         }
 
+        // Check if this is a CLI response (textType = .cliData)
+        // Route to CLI handler - don't save CLI responses to message database
+        if frame.textType == .cliData {
+            await delegate?.messagePollingService(self, didReceiveCLIResponse: frame, fromContact: contact)
+            return
+        }
+
         // Create and save message
         let message = Message(
             deviceID: deviceID,
@@ -324,6 +350,19 @@ public actor MessagePollingService {
                 await delegate?.messagePollingService(self, didReceiveLoginResult: loginResult, fromPublicKeyPrefix: pubKeyPrefix)
             } catch {
                 logger.error("Failed to decode login result: \(error)")
+            }
+
+        case PushCode.binaryResponse.rawValue:
+            // Binary protocol response - route to delegate for handling
+            await delegate?.messagePollingService(self, didReceiveBinaryResponse: data)
+
+        case PushCode.telemetryResponse.rawValue:
+            // Telemetry response from remote node
+            do {
+                let telemetry = try FrameCodec.decodeTelemetryResponse(from: data)
+                await delegate?.messagePollingService(self, didReceiveTelemetryResponse: telemetry)
+            } catch {
+                logger.error("Failed to decode telemetry response: \(error)")
             }
 
         default:
