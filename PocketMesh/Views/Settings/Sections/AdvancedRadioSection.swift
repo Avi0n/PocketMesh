@@ -40,6 +40,7 @@ struct AdvancedRadioSection: View {
                 }
             }
             .pickerStyle(.menu)
+            .tint(.primary)
             .accessibilityHint("Lower values increase range but decrease speed")
 
             Picker("Spreading Factor", selection: $spreadingFactor) {
@@ -50,6 +51,7 @@ struct AdvancedRadioSection: View {
                 }
             }
             .pickerStyle(.menu)
+            .tint(.primary)
             .accessibilityHint("Higher values increase range but decrease speed")
 
             Picker("Coding Rate", selection: $codingRate) {
@@ -60,6 +62,7 @@ struct AdvancedRadioSection: View {
                 }
             }
             .pickerStyle(.menu)
+            .tint(.primary)
             .accessibilityHint("Higher values add error correction but decrease speed")
 
             HStack {
