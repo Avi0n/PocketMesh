@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshKit
+import CoreLocation
 
 struct RepeaterSettingsView: View {
     @Environment(AppState.self) private var appState
@@ -8,6 +9,7 @@ struct RepeaterSettingsView: View {
     let session: RemoteNodeSessionDTO
     @State private var viewModel = RepeaterSettingsViewModel()
     @State private var showRebootConfirmation = false
+    @State private var showingLocationPicker = false
 
     var body: some View {
         Form {
@@ -41,6 +43,19 @@ struct RepeaterSettingsView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("The repeater will restart and be temporarily unavailable.")
+        }
+        .sheet(isPresented: $showingLocationPicker) {
+            LocationPickerView(
+                initialCoordinate: CLLocationCoordinate2D(
+                    latitude: viewModel.latitude,
+                    longitude: viewModel.longitude
+                )
+            ) { coordinate in
+                try await viewModel.applyLocation(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+            }
         }
     }
 
@@ -220,7 +235,13 @@ struct RepeaterSettingsView: View {
                     }
             }
 
-            Text("Changes apply when you dismiss the keyboard")
+            Button {
+                showingLocationPicker = true
+            } label: {
+                Label("Set Location", systemImage: "mappin.and.ellipse")
+            }
+
+            Text("Text fields apply on keyboard dismiss. Map picker applies immediately.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

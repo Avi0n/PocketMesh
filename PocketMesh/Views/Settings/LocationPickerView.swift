@@ -1,18 +1,31 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 import PocketMeshKit
 
 /// Map-based location picker for setting node position
 struct LocationPickerView: View {
-    @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
+    // Configuration
+    private let initialCoordinate: CLLocationCoordinate2D?
+    private let onSave: (CLLocationCoordinate2D) async throws -> Void
+
+    // UI State
     @State private var position: MapCameraPosition = .automatic
     @State private var selectedCoordinate: CLLocationCoordinate2D?
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var isSaving = false
     @State private var showError: String?
-    @State private var retryAlert = RetryAlertState()
+
+    /// Generic initializer for any location-setting context
+    init(
+        initialCoordinate: CLLocationCoordinate2D? = nil,
+        onSave: @escaping (CLLocationCoordinate2D) async throws -> Void
+    ) {
+        self.initialCoordinate = initialCoordinate
+        self.onSave = onSave
+    }
 
     var body: some View {
         NavigationStack {
@@ -93,21 +106,18 @@ struct LocationPickerView: View {
                 loadCurrentLocation()
             }
             .errorAlert($showError)
-            .retryAlert(retryAlert)
         }
     }
 
     private func loadCurrentLocation() {
-        guard let device = appState.connectedDevice else { return }
+        guard let coord = initialCoordinate,
+              coord.latitude != 0 || coord.longitude != 0 else { return }
 
-        if device.latitude != 0 || device.longitude != 0 {
-            let coord = CLLocationCoordinate2D(latitude: device.latitude, longitude: device.longitude)
-            selectedCoordinate = coord
-            position = .region(MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            ))
-        }
+        selectedCoordinate = coord
+        position = .region(MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        ))
     }
 
     private func dropPinAtCenter() {
@@ -120,27 +130,13 @@ struct LocationPickerView: View {
     }
 
     private func saveLocation() {
-        let latitude = selectedCoordinate?.latitude ?? 0
-        let longitude = selectedCoordinate?.longitude ?? 0
+        guard let coord = selectedCoordinate else { return }
 
         isSaving = true
         Task {
             do {
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    try await appState.settingsService.setLocationVerified(
-                        latitude: latitude,
-                        longitude: longitude
-                    )
-                }
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
-                retryAlert.reset()
+                try await onSave(coord)
                 dismiss()
-            } catch let error as SettingsServiceError where error.isRetryable {
-                retryAlert.show(
-                    message: error.localizedDescription ?? "Please ensure device is connected and try again.",
-                    onRetry: { saveLocation() },
-                    onMaxRetriesExceeded: { dismiss() }
-                )
             } catch {
                 showError = error.localizedDescription
             }
@@ -162,6 +158,29 @@ struct LocationPickerView: View {
                 dropPinAtCenter()
             }
             .modifier(GlassButtonModifier(isProminent: true))
+        }
+    }
+}
+
+// MARK: - Local Device Convenience
+
+extension LocationPickerView {
+    /// Convenience initializer for local device location setting (Settings screen)
+    /// Retry handling for SettingsServiceError is handled at the call site since it requires RetryAlertState
+    static func forLocalDevice(appState: AppState) -> LocationPickerView {
+        let device = appState.connectedDevice
+        let initialCoord = device.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
+
+        return LocationPickerView(initialCoordinate: initialCoord) { coordinate in
+            let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
+                try await appState.settingsService.setLocationVerified(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+            }
+            appState.updateDeviceInfo(deviceInfo, selfInfo)
         }
     }
 }

@@ -616,6 +616,31 @@ final class RepeaterSettingsViewModel {
         }
     }
 
+    /// Apply latitude and longitude together (from map picker)
+    /// Throws if either command fails
+    func applyLocation(latitude: Double, longitude: Double) async throws {
+        guard let session, let service = repeaterAdminService else {
+            throw RepeaterSettingsError.notConnected
+        }
+
+        // Format with 6 decimal places for CLI consistency
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 6
+        formatter.maximumFractionDigits = 6
+        let latStr = formatter.string(from: NSNumber(value: latitude)) ?? "\(latitude)"
+        let lonStr = formatter.string(from: NSNumber(value: longitude)) ?? "\(longitude)"
+
+        // Send both commands
+        _ = try await service.sendCommand(sessionID: session.id, command: "set lat \(latStr)")
+        _ = try await service.sendCommand(sessionID: session.id, command: "set lon \(lonStr)")
+
+        // Update local state (already on @MainActor)
+        self.latitude = latitude
+        self.longitude = longitude
+
+        logger.debug("Location applied: \(latitude), \(longitude)")
+    }
+
     /// Apply repeater enabled state with debouncing
     func applyRepeaterModeImmediately() {
         debouncedApply(key: "repeat") { [weak self] in
@@ -731,6 +756,19 @@ final class RepeaterSettingsViewModel {
             showSuccessAlert = true
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Error Types
+
+enum RepeaterSettingsError: LocalizedError {
+    case notConnected
+
+    var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            return "Not connected to repeater"
         }
     }
 }

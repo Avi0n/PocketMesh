@@ -93,7 +93,7 @@ struct SettingsView: View {
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showingLocationPicker) {
-                LocationPickerView()
+                LocationPickerView.forLocalDevice(appState: appState)
             }
             #if DEBUG
             .sheet(isPresented: $showingDatabaseBrowser) {
