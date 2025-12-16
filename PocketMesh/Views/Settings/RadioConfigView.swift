@@ -7,7 +7,7 @@ struct RadioConfigView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var frequency: Double = 915.0
-    @State private var bandwidth: Int = 250
+    @State private var bandwidth: UInt32 = 250_000  // Hz
     @State private var spreadingFactor: Int = 10
     @State private var codingRate: Int = 5
     @State private var txPower: Int = 20
@@ -25,9 +25,6 @@ struct RadioConfigView: View {
         ("JP 920 MHz", 920.0...928.0)
     ]
 
-    // Standard bandwidth options (kHz)
-    private let bandwidthOptions = [125, 250, 500]
-
     // Spreading factor range
     private let spreadingFactorRange = 5...12
 
@@ -40,9 +37,9 @@ struct RadioConfigView: View {
             if let device = appState.connectedDevice {
                 Section {
                     currentSettingRow("Current Frequency", formatFrequency(device.frequency))
-                    currentSettingRow("Current Bandwidth", "\(device.bandwidth / 1000) kHz")
+                    currentSettingRow("Current Bandwidth", "\(RadioOptions.formatBandwidth(device.bandwidth)) kHz")
                     currentSettingRow("Current SF", "SF\(device.spreadingFactor)")
-                    currentSettingRow("Current CR", "4/\(device.codingRate)")
+                    currentSettingRow("Current CR", "\(device.codingRate)")
                     currentSettingRow("Current TX Power", "\(device.txPower) dBm")
                 } header: {
                     Text("Current Settings")
@@ -82,11 +79,14 @@ struct RadioConfigView: View {
             // Bandwidth section
             Section {
                 Picker("Bandwidth", selection: $bandwidth) {
-                    ForEach(bandwidthOptions, id: \.self) { bw in
-                        Text("\(bw) kHz").tag(bw)
+                    ForEach(RadioOptions.bandwidthsHz, id: \.self) { bwHz in
+                        Text("\(RadioOptions.formatBandwidth(bwHz)) kHz")
+                            .tag(bwHz)
+                            .accessibilityLabel("\(RadioOptions.formatBandwidth(bwHz)) kilohertz")
                     }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
+                .accessibilityHint("Lower values increase range but decrease speed")
                 .onChange(of: bandwidth) { _, _ in hasChanges = true }
             } header: {
                 Text("Bandwidth")
@@ -129,16 +129,19 @@ struct RadioConfigView: View {
             // Coding Rate section
             Section {
                 Picker("Coding Rate", selection: $codingRate) {
-                    ForEach(5...8, id: \.self) { cr in
-                        Text("4/\(cr)").tag(cr)
+                    ForEach(RadioOptions.codingRates, id: \.self) { cr in
+                        Text("\(cr)")
+                            .tag(cr)
+                            .accessibilityLabel("Coding rate \(cr)")
                     }
                 }
                 .pickerStyle(.segmented)
+                .accessibilityHint("Higher values add error correction but decrease speed")
                 .onChange(of: codingRate) { _, _ in hasChanges = true }
             } header: {
                 Text("Coding Rate")
             } footer: {
-                Text("Higher coding rate = more error correction but slower. 4/5 for good conditions, 4/8 for noisy environments.")
+                Text("Higher coding rate = more error correction but slower. CR5 for good conditions, CR8 for noisy environments.")
             }
 
             // TX Power section
@@ -232,7 +235,8 @@ struct RadioConfigView: View {
         guard let device = appState.connectedDevice else { return }
 
         frequency = Double(device.frequency) / 1000.0
-        bandwidth = Int(device.bandwidth / 1000)
+        // Use nearestBandwidth for robustness against non-standard values
+        bandwidth = RadioOptions.nearestBandwidth(to: device.bandwidth)
         spreadingFactor = Int(device.spreadingFactor)
         codingRate = Int(device.codingRate)
         txPower = Int(device.txPower)
@@ -271,7 +275,7 @@ struct RadioConfigView: View {
 // MARK: - Airtime Estimate
 
 private struct AirtimeEstimate: View {
-    let bandwidth: Int
+    let bandwidth: UInt32  // Hz
     let spreadingFactor: Int
     let codingRate: Int
 
@@ -303,7 +307,7 @@ private struct AirtimeEstimate: View {
     private var estimatedDataRate: String {
         // Simplified LoRa data rate calculation
         // DR = SF * (BW / 2^SF) * CR
-        let bw = Double(bandwidth * 1000) // Hz
+        let bw = Double(bandwidth) // Hz
         let sf = Double(spreadingFactor)
         let cr = 4.0 / Double(codingRate)
 
@@ -320,7 +324,7 @@ private struct AirtimeEstimate: View {
     private var estimatedAirtime: String {
         // Approximate airtime for 160 byte message
         let messageBytes = 160
-        let bw = Double(bandwidth * 1000)
+        let bw = Double(bandwidth) // Hz
         let sf = Double(spreadingFactor)
         let cr = Double(codingRate)
 

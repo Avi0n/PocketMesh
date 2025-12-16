@@ -6,9 +6,9 @@ struct AdvancedRadioSection: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var frequency: String = ""
-    @State private var bandwidth: String = ""
-    @State private var spreadingFactor: String = ""
-    @State private var codingRate: String = ""
+    @State private var bandwidth: UInt32 = 250_000  // Hz
+    @State private var spreadingFactor: Int = 10
+    @State private var codingRate: Int = 5
     @State private var txPower: String = ""
     @State private var isApplying = false
     @State private var showError: String?
@@ -17,9 +17,6 @@ struct AdvancedRadioSection: View {
 
     private enum RadioField: Hashable {
         case frequency
-        case bandwidth
-        case spreadingFactor
-        case codingRate
         case txPower
     }
 
@@ -35,35 +32,35 @@ struct AdvancedRadioSection: View {
                     .focused($focusedField, equals: .frequency)
             }
 
-            HStack {
-                Text("Bandwidth (kHz)")
-                Spacer()
-                TextField("kHz", text: $bandwidth)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                    .focused($focusedField, equals: .bandwidth)
+            Picker("Bandwidth (kHz)", selection: $bandwidth) {
+                ForEach(RadioOptions.bandwidthsHz, id: \.self) { bwHz in
+                    Text("\(RadioOptions.formatBandwidth(bwHz)) kHz")
+                        .tag(bwHz)
+                        .accessibilityLabel("\(RadioOptions.formatBandwidth(bwHz)) kilohertz")
+                }
             }
+            .pickerStyle(.menu)
+            .accessibilityHint("Lower values increase range but decrease speed")
 
-            HStack {
-                Text("Spreading Factor")
-                Spacer()
-                TextField("5-12", text: $spreadingFactor)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 60)
-                    .focused($focusedField, equals: .spreadingFactor)
+            Picker("Spreading Factor", selection: $spreadingFactor) {
+                ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
+                    Text("SF\(sf)")
+                        .tag(sf)
+                        .accessibilityLabel("Spreading factor \(sf)")
+                }
             }
+            .pickerStyle(.menu)
+            .accessibilityHint("Higher values increase range but decrease speed")
 
-            HStack {
-                Text("Coding Rate")
-                Spacer()
-                TextField("5-8", text: $codingRate)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 60)
-                    .focused($focusedField, equals: .codingRate)
+            Picker("Coding Rate", selection: $codingRate) {
+                ForEach(RadioOptions.codingRates, id: \.self) { cr in
+                    Text("\(cr)")
+                        .tag(cr)
+                        .accessibilityLabel("Coding rate \(cr)")
+                }
             }
+            .pickerStyle(.menu)
+            .accessibilityHint("Higher values add error correction but decrease speed")
 
             HStack {
                 Text("TX Power (dBm)")
@@ -112,31 +109,22 @@ struct AdvancedRadioSection: View {
     private func loadCurrentSettings() {
         guard let device = appState.connectedDevice else { return }
         frequency = String(format: "%.3f", Double(device.frequency) / 1000.0)
-        bandwidth = String(format: "%.1f", Double(device.bandwidth) / 1000.0)
-        spreadingFactor = "\(device.spreadingFactor)"
-        codingRate = "\(device.codingRate)"
+        // Use nearestBandwidth to handle devices with non-standard bandwidth values
+        // or firmware float precision issues (e.g., 7799 Hz instead of 7800 Hz)
+        bandwidth = RadioOptions.nearestBandwidth(to: device.bandwidth)
+        spreadingFactor = Int(device.spreadingFactor)
+        codingRate = Int(device.codingRate)
         txPower = "\(device.txPower)"
     }
 
     private func applySettings() {
         guard let freqMHz = Double(frequency),
-              let bwKHz = Double(bandwidth),
-              let sf = UInt8(spreadingFactor),
-              let cr = UInt8(codingRate),
               let power = UInt8(txPower) else {
             showError = "Invalid input values"
             return
         }
 
-        guard sf >= 5, sf <= 12 else {
-            showError = "Spreading factor must be between 5 and 12"
-            return
-        }
-
-        guard cr >= 5, cr <= 8 else {
-            showError = "Coding rate must be between 5 and 8"
-            return
-        }
+        // Pickers enforce valid values, no range validation needed for bandwidth, SF, CR
 
         isApplying = true
         Task {
@@ -146,10 +134,12 @@ struct AdvancedRadioSection: View {
                     var deviceInfo: DeviceInfo
                     var selfInfo: SelfInfo
                     (deviceInfo, selfInfo) = try await appState.settingsService.setRadioParamsVerified(
-                        frequencyKHz: UInt32(freqMHz * 1000),
-                        bandwidthKHz: UInt32(bwKHz * 1000),
-                        spreadingFactor: sf,
-                        codingRate: cr
+                        frequencyKHz: UInt32((freqMHz * 1000).rounded()),
+                        // Note: Parameter is misleadingly named "bandwidthKHz" but expects Hz.
+                        // bandwidth is already UInt32 Hz from the picker, pass directly.
+                        bandwidthKHz: bandwidth,
+                        spreadingFactor: UInt8(spreadingFactor),
+                        codingRate: UInt8(codingRate)
                     )
 
                     // Then set TX power
