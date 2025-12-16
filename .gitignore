@@ -9,7 +9,11 @@ MeshCore-references/
 
 # AI
 .claude
+.ignore
+CLAUDE.md
 thoughts/
+
+TODO.md
 
 ## User settings
 xcuserdata/
