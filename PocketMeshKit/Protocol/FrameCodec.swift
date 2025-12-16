@@ -250,6 +250,27 @@ public enum FrameCodec {
         return data
     }
 
+    /// Encode keep-alive request with optional forceSince to set sync timestamp.
+    /// Keep-alive only works with direct routing - the firmware ignores flood-routed requests.
+    /// - Parameters:
+    ///   - recipientPublicKey: Full 32-byte public key of recipient
+    ///   - forceSince: Timestamp to sync from. Use 1 for "all messages", 0 to not change.
+    /// - Returns: Encoded frame data
+    public static func encodeKeepAliveRequest(
+        recipientPublicKey: Data,
+        forceSince: UInt32 = 0
+    ) -> Data {
+        var additionalData = Data()
+        // Always include forceSince (4 bytes, little-endian)
+        additionalData.append(contentsOf: withUnsafeBytes(of: forceSince.littleEndian) { Array($0) })
+
+        return encodeBinaryRequest(
+            recipientPublicKey: recipientPublicKey,
+            requestType: .keepAlive,
+            additionalData: additionalData
+        )
+    }
+
     /// Encode a neighbours request with pagination
     /// - Parameters:
     ///   - recipientPublicKey: Full 32-byte public key of recipient

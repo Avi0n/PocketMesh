@@ -10,6 +10,7 @@ public actor RoomServerService {
     private let remoteNodeService: RemoteNodeService
     private let bleTransport: any BLETransport
     private let dataStore: DataStore
+    private let contactService: ContactService
     private let logger = Logger(subsystem: "com.pocketmesh", category: "RoomServer")
 
     /// Self public key prefix for author comparison.
@@ -24,11 +25,13 @@ public actor RoomServerService {
     public init(
         remoteNodeService: RemoteNodeService,
         bleTransport: any BLETransport,
-        dataStore: DataStore
+        dataStore: DataStore,
+        contactService: ContactService
     ) {
         self.remoteNodeService = remoteNodeService
         self.bleTransport = bleTransport
         self.dataStore = dataStore
+        self.contactService = contactService
     }
 
     /// Set self public key prefix from SelfInfo.
@@ -40,6 +43,7 @@ public actor RoomServerService {
     // MARK: - Room Management
 
     /// Join a room server by creating a session and authenticating.
+    /// Automatically syncs message history based on local state.
     /// - Parameters:
     ///   - deviceID: The companion radio device ID
     ///   - contact: The room server contact
@@ -54,6 +58,10 @@ public actor RoomServerService {
         rememberPassword: Bool = true,
         pathLength: UInt8 = 0
     ) async throws -> RemoteNodeSessionDTO {
+        // Check if this is a new session
+        let existingSession = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
+        let isNewSession = existingSession == nil
+
         let session = try await remoteNodeService.createSession(
             deviceID: deviceID,
             contact: contact,
@@ -73,7 +81,50 @@ public actor RoomServerService {
             try await remoteNodeService.storePassword(password, forNodeKey: contact.publicKey)
         }
 
+        // Determine what history to sync
+        let needsFullSync = isNewSession || existingSession?.lastSyncTimestamp == 0
+        let syncSince: UInt32 = needsFullSync ? 1 : (existingSession?.lastSyncTimestamp ?? 1)
+
+        // Attempt history sync (non-blocking)
+        await syncHistoryIfPossible(sessionID: session.id, since: syncSince)
+
         guard let updatedSession = try await dataStore.fetchRemoteNodeSession(id: session.id) else {
+            throw RemoteNodeError.sessionNotFound
+        }
+        return updatedSession
+    }
+
+    /// Reconnect to an existing room session and sync any missed messages.
+    /// Use this when re-authenticating to a room after app restart or BLE reconnection.
+    /// - Parameters:
+    ///   - sessionID: The existing room session ID
+    ///   - pathLength: Optional path length hint (0 = use shortest known path)
+    /// - Returns: Updated session DTO
+    /// - Throws: RemoteNodeError if reconnection fails
+    public func reconnectRoom(
+        sessionID: UUID,
+        pathLength: UInt8 = 0
+    ) async throws -> RemoteNodeSessionDTO {
+        guard let session = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
+            throw RemoteNodeError.sessionNotFound
+        }
+
+        guard session.isRoom else {
+            throw RemoteNodeError.invalidResponse
+        }
+
+        // Re-authenticate to the room
+        _ = try await remoteNodeService.login(
+            sessionID: sessionID,
+            pathLength: pathLength
+        )
+
+        // Sync messages since last known timestamp
+        // Use 1 if no previous sync (get all available messages)
+        let syncSince: UInt32 = session.lastSyncTimestamp > 0 ? session.lastSyncTimestamp : 1
+        await syncHistoryIfPossible(sessionID: sessionID, since: syncSince)
+
+        guard let updatedSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
         }
         return updatedSession
@@ -145,6 +196,9 @@ public actor RoomServerService {
 
         try await dataStore.saveRoomMessage(messageDTO)
 
+        // Update sync timestamp with our own message's timestamp
+        try await dataStore.updateRoomLastSyncTimestamp(sessionID, timestamp: timestamp)
+
         return messageDTO
     }
 
@@ -210,6 +264,9 @@ public actor RoomServerService {
 
         try await dataStore.saveRoomMessage(messageDTO)
 
+        // Update last sync timestamp to track sync progress
+        try await dataStore.updateRoomLastSyncTimestamp(session.id, timestamp: timestamp)
+
         // Increment unread count if not from self
         if !isFromSelf {
             try await dataStore.incrementRoomUnreadCount(session.id)
@@ -264,5 +321,81 @@ public actor RoomServerService {
         // Try to find contact with matching public key prefix
         // Returns nil if no matching contact found
         try await dataStore.findContactNameByKeyPrefix(keyPrefix)
+    }
+
+    /// Attempt to sync history, using advert path first, then falling back to path discovery.
+    private func syncHistoryIfPossible(sessionID: UUID, since: UInt32) async {
+        do {
+            guard let session = try await dataStore.fetchRemoteNodeSession(id: sessionID),
+                  let contact = try await dataStore.findContactByPublicKey(session.publicKey) else {
+                return
+            }
+
+            // Strategy:
+            // 1. If contact has a path from advertisement (outPathLength >= 0), try it first
+            // 2. If that fails or contact is flood-routed, trigger path discovery
+            // 3. Wait for discovery result and retry
+
+            if contact.outPathLength >= 0 {
+                // Contact has a path from advertisement - try it directly
+                logger.debug("Trying advert path for room \(session.name)")
+                do {
+                    try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
+                    logger.debug("History sync succeeded using advert path")
+                    return
+                } catch {
+                    // Advert path didn't work - fall through to path discovery
+                    logger.info("Advert path failed for \(session.name): \(error), trying path discovery")
+                }
+            } else {
+                logger.info("Room \(session.name) is flood-routed, attempting path discovery")
+            }
+
+            // Path discovery fallback
+            let hasDirectRoute = try await discoverPathAndWait(sessionID: sessionID)
+            if !hasDirectRoute {
+                logger.info("Could not establish direct route for \(session.name), skipping history sync")
+                return
+            }
+
+            // Retry with newly discovered path
+            try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
+            logger.debug("History sync succeeded after path discovery")
+        } catch {
+            logger.warning("Failed to sync history for session \(sessionID): \(error)")
+            // Don't fail the join - messages will arrive via normal flow
+        }
+    }
+
+    /// Discover path and wait for direct route.
+    private func discoverPathAndWait(sessionID: UUID, timeout: Duration = .seconds(10)) async throws -> Bool {
+        guard let session = try await dataStore.fetchRemoteNodeSession(id: sessionID),
+              let contact = try await dataStore.findContactByPublicKey(session.publicKey) else {
+            return false
+        }
+
+        // Already direct?
+        if contact.outPathLength >= 0 {
+            return true
+        }
+
+        // Trigger path discovery
+        try await contactService.sendPathDiscovery(
+            deviceID: session.deviceID,
+            publicKey: session.publicKey
+        )
+
+        // Wait for result
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(500))
+
+            if let updated = try await dataStore.findContactByPublicKey(session.publicKey),
+               updated.outPathLength >= 0 {
+                return true
+            }
+        }
+
+        return false
     }
 }

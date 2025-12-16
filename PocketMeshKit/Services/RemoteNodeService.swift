@@ -455,6 +455,54 @@ public actor RemoteNodeService {
         try await sendKeepAliveIfDirectRouted(sessionID: sessionID, publicKey: session.publicKey)
     }
 
+    // MARK: - History Sync
+
+    /// Request message history from a room server.
+    /// Sends a keep-alive with forceSince to set the server's sync timestamp.
+    /// - Parameters:
+    ///   - sessionID: The room session to sync
+    ///   - since: Timestamp to sync from. Use 1 for all history, or a message timestamp for incremental.
+    /// - Throws: RemoteNodeError if request fails
+    public func requestHistorySync(sessionID: UUID, since: UInt32 = 1) async throws {
+        guard let session = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
+            throw RemoteNodeError.sessionNotFound
+        }
+
+        guard session.isRoom else {
+            throw RemoteNodeError.invalidResponse
+        }
+
+        let connectionState = await bleTransport.connectionState
+        guard connectionState == .ready else {
+            throw RemoteNodeError.notConnected
+        }
+
+        // Verify we have a direct route (required for keep-alive)
+        guard let contact = try await dataStore.findContactByPublicKey(session.publicKey) else {
+            throw RemoteNodeError.contactNotFound
+        }
+
+        if contact.outPathLength < 0 {
+            throw RemoteNodeError.floodRouted
+        }
+
+        // Send keep-alive with forceSince
+        let frameData = FrameCodec.encodeKeepAliveRequest(
+            recipientPublicKey: session.publicKey,
+            forceSince: since
+        )
+
+        guard let response = try await bleTransport.send(frameData) else {
+            throw RemoteNodeError.timeout
+        }
+
+        guard response.first == ResponseCode.sent.rawValue else {
+            throw RemoteNodeError.sendFailed("History sync request rejected")
+        }
+
+        logger.debug("Requested history sync for room \(session.name) since \(since)")
+    }
+
     // MARK: - Logout
 
     /// Explicitly logout from a remote node.

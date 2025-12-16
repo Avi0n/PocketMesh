@@ -869,6 +869,7 @@ public actor DataStore {
             existing.unreadCount = dto.unreadCount
             existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
             existing.neighborCount = dto.neighborCount
+            existing.lastSyncTimestamp = dto.lastSyncTimestamp
             try modelContext.save()
             return existing
         } else {
@@ -889,7 +890,8 @@ public actor DataStore {
                 lastNoiseFloor: dto.lastNoiseFloor,
                 unreadCount: dto.unreadCount,
                 lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
-                neighborCount: dto.neighborCount
+                neighborCount: dto.neighborCount,
+                lastSyncTimestamp: dto.lastSyncTimestamp
             )
             modelContext.insert(session)
             try modelContext.save()
@@ -953,6 +955,26 @@ public actor DataStore {
         }
 
         try modelContext.save()
+    }
+
+    /// Update the last sync timestamp for a room session.
+    /// Call this when messages are received to track sync progress.
+    /// Only updates if the new timestamp is greater than the current one.
+    public func updateRoomLastSyncTimestamp(_ sessionID: UUID, timestamp: UInt32) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let session = try modelContext.fetch(descriptor).first {
+            // Only update if newer than current
+            if timestamp > session.lastSyncTimestamp {
+                session.lastSyncTimestamp = timestamp
+                try modelContext.save()
+            }
+        }
     }
 
     // MARK: - RoomMessage Operations

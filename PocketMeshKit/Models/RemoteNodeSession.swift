@@ -54,6 +54,11 @@ public final class RemoteNodeSession {
     /// Number of neighbors (repeater-specific)
     public var neighborCount: Int
 
+    /// Timestamp of the last message received from this room.
+    /// Used to request only newer messages on reconnect.
+    /// Value of 0 means no messages synced yet (request all).
+    public var lastSyncTimestamp: UInt32
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -70,7 +75,8 @@ public final class RemoteNodeSession {
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
         lastRxAirtimeSeconds: UInt32? = nil,
-        neighborCount: Int = 0
+        neighborCount: Int = 0,
+        lastSyncTimestamp: UInt32 = 0
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -88,6 +94,7 @@ public final class RemoteNodeSession {
         self.unreadCount = unreadCount
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
+        self.lastSyncTimestamp = lastSyncTimestamp
     }
 }
 
@@ -146,6 +153,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public let unreadCount: Int
     public let lastRxAirtimeSeconds: UInt32?
     public let neighborCount: Int
+    public let lastSyncTimestamp: UInt32
 
     public init(from model: RemoteNodeSession) {
         self.id = model.id
@@ -164,6 +172,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.unreadCount = model.unreadCount
         self.lastRxAirtimeSeconds = model.lastRxAirtimeSeconds
         self.neighborCount = model.neighborCount
+        self.lastSyncTimestamp = model.lastSyncTimestamp
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -183,7 +192,8 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
         lastRxAirtimeSeconds: UInt32? = nil,
-        neighborCount: Int = 0
+        neighborCount: Int = 0,
+        lastSyncTimestamp: UInt32 = 0
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -201,6 +211,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.unreadCount = unreadCount
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
+        self.lastSyncTimestamp = lastSyncTimestamp
     }
 
     public var publicKeyPrefix: Data { publicKey.prefix(6) }

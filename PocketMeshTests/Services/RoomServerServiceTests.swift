@@ -28,10 +28,15 @@ struct RoomServerServiceTests {
             dataStore: dataStore,
             keychainService: keychain
         )
+        let contactService = ContactService(
+            bleTransport: transport,
+            dataStore: dataStore
+        )
         let roomServerService = RoomServerService(
             remoteNodeService: remoteNodeService,
             bleTransport: transport,
-            dataStore: dataStore
+            dataStore: dataStore,
+            contactService: contactService
         )
         return (roomServerService, remoteNodeService, keychain)
     }

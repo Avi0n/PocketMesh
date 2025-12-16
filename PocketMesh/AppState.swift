@@ -185,7 +185,8 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         self.roomServerService = RoomServerService(
             remoteNodeService: remoteNodeService,
             bleTransport: bleService,
-            dataStore: dataStore
+            dataStore: dataStore,
+            contactService: contactService
         )
         self.repeaterAdminService = RepeaterAdminService(
             remoteNodeService: remoteNodeService,

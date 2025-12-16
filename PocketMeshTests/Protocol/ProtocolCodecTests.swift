@@ -549,6 +549,53 @@ struct ProtocolCodecTests {
         #expect(tag == 0x12345678)
     }
 
+    @Test("Encode keep-alive request without forceSince")
+    func encodeKeepAliveRequestDefault() {
+        let publicKey = Data(repeating: 0xAB, count: 32)
+        let data = FrameCodec.encodeKeepAliveRequest(
+            recipientPublicKey: publicKey
+        )
+
+        #expect(data.count == 38)  // 1 (cmd) + 32 (key) + 1 (type) + 4 (forceSince)
+        #expect(data[0] == CommandCode.sendBinaryRequest.rawValue)
+        #expect(data.subdata(in: 1..<33) == publicKey)
+        #expect(data[33] == BinaryRequestType.keepAlive.rawValue)
+        // forceSince should be 0
+        let forceSince = data.subdata(in: 34..<38).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        #expect(forceSince == 0)
+    }
+
+    @Test("Encode keep-alive request with forceSince = 1 for full history")
+    func encodeKeepAliveRequestFullHistory() {
+        let publicKey = Data(repeating: 0xCD, count: 32)
+        let data = FrameCodec.encodeKeepAliveRequest(
+            recipientPublicKey: publicKey,
+            forceSince: 1
+        )
+
+        #expect(data.count == 38)
+        #expect(data[0] == CommandCode.sendBinaryRequest.rawValue)
+        #expect(data[33] == BinaryRequestType.keepAlive.rawValue)
+        let forceSince = data.subdata(in: 34..<38).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        #expect(forceSince == 1)
+    }
+
+    @Test("Encode keep-alive request with arbitrary timestamp")
+    func encodeKeepAliveRequestWithTimestamp() {
+        let publicKey = Data(repeating: 0xEF, count: 32)
+        let timestamp: UInt32 = 1702656000  // Some arbitrary timestamp
+        let data = FrameCodec.encodeKeepAliveRequest(
+            recipientPublicKey: publicKey,
+            forceSince: timestamp
+        )
+
+        #expect(data.count == 38)
+        #expect(data[0] == CommandCode.sendBinaryRequest.rawValue)
+        #expect(data[33] == BinaryRequestType.keepAlive.rawValue)
+        let forceSince = data.subdata(in: 34..<38).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        #expect(forceSince == timestamp)
+    }
+
     @Test("Decode binary response push")
     func decodeBinaryResponse() throws {
         var testData = Data([PushCode.binaryResponse.rawValue])

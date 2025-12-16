@@ -482,4 +482,73 @@ struct DataStoreIntegrationTests {
         #expect(messages.count == 3)
         #expect(messages.allSatisfy { $0.channelIndex == 0 })
     }
+
+    // MARK: - Remote Node Session Tests
+
+    private func createTestRoomSession(deviceID: UUID) -> RemoteNodeSessionDTO {
+        RemoteNodeSessionDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            name: "TestRoom",
+            role: .roomServer,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            isConnected: false,
+            permissionLevel: .guest,
+            lastSyncTimestamp: 0
+        )
+    }
+
+    @Test("Update room last sync timestamp")
+    func updateRoomLastSyncTimestamp() async throws {
+        let store = try await createTestDataStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let session = createTestRoomSession(deviceID: device.id)
+        _ = try await store.saveRemoteNodeSessionDTO(session)
+
+        // Update timestamp to 1000
+        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 1000)
+
+        var fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.lastSyncTimestamp == 1000)
+
+        // Update to higher timestamp
+        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 2000)
+
+        fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.lastSyncTimestamp == 2000)
+    }
+
+    @Test("Update room last sync timestamp ignores older values")
+    func updateRoomLastSyncTimestampIgnoresOlder() async throws {
+        let store = try await createTestDataStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let session = createTestRoomSession(deviceID: device.id)
+        _ = try await store.saveRemoteNodeSessionDTO(session)
+
+        // Set initial timestamp
+        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 5000)
+
+        var fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.lastSyncTimestamp == 5000)
+
+        // Try to update with older timestamp - should be ignored
+        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 3000)
+
+        fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.lastSyncTimestamp == 5000)  // Should still be 5000
+    }
+
+    @Test("Update room last sync timestamp handles non-existent session")
+    func updateRoomLastSyncTimestampNonExistent() async throws {
+        let store = try await createTestDataStore()
+
+        // Should not throw for non-existent session - just silently does nothing
+        try await store.updateRoomLastSyncTimestamp(UUID(), timestamp: 1000)
+    }
 }
