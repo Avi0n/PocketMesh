@@ -157,6 +157,9 @@ struct BluetoothSection: View {
     }
 
     private func handlePinTypeChange(from oldValue: BluetoothPinType, to newValue: BluetoothPinType) {
+        // Skip if picker is being synced to device's current state (handles initialization race condition)
+        guard newValue != currentPinType else { return }
+
         // If changing TO custom, show PIN entry
         if newValue == .custom && oldValue != .custom {
             showingPinEntry = true
