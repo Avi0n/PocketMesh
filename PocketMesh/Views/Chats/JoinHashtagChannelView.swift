@@ -119,13 +119,13 @@ struct JoinHashtagChannelView: View {
         errorMessage = nil
 
         do {
-            // For hashtag channels, the name IS the passphrase
-            // This derives the secret from SHA-256(name)
+            // For hashtag channels, hash the full name including "#" prefix
+            // to match meshcore spec: sha256("#channelname")[0:16]
             try await appState.channelService.setChannel(
                 deviceID: deviceID,
                 index: selectedSlot,
                 name: "#\(channelName)",
-                passphrase: channelName
+                passphrase: "#\(channelName)"
             )
 
             onComplete()
