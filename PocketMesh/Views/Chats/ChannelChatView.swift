@@ -46,7 +46,6 @@ struct ChannelChatView: View {
                 dismiss()
             }
         }
-        .toolbarVisibility(.hidden, for: .tabBar)
         .task {
             viewModel.configure(appState: appState)
             await viewModel.loadChannelMessages(for: channel)

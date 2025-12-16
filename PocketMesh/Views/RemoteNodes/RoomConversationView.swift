@@ -43,7 +43,6 @@ struct RoomConversationView: View {
             .sheet(isPresented: $showingRoomInfo) {
                 RoomInfoSheet(session: session)
             }
-            .toolbarVisibility(.hidden, for: .tabBar)
             .task {
                 viewModel.configure(appState: appState)
                 await viewModel.loadMessages(for: session)
