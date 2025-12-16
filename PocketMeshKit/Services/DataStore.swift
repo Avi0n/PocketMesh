@@ -363,7 +363,8 @@ public actor DataStore {
 
     /// Save a discovered contact (from NEW_ADVERT push)
     /// These contacts are not yet on the device's contact table
-    public func saveDiscoveredContact(deviceID: UUID, from frame: ContactFrame) throws -> UUID {
+    /// - Returns: Tuple of (contactID, isNew) where isNew is true only if contact was newly created
+    public func saveDiscoveredContact(deviceID: UUID, from frame: ContactFrame) throws -> (contactID: UUID, isNew: Bool) {
         let targetDeviceID = deviceID
         let targetKey = frame.publicKey
         let predicate = #Predicate<Contact> { contact in
@@ -373,19 +374,22 @@ public actor DataStore {
         descriptor.fetchLimit = 1
 
         let contact: Contact
+        let isNew: Bool
         if let existing = try modelContext.fetch(descriptor).first {
             // Update existing discovered contact
             existing.update(from: frame)
             contact = existing
+            isNew = false
         } else {
             // Create new discovered contact
             contact = Contact(deviceID: deviceID, from: frame)
             contact.isDiscovered = true
             modelContext.insert(contact)
+            isNew = true
         }
 
         try modelContext.save()
-        return contact.id
+        return (contactID: contact.id, isNew: isNew)
     }
 
     /// Fetch all discovered (pending) contacts for a device

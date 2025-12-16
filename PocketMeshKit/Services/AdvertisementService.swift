@@ -261,16 +261,18 @@ public actor AdvertisementService {
 
         do {
             let contactFrame = try FrameCodec.decodeContact(from: data)
-            let contactID = try await dataStore.saveDiscoveredContact(deviceID: deviceID, from: contactFrame)
+            let (contactID, isNew) = try await dataStore.saveDiscoveredContact(deviceID: deviceID, from: contactFrame)
             advertHandler?(contactFrame)
 
             // Notify UI of contact update
             await contactUpdatedHandler?()
 
-            // Post notification for new contact (use displayName from saved contact for consistency)
-            let savedContact = try? await dataStore.fetchContact(id: contactID)
-            let contactName = savedContact?.displayName ?? "Unknown Contact"
-            await newContactDiscoveredHandler?(contactName, contactID)
+            // Only post notification for NEW discoveries (not repeat adverts from same contact)
+            if isNew {
+                let savedContact = try? await dataStore.fetchContact(id: contactID)
+                let contactName = savedContact?.displayName ?? "Unknown Contact"
+                await newContactDiscoveredHandler?(contactName, contactID)
+            }
 
             return true
         } catch {
