@@ -576,8 +576,14 @@ struct RoomConversationRow: View {
             .alignmentGuide(.listRowSeparatorLeading) { d in
                 d[.leading]
             }
+
+            // Disclosure chevron to match NavigationLink appearance
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
+        .contentShape(.rect)
     }
 }
 
