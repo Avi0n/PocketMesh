@@ -342,7 +342,7 @@ private struct PublicKeyView: View {
     var body: some View {
         List {
             Section {
-                Text(publicKey.map { String(format: "%02X", $0) }.joined(separator: " "))
+                Text(publicKey.hexString(separator: " "))
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
             } header: {
@@ -353,7 +353,7 @@ private struct PublicKeyView: View {
 
             Section {
                 Button {
-                    UIPasteboard.general.string = publicKey.map { String(format: "%02X", $0) }.joined()
+                    UIPasteboard.general.string = publicKey.hexString()
                 } label: {
                     Label("Copy to Clipboard", systemImage: "doc.on.doc")
                 }

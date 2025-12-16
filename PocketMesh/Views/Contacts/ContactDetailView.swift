@@ -601,7 +601,7 @@ struct ContactDetailView: View {
                 Text("Public Key")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text(currentContact.publicKeyHex)
+                Text(currentContact.publicKey.hexString(separator: " "))
                     .font(.system(.caption, design: .monospaced))
                     .textSelection(.enabled)
             }

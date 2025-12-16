@@ -153,14 +153,14 @@ struct ChannelInfoSheet: View {
                     .foregroundStyle(.secondary)
 
                 HStack {
-                    Text(channel.secret.hexString)
+                    Text(channel.secret.hexString())
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
 
                     Spacer()
 
                     Button("Copy", systemImage: "doc.on.doc") {
-                        UIPasteboard.general.string = channel.secret.hexString
+                        UIPasteboard.general.string = channel.secret.hexString()
                     }
                     .labelStyle(.iconOnly)
                 }
@@ -199,7 +199,7 @@ struct ChannelInfoSheet: View {
 
     private func generateQRCode() -> UIImage? {
         // Format: meshcore://channel/add?name=<name>&secret=<hex>
-        let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString)"
+        let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString())"
 
         let context = CIContext()
         let filter = CIFilter.qrCodeGenerator()

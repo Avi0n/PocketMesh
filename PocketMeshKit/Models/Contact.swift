@@ -252,7 +252,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     }
 
     public var publicKeyHex: String {
-        publicKey.map { String(format: "%02X", $0) }.joined()
+        publicKey.hexString()
     }
 
     /// Converts to a protocol ContactFrame for sending to device

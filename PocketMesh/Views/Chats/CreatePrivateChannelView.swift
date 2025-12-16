@@ -66,7 +66,7 @@ struct CreatePrivateChannelView: View {
             Section {
                 if let secret = generatedSecret {
                     LabeledContent("Secret Key") {
-                        Text(secret.hexString)
+                        Text(secret.hexString())
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
@@ -141,13 +141,13 @@ struct CreatePrivateChannelView: View {
                             .foregroundStyle(.secondary)
 
                         HStack {
-                            Text(secret.hexString)
+                            Text(secret.hexString())
                                 .font(.system(.body, design: .monospaced))
 
                             Spacer()
 
                             Button("Copy", systemImage: "doc.on.doc") {
-                                UIPasteboard.general.string = secret.hexString
+                                UIPasteboard.general.string = secret.hexString()
                             }
                             .labelStyle(.iconOnly)
                         }
@@ -199,7 +199,7 @@ struct CreatePrivateChannelView: View {
         guard let secret = generatedSecret else { return nil }
 
         // Format: meshcore://channel/add?name=<name>&secret=<hex>
-        let urlString = "meshcore://channel/add?name=\(channelName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(secret.hexString)"
+        let urlString = "meshcore://channel/add?name=\(channelName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(secret.hexString())"
 
         let context = CIContext()
         let filter = CIFilter.qrCodeGenerator()
@@ -218,30 +218,6 @@ struct CreatePrivateChannelView: View {
     }
 }
 
-// MARK: - Data Extension for Hex String
-
-extension Data {
-    var hexString: String {
-        map { String(format: "%02X", $0) }.joined()
-    }
-
-    init?(hexString: String) {
-        let hex = hexString.uppercased()
-        guard hex.count % 2 == 0 else { return nil }
-
-        var data = Data()
-        var index = hex.startIndex
-
-        while index < hex.endIndex {
-            let nextIndex = hex.index(index, offsetBy: 2)
-            guard let byte = UInt8(hex[index..<nextIndex], radix: 16) else { return nil }
-            data.append(byte)
-            index = nextIndex
-        }
-
-        self = data
-    }
-}
 
 #Preview {
     NavigationStack {

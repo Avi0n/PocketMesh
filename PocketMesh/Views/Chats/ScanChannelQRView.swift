@@ -90,7 +90,7 @@ struct ScanChannelQRView: View {
                     LabeledContent("Channel Name", value: channel.name)
 
                     LabeledContent("Secret Key") {
-                        Text(channel.secret.hexString)
+                        Text(channel.secret.hexString())
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
