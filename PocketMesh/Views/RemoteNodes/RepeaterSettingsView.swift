@@ -5,11 +5,22 @@ import CoreLocation
 struct RepeaterSettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: RadioField?
+
+    private enum RadioField: Hashable {
+        case frequency
+        case txPower
+    }
 
     let session: RemoteNodeSessionDTO
     @State private var viewModel = RepeaterSettingsViewModel()
     @State private var showRebootConfirmation = false
     @State private var showingLocationPicker = false
+
+    /// Bandwidth options in kHz for CLI protocol (derived from RadioOptions.bandwidthsHz)
+    private var bandwidthOptionsKHz: [Double] {
+        RadioOptions.bandwidthsHz.map { Double($0) / 1000.0 }
+    }
 
     var body: some View {
         Form {
@@ -23,6 +34,14 @@ struct RepeaterSettingsView: View {
         }
         .navigationTitle("Repeater Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                }
+            }
+        }
         .task {
             viewModel.configure(appState: appState, session: session)
             await viewModel.registerHandlers(appState: appState)
@@ -128,51 +147,72 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Frequency")
+                Text("Frequency (MHz)")
                 Spacer()
                 TextField("MHz", value: $viewModel.frequency, format: .number.precision(.fractionLength(3)))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 100)
+                    .focused($focusedField, equals: .frequency)
                     .onChange(of: viewModel.frequency) { _, _ in
                         viewModel.radioSettingsModified = true
                     }
-                Text("MHz")
-                    .foregroundStyle(.secondary)
             }
 
-            Picker("Bandwidth", selection: $viewModel.bandwidth) {
-                Text("62.5 kHz").tag(62.5)
-                Text("125 kHz").tag(125.0)
-                Text("250 kHz").tag(250.0)
-                Text("500 kHz").tag(500.0)
+            Picker("Bandwidth (kHz)", selection: $viewModel.bandwidth) {
+                ForEach(bandwidthOptionsKHz, id: \.self) { bwKHz in
+                    Text("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kHz")
+                        .tag(bwKHz)
+                        .accessibilityLabel("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kilohertz")
+                }
             }
+            .pickerStyle(.menu)
+            .tint(.primary)
+            .accessibilityHint("Lower values increase range but decrease speed")
             .onChange(of: viewModel.bandwidth) { _, _ in
                 viewModel.radioSettingsModified = true
             }
 
             Picker("Spreading Factor", selection: $viewModel.spreadingFactor) {
-                ForEach(7...12, id: \.self) { sf in
-                    Text("SF\(sf)").tag(sf)
+                ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
+                    Text("SF\(sf)")
+                        .tag(sf)
+                        .accessibilityLabel("Spreading factor \(sf)")
                 }
             }
+            .pickerStyle(.menu)
+            .tint(.primary)
+            .accessibilityHint("Higher values increase range but decrease speed")
             .onChange(of: viewModel.spreadingFactor) { _, _ in
                 viewModel.radioSettingsModified = true
             }
 
             Picker("Coding Rate", selection: $viewModel.codingRate) {
-                ForEach(5...8, id: \.self) { cr in
-                    Text("4/\(cr)").tag(cr)
+                ForEach(RadioOptions.codingRates, id: \.self) { cr in
+                    Text("\(cr)")
+                        .tag(cr)
+                        .accessibilityLabel("Coding rate \(cr)")
                 }
             }
+            .pickerStyle(.menu)
+            .tint(.primary)
+            .accessibilityHint("Higher values add error correction but decrease speed")
             .onChange(of: viewModel.codingRate) { _, _ in
                 viewModel.radioSettingsModified = true
             }
 
-            Stepper("TX Power: \(viewModel.txPower) dBm", value: $viewModel.txPower, in: 2...22)
-                .onChange(of: viewModel.txPower) { _, _ in
-                    viewModel.radioSettingsModified = true
-                }
+            HStack {
+                Text("TX Power (dBm)")
+                Spacer()
+                TextField("dBm", value: $viewModel.txPower, format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 60)
+                    .focused($focusedField, equals: .txPower)
+                    .onChange(of: viewModel.txPower) { _, _ in
+                        viewModel.radioSettingsModified = true
+                    }
+            }
 
             // Single Apply button for all radio settings
             Button {
@@ -188,7 +228,6 @@ struct RepeaterSettingsView: View {
                     Spacer()
                 }
             }
-            .buttonStyle(.borderedProminent)
             .disabled(viewModel.isApplying || !viewModel.radioSettingsModified)
         }
     }
