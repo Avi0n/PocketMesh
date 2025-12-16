@@ -260,6 +260,16 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Wire up notification service to message event broadcaster
         messageEventBroadcaster.notificationService = notificationService
 
+        // Configure badge count callback (decoupled from DataStore)
+        notificationService.getBadgeCount = { [weak self] in
+            guard let self else { return (contacts: 0, channels: 0) }
+            do {
+                return try await self.dataStore.getTotalUnreadCounts()
+            } catch {
+                return (contacts: 0, channels: 0)
+            }
+        }
+
         // Wire up message service for send confirmation handling
         messageEventBroadcaster.messageService = messageService
 
@@ -347,7 +357,7 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             self.navigateToChat(with: contact)
         }
 
-        // Set up mark as read handler
+        // Set up mark as read handler for direct messages
         // The callback is @MainActor @Sendable, so it executes on MainActor.
         // We can access self directly since we're on MainActor.
         notificationService.onMarkAsRead = { [weak self] contactID, messageID in
@@ -358,6 +368,38 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 try await self.dataStore.markMessageAsRead(id: messageID)
                 // Clear unread count for the contact
                 try await self.dataStore.clearUnreadCount(contactID: contactID)
+
+                // Remove the delivered notification
+                self.notificationService.removeDeliveredNotification(messageID: messageID)
+
+                // Update badge count from database
+                await self.notificationService.updateBadgeCount()
+
+                // Trigger UI refresh
+                self.messageEventBroadcaster.conversationRefreshTrigger += 1
+            } catch {
+                // Silently ignore - mark as read is not critical
+            }
+        }
+
+        // Set up channel mark as read handler
+        notificationService.onChannelMarkAsRead = { [weak self] deviceID, channelIndex, messageID in
+            guard let self else { return }
+            do {
+                // Mark the specific message as read
+                try await self.dataStore.markMessageAsRead(id: messageID)
+
+                // Clear channel unread count directly by deviceID + index (more efficient)
+                try await self.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
+
+                // Remove the delivered notification
+                self.notificationService.removeDeliveredNotification(messageID: messageID)
+
+                // Update badge count from database
+                await self.notificationService.updateBadgeCount()
+
+                // Trigger UI refresh
+                self.messageEventBroadcaster.conversationRefreshTrigger += 1
             } catch {
                 // Silently ignore - mark as read is not critical
             }
@@ -513,6 +555,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
 
         // Sync connection state with actual BLE state
         await syncConnectionState()
+
+        // Recalculate badge from database
+        await notificationService.updateBadgeCount()
 
         // Force immediate check for expired ACKs when returning from background
         // This catches any timeouts that occurred while the app was suspended

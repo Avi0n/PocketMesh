@@ -143,6 +143,10 @@ final class ChatViewModel {
         guard let dataStore else { return }
 
         currentContact = contact
+
+        // Track active conversation for notification suppression
+        notificationService?.activeContactID = contact.id
+
         isLoading = true
         errorMessage = nil
 
@@ -151,6 +155,9 @@ final class ChatViewModel {
 
             // Clear unread count
             try await dataStore.clearUnreadCount(contactID: contact.id)
+
+            // Update app badge
+            await notificationService?.updateBadgeCount()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -223,6 +230,12 @@ final class ChatViewModel {
 
         currentChannel = channel
         currentContact = nil
+
+        // Track active channel for notification suppression
+        notificationService?.activeContactID = nil
+        notificationService?.activeChannelIndex = channel.index
+        notificationService?.activeChannelDeviceID = channel.deviceID
+
         isLoading = true
         errorMessage = nil
 
@@ -231,6 +244,9 @@ final class ChatViewModel {
 
             // Clear unread count
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+
+            // Update app badge
+            await notificationService?.updateBadgeCount()
         } catch {
             errorMessage = error.localizedDescription
         }

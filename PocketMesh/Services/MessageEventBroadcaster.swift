@@ -34,6 +34,10 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
 
+    /// Triggers conversation list refresh (increment to force reload)
+    /// Use this for state changes like mark-as-read, not for new messages
+    var conversationRefreshTrigger: Int = 0
+
     /// Reference to notification service for posting notifications
     var notificationService: NotificationService?
 
@@ -69,21 +73,20 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         didReceiveDirectMessage message: MessageDTO,
         from contact: ContactDTO
     ) async {
+        // Update state on MainActor
         await MainActor.run {
             self.latestMessage = message
             self.latestEvent = .directMessageReceived(message: message, contact: contact)
             self.newMessageCount += 1
-
-            // Post notification
-            Task {
-                await self.notificationService?.postDirectMessageNotification(
-                    from: contact.displayName,
-                    contactID: contact.id,
-                    messageText: message.text,
-                    messageID: message.id
-                )
-            }
         }
+
+        // Post notification directly (NotificationService is @MainActor)
+        await notificationService?.postDirectMessageNotification(
+            from: contact.displayName,
+            contactID: contact.id,
+            messageText: message.text,
+            messageID: message.id
+        )
     }
 
     nonisolated public func messagePollingService(
@@ -91,22 +94,27 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         didReceiveChannelMessage message: MessageDTO,
         channelIndex: UInt8
     ) async {
-        await MainActor.run {
-            self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
-            self.newMessageCount += 1
+        // All operations on MainActor, but properly awaited (no nested Task)
+        await handleChannelMessage(message, channelIndex: channelIndex)
+    }
 
-            // Post notification
-            Task {
-                let channelName = await self.channelNameLookup?(message.deviceID, channelIndex) ?? "Channel \(channelIndex)"
-                await self.notificationService?.postChannelMessageNotification(
-                    channelName: channelName,
-                    channelIndex: channelIndex,
-                    senderName: message.senderNodeName,  // CHANGED: Use parsed sender name instead of nil
-                    messageText: message.text,
-                    messageID: message.id
-                )
-            }
-        }
+    /// Helper to handle channel message on MainActor (enables proper async/await)
+    @MainActor
+    private func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) async {
+        // Update state
+        self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
+        self.newMessageCount += 1
+
+        // Resolve channel name and post notification directly (no Task wrapper)
+        let channelName = await channelNameLookup?(message.deviceID, channelIndex) ?? "Channel \(channelIndex)"
+        await notificationService?.postChannelMessageNotification(
+            channelName: channelName,
+            channelIndex: channelIndex,
+            deviceID: message.deviceID,
+            senderName: message.senderNodeName,
+            messageText: message.text,
+            messageID: message.id
+        )
     }
 
     nonisolated public func messagePollingService(

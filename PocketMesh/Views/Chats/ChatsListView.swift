@@ -102,6 +102,11 @@ struct ChatsListView: View {
                     await loadConversations()
                 }
             }
+            .onChange(of: appState.messageEventBroadcaster.conversationRefreshTrigger) { _, _ in
+                Task {
+                    await loadConversations()
+                }
+            }
             .onChange(of: appState.connectionState) { oldState, newState in
                 // Refresh and sync when device reconnects (state changes to .ready)
                 if newState == .ready && oldState != .ready {

@@ -48,6 +48,11 @@ public final class NotificationService: NSObject {
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onMarkAsRead: (@MainActor @Sendable (_ contactID: UUID, _ messageID: UUID) async -> Void)?
 
+    /// Callback for when mark as read action is triggered on a channel message
+    /// Includes deviceID to correctly identify the channel across multiple connected devices
+    /// CRITICAL: Must be @MainActor - see onQuickReply comment.
+    public var onChannelMarkAsRead: (@MainActor @Sendable (_ deviceID: UUID, _ channelIndex: UInt8, _ messageID: UUID) async -> Void)?
+
     /// Whether notifications are enabled by user preference
     private var notificationsEnabled: Bool {
         get {
@@ -60,6 +65,32 @@ public final class NotificationService: NSObject {
 
     /// Badge count
     public private(set) var badgeCount: Int = 0
+
+    // MARK: - Active Conversation Tracking
+
+    /// Currently active contact ID (user is viewing this chat)
+    public var activeContactID: UUID?
+
+    /// Currently active channel index (user is viewing this channel)
+    public var activeChannelIndex: UInt8?
+
+    /// Device ID for the active channel
+    public var activeChannelDeviceID: UUID?
+
+    // MARK: - Badge Management
+
+    /// Callback to get total unread count from data layer
+    /// Returns (contactUnread, channelUnread) tuple for preference-aware calculation
+    public var getBadgeCount: (@Sendable () async -> (contacts: Int, channels: Int))?
+
+    /// Cached notification preferences (refreshed on each badge update)
+    private var cachedPreferences: NotificationPreferences?
+
+    /// Last time preferences were refreshed
+    private var preferencesLastRefreshed: Date = .distantPast
+
+    /// Pending badge update task (for debouncing rapid updates)
+    private var pendingBadgeUpdate: Task<Void, Never>?
 
     /// Stored draft messages for contacts (keyed by contactID string).
     /// Used when quick reply fails due to disconnection.
@@ -189,10 +220,13 @@ public final class NotificationService: NSObject {
     ) async {
         guard isAuthorized && notificationsEnabled else { return }
 
+        // Check granular preference (uses cached preferences)
+        guard preferences.contactMessagesEnabled else { return }
+
         let content = UNMutableNotificationContent()
         content.title = contactName
         content.body = messageText
-        content.sound = .default
+        content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.directMessage.rawValue
         content.userInfo = [
             "contactID": contactID.uuidString,
@@ -201,8 +235,10 @@ public final class NotificationService: NSObject {
         ]
         content.threadIdentifier = contactID.uuidString
 
-        badgeCount += 1
-        content.badge = NSNumber(value: badgeCount)
+        // Use current badge count (will be updated after posting)
+        if preferences.badgeEnabled {
+            content.badge = NSNumber(value: badgeCount + 1)
+        }
 
         let request = UNNotificationRequest(
             identifier: messageID.uuidString,
@@ -210,10 +246,16 @@ public final class NotificationService: NSObject {
             trigger: nil
         )
 
+        // Post notification immediately - don't block on badge calculation
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
             // Notification failed to post - log but don't throw
+        }
+
+        // Update badge from database AFTER posting (non-blocking for notification display)
+        if preferences.badgeEnabled {
+            await updateBadgeCount()
         }
     }
 
@@ -221,11 +263,15 @@ public final class NotificationService: NSObject {
     public func postChannelMessageNotification(
         channelName: String,
         channelIndex: UInt8,
+        deviceID: UUID,
         senderName: String?,
         messageText: String,
         messageID: UUID
     ) async {
         guard isAuthorized && notificationsEnabled else { return }
+
+        // Check granular preference (uses cached preferences)
+        guard preferences.channelMessagesEnabled else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "#\(channelName)"
@@ -234,17 +280,20 @@ public final class NotificationService: NSObject {
         } else {
             content.body = messageText
         }
-        content.sound = .default
+        content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.channelMessage.rawValue
         content.userInfo = [
             "channelIndex": Int(channelIndex),
+            "deviceID": deviceID.uuidString,
             "messageID": messageID.uuidString,
             "type": "channelMessage"
         ]
-        content.threadIdentifier = "channel-\(channelIndex)"
+        content.threadIdentifier = "channel-\(deviceID.uuidString)-\(channelIndex)"
 
-        badgeCount += 1
-        content.badge = NSNumber(value: badgeCount)
+        // Use current badge count (will be updated after posting)
+        if preferences.badgeEnabled {
+            content.badge = NSNumber(value: badgeCount + 1)
+        }
 
         let request = UNNotificationRequest(
             identifier: messageID.uuidString,
@@ -252,10 +301,16 @@ public final class NotificationService: NSObject {
             trigger: nil
         )
 
+        // Post notification immediately
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
             // Notification failed to post
+        }
+
+        // Update badge from database AFTER posting
+        if preferences.badgeEnabled {
+            await updateBadgeCount()
         }
     }
 
@@ -268,6 +323,10 @@ public final class NotificationService: NSObject {
     ) async {
         guard isAuthorized && notificationsEnabled else { return }
 
+        // Check granular preference
+        let preferences = NotificationPreferences()
+        guard preferences.roomMessagesEnabled else { return }
+
         let content = UNMutableNotificationContent()
         content.title = roomName
         if let sender = senderName {
@@ -275,7 +334,7 @@ public final class NotificationService: NSObject {
         } else {
             content.body = messageText
         }
-        content.sound = .default
+        content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.roomMessage.rawValue
         content.userInfo = [
             "roomName": roomName,
@@ -307,10 +366,14 @@ public final class NotificationService: NSObject {
     ) async {
         guard isAuthorized && notificationsEnabled else { return }
 
+        // Check granular preference
+        let preferences = NotificationPreferences()
+        guard preferences.newContactDiscoveredEnabled else { return }
+
         let content = UNMutableNotificationContent()
         content.title = "New Contact Discovered"
         content.body = "\(contactName) is now available on the mesh"
-        content.sound = .default
+        content.sound = preferences.soundEnabled ? .default : nil
         content.userInfo = [
             "contactID": contactID.uuidString,
             "type": "newContact"
@@ -417,6 +480,94 @@ public final class NotificationService: NSObject {
         return draft
     }
 
+    // MARK: - Badge Management Methods
+
+    /// Refresh preferences if stale (older than 5 seconds)
+    /// Note: 5s cache prevents excessive UserDefaults reads during rapid message arrival
+    private func refreshPreferencesIfNeeded() {
+        let now = Date()
+        if cachedPreferences == nil || now.timeIntervalSince(preferencesLastRefreshed) > 5.0 {
+            cachedPreferences = NotificationPreferences()
+            preferencesLastRefreshed = now
+        }
+    }
+
+    /// Get current preferences (uses cache)
+    private var preferences: NotificationPreferences {
+        refreshPreferencesIfNeeded()
+        return cachedPreferences ?? NotificationPreferences()
+    }
+
+    /// Updates the app badge count from the database.
+    /// Uses 100ms debounce to handle rapid-fire message arrivals efficiently.
+    public func updateBadgeCount() async {
+        // Cancel any pending update to debounce rapid arrivals
+        pendingBadgeUpdate?.cancel()
+
+        // Create new debounced update
+        pendingBadgeUpdate = Task {
+            // Wait 100ms before actually updating (allows batching multiple arrivals)
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled else { return }
+
+            await performBadgeUpdate()
+        }
+
+        // Wait for the update to complete
+        await pendingBadgeUpdate?.value
+    }
+
+    /// Performs the actual badge update (called by debounced updateBadgeCount)
+    private func performBadgeUpdate() async {
+        guard let getBadgeCount else {
+            return
+        }
+
+        refreshPreferencesIfNeeded()
+        let prefs = preferences
+
+        // If badge is disabled, clear it and return
+        guard prefs.badgeEnabled else {
+            badgeCount = 0
+            do {
+                try await UNUserNotificationCenter.current().setBadgeCount(0)
+            } catch {
+                // Failed to clear badge
+            }
+            return
+        }
+
+        // Get counts from data layer via callback
+        let counts = await getBadgeCount()
+
+        var totalUnread = 0
+
+        // Only include contact messages if preference enabled
+        if prefs.contactMessagesEnabled {
+            totalUnread += counts.contacts
+        }
+
+        // Only include channel messages if preference enabled
+        if prefs.channelMessagesEnabled {
+            totalUnread += counts.channels
+        }
+
+        // Update badge
+        badgeCount = totalUnread
+        do {
+            try await UNUserNotificationCenter.current().setBadgeCount(totalUnread)
+        } catch {
+            // Failed to set badge count
+        }
+    }
+
+    /// Remove a delivered notification by message ID
+    public func removeDeliveredNotification(messageID: UUID) {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(
+            withIdentifiers: [messageID.uuidString]
+        )
+    }
+
 }
 
 // MARK: - UNUserNotificationCenterDelegate
@@ -429,7 +580,28 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        // Show banner and sound even when app is active
+        let userInfo = notification.request.content.userInfo
+
+        // Check if this is a direct message notification for the active chat
+        if let contactIDString = userInfo["contactID"] as? String,
+           let contactID = UUID(uuidString: contactIDString),
+           contactID == activeContactID {
+            // User is viewing this chat - don't show notification
+            return []
+        }
+
+        // Check if this is a channel message notification for the active channel
+        // Must check BOTH channelIndex AND deviceID for multi-device scenarios
+        if let channelIndex = userInfo["channelIndex"] as? Int,
+           let deviceIDString = userInfo["deviceID"] as? String,
+           let deviceID = UUID(uuidString: deviceIDString),
+           UInt8(channelIndex) == activeChannelIndex,
+           deviceID == activeChannelDeviceID {
+            // User is viewing this channel - don't show notification
+            return []
+        }
+
+        // Show banner and sound for other notifications
         return [.banner, .sound, .badge]
     }
 
@@ -456,14 +628,21 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
 
         case NotificationAction.markRead.rawValue:
             // Handle mark as read
-            guard let contactIDString = userInfo["contactID"] as? String,
-                  let contactID = UUID(uuidString: contactIDString),
-                  let messageIDString = userInfo["messageID"] as? String,
-                  let messageID = UUID(uuidString: messageIDString) else {
-                return
-            }
+            let messageIDString = userInfo["messageID"] as? String
+            let messageID = messageIDString.flatMap { UUID(uuidString: $0) }
 
-            await onMarkAsRead?(contactID, messageID)
+            if let contactIDString = userInfo["contactID"] as? String,
+               let contactID = UUID(uuidString: contactIDString),
+               let messageID {
+                // Direct message mark as read
+                await onMarkAsRead?(contactID, messageID)
+            } else if let channelIndex = userInfo["channelIndex"] as? Int,
+                      let deviceIDString = userInfo["deviceID"] as? String,
+                      let deviceID = UUID(uuidString: deviceIDString),
+                      let messageID {
+                // Channel message mark as read (includes deviceID for multi-device)
+                await onChannelMarkAsRead?(deviceID, UInt8(channelIndex), messageID)
+            }
 
         case UNNotificationDefaultActionIdentifier:
             // User tapped the notification

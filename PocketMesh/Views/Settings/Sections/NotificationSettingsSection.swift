@@ -1,8 +1,9 @@
+import PocketMeshKit
 import SwiftUI
 
 /// Notification toggle settings
 struct NotificationSettingsSection: View {
-    @State private var preferences = NotificationPreferences()
+    @State private var preferences = NotificationPreferencesStore()
 
     var body: some View {
         Section {

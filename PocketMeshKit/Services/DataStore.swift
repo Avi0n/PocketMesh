@@ -772,6 +772,65 @@ public actor DataStore {
         }
     }
 
+    /// Clear unread count for a channel by deviceID and index
+    /// More efficient than fetching the full channel DTO when only clearing unread
+    public func clearChannelUnreadCount(deviceID: UUID, index: UInt8) throws {
+        let targetDeviceID = deviceID
+        let targetIndex = index
+        let predicate = #Predicate<Channel> { channel in
+            channel.deviceID == targetDeviceID && channel.index == targetIndex
+        }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let channel = try modelContext.fetch(descriptor).first {
+            channel.unreadCount = 0
+            try modelContext.save()
+        }
+    }
+
+    // MARK: - Badge Count Support
+
+    /// Efficiently calculate total unread counts for badge display
+    /// Returns tuple of (contactUnread, channelUnread) for preference-aware calculation
+    /// Optimization: Only fetches entities with unread > 0 to minimize memory usage
+    public func getTotalUnreadCounts() throws -> (contacts: Int, channels: Int) {
+        // Only fetch contacts with unread messages (reduces memory pressure)
+        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 }
+        let contactDescriptor = FetchDescriptor<Contact>(predicate: contactPredicate)
+        let contactsWithUnread = try modelContext.fetch(contactDescriptor)
+        let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
+
+        // Only fetch channels with unread messages
+        let channelPredicate = #Predicate<Channel> { $0.unreadCount > 0 }
+        let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
+        let channelsWithUnread = try modelContext.fetch(channelDescriptor)
+        let channelTotal = channelsWithUnread.reduce(0) { $0 + $1.unreadCount }
+
+        return (contacts: contactTotal, channels: channelTotal)
+    }
+
+    /// Get total unread count for a contact
+    public func getUnreadCount(contactID: UUID) throws -> Int {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { contact in
+            contact.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first?.unreadCount ?? 0
+    }
+
+    /// Get total unread count for a channel
+    public func getChannelUnreadCount(channelID: UUID) throws -> Int {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first?.unreadCount ?? 0
+    }
+
     // MARK: - Database Warm-up
 
     /// Forces SwiftData to initialize the database.

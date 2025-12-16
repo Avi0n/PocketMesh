@@ -59,6 +59,9 @@ struct ChatView: View {
             viewModel.loadDraftIfExists()
         }
         .onDisappear {
+            // Clear active conversation for notification suppression
+            appState.notificationService.activeContactID = nil
+
             // Refresh parent conversation list when leaving
             if let parent = parentViewModel {
                 Task {

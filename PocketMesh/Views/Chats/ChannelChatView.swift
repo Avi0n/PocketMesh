@@ -52,6 +52,10 @@ struct ChannelChatView: View {
             await viewModel.loadChannelMessages(for: channel)
         }
         .onDisappear {
+            // Clear active channel for notification suppression
+            appState.notificationService.activeChannelIndex = nil
+            appState.notificationService.activeChannelDeviceID = nil
+
             // Refresh parent conversation list when leaving
             if let parent = parentViewModel {
                 Task {

@@ -1,9 +1,29 @@
 import Foundation
 
-/// Centralized notification preferences storage
+/// Thread-safe notification preferences (read-only snapshot from UserDefaults)
+public struct NotificationPreferences: Sendable {
+    public let contactMessagesEnabled: Bool
+    public let channelMessagesEnabled: Bool
+    public let roomMessagesEnabled: Bool
+    public let newContactDiscoveredEnabled: Bool
+    public let soundEnabled: Bool
+    public let badgeEnabled: Bool
+
+    public init() {
+        let defaults = UserDefaults.standard
+        self.contactMessagesEnabled = defaults.object(forKey: "notifyContactMessages") as? Bool ?? true
+        self.channelMessagesEnabled = defaults.object(forKey: "notifyChannelMessages") as? Bool ?? true
+        self.roomMessagesEnabled = defaults.object(forKey: "notifyRoomMessages") as? Bool ?? true
+        self.newContactDiscoveredEnabled = defaults.object(forKey: "notifyNewContacts") as? Bool ?? false
+        self.soundEnabled = defaults.object(forKey: "notificationSoundEnabled") as? Bool ?? true
+        self.badgeEnabled = defaults.object(forKey: "notificationBadgeEnabled") as? Bool ?? true
+    }
+}
+
+/// Observable store for notification preferences (used by Settings UI for two-way binding)
 @MainActor
 @Observable
-public final class NotificationPreferences {
+public final class NotificationPreferencesStore {
     private let defaults = UserDefaults.standard
 
     // MARK: - Message Notifications
