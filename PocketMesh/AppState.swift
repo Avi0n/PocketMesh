@@ -79,13 +79,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Counter for sync/settings operations (on-demand) - shows pill
     private var syncActivityCount: Int = 0
 
-    /// Counter for message polling operations (event-driven) - shows pill
-    private var pollingActivityCount: Int = 0
-
     /// Whether the syncing pill should be displayed
-    /// Only true for on-demand (sync/settings) and event-driven (polling) operations
+    /// Only true for on-demand operations (contact sync, channel sync, settings changes)
     var shouldShowSyncingPill: Bool {
-        syncActivityCount > 0 || pollingActivityCount > 0
+        syncActivityCount > 0
     }
 
     // MARK: - Data Services
@@ -975,18 +972,6 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Set the delegate for message events
         await messagePollingService.setDelegate(messageEventBroadcaster)
 
-        // Set up polling activity handler for syncing pill
-        await messagePollingService.setPollingActivityHandler { [weak self] isPolling in
-            Task { @MainActor in
-                guard let self else { return }
-                if isPolling {
-                    self.pollingActivityCount += 1
-                } else {
-                    self.pollingActivityCount -= 1
-                }
-            }
-        }
-
         // Connect BLE push notifications to the polling service and advertisement service
         await bleService.setResponseHandler { [weak self] data in
             guard let self else { return }
@@ -1169,14 +1154,6 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     func withSyncActivity<T>(_ operation: () async throws -> T) async rethrows -> T {
         syncActivityCount += 1
         defer { syncActivityCount -= 1 }
-        return try await operation()
-    }
-
-    /// Execute an operation while tracking it as polling activity (shows pill)
-    /// Use for: message polling when device signals waiting messages
-    func withPollingActivity<T>(_ operation: () async throws -> T) async rethrows -> T {
-        pollingActivityCount += 1
-        defer { pollingActivityCount -= 1 }
         return try await operation()
     }
 
