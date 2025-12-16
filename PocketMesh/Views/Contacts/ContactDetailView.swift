@@ -318,6 +318,7 @@ struct ContactDetailView: View {
 
                 // Admin Access - navigates to settings view after auth
                 Button {
+                    adminSession = nil  // Clear stale session before presenting sheet
                     showRepeaterAdminAuth = true
                 } label: {
                     Label("Admin Access", systemImage: "gearshape.2")
