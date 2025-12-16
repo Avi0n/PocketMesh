@@ -408,8 +408,7 @@ struct ContactDetailView: View {
                 HStack {
                     Text("Last Advert")
                     Spacer()
-                    Text(Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)), style: .relative)
-                        .foregroundStyle(.secondary)
+                    ConversationTimestamp(date: Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)))
                 }
             }
 
