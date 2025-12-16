@@ -35,7 +35,12 @@ struct NodeSettingsSection: View {
                     UIPasteboard.general.string = hex
                 } label: {
                     HStack {
-                        Label("Public Key", systemImage: "key")
+                        Label {
+                            Text("Public Key")
+                        } icon: {
+                            Image(systemName: "key")
+                                .foregroundStyle(.tint)
+                        }
                         Spacer()
                         Text("Copy")
                             .foregroundStyle(.tint)
@@ -49,7 +54,12 @@ struct NodeSettingsSection: View {
                 showingLocationPicker = true
             } label: {
                 HStack {
-                    Label("Set Location", systemImage: "mappin.and.ellipse")
+                    Label {
+                        Text("Set Location")
+                    } icon: {
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(.tint)
+                    }
                     Spacer()
                     if let device = appState.connectedDevice,
                        device.latitude != 0 || device.longitude != 0 {

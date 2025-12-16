@@ -40,7 +40,12 @@ struct SettingsView: View {
                             showingAdvancedSettings = true
                         } label: {
                             HStack {
-                                Label("Advanced Settings", systemImage: "gearshape.2")
+                                Label {
+                                    Text("Advanced Settings")
+                                } icon: {
+                                    Image(systemName: "gearshape.2")
+                                        .foregroundStyle(.tint)
+                                }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption)

@@ -12,7 +12,12 @@ struct AboutSection: View {
 
             Link(destination: URL(string: "https://meshcore.co.uk")!) {
                 HStack {
-                    Label("MeshCore Website", systemImage: "globe")
+                    Label {
+                        Text("MeshCore Website")
+                    } icon: {
+                        Image(systemName: "globe")
+                            .foregroundStyle(.tint)
+                    }
                     Spacer()
                     Image(systemName: "arrow.up.right")
                         .font(.caption)
