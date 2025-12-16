@@ -79,6 +79,9 @@ final class RepeaterStatusViewModel {
     /// Timeout task for neighbors request
     private var neighborsTimeoutTask: Task<Void, Never>?
 
+    /// Timeout task for telemetry request
+    private var telemetryTimeoutTask: Task<Void, Never>?
+
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
@@ -174,14 +177,26 @@ final class RepeaterStatusViewModel {
 
         self.session = session
         isLoadingTelemetry = true
-        // Note: isLoadingTelemetry stays true until response arrives via handler
+
+        // Start timeout
+        telemetryTimeoutTask?.cancel()
+        telemetryTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.requestTimeout)
+            guard !Task.isCancelled else { return }
+            await MainActor.run { [weak self] in
+                if self?.isLoadingTelemetry == true && self?.telemetry == nil {
+                    self?.isLoadingTelemetry = false
+                }
+            }
+        }
 
         do {
             try await repeaterAdminService.requestTelemetry(sessionID: session.id)
             // Response arrives via push notification - handler will set isLoadingTelemetry = false
         } catch {
             errorMessage = error.localizedDescription
-            isLoadingTelemetry = false  // Only reset on error
+            isLoadingTelemetry = false
+            telemetryTimeoutTask?.cancel()
         }
     }
 
@@ -192,6 +207,7 @@ final class RepeaterStatusViewModel {
               response.publicKeyPrefix == expectedPrefix else {
             return  // Ignore responses for other sessions
         }
+        telemetryTimeoutTask?.cancel()  // Cancel timeout on success
         self.telemetry = response
         self.isLoadingTelemetry = false
     }

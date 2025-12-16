@@ -36,14 +36,21 @@ struct RepeaterStatusView: View {
             .task {
                 viewModel.configure(appState: appState)
                 await viewModel.registerHandlers(appState: appState)
-                await viewModel.requestStatus(for: session)
-                await viewModel.requestNeighbors(for: session)
-                await viewModel.requestTelemetry(for: session)
+
+                // Fire all requests in parallel
+                async let statusTask: () = viewModel.requestStatus(for: session)
+                async let neighborsTask: () = viewModel.requestNeighbors(for: session)
+                async let telemetryTask: () = viewModel.requestTelemetry(for: session)
+
+                // Wait for all to complete (or timeout individually)
+                _ = await (statusTask, neighborsTask, telemetryTask)
             }
             .refreshable {
-                await viewModel.requestStatus(for: session)
-                await viewModel.requestNeighbors(for: session)
-                await viewModel.requestTelemetry(for: session)
+                async let statusTask: () = viewModel.requestStatus(for: session)
+                async let neighborsTask: () = viewModel.requestNeighbors(for: session)
+                async let telemetryTask: () = viewModel.requestTelemetry(for: session)
+
+                _ = await (statusTask, neighborsTask, telemetryTask)
             }
         }
         .presentationDetents([.medium, .large])
@@ -170,9 +177,11 @@ struct RepeaterStatusView: View {
 
     private func refresh() {
         Task {
-            await viewModel.requestStatus(for: session)
-            await viewModel.requestNeighbors(for: session)
-            await viewModel.requestTelemetry(for: session)
+            async let statusTask: () = viewModel.requestStatus(for: session)
+            async let neighborsTask: () = viewModel.requestNeighbors(for: session)
+            async let telemetryTask: () = viewModel.requestTelemetry(for: session)
+
+            _ = await (statusTask, neighborsTask, telemetryTask)
         }
     }
 }
