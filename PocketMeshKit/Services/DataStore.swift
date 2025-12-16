@@ -215,11 +215,11 @@ public actor DataStore {
 
     // MARK: - Contact Operations
 
-    /// Fetch all contacts for a device
+    /// Fetch all confirmed contacts for a device (excludes discovered contacts)
     public func fetchContacts(deviceID: UUID) throws -> [ContactDTO] {
         let targetDeviceID = deviceID
         let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID
+            contact.deviceID == targetDeviceID && contact.isDiscovered == false
         }
         let descriptor = FetchDescriptor(
             predicate: predicate,
@@ -229,11 +229,11 @@ public actor DataStore {
         return contacts.map { ContactDTO(from: $0) }
     }
 
-    /// Fetch contacts with recent messages (for chat list)
+    /// Fetch contacts with recent messages (for chat list, excludes discovered contacts)
     public func fetchConversations(deviceID: UUID) throws -> [ContactDTO] {
         let targetDeviceID = deviceID
         let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID && contact.lastMessageDate != nil
+            contact.deviceID == targetDeviceID && contact.lastMessageDate != nil && contact.isDiscovered == false
         }
         let descriptor = FetchDescriptor(
             predicate: predicate,
@@ -357,6 +357,62 @@ public actor DataStore {
         }
         if let contact = try modelContext.fetch(FetchDescriptor(predicate: predicate)).first {
             modelContext.delete(contact)
+            try modelContext.save()
+        }
+    }
+
+    /// Save a discovered contact (from NEW_ADVERT push)
+    /// These contacts are not yet on the device's contact table
+    public func saveDiscoveredContact(deviceID: UUID, from frame: ContactFrame) throws -> UUID {
+        let targetDeviceID = deviceID
+        let targetKey = frame.publicKey
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID && contact.publicKey == targetKey
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        let contact: Contact
+        if let existing = try modelContext.fetch(descriptor).first {
+            // Update existing discovered contact
+            existing.update(from: frame)
+            contact = existing
+        } else {
+            // Create new discovered contact
+            contact = Contact(deviceID: deviceID, from: frame)
+            contact.isDiscovered = true
+            modelContext.insert(contact)
+        }
+
+        try modelContext.save()
+        return contact.id
+    }
+
+    /// Fetch all discovered (pending) contacts for a device
+    public func fetchDiscoveredContacts(deviceID: UUID) throws -> [ContactDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID && contact.isDiscovered == true
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.name)]
+        )
+        let contacts = try modelContext.fetch(descriptor)
+        return contacts.map { ContactDTO(from: $0) }
+    }
+
+    /// Mark a discovered contact as confirmed (after adding to device)
+    public func confirmContact(id: UUID) throws {
+        let targetID = id
+        let predicate = #Predicate<Contact> { contact in
+            contact.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let contact = try modelContext.fetch(descriptor).first {
+            contact.isDiscovered = false
             try modelContext.save()
         }
     }

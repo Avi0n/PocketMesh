@@ -57,6 +57,10 @@ public final class Contact {
     /// Unread message count
     public var unreadCount: Int
 
+    /// Whether this contact was discovered via advertisement but not yet added to device
+    /// Contacts from NEW_ADVERT push have this set to true until explicitly added
+    public var isDiscovered: Bool
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -74,7 +78,8 @@ public final class Contact {
         isBlocked: Bool = false,
         isFavorite: Bool = false,
         lastMessageDate: Date? = nil,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isDiscovered: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -93,6 +98,7 @@ public final class Contact {
         self.isFavorite = isFavorite
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.isDiscovered = isDiscovered
     }
 
     /// Creates a Contact from a protocol ContactFrame
@@ -202,6 +208,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let isFavorite: Bool
     public let lastMessageDate: Date?
     public let unreadCount: Int
+    public let isDiscovered: Bool
 
     public init(from contact: Contact) {
         self.id = contact.id
@@ -221,6 +228,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isFavorite = contact.isFavorite
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
+        self.isDiscovered = contact.isDiscovered
     }
 
     public var type: ContactType {
@@ -245,5 +253,21 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
 
     public var publicKeyHex: String {
         publicKey.map { String(format: "%02X", $0) }.joined()
+    }
+
+    /// Converts to a protocol ContactFrame for sending to device
+    public func toContactFrame() -> ContactFrame {
+        ContactFrame(
+            publicKey: publicKey,
+            type: type,
+            flags: flags,
+            outPathLength: outPathLength,
+            outPath: outPath,
+            name: name,
+            lastAdvertTimestamp: lastAdvertTimestamp,
+            latitude: latitude,
+            longitude: longitude,
+            lastModified: lastModified
+        )
     }
 }

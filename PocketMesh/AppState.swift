@@ -74,6 +74,17 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Contact sync progress (current, total)
     var contactsSyncProgress: (Int, Int)?
 
+    // MARK: - Contact Discovery Sync Debouncing
+
+    /// Device ID pending sync (for debouncing rapid ADVERT pushes)
+    private var pendingSyncDeviceID: UUID?
+
+    /// Task for debounced sync (cancelled if new ADVERT arrives within debounce window)
+    private var syncDebounceTask: Task<Void, Never>?
+
+    /// Recently notified contact public keys (prevents duplicate notifications)
+    private var recentlyNotifiedContactKeys: Set<Data> = []
+
     // MARK: - Activity Tracking
 
     /// Counter for sync/settings operations (on-demand) - shows pill
@@ -139,6 +150,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
 
     /// Room session to navigate to in chat (for cross-tab navigation after room join)
     var pendingRoomSession: RemoteNodeSessionDTO?
+
+    /// Whether to navigate to Discovery page (for new contact notification tap)
+    var pendingDiscoveryNavigation: Bool = false
 
     // MARK: - Device Persistence Keys
 
@@ -244,6 +258,44 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                     }
                 } catch {
                     // Silently ignore fetch failures - contact will update on next sync
+                }
+            }
+
+            // Wire up contact update events from AdvertisementService
+            await advertisementService.setContactUpdatedHandler { [weak self] in
+                await MainActor.run {
+                    self?.messageEventBroadcaster.handleContactsUpdated()
+                }
+            }
+
+            // MARK: - Contact Discovery Handlers
+
+            // Wire up new contact notification events from AdvertisementService
+            await advertisementService.setNewContactDiscoveredHandler { [weak self] contactName, contactID in
+                await self?.notificationService.postNewContactNotification(
+                    contactName: contactName,
+                    contactID: contactID
+                )
+            }
+
+            // Wire up contact sync requests from AdvertisementService (for auto-add mode)
+            // Debounced: waits 500ms to coalesce rapid discoveries before syncing
+            await advertisementService.setContactSyncRequestHandler { [weak self] deviceID in
+                guard let self else { return }
+
+                await MainActor.run {
+                    // Cancel any pending sync request (coalesce rapid discoveries)
+                    self.syncDebounceTask?.cancel()
+                    self.pendingSyncDeviceID = deviceID
+
+                    // Debounce: wait 500ms before syncing
+                    self.syncDebounceTask = Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(500))
+                        guard !Task.isCancelled, let deviceID = self.pendingSyncDeviceID else { return }
+                        self.pendingSyncDeviceID = nil
+
+                        await self.performDebouncedContactSync(deviceID: deviceID)
+                    }
                 }
             }
         }
@@ -355,6 +407,21 @@ public final class AppState: AccessorySetupKitServiceDelegate {
 
             // Navigate to chat - we're already on MainActor, so just call directly
             self.navigateToChat(with: contact)
+        }
+
+        // Set up new contact notification tap handler
+        // Navigate to Discovery page if auto-add is disabled, otherwise Contacts page
+        notificationService.onNewContactNotificationTapped = { [weak self] _ in
+            guard let self else { return }
+
+            // Check auto-add setting: manualAddContacts = true means auto-add is disabled
+            if self.connectedDevice?.manualAddContacts == true {
+                // Auto-add disabled: navigate to Discovery page
+                self.navigateToDiscovery()
+            } else {
+                // Auto-add enabled: navigate to Contacts page
+                self.navigateToContacts()
+            }
         }
 
         // Set up mark as read handler for direct messages
@@ -1070,6 +1137,50 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         isContactsSyncing = false
     }
 
+    /// Performs contact sync after debounce delay, posts notifications for new contacts
+    private func performDebouncedContactSync(deviceID: UUID) async {
+        do {
+            // Get existing contacts before sync
+            let existingContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+            let existingKeys = Set(existingContacts.map { $0.publicKey })
+
+            // Sync contacts from device
+            _ = try await contactService.syncContacts(deviceID: deviceID)
+
+            // Get contacts after sync
+            let updatedContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+
+            // Find truly new contacts (not in existing set AND not recently notified)
+            let newContacts = updatedContacts.filter {
+                !existingKeys.contains($0.publicKey) && !recentlyNotifiedContactKeys.contains($0.publicKey)
+            }
+
+            // Notify UI to refresh
+            messageEventBroadcaster.handleContactsUpdated()
+
+            // Post notification for each new contact and track to prevent duplicates
+            for contact in newContacts {
+                recentlyNotifiedContactKeys.insert(contact.publicKey)
+                await notificationService.postNewContactNotification(
+                    contactName: contact.displayName,
+                    contactID: contact.id
+                )
+            }
+
+            // Clear deduplication cache after 30 seconds (limit to 50 entries max)
+            if recentlyNotifiedContactKeys.count > 50 {
+                recentlyNotifiedContactKeys.removeAll()
+            } else {
+                Task {
+                    try? await Task.sleep(for: .seconds(30))
+                    recentlyNotifiedContactKeys.removeAll()
+                }
+            }
+        } catch {
+            logger.warning("Auto-sync after ADVERT failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Channel Sync
 
     /// Syncs channels from the connected device
@@ -1224,6 +1335,22 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// Clears the pending room navigation after it's been handled
     func clearPendingRoomNavigation() {
         pendingRoomSession = nil
+    }
+
+    /// Navigates to the Discovery page within Contacts tab
+    func navigateToDiscovery() {
+        pendingDiscoveryNavigation = true
+        selectedTab = 1
+    }
+
+    /// Navigates to the Contacts tab
+    func navigateToContacts() {
+        selectedTab = 1
+    }
+
+    /// Clears the pending Discovery navigation after it's been handled
+    func clearPendingDiscoveryNavigation() {
+        pendingDiscoveryNavigation = false
     }
 
     // MARK: - Onboarding Completion

@@ -39,6 +39,18 @@ public actor AdvertisementService {
     /// Called when 0x81 push received - AppState should fetch updated contact from device
     private var pathRefreshHandler: (@Sendable (UUID, Data, UUID, Bool) async -> Void)?
 
+    /// Handler for contact update events (for UI refresh)
+    private var contactUpdatedHandler: (@Sendable () async -> Void)?
+
+    // MARK: - Discovery Handlers
+
+    /// Handler for new contact discovered events (for notifications)
+    /// Parameters: contactName, contactID
+    private var newContactDiscoveredHandler: (@Sendable (String, UUID) async -> Void)?
+
+    /// Handler for contact sync request events (when ADVERT received for unknown contact)
+    private var contactSyncRequestHandler: (@Sendable (UUID) async -> Void)?
+
     // MARK: - Initialization
 
     public init(bleTransport: any BLETransport, dataStore: DataStore) {
@@ -71,6 +83,21 @@ public actor AdvertisementService {
     /// Set handler for path refresh requests (called when contact path may have changed)
     public func setPathRefreshHandler(_ handler: @escaping @Sendable (UUID, Data, UUID, Bool) async -> Void) {
         pathRefreshHandler = handler
+    }
+
+    /// Set handler for contact update events (called when contacts change)
+    public func setContactUpdatedHandler(_ handler: @escaping @Sendable () async -> Void) {
+        contactUpdatedHandler = handler
+    }
+
+    /// Set handler for new contact discovered events (for posting notifications)
+    public func setNewContactDiscoveredHandler(_ handler: @escaping @Sendable (String, UUID) async -> Void) {
+        newContactDiscoveredHandler = handler
+    }
+
+    /// Set handler for contact sync requests (called when ADVERT received for unknown contact)
+    public func setContactSyncRequestHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
+        contactSyncRequestHandler = handler
     }
 
     // MARK: - Send Advertisement
@@ -212,6 +239,14 @@ public actor AdvertisementService {
                 )
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
                 advertHandler?(frame)
+
+                // Notify UI of contact update
+                await contactUpdatedHandler?()
+            } else {
+                // Unknown contact - device has it but we don't (auto-add mode)
+                // Request a sync to get the new contact
+                logger.info("ADVERT received for unknown contact - requesting sync")
+                await contactSyncRequestHandler?(deviceID)
             }
             return true
         } catch {
@@ -226,8 +261,17 @@ public actor AdvertisementService {
 
         do {
             let contactFrame = try FrameCodec.decodeContact(from: data)
-            _ = try await dataStore.saveContact(deviceID: deviceID, from: contactFrame)
+            let contactID = try await dataStore.saveDiscoveredContact(deviceID: deviceID, from: contactFrame)
             advertHandler?(contactFrame)
+
+            // Notify UI of contact update
+            await contactUpdatedHandler?()
+
+            // Post notification for new contact (use displayName from saved contact for consistency)
+            let savedContact = try? await dataStore.fetchContact(id: contactID)
+            let contactName = savedContact?.displayName ?? "Unknown Contact"
+            await newContactDiscoveredHandler?(contactName, contactID)
+
             return true
         } catch {
             return false

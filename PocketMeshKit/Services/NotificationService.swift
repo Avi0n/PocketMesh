@@ -44,6 +44,10 @@ public final class NotificationService: NSObject {
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onNotificationTapped: (@MainActor @Sendable (_ contactID: UUID) async -> Void)?
 
+    /// Callback for when a new contact discovered notification is tapped
+    /// CRITICAL: Must be @MainActor - see onQuickReply comment.
+    public var onNewContactNotificationTapped: (@MainActor @Sendable (_ contactID: UUID) async -> Void)?
+
     /// Callback for when mark as read action is triggered
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onMarkAsRead: (@MainActor @Sendable (_ contactID: UUID, _ messageID: UUID) async -> Void)?
@@ -648,7 +652,12 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
             // User tapped the notification
             if let contactIDString = userInfo["contactID"] as? String,
                let contactID = UUID(uuidString: contactIDString) {
-                await onNotificationTapped?(contactID)
+                let notificationType = userInfo["type"] as? String
+                if notificationType == "newContact" {
+                    await onNewContactNotificationTapped?(contactID)
+                } else {
+                    await onNotificationTapped?(contactID)
+                }
             }
 
         default:

@@ -7,6 +7,7 @@ struct ContactsListView: View {
     @State private var viewModel = ContactsViewModel()
     @State private var searchText = ""
     @State private var showFavoritesOnly = false
+    @State private var showDiscovery = false
 
     private var filteredContacts: [ContactDTO] {
         viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
@@ -43,6 +44,14 @@ struct ContactsListView: View {
 
                         Divider()
 
+                        NavigationLink {
+                            DiscoveryView()
+                        } label: {
+                            Label("Discovery", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+
+                        Divider()
+
                         Button {
                             Task {
                                 await syncContacts()
@@ -56,17 +65,26 @@ struct ContactsListView: View {
                     }
                 }
             }
-            .overlay {
-                if viewModel.isSyncing || appState.isContactsSyncing {
-                    syncOverlay
-                }
-            }
             .refreshable {
                 await syncContacts()
             }
             .task {
                 viewModel.configure(appState: appState)
                 await loadContacts()
+            }
+            .onChange(of: appState.messageEventBroadcaster.contactsRefreshTrigger) { _, _ in
+                Task {
+                    await loadContacts()
+                }
+            }
+            .onChange(of: appState.pendingDiscoveryNavigation) { _, shouldNavigate in
+                if shouldNavigate {
+                    showDiscovery = true
+                    appState.clearPendingDiscoveryNavigation()
+                }
+            }
+            .navigationDestination(isPresented: $showDiscovery) {
+                DiscoveryView()
             }
         }
     }
@@ -152,29 +170,6 @@ struct ContactsListView: View {
             }
             .tint(.yellow)
         }
-    }
-
-    private var syncOverlay: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-
-            Text("Syncing Contacts...")
-                .font(.headline)
-
-            if let progress = appState.contactsSyncProgress ?? viewModel.syncProgress {
-                Text("\(progress.0) of \(progress.1)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                let displayProgress = appState.contactsSyncProgress ?? viewModel.syncProgress
-                ProgressView(value: Double(displayProgress?.0 ?? 0), total: Double(max(displayProgress?.1 ?? 1, 1)))
-                    .progressViewStyle(.linear)
-                    .frame(width: 200)
-            }
-        }
-        .padding(32)
-        .background(.regularMaterial, in: .rect(cornerRadius: 16))
     }
 
     // MARK: - Actions

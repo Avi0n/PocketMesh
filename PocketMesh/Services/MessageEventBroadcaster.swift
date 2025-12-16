@@ -38,6 +38,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     /// Use this for state changes like mark-as-read, not for new messages
     var conversationRefreshTrigger: Int = 0
 
+    /// Trigger for contact list refresh (increment to force refresh)
+    var contactsRefreshTrigger: Int = 0
+
     /// Reference to notification service for posting notifications
     var notificationService: NotificationService?
 
@@ -218,6 +221,11 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         logger.info("handleRoutingChanged called - contactID: \(contactID), isFlood: \(isFlood)")
         self.latestEvent = .routingChanged(contactID: contactID, isFlood: isFlood)
         self.newMessageCount += 1
+    }
+
+    /// Handles contact update notification from AdvertisementService
+    func handleContactsUpdated() {
+        contactsRefreshTrigger += 1
     }
 
     nonisolated public func messagePollingService(
