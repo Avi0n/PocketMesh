@@ -127,7 +127,8 @@ struct ChannelChatView: View {
             }
             .padding(.vertical)
         }
-        .defaultScrollAnchor(.bottom)
+        .defaultScrollAnchor(.bottom, for: .initialOffset)
+        .defaultScrollAnchor(.bottom, for: .alignment)
         .scrollPosition($scrollPosition)
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: viewModel.messages.count) { _, _ in
