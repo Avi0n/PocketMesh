@@ -227,7 +227,7 @@ private struct DeviceIdentityHeader: View {
                     .font(.title2)
                     .bold()
 
-                Text("MeshCore Device")
+                Text(device.manufacturerName.isEmpty ? "MeshCore Device" : device.manufacturerName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
