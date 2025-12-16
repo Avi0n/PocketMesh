@@ -326,7 +326,8 @@ public actor ContactService {
     /// - Parameters:
     ///   - deviceID: The device ID
     ///   - publicKey: The contact's 32-byte public key
-    public func sendPathDiscovery(deviceID: UUID, publicKey: Data) async throws {
+    /// - Returns: SentResponse containing the estimated timeout from firmware
+    public func sendPathDiscovery(deviceID: UUID, publicKey: Data) async throws -> SentResponse {
         guard await bleTransport.connectionState == .ready else {
             throw ContactServiceError.notConnected
         }
@@ -349,11 +350,9 @@ public actor ContactService {
             throw ContactServiceError.invalidResponse
         }
 
-        // Path discovery is async - response comes via PUSH_CODE_PATH_DISCOVERY_RESPONSE
-        // Firmware always returns SENT (0x06) with tag and timeout data
-        guard response.first == ResponseCode.sent.rawValue else {
-            throw ContactServiceError.invalidResponse
-        }
+        // Decode the SENT response with ack code and estimated timeout
+        // Path discovery result comes later via PUSH_CODE_PATH_DISCOVERY_RESPONSE
+        return try FrameCodec.decodeSentResponse(from: response)
     }
 
     // MARK: - Advert Path Query

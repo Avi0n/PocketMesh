@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshKit
+import os.log
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "PathManagement")
 
 /// Represents a single hop in the routing path with stable identity for SwiftUI
 struct PathHop: Identifiable, Equatable {
@@ -178,16 +181,21 @@ final class PathManagementViewModel {
         // Tier 1: Perform active path discovery (requires remote node response)
         discoveryTask = Task { @MainActor in
             do {
-                try await appState.contactService.sendPathDiscovery(
+                let sentResponse = try await appState.contactService.sendPathDiscovery(
                     deviceID: contact.deviceID,
                     publicKey: contact.publicKey
                 )
 
-                // Wait for push notification with timeout
-                // 30 seconds allows for large mesh networks with distant nodes
+                // Calculate timeout from firmware's suggested value
+                // MeshCore uses suggested_timeout/600 which gives ~1.67× the raw ms-to-seconds conversion
+                // This accounts for network variability in mesh routing
+                let timeoutSeconds = max(30.0, Double(sentResponse.estimatedTimeout) / 600.0)
+                logger.info("Path discovery timeout: \(Int(timeoutSeconds))s (firmware suggested: \(sentResponse.estimatedTimeout)ms)")
+
+                // Wait for push notification with firmware-suggested timeout
                 // The AdvertisementService handler will call handleDiscoveryResponse()
                 // which cancels this task early if a response arrives
-                try await Task.sleep(for: .seconds(30))
+                try await Task.sleep(for: .seconds(timeoutSeconds))
 
                 if !Task.isCancelled {
                     // Timeout - remote node did not respond
