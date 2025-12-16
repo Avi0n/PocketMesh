@@ -52,6 +52,7 @@ struct MainTabView: View {
             Tab("Chats", systemImage: "message.fill", value: 0) {
                 ChatsListView()
             }
+            .badge(appState.notificationService.badgeCount)
 
             Tab("Contacts", systemImage: "person.2.fill", value: 1) {
                 ContactsListView()
