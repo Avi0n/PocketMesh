@@ -199,6 +199,7 @@ struct ChatView: View {
             UnifiedMessageBubble(
                 message: message,
                 contactName: contact.displayName,
+                contactNodeName: contact.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .directMessage,
                 showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
@@ -214,7 +215,7 @@ struct ChatView: View {
     }
 
     private func setReplyText(_ text: String) {
-        viewModel.composingText = text + "\n"
+        viewModel.composingText = text
         isInputFocused = true
     }
 

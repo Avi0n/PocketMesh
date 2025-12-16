@@ -166,6 +166,7 @@ struct ChannelChatView: View {
             UnifiedMessageBubble(
                 message: message,
                 contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .channel(
                     isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
@@ -184,7 +185,7 @@ struct ChannelChatView: View {
     }
 
     private func setReplyText(_ text: String) {
-        viewModel.composingText = text + "\n"
+        viewModel.composingText = text
         isInputFocused = true
     }
 

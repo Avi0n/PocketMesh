@@ -54,6 +54,7 @@ struct MessageBubbleConfiguration: Sendable {
 struct UnifiedMessageBubble: View {
     let message: MessageDTO
     let contactName: String
+    let contactNodeName: String
     let deviceName: String
     let configuration: MessageBubbleConfiguration
     let showTimestamp: Bool
@@ -64,6 +65,7 @@ struct UnifiedMessageBubble: View {
     init(
         message: MessageDTO,
         contactName: String,
+        contactNodeName: String,
         deviceName: String = "Me",
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
@@ -73,6 +75,7 @@ struct UnifiedMessageBubble: View {
     ) {
         self.message = message
         self.contactName = contactName
+        self.contactNodeName = contactNodeName
         self.deviceName = deviceName
         self.configuration = configuration
         self.showTimestamp = showTimestamp
@@ -103,11 +106,10 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Message text with context menu
-                    Text(message.text)
+                    MentionText(message.text, baseColor: textColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(bubbleColor)
-                        .foregroundStyle(textColor)
                         .clipShape(.rect(cornerRadius: 16))
                         .contextMenu {
                             contextMenuContent
@@ -152,8 +154,8 @@ struct UnifiedMessageBubble: View {
 
     @ViewBuilder
     private var contextMenuContent: some View {
-        // Only show Reply if handler is provided
-        if let onReply {
+        // Only show Reply for incoming messages (not outgoing)
+        if let onReply, !message.isOutgoing {
             Button {
                 let replyText = buildReplyText()
                 onReply(replyText)
@@ -265,7 +267,9 @@ struct UnifiedMessageBubble: View {
 
     // MARK: - Helpers
 
-    /// Builds reply preview text with proper Unicode/locale handling
+    /// Builds reply preview text with mention and proper Unicode/locale handling
+    ///
+    /// Format: @[nodeContactName]"preview.."\n
     ///
     /// Per CLAUDE.md: Use localizedStandard APIs for text filtering.
     /// This handles:
@@ -273,24 +277,28 @@ struct UnifiedMessageBubble: View {
     /// - RTL languages (Arabic, Hebrew)
     /// - Messages without spaces (Asian languages)
     private func buildReplyText() -> String {
-        let senderLabel: String
-        if message.isOutgoing {
-            senderLabel = deviceName
-        } else if configuration.showSenderName {
-            senderLabel = senderName
+        // Determine the mesh network name for the mention
+        let mentionName: String
+        if configuration.showSenderName {
+            // Channel message - use sender's node name (from message)
+            mentionName = message.senderNodeName ?? senderName
         } else {
-            senderLabel = contactName
+            // Direct message - use contact's mesh network name
+            mentionName = contactNodeName
         }
 
         // Use locale-aware word enumeration for proper Unicode handling
+        // Count up to 3 words to know if there's more than 2
         var wordCount = 0
-        var endIndex = message.text.startIndex
+        var secondWordEndIndex = message.text.startIndex
         message.text.enumerateSubstrings(
             in: message.text.startIndex...,
             options: [.byWords, .localized]
         ) { _, range, _, stop in
             wordCount += 1
-            endIndex = range.upperBound
+            if wordCount <= 2 {
+                secondWordEndIndex = range.upperBound
+            }
             if wordCount >= 3 {
                 stop = true
             }
@@ -300,8 +308,9 @@ struct UnifiedMessageBubble: View {
         let preview: String
         let hasMore: Bool
         if wordCount > 0 {
-            preview = String(message.text[..<endIndex]).trimmingCharacters(in: .whitespaces)
-            hasMore = endIndex < message.text.endIndex
+            preview = String(message.text[..<secondWordEndIndex]).trimmingCharacters(in: .whitespaces)
+            // Only show ".." if message has more than 2 words
+            hasMore = wordCount > 2
         } else {
             // Fallback for messages without word boundaries (pure emoji, etc.)
             // Take first ~20 characters
@@ -311,8 +320,9 @@ struct UnifiedMessageBubble: View {
             hasMore = maxChars < message.text.count
         }
 
-        let suffix = hasMore ? "..." : ""
-        return "> \(senderLabel): \(preview)\(suffix)"
+        let suffix = hasMore ? ".." : ""
+        let mention = MentionUtilities.createMention(for: mentionName)
+        return "\(mention)\"\(preview)\(suffix)\"\n"
     }
 
     private func snrFormatted(_ snr: Float) -> String {
@@ -355,6 +365,7 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Alice",
+        contactNodeName: "Alice",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -373,6 +384,7 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Bob",
+        contactNodeName: "Bob",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -389,6 +401,7 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Charlie",
+        contactNodeName: "Charlie",
         deviceName: "My Device",
         configuration: .directMessage,
         onRetry: { print("Retry tapped") }
@@ -407,6 +420,7 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "General",
+        contactNodeName: "General",
         deviceName: "My Device",
         configuration: .channel(isPublic: true, contacts: [])
     )
@@ -423,6 +437,7 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Private Group",
+        contactNodeName: "Private Group",
         deviceName: "My Device",
         configuration: .channel(isPublic: false, contacts: [])
     )
