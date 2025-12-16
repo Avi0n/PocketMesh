@@ -158,6 +158,63 @@ struct RemoteNodeServiceTests {
         }
     }
 
+    @Test("hasPassword returns true when password stored")
+    func hasPasswordReturnsTrueWhenStored() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+        let keychain = MockKeychainService()
+        let (service, _, _) = createTestService(
+            transport: transport,
+            dataStore: dataStore,
+            keychainService: keychain
+        )
+
+        let contact = createTestContact(deviceID: UUID(), type: .repeater)
+
+        // Initially no password
+        var hasPassword = await service.hasPassword(forContact: contact)
+        #expect(!hasPassword)
+
+        // Store password
+        try await keychain.storePassword("test", forNodeKey: contact.publicKey)
+
+        // Now should have password
+        hasPassword = await service.hasPassword(forContact: contact)
+        #expect(hasPassword)
+    }
+
+    @Test("Create session with nil password does not overwrite existing keychain password")
+    func createSessionWithNilPasswordPreservesKeychain() async throws {
+        let transport = createTestTransport()
+        let dataStore = try await createTestDataStore()
+        let keychain = MockKeychainService()
+        let (service, _, _) = createTestService(
+            transport: transport,
+            dataStore: dataStore,
+            keychainService: keychain
+        )
+
+        let deviceID = UUID()
+        let contact = createTestContact(deviceID: deviceID, type: .repeater)
+
+        // Pre-store password in keychain
+        try await keychain.storePassword("savedpass", forNodeKey: contact.publicKey)
+
+        // Create session with nil password
+        let session = try await service.createSession(
+            deviceID: deviceID,
+            contact: contact,
+            password: nil,
+            rememberPassword: true
+        )
+
+        #expect(session.publicKey == contact.publicKey)
+
+        // Password should still exist (not deleted or overwritten)
+        let stored = try await keychain.retrievePassword(forNodeKey: contact.publicKey)
+        #expect(stored == "savedpass")
+    }
+
     @Test("Remove session deletes password and session")
     func removeSessionDeletesPasswordAndSession() async throws {
         let transport = createTestTransport()

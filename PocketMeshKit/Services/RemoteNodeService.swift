@@ -174,7 +174,7 @@ public actor RemoteNodeService {
     public func createSession(
         deviceID: UUID,
         contact: ContactDTO,
-        password: String,
+        password: String?,
         rememberPassword: Bool = true
     ) async throws -> RemoteNodeSessionDTO {
         guard let role = RemoteNodeRole(contactType: contact.type) else {
@@ -183,10 +183,6 @@ public actor RemoteNodeService {
 
         guard contact.publicKey.count == 32 else {
             throw RemoteNodeError.loginFailed("Invalid public key length: expected 32 bytes, got \(contact.publicKey.count)")
-        }
-
-        if rememberPassword {
-            try await keychainService.storePassword(password, forNodeKey: contact.publicKey)
         }
 
         // Check for existing session - reuse to avoid duplicates
@@ -205,6 +201,17 @@ public actor RemoteNodeService {
         stopKeepAlive(sessionID: id)
         try await keychainService.deletePassword(forNodeKey: publicKey)
         try await dataStore.deleteRemoteNodeSession(id: id)
+    }
+
+    /// Check if a password is stored for a contact's public key.
+    public func hasPassword(forContact contact: ContactDTO) async -> Bool {
+        await keychainService.hasPassword(forNodeKey: contact.publicKey)
+    }
+
+    /// Store a password for a remote node.
+    /// Call this after successful login to save correct passwords only.
+    public func storePassword(_ password: String, forNodeKey publicKey: Data) async throws {
+        try await keychainService.storePassword(password, forNodeKey: publicKey)
     }
 
     // MARK: - Login

@@ -19,6 +19,7 @@ struct NodeAuthenticationSheet: View {
     @State private var rememberPassword = true
     @State private var isAuthenticating = false
     @State private var errorMessage: String?
+    @State private var hasSavedPassword = false
 
     private let maxPasswordLength = 15
 
@@ -52,6 +53,9 @@ struct NodeAuthenticationSheet: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .task {
+                hasSavedPassword = await appState.remoteNodeService.hasPassword(forContact: contact)
+            }
         }
     }
 
@@ -68,32 +72,48 @@ struct NodeAuthenticationSheet: View {
 
     private var authenticationSection: some View {
         Section {
-            HStack {
-                Group {
-                    if showPassword {
-                        TextField("Password", text: $password)
-                    } else {
-                        SecureField("Password", text: $password)
-                    }
-                }
-                .textContentType(.password)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-
-                Button {
-                    showPassword.toggle()
-                } label: {
-                    Image(systemName: showPassword ? "eye.slash" : "eye")
+            if hasSavedPassword && password.isEmpty {
+                HStack {
+                    Image(systemName: "key.fill")
                         .foregroundStyle(.secondary)
+                    Text("Using saved password")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Enter New") {
+                        hasSavedPassword = false
+                    }
+                    .font(.callout)
                 }
-                .buttonStyle(.plain)
+            } else {
+                HStack {
+                    Group {
+                        if showPassword {
+                            TextField("Password", text: $password)
+                        } else {
+                            SecureField("Password", text: $password)
+                        }
+                    }
+                    .textContentType(.password)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                    Button {
+                        showPassword.toggle()
+                    } label: {
+                        Image(systemName: showPassword ? "eye.slash" : "eye")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
 
             Toggle("Remember Password", isOn: $rememberPassword)
         } header: {
             Text("Authentication")
         } footer: {
-            Text("Max \(maxPasswordLength) characters")
+            if !(hasSavedPassword && password.isEmpty) {
+                Text("Max \(maxPasswordLength) characters")
+            }
         }
     }
 
@@ -120,7 +140,7 @@ struct NodeAuthenticationSheet: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .disabled(isAuthenticating || (role == .repeater && password.isEmpty))
+            .disabled(isAuthenticating || (role == .repeater && password.isEmpty && !hasSavedPassword))
         }
     }
 
@@ -152,7 +172,7 @@ struct NodeAuthenticationSheet: View {
                     session = try await appState.roomServerService.joinRoom(
                         deviceID: device.id,
                         contact: contact,
-                        password: password,
+                        password: password.isEmpty ? nil : password,
                         rememberPassword: rememberPassword,
                         pathLength: pathLength
                     )
@@ -160,7 +180,7 @@ struct NodeAuthenticationSheet: View {
                     session = try await appState.repeaterAdminService.connectAsAdmin(
                         deviceID: device.id,
                         contact: contact,
-                        password: password,
+                        password: password.isEmpty ? nil : password,
                         rememberPassword: rememberPassword,
                         pathLength: pathLength
                     )

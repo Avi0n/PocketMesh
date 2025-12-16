@@ -43,14 +43,14 @@ public actor RoomServerService {
     /// - Parameters:
     ///   - deviceID: The companion radio device ID
     ///   - contact: The room server contact
-    ///   - password: Authentication password
+    ///   - password: Authentication password (uses keychain if not provided)
     ///   - rememberPassword: Whether to store password in keychain
     ///   - pathLength: Path length for timeout calculation (0 = direct)
     /// - Returns: The authenticated session
     public func joinRoom(
         deviceID: UUID,
         contact: ContactDTO,
-        password: String,
+        password: String?,
         rememberPassword: Bool = true,
         pathLength: UInt8 = 0
     ) async throws -> RemoteNodeSessionDTO {
@@ -67,6 +67,11 @@ public actor RoomServerService {
             password: password,
             pathLength: pathLength
         )
+
+        // Store password only after successful login to avoid saving incorrect passwords
+        if let password, rememberPassword {
+            try await remoteNodeService.storePassword(password, forNodeKey: contact.publicKey)
+        }
 
         guard let updatedSession = try await dataStore.fetchRemoteNodeSession(id: session.id) else {
             throw RemoteNodeError.sessionNotFound
