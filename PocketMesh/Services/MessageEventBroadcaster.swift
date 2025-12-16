@@ -6,6 +6,7 @@ import OSLog
 public enum MessageEvent: Sendable, Equatable {
     case directMessageReceived(message: MessageDTO, contact: ContactDTO)
     case channelMessageReceived(message: MessageDTO, channelIndex: UInt8)
+    case roomMessageReceived(message: RoomMessageDTO, sessionID: UUID)
     case messageStatusUpdated(ackCode: UInt32)
     case messageFailed(messageID: UUID)
     case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
@@ -216,7 +217,9 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         didReceiveRoomMessage frame: MessageFrame,
         fromRoom contact: ContactDTO
     ) async {
-        let roomService = await MainActor.run { self.roomServerService }
+        let (roomService, notifService) = await MainActor.run {
+            (self.roomServerService, self.notificationService)
+        }
 
         guard let roomService else {
             await MainActor.run {
@@ -233,15 +236,25 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         }
 
         do {
-            try await roomService.handleIncomingMessage(
+            if let messageDTO = try await roomService.handleIncomingMessage(
                 senderPublicKeyPrefix: frame.senderPublicKeyPrefix,
                 timestamp: frame.timestamp,
                 authorPrefix: Data(authorPrefix.prefix(4)),
                 text: frame.text
-            )
+            ) {
+                // Post notification for backgrounded app
+                await notifService?.postRoomMessageNotification(
+                    roomName: contact.displayName,
+                    senderName: messageDTO.authorName,
+                    messageText: messageDTO.text,
+                    messageID: messageDTO.id
+                )
 
-            await MainActor.run {
-                self.newMessageCount += 1
+                // Broadcast event for UI updates
+                await MainActor.run {
+                    self.latestEvent = .roomMessageReceived(message: messageDTO, sessionID: messageDTO.sessionID)
+                    self.newMessageCount += 1
+                }
             }
         } catch {
             await MainActor.run {

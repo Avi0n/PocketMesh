@@ -48,6 +48,15 @@ struct RoomConversationView: View {
                 viewModel.configure(appState: appState)
                 await viewModel.loadMessages(for: session)
             }
+            .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
+                // Reload messages when a new room message arrives for this session
+                if case .roomMessageReceived(_, let sessionID) = appState.messageEventBroadcaster.latestEvent,
+                   sessionID == session.id {
+                    Task {
+                        await viewModel.loadMessages(for: session)
+                    }
+                }
+            }
             .refreshable {
                 await viewModel.refreshMessages()
             }

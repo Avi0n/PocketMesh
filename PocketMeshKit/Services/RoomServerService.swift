@@ -218,16 +218,18 @@ public actor RoomServerService {
     ///   - timestamp: Message timestamp from server
     ///   - authorPrefix: The original author's 4-byte key prefix
     ///   - text: The message text
+    /// - Returns: The saved message DTO, or nil if the message was a duplicate
+    @discardableResult
     public func handleIncomingMessage(
         senderPublicKeyPrefix: Data,
         timestamp: UInt32,
         authorPrefix: Data,
         text: String
-    ) async throws {
+    ) async throws -> RoomMessageDTO? {
         // Find session by room server's key prefix
         guard let session = try await dataStore.fetchRemoteNodeSessionByPrefix(senderPublicKeyPrefix),
               session.isRoom else {
-            return  // Not from a known room
+            return nil  // Not from a known room
         }
 
         // Generate deduplication key
@@ -242,7 +244,7 @@ public actor RoomServerService {
             sessionID: session.id,
             deduplicationKey: dedupKey
         ) {
-            return
+            return nil
         }
 
         // Defensive check: room servers shouldn't push our own messages back
@@ -273,6 +275,8 @@ public actor RoomServerService {
         }
 
         await roomMessageHandler?(messageDTO)
+
+        return messageDTO
     }
 
     // MARK: - Message Retrieval
