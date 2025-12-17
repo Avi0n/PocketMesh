@@ -1,11 +1,17 @@
+import OSLog
 import SwiftUI
 import PocketMeshKit
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStatus")
 
 /// BLE connection status indicator for toolbar display
 /// Shows connection state via color-coded icon with menu details
 struct BLEStatusIndicatorView: View {
     @Environment(AppState.self) private var appState
     @State private var showingDeviceSelection = false
+    @State private var isSendingAdvert = false
+    @State private var successFeedbackTrigger = false
+    @State private var errorFeedbackTrigger = false
 
     var body: some View {
         Group {
@@ -69,6 +75,25 @@ struct BLEStatusIndicatorView: View {
                 }
             }
 
+            // Advert section
+            Section {
+                Button {
+                    sendAdvert(flood: false)
+                } label: {
+                    Label("Send Zero-Hop Advert", systemImage: "dot.radiowaves.right")
+                }
+                .disabled(isSendingAdvert)
+                .accessibilityHint("Broadcasts to direct neighbors only")
+
+                Button {
+                    sendAdvert(flood: true)
+                } label: {
+                    Label("Send Flood Advert", systemImage: "dot.radiowaves.left.and.right")
+                }
+                .disabled(isSendingAdvert)
+                .accessibilityHint("Floods advertisement across entire mesh")
+            }
+
             // Actions
             Section {
                 Button {
@@ -90,6 +115,8 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
+        .sensoryFeedback(.success, trigger: successFeedbackTrigger)
+        .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel("Bluetooth connection status")
         .accessibilityValue(statusTitle)
         .accessibilityHint("Shows device connection options")
@@ -159,6 +186,24 @@ struct BLEStatusIndicatorView: View {
         case 38..<63: return "battery.50"
         case 13..<38: return "battery.25"
         default: return "battery.0"
+        }
+    }
+
+    // MARK: - Actions
+
+    private func sendAdvert(flood: Bool) {
+        guard !isSendingAdvert else { return }
+        isSendingAdvert = true
+
+        Task {
+            do {
+                _ = try await appState.advertisementService.sendSelfAdvertisement(flood: flood)
+                successFeedbackTrigger.toggle()
+            } catch {
+                logger.error("Failed to send advert (flood=\(flood)): \(error.localizedDescription)")
+                errorFeedbackTrigger.toggle()
+            }
+            isSendingAdvert = false
         }
     }
 }

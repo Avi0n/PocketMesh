@@ -8,6 +8,7 @@ struct ContactsListView: View {
     @State private var searchText = ""
     @State private var showFavoritesOnly = false
     @State private var showDiscovery = false
+    @State private var syncSuccessTrigger = false
 
     private var filteredContacts: [ContactDTO] {
         viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
@@ -68,6 +69,7 @@ struct ContactsListView: View {
             .refreshable {
                 await syncContacts()
             }
+            .sensoryFeedback(.success, trigger: syncSuccessTrigger)
             .task {
                 viewModel.configure(appState: appState)
                 await loadContacts()
@@ -182,6 +184,7 @@ struct ContactsListView: View {
     private func syncContacts() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.syncContacts(deviceID: deviceID)
+        syncSuccessTrigger.toggle()
     }
 }
 
