@@ -126,6 +126,8 @@ public actor BLEService: NSObject, BLETransport {
 
     private var centralManager: CBCentralManager?
     private var connectedPeripheral: CBPeripheral?
+    /// Peripheral being connected to (for cancellation on timeout)
+    private var connectingPeripheral: CBPeripheral?
     private var txCharacteristic: CBCharacteristic?
     private var rxCharacteristic: CBCharacteristic?
 
@@ -241,6 +243,9 @@ public actor BLEService: NSObject, BLETransport {
     // MARK: - Connection
 
     public func connect(to deviceID: UUID) async throws {
+        let startTime = Date()
+        logger.info("Connection attempt starting for device: \(deviceID)")
+
         // Ensure Bluetooth is powered on before using centralManager
         await waitForBluetoothReady()
 
@@ -269,6 +274,9 @@ public actor BLEService: NSObject, BLETransport {
             throw BLEError.deviceNotFound
         }
 
+        // Track before calling connect to ensure we can cancel on timeout
+        // awaitConnection() calls centralManager?.connect() internally
+        connectingPeripheral = peripheral
         _connectionState = .connecting
 
         // Connect with timeout using race pattern
@@ -276,7 +284,15 @@ public actor BLEService: NSObject, BLETransport {
             try await withThrowingTimeout(seconds: connectionTimeout) {
                 try await self.awaitConnection(to: peripheral)
             }
+            connectingPeripheral = nil
+            let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+            logger.info("Connection established in \(elapsedMs)ms")
         } catch {
+            // Explicitly cancel any pending connection
+            if let pending = connectingPeripheral {
+                centralManager.cancelPeripheralConnection(pending)
+                connectingPeripheral = nil
+            }
             handleConnectionFailure()
             throw error
         }
@@ -348,6 +364,7 @@ public actor BLEService: NSObject, BLETransport {
             centralManager?.cancelPeripheralConnection(peripheral)
         }
         connectedPeripheral = nil
+        connectingPeripheral = nil
         txCharacteristic = nil
         rxCharacteristic = nil
         clearSendQueue()  // Prevents hangs if sends were queued during connection attempt
@@ -406,6 +423,10 @@ public actor BLEService: NSObject, BLETransport {
         rxCharacteristic = nil
         _connectionState = .disconnected
         responseBuffer.removeAll()
+
+        // Allow Bluetooth stack to fully process disconnect before new connections
+        // Apple Developer Forums recommend minimum 20ms; using 50ms for safety margin
+        try? await Task.sleep(for: .milliseconds(50))
     }
 
     /// Waits for any in-progress disconnect to complete
@@ -599,6 +620,9 @@ public actor BLEService: NSObject, BLETransport {
 
     /// Performs device initialization sequence (device query + app start)
     public func initializeDevice() async throws -> (DeviceInfo, SelfInfo) {
+        let startTime = Date()
+        logger.info("Device initialization starting")
+
         guard _connectionState == .connected else {
             throw BLEError.notConnected
         }
@@ -609,7 +633,18 @@ public actor BLEService: NSObject, BLETransport {
 
         // Send device query
         let queryData = FrameCodec.encodeDeviceQuery(protocolVersion: 8)
-        guard let queryResponse = try await send(queryData, timeout: setupTimeout, forPairing: true),
+        let queryResponse = try await send(queryData, timeout: setupTimeout, forPairing: true)
+
+        // Diagnostic logging for response analysis
+        if let response = queryResponse {
+            let firstByte = response.first ?? 0xFF
+            let hexDump = response.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
+            logger.debug("Device query response: first=0x\(String(format: "%02X", firstByte)), length=\(response.count), data=[\(hexDump)]")
+        } else {
+            logger.warning("Device query response: nil (timeout)")
+        }
+
+        guard let queryResponse,
               queryResponse.first == ResponseCode.deviceInfo.rawValue else {
             // Get specific pairing error if available
             if lastPairingError != nil {
@@ -620,28 +655,49 @@ public actor BLEService: NSObject, BLETransport {
             throw BLEError.invalidResponse
         }
         let deviceInfo = try FrameCodec.decodeDeviceInfo(from: queryResponse)
+        logger.debug("Device info decoded successfully")
 
         // Sync device time to ensure login timestamps are current
         // This prevents repeater replay attack false positives when the companion radio's RTC
         // hasn't been synchronized (firmware requires sender_timestamp > last_timestamp)
         let currentTimestamp = UInt32(Date().timeIntervalSince1970)
         let setTimeData = FrameCodec.encodeSetDeviceTime(currentTimestamp)
-        if let timeResponse = try await send(setTimeData, timeout: setupTimeout, forPairing: false) {
+        let timeResponse = try await send(setTimeData, timeout: setupTimeout, forPairing: false)
+
+        // Diagnostic logging for time sync response
+        if let response = timeResponse {
+            let firstByte = response.first ?? 0xFF
+            logger.debug("Time sync response: first=0x\(String(format: "%02X", firstByte)), length=\(response.count)")
             // Response code 0x00 = OK, 0x01 = ERR (firmware only accepts forward time changes)
-            if timeResponse.first != ResponseCode.ok.rawValue {
+            if firstByte != ResponseCode.ok.rawValue {
                 logger.warning("Failed to set device time - device clock may be ahead")
             }
+        } else {
+            logger.warning("Time sync response: nil (timeout)")
         }
 
         // Send app start (pairing should be complete by now, but keep the longer timeout)
         let appStartData = FrameCodec.encodeAppStart(appName: "PocketMesh")
-        guard let selfResponse = try await send(appStartData, timeout: setupTimeout, forPairing: false),
+        let selfResponse = try await send(appStartData, timeout: setupTimeout, forPairing: false)
+
+        // Diagnostic logging for app start response
+        if let response = selfResponse {
+            let firstByte = response.first ?? 0xFF
+            let hexDump = response.prefix(16).map { String(format: "%02X", $0) }.joined(separator: " ")
+            logger.debug("App start response: first=0x\(String(format: "%02X", firstByte)), length=\(response.count), data=[\(hexDump)]")
+        } else {
+            logger.warning("App start response: nil (timeout)")
+        }
+
+        guard let selfResponse,
               selfResponse.first == ResponseCode.selfInfo.rawValue else {
             throw BLEError.invalidResponse
         }
         let selfInfo = try FrameCodec.decodeSelfInfo(from: selfResponse)
 
         _connectionState = .ready
+        let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
+        logger.info("Device initialization complete in \(elapsedMs)ms")
         return (deviceInfo, selfInfo)
     }
 
@@ -765,6 +821,7 @@ extension BLEService: CBCentralManagerDelegate {
 
     private func handleConnection(_ peripheral: CBPeripheral) {
         connectedPeripheral = peripheral
+        connectingPeripheral = nil  // Connection succeeded
         peripheral.delegate = self
 
         // Clear any stale data from previous session

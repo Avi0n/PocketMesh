@@ -755,6 +755,13 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         var lastError: Error = BLEError.connectionFailed("Unknown")
 
         for attempt in 1...maxAttempts {
+            // On first attempt, allow ASK/CoreBluetooth bond to fully register
+            // This is more precise than adding delay in pairNewDevice() because
+            // connectWithRetry is called from multiple places
+            if attempt == 1 {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+
             do {
                 // Initialize BLE service
                 await bleService.initialize()
