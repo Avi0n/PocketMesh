@@ -14,8 +14,8 @@ struct RepeaterStatusView: View {
             List {
                 headerSection
                 statusSection
-                neighborsSection
                 telemetrySection
+                neighborsSection  // Moved to bottom with lazy loading
             }
             .navigationTitle("Repeater Status")
             .navigationBarTitleDisplayMode(.inline)
@@ -37,20 +37,19 @@ struct RepeaterStatusView: View {
                 viewModel.configure(appState: appState)
                 await viewModel.registerHandlers(appState: appState)
 
-                // Fire all requests in parallel
-                async let statusTask: () = viewModel.requestStatus(for: session)
-                async let neighborsTask: () = viewModel.requestNeighbors(for: session)
-                async let telemetryTask: () = viewModel.requestTelemetry(for: session)
-
-                // Wait for all to complete (or timeout individually)
-                _ = await (statusTask, neighborsTask, telemetryTask)
+                // Request Status first, then Telemetry (serialized to avoid firmware conflict)
+                await viewModel.requestStatus(for: session)
+                await viewModel.requestTelemetry(for: session)
+                // Note: Neighbors are NOT auto-loaded - user must expand the section
             }
             .refreshable {
-                async let statusTask: () = viewModel.requestStatus(for: session)
-                async let neighborsTask: () = viewModel.requestNeighbors(for: session)
-                async let telemetryTask: () = viewModel.requestTelemetry(for: session)
-
-                _ = await (statusTask, neighborsTask, telemetryTask)
+                // Serialize requests to avoid firmware conflict
+                await viewModel.requestStatus(for: session)
+                await viewModel.requestTelemetry(for: session)
+                // Refresh neighbors only if already loaded
+                if viewModel.neighborsLoaded {
+                    await viewModel.requestNeighbors(for: session)
+                }
             }
         }
         .presentationDetents([.medium, .large])
@@ -129,19 +128,37 @@ struct RepeaterStatusView: View {
     // MARK: - Neighbors Section
 
     private var neighborsSection: some View {
-        Section("Neighbors (\(viewModel.neighbors.count))") {
-            if viewModel.isLoadingNeighbors && viewModel.neighbors.isEmpty {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
+        Section {
+            DisclosureGroup(isExpanded: $viewModel.neighborsExpanded) {
+                if viewModel.isLoadingNeighbors {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                } else if viewModel.neighbors.isEmpty {
+                    Text("No neighbors discovered")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
+                        NeighborRow(neighbor: neighbor)
+                    }
                 }
-            } else if viewModel.neighbors.isEmpty {
-                Text("No neighbors discovered")
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
-                    NeighborRow(neighbor: neighbor)
+            } label: {
+                HStack {
+                    Text("Neighbors")
+                    Spacer()
+                    if viewModel.neighborsLoaded {
+                        Text("\(viewModel.neighbors.count)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .onChange(of: viewModel.neighborsExpanded) { _, isExpanded in
+                if isExpanded && !viewModel.neighborsLoaded {
+                    Task {
+                        await viewModel.requestNeighbors(for: session)
+                    }
                 }
             }
         }
@@ -177,11 +194,13 @@ struct RepeaterStatusView: View {
 
     private func refresh() {
         Task {
-            async let statusTask: () = viewModel.requestStatus(for: session)
-            async let neighborsTask: () = viewModel.requestNeighbors(for: session)
-            async let telemetryTask: () = viewModel.requestTelemetry(for: session)
-
-            _ = await (statusTask, neighborsTask, telemetryTask)
+            // Serialize requests to avoid firmware conflict
+            await viewModel.requestStatus(for: session)
+            await viewModel.requestTelemetry(for: session)
+            // Refresh neighbors only if already loaded
+            if viewModel.neighborsLoaded {
+                await viewModel.requestNeighbors(for: session)
+            }
         }
     }
 }

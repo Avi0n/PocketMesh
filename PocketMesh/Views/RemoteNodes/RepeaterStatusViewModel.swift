@@ -25,6 +25,12 @@ final class RepeaterStatusViewModel {
     var isLoadingNeighbors = false
     var isLoadingTelemetry = false
 
+    /// Whether neighbors have been loaded at least once (for refresh logic)
+    var neighborsLoaded = false
+
+    /// Whether the neighbors disclosure group is expanded
+    var neighborsExpanded = false
+
     /// Error message if any
     var errorMessage: String?
 
@@ -167,6 +173,7 @@ final class RepeaterStatusViewModel {
         neighborsTimeoutTask?.cancel()  // Cancel timeout on success
         self.neighbors = response.neighbours
         self.isLoadingNeighbors = false
+        self.neighborsLoaded = true
     }
 
     // MARK: - Telemetry
