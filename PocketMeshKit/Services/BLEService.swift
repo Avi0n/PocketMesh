@@ -148,6 +148,9 @@ public actor BLEService: NSObject, BLETransport {
 
     // Response handling
     private var responseHandler: (@Sendable (Data) -> Void)?
+
+    /// Event dispatcher for centralized event routing
+    private var eventDispatcher: MeshEventDispatcher?
     private var pendingResponse: CheckedContinuation<Data?, Never>?
     private var responseBuffer: Data = Data()
     /// Task for pending response timeout (cancelled when response arrives)
@@ -541,6 +544,11 @@ public actor BLEService: NSObject, BLETransport {
         responseHandler = handler
     }
 
+    /// Sets the event dispatcher for centralized event routing
+    public func setEventDispatcher(_ dispatcher: MeshEventDispatcher) {
+        self.eventDispatcher = dispatcher
+    }
+
     /// Sets a handler for disconnection events
     public func setDisconnectionHandler(_ handler: @escaping @Sendable (UUID, Error?) -> Void) async {
         disconnectionHandler = handler
@@ -768,7 +776,16 @@ public actor BLEService: NSObject, BLETransport {
     private func handleReceivedData(_ data: Data) {
         guard !data.isEmpty else { return }
 
-        // Check if this is a push notification (0x80+)
+        // Parse and dispatch event (non-blocking, fire-and-forget)
+        if let event = MeshEventParser.parseResponse(data) {
+            if let dispatcher = eventDispatcher {
+                Task {
+                    await dispatcher.dispatch(event)
+                }
+            }
+        }
+
+        // Existing logic unchanged - both paths run in parallel
         if data[0] >= 0x80 {
             logger.debug("Received push code: 0x\(String(format: "%02X", data[0])), length: \(data.count)")
             responseHandler?(data)

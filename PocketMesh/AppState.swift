@@ -140,6 +140,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     /// The repeater admin service for repeater management
     let repeaterAdminService: RepeaterAdminService
 
+    /// The event dispatcher for centralized event routing
+    let eventDispatcher: MeshEventDispatcher
+
     // MARK: - Navigation State
 
     /// Currently selected tab index
@@ -204,6 +207,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
             binaryProtocol: binaryProtocolService,
             dataStore: dataStore
         )
+
+        // Create event dispatcher for centralized event routing
+        self.eventDispatcher = MeshEventDispatcher()
 
         // Wire up message service to contact service for path reset during retry
         Task {
@@ -517,6 +523,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     private func initializeBLEForReconnection() async {
         await bleService.initialize()
 
+        // Set up event dispatcher for centralized event routing
+        await bleService.setEventDispatcher(eventDispatcher)
+        await eventDispatcher.start()
+
         // Set up disconnection handler
         await bleService.setDisconnectionHandler { [weak self] deviceID, error in
             Task { @MainActor in
@@ -766,6 +776,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 // Initialize BLE service
                 await bleService.initialize()
 
+                // Set up event dispatcher for centralized event routing
+                await bleService.setEventDispatcher(eventDispatcher)
+                await eventDispatcher.start()
+
                 // Set up disconnection handler
                 await bleService.setDisconnectionHandler { [weak self] deviceID, error in
                     Task { @MainActor in
@@ -960,6 +974,10 @@ public final class AppState: AccessorySetupKitServiceDelegate {
                 // Ensure BLE is initialized
                 await bleService.initialize()
 
+                // Set up event dispatcher for centralized event routing
+                await bleService.setEventDispatcher(eventDispatcher)
+                await eventDispatcher.start()
+
                 // Set up disconnection handler
                 await bleService.setDisconnectionHandler { [weak self] deviceID, error in
                     Task { @MainActor in
@@ -1049,6 +1067,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
         // Stop periodic ACK checking
         await messageService.stopAckExpiryChecking()
 
+        // Stop event dispatcher
+        await eventDispatcher.stop()
+
         bleStateRestoration.recordDisconnection(intentional: true)
         clearPersistedDevice()
         await bleService.disconnect()
@@ -1061,6 +1082,9 @@ public final class AppState: AccessorySetupKitServiceDelegate {
     func disconnectForNewConnection() async {
         // Stop periodic ACK checking
         await messageService.stopAckExpiryChecking()
+
+        // Stop event dispatcher
+        await eventDispatcher.stop()
 
         // Check if there's an existing BLE connection (even if UI doesn't know)
         let actualState = await bleService.connectionState
