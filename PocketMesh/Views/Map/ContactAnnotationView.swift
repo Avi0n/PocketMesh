@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshKit
+import PocketMeshServices
 
 /// Custom annotation view for displaying contacts on the map
 struct ContactAnnotationView: View {

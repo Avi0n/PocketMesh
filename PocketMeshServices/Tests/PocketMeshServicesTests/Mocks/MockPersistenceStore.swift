@@ -1,0 +1,550 @@
+import Foundation
+import MeshCore
+@testable import PocketMeshServices
+
+/// Mock implementation of PersistenceStoreProtocol for testing.
+///
+/// Uses in-memory storage for all data. Configure by adding items to the
+/// storage dictionaries or setting stubbed errors.
+public actor MockPersistenceStore: PersistenceStoreProtocol {
+
+    // MARK: - In-Memory Storage
+
+    public var messages: [UUID: MessageDTO] = [:]
+    public var contacts: [UUID: ContactDTO] = [:]
+    public var channels: [UUID: ChannelDTO] = [:]
+
+    // MARK: - Stubbed Errors
+
+    public var stubbedSaveMessageError: Error?
+    public var stubbedFetchMessageError: Error?
+    public var stubbedUpdateMessageStatusError: Error?
+    public var stubbedSaveContactError: Error?
+    public var stubbedFetchContactError: Error?
+    public var stubbedDeleteContactError: Error?
+    public var stubbedSaveChannelError: Error?
+    public var stubbedFetchChannelError: Error?
+    public var stubbedDeleteChannelError: Error?
+
+    // MARK: - Recorded Invocations
+
+    public private(set) var savedMessages: [MessageDTO] = []
+    public private(set) var savedContacts: [ContactDTO] = []
+    public private(set) var savedChannels: [ChannelDTO] = []
+    public private(set) var deletedContactIDs: [UUID] = []
+    public private(set) var deletedChannelIDs: [UUID] = []
+    public private(set) var updatedMessageStatuses: [(id: UUID, status: MessageStatus)] = []
+    public private(set) var updatedMessageAcks: [(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?)] = []
+
+    // MARK: - Initialization
+
+    public init() {}
+
+    // MARK: - Message Operations
+
+    public func saveMessage(_ dto: MessageDTO) async throws {
+        savedMessages.append(dto)
+        if let error = stubbedSaveMessageError {
+            throw error
+        }
+        messages[dto.id] = dto
+    }
+
+    public func fetchMessage(id: UUID) async throws -> MessageDTO? {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+        return messages[id]
+    }
+
+    public func fetchMessage(ackCode: UInt32) async throws -> MessageDTO? {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+        return messages.values.first { $0.ackCode == ackCode }
+    }
+
+    public func fetchMessages(contactID: UUID, limit: Int, offset: Int) async throws -> [MessageDTO] {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+        let filtered = messages.values.filter { $0.contactID == contactID }
+            .sorted { $0.timestamp < $1.timestamp }
+        return Array(filtered.dropFirst(offset).prefix(limit))
+    }
+
+    public func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int, offset: Int) async throws -> [MessageDTO] {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+        let filtered = messages.values.filter { $0.deviceID == deviceID && $0.channelIndex == channelIndex }
+            .sorted { $0.timestamp < $1.timestamp }
+        return Array(filtered.dropFirst(offset).prefix(limit))
+    }
+
+    public func updateMessageStatus(id: UUID, status: MessageStatus) async throws {
+        updatedMessageStatuses.append((id: id, status: status))
+        if let error = stubbedUpdateMessageStatusError {
+            throw error
+        }
+        if var message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
+            )
+        }
+    }
+
+    public func updateMessageAck(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {
+        updatedMessageAcks.append((id: id, ackCode: ackCode, status: status, roundTripTime: roundTripTime))
+        if let error = stubbedUpdateMessageStatusError {
+            throw error
+        }
+        if var message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: status,
+                textType: message.textType,
+                ackCode: ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
+            )
+        }
+    }
+
+    public func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {
+        if let message = messages.values.first(where: { $0.ackCode == ackCode }) {
+            try await updateMessageAck(id: message.id, ackCode: ackCode, status: status, roundTripTime: roundTripTime)
+        }
+    }
+
+    public func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {
+        if let error = stubbedUpdateMessageStatusError {
+            throw error
+        }
+        if var message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: retryAttempt,
+                maxRetryAttempts: maxRetryAttempts
+            )
+        }
+    }
+
+    public func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {
+        if let message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
+            )
+        }
+    }
+
+    public func isDuplicateMessage(deduplicationKey: String) async throws -> Bool {
+        messages.values.contains { $0.deduplicationKey == deduplicationKey }
+    }
+
+    // MARK: - Contact Operations
+
+    public func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.filter { $0.deviceID == deviceID && !$0.isDiscovered }
+    }
+
+    public func fetchConversations(deviceID: UUID) async throws -> [ContactDTO] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values
+            .filter { $0.deviceID == deviceID && $0.lastMessageDate != nil && !$0.isDiscovered }
+            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+    }
+
+    public func fetchContact(id: UUID) async throws -> ContactDTO? {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts[id]
+    }
+
+    public func fetchContact(deviceID: UUID, publicKey: Data) async throws -> ContactDTO? {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.first { $0.deviceID == deviceID && $0.publicKey == publicKey }
+    }
+
+    public func fetchContact(deviceID: UUID, publicKeyPrefix: Data) async throws -> ContactDTO? {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.first { $0.deviceID == deviceID && $0.publicKey.prefix(6) == publicKeyPrefix }
+    }
+
+    @discardableResult
+    public func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID {
+        if let error = stubbedSaveContactError {
+            throw error
+        }
+        // Check if contact already exists
+        if let existing = contacts.values.first(where: { $0.deviceID == deviceID && $0.publicKey == frame.publicKey }) {
+            return existing.id
+        }
+        let id = UUID()
+        let dto = ContactDTO(
+            id: id,
+            deviceID: deviceID,
+            publicKey: frame.publicKey,
+            name: frame.name,
+            typeRawValue: frame.type.rawValue,
+            flags: frame.flags,
+            outPathLength: frame.outPathLength,
+            outPath: frame.outPath,
+            lastAdvertTimestamp: frame.lastAdvertTimestamp,
+            latitude: frame.latitude,
+            longitude: frame.longitude,
+            lastModified: frame.lastModified,
+            nickname: nil,
+            isBlocked: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        contacts[id] = dto
+        savedContacts.append(dto)
+        return id
+    }
+
+    public func saveContact(_ dto: ContactDTO) async throws {
+        savedContacts.append(dto)
+        if let error = stubbedSaveContactError {
+            throw error
+        }
+        contacts[dto.id] = dto
+    }
+
+    public func deleteContact(id: UUID) async throws {
+        deletedContactIDs.append(id)
+        if let error = stubbedDeleteContactError {
+            throw error
+        }
+        contacts.removeValue(forKey: id)
+    }
+
+    public func updateContactLastMessage(contactID: UUID, date: Date) async throws {
+        if var contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: date,
+                unreadCount: contact.unreadCount
+            )
+        }
+    }
+
+    public func incrementUnreadCount(contactID: UUID) async throws {
+        if var contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: contact.unreadCount + 1
+            )
+        }
+    }
+
+    public func clearUnreadCount(contactID: UUID) async throws {
+        if var contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: 0
+            )
+        }
+    }
+
+    public func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.filter { $0.deviceID == deviceID && $0.isDiscovered }
+    }
+
+    public func confirmContact(id: UUID) async throws {
+        if var contact = contacts[id] {
+            contacts[id] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isFavorite: contact.isFavorite,
+                isDiscovered: false,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: contact.unreadCount
+            )
+        }
+    }
+
+    // MARK: - Channel Operations
+
+    public func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {
+        if let error = stubbedFetchChannelError {
+            throw error
+        }
+        return channels.values.filter { $0.deviceID == deviceID }.sorted { $0.index < $1.index }
+    }
+
+    public func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? {
+        if let error = stubbedFetchChannelError {
+            throw error
+        }
+        return channels.values.first { $0.deviceID == deviceID && $0.index == index }
+    }
+
+    public func fetchChannel(id: UUID) async throws -> ChannelDTO? {
+        if let error = stubbedFetchChannelError {
+            throw error
+        }
+        return channels[id]
+    }
+
+    @discardableResult
+    public func saveChannel(deviceID: UUID, from info: ChannelInfo) async throws -> UUID {
+        if let error = stubbedSaveChannelError {
+            throw error
+        }
+        // Check if channel already exists
+        if let existing = channels.values.first(where: { $0.deviceID == deviceID && $0.index == info.index }) {
+            // Update existing
+            channels[existing.id] = ChannelDTO(
+                id: existing.id,
+                deviceID: deviceID,
+                index: info.index,
+                name: info.name,
+                secret: info.secret,
+                isEnabled: !info.name.isEmpty,
+                lastMessageDate: existing.lastMessageDate,
+                unreadCount: existing.unreadCount
+            )
+            return existing.id
+        }
+        let id = UUID()
+        let dto = ChannelDTO(
+            id: id,
+            deviceID: deviceID,
+            index: info.index,
+            name: info.name,
+            secret: info.secret,
+            isEnabled: !info.name.isEmpty,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        channels[id] = dto
+        savedChannels.append(dto)
+        return id
+    }
+
+    public func saveChannel(_ dto: ChannelDTO) async throws {
+        savedChannels.append(dto)
+        if let error = stubbedSaveChannelError {
+            throw error
+        }
+        channels[dto.id] = dto
+    }
+
+    public func deleteChannel(id: UUID) async throws {
+        deletedChannelIDs.append(id)
+        if let error = stubbedDeleteChannelError {
+            throw error
+        }
+        channels.removeValue(forKey: id)
+    }
+
+    public func updateChannelLastMessage(channelID: UUID, date: Date) async throws {
+        if var channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: date,
+                unreadCount: channel.unreadCount
+            )
+        }
+    }
+
+    public func incrementChannelUnreadCount(channelID: UUID) async throws {
+        if var channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount + 1
+            )
+        }
+    }
+
+    public func clearChannelUnreadCount(channelID: UUID) async throws {
+        if var channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: 0
+            )
+        }
+    }
+
+    // MARK: - Test Helpers
+
+    /// Resets all storage and recorded invocations
+    public func reset() {
+        messages = [:]
+        contacts = [:]
+        channels = [:]
+        savedMessages = []
+        savedContacts = []
+        savedChannels = []
+        deletedContactIDs = []
+        deletedChannelIDs = []
+        updatedMessageStatuses = []
+        updatedMessageAcks = []
+    }
+}

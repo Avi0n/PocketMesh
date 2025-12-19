@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import PocketMeshKit
+@testable import PocketMeshServices
 
 @Suite("LPP Data Point Display Tests")
 struct LPPDataPointDisplayTests {

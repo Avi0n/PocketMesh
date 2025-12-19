@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// A Text view that displays @[name] mentions in bold
 struct MentionText: View {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Radio preset selector with region-based filtering
 struct RadioPresetSection: View {
@@ -99,10 +99,10 @@ struct RadioPresetSection: View {
         isApplying = true
         Task {
             do {
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    try await appState.settingsService.applyRadioPresetVerified(preset)
+                guard let settingsService = appState.services?.settingsService else {
+                    throw ConnectionError.notConnected
                 }
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                _ = try await settingsService.applyRadioPresetVerified(preset)
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 selectedPresetID = currentPreset?.id // Revert

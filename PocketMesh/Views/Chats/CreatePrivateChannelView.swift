@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import CoreImage.CIFilterBuiltins
 
 /// View for creating a private channel with auto-generated secret and QR code
@@ -180,7 +180,11 @@ struct CreatePrivateChannelView: View {
         errorMessage = nil
 
         do {
-            try await appState.channelService.setChannelWithSecret(
+            guard let channelService = appState.services?.channelService else {
+                errorMessage = "Services not available"
+                return
+            }
+            try await channelService.setChannelWithSecret(
                 deviceID: deviceID,
                 index: selectedSlot,
                 name: channelName,

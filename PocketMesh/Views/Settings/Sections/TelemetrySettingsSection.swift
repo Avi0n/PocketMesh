@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Telemetry sharing configuration
 struct TelemetrySettingsSection: View {
@@ -93,25 +93,23 @@ struct TelemetrySettingsSection: View {
     }
 
     private func updateTelemetry() {
-        guard let device = appState.connectedDevice else { return }
+        guard let device = appState.connectedDevice,
+              let settingsService = appState.services?.settingsService else { return }
 
         isSaving = true
         Task {
             do {
                 let modes = TelemetryModes(
-                    base: allowTelemetryRequests ? .allowAll : .deny,
-                    location: includeLocation ? .allowAll : .deny,
-                    environment: includeEnvironment ? .allowAll : .deny
+                    base: allowTelemetryRequests ? 2 : 0,
+                    location: includeLocation ? 2 : 0,
+                    environment: includeEnvironment ? 2 : 0
                 )
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    try await appState.settingsService.setOtherParamsVerified(
-                        autoAddContacts: !device.manualAddContacts,
-                        telemetryModes: modes,
-                        shareLocationPublicly: device.advertLocationPolicy == 1,
-                        multiAcks: device.multiAcks
-                    )
-                }
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                _ = try await settingsService.setOtherParamsVerified(
+                    autoAddContacts: !device.manualAddContacts,
+                    telemetryModes: modes,
+                    shareLocationPublicly: device.advertLocationPolicy == 1,
+                    multiAcks: device.multiAcks
+                )
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 loadCurrentSettings() // Revert on error

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {

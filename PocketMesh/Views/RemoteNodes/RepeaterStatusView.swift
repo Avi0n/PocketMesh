@@ -1,5 +1,5 @@
+import PocketMeshServices
 import SwiftUI
-import PocketMeshKit
 
 /// Display view for repeater stats, telemetry, and neighbors
 struct RepeaterStatusView: View {
@@ -223,7 +223,7 @@ private struct NeighborRow: View {
 
             Spacer()
 
-            Text(String(format: "%.1f dB", neighbor.snr))
+            Text("\(neighbor.snr.formatted(.number.precision(.fractionLength(1)))) dB")
                 .font(.caption)
                 .foregroundStyle(snrColor)
         }

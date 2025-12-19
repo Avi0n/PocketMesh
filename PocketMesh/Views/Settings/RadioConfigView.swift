@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Radio configuration screen for adjusting LoRa parameters
 struct RadioConfigView: View {
@@ -228,7 +228,7 @@ struct RadioConfigView: View {
 
     private func formatFrequency(_ freqKHz: UInt32) -> String {
         let freqMHz = Double(freqKHz) / 1000.0
-        return String(format: "%.3f MHz", freqMHz)
+        return "\(freqMHz.formatted(.number.precision(.fractionLength(3)))) MHz"
     }
 
     private func loadCurrentSettings() {
@@ -315,9 +315,9 @@ private struct AirtimeEstimate: View {
         let dataRate = sf * symbolRate * cr
 
         if dataRate < 1000 {
-            return String(format: "%.0f bps", dataRate)
+            return "\(dataRate.formatted(.number.precision(.fractionLength(0)))) bps"
         } else {
-            return String(format: "%.1f kbps", dataRate / 1000)
+            return "\((dataRate / 1000).formatted(.number.precision(.fractionLength(1)))) kbps"
         }
     }
 
@@ -343,9 +343,9 @@ private struct AirtimeEstimate: View {
         let totalTime = (preambleTime + payloadTime) * 1000 // ms
 
         if totalTime < 1000 {
-            return String(format: "%.0f ms", totalTime)
+            return "\(totalTime.formatted(.number.precision(.fractionLength(0)))) ms"
         } else {
-            return String(format: "%.1f s", totalTime / 1000)
+            return "\((totalTime / 1000).formatted(.number.precision(.fractionLength(1)))) s"
         }
     }
 

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Reusable password entry sheet for both room servers and repeaters
 struct NodeAuthenticationSheet: View {
@@ -54,7 +54,9 @@ struct NodeAuthenticationSheet: View {
                 }
             }
             .task {
-                hasSavedPassword = await appState.remoteNodeService.hasPassword(forContact: contact)
+                if let remoteNodeService = appState.services?.remoteNodeService {
+                    hasSavedPassword = await remoteNodeService.hasPassword(forContact: contact)
+                }
             }
         }
     }
@@ -164,12 +166,16 @@ struct NodeAuthenticationSheet: View {
                     throw RemoteNodeError.notConnected
                 }
 
+                guard let services = appState.services else {
+                    throw RemoteNodeError.notConnected
+                }
+
                 // Determine path length from contact for timeout calculation
                 let pathLength = UInt8(max(0, contact.outPathLength))
 
                 let session: RemoteNodeSessionDTO
                 if role == .roomServer {
-                    session = try await appState.roomServerService.joinRoom(
+                    session = try await services.roomServerService.joinRoom(
                         deviceID: device.id,
                         contact: contact,
                         password: password.isEmpty ? nil : password,
@@ -177,7 +183,7 @@ struct NodeAuthenticationSheet: View {
                         pathLength: pathLength
                     )
                 } else {
-                    session = try await appState.repeaterAdminService.connectAsAdmin(
+                    session = try await services.repeaterAdminService.connectAsAdmin(
                         deviceID: device.id,
                         contact: contact,
                         password: password.isEmpty ? nil : password,

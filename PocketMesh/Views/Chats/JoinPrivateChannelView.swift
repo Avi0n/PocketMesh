@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// View for joining a private channel by entering name and hex secret key
 struct JoinPrivateChannelView: View {
@@ -101,7 +101,11 @@ struct JoinPrivateChannelView: View {
         errorMessage = nil
 
         do {
-            try await appState.channelService.setChannelWithSecret(
+            guard let channelService = appState.services?.channelService else {
+                errorMessage = "Services not available"
+                return
+            }
+            try await channelService.setChannelWithSecret(
                 deviceID: deviceID,
                 index: selectedSlot,
                 name: channelName,

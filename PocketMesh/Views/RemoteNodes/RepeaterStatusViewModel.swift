@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// ViewModel for repeater status display
 @Observable
@@ -44,7 +44,7 @@ final class RepeaterStatusViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.repeaterAdminService = appState.repeaterAdminService
+        self.repeaterAdminService = appState.services?.repeaterAdminService
         // Handler registration moved to registerHandlers() called from view's .task modifier
     }
 
@@ -52,22 +52,24 @@ final class RepeaterStatusViewModel {
     /// Called from view's .task modifier to ensure proper lifecycle management
     /// This method is idempotent - it clears existing handlers before registering new ones
     func registerHandlers(appState: AppState) async {
-        // Clear any existing handlers first (idempotent setup)
-        await appState.repeaterAdminService.clearHandlers()
+        guard let repeaterAdminService = appState.services?.repeaterAdminService else { return }
 
-        await appState.repeaterAdminService.setStatusHandler { [weak self] status in
+        // Clear any existing handlers first (idempotent setup)
+        await repeaterAdminService.clearHandlers()
+
+        await repeaterAdminService.setStatusHandler { [weak self] status in
             await MainActor.run {
                 self?.handleStatusResponse(status)
             }
         }
 
-        await appState.repeaterAdminService.setNeighboursHandler { [weak self] response in
+        await repeaterAdminService.setNeighboursHandler { [weak self] response in
             await MainActor.run {
                 self?.handleNeighboursResponse(response)
             }
         }
 
-        await appState.repeaterAdminService.setTelemetryHandler { [weak self] response in
+        await repeaterAdminService.setTelemetryHandler { [weak self] response in
             await MainActor.run {
                 self?.handleTelemetryResponse(response)
             }
@@ -234,7 +236,7 @@ final class RepeaterStatusViewModel {
     var batteryDisplay: String? {
         guard let mv = status?.batteryMillivolts else { return nil }
         let volts = Double(mv) / 1000.0
-        return String(format: "%.2fV", volts)
+        return "\(volts.formatted(.number.precision(.fractionLength(2))))V"
     }
 
     var noiseFloorDisplay: String? {

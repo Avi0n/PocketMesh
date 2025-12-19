@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Reusable chat input bar with configurable styling
 struct ChatInputBar: View {

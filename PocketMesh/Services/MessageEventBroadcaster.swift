@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshKit
+import PocketMeshServices
 import OSLog
 
 /// Events broadcast when messages arrive or status changes
@@ -15,11 +15,11 @@ public enum MessageEvent: Sendable, Equatable {
     case error(String)
 }
 
-/// Broadcasts message events from MessagePollingService to SwiftUI views.
-/// This bridges actor isolation to @MainActor context.
+/// Broadcasts message events to SwiftUI views.
+/// This bridges service layer callbacks to @MainActor context.
 @Observable
 @MainActor
-public final class MessageEventBroadcaster: MessagePollingDelegate {
+public final class MessageEventBroadcaster {
 
     // MARK: - Properties
 
@@ -54,7 +54,7 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
     var remoteNodeService: RemoteNodeService?
 
     /// Reference to data store for resolving public key prefixes
-    var dataStore: DataStore?
+    var dataStore: PersistenceStore?
 
     /// Reference to room server service for handling room messages
     var roomServerService: RoomServerService?
@@ -69,19 +69,13 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
 
     public init() {}
 
-    // MARK: - MessagePollingDelegate
+    // MARK: - Direct Message Handling
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveDirectMessage message: MessageDTO,
-        from contact: ContactDTO
-    ) async {
-        // Update state on MainActor
-        await MainActor.run {
-            self.latestMessage = message
-            self.latestEvent = .directMessageReceived(message: message, contact: contact)
-            self.newMessageCount += 1
-        }
+    /// Handle incoming direct message (called from service layer callback)
+    func handleDirectMessage(_ message: MessageDTO, from contact: ContactDTO) async {
+        self.latestMessage = message
+        self.latestEvent = .directMessageReceived(message: message, contact: contact)
+        self.newMessageCount += 1
 
         // Post notification directly (NotificationService is @MainActor)
         await notificationService?.postDirectMessageNotification(
@@ -92,23 +86,14 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         )
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveChannelMessage message: MessageDTO,
-        channelIndex: UInt8
-    ) async {
-        // All operations on MainActor, but properly awaited (no nested Task)
-        await handleChannelMessage(message, channelIndex: channelIndex)
-    }
+    // MARK: - Channel Message Handling
 
-    /// Helper to handle channel message on MainActor (enables proper async/await)
-    @MainActor
-    private func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) async {
-        // Update state
+    /// Handle incoming channel message (called from service layer callback)
+    func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) async {
         self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
         self.newMessageCount += 1
 
-        // Resolve channel name and post notification directly (no Task wrapper)
+        // Resolve channel name and post notification
         let channelName = await channelNameLookup?(message.deviceID, channelIndex) ?? "Channel \(channelIndex)"
         await notificationService?.postChannelMessageNotification(
             channelName: channelName,
@@ -120,88 +105,27 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         )
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveUnknownSender keyPrefix: Data
-    ) async {
-        await MainActor.run {
-            self.latestEvent = .unknownSender(keyPrefix: keyPrefix)
-        }
+    // MARK: - Room Message Handling
+
+    /// Handle incoming room message (called from service layer callback)
+    func handleRoomMessage(_ message: RoomMessageDTO, contact: ContactDTO) async {
+        await notificationService?.postRoomMessageNotification(
+            roomName: contact.displayName,
+            senderName: message.authorName,
+            messageText: message.text,
+            messageID: message.id
+        )
+
+        self.latestEvent = .roomMessageReceived(message: message, sessionID: message.sessionID)
+        self.newMessageCount += 1
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didEncounterError error: MessagePollingError
-    ) async {
-        await MainActor.run {
-            self.latestEvent = .error(error.localizedDescription)
-        }
-    }
+    // MARK: - Status Event Handlers
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveSendConfirmation confirmation: SendConfirmation
-    ) async {
-        // Access messageService on MainActor then call into the actor
-        let msgService = await MainActor.run { self.messageService }
-
-        guard let msgService else {
-            await MainActor.run {
-                self.logger.warning("Received send confirmation but MessageService not ready - ack: \(confirmation.ackCode)")
-            }
-            return
-        }
-
-        do {
-            try await msgService.handleSendConfirmation(confirmation)
-
-            // Notify views of status update so they refresh
-            await MainActor.run {
-                self.latestEvent = .messageStatusUpdated(ackCode: confirmation.ackCode)
-                self.newMessageCount += 1
-            }
-        } catch {
-            await MainActor.run {
-                self.logger.error("Failed to handle send confirmation: \(error)")
-            }
-        }
-    }
-
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveStatusResponse status: RemoteNodeStatus
-    ) async {
-        let adminService = await MainActor.run { self.repeaterAdminService }
-        // Use actor method invocation instead of direct property access
-        await adminService?.invokeStatusHandler(status)
-
-        let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
-        await MainActor.run {
-            self.logger.info("Received status response from node: \(prefixHex)")
-        }
-    }
-
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveLoginResult result: LoginResult,
-        fromPublicKeyPrefix: Data
-    ) async {
-        await MainActor.run {
-            self.logger.debug("Received login result from node: \(fromPublicKeyPrefix.map { String(format: "%02x", $0) }.joined()), success: \(result.success)")
-        }
-
-        let nodeService = await MainActor.run { self.remoteNodeService }
-
-        guard let nodeService else {
-            await MainActor.run {
-                self.logger.warning("Cannot handle login result - RemoteNodeService not configured")
-            }
-            return
-        }
-
-        // Forward to RemoteNodeService using the 6-byte prefix directly
-        // No contact lookup needed - RemoteNodeService keys pending logins by prefix
-        await nodeService.handleLoginResult(result, fromPublicKeyPrefix: fromPublicKeyPrefix)
+    /// Handle acknowledgement/status update
+    func handleAcknowledgement(ackCode: UInt32) {
+        self.latestEvent = .messageStatusUpdated(ackCode: ackCode)
+        self.newMessageCount += 1
     }
 
     /// Called when a message fails due to ACK timeout
@@ -223,88 +147,43 @@ public final class MessageEventBroadcaster: MessagePollingDelegate {
         self.newMessageCount += 1
     }
 
+    // MARK: - Other Event Handlers
+
+    /// Handle unknown sender notification
+    func handleUnknownSender(keyPrefix: Data) {
+        self.latestEvent = .unknownSender(keyPrefix: keyPrefix)
+    }
+
+    /// Handle error notification
+    func handleError(_ message: String) {
+        self.latestEvent = .error(message)
+    }
+
     /// Handles contact update notification from AdvertisementService
     func handleContactsUpdated() {
         contactsRefreshTrigger += 1
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveRoomMessage frame: MessageFrame,
-        fromRoom contact: ContactDTO
-    ) async {
-        let (roomService, notifService) = await MainActor.run {
-            (self.roomServerService, self.notificationService)
-        }
+    // MARK: - Status Response Handling
 
-        guard let roomService else {
-            await MainActor.run {
-                self.logger.warning("Room message received but RoomServerService not configured")
-            }
-            return
-        }
+    /// Handle status response from remote node
+    func handleStatusResponse(_ status: StatusResponse) async {
+        await repeaterAdminService?.invokeStatusHandler(status)
 
-        guard let authorPrefix = frame.extraData, authorPrefix.count >= 4 else {
-            await MainActor.run {
-                self.logger.warning("Room message missing author prefix")
-            }
-            return
-        }
-
-        do {
-            if let messageDTO = try await roomService.handleIncomingMessage(
-                senderPublicKeyPrefix: frame.senderPublicKeyPrefix,
-                timestamp: frame.timestamp,
-                authorPrefix: Data(authorPrefix.prefix(4)),
-                text: frame.text
-            ) {
-                // Post notification for backgrounded app
-                await notifService?.postRoomMessageNotification(
-                    roomName: contact.displayName,
-                    senderName: messageDTO.authorName,
-                    messageText: messageDTO.text,
-                    messageID: messageDTO.id
-                )
-
-                // Broadcast event for UI updates
-                await MainActor.run {
-                    self.latestEvent = .roomMessageReceived(message: messageDTO, sessionID: messageDTO.sessionID)
-                    self.newMessageCount += 1
-                }
-            }
-        } catch {
-            await MainActor.run {
-                self.logger.error("Failed to handle room message: \(error)")
-            }
-        }
+        let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
+        logger.info("Received status response from node: \(prefixHex)")
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveBinaryResponse data: Data
-    ) async {
-        let binaryService = await MainActor.run { self.binaryProtocolService }
-        guard let binaryService else { return }
+    // Note: Login results and binary responses are handled internally by
+    // PocketMeshServices via MeshCore event monitoring. No external handlers needed.
 
-        await binaryService.processBinaryResponse(data)
+    /// Handle telemetry response
+    func handleTelemetryResponse(_ response: TelemetryResponse) async {
+        await repeaterAdminService?.invokeTelemetryHandler(response)
     }
 
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveTelemetryResponse response: TelemetryResponse
-    ) async {
-        let adminService = await MainActor.run { self.repeaterAdminService }
-        // Use actor method invocation instead of direct property access
-        await adminService?.invokeTelemetryHandler(response)
-    }
-
-    nonisolated public func messagePollingService(
-        _ service: MessagePollingService,
-        didReceiveCLIResponse frame: MessageFrame,
-        fromContact contact: ContactDTO
-    ) async {
-        let adminService = await MainActor.run { self.repeaterAdminService }
-        // Route CLI responses to RepeaterAdminService for ViewModel handling
-        await adminService?.invokeCLIHandler(frame, fromContact: contact)
+    /// Handle CLI response
+    func handleCLIResponse(_ message: ContactMessage, fromContact contact: ContactDTO) async {
+        await repeaterAdminService?.invokeCLIHandler(message, fromContact: contact)
     }
 }

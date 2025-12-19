@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Picker for selecting trusted contacts for telemetry
 struct TrustedContactsPickerView: View {
@@ -43,9 +43,10 @@ struct TrustedContactsPickerView: View {
     }
 
     private func loadContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.connectedDevice?.id,
+              let contactService = appState.services?.contactService else { return }
         do {
-            contacts = try await appState.contactService.getContacts(deviceID: deviceID)
+            contacts = try await contactService.getContacts(deviceID: deviceID)
         } catch {
             // Silently fail
         }

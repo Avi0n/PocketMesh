@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// View for joining a hashtag channel (public, name-based)
 struct JoinHashtagChannelView: View {
@@ -115,13 +115,18 @@ struct JoinHashtagChannelView: View {
             return
         }
 
+        guard let channelService = appState.services?.channelService else {
+            errorMessage = "Services not available"
+            return
+        }
+
         isJoining = true
         errorMessage = nil
 
         do {
             // For hashtag channels, hash the full name including "#" prefix
             // to match meshcore spec: sha256("#channelname")[0:16]
-            try await appState.channelService.setChannel(
+            try await channelService.setChannel(
                 deviceID: deviceID,
                 index: selectedSlot,
                 name: "#\(channelName)",

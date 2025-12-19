@@ -1,7 +1,7 @@
 import SwiftUI
 import VisionKit
 import AudioToolbox
-import PocketMeshKit
+import PocketMeshServices
 
 /// View for scanning a channel QR code to join
 struct ScanChannelQRView: View {
@@ -203,7 +203,11 @@ struct ScanChannelQRView: View {
         errorMessage = nil
 
         do {
-            try await appState.channelService.setChannelWithSecret(
+            guard let channelService = appState.services?.channelService else {
+                errorMessage = "Services not available"
+                return
+            }
+            try await channelService.setChannelWithSecret(
                 deviceID: deviceID,
                 index: selectedSlot,
                 name: channel.name,

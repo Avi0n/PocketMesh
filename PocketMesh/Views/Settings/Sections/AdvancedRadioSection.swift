@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Manual radio parameter configuration
 struct AdvancedRadioSection: View {
@@ -111,7 +111,7 @@ struct AdvancedRadioSection: View {
 
     private func loadCurrentSettings() {
         guard let device = appState.connectedDevice else { return }
-        frequency = String(format: "%.3f", Double(device.frequency) / 1000.0)
+        frequency = (Double(device.frequency) / 1000.0).formatted(.number.precision(.fractionLength(3)))
         // Use nearestBandwidth to handle devices with non-standard bandwidth values
         // or firmware float precision issues (e.g., 7799 Hz instead of 7800 Hz)
         bandwidth = RadioOptions.nearestBandwidth(to: device.bandwidth)
@@ -122,8 +122,9 @@ struct AdvancedRadioSection: View {
 
     private func applySettings() {
         guard let freqMHz = Double(frequency),
-              let power = UInt8(txPower) else {
-            showError = "Invalid input values"
+              let power = UInt8(txPower),
+              let settingsService = appState.services?.settingsService else {
+            showError = "Invalid input values or device not connected"
             return
         }
 
@@ -132,25 +133,19 @@ struct AdvancedRadioSection: View {
         isApplying = true
         Task {
             do {
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    // Set radio params first
-                    var deviceInfo: DeviceInfo
-                    var selfInfo: SelfInfo
-                    (deviceInfo, selfInfo) = try await appState.settingsService.setRadioParamsVerified(
-                        frequencyKHz: UInt32((freqMHz * 1000).rounded()),
-                        // Note: Parameter is misleadingly named "bandwidthKHz" but expects Hz.
-                        // bandwidth is already UInt32 Hz from the picker, pass directly.
-                        bandwidthKHz: bandwidth,
-                        spreadingFactor: UInt8(spreadingFactor),
-                        codingRate: UInt8(codingRate)
-                    )
+                // Set radio params first
+                _ = try await settingsService.setRadioParamsVerified(
+                    frequencyKHz: UInt32((freqMHz * 1000).rounded()),
+                    // Note: Parameter is misleadingly named "bandwidthKHz" but expects Hz.
+                    // bandwidth is already UInt32 Hz from the picker, pass directly.
+                    bandwidthKHz: bandwidth,
+                    spreadingFactor: UInt8(spreadingFactor),
+                    codingRate: UInt8(codingRate)
+                )
 
-                    // Then set TX power
-                    (deviceInfo, selfInfo) = try await appState.settingsService.setTxPowerVerified(power)
-                    return (deviceInfo, selfInfo)
-                }
+                // Then set TX power
+                _ = try await settingsService.setTxPowerVerified(power)
 
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
                 focusedField = nil  // Dismiss keyboard on success
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
