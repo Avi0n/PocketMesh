@@ -27,4 +27,4 @@ For more details, see the [Development Guide](docs/Development.md).
 
 ## License
 
-MIT License. CLAUDE.md is adapted from https://github.com/twostraws/SwiftAgents
+AGPL 3.0
