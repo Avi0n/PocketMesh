@@ -1,0 +1,495 @@
+import Foundation
+import SwiftData
+import MeshCore
+import OSLog
+
+/// Connection state for the mesh device
+public enum ConnectionState: Sendable {
+    case disconnected
+    case connecting
+    case connected
+    case ready
+}
+
+/// Errors that can occur during connection operations
+public enum ConnectionError: LocalizedError {
+    case connectionFailed(String)
+    case deviceNotFound
+    case notConnected
+    case initializationFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .connectionFailed(let reason):
+            return "Connection failed: \(reason)"
+        case .deviceNotFound:
+            return "Device not found"
+        case .notConnected:
+            return "Not connected to device"
+        case .initializationFailed(let reason):
+            return "Device initialization failed: \(reason)"
+        }
+    }
+}
+
+/// Manages the connection lifecycle for mesh devices.
+///
+/// `ConnectionManager` owns the transport, session, and services. It handles:
+/// - Device pairing via AccessorySetupKit
+/// - Connection and disconnection
+/// - Auto-reconnect on connection loss
+/// - Last-device persistence for app restoration
+@MainActor
+@Observable
+public final class ConnectionManager {
+
+    // MARK: - Logging
+
+    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "ConnectionManager")
+
+    // MARK: - Observable State
+
+    /// Current connection state
+    public private(set) var connectionState: ConnectionState = .disconnected
+
+    /// Connected device info (nil when disconnected)
+    public private(set) var connectedDevice: DeviceDTO?
+
+    /// Services container (nil when disconnected)
+    public private(set) var services: ServiceContainer?
+
+    /// Number of paired accessories (for troubleshooting UI)
+    public var pairedAccessoriesCount: Int {
+        accessorySetupKit.pairedAccessories.count
+    }
+
+    // MARK: - Internal Components
+
+    private let modelContainer: ModelContainer
+    private var transport: iOSBLETransport?
+    private var session: MeshCoreSession?
+    private let accessorySetupKit = AccessorySetupKitService()
+
+    // MARK: - Persistence Keys
+
+    private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
+    private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
+
+    // MARK: - Last Device Persistence
+
+    /// The last connected device ID (for auto-reconnect)
+    public var lastConnectedDeviceID: UUID? {
+        guard let uuidString = UserDefaults.standard.string(forKey: lastDeviceIDKey) else {
+            return nil
+        }
+        return UUID(uuidString: uuidString)
+    }
+
+    /// Records a successful connection for future restoration
+    private func persistConnection(deviceID: UUID, deviceName: String) {
+        UserDefaults.standard.set(deviceID.uuidString, forKey: lastDeviceIDKey)
+        UserDefaults.standard.set(deviceName, forKey: lastDeviceNameKey)
+    }
+
+    /// Clears the persisted connection
+    private func clearPersistedConnection() {
+        UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
+        UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
+    }
+
+    // MARK: - Initialization
+
+    /// Creates a new connection manager.
+    /// - Parameter modelContainer: The SwiftData model container for persistence
+    public init(modelContainer: ModelContainer) {
+        self.modelContainer = modelContainer
+        accessorySetupKit.delegate = self
+    }
+
+    // MARK: - Public Lifecycle Methods
+
+    /// Activates the connection manager on app launch.
+    /// Call this once during app initialization.
+    public func activate() async {
+        logger.info("Activating ConnectionManager")
+
+        // Activate AccessorySetupKit session first (required before any BLE operations)
+        do {
+            try await accessorySetupKit.activateSession()
+        } catch {
+            logger.error("Failed to activate AccessorySetupKit: \(error.localizedDescription)")
+            return
+        }
+
+        // Auto-reconnect to last device if available
+        if let lastDeviceID = lastConnectedDeviceID {
+            logger.info("Attempting auto-reconnect to last device: \(lastDeviceID)")
+            do {
+                try await connect(to: lastDeviceID)
+            } catch {
+                logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
+                // Don't propagate - auto-reconnect failure is not fatal
+            }
+        }
+    }
+
+    /// Pairs a new device using AccessorySetupKit picker.
+    /// - Throws: AccessorySetupKitError if pairing fails
+    public func pairNewDevice() async throws {
+        logger.info("Starting device pairing")
+
+        // Show AccessorySetupKit picker
+        let deviceID = try await accessorySetupKit.showPicker()
+
+        // Connect to the newly paired device
+        try await connectAfterPairing(deviceID: deviceID)
+    }
+
+    /// Connects to a previously paired device.
+    /// - Parameter deviceID: The UUID of the device to connect to
+    /// - Throws: Connection errors
+    public func connect(to deviceID: UUID) async throws {
+        logger.info("Connecting to device: \(deviceID)")
+
+        // Validate device is still registered with ASK
+        if accessorySetupKit.isSessionActive {
+            let isRegistered = accessorySetupKit.pairedAccessories.contains {
+                $0.bluetoothIdentifier == deviceID
+            }
+
+            if !isRegistered {
+                logger.warning("Device not found in ASK paired accessories")
+                throw ConnectionError.deviceNotFound
+            }
+        }
+
+        // Attempt connection with retry
+        try await connectWithRetry(deviceID: deviceID, maxAttempts: 4)
+    }
+
+    /// Disconnects from the current device.
+    public func disconnect() async {
+        logger.info("Disconnecting from device")
+
+        // Stop event monitoring
+        await services?.stopEventMonitoring()
+
+        // Stop session
+        await session?.stop()
+
+        // Disconnect transport
+        await transport?.disconnect()
+
+        // Clear state
+        await cleanupConnection()
+
+        // Clear persisted connection
+        clearPersistedConnection()
+
+        logger.info("Disconnected")
+    }
+
+    /// Forgets the device, removing it from paired accessories.
+    /// - Throws: `ConnectionError.deviceNotFound` if no device is connected
+    public func forgetDevice() async throws {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        guard let accessory = accessorySetupKit.accessory(for: deviceID) else {
+            throw ConnectionError.deviceNotFound
+        }
+
+        logger.info("Forgetting device: \(deviceID)")
+
+        // Remove from paired accessories
+        try await accessorySetupKit.removeAccessory(accessory)
+
+        // Disconnect
+        await disconnect()
+
+        logger.info("Device forgotten")
+    }
+
+    /// Clears all stale pairings from AccessorySetupKit.
+    /// Use when a device has been factory-reset but iOS still has the old pairing.
+    public func clearStalePairings() async {
+        let accessories = self.accessorySetupKit.pairedAccessories
+        logger.info("Clearing \(accessories.count) stale pairings")
+
+        for accessory in accessories {
+            do {
+                try await self.accessorySetupKit.removeAccessory(accessory)
+            } catch {
+                // Continue trying to remove others even if one fails
+                logger.warning("Failed to remove accessory: \(error.localizedDescription)")
+            }
+        }
+
+        logger.info("Stale pairings cleared")
+    }
+
+    /// Checks if an accessory is registered with AccessorySetupKit.
+    /// - Parameter deviceID: The Bluetooth UUID of the device
+    /// - Returns: `true` if the accessory is available for connection
+    public func hasAccessory(for deviceID: UUID) -> Bool {
+        accessorySetupKit.accessory(for: deviceID) != nil
+    }
+
+    /// Renames the currently connected device via AccessorySetupKit.
+    /// - Throws: `ConnectionError.notConnected` if no device is connected
+    public func renameCurrentDevice() async throws {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        guard let accessory = accessorySetupKit.accessory(for: deviceID) else {
+            throw ConnectionError.deviceNotFound
+        }
+
+        try await accessorySetupKit.renameAccessory(accessory)
+    }
+
+    /// Connects with retry logic for reconnection scenarios
+    private func connectWithRetry(deviceID: UUID, maxAttempts: Int) async throws {
+        var lastError: Error = ConnectionError.connectionFailed("Unknown error")
+
+        for attempt in 1...maxAttempts {
+            do {
+                try await performConnection(deviceID: deviceID)
+
+                if attempt > 1 {
+                    logger.info("Reconnection succeeded on attempt \(attempt)")
+                }
+                return
+
+            } catch {
+                lastError = error
+                logger.warning("Reconnection attempt \(attempt) failed: \(error.localizedDescription)")
+
+                await cleanupConnection()
+
+                if attempt < maxAttempts {
+                    let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
+                    let jitter = Double.random(in: 0...0.1) * baseDelay
+                    try await Task.sleep(for: .seconds(baseDelay + jitter))
+                }
+            }
+        }
+
+        throw lastError
+    }
+
+    // MARK: - Private Connection Methods
+
+    /// Connects to a device immediately after ASK pairing with retry logic
+    private func connectAfterPairing(deviceID: UUID, maxAttempts: Int = 4) async throws {
+        var lastError: Error = ConnectionError.connectionFailed("Unknown error")
+
+        for attempt in 1...maxAttempts {
+            // Allow ASK/CoreBluetooth bond to register on first attempt
+            if attempt == 1 {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+
+            do {
+                try await performConnection(deviceID: deviceID)
+
+                if attempt > 1 {
+                    logger.info("Connection succeeded on attempt \(attempt)")
+                }
+                return
+
+            } catch {
+                lastError = error
+                logger.warning("Connection attempt \(attempt) failed: \(error.localizedDescription)")
+
+                // Clean up failed connection
+                await cleanupConnection()
+
+                if attempt < maxAttempts {
+                    // Exponential backoff with jitter
+                    let baseDelay = 0.3 * pow(2.0, Double(attempt - 1))
+                    let jitter = Double.random(in: 0...0.1) * baseDelay
+                    try await Task.sleep(for: .seconds(baseDelay + jitter))
+                }
+            }
+        }
+
+        throw lastError
+    }
+
+    /// Performs the actual connection to a device
+    private func performConnection(deviceID: UUID) async throws {
+        connectionState = .connecting
+
+        // Create transport
+        let newTransport = iOSBLETransport(accessoryService: accessorySetupKit)
+        self.transport = newTransport
+
+        // Set up disconnection handler for auto-reconnect
+        await newTransport.setDisconnectionHandler { [weak self] deviceID, error in
+            Task { @MainActor [weak self] in
+                await self?.handleConnectionLoss(deviceID: deviceID, error: error)
+            }
+        }
+
+        // Set device ID and connect
+        await newTransport.setDeviceID(deviceID)
+        try await newTransport.connect()
+
+        connectionState = .connected
+
+        // Create session
+        let newSession = MeshCoreSession(transport: newTransport)
+        self.session = newSession
+
+        // Start session
+        try await newSession.start()
+
+        // Get device info via MeshCore API
+        let meshCoreSelfInfo = try await newSession.sendAppStart()
+        let deviceCapabilities = try await newSession.queryDevice()
+
+        // Sync device time (best effort)
+        do {
+            let deviceTime = try await newSession.getTime()
+            let timeDifference = abs(deviceTime.timeIntervalSinceNow)
+            if timeDifference > 60 {
+                try await newSession.setTime(Date())
+                logger.info("Synced device time (was off by \(Int(timeDifference))s)")
+            }
+        } catch {
+            logger.warning("Failed to sync device time: \(error.localizedDescription)")
+        }
+
+        // Create services
+        let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+        await newServices.wireServices()
+        self.services = newServices
+
+        // Create and save device
+        let device = createDevice(
+            deviceID: deviceID,
+            selfInfo: meshCoreSelfInfo,
+            capabilities: deviceCapabilities
+        )
+
+        try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
+        self.connectedDevice = DeviceDTO(from: device)
+
+        // Persist connection for auto-reconnect
+        persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
+
+        // Start event monitoring
+        await newServices.startEventMonitoring(deviceID: deviceID)
+
+        connectionState = .ready
+        logger.info("Connection complete - device ready")
+    }
+
+    /// Creates a Device from MeshCore types
+    private func createDevice(
+        deviceID: UUID,
+        selfInfo: MeshCore.SelfInfo,
+        capabilities: MeshCore.DeviceCapabilities
+    ) -> Device {
+        Device(
+            id: deviceID,
+            publicKey: selfInfo.publicKey,
+            nodeName: selfInfo.name,
+            firmwareVersion: capabilities.firmwareVersion,
+            firmwareVersionString: capabilities.version,
+            manufacturerName: capabilities.model,
+            buildDate: capabilities.firmwareBuild,
+            maxContacts: UInt8(min(capabilities.maxContacts, 255)),
+            maxChannels: UInt8(min(capabilities.maxChannels, 255)),
+            frequency: UInt32(selfInfo.radioFrequency),
+            bandwidth: UInt32(selfInfo.radioBandwidth),
+            spreadingFactor: selfInfo.radioSpreadingFactor,
+            codingRate: selfInfo.radioCodingRate,
+            txPower: selfInfo.txPower,
+            maxTxPower: selfInfo.maxTxPower,
+            latitude: selfInfo.latitude,
+            longitude: selfInfo.longitude,
+            blePin: capabilities.blePin,
+            manualAddContacts: selfInfo.manualAddContacts,
+            multiAcks: selfInfo.multiAcks > 0,
+            telemetryModeBase: selfInfo.telemetryModeBase,
+            telemetryModeLoc: selfInfo.telemetryModeLocation,
+            telemetryModeEnv: selfInfo.telemetryModeEnvironment,
+            advertLocationPolicy: selfInfo.advertisementLocationPolicy,
+            lastConnected: Date(),
+            lastContactSync: 0,
+            isActive: true
+        )
+    }
+
+    // MARK: - Connection Loss Handling
+
+    /// Handles unexpected connection loss
+    private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
+        logger.warning("Connection lost to device \(deviceID): \(error?.localizedDescription ?? "unknown")")
+
+        // Stop services
+        await services?.stopEventMonitoring()
+
+        // Clear state
+        connectionState = .disconnected
+        connectedDevice = nil
+        services = nil
+        session = nil
+        // Keep transport reference for potential reconnect
+
+        // Wait briefly before reconnect attempt
+        try? await Task.sleep(for: .milliseconds(100))
+
+        // Attempt auto-reconnect
+        await attemptAutoReconnect(deviceID: deviceID)
+    }
+
+    /// Attempts to reconnect after connection loss
+    private func attemptAutoReconnect(deviceID: UUID) async {
+        logger.info("Attempting auto-reconnect to \(deviceID)")
+
+        do {
+            try await connect(to: deviceID)
+            logger.info("Auto-reconnect successful")
+        } catch {
+            logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
+            // Don't propagate - UI can offer manual retry
+        }
+    }
+
+    /// Cleans up connection state after failure or disconnect
+    private func cleanupConnection() async {
+        connectionState = .disconnected
+        connectedDevice = nil
+        services = nil
+        session = nil
+        transport = nil
+    }
+}
+
+// MARK: - AccessorySetupKitServiceDelegate
+
+extension ConnectionManager: AccessorySetupKitServiceDelegate {
+    public func accessorySetupKitService(
+        _ service: AccessorySetupKitService,
+        didRemoveAccessoryWithID bluetoothID: UUID
+    ) {
+        // Handle device removed from Settings > Accessories
+        logger.info("Device removed from ASK: \(bluetoothID)")
+
+        if connectedDevice?.id == bluetoothID {
+            Task {
+                await disconnect()
+            }
+        }
+
+        // Clear persisted connection if it was this device
+        if lastConnectedDeviceID == bluetoothID {
+            clearPersistedConnection()
+        }
+    }
+}

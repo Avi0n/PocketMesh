@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import OSLog
 
 @Observable
@@ -138,7 +138,7 @@ final class RepeaterSettingsViewModel {
     // MARK: - Configuration
 
     func configure(appState: AppState, session: RemoteNodeSessionDTO) {
-        self.repeaterAdminService = appState.repeaterAdminService
+        self.repeaterAdminService = appState.services?.repeaterAdminService
         self.session = session
         self.name = session.name
     }
@@ -304,7 +304,7 @@ final class RepeaterSettingsViewModel {
 
     /// Handle CLI response from push notification
     /// Called by the handler registered in registerHandlers()
-    func handleCLIResponse(_ frame: MessageFrame, from contact: ContactDTO) {
+    func handleCLIResponse(_ message: ContactMessage, from contact: ContactDTO) {
         // Verify response is for our session
         guard let expectedPrefix = session?.publicKeyPrefix,
               contact.publicKeyPrefix == expectedPrefix else {
@@ -314,7 +314,7 @@ final class RepeaterSettingsViewModel {
         // Determine which query this response is for based on pending queries
         // IMPORTANT: Order matters - check specific patterns before broad ones
         // Priority: specific patterns (ver, clock, radio) → numeric patterns (lat, lon, tx, intervals) → catch-all (name)
-        var trimmedText = frame.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Strip MeshCore CLI prompt prefix if present (must match CLIResponse.parse() behavior)
         // Firmware prepends "> " to all CLI command responses
@@ -325,23 +325,23 @@ final class RepeaterSettingsViewModel {
         let queryHint = pendingQueries.first { query in
             switch query {
             // Most specific patterns first
-            case "ver": return frame.text.contains("MeshCore") || (frame.text.hasPrefix("v") && frame.text.contains("("))
-            case "clock": return frame.text.contains("UTC") || (frame.text.contains(":") && frame.text.contains("/"))
-            case "get radio": return frame.text.contains(",") && frame.text.split(separator: ",").count >= 4
+            case "ver": return message.text.contains("MeshCore") || (message.text.hasPrefix("v") && message.text.contains("("))
+            case "clock": return message.text.contains("UTC") || (message.text.contains(":") && message.text.contains("/"))
+            case "get radio": return message.text.contains(",") && message.text.split(separator: ",").count >= 4
             case "get repeat": return trimmedText.lowercased() == "on" || trimmedText.lowercased() == "off"
             // Numeric patterns - must check BEFORE "get name" since name pattern is too broad
-            case "get lat": return pendingQueries.contains("get lat") && Double(trimmedText) != nil && !frame.text.contains(",")
-            case "get lon": return pendingQueries.contains("get lon") && Double(trimmedText) != nil && !frame.text.contains(",")
-            case "get tx": return Int(trimmedText) != nil && !frame.text.contains(",")
+            case "get lat": return pendingQueries.contains("get lat") && Double(trimmedText) != nil && !message.text.contains(",")
+            case "get lon": return pendingQueries.contains("get lon") && Double(trimmedText) != nil && !message.text.contains(",")
+            case "get tx": return Int(trimmedText) != nil && !message.text.contains(",")
             case "get advert.interval", "get flood.advert.interval", "get flood.max":
-                return Int(trimmedText) != nil && !frame.text.contains(",")
+                return Int(trimmedText) != nil && !message.text.contains(",")
             // Catch-all for text responses - checked LAST
-            case "get name": return !frame.text.contains(",") && !frame.text.contains("UTC") && !frame.text.contains("(") && Double(trimmedText) == nil
+            case "get name": return !message.text.contains(",") && !message.text.contains("UTC") && !message.text.contains("(") && Double(trimmedText) == nil
             default: return false
             }
         }
 
-        let response = CLIResponse.parse(frame.text, forQuery: queryHint)
+        let response = CLIResponse.parse(message.text, forQuery: queryHint)
 
         switch response {
         case .version(let version):
@@ -535,7 +535,8 @@ final class RepeaterSettingsViewModel {
 
     /// Register for CLI responses (called from view's .task modifier)
     func registerHandlers(appState: AppState) async {
-        await appState.repeaterAdminService.setCLIHandler { [weak self] frame, contact in
+        guard let repeaterAdminService = appState.services?.repeaterAdminService else { return }
+        await repeaterAdminService.setCLIHandler { [weak self] frame, contact in
             await MainActor.run {
                 self?.handleCLIResponse(frame, from: contact)
             }

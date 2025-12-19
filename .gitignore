@@ -11,6 +11,7 @@ MeshCore-references/
 .claude
 .ignore
 CLAUDE.md
+AGENTS.md
 thoughts/
 
 TODO.md
@@ -46,6 +47,7 @@ playground.xcworkspace
 # .swiftpm
 
 build/
+.build/
 
 # CocoaPods
 #
@@ -79,4 +81,4 @@ fastlane/test_output
 
 # Python
 __pycache__
-.venv
+.venv.worktrees/

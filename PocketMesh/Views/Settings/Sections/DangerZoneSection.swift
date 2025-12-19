@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Destructive device actions
 struct DangerZoneSection: View {
@@ -74,15 +74,9 @@ struct DangerZoneSection: View {
     }
 
     private func forgetDevice() {
-        guard let deviceID = appState.connectedDevice?.id,
-              let accessory = appState.accessorySetupKit.accessory(for: deviceID) else {
-            return
-        }
-
         Task {
             do {
-                try await appState.accessorySetupKit.removeAccessory(accessory)
-                await appState.disconnect()
+                try await appState.connectionManager.forgetDevice()
                 dismiss()
             } catch {
                 showError = error.localizedDescription
@@ -91,10 +85,15 @@ struct DangerZoneSection: View {
     }
 
     private func factoryReset() {
+        guard let settingsService = appState.services?.settingsService else {
+            showError = "Services not available"
+            return
+        }
+
         isResetting = true
         Task {
             do {
-                try await appState.settingsService.factoryReset()
+                try await settingsService.factoryReset()
 
                 // Wait briefly then disconnect
                 try await Task.sleep(for: .seconds(1))

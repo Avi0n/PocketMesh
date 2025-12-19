@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Avatar view for remote nodes (room servers and repeaters)
 struct NodeAvatar: View {

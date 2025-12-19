@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 @testable import PocketMesh
-@testable import PocketMeshKit
+@testable import PocketMeshServices
 
 // MARK: - Test Helpers
 

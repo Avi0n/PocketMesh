@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import OSLog
 
 /// ViewModel for chat operations
@@ -75,11 +75,11 @@ final class ChatViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.dataStore
-        self.messageService = appState.messageService
-        self.notificationService = appState.notificationService
-        self.channelService = appState.channelService
-        self.roomServerService = appState.roomServerService
+        self.dataStore = appState.services?.dataStore
+        self.messageService = appState.services?.messageService
+        self.notificationService = appState.services?.notificationService
+        self.channelService = appState.services?.channelService
+        self.roomServerService = appState.services?.roomServerService
     }
 
     /// Configure with services (for testing)

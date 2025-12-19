@@ -1,0 +1,876 @@
+import Foundation
+import MeshCore
+import os
+
+// MARK: - Message Service Errors
+
+/// Errors that can occur during message operations.
+public enum MessageServiceError: Error, Sendable {
+    /// Not connected to a device
+    case notConnected
+    /// Contact not found in database
+    case contactNotFound
+    /// Channel not found in database
+    case channelNotFound
+    /// Message send operation failed
+    case sendFailed(String)
+    /// Attempted to send message to invalid recipient (e.g., repeater)
+    case invalidRecipient
+    /// Message text exceeds maximum allowed length
+    case messageTooLong
+    /// Underlying MeshCore session error
+    case sessionError(MeshCoreError)
+}
+
+// MARK: - Message Service Configuration
+
+/// Configuration for message retry and routing behavior.
+///
+/// Controls how the message service handles delivery failures and routing fallback.
+public struct MessageServiceConfig: Sendable {
+    /// Whether to use flood routing when user manually retries a failed message
+    public let floodFallbackOnRetry: Bool
+
+    /// Maximum total send attempts for automatic retry
+    public let maxAttempts: Int
+
+    /// Maximum attempts to make after switching to flood routing
+    public let maxFloodAttempts: Int
+
+    /// Number of direct attempts before switching to flood routing
+    public let floodAfter: Int
+
+    /// Minimum timeout in seconds (floor for device-suggested timeout)
+    public let minTimeout: TimeInterval
+
+    /// Whether to trigger path discovery after successful flood delivery
+    public let triggerPathDiscoveryAfterFlood: Bool
+
+    public init(
+        floodFallbackOnRetry: Bool = true,
+        maxAttempts: Int = 4,
+        maxFloodAttempts: Int = 2,
+        floodAfter: Int = 2,
+        minTimeout: TimeInterval = 0,
+        triggerPathDiscoveryAfterFlood: Bool = true
+    ) {
+        self.floodFallbackOnRetry = floodFallbackOnRetry
+        self.maxAttempts = maxAttempts
+        self.maxFloodAttempts = maxFloodAttempts
+        self.floodAfter = floodAfter
+        self.minTimeout = minTimeout
+        self.triggerPathDiscoveryAfterFlood = triggerPathDiscoveryAfterFlood
+    }
+
+    public static let `default` = MessageServiceConfig()
+}
+
+// MARK: - Pending ACK Tracker
+
+/// Tracks pending ACKs for message delivery confirmation
+public struct PendingAck: Sendable {
+    public let messageID: UUID
+    public let ackCode: Data
+    public let sentAt: Date
+    public let timeout: TimeInterval
+    public var heardRepeats: Int = 0
+    public var isDelivered: Bool = false
+
+    /// When true, `checkExpiredAcks` will skip this ACK (retry loop manages expiry)
+    public var isRetryManaged: Bool = false
+
+    public init(messageID: UUID, ackCode: Data, sentAt: Date, timeout: TimeInterval, isRetryManaged: Bool = false) {
+        self.messageID = messageID
+        self.ackCode = ackCode
+        self.sentAt = sentAt
+        self.timeout = timeout
+        self.isRetryManaged = isRetryManaged
+    }
+
+    public var isExpired: Bool {
+        !isDelivered && Date().timeIntervalSince(sentAt) > timeout
+    }
+
+    /// Convert Data ack code to UInt32 for storage
+    public var ackCodeUInt32: UInt32 {
+        guard ackCode.count >= 4 else { return 0 }
+        return ackCode.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+    }
+}
+
+// MARK: - Message Service Actor
+
+/// Actor-isolated service for sending messages with retry logic and ACK tracking.
+///
+/// `MessageService` manages all message operations including:
+/// - Sending direct messages to contacts with single-attempt or automatic retry
+/// - Sending channel broadcast messages
+/// - Tracking pending message acknowledgements (ACKs)
+/// - Handling delivery confirmations and failures
+/// - Automatic retry with flood routing fallback
+///
+/// # Example Usage
+///
+/// ```swift
+/// // Send a message with automatic retry
+/// let message = try await messageService.sendMessageWithRetry(
+///     text: "Hello!",
+///     to: contact
+/// ) { messageDTO in
+///     // Message saved, update UI immediately
+///     await updateUI(with: messageDTO)
+/// }
+/// ```
+///
+/// # ACK Tracking
+///
+/// After sending a message, the service tracks pending ACKs and automatically:
+/// - Marks messages as delivered when ACK is received
+/// - Marks messages as failed when timeout expires
+/// - Tracks repeat acknowledgements for network analysis
+///
+/// Call `startEventListening()` to begin processing ACKs from the session.
+public actor MessageService {
+
+    // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessageService")
+
+    private let session: MeshCoreSession
+    private let dataStore: PersistenceStore
+    private let config: MessageServiceConfig
+
+    /// Contact service for path management (optional - retry with reset requires this)
+    private var contactService: ContactService?
+
+    /// Currently tracked pending ACKs (keyed by Data for MeshCore compatibility)
+    private var pendingAcks: [Data: PendingAck] = [:]
+
+    /// Continuations waiting for specific ACK codes (for retry loop)
+    private var ackContinuations: [Data: CheckedContinuation<Bool, Never>] = [:]
+
+    /// ACK confirmation callback (ackCode, roundTripTime)
+    private var ackConfirmationHandler: (@Sendable (UInt32, UInt32) -> Void)?
+
+    /// Message failure callback (messageID)
+    private var messageFailedHandler: (@Sendable (UUID) async -> Void)?
+
+    /// Event broadcaster for retry status updates (messageID, attempt, maxAttempts)
+    private var retryStatusHandler: (@Sendable (UUID, Int, Int) async -> Void)?
+
+    /// Handler for routing change events (contactID, isFlood)
+    private var routingChangedHandler: (@Sendable (UUID, Bool) async -> Void)?
+
+    /// Task for periodic ACK expiry checking
+    private var ackCheckTask: Task<Void, Never>?
+
+    /// Task for listening to session events
+    private var eventListenerTask: Task<Void, Never>?
+
+    /// Interval between ACK expiry checks (in seconds)
+    private var checkInterval: TimeInterval = 5.0
+
+    /// Tracks message IDs currently being retried to prevent concurrent retry attempts
+    private var inFlightRetries: Set<UUID> = []
+
+    /// Grace period for tracking repeats after delivery (60 seconds)
+    private let repeatTrackingGracePeriod: TimeInterval = 60.0
+
+    // MARK: - Initialization
+
+    /// Creates a new message service.
+    ///
+    /// - Parameters:
+    ///   - session: The MeshCore session for sending messages
+    ///   - dataStore: The persistence store for saving messages
+    ///   - config: Configuration for retry and routing behavior (defaults to `.default`)
+    public init(
+        session: MeshCoreSession,
+        dataStore: PersistenceStore,
+        config: MessageServiceConfig = .default
+    ) {
+        self.session = session
+        self.dataStore = dataStore
+        self.config = config
+    }
+
+    /// Sets the contact service for path management during retry.
+    ///
+    /// The contact service is used to reset contact paths when switching to flood routing.
+    ///
+    /// - Parameter service: The contact service to use
+    public func setContactService(_ service: ContactService) {
+        self.contactService = service
+    }
+
+    // MARK: - Event Listening
+
+    /// Starts listening for session events to process message acknowledgements.
+    ///
+    /// Call this method after connection is established to begin processing ACKs.
+    /// The service will automatically update message delivery status when ACKs are received.
+    ///
+    /// # Important
+    /// This must be called for ACK tracking to work. Without event listening,
+    /// messages will remain in "sent" status even if ACKs are received.
+    public func startEventListening() {
+        eventListenerTask?.cancel()
+
+        eventListenerTask = Task { [weak self] in
+            guard let self else { return }
+
+            for await event in await session.events() {
+                guard !Task.isCancelled else { break }
+
+                switch event {
+                case .acknowledgement(let code):
+                    await handleAcknowledgement(code: code)
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    /// Stops listening for session events.
+    ///
+    /// Call this when disconnecting from the device.
+    public func stopEventListening() {
+        eventListenerTask?.cancel()
+        eventListenerTask = nil
+    }
+
+    // MARK: - Send Direct Message
+
+    /// Sends a direct message to a contact with a single send attempt.
+    ///
+    /// This method sends a message once without automatic retry. Use this when you want
+    /// to manually control retry logic or when retry is not needed.
+    ///
+    /// - Parameters:
+    ///   - text: The message text to send (max 200 characters)
+    ///   - contact: The recipient contact
+    ///   - textType: The text encoding type (defaults to `.plain`)
+    ///   - replyToID: Optional ID of message being replied to
+    ///
+    /// - Returns: The created message DTO with pending/sent status
+    ///
+    /// - Throws:
+    ///   - `MessageServiceError.invalidRecipient` if contact is a repeater
+    ///   - `MessageServiceError.messageTooLong` if text exceeds 200 characters
+    ///   - `MessageServiceError.sessionError` if MeshCore send fails
+    ///
+    /// # Example
+    ///
+    /// ```swift
+    /// let message = try await messageService.sendDirectMessage(
+    ///     text: "Hello!",
+    ///     to: contact
+    /// )
+    /// ```
+    public func sendDirectMessage(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain,
+        replyToID: UUID? = nil
+    ) async throws -> MessageDTO {
+        // Prevent messaging repeaters
+        guard contact.type != .repeater else {
+            throw MessageServiceError.invalidRecipient
+        }
+
+        // Validate message length
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        // Save message to store as pending FIRST
+        let messageDTO = createOutgoingMessage(
+            id: messageID,
+            deviceID: contact.deviceID,
+            contactID: contact.id,
+            text: text,
+            timestamp: timestamp,
+            textType: textType,
+            replyToID: replyToID
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        // Single send attempt
+        do {
+            let sentInfo = try await session.sendMessage(
+                to: contact.publicKey,
+                text: text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(timestamp))
+            )
+
+            let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+
+            // Update message with ACK code
+            try await dataStore.updateMessageAck(
+                id: messageID,
+                ackCode: ackCodeUInt32,
+                status: .sent
+            )
+
+            // Track pending ACK
+            let timeout = TimeInterval(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
+            trackPendingAck(messageID: messageID, ackCode: sentInfo.expectedAck, timeout: timeout)
+
+            // Update contact's last message date
+            try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+
+            guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                throw MessageServiceError.sendFailed("Failed to fetch saved message")
+            }
+            return message
+        } catch let error as MeshCoreError {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.sessionError(error)
+        } catch {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw error
+        }
+    }
+
+    // MARK: - Send with Automatic Retry
+
+    /// Sends a direct message with automatic retry and flood routing fallback.
+    ///
+    /// This is the recommended method for sending messages. It automatically:
+    /// 1. Attempts direct routing up to `maxAttempts` times
+    /// 2. Switches to flood routing after `floodAfter` attempts
+    /// 3. Makes up to `maxFloodAttempts` using flood routing
+    /// 4. Returns immediately when ACK is received
+    ///
+    /// The message is saved to the database immediately and the `onMessageCreated`
+    /// callback is invoked, allowing the UI to update before the send completes.
+    ///
+    /// - Parameters:
+    ///   - text: The message text to send (max 200 characters)
+    ///   - contact: The recipient contact
+    ///   - textType: The text encoding type (defaults to `.plain`)
+    ///   - replyToID: Optional ID of message being replied to
+    ///   - timeout: Custom timeout in seconds (0 = use device-suggested timeout)
+    ///   - onMessageCreated: Callback invoked after message is saved to database
+    ///
+    /// - Returns: The message DTO with final delivery status (delivered or failed)
+    ///
+    /// - Throws:
+    ///   - `MessageServiceError.invalidRecipient` if contact is a repeater
+    ///   - `MessageServiceError.messageTooLong` if text exceeds 200 characters
+    ///   - `MessageServiceError.sessionError` if MeshCore send fails
+    ///
+    /// # Example
+    ///
+    /// ```swift
+    /// let message = try await messageService.sendMessageWithRetry(
+    ///     text: "Hello!",
+    ///     to: contact
+    /// ) { savedMessage in
+    ///     // Update UI immediately with pending message
+    ///     await updateConversation(with: savedMessage)
+    /// }
+    /// // Message is now delivered or failed
+    /// ```
+    public func sendMessageWithRetry(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain,
+        replyToID: UUID? = nil,
+        timeout: TimeInterval = 0,
+        onMessageCreated: (@Sendable (MessageDTO) async -> Void)? = nil
+    ) async throws -> MessageDTO {
+        // Prevent messaging repeaters
+        guard contact.type != .repeater else {
+            throw MessageServiceError.invalidRecipient
+        }
+
+        // Validate message length
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        // Save message to store as pending FIRST
+        let messageDTO = createOutgoingMessage(
+            id: messageID,
+            deviceID: contact.deviceID,
+            contactID: contact.id,
+            text: text,
+            timestamp: timestamp,
+            textType: textType,
+            replyToID: replyToID
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        // Notify caller that message is saved
+        await onMessageCreated?(messageDTO)
+
+        // Use MeshCoreSession's retry logic
+        do {
+            let sentInfo = try await session.sendMessageWithRetry(
+                to: contact.publicKey,
+                text: text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(timestamp)),
+                maxAttempts: config.maxAttempts,
+                floodAfter: config.floodAfter,
+                maxFloodAttempts: config.maxFloodAttempts,
+                timeout: timeout > 0 ? timeout : nil
+            )
+
+            if let sentInfo {
+                // Message was ACKed
+                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: ackCodeUInt32,
+                    status: .delivered
+                )
+
+                // Update contact's last message date
+                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+            } else {
+                // All attempts exhausted
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            }
+
+            guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                throw MessageServiceError.sendFailed("Failed to fetch saved message")
+            }
+            return message
+        } catch let error as MeshCoreError {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.sessionError(error)
+        } catch {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw error
+        }
+    }
+
+    /// Retries sending a failed message with automatic retry logic.
+    ///
+    /// Use this method to retry messages that previously failed. The retry uses the same
+    /// automatic retry logic as `sendMessageWithRetry`, including flood routing fallback.
+    ///
+    /// - Parameters:
+    ///   - messageID: The ID of the failed message to retry
+    ///   - contact: The recipient contact
+    ///
+    /// - Returns: The updated message DTO with new delivery status
+    ///
+    /// - Throws:
+    ///   - `MessageServiceError.sendFailed` if message not found or retry already in progress
+    ///   - `MessageServiceError.sessionError` if MeshCore send fails
+    ///
+    /// # Example
+    ///
+    /// ```swift
+    /// let message = try await messageService.retryDirectMessage(
+    ///     messageID: failedMessage.id,
+    ///     to: contact
+    /// )
+    /// ```
+    public func retryDirectMessage(
+        messageID: UUID,
+        to contact: ContactDTO
+    ) async throws -> MessageDTO {
+        // Guard against concurrent retries
+        guard !inFlightRetries.contains(messageID) else {
+            logger.warning("Retry already in progress for message: \(messageID)")
+            throw MessageServiceError.sendFailed("Retry already in progress")
+        }
+
+        inFlightRetries.insert(messageID)
+        defer { inFlightRetries.remove(messageID) }
+
+        guard let existingMessage = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Message not found")
+        }
+
+        // Update message to show retry is starting
+        try await dataStore.updateMessageRetryStatus(
+            id: messageID,
+            status: .retrying,
+            retryAttempt: 0,
+            maxRetryAttempts: config.maxAttempts
+        )
+
+        do {
+            let sentInfo = try await session.sendMessageWithRetry(
+                to: contact.publicKey,
+                text: existingMessage.text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(existingMessage.timestamp)),
+                maxAttempts: config.maxAttempts,
+                floodAfter: config.floodAfter,
+                maxFloodAttempts: config.maxFloodAttempts
+            )
+
+            if let sentInfo {
+                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: ackCodeUInt32,
+                    status: .delivered
+                )
+
+                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+            } else {
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            }
+
+            guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                throw MessageServiceError.sendFailed("Failed to fetch message")
+            }
+            return message
+        } catch let error as MeshCoreError {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.sessionError(error)
+        } catch {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw error
+        }
+    }
+
+    // MARK: - Send Channel Message
+
+    /// Sends a broadcast message to a channel.
+    ///
+    /// Channel messages are broadcast to all devices listening on the specified channel.
+    /// No acknowledgement is expected or tracked for channel messages.
+    ///
+    /// - Parameters:
+    ///   - text: The message text to broadcast (max 200 characters)
+    ///   - channelIndex: The channel index (0-7)
+    ///   - deviceID: The local device ID
+    ///   - textType: The text encoding type (defaults to `.plain`)
+    ///
+    /// - Returns: The ID of the created message
+    ///
+    /// - Throws:
+    ///   - `MessageServiceError.messageTooLong` if text exceeds 200 characters
+    ///   - `MessageServiceError.channelNotFound` if channel index is invalid
+    ///   - `MessageServiceError.sessionError` if MeshCore send fails
+    ///
+    /// # Example
+    ///
+    /// ```swift
+    /// let messageID = try await messageService.sendChannelMessage(
+    ///     text: "Hello channel!",
+    ///     channelIndex: 0,
+    ///     deviceID: device.id
+    /// )
+    /// ```
+    public func sendChannelMessage(
+        text: String,
+        channelIndex: UInt8,
+        deviceID: UUID,
+        textType: TextType = .plain
+    ) async throws -> UUID {
+        // Validate message length
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        // Validate channel index
+        guard channelIndex < ProtocolLimits.maxChannels else {
+            throw MessageServiceError.channelNotFound
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        do {
+            try await session.sendChannelMessage(
+                channel: channelIndex,
+                text: text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(timestamp))
+            )
+
+            // Save message (channel messages are immediately "sent" - no ACK for broadcasts)
+            let messageDTO = createOutgoingChannelMessage(
+                id: messageID,
+                deviceID: deviceID,
+                channelIndex: channelIndex,
+                text: text,
+                timestamp: timestamp,
+                textType: textType
+            )
+            try await dataStore.saveMessage(messageDTO)
+
+            // Update channel's last message date
+            if let channel = try await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) {
+                try await dataStore.updateChannelLastMessage(channelID: channel.id, date: Date())
+            }
+
+            return messageID
+        } catch let error as MeshCoreError {
+            throw MessageServiceError.sessionError(error)
+        }
+    }
+
+    // MARK: - ACK Handling
+
+    /// Processes an acknowledgement from the session event stream
+    private func handleAcknowledgement(code: Data) async {
+        guard pendingAcks[code] != nil else {
+            logger.warning("Received confirmation for unknown ACK")
+            return
+        }
+
+        let isFirstConfirmation = pendingAcks[code]?.isDelivered == false
+
+        if isFirstConfirmation {
+            pendingAcks[code]?.isDelivered = true
+            pendingAcks[code]?.heardRepeats = 1
+
+            // Resume any waiting continuation
+            if let continuation = ackContinuations.removeValue(forKey: code) {
+                continuation.resume(returning: true)
+            }
+
+            guard let tracking = pendingAcks[code] else { return }
+
+            try? await dataStore.updateMessageByAckCode(
+                tracking.ackCodeUInt32,
+                status: .delivered
+            )
+
+            ackConfirmationHandler?(tracking.ackCodeUInt32, 0)
+
+            logger.info("ACK received")
+        } else {
+            pendingAcks[code]?.heardRepeats += 1
+
+            guard let tracking = pendingAcks[code] else { return }
+            let repeatCount = tracking.heardRepeats
+
+            try? await dataStore.updateMessageHeardRepeats(
+                id: tracking.messageID,
+                heardRepeats: repeatCount
+            )
+
+            logger.debug("Heard repeat #\(repeatCount)")
+        }
+    }
+
+    /// Sets a callback to be invoked when an ACK is received.
+    ///
+    /// - Parameter handler: Callback receiving (ackCode, roundTripTimeMs)
+    public func setAckConfirmationHandler(_ handler: @escaping @Sendable (UInt32, UInt32) -> Void) {
+        ackConfirmationHandler = handler
+    }
+
+    /// Sets a callback to be invoked when a message fails after all retries.
+    ///
+    /// - Parameter handler: Callback receiving the failed message ID
+    public func setMessageFailedHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
+        messageFailedHandler = handler
+    }
+
+    /// Sets a callback to be invoked during retry attempts.
+    ///
+    /// Use this to update UI with retry progress.
+    ///
+    /// - Parameter handler: Callback receiving (messageID, currentAttempt, maxAttempts)
+    public func setRetryStatusHandler(_ handler: @escaping @Sendable (UUID, Int, Int) async -> Void) {
+        retryStatusHandler = handler
+    }
+
+    /// Sets a callback to be invoked when routing mode changes during retry.
+    ///
+    /// - Parameter handler: Callback receiving (contactID, isFloodRouting)
+    public func setRoutingChangedHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
+        routingChangedHandler = handler
+    }
+
+    // MARK: - Periodic ACK Checking
+
+    /// Starts periodic checking for expired ACKs.
+    ///
+    /// This method runs a background task that periodically checks for messages
+    /// that have exceeded their ACK timeout and marks them as failed.
+    ///
+    /// - Parameter interval: How often to check for expired ACKs (defaults to 5 seconds)
+    ///
+    /// # Important
+    /// This should be started when the connection is established and stopped when disconnecting.
+    public func startAckExpiryChecking(interval: TimeInterval = 5.0) {
+        self.checkInterval = interval
+        ackCheckTask?.cancel()
+
+        ackCheckTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(self.checkInterval))
+                } catch {
+                    break
+                }
+
+                guard !Task.isCancelled else { break }
+
+                try? await self.checkExpiredAcks()
+                await self.cleanupDeliveredAcks()
+            }
+        }
+    }
+
+    /// Stops the periodic ACK expiry checking.
+    ///
+    /// Call this when disconnecting from the device.
+    public func stopAckExpiryChecking() {
+        ackCheckTask?.cancel()
+        ackCheckTask = nil
+    }
+
+    /// Checks for expired ACKs and marks their messages as failed.
+    ///
+    /// This is called automatically by the periodic checker. You can also call it
+    /// manually to force an immediate check.
+    ///
+    /// - Throws: Database errors when updating message status
+    public func checkExpiredAcks() async throws {
+        let now = Date()
+
+        let expiredCodes = pendingAcks.filter { _, tracking in
+            !tracking.isRetryManaged &&
+            !tracking.isDelivered &&
+            now.timeIntervalSince(tracking.sentAt) > tracking.timeout
+        }.keys
+
+        for ackCode in expiredCodes {
+            if let tracking = pendingAcks.removeValue(forKey: ackCode) {
+                try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
+                logger.warning("Message failed - timeout exceeded")
+
+                await messageFailedHandler?(tracking.messageID)
+            }
+        }
+    }
+
+    /// Cleans up old delivered ACK tracking entries.
+    ///
+    /// Removes ACK tracking data for messages that were delivered more than 60 seconds ago.
+    /// This prevents unbounded memory growth from tracking repeat ACKs.
+    public func cleanupDeliveredAcks() {
+        let now = Date()
+
+        let staleDeliveredCodes = pendingAcks.filter { _, tracking in
+            tracking.isDelivered &&
+            now.timeIntervalSince(tracking.sentAt) > (tracking.timeout + repeatTrackingGracePeriod)
+        }.keys
+
+        for ackCode in staleDeliveredCodes {
+            pendingAcks.removeValue(forKey: ackCode)
+        }
+    }
+
+    /// Fails all pending messages that are awaiting ACK.
+    ///
+    /// Use this when disconnecting from the device to mark all in-flight messages as failed.
+    ///
+    /// - Throws: Database errors when updating message status
+    public func failAllPendingMessages() async throws {
+        let pendingCodes = pendingAcks.filter { _, tracking in
+            !tracking.isDelivered
+        }.keys
+
+        for ackCode in pendingCodes {
+            if let tracking = pendingAcks.removeValue(forKey: ackCode) {
+                try await dataStore.updateMessageStatus(id: tracking.messageID, status: .failed)
+                await messageFailedHandler?(tracking.messageID)
+            }
+        }
+    }
+
+    /// Stops ACK checking and fails all pending messages atomically.
+    ///
+    /// This is the recommended method to call when disconnecting from a device.
+    /// It ensures the periodic checker is stopped and all pending messages are marked as failed.
+    ///
+    /// - Throws: Database errors when updating message status
+    public func stopAndFailAllPending() async throws {
+        ackCheckTask?.cancel()
+        ackCheckTask = nil
+
+        try await failAllPendingMessages()
+    }
+
+    /// The current number of pending ACKs being tracked.
+    ///
+    /// This includes both undelivered messages and recently delivered messages
+    /// still in the grace period for tracking repeats.
+    public var pendingAckCount: Int {
+        pendingAcks.count
+    }
+
+    /// Whether ACK expiry checking is currently active.
+    public var isAckExpiryCheckingActive: Bool {
+        ackCheckTask != nil
+    }
+
+    // MARK: - Private Helpers
+
+    private func trackPendingAck(messageID: UUID, ackCode: Data, timeout: TimeInterval) {
+        let pending = PendingAck(
+            messageID: messageID,
+            ackCode: ackCode,
+            sentAt: Date(),
+            timeout: timeout
+        )
+        pendingAcks[ackCode] = pending
+    }
+
+    private func createOutgoingMessage(
+        id: UUID,
+        deviceID: UUID,
+        contactID: UUID,
+        text: String,
+        timestamp: UInt32,
+        textType: TextType,
+        replyToID: UUID?
+    ) -> MessageDTO {
+        let message = Message(
+            id: id,
+            deviceID: deviceID,
+            contactID: contactID,
+            text: text,
+            timestamp: timestamp,
+            directionRawValue: MessageDirection.outgoing.rawValue,
+            statusRawValue: MessageStatus.pending.rawValue,
+            textTypeRawValue: textType.rawValue,
+            replyToID: replyToID
+        )
+        return MessageDTO(from: message)
+    }
+
+    private func createOutgoingChannelMessage(
+        id: UUID,
+        deviceID: UUID,
+        channelIndex: UInt8,
+        text: String,
+        timestamp: UInt32,
+        textType: TextType
+    ) -> MessageDTO {
+        let message = Message(
+            id: id,
+            deviceID: deviceID,
+            channelIndex: channelIndex,
+            text: text,
+            timestamp: timestamp,
+            directionRawValue: MessageDirection.outgoing.rawValue,
+            statusRawValue: MessageStatus.sent.rawValue,
+            textTypeRawValue: textType.rawValue
+        )
+        return MessageDTO(from: message)
+    }
+}

@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshKit
+import PocketMeshServices
 
 /// Node name and location settings
 struct NodeSettingsSection: View {
@@ -109,15 +109,13 @@ struct NodeSettingsSection: View {
 
     private func saveNodeName() {
         let name = nodeName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
+        guard !name.isEmpty,
+              let settingsService = appState.services?.settingsService else { return }
 
         isSaving = true
         Task {
             do {
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    try await appState.settingsService.setNodeNameVerified(name)
-                }
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                _ = try await settingsService.setNodeNameVerified(name)
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(
@@ -133,25 +131,23 @@ struct NodeSettingsSection: View {
     }
 
     private func updateShareLocation(_ share: Bool) {
-        guard let device = appState.connectedDevice else { return }
+        guard let device = appState.connectedDevice,
+              let settingsService = appState.services?.settingsService else { return }
 
         isSaving = true
         Task {
             do {
                 let telemetryModes = TelemetryModes(
-                    base: TelemetryMode(rawValue: device.telemetryModeBase) ?? .deny,
-                    location: TelemetryMode(rawValue: device.telemetryModeLoc) ?? .deny,
-                    environment: TelemetryMode(rawValue: device.telemetryModeEnv) ?? .deny
+                    base: device.telemetryModeBase,
+                    location: device.telemetryModeLoc,
+                    environment: device.telemetryModeEnv
                 )
-                let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                    try await appState.settingsService.setOtherParamsVerified(
-                        autoAddContacts: !device.manualAddContacts,
-                        telemetryModes: telemetryModes,
-                        shareLocationPublicly: share,
-                        multiAcks: device.multiAcks
-                    )
-                }
-                appState.updateDeviceInfo(deviceInfo, selfInfo)
+                _ = try await settingsService.setOtherParamsVerified(
+                    autoAddContacts: !device.manualAddContacts,
+                    telemetryModes: telemetryModes,
+                    shareLocationPublicly: share,
+                    multiAcks: device.multiAcks
+                )
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 shareLocation = !share // Revert

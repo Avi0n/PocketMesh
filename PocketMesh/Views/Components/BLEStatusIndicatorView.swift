@@ -1,6 +1,6 @@
 import OSLog
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStatus")
 
@@ -145,7 +145,7 @@ struct BLEStatusIndicatorView: View {
     }
 
     private var isAnimating: Bool {
-        appState.connectionState == .connecting || appState.isBLEBusy
+        appState.connectionState == .connecting
     }
 
     private var statusTitle: String {
@@ -161,7 +161,9 @@ struct BLEStatusIndicatorView: View {
         }
     }
 
-    /// Battery voltage in volts (e.g., 3.90)
+    // MARK: - Battery Properties
+
+    /// Battery voltage calculated from millivolts
     private var batteryVoltage: Double? {
         guard let millivolts = appState.deviceBatteryMillivolts else { return nil }
         return Double(millivolts) / 1000.0
@@ -197,7 +199,7 @@ struct BLEStatusIndicatorView: View {
 
         Task {
             do {
-                _ = try await appState.advertisementService.sendSelfAdvertisement(flood: flood)
+                _ = try await appState.services?.advertisementService.sendSelfAdvertisement(flood: flood)
                 successFeedbackTrigger.toggle()
             } catch {
                 logger.error("Failed to send advert (flood=\(flood)): \(error.localizedDescription)")

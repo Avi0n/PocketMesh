@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// View for re-adding the public channel on slot 0
 struct JoinPublicChannelView: View {
@@ -74,7 +74,11 @@ struct JoinPublicChannelView: View {
         errorMessage = nil
 
         do {
-            try await appState.channelService.setupPublicChannel(deviceID: deviceID)
+            guard let channelService = appState.services?.channelService else {
+                errorMessage = "Services not available"
+                return
+            }
+            try await channelService.setupPublicChannel(deviceID: deviceID)
             onComplete()
         } catch {
             errorMessage = error.localizedDescription

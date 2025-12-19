@@ -1,0 +1,129 @@
+import Foundation
+import MeshCore
+
+/// Protocol for PersistenceStore to enable testability of dependent services.
+///
+/// This protocol abstracts the SwiftData persistence operations used by services,
+/// allowing them to be tested with mock implementations.
+///
+/// ## Usage
+///
+/// Services can accept this protocol type for dependency injection:
+/// ```swift
+/// actor MyService {
+///     private let dataStore: any PersistenceStoreProtocol
+///
+///     init(dataStore: any PersistenceStoreProtocol) {
+///         self.dataStore = dataStore
+///     }
+/// }
+/// ```
+public protocol PersistenceStoreProtocol: Actor {
+
+    // MARK: - Message Operations
+
+    /// Save a new message
+    func saveMessage(_ dto: MessageDTO) async throws
+
+    /// Fetch a message by ID
+    func fetchMessage(id: UUID) async throws -> MessageDTO?
+
+    /// Fetch a message by ACK code
+    func fetchMessage(ackCode: UInt32) async throws -> MessageDTO?
+
+    /// Fetch messages for a contact
+    func fetchMessages(contactID: UUID, limit: Int, offset: Int) async throws -> [MessageDTO]
+
+    /// Fetch messages for a channel
+    func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int, offset: Int) async throws -> [MessageDTO]
+
+    /// Update message status
+    func updateMessageStatus(id: UUID, status: MessageStatus) async throws
+
+    /// Update message ACK info
+    func updateMessageAck(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws
+
+    /// Update message status by ACK code
+    func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws
+
+    /// Update message retry status
+    func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws
+
+    /// Update heard repeats count
+    func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws
+
+    /// Check if a message with the given deduplication key exists
+    func isDuplicateMessage(deduplicationKey: String) async throws -> Bool
+
+    // MARK: - Contact Operations
+
+    /// Fetch all confirmed contacts for a device
+    func fetchContacts(deviceID: UUID) async throws -> [ContactDTO]
+
+    /// Fetch contacts with recent messages
+    func fetchConversations(deviceID: UUID) async throws -> [ContactDTO]
+
+    /// Fetch a contact by ID
+    func fetchContact(id: UUID) async throws -> ContactDTO?
+
+    /// Fetch a contact by public key
+    func fetchContact(deviceID: UUID, publicKey: Data) async throws -> ContactDTO?
+
+    /// Fetch a contact by public key prefix
+    func fetchContact(deviceID: UUID, publicKeyPrefix: Data) async throws -> ContactDTO?
+
+    /// Save or update a contact from a ContactFrame
+    @discardableResult
+    func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID
+
+    /// Save or update a contact from DTO
+    func saveContact(_ dto: ContactDTO) async throws
+
+    /// Delete a contact
+    func deleteContact(id: UUID) async throws
+
+    /// Update contact's last message info
+    func updateContactLastMessage(contactID: UUID, date: Date) async throws
+
+    /// Increment unread count for a contact
+    func incrementUnreadCount(contactID: UUID) async throws
+
+    /// Clear unread count for a contact
+    func clearUnreadCount(contactID: UUID) async throws
+
+    /// Fetch discovered (pending) contacts
+    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO]
+
+    /// Mark a discovered contact as confirmed
+    func confirmContact(id: UUID) async throws
+
+    // MARK: - Channel Operations
+
+    /// Fetch all channels for a device
+    func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO]
+
+    /// Fetch a channel by index
+    func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO?
+
+    /// Fetch a channel by ID
+    func fetchChannel(id: UUID) async throws -> ChannelDTO?
+
+    /// Save or update a channel from ChannelInfo
+    @discardableResult
+    func saveChannel(deviceID: UUID, from info: ChannelInfo) async throws -> UUID
+
+    /// Save or update a channel from DTO
+    func saveChannel(_ dto: ChannelDTO) async throws
+
+    /// Delete a channel
+    func deleteChannel(id: UUID) async throws
+
+    /// Update channel's last message info
+    func updateChannelLastMessage(channelID: UUID, date: Date) async throws
+
+    /// Increment unread count for a channel
+    func incrementChannelUnreadCount(channelID: UUID) async throws
+
+    /// Clear unread count for a channel
+    func clearChannelUnreadCount(channelID: UUID) async throws
+}

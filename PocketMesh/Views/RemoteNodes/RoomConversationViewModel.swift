@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// ViewModel for room conversation operations
 @Observable
@@ -37,8 +37,8 @@ final class RoomConversationViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.roomServerService = appState.roomServerService
-        self.dataStore = appState.dataStore
+        self.roomServerService = appState.services?.roomServerService
+        self.dataStore = appState.services?.dataStore
     }
 
     // MARK: - Messages

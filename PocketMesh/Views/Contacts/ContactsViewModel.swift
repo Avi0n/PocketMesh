@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// ViewModel for contact management
 @Observable
@@ -34,8 +34,8 @@ final class ContactsViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.dataStore
-        self.contactService = appState.contactService
+        self.dataStore = appState.services?.dataStore
+        self.contactService = appState.services?.contactService
     }
 
     /// Configure with services (for testing)

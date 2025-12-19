@@ -1,10 +1,11 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
+import MeshCore
 
 /// Detailed device information screen
 struct DeviceInfoView: View {
     @Environment(AppState.self) private var appState
-    @State private var batteryInfo: BatteryAndStorage?
+    @State private var batteryInfo: MeshCore.BatteryInfo?
     @State private var isLoadingBattery: Bool = false
     @State private var lastRefresh: Date?
 
@@ -45,16 +46,16 @@ struct DeviceInfoView: View {
                 // Battery and storage
                 Section {
                     if let battery = batteryInfo {
-                        BatteryRow(millivolts: battery.batteryMillivolts)
+                        BatteryRow(millivolts: UInt16(clamping: battery.level))
 
                         HStack {
                             Label("Storage Used", systemImage: "internaldrive")
                             Spacer()
-                            Text(formatStorage(used: battery.storageUsedKB, total: battery.storageTotalKB))
+                            Text(formatStorage(used: battery.usedStorageKB ?? 0, total: battery.totalStorageKB ?? 0))
                                 .foregroundStyle(.secondary)
                         }
 
-                        StorageBar(used: battery.storageUsedKB, total: battery.storageTotalKB)
+                        StorageBar(used: battery.usedStorageKB ?? 0, total: battery.totalStorageKB ?? 0)
                     } else {
                         HStack {
                             Label("Battery & Storage", systemImage: "battery.100")
@@ -187,18 +188,19 @@ struct DeviceInfoView: View {
         }
     }
 
-    private func formatStorage(used: UInt32, total: UInt32) -> String {
+    private func formatStorage(used: Int, total: Int) -> String {
         "\(used) / \(total) KB"
     }
 
     private func refreshBatteryInfo() {
-        guard !isLoadingBattery else { return }
+        guard !isLoadingBattery,
+              let settingsService = appState.services?.settingsService else { return }
 
         isLoadingBattery = true
 
         Task {
             do {
-                batteryInfo = try await appState.settingsService.getBatteryAndStorage()
+                batteryInfo = try await settingsService.getBattery()
                 lastRefresh = Date()
             } catch {
                 // Leave batteryInfo as nil to show refresh button
@@ -276,7 +278,7 @@ private struct BatteryRow: View {
 
     private var voltageString: String {
         let volts = Double(millivolts) / 1000.0
-        return String(format: "(%.2fV)", volts)
+        return "(\(volts.formatted(.number.precision(.fractionLength(2))))V)"
     }
 
     private var batteryColor: Color {
@@ -303,8 +305,8 @@ private struct BatteryRow: View {
 // MARK: - Storage Bar
 
 private struct StorageBar: View {
-    let used: UInt32
-    let total: UInt32
+    let used: Int
+    let total: Int
 
     var body: some View {
         GeometryReader { geometry in

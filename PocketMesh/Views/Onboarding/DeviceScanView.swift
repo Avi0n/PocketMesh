@@ -1,11 +1,12 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Third screen of onboarding - pairs MeshCore device via AccessorySetupKit
 struct DeviceScanView: View {
     @Environment(AppState.self) private var appState
     @State private var isPairing = false
     @State private var showTroubleshooting = false
+    @State private var errorMessage: String?
 
     var body: some View {
         VStack(spacing: 24) {
@@ -43,7 +44,7 @@ struct DeviceScanView: View {
             Spacer()
 
             // Error message
-            if let error = appState.lastError {
+            if let error = errorMessage {
                 VStack(spacing: 4) {
                     Text(error)
                         .font(.subheadline)
@@ -121,13 +122,13 @@ struct DeviceScanView: View {
 
     private func startPairing() {
         isPairing = true
-        appState.lastError = nil
+        errorMessage = nil
 
         Task {
             defer { isPairing = false }
 
             do {
-                try await appState.pairNewDevice()
+                try await appState.connectionManager.pairNewDevice()
                 withAnimation {
                     appState.completeOnboarding()
                 }
@@ -135,17 +136,17 @@ struct DeviceScanView: View {
                 // User cancelled - no error to show
             } catch AccessorySetupKitError.pickerRestricted {
                 // CBCentralManager was initialized before ASK - should not happen with correct implementation
-                appState.lastError = "Cannot show device picker. Please restart the app and try again."
+                errorMessage = "Cannot show device picker. Please restart the app and try again."
             } catch AccessorySetupKitError.pickerAlreadyActive {
                 // Picker is already showing - ignore
             } catch AccessorySetupKitError.pairingFailed(let reason) {
-                appState.lastError = "Pairing failed: \(reason). Please try again."
+                errorMessage = "Pairing failed: \(reason). Please try again."
             } catch AccessorySetupKitError.discoveryTimeout {
-                appState.lastError = "No devices found. Make sure your device is powered on and nearby."
+                errorMessage = "No devices found. Make sure your device is powered on and nearby."
             } catch AccessorySetupKitError.connectionFailed {
-                appState.lastError = "Could not connect to the device. Please try again."
+                errorMessage = "Could not connect to the device. Please try again."
             } catch {
-                appState.lastError = error.localizedDescription
+                errorMessage = error.localizedDescription
             }
         }
     }
@@ -193,15 +194,15 @@ private struct TroubleshootingSheet: View {
                                 Text("Clear Previous Pairing")
                             }
                         }
-                        .disabled(isClearing || appState.accessorySetupKit.pairedAccessories.isEmpty)
+                        .disabled(isClearing || appState.connectionManager.pairedAccessoriesCount == 0)
                     }
                 } header: {
                     Text("Factory Reset Device?")
                 } footer: {
-                    if appState.accessorySetupKit.pairedAccessories.isEmpty {
+                    if appState.connectionManager.pairedAccessoriesCount == 0 {
                         Text("No previous pairings found.")
                     } else {
-                        Text("Found \(appState.accessorySetupKit.pairedAccessories.count) previous pairing(s).")
+                        Text("Found \(appState.connectionManager.pairedAccessoriesCount) previous pairing(s).")
                     }
                 }
 
@@ -235,15 +236,9 @@ private struct TroubleshootingSheet: View {
         Task {
             defer { isClearing = false }
 
-            // Remove all stale pairings
+            // Remove all stale pairings via ConnectionManager
             // Note: iOS 26 shows a confirmation dialog for each removal
-            for accessory in appState.accessorySetupKit.pairedAccessories {
-                do {
-                    try await appState.accessorySetupKit.removeAccessory(accessory)
-                } catch {
-                    // Continue trying to remove others even if one fails
-                }
-            }
+            await appState.connectionManager.clearStalePairings()
 
             dismiss()
         }

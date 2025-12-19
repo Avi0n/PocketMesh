@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import os.log
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "PathManagement")
@@ -102,9 +102,10 @@ final class PathManagementViewModel {
 
     /// Load all contacts for name resolution and filter repeaters for adding
     func loadContacts(deviceID: UUID) async {
-        guard let appState else { return }
+        guard let appState,
+              let dataStore = appState.services?.dataStore else { return }
         do {
-            let contacts = try await appState.dataStore.fetchContacts(deviceID: deviceID)
+            let contacts = try await dataStore.fetchContacts(deviceID: deviceID)
             allContacts = contacts
             availableRepeaters = contacts.filter { $0.type == .repeater }
         } catch {
@@ -140,14 +141,15 @@ final class PathManagementViewModel {
 
     /// Save the edited path to the contact
     func saveEditedPath(for contact: ContactDTO) async {
-        guard let appState else { return }
+        guard let appState,
+              let contactService = appState.services?.contactService else { return }
 
         isSettingPath = true
         errorMessage = nil
 
         do {
             let pathData = Data(editablePath.map { $0.hashByte })
-            try await appState.contactService.setPath(
+            try await contactService.setPath(
                 deviceID: contact.deviceID,
                 publicKey: contact.publicKey,
                 path: pathData,
@@ -169,7 +171,8 @@ final class PathManagementViewModel {
     /// 1. First perform active discovery to get fresh path (requires remote response)
     /// 2. If timeout, fall back to cached advertisement path
     func discoverPath(for contact: ContactDTO) async {
-        guard let appState else { return }
+        guard let appState,
+              let contactService = appState.services?.contactService else { return }
 
         // Cancel any existing discovery
         discoveryTask?.cancel()
@@ -181,7 +184,7 @@ final class PathManagementViewModel {
         // Tier 1: Perform active path discovery (requires remote node response)
         discoveryTask = Task { @MainActor in
             do {
-                let sentResponse = try await appState.contactService.sendPathDiscovery(
+                let sentResponse = try await contactService.sendPathDiscovery(
                     deviceID: contact.deviceID,
                     publicKey: contact.publicKey
                 )
@@ -189,8 +192,8 @@ final class PathManagementViewModel {
                 // Calculate timeout from firmware's suggested value
                 // MeshCore uses suggested_timeout/600 which gives ~1.67× the raw ms-to-seconds conversion
                 // This accounts for network variability in mesh routing
-                let timeoutSeconds = max(30.0, Double(sentResponse.estimatedTimeout) / 600.0)
-                logger.info("Path discovery timeout: \(Int(timeoutSeconds))s (firmware suggested: \(sentResponse.estimatedTimeout)ms)")
+                let timeoutSeconds = max(30.0, Double(sentResponse.suggestedTimeoutMs) / 600.0)
+                logger.info("Path discovery timeout: \(Int(timeoutSeconds))s (firmware suggested: \(sentResponse.suggestedTimeoutMs)ms)")
 
                 // Wait for push notification with firmware-suggested timeout
                 // The AdvertisementService handler will call handleDiscoveryResponse()
@@ -213,40 +216,9 @@ final class PathManagementViewModel {
         }
     }
 
-    /// Fall back to cached advertisement path when active discovery times out
+    /// Handle timeout when active discovery doesn't receive a response
     private func fallbackToCachedPath(for contact: ContactDTO) async {
-        guard let appState else {
-            discoveryResult = .noPathFound
-            showDiscoveryResult = true
-            return
-        }
-
-        do {
-            if let advertPath = try await appState.contactService.getAdvertPath(
-                deviceID: contact.deviceID,
-                publicKey: contact.publicKey
-            ) {
-                // Found cached path from advertisements
-                discoveryResult = .success(hopCount: Int(advertPath.pathLength), fromCache: true)
-                showDiscoveryResult = true
-
-                // Update the contact's path in the database if different
-                if contact.outPathLength != Int8(advertPath.pathLength) {
-                    try? await appState.contactService.setPath(
-                        deviceID: contact.deviceID,
-                        publicKey: contact.publicKey,
-                        path: advertPath.path,
-                        pathLength: Int8(advertPath.pathLength)
-                    )
-                }
-                onContactNeedsRefresh?()
-                return
-            }
-        } catch {
-            // Failed to query cached path
-        }
-
-        // No cached path available either
+        // Active discovery timed out - remote node did not respond
         discoveryResult = .noPathFound
         showDiscoveryResult = true
     }
@@ -275,13 +247,14 @@ final class PathManagementViewModel {
 
     /// Reset the path for a contact (force flood routing)
     func resetPath(for contact: ContactDTO) async {
-        guard let appState else { return }
+        guard let appState,
+              let contactService = appState.services?.contactService else { return }
 
         isSettingPath = true
         errorMessage = nil
 
         do {
-            try await appState.contactService.resetPath(
+            try await contactService.resetPath(
                 deviceID: contact.deviceID,
                 publicKey: contact.publicKey
             )
@@ -296,13 +269,14 @@ final class PathManagementViewModel {
 
     /// Set a specific path for a contact
     func setPath(for contact: ContactDTO, path: Data, pathLength: Int8) async {
-        guard let appState else { return }
+        guard let appState,
+              let contactService = appState.services?.contactService else { return }
 
         isSettingPath = true
         errorMessage = nil
 
         do {
-            try await appState.contactService.setPath(
+            try await contactService.setPath(
                 deviceID: contact.deviceID,
                 publicKey: contact.publicKey,
                 path: path,

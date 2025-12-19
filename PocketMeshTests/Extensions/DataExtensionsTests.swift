@@ -1,5 +1,5 @@
 import XCTest
-@testable import PocketMeshKit
+@testable import PocketMeshServices
 
 final class DataExtensionsTests: XCTestCase {
 

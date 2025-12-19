@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Sheet presenting channel creation and joining options
 struct ChannelOptionsSheet: View {
@@ -179,7 +179,7 @@ struct ChannelOptionsSheet: View {
         }
 
         do {
-            let existingChannels = try await appState.dataStore.fetchChannels(deviceID: deviceID)
+            let existingChannels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
             let usedSlots = Set(existingChannels.map(\.index))
 
             // Check if public channel exists

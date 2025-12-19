@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import CoreImage.CIFilterBuiltins
 
 /// Sheet displaying channel info with sharing and deletion options
@@ -229,7 +229,7 @@ struct ChannelInfoSheet: View {
         do {
             // Clear channel on device (sends empty name + zero secret via BLE)
             // and deletes from local database
-            try await appState.channelService.clearChannel(
+            try await appState.services?.channelService.clearChannel(
                 deviceID: deviceID,
                 index: channel.index
             )

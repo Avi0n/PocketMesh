@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
@@ -59,7 +59,7 @@ struct ChatView: View {
         }
         .onDisappear {
             // Clear active conversation for notification suppression
-            appState.notificationService.activeContactID = nil
+            appState.services?.notificationService.activeContactID = nil
 
             // Refresh parent conversation list when leaving
             if let parent = parentViewModel {
@@ -114,7 +114,7 @@ struct ChatView: View {
     // MARK: - Contact Refresh
 
     private func refreshContact() async {
-        if let updated = try? await appState.dataStore.fetchContact(id: contact.id) {
+        if let updated = try? await appState.services?.dataStore.fetchContact(id: contact.id) {
             contact = updated
         }
     }

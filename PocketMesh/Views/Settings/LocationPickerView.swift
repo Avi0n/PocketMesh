@@ -1,7 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
-import PocketMeshKit
+import PocketMeshServices
 
 /// Map-based location picker for setting node position
 struct LocationPickerView: View {
@@ -174,13 +174,13 @@ extension LocationPickerView {
         }
 
         return LocationPickerView(initialCoordinate: initialCoord) { coordinate in
-            let (deviceInfo, selfInfo) = try await appState.withSyncActivity {
-                try await appState.settingsService.setLocationVerified(
-                    latitude: coordinate.latitude,
-                    longitude: coordinate.longitude
-                )
+            guard let settingsService = appState.services?.settingsService else {
+                throw SettingsServiceError.notConnected
             }
-            appState.updateDeviceInfo(deviceInfo, selfInfo)
+            _ = try await settingsService.setLocationVerified(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude
+            )
         }
     }
 }

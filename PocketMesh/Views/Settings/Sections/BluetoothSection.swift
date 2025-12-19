@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Bluetooth PIN configuration
 struct BluetoothSection: View {
@@ -81,7 +81,7 @@ struct BluetoothSection: View {
 
             if appState.connectionState == .ready,
                let deviceID = appState.connectedDevice?.id,
-               appState.accessorySetupKit.accessory(for: deviceID) != nil {
+               appState.connectionManager.hasAccessory(for: deviceID) {
                 Button {
                     renameDevice()
                 } label: {
@@ -101,7 +101,7 @@ struct BluetoothSection: View {
         } footer: {
             if appState.connectionState == .ready,
                let deviceID = appState.connectedDevice?.id,
-               appState.accessorySetupKit.accessory(for: deviceID) != nil {
+               appState.connectionManager.hasAccessory(for: deviceID) {
                 Text("Renaming only changes how iOS displays this device.")
             }
         }
@@ -190,13 +190,15 @@ struct BluetoothSection: View {
         isChangingPin = true
         Task {
             do {
-                try await appState.withSyncActivity {
-                    // Send PIN change command (written to RAM until reboot)
-                    try await appState.settingsService.setBlePin(pinValue)
-
-                    // Reboot device to apply PIN change
-                    try await appState.settingsService.reboot()
+                guard let settingsService = appState.services?.settingsService else {
+                    throw ConnectionError.notConnected
                 }
+
+                // Send PIN change command (written to RAM until reboot)
+                try await settingsService.setBlePin(pinValue)
+
+                // Reboot device to apply PIN change
+                try await settingsService.reboot()
 
                 // Wait for device to start rebooting
                 try await Task.sleep(for: .milliseconds(500))
@@ -232,13 +234,15 @@ struct BluetoothSection: View {
         isChangingPin = true
         Task {
             do {
-                try await appState.withSyncActivity {
-                    // Send PIN change command (written to RAM until reboot)
-                    try await appState.settingsService.setBlePin(pin)
-
-                    // Reboot device to apply PIN change
-                    try await appState.settingsService.reboot()
+                guard let settingsService = appState.services?.settingsService else {
+                    throw ConnectionError.notConnected
                 }
+
+                // Send PIN change command (written to RAM until reboot)
+                try await settingsService.setBlePin(pin)
+
+                // Reboot device to apply PIN change
+                try await settingsService.reboot()
 
                 // Wait for device to start rebooting
                 try await Task.sleep(for: .milliseconds(500))
@@ -260,33 +264,22 @@ struct BluetoothSection: View {
     }
 
     private func triggerRepairingFlow() async {
-        guard let deviceID = appState.connectedDevice?.id,
-              let accessory = appState.accessorySetupKit.accessory(for: deviceID) else {
-            return
-        }
-
         do {
-            try await appState.accessorySetupKit.removeAccessory(accessory)
-            await appState.disconnect()
+            try await appState.connectionManager.forgetDevice()
             try await Task.sleep(for: .milliseconds(500))
-            try await appState.pairNewDevice()
+            try await appState.connectionManager.pairNewDevice()
         } catch {
             showError = "Re-pairing failed: \(error.localizedDescription)"
         }
     }
 
     private func renameDevice() {
-        guard let deviceID = appState.connectedDevice?.id,
-              let accessory = appState.accessorySetupKit.accessory(for: deviceID) else {
-            return
-        }
-
         isRenaming = true
         Task {
             defer { isRenaming = false }
 
             do {
-                try await appState.accessorySetupKit.renameAccessory(accessory)
+                try await appState.connectionManager.renameCurrentDevice()
             } catch {
                 // User cancelled or rename failed - no error to show
                 // Rename is optional and user can try again

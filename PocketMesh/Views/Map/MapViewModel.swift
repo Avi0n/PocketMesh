@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshKit
+import PocketMeshServices
 
 /// ViewModel for map contact locations
 @Observable
@@ -26,7 +26,7 @@ final class MapViewModel {
 
     // MARK: - Dependencies
 
-    private var dataStore: DataStore?
+    private var dataStore: PersistenceStore?
     private var deviceID: UUID?
 
     // MARK: - Initialization
@@ -35,12 +35,12 @@ final class MapViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.dataStore
+        self.dataStore = appState.services?.dataStore
         self.deviceID = appState.connectedDevice?.id
     }
 
     /// Configure with services (for testing)
-    func configure(dataStore: DataStore, deviceID: UUID?) {
+    func configure(dataStore: PersistenceStore, deviceID: UUID?) {
         self.dataStore = dataStore
         self.deviceID = deviceID
     }

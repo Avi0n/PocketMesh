@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
@@ -52,7 +52,7 @@ struct MainTabView: View {
             Tab("Chats", systemImage: "message.fill", value: 0) {
                 ChatsListView()
             }
-            .badge(appState.notificationService.badgeCount)
+            .badge(appState.services?.notificationService.badgeCount ?? 0)
 
             Tab("Contacts", systemImage: "person.2.fill", value: 1) {
                 ContactsListView()
@@ -66,18 +66,14 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
-        .overlay(alignment: .top) {
-            if appState.shouldShowSyncingPill {
-                SyncingPillView()
-                    .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(duration: 0.3), value: appState.shouldShowSyncingPill)
-            }
-        }
         .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
             if appState.pendingReconnectDeviceID != nil {
                 Button("Try Again") {
-                    appState.retryPendingReconnection()
+                    Task {
+                        if let deviceID = appState.pendingReconnectDeviceID {
+                            try? await appState.connectionManager.connect(to: deviceID)
+                        }
+                    }
                 }
                 Button("Cancel", role: .cancel) {
                     appState.pendingReconnectDeviceID = nil

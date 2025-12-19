@@ -1,5 +1,5 @@
 import Testing
-@testable import PocketMeshKit
+@testable import PocketMeshServices
 
 struct CLIResponseTests {
 

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatsListView")
@@ -209,7 +209,7 @@ struct ChatsListView: View {
         guard let deviceID = appState.connectedDevice?.id else { return }
 
         // Sync channels from device
-        _ = try? await appState.channelService.syncChannels(deviceID: deviceID)
+        _ = try? await appState.services?.channelService.syncChannels(deviceID: deviceID)
 
         // Reload conversations and channels
         await loadConversations()
@@ -238,13 +238,13 @@ struct ChatsListView: View {
     private func deleteRoom(_ session: RemoteNodeSessionDTO) async {
         do {
             // Leave room (sends logout and removes session)
-            try await appState.roomServerService.leaveRoom(
+            try await appState.services?.roomServerService.leaveRoom(
                 sessionID: session.id,
                 publicKey: session.publicKey
             )
 
             // Delete associated contact
-            try await appState.contactService.removeContact(
+            try await appState.services?.contactService.removeContact(
                 deviceID: session.deviceID,
                 publicKey: session.publicKey
             )
@@ -422,7 +422,7 @@ struct NewChatView: View {
 
         isLoading = true
         do {
-            contacts = try await appState.dataStore.fetchContacts(deviceID: deviceID)
+            contacts = try await appState.services?.dataStore.fetchContacts(deviceID: deviceID) ?? []
         } catch {
             // Silently handle error
         }
@@ -653,7 +653,7 @@ struct RoomAuthenticationSheet: View {
         }
         .task {
             // Fetch the contact associated with this room session
-            contact = try? await appState.dataStore.fetchContact(
+            contact = try? await appState.services?.dataStore.fetchContact(
                 deviceID: session.deviceID,
                 publicKey: session.publicKey
             )

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Shows contacts discovered via advertisement that haven't been added to the device
 struct DiscoveryView: View {
@@ -97,11 +97,12 @@ struct DiscoveryView: View {
     }
 
     private func loadDiscoveredContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.connectedDevice?.id,
+              let dataStore = appState.services?.dataStore else { return }
 
         isLoading = true
         do {
-            discoveredContacts = try await appState.dataStore.fetchDiscoveredContacts(deviceID: deviceID)
+            discoveredContacts = try await dataStore.fetchDiscoveredContacts(deviceID: deviceID)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -109,17 +110,23 @@ struct DiscoveryView: View {
     }
 
     private func addContact(_ contact: ContactDTO) async {
+        guard let contactService = appState.services?.contactService,
+              let dataStore = appState.services?.dataStore else {
+            errorMessage = "Services not available"
+            return
+        }
+
         addingContactID = contact.id
 
         do {
             // Send to device
-            try await appState.contactService.addOrUpdateContact(
+            try await contactService.addOrUpdateContact(
                 deviceID: contact.deviceID,
                 contact: contact.toContactFrame()
             )
 
             // Mark as confirmed locally
-            try await appState.dataStore.confirmContact(id: contact.id)
+            try await dataStore.confirmContact(id: contact.id)
 
             // Remove from local list
             discoveredContacts.removeAll { $0.id == contact.id }

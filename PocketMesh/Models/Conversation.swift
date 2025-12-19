@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshKit
+import PocketMeshServices
 
 /// Represents a conversation in the chat list - direct chat, channel, or room
 enum Conversation: Identifiable, Hashable {

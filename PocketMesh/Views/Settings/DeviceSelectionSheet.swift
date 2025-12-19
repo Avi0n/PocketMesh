@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Sheet for selecting and reconnecting to previously paired devices
 struct DeviceSelectionSheet: View {
@@ -31,7 +31,9 @@ struct DeviceSelectionSheet: View {
                     Button("Connect") {
                         guard let device = selectedDevice else { return }
                         dismiss()
-                        appState.initiateReconnection(to: device.id)
+                        Task {
+                            try? await appState.connectionManager.connect(to: device.id)
+                        }
                     }
                     .fontWeight(.semibold)
                     .disabled(selectedDevice == nil)
@@ -87,8 +89,12 @@ struct DeviceSelectionSheet: View {
     // MARK: - Actions
 
     private func loadDevices() async {
+        guard let dataStore = appState.services?.dataStore else {
+            savedDevices = []
+            return
+        }
         do {
-            savedDevices = try await appState.dataStore.fetchDevices()
+            savedDevices = try await dataStore.fetchDevices()
         } catch {
             savedDevices = []
         }
@@ -97,25 +103,9 @@ struct DeviceSelectionSheet: View {
     private func scanForNewDevice() {
         dismiss()
         Task {
-            await appState.disconnectForNewConnection()
-            // Trigger ASK picker flow
-            do {
-                try await appState.pairNewDevice()
-            } catch AccessorySetupKitError.pickerDismissed {
-                // User cancelled - no error to show
-            } catch AccessorySetupKitError.pickerRestricted {
-                appState.lastError = "Cannot show device picker. Please restart the app."
-            } catch AccessorySetupKitError.pickerAlreadyActive {
-                // Picker already showing - ignore
-            } catch AccessorySetupKitError.pairingFailed(let reason) {
-                appState.lastError = "Pairing failed: \(reason)"
-            } catch AccessorySetupKitError.discoveryTimeout {
-                appState.lastError = "No devices found. Make sure your device is powered on and nearby."
-            } catch AccessorySetupKitError.connectionFailed {
-                appState.lastError = "Could not connect to the device. Please try again."
-            } catch {
-                appState.lastError = error.localizedDescription
-            }
+            await appState.disconnect()
+            // Trigger ASK picker flow via AppState
+            appState.startDeviceScan()
         }
     }
 }

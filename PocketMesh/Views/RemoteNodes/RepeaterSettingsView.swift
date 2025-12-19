@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import CoreLocation
 
 struct RepeaterSettingsView: View {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 import MapKit
 #if DEBUG
 import DataScoutCompanion

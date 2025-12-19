@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshKit
+import PocketMeshServices
 
 /// Map view displaying contacts with their locations
 struct MapView: View {

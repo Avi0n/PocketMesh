@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshKit
+import PocketMeshServices
 
 /// Detailed view for a single contact
 struct ContactDetailView: View {
@@ -109,7 +109,7 @@ struct ContactDetailView: View {
 
             // Fetch fresh contact data from device to catch external changes
             // (e.g., user modified path in official MeshCore app)
-            if let freshContact = try? await appState.contactService.getContact(
+            if let freshContact = try? await appState.services?.contactService.getContact(
                 deviceID: currentContact.deviceID,
                 publicKey: currentContact.publicKey
             ) {
@@ -117,9 +117,9 @@ struct ContactDetailView: View {
             }
 
             // Wire up path discovery response handler to receive push notifications
-            await appState.advertisementService.setPathDiscoveryHandler { [weak pathViewModel] response in
+            await appState.services?.advertisementService.setPathDiscoveryHandler { [weak pathViewModel] response in
                 Task { @MainActor in
-                    pathViewModel?.handleDiscoveryResponse(hopCount: response.outboundPath.count)
+                    pathViewModel?.handleDiscoveryResponse(hopCount: response.outPath.count)
                 }
             }
         }
@@ -203,7 +203,7 @@ struct ContactDetailView: View {
 
     private func toggleFavorite() async {
         do {
-            try await appState.contactService.updateContactPreferences(
+            try await appState.services?.contactService.updateContactPreferences(
                 contactID: currentContact.id,
                 isFavorite: !currentContact.isFavorite
             )
@@ -215,7 +215,7 @@ struct ContactDetailView: View {
 
     private func toggleBlocked() async {
         do {
-            try await appState.contactService.updateContactPreferences(
+            try await appState.services?.contactService.updateContactPreferences(
                 contactID: currentContact.id,
                 isBlocked: !currentContact.isBlocked
             )
@@ -227,7 +227,7 @@ struct ContactDetailView: View {
 
     private func deleteContact() async {
         do {
-            try await appState.contactService.removeContact(
+            try await appState.services?.contactService.removeContact(
                 deviceID: currentContact.deviceID,
                 publicKey: currentContact.publicKey
             )
@@ -239,14 +239,14 @@ struct ContactDetailView: View {
 
     private func shareContact() async {
         do {
-            try await appState.contactService.shareContact(publicKey: currentContact.publicKey)
+            try await appState.services?.contactService.shareContact(publicKey: currentContact.publicKey)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     private func refreshContact() async {
-        if let updated = try? await appState.dataStore.fetchContact(id: currentContact.id) {
+        if let updated = try? await appState.services?.dataStore.fetchContact(id: currentContact.id) {
             currentContact = updated
         }
     }
@@ -661,7 +661,7 @@ struct ContactDetailView: View {
     private func saveNickname() async {
         isSaving = true
         do {
-            try await appState.contactService.updateContactPreferences(
+            try await appState.services?.contactService.updateContactPreferences(
                 contactID: currentContact.id,
                 nickname: nickname.isEmpty ? nil : nickname
             )

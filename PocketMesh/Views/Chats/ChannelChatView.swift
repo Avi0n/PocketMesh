@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Channel conversation view with broadcast messaging
 struct ChannelChatView: View {
@@ -52,8 +52,8 @@ struct ChannelChatView: View {
         }
         .onDisappear {
             // Clear active channel for notification suppression
-            appState.notificationService.activeChannelIndex = nil
-            appState.notificationService.activeChannelDeviceID = nil
+            appState.services?.notificationService.activeChannelIndex = nil
+            appState.services?.notificationService.activeChannelDeviceID = nil
 
             // Refresh parent conversation list when leaving
             if let parent = parentViewModel {

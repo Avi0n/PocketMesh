@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshKit
+import PocketMeshServices
 
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {
@@ -177,8 +177,8 @@ struct UnifiedMessageBubble: View {
                 Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
             }
 
-            if !message.isOutgoing, let snrValue = message.snrValue {
-                Text("SNR: \(snrFormatted(snrValue))")
+            if !message.isOutgoing, let snr = message.snr {
+                Text("SNR: \(snrFormatted(snr))")
             }
 
             // Show hop count for incoming messages
@@ -325,7 +325,7 @@ struct UnifiedMessageBubble: View {
         return "\(mention)\"\(preview)\(suffix)\"\n"
     }
 
-    private func snrFormatted(_ snr: Float) -> String {
+    private func snrFormatted(_ snr: Double) -> String {
         let quality: String
         switch snr {
         case 10...:
@@ -339,7 +339,7 @@ struct UnifiedMessageBubble: View {
         default:
             quality = "Very Poor"
         }
-        return String(format: "%.1f dB (%@)", snr, quality)
+        return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB (\(quality))"
     }
 
     private func hopCountFormatted(_ pathLength: UInt8) -> String {
