@@ -298,31 +298,36 @@ public actor RemoteNodeService {
             throw RemoteNodeError.passwordNotFound
         }
 
-        // Send login via MeshCore session
-        do {
-            _ = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
-        } catch let error as MeshCoreError {
-            throw RemoteNodeError.sessionError(error)
-        }
-
         // Calculate timeout based on path length
         let timeout = LoginTimeoutConfig.timeout(forPathLength: pathLength)
+        let prefix = Data(remoteSession.publicKey.prefix(6))
 
-        // Wait for login result push (keyed by 6-byte prefix to match MeshCore protocol)
+        // Cancel any existing pending login for this prefix
+        if let existing = pendingLogins.removeValue(forKey: prefix) {
+            let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
+            logger.warning("Overwriting pending login for prefix \(prefixHex)")
+            existing.resume(throwing: RemoteNodeError.cancelled)
+        }
+
+        // Register continuation BEFORE sending to avoid race condition with loginSuccess event
         return try await withCheckedThrowingContinuation { continuation in
-            let prefix = Data(remoteSession.publicKey.prefix(6))
-
-            // Cancel any existing pending login for this prefix
-            if let existing = pendingLogins.removeValue(forKey: prefix) {
-                let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
-                logger.warning("Overwriting pending login for prefix \(prefixHex)")
-                existing.resume(throwing: RemoteNodeError.cancelled)
-            }
-
             pendingLogins[prefix] = continuation
 
-            Task {
-                try await Task.sleep(for: timeout)
+            Task { [self] in
+                // Send login via MeshCore session
+                do {
+                    _ = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
+                } catch {
+                    // Send failed - remove pending and resume with error
+                    if let pending = pendingLogins.removeValue(forKey: prefix) {
+                        let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
+                        pending.resume(throwing: RemoteNodeError.sessionError(meshError))
+                    }
+                    return
+                }
+
+                // Send succeeded - start timeout countdown
+                try? await Task.sleep(for: timeout)
                 if let pending = pendingLogins.removeValue(forKey: prefix) {
                     logger.warning("Login timeout after \(timeout) for session \(sessionID)")
                     pending.resume(throwing: RemoteNodeError.timeout)
