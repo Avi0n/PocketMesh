@@ -39,12 +39,20 @@ public enum PacketBuilder: Sendable {
 
     /// Builds an appStart command to initialize the session.
     ///
-    /// - Parameter clientId: Client identifier string (max 12 characters).
+    /// - Parameter clientId: Client identifier string (max 5 characters, will be truncated).
     /// - Returns: The command packet data.
-    public static func appStart(clientId: String = "MeshCore") -> Data {
+    ///
+    /// Packet format (per firmware MyMesh.cpp:842-845):
+    /// - Byte 0: Command code (0x01)
+    /// - Bytes 1-7: Reserved (0x03 followed by 6 spaces)
+    /// - Bytes 8+: Client ID (5 chars max, firmware reads from byte 8)
+    public static func appStart(clientId: String = "MCore") -> Data {
         var data = Data([CommandCode.appStart.rawValue, 0x03])
-        let paddedId = clientId.padding(toLength: 12, withPad: " ", startingAt: 0)
-        data.append(paddedId.data(using: .utf8) ?? Data())
+        // Add 6 reserved bytes (spaces) per Python reference device.py:15
+        data.append(contentsOf: [0x20, 0x20, 0x20, 0x20, 0x20, 0x20])
+        // Client ID: 5 chars max (firmware reads from byte 8, limited display space)
+        let truncatedId = String(clientId.prefix(5))
+        data.append(truncatedId.data(using: .utf8) ?? Data())
         return data
     }
 
