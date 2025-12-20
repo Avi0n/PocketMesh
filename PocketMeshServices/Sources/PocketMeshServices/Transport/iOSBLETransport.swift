@@ -107,7 +107,20 @@ public actor iOSBLETransport: MeshTransport {
 
     // MARK: - Initialization
 
-    /// Creates an iOS BLE transport.
+    /// Creates an iOS BLE transport with a shared BLE delegate.
+    ///
+    /// Use this initializer to share a single `CBCentralManager` across connection attempts,
+    /// avoiding state restoration race conditions.
+    ///
+    /// - Parameters:
+    ///   - delegate: The shared BLE delegate that owns the `CBCentralManager`.
+    ///   - accessoryService: Optional AccessorySetupKit service for iOS 26+ state restoration.
+    public init(delegate: iOSBLEDelegate, accessoryService: AccessorySetupKitService? = nil) {
+        self.delegate = delegate
+        self.accessoryService = accessoryService
+    }
+
+    /// Creates an iOS BLE transport with its own BLE delegate.
     ///
     /// - Parameters:
     ///   - deviceID: Optional UUID of the device to connect to. Can be set later via `setDeviceID(_:)`.
@@ -281,13 +294,21 @@ public actor iOSBLETransport: MeshTransport {
 
 // MARK: - BLE Delegate
 
+/// Manages CoreBluetooth operations for BLE transport.
+///
+/// This class owns the `CBCentralManager` and handles all CoreBluetooth delegate callbacks.
+/// For proper state restoration handling, create a single instance and share it across
+/// connection attempts.
+///
 /// @unchecked Sendable: CBCentralManagerDelegate requires NSObject. All mutable state protected by continuationLock.
-private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, @unchecked Sendable {
+public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, @unchecked Sendable {
 
     private let logger = Logger(subsystem: "com.pocketmesh", category: "iOSBLEDelegate")
 
     // CoreBluetooth
-    let centralManager: CBCentralManager
+    // Initialized after super.init() so self can be passed as delegate.
+    // Safe: assigned exactly once, read-only after init, class is @unchecked Sendable.
+    nonisolated(unsafe) var centralManager: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
     private var txCharacteristic: CBCharacteristic?
     private var rxCharacteristic: CBCharacteristic?
@@ -318,6 +339,9 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
     private var isAutoReconnecting = false
     private var needsResubscriptionAfterReconnect = false
 
+    /// Set when willRestoreState finds a connected peripheral that needs service discovery after poweredOn
+    private var pendingRestorationServiceDiscovery = false
+
     // Callbacks to transport actor
     private var onDisconnection: ((UUID, Error?) -> Void)?
     private var onReconnection: ((UUID) -> Void)?
@@ -327,20 +351,32 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         connectedPeripheral?.identifier
     }
 
-    override init() {
+    public override init() {
         let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
         self.dataStream = stream
         self.dataContinuation = continuation
 
+        // Call super.init() first so 'self' is available
+        super.init()
+
+        // Now create CBCentralManager with self as delegate
+        // This is required when using CBCentralManagerOptionRestoreIdentifierKey
         let options: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: stateRestorationID,
             CBCentralManagerOptionShowPowerAlertKey: true
         ]
+        self.centralManager = CBCentralManager(delegate: self, queue: .main, options: options)
+    }
 
-        // Create central manager on main queue to avoid threading issues
-        self.centralManager = CBCentralManager(delegate: nil, queue: .main, options: options)
-        super.init()
-        centralManager.delegate = self
+    /// Resets the delegate for a new connection attempt.
+    ///
+    /// Call this before reusing the delegate for a new transport instance.
+    /// Clears transport callbacks while preserving the `CBCentralManager` and any restored peripheral.
+    public func resetForNewConnection() {
+        onDisconnection = nil
+        onReconnection = nil
+        onStateChange = nil
+        // Keep centralManager and connectedPeripheral for state restoration
     }
 
     func setTransportCallbacks(
@@ -356,19 +392,17 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
     // MARK: - Public Methods
 
     func waitForPoweredOn() async throws {
+        // If already powered on, return immediately
         if centralManager.state == .poweredOn { return }
 
-        switch centralManager.state {
-        case .unauthorized:
-            throw BLEError.bluetoothUnauthorized
-        case .poweredOff:
-            throw BLEError.bluetoothPoweredOff
-        case .unsupported:
+        // Only .unsupported is truly permanent (hardware limitation)
+        // All other states should wait for delegate callback
+        if centralManager.state == .unsupported {
             throw BLEError.bluetoothUnavailable
-        default:
-            break
         }
 
+        // Wait for centralManagerDidUpdateState callback
+        // The callback will resume with success (.poweredOn) or throw appropriate error
         try await withCheckedThrowingContinuation { continuation in
             continuationLock.withLock { $0.bluetoothReady = continuation }
         }
@@ -480,20 +514,30 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
 
     // MARK: - CBCentralManagerDelegate
 
-    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         continuationLock.withLock { state in
             switch central.state {
             case .poweredOn:
                 state.bluetoothReady?.resume()
                 state.bluetoothReady = nil
+
+                // Handle deferred service discovery from state restoration
+                if pendingRestorationServiceDiscovery, let peripheral = connectedPeripheral {
+                    pendingRestorationServiceDiscovery = false
+                    logger.info("State restoration: discovering services after poweredOn")
+                    onStateChange?(.connecting)
+                    peripheral.discoverServices([nordicUARTServiceUUID])
+                }
             case .poweredOff:
-                state.bluetoothReady?.resume(throwing: BLEError.bluetoothPoweredOff)
-                state.bluetoothReady = nil
+                // Don't throw immediately - this might be a transient state during XPC re-establishment
+                // The connection timeout will handle truly-off Bluetooth
+                logger.debug("Bluetooth state: poweredOff (waiting for potential recovery)")
                 onStateChange?(.disconnected)
             case .unauthorized:
-                state.bluetoothReady?.resume(throwing: BLEError.bluetoothUnauthorized)
-                state.bluetoothReady = nil
+                // Don't throw immediately - user might grant permission when prompted
+                logger.debug("Bluetooth state: unauthorized (waiting for potential authorization)")
             case .unsupported:
+                // Only .unsupported is truly permanent - no hardware support
                 state.bluetoothReady?.resume(throwing: BLEError.bluetoothUnavailable)
                 state.bluetoothReady = nil
             default:
@@ -502,20 +546,20 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         }
     }
 
-    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+    public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         connectedPeripheral = peripheral
         peripheral.delegate = self
         peripheral.discoverServices([nordicUARTServiceUUID])
     }
 
-    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+    public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         continuationLock.withLock { state in
             state.connection?.resume(throwing: BLEError.connectionFailed(error?.localizedDescription ?? "Unknown error"))
             state.connection = nil
         }
     }
 
-    func centralManager(
+    public func centralManager(
         _ central: CBCentralManager,
         didDisconnectPeripheral peripheral: CBPeripheral,
         timestamp: CFAbsoluteTime,
@@ -554,7 +598,7 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         onDisconnection?(deviceID, error)
     }
 
-    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
+    public func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral],
            let peripheral = peripherals.first {
             logger.info("State restoration: restoring peripheral")
@@ -563,15 +607,17 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
             needsResubscriptionAfterReconnect = true
 
             if peripheral.state == .connected {
-                onStateChange?(.connecting)
-                peripheral.discoverServices([nordicUARTServiceUUID])
+                // Don't call discoverServices here - CBCentralManager may not be poweredOn yet.
+                // Set flag to trigger service discovery after poweredOn state is reached.
+                pendingRestorationServiceDiscovery = true
+                logger.debug("State restoration: deferring service discovery until poweredOn")
             }
         }
     }
 
     // MARK: - CBPeripheralDelegate
 
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard error == nil,
               let service = peripheral.services?.first(where: { $0.uuid == nordicUARTServiceUUID }) else {
             continuationLock.withLock { state in
@@ -584,7 +630,7 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         peripheral.discoverCharacteristics([txCharacteristicUUID, rxCharacteristicUUID], for: service)
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
         guard error == nil else {
             continuationLock.withLock { state in
                 state.connection?.resume(throwing: BLEError.characteristicNotFound)
@@ -630,12 +676,12 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         }
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil, let data = characteristic.value, !data.isEmpty else { return }
         dataContinuation.yield(data)
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
         continuationLock.withLock { state in
             if let error {
                 state.write?.resume(throwing: BLEError.writeError(error.localizedDescription))
@@ -646,7 +692,7 @@ private final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriph
         }
     }
 
-    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+    public func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
         guard characteristic.uuid == rxCharacteristicUUID else { return }
 
         // Check if this is a reconnection scenario

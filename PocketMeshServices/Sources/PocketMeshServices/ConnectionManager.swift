@@ -70,6 +70,10 @@ public final class ConnectionManager {
     private var session: MeshCoreSession?
     private let accessorySetupKit = AccessorySetupKitService()
 
+    /// Shared BLE delegate to avoid re-creating CBCentralManager on each connection attempt.
+    /// This prevents state restoration race conditions that cause "API MISUSE" errors.
+    private let bleDelegate = iOSBLEDelegate()
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -323,8 +327,11 @@ public final class ConnectionManager {
     private func performConnection(deviceID: UUID) async throws {
         connectionState = .connecting
 
-        // Create transport
-        let newTransport = iOSBLETransport(accessoryService: accessorySetupKit)
+        // Reset callbacks from any previous transport
+        bleDelegate.resetForNewConnection()
+
+        // Create transport with shared delegate
+        let newTransport = iOSBLETransport(delegate: bleDelegate, accessoryService: accessorySetupKit)
         self.transport = newTransport
 
         // Set up disconnection handler for auto-reconnect
