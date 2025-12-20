@@ -29,7 +29,7 @@ enum PacketSize {
     static let rawDataMinimum = 2
     static let controlDataMinimum = 4
     static let pathDiscoveryMinimum = 6
-    static let loginSuccessMinimum = 8
+    static let loginSuccessMinimum = 7  // [permissions:1][pubkeyPrefix:6]
 }
 
 // MARK: - Parser Logger
@@ -727,13 +727,14 @@ enum Parsers {
 
     enum LoginSuccess {
         /// Per Python reader.py:433-434: admin bit is bit 0 (permissions & 1)
+        /// Format: [permissions:1][pubkeyPrefix:6] (same as loginFailed)
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.loginSuccessMinimum else {
                 return .loginSuccess(LoginInfo(permissions: 0, isAdmin: false, publicKeyPrefix: Data()))
             }
             let permissions = data[0]
             let isAdmin = (permissions & 0x01) != 0
-            let pubkeyPrefix = Data(data[2..<8])
+            let pubkeyPrefix = Data(data[1..<7])
             return .loginSuccess(LoginInfo(
                 permissions: permissions,
                 isAdmin: isAdmin,
