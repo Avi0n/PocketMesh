@@ -605,7 +605,11 @@ public struct TelemetryResponse: Sendable, Equatable {
     public let publicKeyPrefix: Data
     public let tag: Data?
     public let rawData: Data
-    // LPP parsing will be added later
+
+    /// Parsed LPP data points from the raw telemetry data
+    public var dataPoints: [LPPDataPoint] {
+        LPPDecoder.decode(rawData)
+    }
 
     public init(publicKeyPrefix: Data, tag: Data?, rawData: Data) {
         self.publicKeyPrefix = publicKeyPrefix

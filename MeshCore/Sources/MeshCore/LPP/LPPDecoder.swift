@@ -238,74 +238,74 @@ public enum LPPDecoder {
             return .float(Double(data[0]) * 0.5)
 
         case .temperature:
-            let raw = readInt16LE(data)
+            let raw = readInt16BE(data)
             return .float(Double(raw) / 10.0)
 
         case .barometer:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .float(Double(raw) / 10.0)
 
         case .voltage:
-            // MeshCore firmware: 0.1mV units (38657 = 3.8657V)
-            let raw = readUInt16LE(data)
-            return .float(Double(raw) / 10000.0)
+            // MeshCore firmware uses 0.01V units (multiplier 100)
+            let raw = readUInt16BE(data)
+            return .float(Double(raw) / 100.0)
 
         case .current:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .float(Double(raw) / 1000.0)
 
         case .illuminance:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .integer(Int(raw))
 
         case .altitude:
-            let raw = readInt16LE(data)
+            let raw = readInt16BE(data)
             return .float(Double(raw))
 
         case .load:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .float(Double(raw) / 100.0)
 
         case .concentration:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .integer(Int(raw))
 
         case .power:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .integer(Int(raw))
 
         case .direction:
-            let raw = readUInt16LE(data)
+            let raw = readUInt16BE(data)
             return .integer(Int(raw))
 
         case .analogInput, .analogOutput:
-            let raw = readInt16LE(data)
+            let raw = readInt16BE(data)
             return .float(Double(raw) / 100.0)
 
         case .genericSensor:
-            let raw = readInt32LE(data)
+            let raw = readInt32BE(data)
             return .integer(Int(raw))
 
         case .frequency:
-            let raw = readUInt32LE(data)
+            let raw = readUInt32BE(data)
             return .integer(Int(raw))
 
         case .distance:
-            let raw = readUInt32LE(data)
+            let raw = readUInt32BE(data)
             return .float(Double(raw) / 1000.0)
 
         case .energy:
-            let raw = readUInt32LE(data)
+            let raw = readUInt32BE(data)
             return .float(Double(raw) / 1000.0)
 
         case .unixTime:
-            let raw = readUInt32LE(data)
+            let raw = readUInt32BE(data)
             return .timestamp(Date(timeIntervalSince1970: TimeInterval(raw)))
 
         case .accelerometer:
-            let x = readInt16LE(data, offset: 0)
-            let y = readInt16LE(data, offset: 2)
-            let z = readInt16LE(data, offset: 4)
+            let x = readInt16BE(data, offset: 0)
+            let y = readInt16BE(data, offset: 2)
+            let z = readInt16BE(data, offset: 4)
             return .vector3(
                 x: Double(x) / 1000.0,
                 y: Double(y) / 1000.0,
@@ -313,9 +313,9 @@ public enum LPPDecoder {
             )
 
         case .gyrometer:
-            let x = readInt16LE(data, offset: 0)
-            let y = readInt16LE(data, offset: 2)
-            let z = readInt16LE(data, offset: 4)
+            let x = readInt16BE(data, offset: 0)
+            let y = readInt16BE(data, offset: 2)
+            let z = readInt16BE(data, offset: 4)
             return .vector3(
                 x: Double(x) / 100.0,
                 y: Double(y) / 100.0,
@@ -327,9 +327,9 @@ public enum LPPDecoder {
 
         case .gps:
             // lat/lon: 0.0001° resolution, alt: 0.01m resolution
-            let lat = readInt24LE(data, offset: 0)
-            let lon = readInt24LE(data, offset: 3)
-            let alt = readInt24LE(data, offset: 6)
+            let lat = readInt24BE(data, offset: 0)
+            let lon = readInt24BE(data, offset: 3)
+            let alt = readInt24BE(data, offset: 6)
             return .gps(
                 latitude: Double(lat) / 10000.0,
                 longitude: Double(lon) / 10000.0,
@@ -338,38 +338,40 @@ public enum LPPDecoder {
         }
     }
 
-    // MARK: - Binary Reading Helpers
+    // MARK: - Binary Reading Helpers (Big-Endian for MeshCore/LPP compatibility)
 
-    private static func readInt16LE(_ data: Data, offset: Int = 0) -> Int16 {
-        data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: offset, as: Int16.self).littleEndian
-        }
+    private static func readInt16BE(_ data: Data, offset: Int = 0) -> Int16 {
+        guard offset + 2 <= data.count else { return 0 }
+        return Int16(data[offset]) << 8 | Int16(data[offset + 1])
     }
 
-    private static func readUInt16LE(_ data: Data, offset: Int = 0) -> UInt16 {
-        data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: offset, as: UInt16.self).littleEndian
-        }
+    private static func readUInt16BE(_ data: Data, offset: Int = 0) -> UInt16 {
+        guard offset + 2 <= data.count else { return 0 }
+        return UInt16(data[offset]) << 8 | UInt16(data[offset + 1])
     }
 
-    private static func readInt32LE(_ data: Data, offset: Int = 0) -> Int32 {
-        data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: offset, as: Int32.self).littleEndian
-        }
+    private static func readInt32BE(_ data: Data, offset: Int = 0) -> Int32 {
+        guard offset + 4 <= data.count else { return 0 }
+        return Int32(data[offset]) << 24
+             | Int32(data[offset + 1]) << 16
+             | Int32(data[offset + 2]) << 8
+             | Int32(data[offset + 3])
     }
 
-    private static func readUInt32LE(_ data: Data, offset: Int = 0) -> UInt32 {
-        data.withUnsafeBytes { buffer in
-            buffer.loadUnaligned(fromByteOffset: offset, as: UInt32.self).littleEndian
-        }
+    private static func readUInt32BE(_ data: Data, offset: Int = 0) -> UInt32 {
+        guard offset + 4 <= data.count else { return 0 }
+        return UInt32(data[offset]) << 24
+             | UInt32(data[offset + 1]) << 16
+             | UInt32(data[offset + 2]) << 8
+             | UInt32(data[offset + 3])
     }
 
-    /// Read a 24-bit signed integer (little-endian)
-    private static func readInt24LE(_ data: Data, offset: Int) -> Int32 {
+    /// Read a 24-bit signed integer (big-endian)
+    private static func readInt24BE(_ data: Data, offset: Int) -> Int32 {
         guard offset + 3 <= data.count else { return 0 }
-        var value: Int32 = Int32(data[offset])
-            | (Int32(data[offset + 1]) << 8)
-            | (Int32(data[offset + 2]) << 16)
+        var value: Int32 = Int32(data[offset]) << 16
+                         | Int32(data[offset + 1]) << 8
+                         | Int32(data[offset + 2])
         // Sign extend if negative (bit 23 is set)
         if value & 0x800000 != 0 {
             value |= Int32(bitPattern: 0xFF000000)

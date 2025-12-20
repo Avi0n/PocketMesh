@@ -200,12 +200,12 @@ public struct LPPEncoder: Sendable {
     ///
     /// - Parameters:
     ///   - channel: Sensor channel
-    ///   - volts: Voltage in volts (0.0001V resolution per MeshCore firmware)
+    ///   - volts: Voltage in volts (0.01V resolution per MeshCore firmware)
     public mutating func addVoltage(channel: UInt8, volts: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.voltage.rawValue)
-        // MeshCore firmware uses 0.1mV (0.0001V) units - decoder divides by 10000
-        appendUInt16(UInt16(volts * 10000))
+        // MeshCore firmware uses 0.01V units (multiplier 100)
+        appendUInt16(UInt16(volts * 100))
     }
 
     /// Adds a current reading.
@@ -234,22 +234,22 @@ public struct LPPEncoder: Sendable {
         buffer.append(data)
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Private Helpers (Big-Endian for MeshCore/LPP compatibility)
 
     private mutating func appendInt16(_ value: Int16) {
-        var v = value.littleEndian
-        withUnsafeBytes(of: &v) { buffer.append(contentsOf: $0) }
+        buffer.append(UInt8((value >> 8) & 0xFF))  // High byte first
+        buffer.append(UInt8(value & 0xFF))         // Low byte second
     }
 
     private mutating func appendUInt16(_ value: UInt16) {
-        var v = value.littleEndian
-        withUnsafeBytes(of: &v) { buffer.append(contentsOf: $0) }
+        buffer.append(UInt8((value >> 8) & 0xFF))  // High byte first
+        buffer.append(UInt8(value & 0xFF))         // Low byte second
     }
 
     private mutating func appendInt24(_ value: Int32) {
-        // Little-endian 24-bit signed
-        buffer.append(UInt8(value & 0xFF))
+        // Big-endian 24-bit signed
+        buffer.append(UInt8((value >> 16) & 0xFF)) // High byte first
         buffer.append(UInt8((value >> 8) & 0xFF))
-        buffer.append(UInt8((value >> 16) & 0xFF))
+        buffer.append(UInt8(value & 0xFF))         // Low byte last
     }
 }
