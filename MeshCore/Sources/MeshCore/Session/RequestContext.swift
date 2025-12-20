@@ -6,6 +6,21 @@ public struct RequestContext: Sendable {
     public let requestType: BinaryRequestType?
     public let publicKeyPrefix: Data?
     public let expiresAt: Date
+    public let context: [String: Int]  // Additional context (e.g., prefixLength for neighbours)
+
+    public init(
+        expectedAck: Data,
+        requestType: BinaryRequestType?,
+        publicKeyPrefix: Data?,
+        expiresAt: Date,
+        context: [String: Int] = [:]
+    ) {
+        self.expectedAck = expectedAck
+        self.requestType = requestType
+        self.publicKeyPrefix = publicKeyPrefix
+        self.expiresAt = expiresAt
+        self.context = context
+    }
 }
 
 /// Composite key for binary response routing (tag + type correlation)
@@ -29,15 +44,17 @@ public actor PendingRequests {
         tag: Data,
         requestType: BinaryRequestType? = nil,
         publicKeyPrefix: Data? = nil,
-        timeout: TimeInterval
+        timeout: TimeInterval,
+        context: [String: Int] = [:]
     ) async -> MeshEvent? {
-        let context = RequestContext(
+        let requestContext = RequestContext(
             expectedAck: tag,
             requestType: requestType,
             publicKeyPrefix: publicKeyPrefix,
-            expiresAt: Date().addingTimeInterval(timeout)
+            expiresAt: Date().addingTimeInterval(timeout),
+            context: context
         )
-        metadata[tag] = context
+        metadata[tag] = requestContext
 
         // Index binary requests for routing
         if let type = requestType, let prefix = publicKeyPrefix {
@@ -102,5 +119,16 @@ public actor PendingRequests {
         for (tag, context) in metadata where context.expiresAt < now {
             timeout(tag: tag)
         }
+    }
+
+    /// Get binary request info by tag (expected_ack)
+    /// Returns nil if no pending request matches the tag
+    public func getBinaryRequestInfo(tag: Data) -> (type: BinaryRequestType, publicKeyPrefix: Data, context: [String: Int])? {
+        guard let requestContext = metadata[tag],
+              let type = requestContext.requestType,
+              let prefix = requestContext.publicKeyPrefix else {
+            return nil
+        }
+        return (type, prefix, requestContext.context)
     }
 }

@@ -23,6 +23,7 @@ enum PacketSize {
     static let radioStatsMinimum = 12
     static let packetStatsMinimum = 24
     static let channelInfoMinimum = 49
+    // statusResponseMinimum: 1 (reserved) + 6 (pubkey) + 51 (fields) = 58 bytes
     static let statusResponseMinimum = 58
     static let traceDataMinimum = 11
     static let rawDataMinimum = 2
@@ -353,10 +354,12 @@ enum Parsers {
     // MARK: - StatusResponse
 
     enum StatusResponse {
-        /// Per Python parsing.py: StatusResponse uses 2-byte fields for several values
-        /// Format (58 bytes total): pubkey(6) + bat(2) + tx_queue(2) + noise(2) + rssi(2) +
+        /// StatusResponse push notification format (58 bytes total):
+        /// reserved(1) + pubkey(6) + bat(2) + tx_queue(2) + noise(2) + rssi(2) +
         /// recv(4) + sent(4) + airtime(4) + uptime(4) + flood_tx(4) + direct_tx(4) +
         /// flood_rx(4) + direct_rx(4) + full_evts(2) + snr(2) + direct_dups(2) + flood_dups(2) + rx_air(4)
+        ///
+        /// The reserved byte must be skipped before reading pubkey.
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.statusResponseMinimum else {
                 return .parseFailure(
@@ -366,6 +369,7 @@ enum Parsers {
             }
 
             var offset = 0
+            offset += 1  // Skip reserved byte (per firmware and Python parsing.py)
             let pubkeyPrefix = Data(data[offset..<offset+6]); offset += 6
             let battery = Int(data.readUInt16LE(at: offset)); offset += 2
             let txQueueLen = Int(data.readUInt16LE(at: offset)); offset += 2
@@ -430,6 +434,15 @@ enum Parsers {
     // MARK: - BinaryResponse
 
     enum BinaryResponse {
+        /// Parses generic binary response.
+        ///
+        /// Note: This returns a generic `.binaryResponse` event. For typed responses
+        /// (MMA, ACL, Neighbours, Status), the session layer should:
+        /// 1. Track pending requests with their expected response type
+        /// 2. Match incoming binaryResponse by tag
+        /// 3. Re-parse using the appropriate parser (MMAParser, ACLParser, etc.)
+        ///
+        /// See Python meshcore_py reader.py:600-650 for reference implementation.
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= 4 else {
                 return .parseFailure(data: data, reason: "BinaryResponse too short")
@@ -727,5 +740,200 @@ enum Parsers {
                 publicKeyPrefix: pubkeyPrefix
             ))
         }
+    }
+}
+
+// MARK: - ACL Parser
+
+enum ACLParser {
+    /// Parses ACL (Access Control List) response data
+    /// Format: [pubkey_prefix:6][permissions:1] per entry (7 bytes each)
+    /// Entries with all-zero key prefix are skipped
+    static func parse(_ data: Data) -> [ACLEntry] {
+        var entries: [ACLEntry] = []
+        var offset = 0
+
+        while offset + 7 <= data.count {
+            let keyPrefix = Data(data[offset..<offset+6])
+            let permissions = data[offset + 6]
+            offset += 7
+
+            // Skip null entries (all zeros)
+            if keyPrefix.allSatisfy({ $0 == 0 }) {
+                continue
+            }
+
+            entries.append(ACLEntry(keyPrefix: keyPrefix, permissions: permissions))
+        }
+
+        return entries
+    }
+}
+
+// MARK: - MMA Parser
+
+enum MMAParser {
+    /// Parses MMA (Min/Max/Average) response data
+    /// Format: [channel:1][type:1][min:N][max:N][avg:N]... where N = sensor data size
+    static func parse(_ data: Data) -> [MMAEntry] {
+        var entries: [MMAEntry] = []
+        var offset = 0
+
+        while offset < data.count {
+            guard offset + 2 <= data.count else { break }
+
+            let channel = data[offset]
+            let typeCode = data[offset + 1]
+            offset += 2
+
+            guard let sensorType = LPPSensorType(rawValue: typeCode) else { break }
+
+            let valueSize = sensorType.dataSize
+            guard offset + valueSize * 3 <= data.count else { break }
+
+            let minData = data.subdata(in: offset..<(offset + valueSize))
+            offset += valueSize
+            let maxData = data.subdata(in: offset..<(offset + valueSize))
+            offset += valueSize
+            let avgData = data.subdata(in: offset..<(offset + valueSize))
+            offset += valueSize
+
+            let minValue = decodeToDouble(type: sensorType, data: minData)
+            let maxValue = decodeToDouble(type: sensorType, data: maxData)
+            let avgValue = decodeToDouble(type: sensorType, data: avgData)
+
+            entries.append(MMAEntry(
+                channel: channel,
+                type: sensorType.name,
+                min: minValue,
+                max: maxValue,
+                avg: avgValue
+            ))
+        }
+
+        return entries
+    }
+
+    /// Decode LPP value to Double for MMA entries
+    private static func decodeToDouble(type: LPPSensorType, data: Data) -> Double {
+        switch type {
+        case .digitalInput, .digitalOutput, .presence, .switchValue:
+            return Double(data[0])
+        case .percentage:
+            return Double(data[0])
+        case .humidity:
+            return Double(data[0]) * 0.5
+        case .temperature:
+            return Double(readInt16BE(data)) / 10.0
+        case .barometer:
+            return Double(readUInt16BE(data)) / 10.0
+        case .voltage:
+            return Double(readUInt16BE(data)) / 100.0
+        case .current:
+            return Double(readUInt16BE(data)) / 1000.0
+        case .illuminance, .concentration, .power, .direction:
+            return Double(readUInt16BE(data))
+        case .altitude:
+            return Double(readInt16BE(data))
+        case .load:
+            return Double(readUInt16BE(data)) / 100.0
+        case .analogInput, .analogOutput:
+            return Double(readInt16BE(data)) / 100.0
+        case .genericSensor:
+            return Double(readInt32BE(data))
+        case .frequency:
+            return Double(readUInt32BE(data))
+        case .distance, .energy:
+            return Double(readUInt32BE(data)) / 1000.0
+        case .unixTime:
+            return Double(readUInt32BE(data))
+        case .accelerometer, .gyrometer, .colour, .gps:
+            // Complex types - return first component only for MMA
+            return Double(readInt16BE(data)) / (type == .accelerometer ? 1000.0 : 100.0)
+        }
+    }
+
+    // Big-endian read helpers
+    private static func readInt16BE(_ data: Data, offset: Int = 0) -> Int16 {
+        guard offset + 2 <= data.count else { return 0 }
+        return Int16(data[offset]) << 8 | Int16(data[offset + 1])
+    }
+
+    private static func readUInt16BE(_ data: Data, offset: Int = 0) -> UInt16 {
+        guard offset + 2 <= data.count else { return 0 }
+        return UInt16(data[offset]) << 8 | UInt16(data[offset + 1])
+    }
+
+    private static func readInt32BE(_ data: Data, offset: Int = 0) -> Int32 {
+        guard offset + 4 <= data.count else { return 0 }
+        return Int32(data[offset]) << 24 | Int32(data[offset + 1]) << 16
+             | Int32(data[offset + 2]) << 8 | Int32(data[offset + 3])
+    }
+
+    private static func readUInt32BE(_ data: Data, offset: Int = 0) -> UInt32 {
+        guard offset + 4 <= data.count else { return 0 }
+        return UInt32(data[offset]) << 24 | UInt32(data[offset + 1]) << 16
+             | UInt32(data[offset + 2]) << 8 | UInt32(data[offset + 3])
+    }
+}
+
+// MARK: - Neighbours Parser
+
+enum NeighboursParser {
+    /// Parses Neighbours response data from binary protocol
+    /// Format:
+    /// - 2 bytes: total neighbours count (little-endian, signed int16)
+    /// - 2 bytes: results count in this response (little-endian, signed int16)
+    /// - For each result:
+    ///   - N bytes: pubkey prefix (N = pubkeyPrefixLength, default 4)
+    ///   - 4 bytes: seconds ago (little-endian, signed int32)
+    ///   - 1 byte: snr (signed int8, divide by 4)
+    static func parse(
+        _ data: Data,
+        publicKeyPrefix: Data,
+        tag: Data,
+        prefixLength: Int = 4
+    ) -> NeighboursResponse {
+        guard data.count >= 4 else {
+            return NeighboursResponse(
+                publicKeyPrefix: publicKeyPrefix,
+                tag: tag,
+                totalCount: 0,
+                neighbours: []
+            )
+        }
+
+        let totalCount = Int(data.readInt16LE(at: 0))
+        let resultsCount = Int(data.readInt16LE(at: 2))
+
+        var neighbours: [Neighbour] = []
+        let entrySize = prefixLength + 4 + 1 // pubkey + secs_ago + snr
+        var offset = 4
+
+        for _ in 0..<resultsCount {
+            guard offset + entrySize <= data.count else { break }
+
+            let keyPrefix = Data(data[offset..<(offset + prefixLength)])
+            offset += prefixLength
+
+            let secondsAgo = Int(data.readInt32LE(at: offset))
+            offset += 4
+
+            let snr = Double(Int8(bitPattern: data[offset])) / 4.0
+            offset += 1
+
+            neighbours.append(Neighbour(
+                publicKeyPrefix: keyPrefix,
+                secondsAgo: secondsAgo,
+                snr: snr
+            ))
+        }
+
+        return NeighboursResponse(
+            publicKeyPrefix: publicKeyPrefix,
+            tag: tag,
+            totalCount: totalCount,
+            neighbours: neighbours
+        )
     }
 }

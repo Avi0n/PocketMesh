@@ -1517,13 +1517,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         payload.append(contentsOf: [0, 0])
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .mma, payload: payload)
-        try await transport.send(data)
 
-        let tag = publicKey.prefix(6)
+        // Send and wait for MSG_SENT to get expected_ack
+        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
+            if case .messageSent(let info) = event { return info }
+            return nil
+        }
+
+        // Register with expected_ack as the tag for routing
         let result = await pendingRequests.register(
-            tag: Data(tag),
+            tag: sentInfo.expectedAck,
             requestType: .mma,
-            publicKeyPrefix: Data(tag),
+            publicKeyPrefix: Data(publicKey.prefix(6)),
             timeout: configuration.defaultTimeout
         )
 
@@ -1549,13 +1554,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     public func requestACL(from publicKey: Data) async throws -> ACLResponse {
         let payload = Data([0, 0])
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .acl, payload: payload)
-        try await transport.send(data)
 
-        let tag = publicKey.prefix(6)
+        // Send and wait for MSG_SENT to get expected_ack
+        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
+            if case .messageSent(let info) = event { return info }
+            return nil
+        }
+
+        // Register with expected_ack as the tag for routing
         let result = await pendingRequests.register(
-            tag: Data(tag),
+            tag: sentInfo.expectedAck,
             requestType: .acl,
-            publicKeyPrefix: Data(tag),
+            publicKeyPrefix: Data(publicKey.prefix(6)),
             timeout: configuration.defaultTimeout
         )
 
@@ -1600,14 +1610,20 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         payload.append(contentsOf: withUnsafeBytes(of: randomTag.littleEndian) { Array($0) })
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .neighbours, payload: payload)
-        try await transport.send(data)
 
-        let tag = publicKey.prefix(6)
+        // Send and wait for MSG_SENT to get expected_ack
+        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
+            if case .messageSent(let info) = event { return info }
+            return nil
+        }
+
+        // Register with expected_ack as the tag for routing, store prefixLength in context
         let result = await pendingRequests.register(
-            tag: Data(tag),
+            tag: sentInfo.expectedAck,
             requestType: .neighbours,
-            publicKeyPrefix: Data(tag),
-            timeout: configuration.defaultTimeout
+            publicKeyPrefix: Data(publicKey.prefix(6)),
+            timeout: configuration.defaultTimeout,
+            context: ["prefixLength": Int(pubkeyPrefixLength)]
         )
 
         guard let event = result else {
@@ -1813,7 +1829,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     private func handleReceivedData(_ data: Data) async {
-        let event = PacketParser.parse(data)
+        var event = PacketParser.parse(data)
 
         if case .parseFailure(_, let reason) = event {
             logger.warning("Failed to parse packet: \(data.hexString) - \(reason)")
@@ -1821,9 +1837,43 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             logger.debug("Received event: \(String(describing: event))")
         }
 
+        // Route generic binary response to typed event based on pending request
+        if case .binaryResponse(let tag, let responseData) = event {
+            if let typedEvent = await routeGenericBinaryResponse(tag: tag, data: responseData) {
+                event = typedEvent
+                logger.debug("Routed binary response to typed event: \(String(describing: event))")
+            }
+        }
+
         trackContactChanges(event: event)
         await routeBinaryResponse(event: event)
         await dispatcher.dispatch(event)
+    }
+
+    /// Routes a generic binary response to a typed event based on pending request type
+    private func routeGenericBinaryResponse(tag: Data, data: Data) async -> MeshEvent? {
+        guard let (requestType, publicKeyPrefix, context) = await pendingRequests.getBinaryRequestInfo(tag: tag) else {
+            return nil
+        }
+
+        switch requestType {
+        case .mma:
+            let entries = MMAParser.parse(data)
+            return .mmaResponse(MMAResponse(publicKeyPrefix: publicKeyPrefix, tag: tag, data: entries))
+
+        case .acl:
+            let entries = ACLParser.parse(data)
+            return .aclResponse(ACLResponse(publicKeyPrefix: publicKeyPrefix, tag: tag, entries: entries))
+
+        case .neighbours:
+            let prefixLength = context["prefixLength"] ?? 4
+            let response = NeighboursParser.parse(data, publicKeyPrefix: publicKeyPrefix, tag: tag, prefixLength: prefixLength)
+            return .neighboursResponse(response)
+
+        case .status, .telemetry, .keepAlive:
+            // These have dedicated response codes (0x89, 0x8A) or no typed response
+            return nil
+        }
     }
 
     private func trackContactChanges(event: MeshEvent) {
