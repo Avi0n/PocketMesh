@@ -456,6 +456,22 @@ public final class AppState {
             }
         }
 
+        // CLI message handler (repeater admin responses)
+        await services.messagePollingService.setCLIMessageHandler { [weak self] message, contact in
+            guard let self else { return }
+
+            // Forward CLI response to the broadcaster for routing to RepeaterSettingsViewModel
+            if let contact {
+                await MainActor.run {
+                    Task {
+                        await self.messageEventBroadcaster.handleCLIResponse(message, fromContact: contact)
+                    }
+                }
+            } else {
+                self.logger.warning("Dropping CLI response: no contact found for sender")
+            }
+        }
+
         // ACK handler not needed - MessageService handles ACKs internally
     }
 

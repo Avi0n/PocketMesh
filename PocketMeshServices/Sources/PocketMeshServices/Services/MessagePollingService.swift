@@ -28,8 +28,11 @@ public actor MessagePollingService {
     /// Handler for incoming channel messages
     private var channelMessageHandler: (@Sendable (ChannelMessage, ChannelDTO?) async -> Void)?
 
-    /// Handler for CLI/signed messages (from room servers)
+    /// Handler for signed messages (from room servers)
     private var signedMessageHandler: (@Sendable (ContactMessage, ContactDTO?) async -> Void)?
+
+    /// Handler for CLI responses (textType = 0x01)
+    private var cliMessageHandler: (@Sendable (ContactMessage, ContactDTO?) async -> Void)?
 
     /// Handler for acknowledgements (message delivery confirmations)
     private var acknowledgementHandler: (@Sendable (Data) async -> Void)?
@@ -66,9 +69,14 @@ public actor MessagePollingService {
         channelMessageHandler = handler
     }
 
-    /// Set handler for signed/CLI messages (from room servers)
+    /// Set handler for signed messages (from room servers)
     public func setSignedMessageHandler(_ handler: @escaping @Sendable (ContactMessage, ContactDTO?) async -> Void) {
         signedMessageHandler = handler
+    }
+
+    /// Set handler for CLI responses (textType = 0x01)
+    public func setCLIMessageHandler(_ handler: @escaping @Sendable (ContactMessage, ContactDTO?) async -> Void) {
+        cliMessageHandler = handler
     }
 
     /// Set handler for acknowledgements
@@ -201,10 +209,15 @@ public actor MessagePollingService {
         )
 
         // Route based on text type
-        // TextType 0x02 = signedPlain (from room servers)
-        if message.textType == 0x02 {
+        switch message.textType {
+        case MeshTextType.cliData.rawValue:
+            // CLI responses from repeaters (textType = 0x01)
+            await cliMessageHandler?(message, contact)
+        case MeshTextType.signedPlain.rawValue:
+            // Signed messages from room servers (textType = 0x02)
             await signedMessageHandler?(message, contact)
-        } else {
+        default:
+            // Regular contact messages (textType = 0x00 or unknown)
             await contactMessageHandler?(message, contact)
         }
     }
