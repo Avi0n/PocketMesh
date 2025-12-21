@@ -111,6 +111,19 @@ public final class ConnectionManager {
     public init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
         accessorySetupKit.delegate = self
+
+        // Handle Bluetooth power-cycle recovery
+        bleDelegate.setBluetoothPoweredOnHandler { [weak self] in
+            Task { @MainActor in
+                guard let self,
+                      self.shouldBeConnected,
+                      self.connectionState == .disconnected,
+                      let deviceID = self.lastConnectedDeviceID else { return }
+
+                self.logger.info("Bluetooth powered on: reconnecting to \(deviceID)")
+                try? await self.connect(to: deviceID)
+            }
+        }
     }
 
     // MARK: - Public Lifecycle Methods
