@@ -401,6 +401,8 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
         onReconnection = nil
         onStateChange = nil
         onBluetoothPoweredOn = nil
+        isAutoReconnecting = false
+        needsResubscriptionAfterReconnect = false
         // Keep centralManager and connectedPeripheral for state restoration
     }
 
