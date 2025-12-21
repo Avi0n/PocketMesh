@@ -597,6 +597,7 @@ public final class ConnectionManager {
             logger.error("Session setup failed: \(error.localizedDescription)")
             await session?.stop()
             session = nil
+            await transport?.disconnect()
             connectionState = .disconnected
             // User can manually retry if needed
         }
