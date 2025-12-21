@@ -495,19 +495,6 @@ public final class ConnectionManager {
         // Bluetooth power-cycle handled via onBluetoothPoweredOn callback
     }
 
-    /// Attempts to reconnect after connection loss
-    private func attemptAutoReconnect(deviceID: UUID) async {
-        logger.info("Attempting auto-reconnect to \(deviceID)")
-
-        do {
-            try await connect(to: deviceID)
-            logger.info("Auto-reconnect successful")
-        } catch {
-            logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
-            // Don't propagate - UI can offer manual retry
-        }
-    }
-
     /// Handles iOS system auto-reconnect completion.
     ///
     /// When iOS auto-reconnects the BLE peripheral (via CBConnectPeripheralOptionEnableAutoReconnect),
