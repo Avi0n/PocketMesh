@@ -1,18 +1,45 @@
 import SwiftUI
 import PocketMeshServices
 
+/// Represents a device that can be selected for connection
+private enum SelectableDevice: Identifiable, Equatable {
+    case saved(DeviceDTO)
+    case accessory(id: UUID, name: String)
+
+    var id: UUID {
+        switch self {
+        case .saved(let device): device.id
+        case .accessory(let id, _): id
+        }
+    }
+
+    var name: String {
+        switch self {
+        case .saved(let device): device.nodeName
+        case .accessory(_, let name): name
+        }
+    }
+
+    var lastConnected: Date? {
+        switch self {
+        case .saved(let device): device.lastConnected
+        case .accessory: nil
+        }
+    }
+}
+
 /// Sheet for selecting and reconnecting to previously paired devices
 struct DeviceSelectionSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
-    @State private var savedDevices: [DeviceDTO] = []
-    @State private var selectedDevice: DeviceDTO?
+    @State private var devices: [SelectableDevice] = []
+    @State private var selectedDevice: SelectableDevice?
 
     var body: some View {
         NavigationStack {
             Group {
-                if savedDevices.isEmpty {
+                if devices.isEmpty {
                     emptyStateView
                 } else {
                     deviceListView
@@ -50,7 +77,7 @@ struct DeviceSelectionSheet: View {
     private var deviceListView: some View {
         List {
             Section {
-                ForEach(savedDevices) { device in
+                ForEach(devices) { device in
                     DeviceRow(device: device, isSelected: selectedDevice?.id == device.id)
                         .contentShape(.rect)
                         .onTapGesture {
@@ -89,15 +116,20 @@ struct DeviceSelectionSheet: View {
     // MARK: - Actions
 
     private func loadDevices() async {
-        guard let dataStore = appState.services?.dataStore else {
-            savedDevices = []
-            return
-        }
+        // Try to load from SwiftData first
         do {
-            savedDevices = try await dataStore.fetchDevices()
+            let savedDevices = try await appState.connectionManager.fetchSavedDevices()
+            if !savedDevices.isEmpty {
+                devices = savedDevices.map { .saved($0) }
+                return
+            }
         } catch {
-            savedDevices = []
+            print("DeviceSelectionSheet: Failed to load devices: \(error)")
         }
+
+        // Fall back to ASK accessories when database is empty
+        let accessories = appState.connectionManager.pairedAccessoryInfos
+        devices = accessories.map { .accessory(id: $0.id, name: $0.name) }
     }
 
     private func scanForNewDevice() {
@@ -113,7 +145,7 @@ struct DeviceSelectionSheet: View {
 // MARK: - Device Row
 
 private struct DeviceRow: View {
-    let device: DeviceDTO
+    let device: SelectableDevice
     let isSelected: Bool
 
     var body: some View {
@@ -125,12 +157,18 @@ private struct DeviceRow: View {
                 .background(.tint.opacity(0.1), in: .circle)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(device.nodeName)
+                Text(device.name)
                     .font(.headline)
 
-                Text("Last connected \(device.lastConnected, format: .relative(presentation: .named))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if let lastConnected = device.lastConnected {
+                    Text("Last connected \(lastConnected, format: .relative(presentation: .named))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Paired via Bluetooth")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
