@@ -341,6 +341,13 @@ public final class ConnectionManager {
             }
         }
 
+        // Set up reconnection handler for iOS auto-reconnect
+        await newTransport.setReconnectionHandler { [weak self] deviceID in
+            Task { @MainActor [weak self] in
+                await self?.handleIOSAutoReconnect(deviceID: deviceID)
+            }
+        }
+
         // Set device ID and connect
         await newTransport.setDeviceID(deviceID)
         try await newTransport.connect()
@@ -351,11 +358,13 @@ public final class ConnectionManager {
         let newSession = MeshCoreSession(transport: newTransport)
         self.session = newSession
 
-        // Start session
+        // Start session (this calls sendAppStart internally)
         try await newSession.start()
 
-        // Get device info via MeshCore API
-        let meshCoreSelfInfo = try await newSession.sendAppStart()
+        // Get device info - selfInfo is now available from session
+        guard let meshCoreSelfInfo = await newSession.currentSelfInfo else {
+            throw ConnectionError.initializationFailed("Failed to get device self info")
+        }
         let deviceCapabilities = try await newSession.queryDevice()
 
         // Sync device time (best effort)
@@ -448,8 +457,15 @@ public final class ConnectionManager {
         session = nil
         // Keep transport reference for potential reconnect
 
-        // Wait briefly before reconnect attempt
-        try? await Task.sleep(for: .milliseconds(100))
+        // Brief delay to allow iOS auto-reconnect to kick in
+        // iOS may auto-reconnect via CBConnectPeripheralOptionEnableAutoReconnect
+        try? await Task.sleep(for: .milliseconds(500))
+
+        // If we're already reconnecting (iOS auto-reconnect handled it), skip
+        if connectionState != .disconnected {
+            logger.debug("Connection state changed during delay - skipping app-level reconnect")
+            return
+        }
 
         // Attempt auto-reconnect
         await attemptAutoReconnect(deviceID: deviceID)
@@ -465,6 +481,87 @@ public final class ConnectionManager {
         } catch {
             logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
             // Don't propagate - UI can offer manual retry
+        }
+    }
+
+    /// Handles iOS system auto-reconnect completion.
+    ///
+    /// When iOS auto-reconnects the BLE peripheral (via CBConnectPeripheralOptionEnableAutoReconnect),
+    /// this method re-establishes the session layer without creating a new transport.
+    private func handleIOSAutoReconnect(deviceID: UUID) async {
+        logger.info("iOS auto-reconnect complete for \(deviceID)")
+
+        // If we're already reconnecting via app-level logic, let that complete
+        if connectionState == .connecting {
+            logger.debug("Already reconnecting - iOS auto-reconnect handled by existing attempt")
+            return
+        }
+
+        // If we're already connected, nothing to do
+        if connectionState == .connected || connectionState == .ready {
+            logger.debug("Already connected - ignoring iOS auto-reconnect callback")
+            return
+        }
+
+        // iOS reconnected the BLE layer, now we need to re-establish the session
+        connectionState = .connecting
+
+        guard let existingTransport = transport else {
+            logger.warning("No transport available for session re-establishment")
+            await attemptAutoReconnect(deviceID: deviceID)
+            return
+        }
+
+        do {
+            // Create new session on existing transport
+            let newSession = MeshCoreSession(transport: existingTransport)
+            self.session = newSession
+
+            // Start session (transport is already connected)
+            try await newSession.start()
+
+            guard let meshCoreSelfInfo = await newSession.currentSelfInfo else {
+                throw ConnectionError.initializationFailed("Failed to get device self info")
+            }
+            let deviceCapabilities = try await newSession.queryDevice()
+
+            // Sync device time (best effort)
+            do {
+                let deviceTime = try await newSession.getTime()
+                let timeDifference = abs(deviceTime.timeIntervalSinceNow)
+                if timeDifference > 60 {
+                    try await newSession.setTime(Date())
+                    logger.info("Synced device time (was off by \(Int(timeDifference))s)")
+                }
+            } catch {
+                logger.warning("Failed to sync device time: \(error.localizedDescription)")
+            }
+
+            // Create services
+            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            await newServices.wireServices()
+            self.services = newServices
+
+            // Update device
+            let device = createDevice(
+                deviceID: deviceID,
+                selfInfo: meshCoreSelfInfo,
+                capabilities: deviceCapabilities
+            )
+
+            try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
+            self.connectedDevice = DeviceDTO(from: device)
+
+            // Start event monitoring
+            await newServices.startEventMonitoring(deviceID: deviceID)
+
+            connectionState = .ready
+            logger.info("iOS auto-reconnect: session re-established successfully")
+
+        } catch {
+            logger.error("iOS auto-reconnect: session re-establishment failed: \(error.localizedDescription)")
+            // Fall back to full reconnection
+            await attemptAutoReconnect(deviceID: deviceID)
         }
     }
 

@@ -88,6 +88,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private var contactManager = ContactManager()
     private var selfInfo: SelfInfo?
     private var cachedTime: Date?
+
+    /// Returns the device's self info after session start.
+    ///
+    /// This is populated after `start()` completes successfully.
+    public var currentSelfInfo: SelfInfo? { selfInfo }
     private var isRunning = false
     private var receiveTask: Task<Void, Never>?
     private var autoMessageFetchTask: Task<Void, Never>?
@@ -166,6 +171,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshTransportError`` if the transport connection fails.
     ///           ``MeshCoreError/timeout`` if the device doesn't respond to appStart.
     public func start() async throws {
+        // Guard against being called multiple times
+        if isRunning {
+            logger.warning("Session already running - skipping redundant start()")
+            return
+        }
+
         logger.info("Starting MeshCore session...")
         updateConnectionState(.connecting)
         do {

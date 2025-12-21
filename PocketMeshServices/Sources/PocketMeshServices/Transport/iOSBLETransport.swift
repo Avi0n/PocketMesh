@@ -151,6 +151,29 @@ public actor iOSBLETransport: MeshTransport {
         let startTime = Date()
         logger.info("Connection attempt starting for device: \(targetDeviceID)")
 
+        // Check if delegate already has this device connected
+        if let existingID = delegate.connectedPeripheralID, existingID == targetDeviceID {
+            logger.info("Already connected to \(targetDeviceID), skipping redundant connect()")
+            _connectionState = .connected
+
+            // Still need to set up callbacks for this transport
+            delegate.setTransportCallbacks(
+                onDisconnection: { [weak self] deviceID, error in
+                    guard let self else { return }
+                    Task { await self.handleDisconnection(deviceID: deviceID, error: error) }
+                },
+                onReconnection: { [weak self] deviceID in
+                    guard let self else { return }
+                    Task { await self.handleReconnection(deviceID: deviceID) }
+                },
+                onStateChange: { [weak self] state in
+                    guard let self else { return }
+                    Task { await self.handleStateChange(state) }
+                }
+            )
+            return
+        }
+
         // Set up callbacks for this transport
         delegate.setTransportCallbacks(
             onDisconnection: { [weak self] deviceID, error in
@@ -527,6 +550,12 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
                     logger.info("State restoration: discovering services after poweredOn")
                     onStateChange?(.connecting)
                     peripheral.discoverServices([nordicUARTServiceUUID])
+                }
+                // Handle reconnection after Bluetooth power cycle
+                else if isAutoReconnecting, let peripheral = connectedPeripheral,
+                        peripheral.state != .connected {
+                    logger.info("Bluetooth powered on: re-initiating connection to \(peripheral.identifier)")
+                    centralManager.connect(peripheral, options: connectionOptions())
                 }
             case .poweredOff:
                 // Don't throw immediately - this might be a transient state during XPC re-establishment
