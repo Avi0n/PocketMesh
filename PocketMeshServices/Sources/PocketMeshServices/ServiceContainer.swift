@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftData
 import MeshCore
 
@@ -181,6 +182,40 @@ public final class ServiceContainer {
         // RemoteNodeService event monitoring is per-session, handled internally
 
         isMonitoringEvents = false
+    }
+
+    // MARK: - Initial Sync
+
+    /// Performs initial sync of contacts and channels from the device.
+    ///
+    /// This method checks for task cancellation between sync operations.
+    /// Call after connection is established to ensure device data is current.
+    ///
+    /// - Parameter deviceID: The connected device's UUID
+    public func performInitialSync(deviceID: UUID) async {
+        let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+
+        // Sync contacts
+        guard !Task.isCancelled else { return }
+        do {
+            let result = try await contactService.syncContacts(deviceID: deviceID)
+            if result.contactsReceived > 0 {
+                logger.info("Initial sync: \(result.contactsReceived) contacts synced")
+            }
+        } catch {
+            logger.warning("Initial sync: contact sync failed: \(error)")
+        }
+
+        // Sync channels
+        guard !Task.isCancelled else { return }
+        do {
+            let result = try await channelService.syncChannels(deviceID: deviceID)
+            if result.channelsSynced > 0 {
+                logger.info("Initial sync: \(result.channelsSynced) channels synced")
+            }
+        } catch {
+            logger.warning("Initial sync: channel sync failed: \(error)")
+        }
     }
 
     // MARK: - Convenience Methods

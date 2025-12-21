@@ -76,6 +76,9 @@ public final class AppState {
     /// Counter for sync/settings operations (on-demand) - shows pill
     private var syncActivityCount: Int = 0
 
+    /// Task for initial sync, tracked for cancellation on disconnect
+    private var initialSyncTask: Task<Void, Never>?
+
     /// Whether the syncing pill should be displayed
     /// Only true for on-demand operations (contact sync, channel sync, settings changes)
     var shouldShowSyncingPill: Bool {
@@ -195,6 +198,25 @@ public final class AppState {
 
         // Wire up contact discovery handlers from AdvertisementService
         await wireContactDiscoveryHandlers(services: services)
+    }
+
+    /// Triggers initial sync of contacts and channels from the device.
+    /// Uses withSyncActivity to show the syncing pill during operation.
+    func triggerInitialSync() {
+        guard let services, let deviceID = connectedDevice?.id else { return }
+
+        // Cancel any existing sync
+        initialSyncTask?.cancel()
+
+        initialSyncTask = Task {
+            await withSyncActivity {
+                await services.performInitialSync(deviceID: deviceID)
+            }
+
+            // Trigger UI refresh after sync completes
+            messageEventBroadcaster.contactsRefreshTrigger += 1
+            messageEventBroadcaster.conversationRefreshTrigger += 1
+        }
     }
 
     /// Wire up advertisement service handlers for contact discovery
@@ -506,6 +528,10 @@ public final class AppState {
 
     /// Disconnect from device
     func disconnect() async {
+        // Cancel any in-progress sync
+        initialSyncTask?.cancel()
+        initialSyncTask = nil
+
         await connectionManager.disconnect()
     }
 

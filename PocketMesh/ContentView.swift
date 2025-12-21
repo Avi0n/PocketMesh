@@ -48,7 +48,8 @@ struct MainTabView: View {
     var body: some View {
         @Bindable var appState = appState
 
-        TabView(selection: $appState.selectedTab) {
+        ZStack(alignment: .top) {
+            TabView(selection: $appState.selectedTab) {
             Tab("Chats", systemImage: "message.fill", value: 0) {
                 ChatsListView()
             }
@@ -64,6 +65,20 @@ struct MainTabView: View {
 
             Tab("Settings", systemImage: "gear", value: 3) {
                 SettingsView()
+            }
+        }
+        .onChange(of: appState.connectionState) { oldState, newState in
+            if newState == .ready && oldState != .ready {
+                appState.triggerInitialSync()
+            }
+        }
+
+            if appState.shouldShowSyncingPill {
+                SyncingPillView()
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(duration: 0.3), value: appState.shouldShowSyncingPill)
             }
         }
         .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
