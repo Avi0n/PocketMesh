@@ -502,85 +502,90 @@ public final class ConnectionManager {
     private func handleIOSAutoReconnect(deviceID: UUID) async {
         logger.info("iOS auto-reconnect complete for \(deviceID)")
 
-        // Skip if this was an intentional disconnect
-        if !shouldBeConnected {
-            logger.info("Ignoring iOS auto-reconnect: disconnect was intentional")
-            // Disconnect the transport that iOS just reconnected
+        // User disconnected while iOS was reconnecting
+        guard shouldBeConnected else {
+            logger.info("Ignoring: user disconnected")
             await transport?.disconnect()
             return
         }
 
-        // If we're already reconnecting via app-level logic, let that complete
-        if connectionState == .connecting {
-            logger.debug("Already reconnecting - iOS auto-reconnect handled by existing attempt")
+        // Already handling a connection
+        guard self.connectionState == .disconnected else {
+            logger.debug("Ignoring: already \(String(describing: self.connectionState))")
             return
         }
 
-        // If we're already connected, nothing to do
-        if connectionState == .connected || connectionState == .ready {
-            logger.debug("Already connected - ignoring iOS auto-reconnect callback")
-            return
-        }
-
-        // iOS reconnected the BLE layer, now we need to re-establish the session
         connectionState = .connecting
 
         guard let existingTransport = transport else {
-            logger.warning("No transport available for session re-establishment")
-            await attemptAutoReconnect(deviceID: deviceID)
+            logger.warning("No transport for session setup")
+            connectionState = .disconnected
             return
         }
 
         do {
-            // Create new session on existing transport
             let newSession = MeshCoreSession(transport: existingTransport)
             self.session = newSession
 
-            // Start session (transport is already connected)
             try await newSession.start()
 
-            guard let meshCoreSelfInfo = await newSession.currentSelfInfo else {
-                throw ConnectionError.initializationFailed("Failed to get device self info")
+            // Check after await — user may have disconnected
+            guard shouldBeConnected else {
+                logger.info("User disconnected during session setup")
+                await newSession.stop()
+                connectionState = .disconnected
+                return
             }
-            let deviceCapabilities = try await newSession.queryDevice()
 
-            // Sync device time (best effort)
-            do {
-                let deviceTime = try await newSession.getTime()
-                let timeDifference = abs(deviceTime.timeIntervalSinceNow)
-                if timeDifference > 60 {
-                    try await newSession.setTime(Date())
-                    logger.info("Synced device time (was off by \(Int(timeDifference))s)")
+            guard let selfInfo = await newSession.currentSelfInfo else {
+                throw ConnectionError.initializationFailed("No self info")
+            }
+            let capabilities = try await newSession.queryDevice()
+
+            // Time sync (best effort)
+            if let deviceTime = try? await newSession.getTime() {
+                if abs(deviceTime.timeIntervalSinceNow) > 60 {
+                    try? await newSession.setTime(Date())
+                    logger.info("Synced device time")
                 }
-            } catch {
-                logger.warning("Failed to sync device time: \(error.localizedDescription)")
             }
 
-            // Create services
+            // Check after await
+            guard shouldBeConnected else {
+                logger.info("User disconnected during device query")
+                await newSession.stop()
+                connectionState = .disconnected
+                return
+            }
+
             let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
             await newServices.wireServices()
+
+            // Check after await
+            guard shouldBeConnected else {
+                logger.info("User disconnected during service wiring")
+                await newSession.stop()
+                connectionState = .disconnected
+                return
+            }
+
             self.services = newServices
 
-            // Update device
-            let device = createDevice(
-                deviceID: deviceID,
-                selfInfo: meshCoreSelfInfo,
-                capabilities: deviceCapabilities
-            )
-
+            let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities)
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
 
-            // Start event monitoring
             await newServices.startEventMonitoring(deviceID: deviceID)
 
             connectionState = .ready
-            logger.info("iOS auto-reconnect: session re-established successfully")
+            logger.info("iOS auto-reconnect: session ready")
 
         } catch {
-            logger.error("iOS auto-reconnect: session re-establishment failed: \(error.localizedDescription)")
-            // Fall back to full reconnection
-            await attemptAutoReconnect(deviceID: deviceID)
+            logger.error("Session setup failed: \(error.localizedDescription)")
+            await session?.stop()
+            session = nil
+            connectionState = .disconnected
+            // User can manually retry if needed
         }
     }
 
