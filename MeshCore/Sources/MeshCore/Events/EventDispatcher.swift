@@ -20,15 +20,18 @@ import Foundation
 /// }
 /// ```
 public actor EventDispatcher {
-    /// Internal subscription storage with optional filter predicate
+    /// Represents an internal subscription storage with an optional filter predicate.
     private struct Subscription: Sendable {
+        /// The continuation used to yield events to the async stream.
         let continuation: AsyncStream<MeshEvent>.Continuation
+        /// The optional predicate used to filter events before yielding.
         let filter: (@Sendable (MeshEvent) -> Bool)?
     }
 
+    /// Stores active subscriptions keyed by a unique identifier.
     private var subscriptions: [UUID: Subscription] = [:]
 
-    /// Subscribe to all events using modern AsyncStream.makeStream() API.
+    /// Subscribes to all events using modern AsyncStream API.
     ///
     /// Uses bounded buffering to prevent memory issues with high-throughput events.
     ///
@@ -42,12 +45,12 @@ public actor EventDispatcher {
         subscribe(filter: nil)
     }
 
-    /// Subscribe to events matching a filter predicate.
+    /// Subscribes to events matching a filter predicate.
     ///
     /// Only events for which the filter returns `true` will be yielded to the stream.
     /// If no filter is provided (nil), all events are yielded.
     ///
-    /// - Parameter filter: Optional predicate to filter events. Pass `nil` for all events.
+    /// - Parameter filter: An optional predicate to filter events. Pass `nil` for all events.
     /// - Returns: An async stream of matching events.
     ///
     /// - Important: Uses `.bufferingNewest(100)` which means if a subscriber processes
@@ -75,7 +78,7 @@ public actor EventDispatcher {
         return stream
     }
 
-    /// Dispatch an event to all subscribers, applying filters.
+    /// Dispatches an event to all subscribers, applying filters.
     ///
     /// Each subscription's filter (if any) is evaluated. The event is only
     /// yielded to subscribers whose filter returns `true` or who have no filter.
@@ -90,6 +93,9 @@ public actor EventDispatcher {
         }
     }
 
+    /// Removes a subscription from the dispatcher.
+    /// 
+    /// - Parameter id: The unique identifier of the subscription to remove.
     private func removeSubscription(id: UUID) {
         subscriptions.removeValue(forKey: id)
     }

@@ -1,27 +1,24 @@
 import Foundation
 
-/// A contact stored on the MeshCore device.
+/// Represents a contact stored on the MeshCore device.
 ///
-/// `MeshContact` represents a node in the mesh network that your device knows about.
-/// Contacts are discovered through advertisements and can be used as message destinations.
+/// `MeshContact` defines a node in the mesh network that your device has discovered or stored.
+/// Contacts are typically discovered through advertisements and are used as message destinations.
 ///
-/// ## Properties
+/// ## Identity
+/// Each contact has a unique 32-byte public key. The ``id`` property
+/// is the hex string representation for use with SwiftUI's `Identifiable`.
 ///
-/// - **Identity**: Each contact has a unique 32-byte public key. The ``id`` property
-///   is the hex string representation for use with SwiftUI's `Identifiable`.
+/// ## Routing
+/// The ``outPath`` and ``outPathLength`` describe the routing path to reach
+/// this contact. A path length of -1 indicates flood routing (broadcast to all).
 ///
-/// - **Path**: The ``outPath`` and ``outPathLength`` describe the routing path to reach
-///   this contact. A path length of -1 indicates flood routing (broadcast to all).
-///
-/// - **Location**: If the contact shares its location, ``latitude`` and ``longitude``
-///   contain GPS coordinates.
+/// ## Location
+/// If the contact shares its location, ``latitude`` and ``longitude``
+/// contain GPS coordinates.
 ///
 /// ## Usage
-///
 /// ```swift
-/// // Get contacts from the session
-/// let contacts = try await session.getContacts()
-///
 /// // Find a contact by name
 /// if let contact = session.getContactByName("MyNode") {
 ///     try await session.sendMessage(to: contact.publicKey, text: "Hello!")
@@ -33,54 +30,68 @@ import Foundation
 /// }
 /// ```
 public struct MeshContact: Sendable, Identifiable, Equatable {
-    /// Unique identifier (hex string of public key).
+    /// The unique identifier for the contact, represented as a hex string of the public key.
     public let id: String
 
     /// The contact's 32-byte public key.
     public let publicKey: Data
 
-    /// Contact type identifier.
+    /// The type identifier for the contact.
     public let type: UInt8
 
-    /// Contact flags.
+    /// The operational flags for the contact.
     public let flags: UInt8
 
-    /// Length of the outbound routing path (-1 for flood routing).
+    /// The length of the outbound routing path, where -1 indicates flood routing.
     public let outPathLength: Int8
 
-    /// Outbound routing path data.
+    /// The outbound routing path data.
     public let outPath: Data
 
     /// The name this contact advertises on the network.
     public let advertisedName: String
 
-    /// When this contact last sent an advertisement.
+    /// The date and time when this contact last sent an advertisement.
     public let lastAdvertisement: Date
 
-    /// Latitude coordinate, if location is shared.
+    /// The latitude coordinate of the contact, if location sharing is enabled.
     public let latitude: Double
 
-    /// Longitude coordinate, if location is shared.
+    /// The longitude coordinate of the contact, if location sharing is enabled.
     public let longitude: Double
 
-    /// When this contact record was last modified.
+    /// The date and time when this contact record was last modified.
     public let lastModified: Date
 
-    /// The first 6 bytes of the public key as a hex string.
+    /// Computes the first 6 bytes of the public key as a hex string.
     ///
-    /// This prefix is commonly used for display and as a message destination.
+    /// This prefix is commonly used for UI display and as a compact message destination.
     public var publicKeyPrefix: String {
         publicKey.prefix(6).hexString
     }
 
-    /// Whether this contact uses flood (broadcast) routing.
+    /// Indicates whether this contact uses flood (broadcast) routing.
     ///
-    /// Flood routing sends messages to all nodes in the network, useful when
-    /// no direct path is known. Path length -1 indicates flood routing.
+    /// Flood routing sends messages to all nodes in the network. This is used when
+    /// no direct path is known.
     public var isFloodPath: Bool {
         outPathLength == -1
     }
 
+    /// Initializes a new mesh contact with the specified properties.
+    ///
+    /// - Parameters:
+    ///   - id: Unique hex string identifier.
+    ///   - publicKey: The 32-byte public key data.
+    ///   - type: Contact type identifier.
+    ///   - flags: Operational flags.
+    ///   - outPathLength: Length of the outbound path.
+    ///   - outPath: Outbound path data.
+    ///   - advertisedName: Name advertised by the node.
+    ///   - lastAdvertisement: Date of last advertisement.
+    ///   - latitude: Latitude coordinate.
+    ///   - longitude: Longitude coordinate.
+    ///   - lastModified: Date of last record update.
     public init(
         id: String,
         publicKey: Data,

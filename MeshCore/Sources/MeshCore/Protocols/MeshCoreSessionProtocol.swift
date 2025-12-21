@@ -1,6 +1,6 @@
 import Foundation
 
-/// Protocol for MeshCoreSession to enable testability of dependent services.
+/// Defines the interface for MeshCore device communication.
 ///
 /// This protocol abstracts the core mesh communication operations used by services
 /// in the PocketMeshServices layer, allowing them to be tested without a real BLE connection.
@@ -21,28 +21,32 @@ public protocol MeshCoreSessionProtocol: Actor {
 
     // MARK: - Connection State
 
-    /// Observable connection state stream for UI binding
+    /// Provides an observable connection state stream for UI binding.
     var connectionState: AsyncStream<ConnectionState> { get }
 
     // MARK: - Message Operations (used by MessageService)
 
-    /// Send a direct message to a contact
+    /// Sends a direct message to a contact.
+    ///
     /// - Parameters:
-    ///   - destination: The recipient's public key (6-byte prefix)
-    ///   - text: The message text
-    ///   - timestamp: Message timestamp
-    /// - Returns: Information about the sent message including ACK code
+    ///   - destination: The recipient's public key (6-byte prefix).
+    ///   - text: The message text to send.
+    ///   - timestamp: The timestamp of the message.
+    /// - Returns: A `MessageSentInfo` object containing information about the sent message, including the ACK code.
+    /// - Throws: `MeshCoreError` if the message fails to send or the device returns an error.
     func sendMessage(
         to destination: Data,
         text: String,
         timestamp: Date
     ) async throws -> MessageSentInfo
 
-    /// Send a message to a channel
+    /// Sends a message to a channel.
+    ///
     /// - Parameters:
-    ///   - channel: The channel index (0-7)
-    ///   - text: The message text
-    ///   - timestamp: Message timestamp
+    ///   - channel: The channel index (0-7).
+    ///   - text: The message text to send.
+    ///   - timestamp: The timestamp of the message.
+    /// - Throws: `MeshCoreError` if the channel message fails to send.
     func sendChannelMessage(
         channel: UInt8,
         text: String,
@@ -51,39 +55,55 @@ public protocol MeshCoreSessionProtocol: Actor {
 
     // MARK: - Contact Operations (used by ContactService)
 
-    /// Get contacts from the device
-    /// - Parameter lastModified: Optional date for incremental sync
-    /// - Returns: Array of mesh contacts
+    /// Retrieves contacts from the device.
+    ///
+    /// - Parameter lastModified: An optional date for incremental synchronization.
+    /// - Returns: An array of `MeshContact` objects retrieved from the device.
+    /// - Throws: `MeshCoreError` if the contact query fails.
     func getContacts(since lastModified: Date?) async throws -> [MeshContact]
 
-    /// Add a contact to the device
-    /// - Parameter contact: The contact to add
+    /// Adds a contact to the device.
+    ///
+    /// - Parameter contact: The contact to add to the device's storage.
+    /// - Throws: `MeshCoreError` if the contact cannot be added.
     func addContact(_ contact: MeshContact) async throws
 
-    /// Remove a contact from the device
-    /// - Parameter publicKey: The contact's public key
+    /// Removes a contact from the device.
+    ///
+    /// - Parameter publicKey: The contact's public key to remove.
+    /// - Throws: `MeshCoreError` if the contact cannot be removed.
     func removeContact(publicKey: Data) async throws
 
-    /// Reset the path to a contact (triggers re-discovery)
-    /// - Parameter publicKey: The contact's public key
+    /// Resets the path to a contact.
+    ///
+    /// Triggers path re-discovery for the specified contact by clearing existing routing info.
+    ///
+    /// - Parameter publicKey: The contact's public key.
+    /// - Throws: `MeshCoreError` if the path reset command fails.
     func resetPath(publicKey: Data) async throws
 
-    /// Send a path discovery request to a contact
-    /// - Parameter destination: The contact's public key
-    /// - Returns: Information about the sent message
+    /// Sends a path discovery request to a contact.
+    ///
+    /// - Parameter destination: The contact's public key.
+    /// - Returns: A `MessageSentInfo` object containing information about the discovery request.
+    /// - Throws: `MeshCoreError` if the discovery request fails.
     func sendPathDiscovery(to destination: Data) async throws -> MessageSentInfo
 
     // MARK: - Channel Operations (used by ChannelService)
 
-    /// Get information about a channel
-    /// - Parameter index: The channel index (0-7)
-    /// - Returns: Channel information including name and secret
+    /// Retrieves information about a channel.
+    ///
+    /// - Parameter index: The channel index (0-7).
+    /// - Returns: A `ChannelInfo` object including the name and secret.
+    /// - Throws: `MeshCoreError` if the channel query fails.
     func getChannel(index: UInt8) async throws -> ChannelInfo
 
-    /// Set a channel's configuration
+    /// Configures a channel's settings.
+    ///
     /// - Parameters:
-    ///   - index: The channel index (0-7)
-    ///   - name: The channel name
-    ///   - secret: The 16-byte channel secret
+    ///   - index: The channel index (0-7).
+    ///   - name: The channel name.
+    ///   - secret: The 16-byte channel secret.
+    /// - Throws: `MeshCoreError` if the channel configuration fails.
     func setChannel(index: UInt8, name: String, secret: Data) async throws
 }

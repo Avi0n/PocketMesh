@@ -2,11 +2,12 @@ import Foundation
 
 // MARK: - Data Extensions for Binary Reading
 
+/// Provides utilities for reading binary protocol data and hex string conversions.
 extension Data {
     /// Hex digits lookup table (static to avoid repeated allocation)
     private static let hexDigits = Array("0123456789abcdef".utf8)
 
-    /// Hex string representation (optimized)
+    /// Computes the optimized hex string representation of the data.
     public var hexString: String {
         var chars = [UInt8](repeating: 0, count: count * 2)
         for (i, byte) in enumerated() {
@@ -16,7 +17,10 @@ extension Data {
         return String(decoding: chars, as: UTF8.self)
     }
 
-    /// Initialize Data from hex string (for test fixtures and contact ID handling)
+    /// Initializes a new `Data` instance from a hex string.
+    ///
+    /// - Parameter hexString: The hex string to parse.
+    /// - Returns: A `Data` object if the string is valid hex; otherwise, `nil`.
     public init?(hexString: String) {
         let len = hexString.count / 2
         var data = Data(capacity: len)
@@ -30,7 +34,10 @@ extension Data {
         self = data
     }
 
-    /// Read UInt32 little-endian at offset (uses loadUnaligned for safety)
+    /// Reads a little-endian `UInt32` from the specified offset.
+    ///
+    /// - Parameter offset: The index to start reading from.
+    /// - Returns: The parsed `UInt32` value, or 0 if the offset is out of bounds.
     public func readUInt32LE(at offset: Int) -> UInt32 {
         guard offset + 4 <= count else { return 0 }
         return self.dropFirst(offset).withUnsafeBytes {
@@ -38,7 +45,10 @@ extension Data {
         }
     }
 
-    /// Read Int32 little-endian at offset (uses loadUnaligned for safety)
+    /// Reads a little-endian `Int32` from the specified offset.
+    ///
+    /// - Parameter offset: The index to start reading from.
+    /// - Returns: The parsed `Int32` value, or 0 if the offset is out of bounds.
     public func readInt32LE(at offset: Int) -> Int32 {
         guard offset + 4 <= count else { return 0 }
         return self.dropFirst(offset).withUnsafeBytes {
@@ -46,7 +56,10 @@ extension Data {
         }
     }
 
-    /// Read UInt16 little-endian at offset (uses loadUnaligned for safety)
+    /// Reads a little-endian `UInt16` from the specified offset.
+    ///
+    /// - Parameter offset: The index to start reading from.
+    /// - Returns: The parsed `UInt16` value, or 0 if the offset is out of bounds.
     public func readUInt16LE(at offset: Int) -> UInt16 {
         guard offset + 2 <= count else { return 0 }
         return self.dropFirst(offset).withUnsafeBytes {
@@ -54,7 +67,10 @@ extension Data {
         }
     }
 
-    /// Read Int16 little-endian at offset (uses loadUnaligned for safety)
+    /// Reads a little-endian `Int16` from the specified offset.
+    ///
+    /// - Parameter offset: The index to start reading from.
+    /// - Returns: The parsed `Int16` value, or 0 if the offset is out of bounds.
     public func readInt16LE(at offset: Int) -> Int16 {
         guard offset + 2 <= count else { return 0 }
         return self.dropFirst(offset).withUnsafeBytes {
@@ -62,24 +78,39 @@ extension Data {
         }
     }
 
-    // Legacy aliases for compatibility
+    /// Reads a little-endian `UInt32` from the specified offset.
+    ///
+    /// This is an alias for ``readUInt32LE(at:)``.
     public func readUInt32(at offset: Int) -> UInt32 { readUInt32LE(at: offset) }
+    /// Reads a little-endian `Int32` from the specified offset.
+    ///
+    /// This is an alias for ``readInt32LE(at:)``.
     public func readInt32(at offset: Int) -> Int32 { readInt32LE(at: offset) }
+    /// Reads a little-endian `UInt16` from the specified offset.
+    ///
+    /// This is an alias for ``readUInt16LE(at:)``.
     public func readUInt16(at offset: Int) -> UInt16 { readUInt16LE(at: offset) }
+    /// Reads a little-endian `Int16` from the specified offset.
+    ///
+    /// This is an alias for ``readInt16LE(at:)``.
     public func readInt16(at offset: Int) -> Int16 { readInt16LE(at: offset) }
 }
 
 // MARK: - SNR Helper
 
 extension Int8 {
-    /// Convert raw SNR byte to Double (MeshCore uses SNR * 4 encoding)
+    /// Converts the raw SNR byte to a floating-point value.
+    ///
+    /// The MeshCore protocol encodes SNR as a signed byte where the value is SNR * 4.
     public var snrValue: Double {
         Double(self) / 4.0
     }
 }
 
 extension UInt8 {
-    /// Convert raw SNR byte (signed) to Double
+    /// Converts the raw SNR byte (interpreted as signed) to a floating-point value.
+    ///
+    /// The MeshCore protocol encodes SNR as a signed byte where the value is SNR * 4.
     public var snrValue: Double {
         Int8(bitPattern: self).snrValue
     }

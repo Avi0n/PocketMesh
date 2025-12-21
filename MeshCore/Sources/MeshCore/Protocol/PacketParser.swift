@@ -2,13 +2,24 @@ import Foundation
 
 // MARK: - PacketParser
 
-/// Stateless packet parser - routes to category-specific parsers
-/// Uses enum (not struct) to prevent instantiation of stateless type
+/// Stateless packet parser for decoding raw data into mesh events.
+///
+/// `PacketParser` acts as a central router that identifies the type of incoming
+/// data based on its `ResponseCode` and delegates parsing to domain-specific handlers.
+///
+/// Use the ``parse(_:)`` method to convert raw `Data` received from a transport
+/// into a ``MeshEvent``.
 public enum PacketParser {
 
-    /// Parse raw data into a MeshEvent
-    /// - Parameter data: Raw data received from device (includes response code byte)
-    /// - Returns: Parsed MeshEvent (returns .parseFailure for unknown/malformed data)
+    /// Parses raw binary data into a mesh event.
+    ///
+    /// - Parameter data: Raw data received from the device, including the response code byte.
+    /// - Returns: A parsed ``MeshEvent``, or `.parseFailure` if the data is malformed or the code is unknown.
+    ///
+    /// ### Routing Logic
+    /// 1. Extracts the first byte as the ``ResponseCode``.
+    /// 2. Validates the code exists in the protocol.
+    /// 3. Routes the remaining payload to a category-specific parser (Simple, Device, Contact, etc.).
     public static func parse(_ data: Data) -> MeshEvent {
         guard let firstByte = data.first else {
             return .parseFailure(data: data, reason: "Empty packet")
@@ -46,6 +57,12 @@ public enum PacketParser {
 
 extension PacketParser {
 
+    /// Handles trivial response codes like OK and Error.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseSimpleResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .ok:
@@ -69,6 +86,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles responses related to local device information.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseDeviceResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .battery:
@@ -124,6 +147,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles responses related to contact list management.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseContactResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .contactStart:
@@ -162,6 +191,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles responses related to direct and channel messaging.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseMessageResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .messageSent:
@@ -203,6 +238,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles asynchronous push notifications from the device.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parsePushNotification(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .ack:
@@ -252,6 +293,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles authentication-related responses.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseLoginResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .loginSuccess:
@@ -272,6 +319,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles responses from the cryptographic signing engine.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseSigningResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .signStart:
@@ -297,6 +350,12 @@ extension PacketParser {
 
 extension PacketParser {
 
+    /// Handles utility responses like statistics and channel info.
+    ///
+    /// - Parameters:
+    ///   - code: The response code.
+    ///   - payload: The payload data.
+    /// - Returns: A parsed mesh event.
     private static func parseMiscResponse(_ code: ResponseCode, _ payload: Data) -> MeshEvent {
         switch code {
         case .stats:

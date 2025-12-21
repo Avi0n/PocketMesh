@@ -1,13 +1,33 @@
 import Foundation
 
-/// Metadata for tracking pending requests (without continuation - that's managed by PendingRequests actor)
+/// Encapsulates metadata for tracking a pending request.
+///
+/// This structure holds the information necessary to correlate an incoming response
+/// with a previously sent request, including timeout information and optional context.
 public struct RequestContext: Sendable {
+    /// The data representing the expected acknowledgment or tag for this request.
     public let expectedAck: Data
+    
+    /// The type of binary request being tracked, if applicable.
     public let requestType: BinaryRequestType?
+    
+    /// The public key prefix of the target node, if applicable.
     public let publicKeyPrefix: Data?
+    
+    /// The date and time when this request expires.
     public let expiresAt: Date
-    public let context: [String: Int]  // Additional context (e.g., prefixLength for neighbours)
+    
+    /// Additional context parameters for specialized request types.
+    public let context: [String: Int]
 
+    /// Initializes a new request context.
+    ///
+    /// - Parameters:
+    ///   - expectedAck: The expected acknowledgment data.
+    ///   - requestType: The type of binary request.
+    ///   - publicKeyPrefix: The target node's public key prefix.
+    ///   - expiresAt: The expiration date.
+    ///   - context: Additional context parameters.
     public init(
         expectedAck: Data,
         requestType: BinaryRequestType?,
@@ -23,23 +43,38 @@ public struct RequestContext: Sendable {
     }
 }
 
-/// Composite key for binary response routing (tag + type correlation)
+/// Defines a composite key for binary response routing.
 private struct BinaryRequestKey: Hashable {
+    /// The public key prefix of the node.
     let publicKeyPrefix: Data
+    
+    /// The type of request.
     let requestType: BinaryRequestType
 }
 
-/// Actor for managing pending request continuations safely
-/// Keeps CheckedContinuation out of Sendable structs
-/// Supports sophisticated routing with tag + type correlation for binary responses
+/// Manages pending request continuations and metadata safely.
+///
+/// `PendingRequests` is an actor that ensures thread-safe access to pending requests.
+/// it supports routing responses back to their originators using tags or node-type correlation.
 public actor PendingRequests {
+    /// Mapping of tags to their respective continuations.
     private var requests: [Data: CheckedContinuation<MeshEvent?, Never>] = [:]
+    
+    /// Mapping of tags to their request contexts.
     private var metadata: [Data: RequestContext] = [:]
 
-    // Additional index for binary request routing by (publicKeyPrefix, requestType)
+    /// Mapping of binary request keys to their original tags for routing.
     private var binaryRequestIndex: [BinaryRequestKey: Data] = [:]
 
-    /// Register a new pending request and wait for response
+    /// Registers a new pending request and waits for its response or timeout.
+    ///
+    /// - Parameters:
+    ///   - tag: The tag used to identify the request.
+    ///   - requestType: Optional type for binary requests.
+    ///   - publicKeyPrefix: Optional public key prefix of the target node.
+    ///   - timeout: The maximum time to wait for a response.
+    ///   - context: Additional context for the request.
+    /// - Returns: The received `MeshEvent`, or `nil` if the request timed out.
     public func register(
         tag: Data,
         requestType: BinaryRequestType? = nil,
@@ -73,7 +108,11 @@ public actor PendingRequests {
         }
     }
 
-    /// Complete a pending request with an event
+    /// Completes a pending request with the provided event.
+    ///
+    /// - Parameters:
+    ///   - tag: The tag of the request to complete.
+    ///   - event: The event to return to the caller.
     public func complete(tag: Data, with event: MeshEvent) {
         if let context = metadata[tag], let type = context.requestType, let prefix = context.publicKeyPrefix {
             let key = BinaryRequestKey(publicKeyPrefix: prefix, requestType: type)
@@ -83,15 +122,23 @@ public actor PendingRequests {
         metadata.removeValue(forKey: tag)
     }
 
-    /// Complete a binary request by public key prefix and type
-    /// Used when response contains the prefix but not the original tag
+    /// Completes a binary request using node prefix and request type.
+    ///
+    /// This method is used when the response contains the node's prefix but not the original request tag.
+    ///
+    /// - Parameters:
+    ///   - publicKeyPrefix: The public key prefix of the responding node.
+    ///   - type: The type of the binary request.
+    ///   - event: The event to return to the caller.
     public func completeBinaryRequest(publicKeyPrefix: Data, type: BinaryRequestType, with event: MeshEvent) {
         let key = BinaryRequestKey(publicKeyPrefix: publicKeyPrefix, requestType: type)
         guard let tag = binaryRequestIndex[key] else { return }
         complete(tag: tag, with: event)
     }
 
-    /// Timeout a pending request
+    /// Marks a pending request as timed out.
+    ///
+    /// - Parameter tag: The tag of the request that timed out.
     private func timeout(tag: Data) {
         if let context = metadata[tag], let type = context.requestType, let prefix = context.publicKeyPrefix {
             let key = BinaryRequestKey(publicKeyPrefix: prefix, requestType: type)
@@ -101,19 +148,29 @@ public actor PendingRequests {
         metadata.removeValue(forKey: tag)
     }
 
-    /// Check if a tag matches any pending binary request
+    /// Determines if a tag matches a pending binary request of a specific type.
+    ///
+    /// - Parameters:
+    ///   - tag: The tag to check.
+    ///   - type: The request type to match.
+    /// - Returns: `true` if the tag matches a pending request of the specified type.
     public func matchesBinaryRequest(tag: Data, type: BinaryRequestType) -> Bool {
         guard let context = metadata[tag] else { return false }
         return context.requestType == type
     }
 
-    /// Check if there's a pending request for this public key prefix and type
+    /// Checks if there is a pending binary request for a specific node and type.
+    ///
+    /// - Parameters:
+    ///   - publicKeyPrefix: The public key prefix of the node.
+    ///   - type: The type of the request.
+    /// - Returns: `true` if such a request is pending.
     public func hasPendingBinaryRequest(publicKeyPrefix: Data, type: BinaryRequestType) -> Bool {
         let key = BinaryRequestKey(publicKeyPrefix: publicKeyPrefix, requestType: type)
         return binaryRequestIndex[key] != nil
     }
 
-    /// Clean up expired requests
+    /// Cleans up all expired pending requests.
     public func cleanupExpired() {
         let now = Date()
         for (tag, context) in metadata where context.expiresAt < now {
@@ -121,8 +178,10 @@ public actor PendingRequests {
         }
     }
 
-    /// Get binary request info by tag (expected_ack)
-    /// Returns nil if no pending request matches the tag
+    /// Retrieves metadata for a pending binary request by its tag.
+    ///
+    /// - Parameter tag: The tag of the request.
+    /// - Returns: A tuple containing the request type, public key prefix, and context, or `nil` if not found.
     public func getBinaryRequestInfo(tag: Data) -> (type: BinaryRequestType, publicKeyPrefix: Data, context: [String: Int])? {
         guard let requestContext = metadata[tag],
               let type = requestContext.requestType,

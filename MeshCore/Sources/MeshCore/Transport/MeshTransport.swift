@@ -1,22 +1,22 @@
 import Foundation
 
-/// Protocol for MeshCore transport implementations.
+/// Defines the interface for communicating with a MeshCore device across various physical layers.
 ///
-/// `MeshTransport` defines the interface for communication with a MeshCore device.
-/// Implement this protocol to support different transport mechanisms (e.g., Bluetooth LE,
-/// Serial, TCP/IP).
+/// `MeshTransport` serves as a primary extensibility point for the MeshCore library, allowing
+/// different transport mechanisms (such as Bluetooth Low Energy, Serial, or TCP/IP) to be
+/// plugged into a ``MeshCoreSession``.
 ///
 /// ## Built-in Implementations
 ///
-/// - ``BLETransport``: Bluetooth Low Energy transport for iOS/macOS
-/// - ``MockTransport``: In-memory transport for testing
+/// - ``BLETransport``: Bluetooth Low Energy transport for iOS and macOS.
+/// - ``MockTransport``: In-memory transport for unit testing and simulation.
 ///
 /// ## Custom Implementations
 ///
-/// To create a custom transport:
+/// To support a new physical layer, implement this protocol in a thread-safe manner (ideally using an `actor`):
 ///
 /// ```swift
-/// actor MyTransport: MeshTransport {
+/// actor MyCustomTransport: MeshTransport {
 ///     private var continuation: AsyncStream<Data>.Continuation?
 ///     private var _isConnected = false
 ///
@@ -29,7 +29,7 @@ import Foundation
 ///     }
 ///
 ///     func connect() async throws {
-///         // Establish connection
+///         // Establish connection to the hardware
 ///         _isConnected = true
 ///     }
 ///
@@ -42,11 +42,11 @@ import Foundation
 ///         guard _isConnected else {
 ///             throw MeshTransportError.notConnected
 ///         }
-///         // Send data over your transport
+///         // Write data to the physical medium
 ///     }
 ///
-///     // Call when data is received from the device
-///     func didReceive(_ data: Data) {
+///     // Internal helper to bridge hardware callbacks to the stream
+///     func handleIncomingData(_ data: Data) {
 ///         continuation?.yield(data)
 ///     }
 /// }
@@ -54,36 +54,42 @@ import Foundation
 ///
 /// ## Thread Safety
 ///
-/// Implementations must be `Sendable`. Using an `actor` is recommended for complex
-/// state management, though simpler implementations can use other concurrency-safe patterns.
+/// Implementations must conform to `Sendable`. Using an `actor` is the recommended way to
+/// manage internal state and ensure concurrency safety in a modern Swift environment.
 public protocol MeshTransport: Sendable {
-    /// Connects to the MeshCore device.
+    /// Establishes a connection to the MeshCore device.
     ///
-    /// This method should establish the underlying transport connection and prepare
-    /// for data exchange. It should throw if the connection cannot be established.
+    /// This method initializes the underlying physical layer and prepares the transport
+    /// for data exchange.
     ///
-    /// - Throws: ``MeshTransportError`` if the connection fails.
+    /// - Throws: A ``MeshTransportError`` if the connection cannot be established or if
+    ///   the hardware is unavailable.
     func connect() async throws
 
-    /// Disconnects from the device.
+    /// Terminates the connection to the device.
     ///
-    /// This method should cleanly close the transport connection and release resources.
-    /// It should be safe to call multiple times.
+    /// Cleans up resources, closes the physical connection, and finishes the `receivedData` stream.
+    /// This method is idempotent and safe to call even if already disconnected.
     func disconnect() async
 
-    /// Sends data to the device.
+    /// Transmits raw data to the connected MeshCore device.
     ///
-    /// - Parameter data: The raw bytes to send.
-    /// - Throws: ``MeshTransportError/notConnected`` if not connected.
-    ///           ``MeshTransportError/sendFailed(_:)`` if the send fails.
+    /// - Parameter data: The raw bytes to be sent over the transport.
+    /// - Throws:
+    ///   - ``MeshTransportError/notConnected`` if called while the transport is disconnected.
+    ///   - ``MeshTransportError/sendFailed(_:)`` if the underlying physical layer fails to transmit.
     func send(_ data: Data) async throws
 
-    /// An async stream of data received from the device.
+    /// Provides an asynchronous stream of raw data received from the device.
     ///
-    /// This stream yields raw data packets as they are received from the device.
-    /// The stream ends when the connection is closed.
+    /// Each element in the stream represents a discrete chunk of data received from the
+    /// physical layer. The stream terminates when the transport is disconnected.
+    ///
+    /// - Returns: An `AsyncStream` yielding `Data` objects.
     var receivedData: AsyncStream<Data> { get async }
 
-    /// Whether the transport is currently connected.
+    /// Indicates whether the transport is currently connected to a device.
+    ///
+    /// This property should accurately reflect the status of the underlying physical connection.
     var isConnected: Bool { get async }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Type-safe event filter for MeshCore events.
+/// Provides a type-safe event filter for MeshCore events.
 ///
 /// `EventFilter` provides a convenient way to create predicates for filtering ``MeshEvent``
 /// values. Use the built-in static factory methods for common filtering patterns, or create
@@ -31,6 +31,7 @@ import Foundation
 /// let event = await session.waitForEvent(filter: filter, timeout: 5.0)
 /// ```
 public struct EventFilter: Sendable {
+    /// The underlying predicate used for matching.
     private let predicate: @Sendable (MeshEvent) -> Bool
 
     /// Creates a custom event filter with a predicate.

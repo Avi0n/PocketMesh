@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - LPP Sensor Types
 
-/// Cayenne Low Power Payload (LPP) sensor types.
+/// Represents Cayenne Low Power Payload (LPP) sensor types.
 ///
 /// LPP is a compact binary format for transmitting sensor data over low-bandwidth
 /// networks like LoRa. Each sensor type has a defined data size and encoding.
@@ -10,35 +10,62 @@ import Foundation
 /// For the full specification, see:
 /// [Cayenne LPP Documentation](https://developers.mydevices.com/cayenne/docs/lora/#lora-cayenne-low-power-payload)
 public enum LPPSensorType: UInt8, Sendable, CaseIterable {
+    /// Digital input (1 byte).
     case digitalInput = 0
+    /// Digital output (1 byte).
     case digitalOutput = 1
+    /// Analog input (2 bytes, 0.01 resolution).
     case analogInput = 2
+    /// Analog output (2 bytes, 0.01 resolution).
     case analogOutput = 3
+    /// Generic sensor (4 bytes).
     case genericSensor = 100
+    /// Illuminance (2 bytes, 1 lux resolution).
     case illuminance = 101
+    /// Presence (1 byte).
     case presence = 102
+    /// Temperature (2 bytes, 0.1°C resolution).
     case temperature = 103
+    /// Humidity (1 byte, 0.5% resolution).
     case humidity = 104
+    /// Accelerometer (6 bytes, 0.001G resolution).
     case accelerometer = 113
+    /// Barometer (2 bytes, 0.1 hPa resolution).
     case barometer = 115
+    /// Voltage (2 bytes, 0.01V resolution).
     case voltage = 116
+    /// Current (2 bytes, 0.001A resolution).
     case current = 117
+    /// Frequency (4 bytes, 1 Hz resolution).
     case frequency = 118
+    /// Percentage (1 byte, 1% resolution).
     case percentage = 120
+    /// Altitude (2 bytes, 1m resolution).
     case altitude = 121
+    /// Load (2 bytes, 0.01kg resolution).
     case load = 122
+    /// Concentration (2 bytes, 1 ppm resolution).
     case concentration = 125
+    /// Power (2 bytes, 1W resolution).
     case power = 128
+    /// Distance (4 bytes, 0.001m resolution).
     case distance = 130
+    /// Energy (4 bytes, 0.001kWh resolution).
     case energy = 131
+    /// Direction (2 bytes, 1° resolution).
     case direction = 132
+    /// Unix Time (4 bytes).
     case unixTime = 133
+    /// Gyrometer (6 bytes, 0.01°/s resolution).
     case gyrometer = 134
+    /// Colour (3 bytes, RGB).
     case colour = 135
+    /// GPS (9 bytes, 0.0001° lat/lon, 0.01m alt).
     case gps = 136
+    /// Switch (1 byte).
     case switchValue = 142
 
-    /// Size in bytes for this sensor type's data payload
+    /// Returns the size in bytes for this sensor type's data payload.
     public var dataSize: Int {
         switch self {
         // 1-byte types
@@ -63,7 +90,7 @@ public enum LPPSensorType: UInt8, Sendable, CaseIterable {
         }
     }
 
-    /// Human-readable name for the sensor type
+    /// Returns the human-readable name for the sensor type.
     public var name: String {
         switch self {
         case .digitalInput: "Digital Input"
@@ -99,46 +126,52 @@ public enum LPPSensorType: UInt8, Sendable, CaseIterable {
 
 // MARK: - LPP Values
 
-/// A decoded LPP sensor value.
+/// Represents a decoded LPP sensor value.
 ///
-/// `LPPValue` represents the decoded data from a sensor reading. The specific
+/// `LPPValue` contains the decoded data from a sensor reading. The specific
 /// case indicates the value type, which depends on the sensor.
 public enum LPPValue: Sendable, Equatable {
-    /// Boolean value (digital input/output, presence, switch)
+    /// Boolean value (digital input/output, presence, switch).
     case digital(Bool)
 
-    /// Integer value (illuminance in lux, percentage, direction in degrees)
+    /// Integer value (illuminance in lux, percentage, direction in degrees).
     case integer(Int)
 
-    /// Floating-point value with unit context
+    /// Floating-point value with unit context.
     case float(Double)
 
-    /// 3D vector (accelerometer in g, gyrometer in degrees/s)
+    /// 3D vector (accelerometer in g, gyrometer in degrees/s).
     case vector3(x: Double, y: Double, z: Double)
 
-    /// GPS coordinates
+    /// GPS coordinates.
     case gps(latitude: Double, longitude: Double, altitude: Double)
 
-    /// RGB colour
+    /// RGB colour.
     case rgb(red: UInt8, green: UInt8, blue: UInt8)
 
-    /// Unix timestamp
+    /// Unix timestamp.
     case timestamp(Date)
 }
 
 // MARK: - LPP Data Point
 
-/// A single decoded LPP data point
+/// Represents a single decoded LPP data point.
 public struct LPPDataPoint: Sendable, Equatable {
-    /// Channel identifier (application-specific)
+    /// The channel identifier (application-specific).
     public let channel: UInt8
 
-    /// Sensor type
+    /// The sensor type.
     public let type: LPPSensorType
 
-    /// Decoded value
+    /// The decoded value.
     public let value: LPPValue
 
+    /// Creates a new LPP data point.
+    ///
+    /// - Parameters:
+    ///   - channel: Channel identifier.
+    ///   - type: Sensor type.
+    ///   - value: Decoded value.
     public init(channel: UInt8, type: LPPSensorType, value: LPPValue) {
         self.channel = channel
         self.type = type
@@ -193,7 +226,7 @@ public enum LPPDecoder {
     /// Decodes LPP data from raw bytes.
     ///
     /// - Parameter data: Raw LPP-encoded data bytes.
-    /// - Returns: Array of decoded data points. Returns an empty array if
+    /// - Returns: An array of decoded data points. Returns an empty array if
     ///            the data is empty or cannot be parsed.
     public static func decode(_ data: Data) -> [LPPDataPoint] {
         var result: [LPPDataPoint] = []

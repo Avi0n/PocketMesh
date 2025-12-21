@@ -1,10 +1,10 @@
 import Foundation
 
-/// Events emitted by a MeshCore device during communication.
+/// Represents events emitted by a MeshCore device during communication.
 ///
-/// `MeshEvent` represents all possible events that can be received from a MeshCore
-/// mesh networking device. Events are delivered through the ``MeshCoreSession/events()``
-/// async stream.
+/// `MeshEvent` encapsulates all possible events that can be received from a MeshCore
+/// mesh networking device. These events are delivered through the ``MeshCoreSession/events()``
+/// asynchronous stream.
 ///
 /// ## Event Categories
 ///
@@ -36,7 +36,7 @@ import Foundation
 public enum MeshEvent: Sendable {
     // MARK: - Connection Lifecycle
 
-    /// Connection state changed.
+    /// Indicates that the connection state has changed.
     ///
     /// Emitted when the transport connection state changes (connecting, connected, disconnected, etc.).
     /// Subscribe to ``MeshCoreSession/connectionState`` for a dedicated state stream.
@@ -44,118 +44,122 @@ public enum MeshEvent: Sendable {
 
     // MARK: - Command Responses
 
-    /// Command completed successfully.
+    /// Indicates that a command completed successfully.
     ///
     /// Emitted when a command sent to the device completes successfully.
-    /// - Parameter value: Optional success value returned by the command.
+    /// 
+    /// - Parameter value: An optional success value returned by the command.
     case ok(value: UInt32?)
 
-    /// Command failed with error.
+    /// Indicates that a command failed with an error.
     ///
     /// Emitted when a command sent to the device fails.
-    /// - Parameter code: Device-specific error code, if available.
+    /// 
+    /// - Parameter code: A device-specific error code, if available.
     case error(code: UInt8?)
 
     // MARK: - Device Information
 
-    /// Device self-information received.
+    /// Indicates that device self-information was received.
     ///
-    /// Emitted after ``MeshCoreSession/start()`` with the device's identity and configuration.
+    /// Emitted after calling ``MeshCoreSession/start()`` with the device's identity and configuration.
     case selfInfo(SelfInfo)
 
-    /// Device capabilities received.
+    /// Indicates that device capabilities were received.
     ///
     /// Emitted in response to ``MeshCoreSession/queryDevice()`` with hardware capabilities.
     case deviceInfo(DeviceCapabilities)
 
-    /// Battery status received.
+    /// Indicates that battery status was received.
     ///
     /// Emitted in response to ``MeshCoreSession/getBattery()``.
     case battery(BatteryInfo)
 
-    /// Current device time received.
+    /// Indicates that the current device time was received.
     ///
     /// Emitted in response to ``MeshCoreSession/getTime()``.
     case currentTime(Date)
 
-    /// Custom variables received.
+    /// Indicates that custom variables were received.
     ///
     /// Emitted in response to ``MeshCoreSession/getCustomVars()``.
     case customVars([String: String])
 
-    /// Channel configuration received.
+    /// Indicates that channel configuration was received.
     ///
     /// Emitted in response to ``MeshCoreSession/getChannel(index:)``.
     case channelInfo(ChannelInfo)
 
-    /// Core statistics received.
+    /// Indicates that core statistics were received.
     ///
     /// Emitted in response to ``MeshCoreSession/getStatsCore()``.
     case statsCore(CoreStats)
 
-    /// Radio statistics received.
+    /// Indicates that radio statistics were received.
     ///
     /// Emitted in response to ``MeshCoreSession/getStatsRadio()``.
     case statsRadio(RadioStats)
 
-    /// Packet statistics received.
+    /// Indicates that packet statistics were received.
     ///
     /// Emitted in response to ``MeshCoreSession/getStatsPackets()``.
     case statsPackets(PacketStats)
 
     // MARK: - Contact Management
 
-    /// Contact list transfer started.
+    /// Indicates that a contact list transfer has started.
     ///
     /// Emitted at the start of a contact list transfer, indicating the total count.
-    /// - Parameter count: Total number of contacts to be received.
+    /// 
+    /// - Parameter count: The total number of contacts to be received.
     case contactsStart(count: Int)
 
-    /// Contact received.
+    /// Indicates that a contact was received.
     ///
     /// Emitted for each contact during a contact list transfer.
     case contact(MeshContact)
 
-    /// Contact list transfer completed.
+    /// Indicates that a contact list transfer has completed.
     ///
     /// Emitted at the end of a contact list transfer.
-    /// - Parameter lastModified: Timestamp of the most recently modified contact.
+    /// 
+    /// - Parameter lastModified: The timestamp of the most recently modified contact.
     case contactsEnd(lastModified: Date)
 
-    /// New contact discovered.
+    /// Indicates that a new contact was discovered.
     ///
     /// Emitted when a new contact is added to the device's contact list.
     case newContact(MeshContact)
 
-    /// Contact URI received.
+    /// Indicates that a contact URI was received.
     ///
     /// Emitted in response to ``MeshCoreSession/exportContact(publicKey:)`` with a shareable contact URI.
     case contactURI(String)
 
     // MARK: - Messaging
 
-    /// Message queued for sending.
+    /// Indicates that a message was queued for sending.
     ///
     /// Emitted when a message is successfully queued for transmission.
     /// Wait for an ``acknowledgement(code:)`` event to confirm delivery.
     case messageSent(MessageSentInfo)
 
-    /// Direct message received from a contact.
+    /// Indicates that a direct message was received from a contact.
     ///
     /// Emitted when a private message is received from another node.
     case contactMessageReceived(ContactMessage)
 
-    /// Channel broadcast message received.
+    /// Indicates that a channel broadcast message was received.
     ///
     /// Emitted when a message is received on a subscribed channel.
     case channelMessageReceived(ChannelMessage)
 
-    /// No more messages waiting.
+    /// Indicates that no more messages are waiting.
     ///
     /// Emitted by ``MeshCoreSession/getMessage()`` when the message queue is empty.
     case noMoreMessages
 
-    /// Messages are waiting to be fetched.
+    /// Indicates that messages are waiting to be fetched.
     ///
     /// Emitted when the device has pending messages in its queue.
     /// Use ``MeshCoreSession/getMessage()`` to fetch them, or enable
@@ -164,159 +168,178 @@ public enum MeshEvent: Sendable {
 
     // MARK: - Network Events
 
-    /// Advertisement received from a node.
+    /// Indicates that an advertisement was received from a node.
     ///
     /// Emitted when the device receives an advertisement broadcast from another mesh node.
-    /// - Parameter publicKey: Public key of the advertising node.
+    /// 
+    /// - Parameter publicKey: The public key of the advertising node.
     case advertisement(publicKey: Data)
 
-    /// Routing path updated.
+    /// Indicates that a routing path was updated.
     ///
     /// Emitted when the device learns a new or updated routing path to a node.
-    /// - Parameter publicKey: Public key of the destination node.
+    /// 
+    /// - Parameter publicKey: The public key of the destination node.
     case pathUpdate(publicKey: Data)
 
-    /// Message delivery acknowledgement.
+    /// Indicates a message delivery acknowledgement.
     ///
     /// Emitted when the device receives confirmation that a sent message was delivered.
     /// Match against ``MessageSentInfo/expectedAck`` to correlate with sent messages.
-    /// - Parameter code: Acknowledgement code to match against expected value.
+    /// 
+    /// - Parameter code: The acknowledgement code to match against the expected value.
     case acknowledgement(code: Data)
 
-    /// Trace route data received.
+    /// Indicates that trace route data was received.
     ///
     /// Emitted in response to ``MeshCoreSession/sendTrace(tag:authCode:flags:path:)``
     /// with path information.
     case traceData(TraceInfo)
 
-    /// Path discovery response.
+    /// Indicates a path discovery response.
     ///
     /// Emitted in response to ``MeshCoreSession/sendPathDiscovery(to:)`` with routing paths.
     case pathResponse(PathInfo)
 
     // MARK: - Authentication
 
-    /// Login succeeded.
+    /// Indicates that login succeeded.
     ///
     /// Emitted when authentication to a remote node succeeds.
     case loginSuccess(LoginInfo)
 
-    /// Login failed.
+    /// Indicates that login failed.
     ///
     /// Emitted when authentication to a remote node fails.
-    /// - Parameter publicKeyPrefix: Public key prefix of the target node, if available.
+    /// 
+    /// - Parameter publicKeyPrefix: The public key prefix of the target node, if available.
     case loginFailed(publicKeyPrefix: Data?)
 
     // MARK: - Binary Protocol Responses
 
-    /// Status response from a remote node.
+    /// Indicates a status response from a remote node.
     ///
     /// Emitted in response to ``MeshCoreSession/requestStatus(from:)``.
     case statusResponse(StatusResponse)
 
-    /// Telemetry response from a remote node.
+    /// Indicates a telemetry response from a remote node.
     ///
     /// Emitted in response to ``MeshCoreSession/requestTelemetry(from:)`` or
     /// ``MeshCoreSession/getSelfTelemetry()``.
     case telemetryResponse(TelemetryResponse)
 
-    /// Generic binary protocol response.
+    /// Indicates a generic binary protocol response.
     ///
-    /// Emitted for binary protocol responses that don't have specific event types.
-    /// - Parameter tag: Request correlation tag.
-    /// - Parameter data: Response payload.
+    /// Emitted for binary protocol responses that do not have specific event types.
+    /// 
+    /// - Parameters:
+    ///   - tag: The request correlation tag.
+    ///   - data: The response payload.
     case binaryResponse(tag: Data, data: Data)
 
-    /// Min/Max/Average telemetry response.
+    /// Indicates a Min/Max/Average telemetry response.
     ///
     /// Emitted in response to ``MeshCoreSession/requestMMA(from:start:end:)``.
     case mmaResponse(MMAResponse)
 
-    /// Access control list response.
+    /// Indicates an access control list response.
     ///
     /// Emitted in response to ``MeshCoreSession/requestACL(from:)``.
     case aclResponse(ACLResponse)
 
-    /// Neighbours list response.
+    /// Indicates a neighbours list response.
     ///
     /// Emitted in response to ``MeshCoreSession/requestNeighbours(from:count:offset:orderBy:pubkeyPrefixLength:)``.
     case neighboursResponse(NeighboursResponse)
 
     // MARK: - Cryptographic Signing
 
-    /// Signing session started.
+    /// Indicates that a signing session has started.
     ///
-    /// Emitted in response to ``MeshCoreSession/signStart()`` with maximum data size.
-    /// - Parameter maxLength: Maximum number of bytes that can be signed.
+    /// Emitted in response to ``MeshCoreSession/signStart()`` with the maximum data size.
+    /// 
+    /// - Parameter maxLength: The maximum number of bytes that can be signed.
     case signStart(maxLength: Int)
 
-    /// Cryptographic signature generated.
+    /// Indicates that a cryptographic signature was generated.
     ///
     /// Emitted in response to ``MeshCoreSession/signFinish(timeout:)`` with the signature.
     case signature(Data)
 
-    /// Feature disabled.
+    /// Indicates that a feature is disabled.
     ///
     /// Emitted when a requested feature is disabled on the device.
-    /// - Parameter reason: Human-readable reason for the disabled feature.
+    /// 
+    /// - Parameter reason: A human-readable reason for the disabled feature.
     case disabled(reason: String)
 
     // MARK: - Raw Data and Logging
 
-    /// Raw radio data received.
+    /// Indicates that raw radio data was received.
     ///
     /// Emitted when the device forwards raw radio packets.
     case rawData(RawDataInfo)
 
-    /// Log data from device.
+    /// Indicates log data from the device.
     ///
     /// Emitted when the device sends diagnostic log data.
     case logData(LogDataInfo)
 
-    /// Raw RF log data.
+    /// Indicates raw RF log data.
     ///
     /// Emitted when the device sends low-level radio log data.
     case rxLogData(LogDataInfo)
 
-    /// Control protocol data received.
+    /// Indicates that control protocol data was received.
     ///
     /// Emitted when control protocol messages are received.
     case controlData(ControlDataInfo)
 
-    /// Node discovery response.
+    /// Indicates a node discovery response.
     ///
     /// Emitted in response to ``MeshCoreSession/sendNodeDiscoverRequest(filter:prefixOnly:tag:since:)``.
     case discoverResponse(DiscoverResponse)
 
     // MARK: - Key Management
 
-    /// Private key exported.
+    /// Indicates that a private key was exported.
     ///
     /// Emitted in response to ``MeshCoreSession/exportPrivateKey()`` with the device's private key.
     case privateKey(Data)
 
     // MARK: - Debug and Diagnostics
 
-    /// Packet parsing failed.
+    /// Indicates that packet parsing failed.
     ///
     /// Emitted when the session receives data it cannot parse.
     /// This is a diagnostic event for debugging protocol issues.
-    /// - Parameter data: The raw data that failed to parse.
-    /// - Parameter reason: Human-readable reason for the parse failure.
+    /// 
+    /// - Parameters:
+    ///   - data: The raw data that failed to parse.
+    ///   - reason: A human-readable reason for the parse failure.
     case parseFailure(data: Data, reason: String)
 }
 
 // MARK: - Supporting Types for MeshEvent Associated Values
 
-/// Information returned when a message is successfully queued for sending.
+/// Provides information returned when a message is successfully queued for sending.
 ///
 /// This struct is returned by message-sending methods and contains information
 /// needed to wait for delivery acknowledgement.
 public struct MessageSentInfo: Sendable, Equatable {
+    /// The type of the sent message.
     public let type: UInt8
+    /// The expected acknowledgement data for correlation.
     public let expectedAck: Data
+    /// The suggested timeout in milliseconds to wait for acknowledgement.
     public let suggestedTimeoutMs: UInt32
 
+    /// Initializes a new message sent information object.
+    /// 
+    /// - Parameters:
+    ///   - type: The message type.
+    ///   - expectedAck: The expected acknowledgement data.
+    ///   - suggestedTimeoutMs: The suggested timeout in milliseconds.
     public init(type: UInt8, expectedAck: Data, suggestedTimeoutMs: UInt32) {
         self.type = type
         self.expectedAck = expectedAck
@@ -324,19 +347,36 @@ public struct MessageSentInfo: Sendable, Equatable {
     }
 }
 
-/// A message received from a mesh contact.
+/// Represents a message received from a mesh contact.
 ///
 /// Contact messages are private messages sent directly to your device from
 /// another node in the mesh network.
 public struct ContactMessage: Sendable, Equatable {
+    /// The public key prefix of the sender.
     public let senderPublicKeyPrefix: Data
+    /// The length of the path the message travelled.
     public let pathLength: UInt8
+    /// The type of text content.
     public let textType: UInt8
+    /// The timestamp from the sender.
     public let senderTimestamp: Date
+    /// The cryptographic signature of the message, if available.
     public let signature: Data?
+    /// The actual text content of the message.
     public let text: String
+    /// The signal-to-noise ratio of the received packet.
     public let snr: Double?
 
+    /// Initializes a new contact message.
+    /// 
+    /// - Parameters:
+    ///   - senderPublicKeyPrefix: The sender's public key prefix.
+    ///   - pathLength: The path length.
+    ///   - textType: The text type.
+    ///   - senderTimestamp: The sender's timestamp.
+    ///   - signature: The signature.
+    ///   - text: The message text.
+    ///   - snr: The signal-to-noise ratio.
     public init(
         senderPublicKeyPrefix: Data,
         pathLength: UInt8,
@@ -356,18 +396,33 @@ public struct ContactMessage: Sendable, Equatable {
     }
 }
 
-/// A message received on a broadcast channel.
+/// Represents a message received on a broadcast channel.
 ///
 /// Channel messages are broadcast messages visible to all nodes subscribed
 /// to the same channel.
 public struct ChannelMessage: Sendable, Equatable {
+    /// The index of the channel on which the message was received.
     public let channelIndex: UInt8
+    /// The length of the path the message travelled.
     public let pathLength: UInt8
+    /// The type of text content.
     public let textType: UInt8
+    /// The timestamp from the sender.
     public let senderTimestamp: Date
+    /// The actual text content of the message.
     public let text: String
+    /// The signal-to-noise ratio of the received packet.
     public let snr: Double?
 
+    /// Initializes a new channel message.
+    /// 
+    /// - Parameters:
+    ///   - channelIndex: The channel index.
+    ///   - pathLength: The path length.
+    ///   - textType: The text type.
+    ///   - senderTimestamp: The sender's timestamp.
+    ///   - text: The message text.
+    ///   - snr: The signal-to-noise ratio.
     public init(
         channelIndex: UInt8,
         pathLength: UInt8,
@@ -385,15 +440,24 @@ public struct ChannelMessage: Sendable, Equatable {
     }
 }
 
-/// Configuration information for a broadcast channel.
+/// Defines configuration information for a broadcast channel.
 ///
 /// Channels allow broadcast messaging to all nodes sharing the same channel
 /// name and secret key.
 public struct ChannelInfo: Sendable, Equatable {
+    /// The index of the channel configuration.
     public let index: UInt8
+    /// The human-readable name of the channel.
     public let name: String
+    /// The secret key data used for channel communication.
     public let secret: Data
 
+    /// Initializes a new channel information object.
+    /// 
+    /// - Parameters:
+    ///   - index: The channel index.
+    ///   - name: The channel name.
+    ///   - secret: The channel secret data.
     public init(index: UInt8, name: String, secret: Data) {
         self.index = index
         self.name = name
@@ -401,31 +465,51 @@ public struct ChannelInfo: Sendable, Equatable {
     }
 }
 
-/// Status response from a remote node
+/// Represents a status response from a remote node.
+/// 
 /// Note on offset logic (per Python parsing.py):
 /// - Binary request responses: offset=0, fields start immediately after response code
 /// - Push notification responses: offset=8, pubkey_prefix at bytes 2-8, fields follow
 /// The parser must handle both cases based on whether this is a solicited vs unsolicited response
 public struct StatusResponse: Sendable, Equatable {
+    /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
+    /// The battery level in millivolts.
     public let battery: Int
+    /// The current length of the transmit queue.
     public let txQueueLength: Int
+    /// The noise floor in dBm.
     public let noiseFloor: Int
+    /// The last received signal strength indicator.
     public let lastRSSI: Int
+    /// Total packets received by the node.
     public let packetsReceived: UInt32
+    /// Total packets sent by the node.
     public let packetsSent: UInt32
+    /// Total transmit airtime in seconds.
     public let airtime: UInt32
+    /// The node's uptime in seconds.
     public let uptime: UInt32
+    /// Total flood packets sent.
     public let sentFlood: UInt32
+    /// Total direct packets sent.
     public let sentDirect: UInt32
+    /// Total flood packets received.
     public let receivedFlood: UInt32
+    /// Total direct packets received.
     public let receivedDirect: UInt32
+    /// Total full events recorded.
     public let fullEvents: Int
+    /// The last recorded signal-to-noise ratio.
     public let lastSNR: Double
+    /// Total direct duplicates received.
     public let directDuplicates: Int
+    /// Total flood duplicates received.
     public let floodDuplicates: Int
+    /// Total receive airtime in seconds.
     public let rxAirtime: UInt32
 
+    /// Initializes a new status response object.
     public init(
         publicKeyPrefix: Data,
         battery: Int,
@@ -467,17 +551,30 @@ public struct StatusResponse: Sendable, Equatable {
     }
 }
 
+/// Represents core device statistics.
+/// 
 /// Core stats (9 bytes payload, little-endian per Python reader.py):
 /// - Bytes 0-1: UInt16 - battery_mv
 /// - Bytes 2-5: UInt32 - uptime_secs
 /// - Bytes 6-7: UInt16 - errors
 /// - Byte 8: UInt8 - queue_len
 public struct CoreStats: Sendable, Equatable {
+    /// The battery level in millivolts.
     public let batteryMV: UInt16
+    /// The device uptime in seconds.
     public let uptimeSeconds: UInt32
+    /// Total count of errors encountered.
     public let errors: UInt16
+    /// The current length of the transmit queue.
     public let queueLength: UInt8
 
+    /// Initializes a new core statistics object.
+    /// 
+    /// - Parameters:
+    ///   - batteryMV: The battery level.
+    ///   - uptimeSeconds: The uptime in seconds.
+    ///   - errors: The error count.
+    ///   - queueLength: The queue length.
     public init(batteryMV: UInt16, uptimeSeconds: UInt32, errors: UInt16, queueLength: UInt8) {
         self.batteryMV = batteryMV
         self.uptimeSeconds = uptimeSeconds
@@ -486,6 +583,8 @@ public struct CoreStats: Sendable, Equatable {
     }
 }
 
+/// Represents radio statistics.
+/// 
 /// Radio stats (12 bytes payload, little-endian per Python reader.py):
 /// - Bytes 0-1: Int16 - noise_floor (dBm)
 /// - Byte 2: Int8 - last_rssi (dBm)
@@ -493,12 +592,25 @@ public struct CoreStats: Sendable, Equatable {
 /// - Bytes 4-7: UInt32 - tx_air_secs
 /// - Bytes 8-11: UInt32 - rx_air_secs
 public struct RadioStats: Sendable, Equatable {
+    /// The noise floor in dBm.
     public let noiseFloor: Int16
+    /// The last received signal strength indicator in dBm.
     public let lastRSSI: Int8
+    /// The last recorded signal-to-noise ratio.
     public let lastSNR: Double
+    /// Total transmit airtime in seconds.
     public let txAirtimeSeconds: UInt32
+    /// Total receive airtime in seconds.
     public let rxAirtimeSeconds: UInt32
 
+    /// Initializes a new radio statistics object.
+    /// 
+    /// - Parameters:
+    ///   - noiseFloor: The noise floor.
+    ///   - lastRSSI: The last RSSI.
+    ///   - lastSNR: The last SNR.
+    ///   - txAirtimeSeconds: Transmit airtime.
+    ///   - rxAirtimeSeconds: Receive airtime.
     public init(
         noiseFloor: Int16,
         lastRSSI: Int8,
@@ -514,6 +626,8 @@ public struct RadioStats: Sendable, Equatable {
     }
 }
 
+/// Represents packet statistics.
+/// 
 /// Packet stats (24 bytes payload, little-endian per Python reader.py):
 /// - Bytes 0-3: UInt32 - recv
 /// - Bytes 4-7: UInt32 - sent
@@ -522,13 +636,20 @@ public struct RadioStats: Sendable, Equatable {
 /// - Bytes 16-19: UInt32 - flood_rx
 /// - Bytes 20-23: UInt32 - direct_rx
 public struct PacketStats: Sendable, Equatable {
+    /// Total packets received.
     public let received: UInt32
+    /// Total packets sent.
     public let sent: UInt32
+    /// Total flood packets transmitted.
     public let floodTx: UInt32
+    /// Total direct packets transmitted.
     public let directTx: UInt32
+    /// Total flood packets received.
     public let floodRx: UInt32
+    /// Total direct packets received.
     public let directRx: UInt32
 
+    /// Initializes a new packet statistics object.
     public init(
         received: UInt32,
         sent: UInt32,
@@ -546,14 +667,20 @@ public struct PacketStats: Sendable, Equatable {
     }
 }
 
-/// Trace route information
+/// Represents trace route information.
 public struct TraceInfo: Sendable, Equatable {
+    /// The tag for request correlation.
     public let tag: UInt32
+    /// The authentication code for the trace request.
     public let authCode: UInt32
+    /// Configuration flags for the trace.
     public let flags: UInt8
+    /// The length of the recorded path.
     public let pathLength: UInt8
+    /// The list of nodes in the trace path.
     public let path: [TraceNode]
 
+    /// Initializes a new trace information object.
     public init(tag: UInt32, authCode: UInt32, flags: UInt8, pathLength: UInt8, path: [TraceNode]) {
         self.tag = tag
         self.authCode = authCode
@@ -563,23 +690,39 @@ public struct TraceInfo: Sendable, Equatable {
     }
 }
 
-/// A node in a trace path
+/// Represents a node in a trace path.
 public struct TraceNode: Sendable, Equatable {
+    /// The hash of the node's public key, if available.
     public let hash: UInt8?
+    /// The signal-to-noise ratio at this hop.
     public let snr: Double
 
+    /// Initializes a new trace node object.
+    /// 
+    /// - Parameters:
+    ///   - hash: The node hash.
+    ///   - snr: The signal-to-noise ratio.
     public init(hash: UInt8?, snr: Double) {
         self.hash = hash
         self.snr = snr
     }
 }
 
-/// Path discovery information
+/// Represents path discovery information.
 public struct PathInfo: Sendable, Equatable {
+    /// The public key prefix of the node for which the path was discovered.
     public let publicKeyPrefix: Data
+    /// The outbound path data.
     public let outPath: Data
+    /// The inbound path data.
     public let inPath: Data
 
+    /// Initializes a new path information object.
+    /// 
+    /// - Parameters:
+    ///   - publicKeyPrefix: The node's public key prefix.
+    ///   - outPath: The outbound path.
+    ///   - inPath: The inbound path.
     public init(publicKeyPrefix: Data, outPath: Data, inPath: Data) {
         self.publicKeyPrefix = publicKeyPrefix
         self.outPath = outPath
@@ -587,12 +730,21 @@ public struct PathInfo: Sendable, Equatable {
     }
 }
 
-/// Login success information
+/// Represents login success information.
 public struct LoginInfo: Sendable, Equatable {
+    /// The permissions granted after successful login.
     public let permissions: UInt8
+    /// A boolean indicating whether the user has administrator privileges.
     public let isAdmin: Bool
+    /// The public key prefix of the node where the login occurred.
     public let publicKeyPrefix: Data
 
+    /// Initializes a new login information object.
+    /// 
+    /// - Parameters:
+    ///   - permissions: The granted permissions.
+    ///   - isAdmin: Admin status.
+    ///   - publicKeyPrefix: The node's public key prefix.
     public init(permissions: UInt8, isAdmin: Bool, publicKeyPrefix: Data) {
         self.permissions = permissions
         self.isAdmin = isAdmin
@@ -600,17 +752,26 @@ public struct LoginInfo: Sendable, Equatable {
     }
 }
 
-/// Telemetry response from a remote node
+/// Represents a telemetry response from a remote node.
 public struct TelemetryResponse: Sendable, Equatable {
+    /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
+    /// The optional tag for request correlation.
     public let tag: Data?
+    /// The raw telemetry data payload.
     public let rawData: Data
 
-    /// Parsed LPP data points from the raw telemetry data
+    /// Returns the parsed LPP data points from the raw telemetry data.
     public var dataPoints: [LPPDataPoint] {
         LPPDecoder.decode(rawData)
     }
 
+    /// Initializes a new telemetry response object.
+    /// 
+    /// - Parameters:
+    ///   - publicKeyPrefix: The node's public key prefix.
+    ///   - tag: The correlation tag.
+    ///   - rawData: The raw payload.
     public init(publicKeyPrefix: Data, tag: Data?, rawData: Data) {
         self.publicKeyPrefix = publicKeyPrefix
         self.tag = tag
@@ -618,12 +779,16 @@ public struct TelemetryResponse: Sendable, Equatable {
     }
 }
 
-/// MMA (Min/Max/Average) response
+/// Represents a MMA (Min/Max/Average) response.
 public struct MMAResponse: Sendable, Equatable {
+    /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
+    /// The tag for request correlation.
     public let tag: Data
+    /// The list of MMA entries.
     public let data: [MMAEntry]
 
+    /// Initializes a new MMA response object.
     public init(publicKeyPrefix: Data, tag: Data, data: [MMAEntry]) {
         self.publicKeyPrefix = publicKeyPrefix
         self.tag = tag
@@ -631,14 +796,20 @@ public struct MMAResponse: Sendable, Equatable {
     }
 }
 
-/// An entry in MMA response data
+/// Represents an entry in MMA response data.
 public struct MMAEntry: Sendable, Equatable {
+    /// The sensor channel associated with this entry.
     public let channel: UInt8
+    /// The type of data recorded.
     public let type: String
+    /// The minimum recorded value.
     public let min: Double
+    /// The maximum recorded value.
     public let max: Double
+    /// The average recorded value.
     public let avg: Double
 
+    /// Initializes a new MMA entry object.
     public init(channel: UInt8, type: String, min: Double, max: Double, avg: Double) {
         self.channel = channel
         self.type = type
@@ -648,12 +819,16 @@ public struct MMAEntry: Sendable, Equatable {
     }
 }
 
-/// ACL (Access Control List) response
+/// Represents an ACL (Access Control List) response.
 public struct ACLResponse: Sendable, Equatable {
+    /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
+    /// The tag for request correlation.
     public let tag: Data
+    /// The list of ACL entries.
     public let entries: [ACLEntry]
 
+    /// Initializes a new ACL response object.
     public init(publicKeyPrefix: Data, tag: Data, entries: [ACLEntry]) {
         self.publicKeyPrefix = publicKeyPrefix
         self.tag = tag
@@ -661,26 +836,35 @@ public struct ACLResponse: Sendable, Equatable {
     }
 }
 
-/// An entry in ACL response data
+/// Represents an entry in ACL response data.
 public struct ACLEntry: Sendable, Equatable {
+    /// The public key prefix affected by this ACL entry.
     public let keyPrefix: Data
+    /// The permissions granted to the key prefix.
     public let permissions: UInt8
 
+    /// Initializes a new ACL entry object.
     public init(keyPrefix: Data, permissions: UInt8) {
         self.keyPrefix = keyPrefix
         self.permissions = permissions
     }
 }
 
-/// Neighbours response from a remote node
+/// Represents a neighbours response from a remote node.
+/// 
 /// Note: Parser context must include `pubkey_prefix_length` for proper neighbour parsing
-/// (typically 6 bytes, but configurable in some firmware versions)
+/// (typically 6 bytes, but configurable in some firmware versions).
 public struct NeighboursResponse: Sendable, Equatable {
+    /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
+    /// The tag for request correlation.
     public let tag: Data
+    /// The total number of neighbours known to the node.
     public let totalCount: Int
+    /// The list of neighbours returned in this response.
     public let neighbours: [Neighbour]
 
+    /// Initializes a new neighbours response object.
     public init(publicKeyPrefix: Data, tag: Data, totalCount: Int, neighbours: [Neighbour]) {
         self.publicKeyPrefix = publicKeyPrefix
         self.tag = tag
@@ -689,12 +873,16 @@ public struct NeighboursResponse: Sendable, Equatable {
     }
 }
 
-/// A neighbour node
+/// Represents a neighbour node.
 public struct Neighbour: Sendable, Equatable {
+    /// The public key prefix of the neighbour node.
     public let publicKeyPrefix: Data
+    /// How many seconds ago the neighbour was last seen.
     public let secondsAgo: Int
+    /// The signal-to-noise ratio of the last communication with this neighbour.
     public let snr: Double
 
+    /// Initializes a new neighbour object.
     public init(publicKeyPrefix: Data, secondsAgo: Int, snr: Double) {
         self.publicKeyPrefix = publicKeyPrefix
         self.secondsAgo = secondsAgo
@@ -702,12 +890,16 @@ public struct Neighbour: Sendable, Equatable {
     }
 }
 
-/// Raw data received from device
+/// Represents raw data received from the device.
 public struct RawDataInfo: Sendable, Equatable {
+    /// The signal-to-noise ratio of the received packet.
     public let snr: Double
+    /// The received signal strength indicator in dBm.
     public let rssi: Int
+    /// The raw payload data.
     public let payload: Data
 
+    /// Initializes a new raw data info object.
     public init(snr: Double, rssi: Int, payload: Data) {
         self.snr = snr
         self.rssi = rssi
@@ -715,12 +907,16 @@ public struct RawDataInfo: Sendable, Equatable {
     }
 }
 
-/// Log data from device
+/// Represents log data received from the device.
 public struct LogDataInfo: Sendable, Equatable {
+    /// The optional signal-to-noise ratio associated with the log entry.
     public let snr: Double?
+    /// The optional received signal strength indicator associated with the log entry.
     public let rssi: Int?
+    /// The raw log payload data.
     public let payload: Data
 
+    /// Initializes a new log data info object.
     public init(snr: Double?, rssi: Int?, payload: Data) {
         self.snr = snr
         self.rssi = rssi
@@ -728,14 +924,20 @@ public struct LogDataInfo: Sendable, Equatable {
     }
 }
 
-/// Control data from device
+/// Represents control protocol data received from the device.
 public struct ControlDataInfo: Sendable, Equatable {
+    /// The signal-to-noise ratio of the received packet.
     public let snr: Double
+    /// The received signal strength indicator in dBm.
     public let rssi: Int
+    /// The path length the control packet travelled.
     public let pathLength: UInt8
+    /// The type of control protocol payload.
     public let payloadType: UInt8
+    /// The raw payload data.
     public let payload: Data
 
+    /// Initializes a new control data info object.
     public init(snr: Double, rssi: Int, pathLength: UInt8, payloadType: UInt8, payload: Data) {
         self.snr = snr
         self.rssi = rssi
@@ -745,16 +947,24 @@ public struct ControlDataInfo: Sendable, Equatable {
     }
 }
 
-/// Node discovery response
+/// Represents a node discovery response.
 public struct DiscoverResponse: Sendable, Equatable {
+    /// The type of the discovered node.
     public let nodeType: UInt8
+    /// The inbound signal-to-noise ratio.
     public let snrIn: Double
+    /// The signal-to-noise ratio.
     public let snr: Double
+    /// The received signal strength indicator in dBm.
     public let rssi: Int
+    /// The path length to the discovered node.
     public let pathLength: UInt8
+    /// The tag for request correlation.
     public let tag: Data
+    /// The full public key of the discovered node.
     public let publicKey: Data
 
+    /// Initializes a new discovery response object.
     public init(
         nodeType: UInt8,
         snrIn: Double,
@@ -776,7 +986,7 @@ public struct DiscoverResponse: Sendable, Equatable {
 
 // MARK: - Connection State
 
-/// The current connection state of a MeshCore session.
+/// Represents the current connection state of a MeshCore session.
 ///
 /// Use this enum to update your UI based on connection status. Subscribe to
 /// state changes via ``MeshCoreSession/connectionState``.
@@ -800,32 +1010,43 @@ public struct DiscoverResponse: Sendable, Equatable {
 /// }
 /// ```
 public enum ConnectionState: Sendable, Equatable {
+    /// Indicates the session is disconnected.
     case disconnected
+    /// Indicates the session is attempting to connect.
     case connecting
+    /// Indicates the session is successfully connected.
     case connected
+    /// Indicates the session is attempting to reconnect after a failure.
     case reconnecting(attempt: Int)
+    /// Indicates the session connection failed with a specific error.
     case failed(MeshTransportError)
 }
 
-/// Errors that can occur at the transport layer.
+/// Represents errors that can occur at the transport layer.
 ///
 /// These errors indicate problems with the underlying transport connection
 /// (e.g., Bluetooth LE), rather than protocol-level errors.
 public enum MeshTransportError: Error, Sendable, Equatable {
+    /// Indicates the transport is not connected.
     case notConnected
+    /// Indicates a connection attempt failed with a specific reason.
     case connectionFailed(String)
+    /// Indicates sending data failed with a specific reason.
     case sendFailed(String)
+    /// Indicates the target device could not be found.
     case deviceNotFound
+    /// Indicates a required service was not found on the device.
     case serviceNotFound
+    /// Indicates a required characteristic was not found on the device.
     case characteristicNotFound
 }
 
 // MARK: - Event Attributes for Filtering
 
 extension MeshEvent {
-    /// Attributes for event filtering.
+    /// Returns attributes for event filtering.
     ///
-    /// Returns a dictionary of key-value pairs that can be used to filter events.
+    /// Provides a dictionary of key-value pairs that can be used to filter events.
     /// This enables type-safe filtering via ``EventFilter`` without runtime type checking.
     ///
     /// - Note: Not all events have attributes. Events without filterable properties

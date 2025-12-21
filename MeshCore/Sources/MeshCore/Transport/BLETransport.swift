@@ -9,8 +9,41 @@ private enum UARTUUID {
     static let tx = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")  // Read from device
 }
 
-/// BLE transport implementation using CoreBluetooth
-/// Uses AsyncStream for Swift 6 concurrency safety
+/// Implements a Bluetooth Low Energy transport for MeshCore devices.
+///
+/// `BLETransport` uses the Nordic UART Service (NUS) to provide a serial-like communication
+/// channel over BLE. It manages the full lifecycle of a BLE connection, from scanning and
+/// discovery to service and characteristic negotiation.
+///
+/// ## State Management
+///
+/// This implementation is an `actor`, ensuring that all mutable state (connection status,
+/// peripheral references, and characteristics) is isolated and protected from concurrent
+/// access. It uses modern Swift concurrency patterns, including `AsyncStream` for data
+/// reception and checked continuations for bridging delegate-based callbacks to `async` methods.
+///
+/// ## Nordic UART Service (NUS)
+///
+/// The transport relies on two specific characteristics:
+/// - **RX (Write)**: Used to send data packets to the MeshCore device.
+/// - **TX (Notify)**: Used to receive data packets from the MeshCore device via notifications.
+///
+/// ## Example
+///
+/// ```swift
+/// let transport = BLETransport()
+/// try await transport.connect()
+///
+/// // Start listening for data
+/// Task {
+///     for await data in await transport.receivedData {
+///         print("Received \(data.count) bytes")
+///     }
+/// }
+///
+/// // Send data
+/// try await transport.send(Data([0x01, 0x02, 0x03]))
+/// ```
 public actor BLETransport: MeshTransport {
 
     private let logger = Logger(subsystem: "MeshCore", category: "BLETransport")
@@ -23,21 +56,24 @@ public actor BLETransport: MeshTransport {
     private let dataStream: AsyncStream<Data>
     private let dataContinuation: AsyncStream<Data>.Continuation
 
+    /// The current connection state of the transport.
     public private(set) var isConnected = false
+    
+    /// The detailed connection state, including failure reasons.
     public private(set) var connectionState: ConnectionState = .disconnected
 
+    /// An asynchronous stream of raw data received from the BLE device.
     public var receivedData: AsyncStream<Data> { dataStream }
 
-    /// Creates a BLE transport for MeshCore device communication.
+    /// Initializes a new BLE transport.
     ///
-    /// - Parameter address: Optional BLE address (UUID string) to connect to a specific device.
-    ///                      If nil, scans for any device advertising the Nordic UART Service
-    ///                      with a name starting with "MeshCore".
+    /// - Parameter address: An optional BLE peripheral identifier (UUID string). If provided,
+    ///   the transport will attempt to connect only to that specific device. If `nil`, it scans
+    ///   for any device advertising the Nordic UART Service with a name starting with "MeshCore".
     ///
-    /// - Note: This transport does not handle automatic reconnection. CoreBluetooth's
-    ///         `connect(_:options:)` persists connection intent, and apps should implement
-    ///         their own reconnection policy by observing `connectionState` and calling
-    ///         `connect()` again when appropriate.
+    /// - Note: This transport does not handle automatic reconnection. Reconnection logic should
+    ///   be implemented at a higher level (e.g., in ``MeshCoreSession``) by observing
+    ///   `connectionState`.
     public init(address: String? = nil) {
         self.address = address
 
@@ -48,6 +84,19 @@ public actor BLETransport: MeshTransport {
         self.delegate = BLEDelegate(dataContinuation: continuation)
     }
 
+    /// Scans for and connects to a MeshCore BLE device.
+    ///
+    /// This method performs the following steps:
+    /// 1. Waits for the Bluetooth hardware to be powered on.
+    /// 2. Scans for peripherals matching the criteria (name prefix or address).
+    /// 3. Connects to the discovered peripheral.
+    /// 4. Discovers the Nordic UART Service and its characteristics.
+    /// 5. Enables notifications on the TX characteristic.
+    ///
+    /// - Throws:
+    ///   - ``MeshTransportError/connectionFailed(_:)`` if Bluetooth is unavailable or connection fails.
+    ///   - ``MeshTransportError/deviceNotFound`` if no matching device is found within the timeout.
+    ///   - ``MeshTransportError/serviceNotFound`` if the device does not support the NUS service.
     public func connect() async throws {
         logger.info("Connecting to BLE device...")
         connectionState = .connecting
@@ -71,6 +120,10 @@ public actor BLETransport: MeshTransport {
         logger.info("BLE connection established")
     }
 
+    /// Disconnects from the current BLE device and stops all streaming.
+    ///
+    /// Closes the peripheral connection, updates the connection state, and finishes
+    /// the data stream.
     public func disconnect() async {
         if let peripheral = peripheral {
             delegate.centralManager.cancelPeripheralConnection(peripheral)
@@ -81,6 +134,14 @@ public actor BLETransport: MeshTransport {
         logger.info("BLE disconnected")
     }
 
+    /// Sends raw data to the device using the NUS RX characteristic.
+    ///
+    /// Data is sent using the `.withResponse` write type to ensure delivery.
+    ///
+    /// - Parameter data: The raw bytes to transmit.
+    /// - Throws:
+    ///   - ``MeshTransportError/notConnected`` if the transport is not currently connected.
+    ///   - ``MeshTransportError/sendFailed(_:)`` if the write operation fails.
     public func send(_ data: Data) async throws {
         guard isConnected else {
             throw MeshTransportError.notConnected
@@ -113,7 +174,14 @@ public actor BLETransport: MeshTransport {
     }
 }
 
-/// @unchecked Sendable: CBCentralManagerDelegate requires NSObject. All mutable state protected by continuationLock.
+/// A private delegate class that handles CoreBluetooth callbacks and bridges them to Swift concurrency.
+///
+/// This class is internal to `BLETransport` and manages the complex interactions with `CBCentralManager`
+/// and `CBPeripheral`. It uses thread-safe continuations to allow the actor to wait for BLE events
+/// asynchronously.
+///
+/// - Note: Marked as `@unchecked Sendable` because it inherits from `NSObject` (as required by
+///   BLE delegate protocols) but protects its mutable continuation state using `OSAllocatedUnfairLock`.
 private final class BLEDelegate: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, @unchecked Sendable {
     let centralManager: CBCentralManager
     let disconnectionEvents: AsyncStream<Void>

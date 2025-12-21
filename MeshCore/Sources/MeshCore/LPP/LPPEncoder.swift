@@ -47,6 +47,8 @@ public struct LPPEncoder: Sendable {
     }
 
     /// Returns the encoded payload.
+    ///
+    /// - Returns: A `Data` object containing the LPP-encoded payload.
     public func encode() -> Data {
         buffer
     }
@@ -56,8 +58,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a digital input value.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel (0-255)
-    ///   - value: Digital value (0 or 1)
+    ///   - channel: Sensor channel (0-255).
+    ///   - value: Digital value (0 or 1).
     public mutating func addDigitalInput(channel: UInt8, value: UInt8) {
         buffer.append(channel)
         buffer.append(LPPSensorType.digitalInput.rawValue)
@@ -67,8 +69,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a digital output value.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel (0-255)
-    ///   - value: Digital value (0 or 1)
+    ///   - channel: Sensor channel (0-255).
+    ///   - value: Digital value (0 or 1).
     public mutating func addDigitalOutput(channel: UInt8, value: UInt8) {
         buffer.append(channel)
         buffer.append(LPPSensorType.digitalOutput.rawValue)
@@ -80,8 +82,8 @@ public struct LPPEncoder: Sendable {
     /// Adds an analog input value.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - value: Analog value (0.01 resolution, range -327.68 to 327.67)
+    ///   - channel: Sensor channel (0-255).
+    ///   - value: Analog value (0.01 resolution, range -327.68 to 327.67).
     public mutating func addAnalogInput(channel: UInt8, value: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.analogInput.rawValue)
@@ -91,8 +93,8 @@ public struct LPPEncoder: Sendable {
     /// Adds an analog output value.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - value: Analog value (0.01 resolution, range -327.68 to 327.67)
+    ///   - channel: Sensor channel (0-255).
+    ///   - value: Analog value (0.01 resolution, range -327.68 to 327.67).
     public mutating func addAnalogOutput(channel: UInt8, value: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.analogOutput.rawValue)
@@ -104,8 +106,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a temperature reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - celsius: Temperature in Celsius (0.1 resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - celsius: Temperature in Celsius (0.1 resolution).
     public mutating func addTemperature(channel: UInt8, celsius: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.temperature.rawValue)
@@ -115,8 +117,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a humidity reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - percent: Relative humidity 0-100 (0.5 resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - percent: Relative humidity 0-100 (0.5 resolution).
     public mutating func addHumidity(channel: UInt8, percent: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.humidity.rawValue)
@@ -126,8 +128,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a barometric pressure reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - hPa: Pressure in hectopascals (0.1 resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - hPa: Pressure in hectopascals (0.1 resolution).
     public mutating func addBarometer(channel: UInt8, hPa: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.barometer.rawValue)
@@ -137,8 +139,8 @@ public struct LPPEncoder: Sendable {
     /// Adds an illuminance reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - lux: Illuminance in lux (1 lux resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - lux: Illuminance in lux (1 lux resolution).
     public mutating func addIlluminance(channel: UInt8, lux: UInt16) {
         buffer.append(channel)
         buffer.append(LPPSensorType.illuminance.rawValue)
@@ -150,10 +152,10 @@ public struct LPPEncoder: Sendable {
     /// Adds an accelerometer reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - x: X-axis acceleration in G (0.001 resolution)
-    ///   - y: Y-axis acceleration in G
-    ///   - z: Z-axis acceleration in G
+    ///   - channel: Sensor channel (0-255).
+    ///   - x: X-axis acceleration in G (0.001 resolution).
+    ///   - y: Y-axis acceleration in G.
+    ///   - z: Z-axis acceleration in G.
     public mutating func addAccelerometer(channel: UInt8, x: Double, y: Double, z: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.accelerometer.rawValue)
@@ -165,10 +167,10 @@ public struct LPPEncoder: Sendable {
     /// Adds a gyrometer reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - x: X-axis rotation in deg/s (0.01 resolution)
-    ///   - y: Y-axis rotation in deg/s
-    ///   - z: Z-axis rotation in deg/s
+    ///   - channel: Sensor channel (0-255).
+    ///   - x: X-axis rotation in deg/s (0.01 resolution).
+    ///   - y: Y-axis rotation in deg/s.
+    ///   - z: Z-axis rotation in deg/s.
     public mutating func addGyrometer(channel: UInt8, x: Double, y: Double, z: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.gyrometer.rawValue)
@@ -182,10 +184,10 @@ public struct LPPEncoder: Sendable {
     /// Adds a GPS location.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - latitude: Latitude in degrees (-90 to 90, 0.0001 resolution)
-    ///   - longitude: Longitude in degrees (-180 to 180, 0.0001 resolution)
-    ///   - altitude: Altitude in meters (0.01 resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - latitude: Latitude in degrees (-90 to 90, 0.0001 resolution).
+    ///   - longitude: Longitude in degrees (-180 to 180, 0.0001 resolution).
+    ///   - altitude: Altitude in meters (0.01 resolution).
     public mutating func addGPS(channel: UInt8, latitude: Double, longitude: Double, altitude: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.gps.rawValue)
@@ -199,8 +201,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a voltage reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - volts: Voltage in volts (0.01V resolution per MeshCore firmware)
+    ///   - channel: Sensor channel (0-255).
+    ///   - volts: Voltage in volts (0.01V resolution per MeshCore firmware).
     public mutating func addVoltage(channel: UInt8, volts: Double) {
         buffer.append(channel)
         buffer.append(LPPSensorType.voltage.rawValue)
@@ -211,8 +213,8 @@ public struct LPPEncoder: Sendable {
     /// Adds a current reading.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - milliamps: Current in milliamps (0.001A resolution)
+    ///   - channel: Sensor channel (0-255).
+    ///   - milliamps: Current in milliamps (0.001A resolution).
     public mutating func addCurrent(channel: UInt8, milliamps: UInt16) {
         buffer.append(channel)
         buffer.append(LPPSensorType.current.rawValue)
@@ -224,9 +226,9 @@ public struct LPPEncoder: Sendable {
     /// Adds a raw data point.
     ///
     /// - Parameters:
-    ///   - channel: Sensor channel
-    ///   - type: Sensor type
-    ///   - data: Raw encoded data (must match type's dataSize)
+    ///   - channel: Sensor channel (0-255).
+    ///   - type: Sensor type.
+    ///   - data: Raw encoded data (must match type's dataSize).
     public mutating func addRaw(channel: UInt8, type: LPPSensorType, data: Data) {
         precondition(data.count == type.dataSize, "Data size must match sensor type")
         buffer.append(channel)

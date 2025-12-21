@@ -98,7 +98,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private var _connectionState: ConnectionState = .disconnected
     private var connectionStateContinuations: [UUID: AsyncStream<ConnectionState>.Continuation] = [:]
 
-    /// Observable connection state stream for UI binding
+    /// Provides an observable connection state stream for UI binding.
+    ///
+    /// The stream yields the current state immediately upon subscription,
+    /// and then yields subsequent state changes as they occur.
     public var connectionState: AsyncStream<ConnectionState> {
         AsyncStream { continuation in
             let id = UUID()
@@ -137,7 +140,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameters:
     ///   - transport: The transport layer for device communication (e.g., ``BLETransport``).
     ///   - configuration: Session configuration options. Defaults to ``SessionConfiguration/default``.
-    ///   - clock: Clock for timing operations. Defaults to `ContinuousClock` for production use.
+    ///   - clock: The clock for timing operations. Defaults to `ContinuousClock` for production use.
     ///            Inject a test clock for deterministic testing of timeouts.
     public init(
         transport: any MeshTransport,
@@ -157,7 +160,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// 3. Receives device self-info (public key, name, capabilities)
     /// 4. Starts the background receive loop for incoming data
     ///
-    /// After this method returns successfully, the session is ready for use.
+    /// The session becomes ready for use after this method returns successfully.
     /// Subscribe to events via ``events()`` to receive incoming messages and notifications.
     ///
     /// - Throws: ``MeshTransportError`` if the transport connection fails.
@@ -205,22 +208,16 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Subscribes to all events from the device.
     ///
-    /// Returns an `AsyncStream` that yields ``MeshEvent`` values as they are received.
-    /// The stream continues until the session is stopped or the subscription is cancelled.
+    /// Each subscriber receives all events independently. Supports bounded buffering of up to 100 events.
     ///
-    /// Multiple subscribers can exist simultaneously; each receives all events independently.
-    ///
-    /// - Returns: An async stream of mesh events.
-    ///
-    /// - Note: The stream uses bounded buffering (100 events). If a subscriber processes
-    ///   events slower than they arrive, older events may be dropped.
+    /// - Returns: An async stream of mesh events that yields ``MeshEvent`` values as they are received.
     public func events() async -> AsyncStream<MeshEvent> {
         await dispatcher.subscribe()
     }
 
     // MARK: - Contact Management
 
-    /// The currently cached contacts.
+    /// Returns the currently cached contacts.
     ///
     /// This property returns contacts from the local cache without making a device request.
     /// Use ``getContacts(since:)`` or ``ensureContacts(force:)`` to refresh from the device.
@@ -228,7 +225,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         contactManager.cachedContacts
     }
 
-    /// Pending contacts awaiting confirmation.
+    /// Returns pending contacts awaiting confirmation.
     ///
     /// These are contacts that have been discovered but not yet added to the device's
     /// contact list. Use ``addContact(_:)`` to add them permanently.
@@ -236,7 +233,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         contactManager.cachedPendingContacts
     }
 
-    /// The last known device time.
+    /// Returns the last known device time.
     ///
     /// This is updated when the device reports its current time. Returns `nil` if
     /// the time has not been queried. Use ``getTime()`` to explicitly request it.
@@ -282,7 +279,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         contactManager.getByKeyPrefix(prefix)
     }
 
-    /// Whether the contact cache needs refreshing.
+    /// Indicates whether the contact cache needs refreshing.
     ///
     /// Returns `true` if contacts have been modified since the last fetch,
     /// or if the cache has never been populated.
@@ -364,13 +361,13 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     // MARK: - Event Waiting
 
-    /// Wait for a specific event type with optional filtering.
+    /// Waits for a specific event type with optional filtering.
     ///
-    /// Note: For command/response patterns, prefer `sendAndWait` to avoid race conditions.
+    /// Prefer ``sendAndWait(_:matching:timeout:)`` for command/response patterns to avoid race conditions.
     ///
     /// - Parameters:
     ///   - predicate: A closure that returns `true` for the event you're waiting for.
-    ///   - timeout: Maximum time to wait. Uses `configuration.defaultTimeout` if nil.
+    ///   - timeout: Maximum time to wait in seconds. Uses `configuration.defaultTimeout` if `nil`.
     /// - Returns: The matching event, or `nil` if timeout occurred.
     public func waitForEvent(
         matching predicate: @escaping @Sendable (MeshEvent) -> Bool,
@@ -400,14 +397,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Wait for an event matching an ``EventFilter`` with timeout.
+    /// Waits for an event matching an ``EventFilter`` with timeout.
     ///
     /// This method subscribes to events using a filtered subscription for efficiency,
     /// then waits for the first matching event or timeout.
     ///
     /// - Parameters:
     ///   - filter: The event filter to apply.
-    ///   - timeout: Maximum time to wait. Uses `configuration.defaultTimeout` if nil.
+    ///   - timeout: Maximum time to wait. Uses `configuration.defaultTimeout` if `nil`.
     /// - Returns: The matching event, or `nil` if timeout occurred.
     ///
     /// ## Example
@@ -448,8 +445,16 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Send a command and wait for a matching response (race-condition safe)
-    /// Subscribes to events BEFORE sending to ensure no responses are missed
+    /// Sends a command and waits for a matching response.
+    ///
+    /// This method avoids race conditions by subscribing to events before sending the command.
+    ///
+    /// - Parameters:
+    ///   - data: The command data to send.
+    ///   - predicate: A closure that matches and extracts the desired result from an event.
+    ///   - timeout: The maximum time to wait for a response. Defaults to `configuration.defaultTimeout`.
+    /// - Returns: The extracted result of type `T`.
+    /// - Throws: ``MeshCoreError/timeout`` if no matching event is received within the timeout.
     public func sendAndWait<T: Sendable>(
         _ data: Data,
         matching predicate: @escaping @Sendable (MeshEvent) -> T?,
@@ -489,14 +494,15 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Send a command and wait for either a success response or error
-    /// Subscribes to events BEFORE sending to ensure no responses are missed
+    /// Sends a command and waits for either a success response or error.
+    ///
     /// - Parameters:
-    ///   - data: Command data to send
-    ///   - successPredicate: Predicate to match success events and extract result
-    ///   - timeout: Optional timeout override
-    /// - Returns: The extracted result on success
-    /// - Throws: MeshCoreError.deviceError on error response, MeshCoreError.timeout on timeout
+    ///   - data: Command data to send.
+    ///   - successPredicate: Predicate to match success events and extract result.
+    ///   - timeout: Optional timeout override.
+    /// - Returns: The extracted result on success.
+    /// - Throws: ``MeshCoreError/deviceError(code:)`` on error response,
+    ///           ``MeshCoreError/timeout`` on timeout.
     private func sendAndWaitWithError<T: Sendable>(
         _ data: Data,
         matching successPredicate: @escaping @Sendable (MeshEvent) -> T?,
@@ -542,8 +548,13 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     // MARK: - Commands
 
-    /// Send appstart command
-    /// - Throws: MeshCoreError.timeout if no response received
+    /// Sends the app-start command to initialize communication with the device.
+    ///
+    /// This is typically called automatically by ``start()``.
+    ///
+    /// - Returns: Information about the device itself.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func sendAppStart() async throws -> SelfInfo {
         let data = PacketBuilder.appStart(clientId: configuration.clientIdentifier)
         return try await sendAndWaitWithError(data) { event in
@@ -552,8 +563,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Query device capabilities
-    /// - Throws: MeshCoreError.timeout or MeshCoreError.deviceError
+    /// Queries the device for its capabilities and system information.
+    ///
+    /// - Returns: Information about the device hardware, firmware, and supported features.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func queryDevice() async throws -> DeviceCapabilities {
         let data = PacketBuilder.deviceQuery()
         return try await sendAndWaitWithError(data) { event in
@@ -562,8 +576,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Get battery information
-    /// - Throws: MeshCoreError.timeout or MeshCoreError.deviceError
+    /// Retrieves the current battery status from the device.
+    ///
+    /// - Returns: Battery voltage and charge level information.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getBattery() async throws -> BatteryInfo {
         let data = PacketBuilder.getBattery()
         return try await sendAndWaitWithError(data) { event in
@@ -647,16 +664,27 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return try await sendMessage(to: publicKey, text: text, timestamp: timestamp)
     }
 
-    /// Send message with automatic retry and path reset
+    /// Sends a message with automatic retry logic and optional path reset.
+    ///
+    /// This method attempts to send a message multiple times. If initial attempts fail,
+    /// it can optionally reset the routing path to "flood" mode to increase delivery
+    /// probability.
+    ///
     /// - Parameters:
-    ///   - destination: Full 32-byte public key (required for path reset)
-    ///   - text: Message text
-    ///   - timestamp: Message timestamp
-    ///   - maxAttempts: Maximum total attempts (default: 3)
-    ///   - floodAfter: Reset to flood path after this many failed attempts (default: 2)
-    ///   - maxFloodAttempts: Maximum attempts while in flood mode (default: 2)
-    ///   - timeout: ACK timeout per attempt (nil = use suggested timeout from device)
-    /// - Returns: MessageSentInfo if ACK received, nil if all attempts failed
+    ///   - destination: The full 32-byte public key of the recipient. A full key is
+    ///                  required if path reset is enabled.
+    ///   - text: The message text to send.
+    ///   - timestamp: The message timestamp. Defaults to current time.
+    ///   - maxAttempts: The maximum number of total attempts to make. Defaults to 3.
+    ///   - floodAfter: The number of failed attempts after which to reset the path to flood.
+    ///                 Defaults to 2.
+    ///   - maxFloodAttempts: The maximum number of attempts to make while in flood mode.
+    ///                       Defaults to 2.
+    ///   - timeout: The acknowledgment timeout per attempt. If `nil`, uses the suggested
+    ///              timeout provided by the device.
+    /// - Returns: Information about the sent message if an acknowledgment was received,
+    ///            otherwise `nil` if all attempts failed.
+    /// - Throws: ``MeshCoreError/invalidInput`` if the destination key is not 32 bytes.
     public func sendMessageWithRetry(
         to destination: Data,
         text: String,
@@ -714,8 +742,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return nil
     }
 
-    /// Send advertisement
-    /// - Throws: MeshCoreError.timeout or MeshCoreError.deviceError
+    /// Sends an advertisement broadcast.
+    ///
+    /// - Parameter flood: If `true`, the advertisement is broadcast using flood routing.
+    /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func sendAdvertisement(flood: Bool = false) async throws {
         let data = PacketBuilder.sendAdvertisement(flood: flood)
         let _: Bool = try await sendAndWaitWithError(data) { event in
@@ -724,7 +754,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Request status from a remote node
+    /// Requests status information from a remote node using the binary protocol.
+    ///
+    /// - Parameter publicKey: The full 32-byte public key of the remote node.
+    /// - Returns: A status response containing battery, uptime, and other metrics.
+    /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
+    ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .status)
         try await transport.send(data)
@@ -749,6 +784,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Requests status information from a remote node.
+    ///
     /// - Parameter destination: The destination (contact or public key).
     /// - Returns: Status response from the remote node.
     /// - Throws: ``MeshCoreError`` on failure.
@@ -760,6 +796,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     // MARK: - Device Configuration Commands
 
     /// Gets the current device time.
+    ///
     /// - Returns: The device's current time.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getTime() async throws -> Date {
@@ -770,6 +807,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the device's current time.
+    ///
     /// - Parameter date: The time to set on the device.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setTime(_ date: Date) async throws {
@@ -777,6 +815,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the device's advertised name.
+    ///
     /// - Parameter name: The name to advertise (max 32 bytes UTF-8).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setName(_ name: String) async throws {
@@ -784,6 +823,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the device's GPS coordinates.
+    ///
     /// - Parameters:
     ///   - latitude: Latitude in degrees (-90 to 90).
     ///   - longitude: Longitude in degrees (-180 to 180).
@@ -793,6 +833,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the radio transmission power level.
+    ///
     /// - Parameter power: Power level in dBm (device-specific range, typically 1-20).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setTxPower(_ power: Int) async throws {
@@ -800,6 +841,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Configures radio parameters for LoRa communication.
+    ///
     /// - Parameters:
     ///   - frequency: Center frequency in MHz (e.g., 915.0).
     ///   - bandwidth: Signal bandwidth in kHz (e.g., 125.0, 250.0, 500.0).
@@ -821,6 +863,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Configures radio timing parameters for fine-tuning.
+    ///
     /// - Parameters:
     ///   - rxDelay: Receive delay in microseconds.
     ///   - af: Auto-frequency correction parameter.
@@ -861,6 +904,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the device PIN for administrative access.
+    ///
     /// - Parameter pin: 4-digit PIN as a 32-bit unsigned integer.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setDevicePin(_ pin: UInt32) async throws {
@@ -869,7 +913,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     // MARK: - Granular Device Configuration
 
-    /// Set the base telemetry mode (preserves other settings).
+    /// Sets the base telemetry mode (preserves other settings).
     ///
     /// Uses a read-modify-write pattern: reads current settings from `selfInfo`,
     /// modifies only the requested value, then writes all settings back.
@@ -882,7 +926,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Set the location telemetry mode (preserves other settings).
+    /// Sets the location telemetry mode (preserves other settings).
     ///
     /// - Parameter mode: Telemetry mode value (0-3).
     /// - Throws: ``MeshCoreError/sessionNotStarted`` if device info unavailable.
@@ -892,7 +936,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Set the environment telemetry mode (preserves other settings).
+    /// Sets the environment telemetry mode (preserves other settings).
     ///
     /// - Parameter mode: Telemetry mode value (0-3).
     /// - Throws: ``MeshCoreError/sessionNotStarted`` if device info unavailable.
@@ -902,7 +946,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Set manual add contacts mode (preserves other settings).
+    /// Sets the manual add contacts mode (preserves other settings).
     ///
     /// When enabled, contacts discovered via advertisement must be manually approved
     /// before being added to the device's contact list.
@@ -915,7 +959,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Set multi-acks count (preserves other settings).
+    /// Sets the multi-acks count (preserves other settings).
     ///
     /// - Parameter count: Number of acknowledgment retries.
     /// - Throws: ``MeshCoreError/sessionNotStarted`` if device info unavailable.
@@ -925,7 +969,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Set advertisement location policy (preserves other settings).
+    /// Sets the advertisement location policy (preserves other settings).
     ///
     /// - Parameter policy: Location advertising policy value.
     /// - Throws: ``MeshCoreError/sessionNotStarted`` if device info unavailable.
@@ -935,7 +979,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
-    /// Current device configuration from selfInfo.
+    /// Returns the current device configuration from selfInfo.
     ///
     /// - Returns: Current other params configuration.
     /// - Throws: ``MeshCoreError/sessionNotStarted`` if selfInfo unavailable after refresh.
@@ -952,7 +996,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return OtherParamsConfig(from: info)
     }
 
-    /// Apply other params configuration to device.
+    /// Applies other params configuration to device.
     private func applyOtherParams(_ config: OtherParamsConfig) async throws {
         try await setOtherParams(
             manualAddContacts: config.manualAddContacts,
@@ -978,6 +1022,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Retrieves telemetry data from the device.
+    ///
     /// - Returns: Device telemetry including battery, temperature, and sensor data.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getSelfTelemetry() async throws -> TelemetryResponse {
@@ -988,6 +1033,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Retrieves all custom variables stored on the device.
+    ///
     /// - Returns: Dictionary mapping variable names to values.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getCustomVars() async throws -> [String: String] {
@@ -998,6 +1044,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets a custom variable on the device.
+    ///
     /// - Parameters:
     ///   - key: Variable name (max 32 bytes).
     ///   - value: Variable value (max 256 bytes).
@@ -1034,6 +1081,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     // MARK: - Stats Commands
 
     /// Retrieves core device statistics.
+    ///
     /// - Returns: Core statistics including uptime and system metrics.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getStatsCore() async throws -> CoreStats {
@@ -1044,6 +1092,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Retrieves radio statistics.
+    ///
     /// - Returns: Radio statistics including RSSI, SNR, and transmission counts.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getStatsRadio() async throws -> RadioStats {
@@ -1054,6 +1103,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Retrieves packet statistics.
+    ///
     /// - Returns: Packet statistics including sent, received, and dropped counts.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getStatsPackets() async throws -> PacketStats {
@@ -1077,6 +1127,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Removes a contact from the device's contact list.
+    ///
     /// - Parameter publicKey: The full 32-byte public key of the contact to remove.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func removeContact(publicKey: Data) async throws {
@@ -1095,6 +1146,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Exports a contact as a shareable URI string.
+    ///
     /// - Parameter publicKey: The contact's public key, or `nil` to export self.
     /// - Returns: A URI string encoding the contact information.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
@@ -1106,6 +1158,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Imports a contact from encoded contact card data.
+    ///
     /// - Parameter cardData: The contact card data (typically from a QR code or URI).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func importContact(cardData: Data) async throws {
@@ -1172,6 +1225,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Adds a contact to the device's contact list.
+    ///
     /// - Parameter contact: The contact to add.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func addContact(_ contact: MeshContact) async throws {
@@ -1239,12 +1293,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// Returns one message at a time from the device's message queue. Call repeatedly
     /// until `.noMoreMessages` is returned to drain the queue.
+    /// Use ``startAutoMessageFetching()`` to automate this process.
     ///
     /// - Returns: A ``MessageResult`` containing either a contact message, channel message,
     ///            or indication that no more messages are waiting.
     /// - Throws: ``MeshCoreError`` if the fetch fails.
-    ///
-    /// - Note: Consider using ``startAutoMessageFetching()`` for automatic handling.
     public func getMessage() async throws -> MessageResult {
         let data = PacketBuilder.getMessage()
         let events = await dispatcher.subscribe()
@@ -1322,6 +1375,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sends a login request to a remote node.
+    ///
     /// - Parameters:
     ///   - destination: The destination (contact or public key).
     ///   - password: The authentication password.
@@ -1343,6 +1397,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Requests status information from a remote node.
+    ///
     /// - Parameter destination: The node's public key (6+ bytes).
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
@@ -1354,6 +1409,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Requests telemetry data from a remote node.
+    ///
     /// - Parameter destination: The node's public key (6+ bytes).
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
@@ -1415,6 +1471,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Sets the flood scope using a ``FloodScope`` enum.
+    ///
     /// - Parameter scope: The flood scope to set.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setFloodScope(_ scope: FloodScope) async throws {
@@ -1424,6 +1481,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     // MARK: - Channel Commands
 
     /// Retrieves configuration for a channel.
+    ///
     /// - Parameter index: Channel index (0-15).
     /// - Returns: Channel information including name and secret.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
@@ -1435,6 +1493,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Configures a channel with name and secret.
+    ///
     /// - Parameters:
     ///   - index: Channel index (0-15).
     ///   - name: Channel name.
@@ -1445,6 +1504,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Configures a channel with automatic secret derivation.
+    ///
     /// - Parameters:
     ///   - index: Channel index (0-15).
     ///   - name: Channel name.
@@ -1489,6 +1549,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Requests telemetry data from a destination.
+    ///
     /// - Parameter destination: The destination (contact or public key).
     /// - Returns: Telemetry response from the remote node.
     /// - Throws: ``MeshCoreError`` on failure.
@@ -1687,8 +1748,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Initiates a multi-step signing process. After calling this, send data chunks
     /// with ``signData(_:)``, then finalize with ``signFinish(timeout:)``.
     ///
-    /// For convenience, use ``sign(_:chunkSize:timeout:)`` to handle the entire process.
-    ///
     /// - Returns: Maximum data size that can be signed in bytes.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func signStart() async throws -> Int {
@@ -1713,8 +1772,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Completes the signing operation started with ``signStart()`` after all
     /// data chunks have been sent with ``signData(_:)``.
     ///
-    /// - Parameter timeout: Optional timeout override. Defaults to 3x default timeout
-    ///                      as signing can take longer than normal operations.
+    /// - Parameter timeout: Optional timeout override. Defaults to 3x default timeout.
     /// - Returns: The cryptographic signature (typically 64 bytes).
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func signFinish(timeout: TimeInterval? = nil) async throws -> Data {
@@ -1727,8 +1785,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Signs data using the device's private key.
     ///
-    /// This is a convenience method that handles the complete signing workflow:
-    /// starts signing, sends data in chunks, and retrieves the signature.
+    /// Handles the complete signing workflow: starts signing, sends data in chunks, and retrieves signature.
     ///
     /// - Parameters:
     ///   - data: The data to sign.
@@ -1811,6 +1868,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     // MARK: - Private
 
+    /// Sends a command and waits for an "OK" response from the device.
     private func sendSimpleCommand(_ data: Data) async throws {
         let _: Bool = try await sendAndWaitWithError(data) { event in
             if case .ok = event { return true }
@@ -1818,6 +1876,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    /// The background loop for receiving data from the transport.
     private func receiveLoop() async {
         for await data in await transport.receivedData {
             await handleReceivedData(data)
@@ -1828,6 +1887,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         isRunning = false
     }
 
+    /// Handles raw data received from the device.
     private func handleReceivedData(_ data: Data) async {
         var event = PacketParser.parse(data)
 
@@ -1850,7 +1910,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         await dispatcher.dispatch(event)
     }
 
-    /// Routes a generic binary response to a typed event based on pending request type
+    /// Routes a generic binary response to a typed event based on pending request type.
     private func routeGenericBinaryResponse(tag: Data, data: Data) async -> MeshEvent? {
         guard let (requestType, publicKeyPrefix, context) = await pendingRequests.getBinaryRequestInfo(tag: tag) else {
             return nil
@@ -1876,6 +1936,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    /// Tracks contact-related changes from received events.
     private func trackContactChanges(event: MeshEvent) {
         // Track contact-related events in ContactManager
         contactManager.trackChanges(from: event)
@@ -1903,6 +1964,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    /// Routes binary responses to complete pending requests.
     private func routeBinaryResponse(event: MeshEvent) async {
         switch event {
         case .statusResponse(let response):
@@ -1957,6 +2019,7 @@ public struct OtherParamsConfig: Sendable {
     public var advertisementLocationPolicy: UInt8
     public var multiAcks: UInt8
 
+    /// Creates a new configuration with default values.
     public init(
         manualAddContacts: Bool = false,
         telemetryModeBase: UInt8 = 0,
@@ -1973,6 +2036,7 @@ public struct OtherParamsConfig: Sendable {
         self.multiAcks = multiAcks
     }
 
+    /// Creates a configuration from existing device information.
     init(from selfInfo: SelfInfo) {
         self.manualAddContacts = selfInfo.manualAddContacts
         self.telemetryModeBase = selfInfo.telemetryModeBase

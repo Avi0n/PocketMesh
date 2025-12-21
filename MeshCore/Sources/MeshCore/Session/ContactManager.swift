@@ -18,37 +18,39 @@ struct ContactManager {
 
     // MARK: - Public Properties
 
-    /// All cached contacts
+    /// Retrieves all currently cached contacts.
     var cachedContacts: [MeshContact] {
         Array(contacts.values)
     }
 
-    /// Pending contacts awaiting confirmation
+    /// Retrieves all pending contacts awaiting confirmation.
     var cachedPendingContacts: [MeshContact] {
         Array(pendingContacts.values)
     }
 
-    /// Whether contacts need refresh
+    /// Indicates whether the contact cache needs to be refreshed from the device.
     var needsRefresh: Bool {
         isDirty
     }
 
-    /// Last modified date from device
+    /// Retrieves the last modified date of the contacts as reported by the device.
     var contactsLastModified: Date? {
         lastModified
     }
 
-    /// Whether there are any contacts in cache
+    /// Indicates whether the contact cache is empty.
     var isEmpty: Bool {
         contacts.isEmpty
     }
 
     // MARK: - Lookup Methods
 
-    /// Find contact by advertised name
+    /// Finds a contact by their advertised name.
+    ///
     /// - Parameters:
-    ///   - name: Name to search for
-    ///   - exactMatch: If true, requires exact case-insensitive match; otherwise uses localizedStandardContains
+    ///   - name: The name to search for.
+    ///   - exactMatch: If true, requires an exact case-insensitive match; otherwise, uses localized search.
+    /// - Returns: The matching `MeshContact`, or `nil` if not found.
     func getByName(_ name: String, exactMatch: Bool = false) -> MeshContact? {
         if exactMatch {
             return contacts.values.first { $0.advertisedName.lowercased() == name.lowercased() }
@@ -56,30 +58,45 @@ struct ContactManager {
         return contacts.values.first { $0.advertisedName.localizedStandardContains(name) }
     }
 
-    /// Find contact by public key prefix (hex string)
+    /// Finds a contact by their public key prefix (hex string).
+    ///
+    /// - Parameter prefix: The hex string prefix of the public key.
+    /// - Returns: The matching `MeshContact`, or `nil` if not found.
     func getByKeyPrefix(_ prefix: String) -> MeshContact? {
         let normalizedPrefix = prefix.lowercased()
         return contacts.values.first { $0.publicKey.hexString.lowercased().hasPrefix(normalizedPrefix) }
     }
 
-    /// Find contact by public key prefix (Data)
+    /// Finds a contact by their public key prefix (Data).
+    ///
+    /// - Parameter prefix: The raw data prefix of the public key.
+    /// - Returns: The matching `MeshContact`, or `nil` if not found.
     func getByKeyPrefix(_ prefix: Data) -> MeshContact? {
         contacts.values.first { $0.publicKey.prefix(prefix.count) == prefix }
     }
 
-    /// Find contact by full public key
+    /// Finds a contact by their full public key.
+    ///
+    /// - Parameter key: The full public key data.
+    /// - Returns: The matching `MeshContact`, or `nil` if not found.
     func getByPublicKey(_ key: Data) -> MeshContact? {
         contacts[key.hexString]
     }
 
     // MARK: - Cache Management
 
-    /// Store a single contact in cache
+    /// Stores a single contact in the cache.
+    ///
+    /// - Parameter contact: The contact to store.
     mutating func store(_ contact: MeshContact) {
         contacts[contact.id] = contact
     }
 
-    /// Update cache with new contacts from device
+    /// Updates the contact cache with new contacts and a modification date.
+    ///
+    /// - Parameters:
+    ///   - newContacts: An array of contacts to add or update in the cache.
+    ///   - lastModified: The date these contacts were fetched.
     mutating func updateCache(_ newContacts: [MeshContact], lastModified: Date) {
         for contact in newContacts {
             contacts[contact.id] = contact
@@ -89,40 +106,49 @@ struct ContactManager {
         logger.debug("Updated cache with \(newContacts.count) contacts")
     }
 
-    /// Mark cache as not dirty
+    /// Marks the cache as clean (synchronized with the device).
+    ///
+    /// - Parameter lastModified: The date of the last synchronization.
     mutating func markClean(lastModified: Date) {
         self.lastModified = lastModified
         isDirty = false
     }
 
-    /// Mark cache as needing refresh
+    /// Marks the cache as needing a refresh from the device.
     mutating func markDirty() {
         isDirty = true
     }
 
-    /// Add a pending contact
+    /// Adds a contact to the pending contacts list.
+    ///
+    /// - Parameter contact: The contact to add to the pending list.
     mutating func addPending(_ contact: MeshContact) {
         pendingContacts[contact.id] = contact
     }
 
-    /// Pop a pending contact by public key
+    /// Removes and returns a pending contact by their public key hex string.
+    ///
+    /// - Parameter publicKey: The hex string of the public key.
+    /// - Returns: The removed `MeshContact`, or `nil` if not found.
     mutating func popPending(publicKey: String) -> MeshContact? {
         pendingContacts.removeValue(forKey: publicKey)
     }
 
-    /// Flush all pending contacts
+    /// Removes all contacts from the pending list.
     mutating func flushPending() {
         pendingContacts.removeAll()
     }
 
-    /// Remove a contact from cache
+    /// Removes a contact from both the active and pending caches.
+    ///
+    /// - Parameter contactId: The identifier (hex string) of the contact to remove.
     mutating func remove(_ contactId: String) {
         contacts.removeValue(forKey: contactId)
         pendingContacts.removeValue(forKey: contactId)
         isDirty = true
     }
 
-    /// Clear all cached data
+    /// Clears all cached contact data and marks the cache as dirty.
     mutating func clear() {
         contacts.removeAll()
         pendingContacts.removeAll()
@@ -132,15 +158,21 @@ struct ContactManager {
 
     // MARK: - Auto-Update
 
+    /// Indicates whether automatic contact updates are enabled.
     var isAutoUpdateEnabled: Bool {
         autoUpdate
     }
 
+    /// Enables or disables automatic contact updates based on device events.
+    ///
+    /// - Parameter enabled: `true` to enable automatic updates.
     mutating func setAutoUpdate(_ enabled: Bool) {
         autoUpdate = enabled
     }
 
-    /// Track changes from device event stream
+    /// Tracks contact changes based on events received from the device.
+    ///
+    /// - Parameter event: The `MeshEvent` to process for contact changes.
     mutating func trackChanges(from event: MeshEvent) {
         switch event {
         case .contact(let contact):
