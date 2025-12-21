@@ -366,6 +366,38 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(info.secret, secret)
     }
 
+    func test_channelInfo_handlesGarbageBytesAfterNull() {
+        // Firmware uses strcpy which leaves uninitialized garbage after the null terminator.
+        // This test verifies we correctly parse only up to the null byte.
+        var data = Data()
+        let index: UInt8 = 2
+        let name = "Primary"
+        let nameBytes = name.data(using: .utf8)!
+        var namePadded = nameBytes
+        namePadded.append(0) // Null terminator
+        // Append garbage bytes (invalid UTF-8 sequences) to simulate uninitialized memory
+        let garbageBytes = Data([0xFF, 0xFE, 0x80, 0x81, 0xC0, 0xC1])
+        namePadded.append(garbageBytes)
+        // Pad to 32 bytes total
+        namePadded.append(Data(repeating: 0xAB, count: 32 - namePadded.count))
+        let secret = Data(repeating: 0xCC, count: 16)
+
+        data.append(index)
+        data.append(namePadded)
+        data.append(secret)
+
+        let event = Parsers.ChannelInfo.parse(data)
+
+        guard case .channelInfo(let info) = event else {
+            XCTFail("Expected .channelInfo event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(info.index, index)
+        XCTAssertEqual(info.name, "Primary", "Name should be parsed up to null terminator, ignoring garbage bytes")
+        XCTAssertEqual(info.secret, secret)
+    }
+
     // MARK: - CustomVars Round-Trip
 
     func test_customVars_roundTrip() {

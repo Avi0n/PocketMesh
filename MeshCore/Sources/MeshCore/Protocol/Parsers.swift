@@ -737,6 +737,10 @@ enum Parsers {
     /// Parser for channel configuration data.
     enum ChannelInfo {
         /// Parses channel index, name, and PSK secret.
+        ///
+        /// The channel name is a null-terminated C string in a 32-byte buffer.
+        /// Bytes after the null terminator may be uninitialized garbage from the firmware,
+        /// so we must find the null and decode only the bytes before it.
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.channelInfoMinimum else {
                 return .parseFailure(
@@ -746,8 +750,12 @@ enum Parsers {
             }
             let index = data[0]
             let nameData = data[1..<33]
-            let name = String(data: nameData, encoding: .utf8)?
-                .trimmingCharacters(in: .controlCharacters) ?? ""
+
+            // Find first null byte - firmware uses strcpy which leaves garbage after the null
+            let nullIndex = nameData.firstIndex(of: 0) ?? nameData.endIndex
+            let validNameData = nameData[nameData.startIndex..<nullIndex]
+            let name = String(data: validNameData, encoding: .utf8) ?? ""
+
             let secret = Data(data[33..<49])
 
             return .channelInfo(MeshCore.ChannelInfo(
