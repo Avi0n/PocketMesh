@@ -369,6 +369,7 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
     private var onDisconnection: ((UUID, Error?) -> Void)?
     private var onReconnection: ((UUID) -> Void)?
     private var onStateChange: ((BLEConnectionState) -> Void)?
+    private var onBluetoothPoweredOn: (() -> Void)?
 
     var connectedPeripheralID: UUID? {
         connectedPeripheral?.identifier
@@ -399,6 +400,7 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
         onDisconnection = nil
         onReconnection = nil
         onStateChange = nil
+        onBluetoothPoweredOn = nil
         // Keep centralManager and connectedPeripheral for state restoration
     }
 
@@ -410,6 +412,12 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
         self.onDisconnection = onDisconnection
         self.onReconnection = onReconnection
         self.onStateChange = onStateChange
+    }
+
+    /// Sets a handler called when Bluetooth powers on.
+    /// Used by ConnectionManager to reconnect after Bluetooth power cycle.
+    func setBluetoothPoweredOnHandler(_ handler: @escaping @Sendable () -> Void) {
+        onBluetoothPoweredOn = handler
     }
 
     // MARK: - Public Methods
@@ -556,6 +564,10 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
                         peripheral.state != .connected {
                     logger.info("Bluetooth powered on: re-initiating connection to \(peripheral.identifier)")
                     centralManager.connect(peripheral, options: connectionOptions())
+                }
+                // Notify ConnectionManager for power-cycle recovery
+                else {
+                    onBluetoothPoweredOn?()
                 }
             case .poweredOff:
                 // Don't throw immediately - this might be a transient state during XPC re-establishment
