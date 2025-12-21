@@ -58,6 +58,10 @@ public final class ConnectionManager {
     /// Services container (nil when disconnected)
     public private(set) var services: ServiceContainer?
 
+    /// Whether the last disconnect was intentional (user-initiated).
+    /// When true, auto-reconnect is suppressed until the next explicit connect.
+    private var intentionallyDisconnected = false
+
     /// Number of paired accessories (for troubleshooting UI)
     public var pairedAccessoriesCount: Int {
         accessorySetupKit.pairedAccessories.count
@@ -142,6 +146,9 @@ public final class ConnectionManager {
     public func pairNewDevice() async throws {
         logger.info("Starting device pairing")
 
+        // Clear intentional disconnect flag - user is explicitly pairing
+        intentionallyDisconnected = false
+
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
 
@@ -154,6 +161,9 @@ public final class ConnectionManager {
     /// - Throws: Connection errors
     public func connect(to deviceID: UUID) async throws {
         logger.info("Connecting to device: \(deviceID)")
+
+        // Clear intentional disconnect flag - user is explicitly connecting
+        intentionallyDisconnected = false
 
         // Validate device is still registered with ASK
         if accessorySetupKit.isSessionActive {
@@ -173,7 +183,10 @@ public final class ConnectionManager {
 
     /// Disconnects from the current device.
     public func disconnect() async {
-        logger.info("Disconnecting from device")
+        logger.info("Disconnecting from device (user-initiated)")
+
+        // Mark as intentional disconnect to suppress auto-reconnect
+        intentionallyDisconnected = true
 
         // Stop event monitoring
         await services?.stopEventMonitoring()
@@ -457,6 +470,12 @@ public final class ConnectionManager {
         session = nil
         // Keep transport reference for potential reconnect
 
+        // Skip auto-reconnect if this was an intentional disconnect
+        if intentionallyDisconnected {
+            logger.info("Skipping auto-reconnect: disconnect was intentional")
+            return
+        }
+
         // Brief delay to allow iOS auto-reconnect to kick in
         // iOS may auto-reconnect via CBConnectPeripheralOptionEnableAutoReconnect
         try? await Task.sleep(for: .milliseconds(500))
@@ -490,6 +509,14 @@ public final class ConnectionManager {
     /// this method re-establishes the session layer without creating a new transport.
     private func handleIOSAutoReconnect(deviceID: UUID) async {
         logger.info("iOS auto-reconnect complete for \(deviceID)")
+
+        // Skip if this was an intentional disconnect
+        if intentionallyDisconnected {
+            logger.info("Ignoring iOS auto-reconnect: disconnect was intentional")
+            // Disconnect the transport that iOS just reconnected
+            await transport?.disconnect()
+            return
+        }
 
         // If we're already reconnecting via app-level logic, let that complete
         if connectionState == .connecting {
