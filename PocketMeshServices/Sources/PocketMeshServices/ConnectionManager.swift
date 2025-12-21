@@ -484,34 +484,15 @@ public final class ConnectionManager {
     private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
         logger.warning("Connection lost to device \(deviceID): \(error?.localizedDescription ?? "unknown")")
 
-        // Stop services
         await services?.stopEventMonitoring()
-
-        // Clear state
         connectionState = .disconnected
         connectedDevice = nil
         services = nil
         session = nil
-        // Keep transport reference for potential reconnect
+        // Keep transport reference for iOS auto-reconnect to use
 
-        // Skip auto-reconnect if this was an intentional disconnect
-        if !shouldBeConnected {
-            logger.info("Skipping auto-reconnect: disconnect was intentional")
-            return
-        }
-
-        // Brief delay to allow iOS auto-reconnect to kick in
-        // iOS may auto-reconnect via CBConnectPeripheralOptionEnableAutoReconnect
-        try? await Task.sleep(for: .milliseconds(500))
-
-        // If we're already reconnecting (iOS auto-reconnect handled it), skip
-        if connectionState != .disconnected {
-            logger.debug("Connection state changed during delay - skipping app-level reconnect")
-            return
-        }
-
-        // Attempt auto-reconnect
-        await attemptAutoReconnect(deviceID: deviceID)
+        // iOS auto-reconnect handles normal disconnects via handleIOSAutoReconnect()
+        // Bluetooth power-cycle handled via onBluetoothPoweredOn callback
     }
 
     /// Attempts to reconnect after connection loss
