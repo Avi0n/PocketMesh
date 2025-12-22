@@ -127,7 +127,7 @@ public final class AppState {
     }
 
     /// Wire services to message event broadcaster
-    private func wireServicesIfConnected() async {
+    func wireServicesIfConnected() async {
         guard let services else { return }
 
         // Wire notification service to message event broadcaster
@@ -517,6 +517,7 @@ public final class AppState {
                 try await connectionManager.pairNewDevice()
                 hasCompletedOnboarding = true
                 await wireServicesIfConnected()
+                triggerInitialSync()
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error
             } catch {
