@@ -72,13 +72,23 @@ public actor iOSBLETransport: MeshTransport {
         delegate.connectedPeripheralID
     }
 
-    /// MeshTransport conformance: Async stream of received data
-    public nonisolated var receivedData: AsyncStream<Data> {
-        delegate.dataStream
+    /// MeshTransport conformance: Async stream of received data.
+    /// Returns the stream created during connect(). If accessed before
+    /// connect() succeeds, returns an immediately-finishing empty stream.
+    public var receivedData: AsyncStream<Data> {
+        guard let stream = _receivedData else {
+            // Return empty stream if not connected - will finish immediately
+            return AsyncStream { $0.finish() }
+        }
+        return stream
     }
 
     /// Whether a send operation is currently in progress
     private var sendInProgress = false
+
+    /// The data stream for the current connection session.
+    /// Created fresh on each connect(), nil when disconnected.
+    private var _receivedData: AsyncStream<Data>?
 
     /// Queue of callers waiting to send (FIFO)
     private var sendQueue: [CheckedContinuation<Void, Never>] = []
@@ -156,6 +166,9 @@ public actor iOSBLETransport: MeshTransport {
             logger.info("Already connected to \(targetDeviceID), skipping redundant connect()")
             _connectionState = .connected
 
+            // Create fresh stream for this session
+            _receivedData = delegate.createDataStream()
+
             // Still need to set up callbacks for this transport
             delegate.setTransportCallbacks(
                 onDisconnection: { [weak self] deviceID, error in
@@ -204,6 +217,10 @@ public actor iOSBLETransport: MeshTransport {
         do {
             try await delegate.connect(to: targetDeviceID, timeout: connectionTimeout, initialSetupTimeout: initialSetupTimeout)
             _connectionState = .connected
+
+            // Create fresh stream for this session
+            _receivedData = delegate.createDataStream()
+
             let elapsedMs = Int(Date().timeIntervalSince(startTime) * 1000)
             logger.info("Connection established in \(elapsedMs)ms")
         } catch {
@@ -216,6 +233,7 @@ public actor iOSBLETransport: MeshTransport {
     public func disconnect() async {
         clearSendQueue()
         await delegate.disconnect()
+        _receivedData = nil
         _connectionState = .disconnected
     }
 
@@ -345,8 +363,9 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
     private let rxCharacteristicUUID = CBUUID(string: BLEServiceUUID.rxCharacteristic)
 
     // Data streaming
-    let dataStream: AsyncStream<Data>
-    private let dataContinuation: AsyncStream<Data>.Continuation
+    /// Active continuation for yielding received BLE data.
+    /// Nil when no connection session is active.
+    private var dataContinuation: AsyncStream<Data>.Continuation?
 
     // Continuation state (thread-safe)
     private let continuationLock = OSAllocatedUnfairLock<ContinuationState>(initialState: ContinuationState())
@@ -376,15 +395,9 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
     }
 
     public override init() {
-        let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
-        self.dataStream = stream
-        self.dataContinuation = continuation
-
-        // Call super.init() first so 'self' is available
         super.init()
 
-        // Now create CBCentralManager with self as delegate
-        // This is required when using CBCentralManagerOptionRestoreIdentifierKey
+        // Create CBCentralManager with state restoration
         let options: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: stateRestorationID,
             CBCentralManagerOptionShowPowerAlertKey: true
@@ -397,6 +410,11 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
     /// Call this before reusing the delegate for a new transport instance.
     /// Clears transport callbacks while preserving the `CBCentralManager` and any restored peripheral.
     public func resetForNewConnection() {
+        // Finish any existing stream to signal termination
+        dataContinuation?.finish()
+        dataContinuation = nil
+
+        // Clear callbacks
         onDisconnection = nil
         onReconnection = nil
         onStateChange = nil
@@ -404,6 +422,23 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
         isAutoReconnecting = false
         needsResubscriptionAfterReconnect = false
         // Keep centralManager and connectedPeripheral for state restoration
+    }
+
+    /// Creates a fresh AsyncStream for a new connection session.
+    ///
+    /// This must be called at the start of each connection before iterating.
+    /// Calling this will finish any previous stream, signaling termination
+    /// to any lingering iterators.
+    ///
+    /// - Returns: A new AsyncStream that will receive BLE characteristic updates.
+    public func createDataStream() -> AsyncStream<Data> {
+        // Finish previous stream to signal termination to any old iterators
+        dataContinuation?.finish()
+
+        // Create fresh stream for this session
+        let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
+        self.dataContinuation = continuation
+        return stream
     }
 
     func setTransportCallbacks(
@@ -492,6 +527,10 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
             state.write?.resume(throwing: BLEError.notConnected)
             state.write = nil
         }
+
+        // Finish the data stream to signal termination to consumers
+        dataContinuation?.finish()
+        dataContinuation = nil
 
         // Allow Bluetooth stack to process
         try? await Task.sleep(for: .milliseconds(50))
@@ -721,7 +760,7 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
 
     public func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         guard error == nil, let data = characteristic.value, !data.isEmpty else { return }
-        dataContinuation.yield(data)
+        dataContinuation?.yield(data)
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
