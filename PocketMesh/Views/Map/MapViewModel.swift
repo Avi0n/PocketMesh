@@ -26,23 +26,20 @@ final class MapViewModel {
 
     // MARK: - Dependencies
 
-    private var dataStore: PersistenceStore?
-    private var deviceID: UUID?
+    /// Weak reference to AppState for service access
+    private weak var appState: AppState?
+
+    /// Services accessed lazily to ensure they're always current
+    private var dataStore: PersistenceStore? { appState?.services?.dataStore }
+    private var deviceID: UUID? { appState?.connectedDevice?.id }
 
     // MARK: - Initialization
 
     init() {}
 
-    /// Configure with services from AppState
+    /// Configure with AppState reference
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
-        self.deviceID = appState.connectedDevice?.id
-    }
-
-    /// Configure with services (for testing)
-    func configure(dataStore: PersistenceStore, deviceID: UUID?) {
-        self.dataStore = dataStore
-        self.deviceID = deviceID
+        self.appState = appState
     }
 
     // MARK: - Load Contacts
