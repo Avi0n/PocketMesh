@@ -67,11 +67,6 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
-        .onChange(of: appState.connectionState) { oldState, newState in
-            if newState == .ready && oldState != .ready {
-                appState.triggerInitialSync()
-            }
-        }
 
             if appState.shouldShowSyncingPill {
                 SyncingPillView()
