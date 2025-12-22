@@ -31,6 +31,15 @@ final class RepeaterStatusViewModel {
     /// Whether the neighbors disclosure group is expanded
     var neighborsExpanded = false
 
+    /// Whether telemetry has been loaded at least once (for refresh logic)
+    var telemetryLoaded = false
+
+    /// Whether the telemetry disclosure group is expanded
+    var telemetryExpanded = false
+
+    /// Clock time from the repeater
+    var clockTime: String?
+
     /// Error message if any
     var errorMessage: String?
 
@@ -74,6 +83,12 @@ final class RepeaterStatusViewModel {
                 self?.handleTelemetryResponse(response)
             }
         }
+
+        await repeaterAdminService.setCLIHandler { [weak self] frame, contact in
+            await MainActor.run {
+                self?.handleCLIResponse(frame, from: contact)
+            }
+        }
     }
 
     // MARK: - Status
@@ -114,6 +129,8 @@ final class RepeaterStatusViewModel {
         do {
             let response = try await repeaterAdminService.requestStatus(sessionID: session.id)
             handleStatusResponse(response)
+            // Also request clock time
+            _ = try? await repeaterAdminService.sendCommand(sessionID: session.id, command: "clock")
         } catch {
             errorMessage = error.localizedDescription
             isLoadingStatus = false
@@ -217,48 +234,92 @@ final class RepeaterStatusViewModel {
         telemetryTimeoutTask?.cancel()  // Cancel timeout on success
         self.telemetry = response
         self.isLoadingTelemetry = false
+        self.telemetryLoaded = true
+    }
+
+    /// Handle CLI response (for clock time)
+    func handleCLIResponse(_ frame: ContactMessage, from contact: ContactDTO) {
+        // Validate session exists and response is from our session
+        // Note: Compare using prefix bytes since contact.publicKey and session.publicKey
+        // come from different sources (contacts database vs session)
+        guard let session = session else {
+            return
+        }
+
+        // Compare public key prefixes directly from the message sender
+        // The contact's publicKeyPrefix should match the session's publicKeyPrefix
+        guard Data(frame.senderPublicKeyPrefix) == Data(session.publicKeyPrefix) else {
+            return
+        }
+
+        let response = CLIResponse.parse(frame.text)
+        switch response {
+        case .deviceTime(let time):
+            self.clockTime = time
+        default:
+            break
+        }
     }
 
     // MARK: - Computed Properties
 
-    var uptimeDisplay: String? {
-        guard let uptime = status?.uptimeSeconds else { return nil }
-        let hours = uptime / 3600
+    /// Em-dash for missing data (cleaner than "Unavailable")
+    private static let emDash = "—"
+
+    var uptimeDisplay: String {
+        guard let uptime = status?.uptimeSeconds else { return Self.emDash }
+        let days = uptime / 86400
+        let hours = (uptime % 86400) / 3600
         let minutes = (uptime % 3600) / 60
-        if hours > 0 {
+
+        if days > 0 {
+            if days == 1 {
+                return "1 day \(hours)h \(minutes)m"
+            } else {
+                return "\(days) days \(hours)h \(minutes)m"
+            }
+        } else if hours > 0 {
             return "\(hours)h \(minutes)m"
         }
         return "\(minutes)m"
     }
 
-    var batteryDisplay: String? {
-        guard let mv = status?.batteryMillivolts else { return nil }
+    var batteryDisplay: String {
+        guard let mv = status?.batteryMillivolts else { return Self.emDash }
         let volts = Double(mv) / 1000.0
-        return "\(volts.formatted(.number.precision(.fractionLength(2))))V"
+        // LiPo battery voltage range: 4.2V (100%) to 3.0V (0%)
+        // Note: This assumes standard LiPo chemistry; actual range may vary by device
+        let percent = ((volts - 3.0) / 1.2) * 100
+        let clampedPercent = Int(min(100, max(0, percent)))
+        return "\(volts.formatted(.number.precision(.fractionLength(2))))V (\(clampedPercent)%)"
     }
 
-    var noiseFloorDisplay: String? {
-        guard let nf = status?.noiseFloor else { return nil }
+    var lastRSSIDisplay: String {
+        guard let rssi = status?.lastRSSI else { return Self.emDash }
+        return "\(rssi) dBm"
+    }
+
+    var lastSNRDisplay: String {
+        guard let snr = status?.lastSNR else { return Self.emDash }
+        return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB"
+    }
+
+    var noiseFloorDisplay: String {
+        guard let nf = status?.noiseFloor else { return Self.emDash }
         return "\(nf) dBm"
     }
 
-    var txCountDisplay: String? {
-        guard let count = status?.packetsSent else { return nil }
+    var packetsSentDisplay: String {
+        guard let count = status?.packetsSent else { return Self.emDash }
         return count.formatted()
     }
 
-    var rxCountDisplay: String? {
-        guard let count = status?.packetsReceived else { return nil }
+    var packetsReceivedDisplay: String {
+        guard let count = status?.packetsReceived else { return Self.emDash }
         return count.formatted()
     }
 
-    var airTimeDisplay: String? {
-        guard let seconds = status?.repeaterRxAirtimeSeconds else { return nil }
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
+    var clockDisplay: String {
+        clockTime ?? Self.emDash
     }
 }

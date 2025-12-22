@@ -37,22 +37,23 @@ struct RepeaterStatusView: View {
                 viewModel.configure(appState: appState)
                 await viewModel.registerHandlers(appState: appState)
 
-                // Request Status first, then Telemetry (serialized to avoid firmware conflict)
+                // Request Status first (includes clock query)
                 await viewModel.requestStatus(for: session)
-                await viewModel.requestTelemetry(for: session)
-                // Note: Neighbors are NOT auto-loaded - user must expand the section
+                // Note: Telemetry and Neighbors are NOT auto-loaded - user must expand the section
             }
             .refreshable {
-                // Serialize requests to avoid firmware conflict
                 await viewModel.requestStatus(for: session)
-                await viewModel.requestTelemetry(for: session)
+                // Refresh telemetry only if already loaded
+                if viewModel.telemetryLoaded {
+                    await viewModel.requestTelemetry(for: session)
+                }
                 // Refresh neighbors only if already loaded
                 if viewModel.neighborsLoaded {
                     await viewModel.requestNeighbors(for: session)
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 
     // MARK: - Header Section
@@ -66,12 +67,6 @@ struct RepeaterStatusView: View {
 
                     Text(session.name)
                         .font(.headline)
-
-                    if session.isConnected {
-                        Label("Connected", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                    }
                 }
                 Spacer()
             }
@@ -100,29 +95,18 @@ struct RepeaterStatusView: View {
 
     @ViewBuilder
     private var statusRows: some View {
-        if let uptime = viewModel.uptimeDisplay {
-            LabeledContent("Uptime", value: uptime)
-        }
-
-        if let battery = viewModel.batteryDisplay {
-            LabeledContent("Battery", value: battery)
-        }
-
-        if let noiseFloor = viewModel.noiseFloorDisplay {
-            LabeledContent("Noise Floor", value: noiseFloor)
-        }
-
-        if let txCount = viewModel.txCountDisplay {
-            LabeledContent("TX Count", value: txCount)
-        }
-
-        if let rxCount = viewModel.rxCountDisplay {
-            LabeledContent("RX Count", value: rxCount)
-        }
-
-        if let airTime = viewModel.airTimeDisplay {
-            LabeledContent("RX Airtime", value: airTime)
-        }
+        // Power
+        LabeledContent("Battery", value: viewModel.batteryDisplay)
+        // Health
+        LabeledContent("Uptime", value: viewModel.uptimeDisplay)
+        LabeledContent("Clock", value: viewModel.clockDisplay)
+        // Radio
+        LabeledContent("Last RSSI", value: viewModel.lastRSSIDisplay)
+        LabeledContent("Last SNR", value: viewModel.lastSNRDisplay)
+        LabeledContent("Noise Floor", value: viewModel.noiseFloorDisplay)
+        // Activity
+        LabeledContent("Packets Sent", value: viewModel.packetsSentDisplay)
+        LabeledContent("Packets Received", value: viewModel.packetsReceivedDisplay)
     }
 
     // MARK: - Neighbors Section
@@ -167,25 +151,47 @@ struct RepeaterStatusView: View {
     // MARK: - Telemetry Section
 
     private var telemetrySection: some View {
-        Section("Telemetry") {
-            if viewModel.isLoadingTelemetry && viewModel.telemetry == nil {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
-                }
-            } else if let telemetry = viewModel.telemetry {
-                if telemetry.dataPoints.isEmpty {
-                    Text("No sensor data")
-                        .foregroundStyle(.secondary)
+        Section {
+            DisclosureGroup(isExpanded: $viewModel.telemetryExpanded) {
+                if viewModel.isLoadingTelemetry {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                } else if let telemetry = viewModel.telemetry {
+                    if telemetry.dataPoints.isEmpty {
+                        Text("No sensor data")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(telemetry.dataPoints, id: \.channel) { dataPoint in
+                            TelemetryRow(dataPoint: dataPoint)
+                        }
+                    }
                 } else {
-                    ForEach(telemetry.dataPoints, id: \.channel) { dataPoint in
-                        TelemetryRow(dataPoint: dataPoint)
+                    Text("No telemetry data")
+                        .foregroundStyle(.secondary)
+                }
+            } label: {
+                HStack {
+                    Text("Telemetry")
+                    Spacer()
+                    if viewModel.telemetryLoaded {
+                        Text("\(viewModel.telemetry?.dataPoints.count ?? 0)")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("tap to load")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
-            } else {
-                Text("No telemetry data")
-                    .foregroundStyle(.secondary)
+            }
+            .onChange(of: viewModel.telemetryExpanded) { _, isExpanded in
+                if isExpanded && !viewModel.telemetryLoaded {
+                    Task {
+                        await viewModel.requestTelemetry(for: session)
+                    }
+                }
             }
         }
     }
@@ -194,9 +200,11 @@ struct RepeaterStatusView: View {
 
     private func refresh() {
         Task {
-            // Serialize requests to avoid firmware conflict
             await viewModel.requestStatus(for: session)
-            await viewModel.requestTelemetry(for: session)
+            // Refresh telemetry only if already loaded
+            if viewModel.telemetryLoaded {
+                await viewModel.requestTelemetry(for: session)
+            }
             // Refresh neighbors only if already loaded
             if viewModel.neighborsLoaded {
                 await viewModel.requestNeighbors(for: session)
