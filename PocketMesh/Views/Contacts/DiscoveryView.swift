@@ -10,6 +10,8 @@ struct DiscoveryView: View {
     @State private var errorMessage: String?
 
     var body: some View {
+        let _ = appState.contactsRefreshTrigger  // Force @Observable tracking
+
         Group {
             if isLoading && discoveredContacts.isEmpty {
                 ProgressView()
@@ -24,7 +26,7 @@ struct DiscoveryView: View {
         .task {
             await loadDiscoveredContacts()
         }
-        .onChange(of: appState.messageEventBroadcaster.contactsRefreshTrigger) { _, _ in
+        .onChange(of: appState.contactsRefreshTrigger) { _, _ in
             Task {
                 await loadDiscoveredContacts()
             }

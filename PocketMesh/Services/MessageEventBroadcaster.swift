@@ -34,13 +34,6 @@ public final class MessageEventBroadcaster {
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
 
-    /// Triggers conversation list refresh (increment to force reload)
-    /// Use this for state changes like mark-as-read, not for new messages
-    var conversationRefreshTrigger: Int = 0
-
-    /// Trigger for contact list refresh (increment to force refresh)
-    var contactsRefreshTrigger: Int = 0
-
     /// Reference to notification service for posting notifications
     var notificationService: NotificationService?
 
@@ -157,11 +150,6 @@ public final class MessageEventBroadcaster {
     /// Handle error notification
     func handleError(_ message: String) {
         self.latestEvent = .error(message)
-    }
-
-    /// Handles contact update notification from AdvertisementService
-    func handleContactsUpdated() {
-        contactsRefreshTrigger += 1
     }
 
     // MARK: - Status Response Handling
