@@ -611,10 +611,17 @@ public final class iOSBLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphe
                     onBluetoothPoweredOn?()
                 }
             case .poweredOff:
-                // Don't throw immediately - this might be a transient state during XPC re-establishment
-                // The connection timeout will handle truly-off Bluetooth
-                logger.debug("Bluetooth state: poweredOff (waiting for potential recovery)")
+                logger.debug("Bluetooth state: poweredOff")
                 onStateChange?(.disconnected)
+
+                // Notify ConnectionManager of disconnection so UI updates immediately
+                if let peripheral = connectedPeripheral {
+                    let deviceID = peripheral.identifier
+                    connectedPeripheral = nil
+                    txCharacteristic = nil
+                    rxCharacteristic = nil
+                    onDisconnection?(deviceID, nil)
+                }
             case .unauthorized:
                 // Don't throw immediately - user might grant permission when prompted
                 logger.debug("Bluetooth state: unauthorized (waiting for potential authorization)")
