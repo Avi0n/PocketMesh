@@ -25,20 +25,23 @@ final class ContactsViewModel {
 
     // MARK: - Dependencies
 
-    /// Weak reference to AppState for service access
-    private weak var appState: AppState?
-
-    /// Services accessed lazily to ensure they're always current
-    private var dataStore: DataStore? { appState?.services?.dataStore }
-    private var contactService: ContactService? { appState?.services?.contactService }
+    private var dataStore: DataStore?
+    private var contactService: ContactService?
 
     // MARK: - Initialization
 
     init() {}
 
-    /// Configure with AppState reference
+    /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.appState = appState
+        self.dataStore = appState.services?.dataStore
+        self.contactService = appState.services?.contactService
+    }
+
+    /// Configure with services (for testing)
+    func configure(dataStore: DataStore, contactService: ContactService) {
+        self.dataStore = dataStore
+        self.contactService = contactService
     }
 
     // MARK: - Load Contacts

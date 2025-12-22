@@ -71,12 +71,6 @@ public final class AppState {
     /// Message event broadcaster for UI updates
     let messageEventBroadcaster = MessageEventBroadcaster()
 
-    /// Triggers conversation list refresh (increment to force reload)
-    var conversationRefreshTrigger: Int = 0
-
-    /// Triggers contact list refresh (increment to force reload)
-    var contactsRefreshTrigger: Int = 0
-
     // MARK: - Activity Tracking
 
     /// Counter for sync/settings operations (on-demand) - shows pill
@@ -111,13 +105,6 @@ public final class AppState {
 
     init(modelContainer: ModelContainer) {
         self.connectionManager = ConnectionManager(modelContainer: modelContainer)
-
-        // Wire connection ready callback to trigger sync
-        connectionManager.onBecameReady = { [weak self] in
-            Task { @MainActor in
-                self?.triggerInitialSync()
-            }
-        }
 
         // Set up notification handlers
         setupNotificationHandlers()
@@ -227,8 +214,8 @@ public final class AppState {
             }
 
             // Trigger UI refresh after sync completes
-            contactsRefreshTrigger += 1
-            conversationRefreshTrigger += 1
+            messageEventBroadcaster.contactsRefreshTrigger += 1
+            messageEventBroadcaster.conversationRefreshTrigger += 1
         }
     }
 
@@ -306,7 +293,7 @@ public final class AppState {
             }
 
             // Notify UI to refresh
-            contactsRefreshTrigger += 1
+            messageEventBroadcaster.handleContactsUpdated()
 
             // Post notification for each new contact and track to prevent duplicates
             for contact in newContacts {
@@ -398,7 +385,7 @@ public final class AppState {
                 await services.notificationService.updateBadgeCount()
 
                 await MainActor.run {
-                    self.conversationRefreshTrigger += 1
+                    self.messageEventBroadcaster.conversationRefreshTrigger += 1
                 }
             } catch {
                 self.logger.error("Contact message lost after retry: \(error)")
@@ -460,7 +447,7 @@ public final class AppState {
                 await services.notificationService.updateBadgeCount()
 
                 await MainActor.run {
-                    self.conversationRefreshTrigger += 1
+                    self.messageEventBroadcaster.conversationRefreshTrigger += 1
                 }
             } catch {
                 self.logger.error("Channel message lost after retry: \(error)")
@@ -693,7 +680,7 @@ public final class AppState {
                 try await services.dataStore.clearUnreadCount(contactID: contactID)
                 services.notificationService.removeDeliveredNotification(messageID: messageID)
                 await services.notificationService.updateBadgeCount()
-                self.conversationRefreshTrigger += 1
+                self.messageEventBroadcaster.conversationRefreshTrigger += 1
             } catch {
                 // Silently ignore
             }
@@ -707,7 +694,7 @@ public final class AppState {
                 try await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
                 services.notificationService.removeDeliveredNotification(messageID: messageID)
                 await services.notificationService.updateBadgeCount()
-                self.conversationRefreshTrigger += 1
+                self.messageEventBroadcaster.conversationRefreshTrigger += 1
             } catch {
                 // Silently ignore
             }

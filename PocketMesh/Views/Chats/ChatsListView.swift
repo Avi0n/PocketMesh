@@ -28,8 +28,6 @@ struct ChatsListView: View {
     }
 
     var body: some View {
-        let _ = appState.conversationRefreshTrigger  // Force @Observable tracking
-
         NavigationStack(path: $navigationPath) {
             Group {
                 if viewModel.isLoading && viewModel.allConversations.isEmpty {
@@ -108,9 +106,17 @@ struct ChatsListView: View {
                     await loadConversations()
                 }
             }
-            .onChange(of: appState.conversationRefreshTrigger) { _, _ in
+            .onChange(of: appState.messageEventBroadcaster.conversationRefreshTrigger) { _, _ in
                 Task {
                     await loadConversations()
+                }
+            }
+            .onChange(of: appState.connectionState) { oldState, newState in
+                // Refresh and sync when device reconnects (state changes to .ready)
+                if newState == .ready && oldState != .ready {
+                    Task {
+                        await syncOnReconnection()
+                    }
                 }
             }
             .onChange(of: appState.pendingRoomSession) { _, _ in
@@ -197,6 +203,16 @@ struct ChatsListView: View {
     private func refreshConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.loadAllConversations(deviceID: deviceID)
+    }
+
+    private func syncOnReconnection() async {
+        guard let deviceID = appState.connectedDevice?.id else { return }
+
+        // Sync channels from device
+        _ = try? await appState.services?.channelService.syncChannels(deviceID: deviceID)
+
+        // Reload conversations and channels
+        await loadConversations()
     }
 
     private func deleteConversations(at offsets: IndexSet) {

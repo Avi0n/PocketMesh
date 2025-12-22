@@ -122,6 +122,107 @@ final class ProtocolBugFixTests: XCTestCase {
         XCTAssertEqual(status.lastRSSI, -42)
     }
 
+    // MARK: - Binary Response Status Parsing (Format 2)
+
+    func test_statusResponse_parseFromBinaryResponse_validPayload() {
+        // Binary response format: fields start at offset 0 (no reserved byte, no pubkey)
+        // Total: 52 bytes minimum
+        var payload = Data()
+        payload.append(contentsOf: [0xE8, 0x03])  // Battery: 1000mV (little-endian)
+        payload.append(contentsOf: [0x05, 0x00])  // txQueue: 5
+        payload.append(contentsOf: [0x92, 0xFF])  // noiseFloor: -110 (signed)
+        payload.append(contentsOf: [0xAB, 0xFF])  // lastRSSI: -85 (signed)
+        payload.append(contentsOf: [0x64, 0x00, 0x00, 0x00])  // packetsRecv: 100
+        payload.append(contentsOf: [0xC8, 0x00, 0x00, 0x00])  // packetsSent: 200
+        payload.append(contentsOf: [0x10, 0x27, 0x00, 0x00])  // airtime: 10000
+        payload.append(contentsOf: [0x58, 0x02, 0x00, 0x00])  // uptime: 600
+        payload.append(contentsOf: [0x0A, 0x00, 0x00, 0x00])  // sentFlood: 10
+        payload.append(contentsOf: [0x14, 0x00, 0x00, 0x00])  // sentDirect: 20
+        payload.append(contentsOf: [0x1E, 0x00, 0x00, 0x00])  // recvFlood: 30
+        payload.append(contentsOf: [0x28, 0x00, 0x00, 0x00])  // recvDirect: 40
+        payload.append(contentsOf: [0x03, 0x00])  // fullEvents: 3
+        payload.append(contentsOf: [0x28, 0x00])  // lastSNR: 40/4 = 10.0
+        payload.append(contentsOf: [0x02, 0x00])  // directDups: 2
+        payload.append(contentsOf: [0x01, 0x00])  // floodDups: 1
+        payload.append(contentsOf: [0x20, 0x4E, 0x00, 0x00])  // rxAirtime: 20000
+
+        let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
+
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+
+        guard let status = status else {
+            XCTFail("Should successfully parse valid binary response")
+            return
+        }
+
+        XCTAssertEqual(status.publicKeyPrefix.hexString, "aabbccddeeff")
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.txQueueLength, 5)
+        XCTAssertEqual(status.noiseFloor, -110)
+        XCTAssertEqual(status.lastRSSI, -85)
+        XCTAssertEqual(status.packetsReceived, 100)
+        XCTAssertEqual(status.packetsSent, 200)
+        XCTAssertEqual(status.airtime, 10000)
+        XCTAssertEqual(status.uptime, 600)
+        XCTAssertEqual(status.sentFlood, 10)
+        XCTAssertEqual(status.sentDirect, 20)
+        XCTAssertEqual(status.receivedFlood, 30)
+        XCTAssertEqual(status.receivedDirect, 40)
+        XCTAssertEqual(status.fullEvents, 3)
+        XCTAssertEqual(status.lastSNR, 10.0, accuracy: 0.001)
+        XCTAssertEqual(status.directDuplicates, 2)
+        XCTAssertEqual(status.floodDuplicates, 1)
+        XCTAssertEqual(status.rxAirtime, 20000)
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_rejectsShortPayload() {
+        let shortPayload = Data(repeating: 0, count: 47)  // Less than 48 bytes
+        let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
+
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(shortPayload, publicKeyPrefix: pubkeyPrefix)
+
+        XCTAssertNil(status, "Should return nil for payload shorter than 48 bytes")
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_handlesMinimalPayload() {
+        // Exactly 48 bytes (no rxAirtime field)
+        var payload = Data(repeating: 0, count: 48)
+        // Set battery to non-zero so we can verify parsing
+        payload[0] = 0xE8
+        payload[1] = 0x03  // Battery: 1000mV
+
+        let pubkeyPrefix = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+
+        guard let status = status else {
+            XCTFail("Should parse minimal payload")
+            return
+        }
+
+        XCTAssertEqual(status.battery, 1000)
+        XCTAssertEqual(status.rxAirtime, 0, "rxAirtime should default to 0 when not present")
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_rejectsIncompletePayload() {
+        for size in [49, 50, 51] {
+            let payload = Data(repeating: 0, count: size)
+            let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
+            let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+            XCTAssertNil(status, "Should reject \(size)-byte payload")
+        }
+    }
+
+    func test_statusResponse_parseFromBinaryResponse_handlesExtraData() {
+        var payload = Data(repeating: 0, count: 56)  // 52 + 4 extra bytes
+        payload[0] = 0xE8
+        payload[1] = 0x03  // Battery: 1000mV
+        let pubkeyPrefix = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+        let status = Parsers.StatusResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+        XCTAssertNotNil(status, "Should parse payload with extra data")
+        XCTAssertEqual(status?.battery, 1000)
+    }
+
     // MARK: - Bug B & D: Binary Response Routing & Neighbours Parser
 
     func test_neighboursParser_parsesValidResponse() {
@@ -303,5 +404,36 @@ final class ProtocolBugFixTests: XCTestCase {
         XCTAssertEqual(entries[0].min, 50.0, accuracy: 0.001)
         XCTAssertEqual(entries[0].max, 75.0, accuracy: 0.001)
         XCTAssertEqual(entries[0].avg, 65.0, accuracy: 0.001)
+    }
+
+    // MARK: - Binary Response Telemetry Parsing (Format 2)
+
+    func test_telemetryResponse_parseFromBinaryResponse_validPayload() {
+        // Binary response format: raw LPP data starts at offset 0
+        // LPP format: [channel:1][type:1][value:N]
+        var payload = Data()
+        // Temperature reading: channel 1, type 0x67
+        payload.append(0x01)  // channel
+        payload.append(0x67)  // type: temperature
+        payload.append(contentsOf: [0x00, 0xFA])  // 250 = 25.0°C (big-endian, /10)
+
+        let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
+
+        let response = Parsers.TelemetryResponse.parseFromBinaryResponse(payload, publicKeyPrefix: pubkeyPrefix)
+
+        XCTAssertEqual(response.publicKeyPrefix.hexString, "aabbccddeeff")
+        XCTAssertEqual(response.rawData, payload)
+        XCTAssertEqual(response.dataPoints.count, 1)
+        XCTAssertEqual(response.dataPoints.first?.channel, 1)
+    }
+
+    func test_telemetryResponse_parseFromBinaryResponse_emptyPayload() {
+        let emptyPayload = Data()
+        let pubkeyPrefix = Data([0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
+
+        let response = Parsers.TelemetryResponse.parseFromBinaryResponse(emptyPayload, publicKeyPrefix: pubkeyPrefix)
+
+        // Empty payload is valid (just no data points)
+        XCTAssertEqual(response.dataPoints.count, 0)
     }
 }

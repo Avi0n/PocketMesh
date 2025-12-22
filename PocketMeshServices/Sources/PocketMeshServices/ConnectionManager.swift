@@ -50,17 +50,7 @@ public final class ConnectionManager {
     // MARK: - Observable State
 
     /// Current connection state
-    public private(set) var connectionState: ConnectionState = .disconnected {
-        didSet {
-            if connectionState == .ready && oldValue != .ready {
-                onBecameReady?()
-            }
-        }
-    }
-
-    /// Callback fired when connection transitions to .ready state.
-    /// Callers should use `[weak self]` to avoid retain cycles.
-    public var onBecameReady: (@Sendable () -> Void)?
+    public private(set) var connectionState: ConnectionState = .disconnected
 
     /// Connected device info (nil when disconnected)
     public private(set) var connectedDevice: DeviceDTO?

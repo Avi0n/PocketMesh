@@ -55,6 +55,10 @@ enum PacketSize {
     /// Minimum size for login success response.
     /// Format: `[permissions:1][pubkeyPrefix:6]`
     static let loginSuccessMinimum = 7
+    /// Size for binary response status payload without rxAirtime field (48 bytes).
+    static let binaryResponseStatusBase = 48
+    /// Minimum size for binary response status payload with rxAirtime field (52 bytes).
+    static let binaryResponseStatusWithRxAirtime = 52
 }
 
 // MARK: - Parser Logger
@@ -533,6 +537,79 @@ enum Parsers {
                 rxAirtime: rxAirtime
             ))
         }
+
+        /// Parses status data from a BINARY_RESPONSE (0x8C) payload.
+        ///
+        /// ### Binary Format (Format 2 - no pubkey header)
+        /// Fields start at offset 0:
+        /// - Offset 0 (2 bytes): Battery level in mV (UInt16 LE)
+        /// - Offset 2 (2 bytes): Tx queue length (UInt16 LE)
+        /// - Offset 4 (2 bytes): Noise floor (Int16 LE)
+        /// - Offset 6 (2 bytes): Last RSSI (Int16 LE)
+        /// - Offset 8 (4 bytes): Packets received (UInt32 LE)
+        /// - Offset 12 (4 bytes): Packets sent (UInt32 LE)
+        /// - Offset 16 (4 bytes): Airtime in seconds (UInt32 LE)
+        /// - Offset 20 (4 bytes): Uptime in seconds (UInt32 LE)
+        /// - Offset 24 (4 bytes): Sent flood (UInt32 LE)
+        /// - Offset 28 (4 bytes): Sent direct (UInt32 LE)
+        /// - Offset 32 (4 bytes): Received flood (UInt32 LE)
+        /// - Offset 36 (4 bytes): Received direct (UInt32 LE)
+        /// - Offset 40 (2 bytes): Full events counter (UInt16 LE)
+        /// - Offset 42 (2 bytes): Last SNR scaled by 4 (Int16 LE)
+        /// - Offset 44 (2 bytes): Direct duplicates (UInt16 LE)
+        /// - Offset 46 (2 bytes): Flood duplicates (UInt16 LE)
+        /// - Offset 48 (4 bytes): Rx airtime (UInt32 LE, optional)
+        ///
+        /// - Parameters:
+        ///   - data: Raw binary response payload (without the 4-byte tag).
+        ///   - publicKeyPrefix: The 6-byte public key prefix from the pending request context.
+        /// - Returns: A `StatusResponse` if parsing succeeds, `nil` otherwise.
+        static func parseFromBinaryResponse(_ data: Data, publicKeyPrefix: Data) -> MeshCore.StatusResponse? {
+            // Accept exactly 48 bytes (no rxAirtime) or 52+ bytes (with rxAirtime)
+            // Reject malformed payloads with incomplete rxAirtime field
+            guard data.count == PacketSize.binaryResponseStatusBase ||
+                  data.count >= PacketSize.binaryResponseStatusWithRxAirtime else { return nil }
+
+            var offset = 0
+            let battery = Int(data.readUInt16LE(at: offset)); offset += 2
+            let txQueueLen = Int(data.readUInt16LE(at: offset)); offset += 2
+            let noiseFloor = Int(data.readInt16LE(at: offset)); offset += 2
+            let lastRSSI = Int(data.readInt16LE(at: offset)); offset += 2
+            let packetsRecv = data.readUInt32LE(at: offset); offset += 4
+            let packetsSent = data.readUInt32LE(at: offset); offset += 4
+            let airtime = data.readUInt32LE(at: offset); offset += 4
+            let uptime = data.readUInt32LE(at: offset); offset += 4
+            let sentFlood = data.readUInt32LE(at: offset); offset += 4
+            let sentDirect = data.readUInt32LE(at: offset); offset += 4
+            let recvFlood = data.readUInt32LE(at: offset); offset += 4
+            let recvDirect = data.readUInt32LE(at: offset); offset += 4
+            let fullEvents = Int(data.readUInt16LE(at: offset)); offset += 2
+            let lastSNR = Double(data.readInt16LE(at: offset)) / 4.0; offset += 2
+            let directDups = Int(data.readUInt16LE(at: offset)); offset += 2
+            let floodDups = Int(data.readUInt16LE(at: offset)); offset += 2
+            let rxAirtime = data.count >= PacketSize.binaryResponseStatusWithRxAirtime ? data.readUInt32LE(at: offset) : 0
+
+            return MeshCore.StatusResponse(
+                publicKeyPrefix: publicKeyPrefix,
+                battery: battery,
+                txQueueLength: txQueueLen,
+                noiseFloor: noiseFloor,
+                lastRSSI: lastRSSI,
+                packetsReceived: packetsRecv,
+                packetsSent: packetsSent,
+                airtime: airtime,
+                uptime: uptime,
+                sentFlood: sentFlood,
+                sentDirect: sentDirect,
+                receivedFlood: recvFlood,
+                receivedDirect: recvDirect,
+                fullEvents: fullEvents,
+                lastSNR: lastSNR,
+                directDuplicates: directDups,
+                floodDuplicates: floodDups,
+                rxAirtime: rxAirtime
+            )
+        }
     }
 
     // MARK: - TelemetryResponse
@@ -556,6 +633,23 @@ enum Parsers {
                 rawData: rawData
             ))
         }
+
+        /// Parses telemetry data from a BINARY_RESPONSE (0x8C) payload.
+        ///
+        /// ### Binary Format (Format 2 - no pubkey header)
+        /// Raw LPP data starts at offset 0.
+        ///
+        /// - Parameters:
+        ///   - data: Raw binary response payload (without the 4-byte tag).
+        ///   - publicKeyPrefix: The 6-byte public key prefix from the pending request context.
+        /// - Returns: A `TelemetryResponse` with the raw data for LPP decoding.
+        static func parseFromBinaryResponse(_ data: Data, publicKeyPrefix: Data) -> MeshCore.TelemetryResponse {
+            MeshCore.TelemetryResponse(
+                publicKeyPrefix: publicKeyPrefix,
+                tag: nil,
+                rawData: data
+            )
+        }
     }
 
     // MARK: - BinaryResponse
@@ -571,11 +665,15 @@ enum Parsers {
         /// use specialized parsers (like ``ACLParser`` or ``MMAParser``) to decode
         /// the `responseData` based on the request context.
         static func parse(_ data: Data) -> MeshEvent {
-            guard data.count >= 4 else {
-                return .parseFailure(data: data, reason: "BinaryResponse too short")
+            // Binary response format:
+            // - Byte 0: Request type (unused, skip)
+            // - Bytes 1-4: Tag (matches expectedAck from messageSent)
+            // - Bytes 5+: Response data
+            guard data.count >= 5 else {
+                return .parseFailure(data: data, reason: "BinaryResponse too short: \(data.count) < 5")
             }
-            let tag = Data(data.prefix(4))
-            let responseData = Data(data.dropFirst(4))
+            let tag = Data(data[1..<5])
+            let responseData = Data(data.dropFirst(5))
             return .binaryResponse(tag: tag, data: responseData)
         }
     }
