@@ -129,6 +129,8 @@ struct DeviceScanView: View {
 
             do {
                 try await appState.connectionManager.pairNewDevice()
+                await appState.wireServicesIfConnected()
+                appState.triggerInitialSync()
                 withAnimation {
                     appState.completeOnboarding()
                 }
