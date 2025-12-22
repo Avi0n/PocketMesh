@@ -15,8 +15,6 @@ struct ContactsListView: View {
     }
 
     var body: some View {
-        let _ = appState.contactsRefreshTrigger  // Force @Observable tracking
-
         NavigationStack {
             Group {
                 if viewModel.isLoading && viewModel.contacts.isEmpty {
@@ -76,7 +74,7 @@ struct ContactsListView: View {
                 viewModel.configure(appState: appState)
                 await loadContacts()
             }
-            .onChange(of: appState.contactsRefreshTrigger) { _, _ in
+            .onChange(of: appState.messageEventBroadcaster.contactsRefreshTrigger) { _, _ in
                 Task {
                     await loadContacts()
                 }

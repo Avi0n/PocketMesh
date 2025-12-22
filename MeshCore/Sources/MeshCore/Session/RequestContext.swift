@@ -191,3 +191,56 @@ public actor PendingRequests {
         return (type, prefix, requestContext.context)
     }
 }
+
+/// Serializes binary request operations to prevent race conditions.
+///
+/// When multiple binary requests (status, telemetry, etc.) are sent concurrently,
+/// their `messageSent` events can interleave, causing incorrect `expectedAck` matching.
+/// This actor ensures only one binary request is in flight at a time.
+public actor BinaryRequestSerializer {
+    private var isRequestInFlight = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    /// Acquires the lock, waiting if another request is in flight.
+    public func acquire() async {
+        if !isRequestInFlight {
+            isRequestInFlight = true
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    /// Releases the lock, allowing the next waiter to proceed.
+    public func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            next.resume()
+        } else {
+            isRequestInFlight = false
+        }
+    }
+
+    /// Executes a binary request operation with serialization.
+    ///
+    /// This ensures only one binary request is processed at a time,
+    /// preventing race conditions with `messageSent` event correlation.
+    ///
+    /// - Parameter operation: The async throwing operation to execute.
+    /// - Returns: The result of the operation.
+    public func withSerialization<T: Sendable>(
+        _ operation: @Sendable () async throws -> T
+    ) async throws -> T {
+        await acquire()
+        do {
+            let result = try await operation()
+            release()
+            return result
+        } catch {
+            release()
+            throw error
+        }
+    }
+}

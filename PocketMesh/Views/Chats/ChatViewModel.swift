@@ -63,23 +63,29 @@ final class ChatViewModel {
 
     // MARK: - Dependencies
 
-    /// Weak reference to AppState for service access
-    private weak var appState: AppState?
-
-    /// Services accessed lazily to ensure they're always current
-    private var dataStore: DataStore? { appState?.services?.dataStore }
-    private var messageService: MessageService? { appState?.services?.messageService }
-    private var notificationService: NotificationService? { appState?.services?.notificationService }
-    private var channelService: ChannelService? { appState?.services?.channelService }
-    private var roomServerService: RoomServerService? { appState?.services?.roomServerService }
+    private var dataStore: DataStore?
+    private var messageService: MessageService?
+    private var notificationService: NotificationService?
+    private var channelService: ChannelService?
+    private var roomServerService: RoomServerService?
 
     // MARK: - Initialization
 
     init() {}
 
-    /// Configure with AppState reference
+    /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.appState = appState
+        self.dataStore = appState.services?.dataStore
+        self.messageService = appState.services?.messageService
+        self.notificationService = appState.services?.notificationService
+        self.channelService = appState.services?.channelService
+        self.roomServerService = appState.services?.roomServerService
+    }
+
+    /// Configure with services (for testing)
+    func configure(dataStore: DataStore, messageService: MessageService) {
+        self.dataStore = dataStore
+        self.messageService = messageService
     }
 
     // MARK: - Conversation List

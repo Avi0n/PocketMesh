@@ -83,6 +83,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private let clock: any Clock<Duration>
     private let dispatcher = EventDispatcher()
     private let pendingRequests = PendingRequests()
+    private let binaryRequestSerializer = BinaryRequestSerializer()
 
     // State
     private var contactManager = ContactManager()
@@ -772,26 +773,73 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
     ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
+        // Serialize binary requests to prevent messageSent race conditions
+        try await binaryRequestSerializer.withSerialization { [self] in
+            try await performStatusRequest(from: publicKey)
+        }
+    }
+
+    /// Internal implementation of status request, called within serialization.
+    private func performStatusRequest(from publicKey: Data) async throws -> StatusResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .status)
+        let publicKeyPrefix = Data(publicKey.prefix(6))
+        let effectiveTimeout = configuration.defaultTimeout
+
+        // Subscribe BEFORE sending to avoid race condition where binaryResponse
+        // arrives before we can register the pending request
+        let events = await dispatcher.subscribe()
+
+        // Send after subscribing
         try await transport.send(data)
 
-        let tag = publicKey.prefix(6)
-        let result = await pendingRequests.register(
-            tag: Data(tag),
-            requestType: .status,
-            publicKeyPrefix: Data(tag),
-            timeout: configuration.defaultTimeout
-        )
+        // Wait for messageSent (to get expectedAck) then binaryResponse (the actual response)
+        return try await withThrowingTaskGroup(of: StatusResponse?.self) { group in
+            group.addTask {
+                var expectedAck: Data?
 
-        guard let event = result else {
+                for await event in events {
+                    if Task.isCancelled { return nil }
+
+                    switch event {
+                    case .messageSent(let info):
+                        // Capture the expectedAck from firmware's MSG_SENT response
+                        expectedAck = info.expectedAck
+
+                    case .binaryResponse(let tag, let responseData):
+                        // Match by expectedAck (4-byte tag from firmware)
+                        guard let expected = expectedAck, tag == expected else { continue }
+
+                        guard let response = Parsers.StatusResponse.parseFromBinaryResponse(
+                            responseData,
+                            publicKeyPrefix: publicKeyPrefix
+                        ) else {
+                            return nil
+                        }
+                        return response
+
+                    case .statusResponse(let response):
+                        // Handle already-routed response (if routing happens elsewhere)
+                        return response
+
+                    default:
+                        continue
+                    }
+                }
+                return nil
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(effectiveTimeout))
+                return nil
+            }
+
+            if let result = try await group.next() ?? nil {
+                group.cancelAll()
+                return result
+            }
+            group.cancelAll()
             throw MeshCoreError.timeout
         }
-
-        if case .statusResponse(let response) = event {
-            return response
-        }
-
-        throw MeshCoreError.invalidResponse(expected: "statusResponse", got: String(describing: event))
     }
 
     /// Requests status information from a remote node.
@@ -1537,26 +1585,71 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestTelemetry(from publicKey: Data) async throws -> TelemetryResponse {
+        // Serialize binary requests to prevent messageSent race conditions
+        try await binaryRequestSerializer.withSerialization { [self] in
+            try await performTelemetryRequest(from: publicKey)
+        }
+    }
+
+    /// Internal implementation of telemetry request, called within serialization.
+    private func performTelemetryRequest(from publicKey: Data) async throws -> TelemetryResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .telemetry)
+        let publicKeyPrefix = Data(publicKey.prefix(6))
+        let effectiveTimeout = configuration.defaultTimeout
+
+        // Subscribe BEFORE sending to avoid race condition where binaryResponse
+        // arrives before we can register the pending request
+        let events = await dispatcher.subscribe()
+
+        // Send after subscribing
         try await transport.send(data)
 
-        let tag = publicKey.prefix(6)
-        let result = await pendingRequests.register(
-            tag: Data(tag),
-            requestType: .telemetry,
-            publicKeyPrefix: Data(tag),
-            timeout: configuration.defaultTimeout
-        )
+        // Wait for messageSent (to get expectedAck) then binaryResponse (the actual response)
+        return try await withThrowingTaskGroup(of: TelemetryResponse?.self) { group in
+            group.addTask {
+                var expectedAck: Data?
 
-        guard let event = result else {
+                for await event in events {
+                    if Task.isCancelled { return nil }
+
+                    switch event {
+                    case .messageSent(let info):
+                        // Capture the expectedAck from firmware's MSG_SENT response
+                        expectedAck = info.expectedAck
+
+                    case .binaryResponse(let tag, let responseData):
+                        // Match by expectedAck (4-byte tag from firmware)
+                        guard let expected = expectedAck, tag == expected else { continue }
+
+                        let response = Parsers.TelemetryResponse.parseFromBinaryResponse(
+                            responseData,
+                            publicKeyPrefix: publicKeyPrefix
+                        )
+                        return response
+
+                    case .telemetryResponse(let response):
+                        // Handle already-routed response (if routing happens elsewhere)
+                        return response
+
+                    default:
+                        continue
+                    }
+                }
+                return nil
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(effectiveTimeout))
+                return nil
+            }
+
+            if let result = try await group.next() ?? nil {
+                group.cancelAll()
+                return result
+            }
+            group.cancelAll()
             throw MeshCoreError.timeout
         }
-
-        if case .telemetryResponse(let response) = event {
-            return response
-        }
-
-        throw MeshCoreError.invalidResponse(expected: "telemetryResponse", got: String(describing: event))
     }
 
     /// Requests telemetry data from a destination.
@@ -1941,8 +2034,23 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             let response = NeighboursParser.parse(data, publicKeyPrefix: publicKeyPrefix, tag: tag, prefixLength: prefixLength)
             return .neighboursResponse(response)
 
-        case .status, .telemetry, .keepAlive:
-            // These have dedicated response codes (0x89, 0x8A) or no typed response
+        case .status:
+            guard let response = Parsers.StatusResponse.parseFromBinaryResponse(
+                data,
+                publicKeyPrefix: publicKeyPrefix
+            ) else {
+                return nil
+            }
+            return .statusResponse(response)
+
+        case .telemetry:
+            let response = Parsers.TelemetryResponse.parseFromBinaryResponse(
+                data,
+                publicKeyPrefix: publicKeyPrefix
+            )
+            return .telemetryResponse(response)
+
+        case .keepAlive:
             return nil
         }
     }

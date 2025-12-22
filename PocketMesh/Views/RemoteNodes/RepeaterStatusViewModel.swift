@@ -112,15 +112,13 @@ final class RepeaterStatusViewModel {
         }
 
         do {
-            _ = try await repeaterAdminService.requestStatus(sessionID: session.id)
-            // Status response arrives via push notification
-            // The handler will set isLoadingStatus = false when response arrives
+            let response = try await repeaterAdminService.requestStatus(sessionID: session.id)
+            handleStatusResponse(response)
         } catch {
             errorMessage = error.localizedDescription
-            isLoadingStatus = false  // Only clear on error
+            isLoadingStatus = false
             statusTimeoutTask?.cancel()
         }
-        // Note: Don't clear isLoadingStatus here - it's cleared by handleStatusResponse
     }
 
     /// Request neighbors from the repeater
@@ -200,8 +198,8 @@ final class RepeaterStatusViewModel {
         }
 
         do {
-            try await repeaterAdminService.requestTelemetry(sessionID: session.id)
-            // Response arrives via push notification - handler will set isLoadingTelemetry = false
+            let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
+            handleTelemetryResponse(response)
         } catch {
             errorMessage = error.localizedDescription
             isLoadingTelemetry = false
