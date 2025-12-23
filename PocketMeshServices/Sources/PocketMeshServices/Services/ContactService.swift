@@ -272,15 +272,27 @@ public actor ContactService {
 
     // MARK: - Export/Import Contact
 
-    /// Export a contact to a shareable URI
+    /// Export a contact to a shareable URI (legacy firmware call)
     /// - Parameter publicKey: The contact's 32-byte public key (nil for self)
     /// - Returns: Contact URI string
+    @available(*, deprecated, message: "Use exportContactURI(name:publicKey:type:) instead")
     public func exportContact(publicKey: Data? = nil) async throws -> String {
         do {
             return try await session.exportContact(publicKey: publicKey)
         } catch let error as MeshCoreError {
             throw ContactServiceError.sessionError(error)
         }
+    }
+
+    /// Build a shareable contact URI from contact information
+    /// - Parameters:
+    ///   - name: The contact's advertised name
+    ///   - publicKey: The contact's 32-byte public key
+    ///   - type: The contact type (chat, repeater, room)
+    /// - Returns: Contact URI string in format: meshcore://contact/add?name=...&public_key=...&type=...
+    public static func exportContactURI(name: String, publicKey: Data, type: ContactType) -> String {
+        let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        return "meshcore://contact/add?name=\(encodedName)&public_key=\(publicKey.hexString())&type=\(type.rawValue)"
     }
 
     /// Import a contact from card data

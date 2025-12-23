@@ -9,6 +9,8 @@ struct ContactsListView: View {
     @State private var showFavoritesOnly = false
     @State private var showDiscovery = false
     @State private var syncSuccessTrigger = false
+    @State private var showShareMyContact = false
+    @State private var showAddContact = false
 
     private var filteredContacts: [ContactDTO] {
         viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
@@ -41,6 +43,20 @@ struct ContactsListView: View {
                                 showFavoritesOnly ? "Show All" : "Show Favorites",
                                 systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
                             )
+                        }
+
+                        Divider()
+
+                        Button {
+                            showShareMyContact = true
+                        } label: {
+                            Label("Share My Contact", systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            showAddContact = true
+                        } label: {
+                            Label("Add Contact", systemImage: "plus")
                         }
 
                         Divider()
@@ -93,6 +109,18 @@ struct ContactsListView: View {
             }
             .navigationDestination(isPresented: $showDiscovery) {
                 DiscoveryView()
+            }
+            .sheet(isPresented: $showShareMyContact) {
+                if let device = appState.connectedDevice {
+                    ContactQRShareSheet(
+                        contactName: device.nodeName,
+                        publicKey: device.publicKey,
+                        contactType: .chat
+                    )
+                }
+            }
+            .sheet(isPresented: $showAddContact) {
+                AddContactSheet()
             }
         }
     }

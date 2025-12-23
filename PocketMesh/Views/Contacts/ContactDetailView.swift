@@ -42,6 +42,8 @@ struct ContactDetailView: View {
     @State private var showRepeaterAdminAuth = false
     @State private var adminSession: RemoteNodeSessionDTO?
     @State private var navigateToSettings = false
+    // QR sharing state
+    @State private var showQRShareSheet = false
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -182,6 +184,13 @@ struct ContactDetailView: View {
                     // Navigation triggers in onDismiss above
                 }
             }
+        }
+        .sheet(isPresented: $showQRShareSheet) {
+            ContactQRShareSheet(
+                contactName: currentContact.name,
+                publicKey: currentContact.publicKey,
+                contactType: currentContact.type
+            )
         }
         .navigationDestination(isPresented: $navigateToSettings) {
             if let session = adminSession {
@@ -347,13 +356,20 @@ struct ContactDetailView: View {
                 )
             }
 
-            // Share contact (for all contact types)
+            // Share Contact via QR
+            Button {
+                showQRShareSheet = true
+            } label: {
+                Label("Share Contact", systemImage: "square.and.arrow.up")
+            }
+
+            // Share Contact via Advert
             Button {
                 Task {
                     await shareContact()
                 }
             } label: {
-                Label("Share Contact", systemImage: "square.and.arrow.up")
+                Label("Share Contact via Advert", systemImage: "antenna.radiowaves.left.and.right")
             }
         }
     }

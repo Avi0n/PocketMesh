@@ -68,7 +68,6 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
-    private weak var appState: AppState?
 
     // MARK: - Initialization
 
@@ -81,7 +80,6 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
-        self.appState = appState
     }
 
     /// Configure with services (for testing)
@@ -212,7 +210,6 @@ final class ChatViewModel {
 
             // Update conversations list to reflect new message
             await loadConversations(deviceID: contact.deviceID)
-            await appState?.syncCoordinator?.notifyConversationsChanged()
         } catch {
             errorMessage = error.localizedDescription
             // Note: composingText already cleared - failed message can be retried from bubble
@@ -282,7 +279,6 @@ final class ChatViewModel {
 
             // Reload channels to update conversation list
             await loadChannels(deviceID: channel.deviceID)
-            await appState?.syncCoordinator?.notifyConversationsChanged()
         } catch {
             errorMessage = error.localizedDescription
             // Restore the text so user can retry
