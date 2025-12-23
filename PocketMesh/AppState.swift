@@ -26,11 +26,15 @@ public final class AppState {
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
 
-    /// The sync coordinator for data synchronization (stored for direct observation)
+    /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
 
     /// Incremented when services change (device switch, reconnect). Views observe this to reload.
     public private(set) var servicesVersion: Int = 0
+
+    /// Incremented when conversations data changes. Views observe this to reload.
+    /// Lives on AppState (not SyncCoordinator) because SwiftUI can only observe @Observable classes.
+    public private(set) var conversationsVersion: Int = 0
 
     // MARK: - UI State for Connection
 
@@ -147,6 +151,12 @@ public final class AppState {
                 self?.syncActivityCount -= 1
             }
         )
+
+        // Wire conversations changed callback for UI observation
+        // This lives on AppState because SwiftUI can only observe @Observable classes, not actors
+        await services.syncCoordinator.setConversationsChangedCallback { @MainActor [weak self] in
+            self?.conversationsVersion += 1
+        }
 
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
