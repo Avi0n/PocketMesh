@@ -85,6 +85,11 @@ public final class ServiceContainer {
     /// Service for room server operations
     public let roomServerService: RoomServerService
 
+    // MARK: - Sync Coordination
+
+    /// Sync coordinator for managing sync lifecycle
+    public let syncCoordinator: SyncCoordinator
+
     // MARK: - State
 
     /// Whether services have been wired together
@@ -133,6 +138,9 @@ public final class ServiceContainer {
             remoteNodeService: remoteNodeService,
             dataStore: dataStore
         )
+
+        // Sync coordinator (no dependencies on other services)
+        self.syncCoordinator = SyncCoordinator()
     }
 
     // MARK: - Service Wiring

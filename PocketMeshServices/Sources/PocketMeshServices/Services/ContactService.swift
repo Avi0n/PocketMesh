@@ -358,6 +358,12 @@ public actor ContactService {
     }
 }
 
+// MARK: - ContactServiceProtocol Conformance
+
+extension ContactService: ContactServiceProtocol {
+    // Already implements syncContacts(deviceID:since:) -> ContactSyncResult
+}
+
 // MARK: - MeshContact Extensions
 
 extension MeshContact {
