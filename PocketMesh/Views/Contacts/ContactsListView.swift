@@ -137,33 +137,11 @@ struct ContactsListView: View {
 
     private var contactsList: some View {
         List {
-            // Favorites section
-            let favorites = filteredContacts.filter(\.isFavorite)
-            if !favorites.isEmpty && !showFavoritesOnly {
-                Section {
-                    ForEach(favorites) { contact in
-                        contactRow(contact)
-                    }
-                } header: {
-                    Label("Favorites", systemImage: "star.fill")
-                }
-            }
-
-            // All contacts section
-            let nonFavorites = showFavoritesOnly ? favorites : filteredContacts.filter { !$0.isFavorite }
-            if !nonFavorites.isEmpty {
-                Section {
-                    ForEach(showFavoritesOnly ? favorites : nonFavorites) { contact in
-                        contactRow(contact)
-                    }
-                } header: {
-                    if !showFavoritesOnly && !favorites.isEmpty {
-                        Text("All Contacts")
-                    }
-                }
+            ForEach(filteredContacts) { contact in
+                contactRow(contact)
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
     }
 
     private func contactRow(_ contact: ContactDTO) -> some View {
