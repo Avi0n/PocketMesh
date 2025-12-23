@@ -41,8 +41,8 @@ public actor ContactService {
     private let dataStore: PersistenceStore
     private let logger = Logger(subsystem: "com.pocketmesh", category: "ContactService")
 
-    /// Handler for contact updates (for UI refresh)
-    private var contactUpdateHandler: (@Sendable ([ContactDTO]) -> Void)?
+    /// Sync coordinator for UI refresh notifications
+    private weak var syncCoordinator: SyncCoordinator?
 
     /// Progress handler for sync operations
     private var syncProgressHandler: (@Sendable (Int, Int) -> Void)?
@@ -54,11 +54,11 @@ public actor ContactService {
         self.dataStore = dataStore
     }
 
-    // MARK: - Event Handlers
+    // MARK: - Configuration
 
-    /// Set handler for contact updates
-    public func setContactUpdateHandler(_ handler: @escaping @Sendable ([ContactDTO]) -> Void) {
-        contactUpdateHandler = handler
+    /// Set the sync coordinator for UI refresh notifications
+    public func setSyncCoordinator(_ coordinator: SyncCoordinator) {
+        self.syncCoordinator = coordinator
     }
 
     /// Set progress handler for sync operations
@@ -95,10 +95,6 @@ public actor ContactService {
                 syncProgressHandler?(receivedCount, meshContacts.count)
             }
 
-            // Notify handler with all contacts
-            let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
-            contactUpdateHandler?(allContacts)
-
             return ContactSyncResult(
                 contactsReceived: receivedCount,
                 lastSyncTimestamp: lastTimestamp,
@@ -134,9 +130,8 @@ public actor ContactService {
             // Save to local database
             _ = try await dataStore.saveContact(deviceID: deviceID, from: contact)
 
-            // Notify handler
-            let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
-            contactUpdateHandler?(allContacts)
+            // Notify UI to refresh contacts list
+            await syncCoordinator?.notifyContactsChanged()
         } catch let error as MeshCoreError {
             if case .deviceError(let code) = error, code == ProtocolError.tableFull.rawValue {
                 throw ContactServiceError.contactTableFull
@@ -160,9 +155,8 @@ public actor ContactService {
                 try await dataStore.deleteContact(id: contact.id)
             }
 
-            // Notify handler
-            let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
-            contactUpdateHandler?(allContacts)
+            // Notify UI to refresh contacts list
+            await syncCoordinator?.notifyContactsChanged()
         } catch let error as MeshCoreError {
             if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
                 throw ContactServiceError.contactNotFound

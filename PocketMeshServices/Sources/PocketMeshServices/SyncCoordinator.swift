@@ -90,6 +90,14 @@ public actor SyncCoordinator {
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
 
+    /// Callback when contacts data changes (for SwiftUI observation)
+    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    nonisolated(unsafe) private var onContactsChanged: (@Sendable @MainActor () -> Void)?
+
+    /// Callback when conversations data changes (for SwiftUI observation)
+    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    nonisolated(unsafe) private var onConversationsChanged: (@Sendable @MainActor () -> Void)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -116,18 +124,29 @@ public actor SyncCoordinator {
         onSyncActivityEnded = onEnded
     }
 
+    /// Sets callbacks for data change notifications (used by AppState for SwiftUI observation)
+    public func setDataChangeCallbacks(
+        onContactsChanged: @escaping @Sendable @MainActor () -> Void,
+        onConversationsChanged: @escaping @Sendable @MainActor () -> Void
+    ) {
+        self.onContactsChanged = onContactsChanged
+        self.onConversationsChanged = onConversationsChanged
+    }
+
     // MARK: - Notifications
 
     /// Notify that contacts data changed (triggers UI refresh)
     @MainActor
     public func notifyContactsChanged() {
         contactsVersion += 1
+        onContactsChanged?()
     }
 
     /// Notify that conversations data changed (triggers UI refresh)
     @MainActor
     public func notifyConversationsChanged() {
         conversationsVersion += 1
+        onConversationsChanged?()
     }
 
     // MARK: - Full Sync

@@ -26,11 +26,17 @@ public final class AppState {
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
 
-    /// The sync coordinator for data synchronization (stored for direct observation)
+    /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
 
     /// Incremented when services change (device switch, reconnect). Views observe this to reload.
     public private(set) var servicesVersion: Int = 0
+
+    /// Incremented when contacts data changes. Views observe this to reload contact lists.
+    public private(set) var contactsVersion: Int = 0
+
+    /// Incremented when conversations data changes. Views observe this to reload chat lists.
+    public private(set) var conversationsVersion: Int = 0
 
     // MARK: - UI State for Connection
 
@@ -132,9 +138,19 @@ public final class AppState {
             return
         }
 
-        // Store syncCoordinator directly for SwiftUI observation
-        // (computed property chains through other objects break observation)
+        // Store syncCoordinator reference
         syncCoordinator = services.syncCoordinator
+
+        // Wire data change callbacks for SwiftUI observation
+        // (actors don't participate in SwiftUI's observation system, so we need callbacks)
+        await services.syncCoordinator.setDataChangeCallbacks(
+            onContactsChanged: { @MainActor [weak self] in
+                self?.contactsVersion += 1
+            },
+            onConversationsChanged: { @MainActor [weak self] in
+                self?.conversationsVersion += 1
+            }
+        )
 
         // Wire sync activity callbacks for syncing pill display
         // These are called for contacts and channels phases, NOT for messages

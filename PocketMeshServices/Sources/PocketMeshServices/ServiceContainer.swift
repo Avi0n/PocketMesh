@@ -155,6 +155,9 @@ public final class ServiceContainer {
         // Wire message service to contact service for path management during retry
         await messageService.setContactService(contactService)
 
+        // Wire contact service to sync coordinator for UI refresh notifications
+        await contactService.setSyncCoordinator(syncCoordinator)
+
         isWired = true
     }
 

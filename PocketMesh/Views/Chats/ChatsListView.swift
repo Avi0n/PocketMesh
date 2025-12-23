@@ -107,7 +107,7 @@ struct ChatsListView: View {
                     await loadConversations()
                 }
             }
-            .onChange(of: appState.syncCoordinator?.conversationsVersion) { _, _ in
+            .onChange(of: appState.conversationsVersion) { _, _ in
                 Task {
                     await loadConversations()
                 }

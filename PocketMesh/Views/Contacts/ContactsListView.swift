@@ -96,7 +96,7 @@ struct ContactsListView: View {
                     await loadContacts()
                 }
             }
-            .onChange(of: appState.syncCoordinator?.contactsVersion) { _, _ in
+            .onChange(of: appState.contactsVersion) { _, _ in
                 Task {
                     await loadContacts()
                 }
