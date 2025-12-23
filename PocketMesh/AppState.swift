@@ -118,13 +118,8 @@ public final class AppState {
 
     /// Initialize on app launch
     func initialize() async {
-        // Set up notification center delegate
-        if let notificationService = services?.notificationService {
-            UNUserNotificationCenter.current().delegate = notificationService
-            await notificationService.setup()
-        }
-
         // activate() will trigger onConnectionReady callback if connection succeeds
+        // Notification delegate is set in wireServicesIfConnected() when services become available
         await connectionManager.activate()
     }
 
@@ -169,6 +164,10 @@ public final class AppState {
 
         // Wire notification service to message event broadcaster
         messageEventBroadcaster.notificationService = services.notificationService
+
+        // Set up notification center delegate and check authorization
+        UNUserNotificationCenter.current().delegate = services.notificationService
+        await services.notificationService.setup()
 
         // Wire message service for send confirmation handling
         messageEventBroadcaster.messageService = services.messageService
