@@ -53,20 +53,20 @@ struct ChannelInfoSheet: View {
                     }
                 }
             }
-            .confirmationDialog(
-                "Delete Channel",
-                isPresented: $showingDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("Delete Channel", role: .destructive) {
-                    Task {
-                        await deleteChannel()
-                    }
+        }
+        .confirmationDialog(
+            "Delete Channel",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Channel", role: .destructive) {
+                Task {
+                    await deleteChannel()
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This will remove the channel from your device and delete all local messages. This action cannot be undone.")
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove the channel from your device and delete all local messages. This action cannot be undone.")
         }
     }
 
@@ -223,13 +223,18 @@ struct ChannelInfoSheet: View {
             return
         }
 
+        guard let channelService = appState.services?.channelService else {
+            errorMessage = "Services not available"
+            return
+        }
+
         isDeleting = true
         errorMessage = nil
 
         do {
             // Clear channel on device (sends empty name + zero secret via BLE)
             // and deletes from local database
-            try await appState.services?.channelService.clearChannel(
+            try await channelService.clearChannel(
                 deviceID: deviceID,
                 index: channel.index
             )

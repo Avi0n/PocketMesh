@@ -212,9 +212,10 @@ struct ChatsListView: View {
                 // Show confirmation alert for room deletion
                 roomToDelete = session
                 showRoomDeleteAlert = true
-            case .channel:
-                // Channel deletion is handled via ChannelInfoSheet, not swipe-to-delete
-                break
+            case .channel(let channel):
+                Task {
+                    await deleteChannel(channel)
+                }
             }
         }
     }
@@ -237,6 +238,20 @@ struct ChatsListView: View {
             await loadConversations()
         } catch {
             logger.error("Failed to delete room: \(error)")
+        }
+    }
+
+    private func deleteChannel(_ channel: ChannelDTO) async {
+        guard let channelService = appState.services?.channelService else { return }
+
+        do {
+            try await channelService.clearChannel(
+                deviceID: channel.deviceID,
+                index: channel.index
+            )
+            await loadConversations()
+        } catch {
+            logger.error("Failed to delete channel: \(error)")
         }
     }
 }
