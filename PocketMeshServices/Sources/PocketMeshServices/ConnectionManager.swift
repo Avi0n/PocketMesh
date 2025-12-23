@@ -129,6 +129,14 @@ public final class ConnectionManager {
                 }
             }
 
+            // Handle entering auto-reconnecting phase
+            await stateMachine.setAutoReconnectingHandler { [weak self] deviceID in
+                Task { @MainActor in
+                    guard let self else { return }
+                    await self.handleEnteringAutoReconnect(deviceID: deviceID)
+                }
+            }
+
             // Handle iOS auto-reconnect completion
             // Using transport.setReconnectionHandler ensures the transport captures
             // the data stream internally before calling our handler
@@ -227,6 +235,15 @@ public final class ConnectionManager {
             logger.info("Switching from current device to: \(deviceID)")
             try await switchDevice(to: deviceID)
             return
+        }
+
+        // Cancel pending state restoration auto-reconnect if connecting to different device
+        if await stateMachine.isAutoReconnecting {
+            let restoringDeviceID = await stateMachine.connectedDeviceID
+            if restoringDeviceID != deviceID {
+                logger.info("Cancelling state restoration auto-reconnect to \(restoringDeviceID?.uuidString ?? "unknown") to connect to \(deviceID)")
+                await transport.disconnect()
+            }
         }
 
         logger.info("Connecting to device: \(deviceID)")
@@ -615,6 +632,28 @@ public final class ConnectionManager {
         // Bluetooth power-cycle handled via onBluetoothPoweredOn callback
     }
 
+    /// Handles entering iOS auto-reconnect phase.
+    /// Tears down services but keeps state as "connecting" to show pulsing icon.
+    private func handleEnteringAutoReconnect(deviceID: UUID) async {
+        logger.info("Entering auto-reconnect phase for \(deviceID)")
+
+        // User may have disconnected just before this
+        guard shouldBeConnected else {
+            logger.info("Ignoring auto-reconnect: user disconnected")
+            await transport.disconnect()
+            return
+        }
+
+        // Tear down session layer (it's invalid now)
+        await services?.stopEventMonitoring()
+        services = nil
+        session = nil
+
+        // Show "connecting" state with pulsing blue icon
+        // Keep connectedDevice set so we can show device name during reconnection
+        connectionState = .connecting
+    }
+
     /// Handles iOS system auto-reconnect completion.
     ///
     /// When iOS auto-reconnects the BLE peripheral (via CBConnectPeripheralOptionEnableAutoReconnect),
@@ -629,8 +668,8 @@ public final class ConnectionManager {
             return
         }
 
-        // Already handling a connection
-        guard self.connectionState == .disconnected else {
+        // Accept both disconnected (normal) and connecting (auto-reconnect in progress)
+        guard self.connectionState == .disconnected || self.connectionState == .connecting else {
             logger.debug("Ignoring: already \(String(describing: self.connectionState))")
             return
         }

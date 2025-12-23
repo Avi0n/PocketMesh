@@ -55,6 +55,10 @@ public actor BLEStateMachine {
     private var onReconnection: (@Sendable (UUID, AsyncStream<Data>) -> Void)?
     private var onBluetoothStateChange: (@Sendable (CBManagerState) -> Void)?
     private var onBluetoothPoweredOn: (@Sendable () -> Void)?
+    /// Called when entering iOS auto-reconnecting phase.
+    /// The device has disconnected but iOS will attempt automatic reconnection.
+    /// Note: The MeshCore session is invalid at this point and will be rebuilt upon successful reconnection.
+    private var onAutoReconnecting: (@Sendable (UUID) -> Void)?
 
     // MARK: - Initialization
 
@@ -136,6 +140,12 @@ public actor BLEStateMachine {
     /// Sets a handler called when Bluetooth powers on
     public func setBluetoothPoweredOnHandler(_ handler: @escaping @Sendable () -> Void) {
         onBluetoothPoweredOn = handler
+    }
+
+    /// Sets a handler for auto-reconnecting events.
+    /// Called when device disconnects but iOS is attempting automatic reconnection.
+    public func setAutoReconnectingHandler(_ handler: @escaping @Sendable (UUID) -> Void) {
+        onAutoReconnecting = handler
     }
 
     /// Waits for Bluetooth to be powered on.
@@ -557,6 +567,9 @@ extension BLEStateMachine {
             }
 
             phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
+
+            // Notify handler so UI can show "connecting" state
+            onAutoReconnecting?(deviceID)
             return
         }
 

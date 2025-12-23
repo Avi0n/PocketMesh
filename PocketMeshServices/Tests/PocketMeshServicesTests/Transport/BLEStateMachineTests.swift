@@ -44,4 +44,19 @@ struct BLEStateMachineTests {
         // Full integration test needed on device
         #expect(true)
     }
+
+    @Test("setAutoReconnectingHandler can be registered")
+    func setAutoReconnectingHandlerCanBeRegistered() async {
+        let sm = BLEStateMachine()
+
+        // Verify handler can be registered without crashing
+        // The handler is never called in this test since we don't simulate a disconnect
+        await sm.setAutoReconnectingHandler { _ in
+            // Handler would be called with device ID on disconnect with isReconnecting: true
+            // Full integration test requires device
+        }
+
+        // Verify state machine is still in idle phase after registering handler
+        #expect(await sm.currentPhase.name == "idle")
+    }
 }
