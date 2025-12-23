@@ -482,7 +482,7 @@ struct ChannelConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.green, in: .capsule)
+                            .background(.blue, in: .capsule)
                     }
                 }
             }
@@ -568,7 +568,7 @@ struct RoomConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.orange, in: .capsule)
+                            .background(.blue, in: .capsule)
                     }
                 }
             }
