@@ -86,12 +86,17 @@ struct ContactServiceTests {
 
     @Test("ContactServiceError sessionError carries MeshCoreError")
     func contactServiceErrorSessionError() {
-        let meshError = MeshCoreError.deviceNotConnected
+        let meshError = MeshCoreError.notConnected
         let error = ContactServiceError.sessionError(meshError)
 
         // Verify the associated value is accessible
         if case .sessionError(let innerError) = error {
-            #expect(innerError == .deviceNotConnected)
+            // Just verify we can access the inner error
+            if case .notConnected = innerError {
+                // Success
+            } else {
+                Issue.record("Expected .notConnected case")
+            }
         } else {
             Issue.record("Expected sessionError case")
         }

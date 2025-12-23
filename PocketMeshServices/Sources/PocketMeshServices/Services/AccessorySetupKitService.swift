@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import AccessorySetupKit
 import CoreBluetooth
 import UIKit
@@ -368,3 +369,69 @@ public enum AccessorySetupKitError: LocalizedError {
         }
     }
 }
+
+#else
+// macOS stubs for compilation
+import Foundation
+
+public struct ASAccessory {
+    public var bluetoothIdentifier: UUID? { nil }
+    public var displayName: String { "" }
+}
+
+@MainActor
+public protocol AccessorySetupKitServiceDelegate: AnyObject {
+    func accessorySetupKitService(_ service: AccessorySetupKitService, didRemoveAccessoryWithID bluetoothID: UUID)
+}
+
+@MainActor @Observable
+public final class AccessorySetupKitService {
+    public private(set) var pairedAccessories: [ASAccessory] = []
+    public private(set) var isSessionActive = false
+    public weak var delegate: AccessorySetupKitServiceDelegate?
+
+    public init() {}
+
+    public func activateSession() async throws {}
+    public func showPicker() async throws -> UUID { throw AccessorySetupKitError.sessionNotActive }
+    public func removeAccessory(_ accessory: ASAccessory) async throws {}
+    public func renameAccessory(_ accessory: ASAccessory) async throws {}
+    public func accessory(for bluetoothID: UUID) -> ASAccessory? { nil }
+    public func invalidateSession() {}
+}
+
+public enum AccessorySetupKitError: LocalizedError {
+    case sessionNotActive
+    case sessionInvalidated
+    case pickerDismissed
+    case pickerRestricted
+    case pickerAlreadyActive
+    case pairingFailed(String)
+    case noBluetoothIdentifier
+    case discoveryTimeout
+    case connectionFailed
+
+    public var errorDescription: String? {
+        switch self {
+        case .sessionNotActive:
+            return "Bluetooth is not ready. Please ensure Bluetooth is enabled and try again."
+        case .sessionInvalidated:
+            return "Bluetooth session ended unexpectedly. Please restart the app."
+        case .pickerDismissed:
+            return "Device selection was cancelled."
+        case .pickerRestricted:
+            return "Cannot show device picker. Please check that Bluetooth is enabled and the app has permission."
+        case .pickerAlreadyActive:
+            return "Device picker is already showing."
+        case .pairingFailed(let reason):
+            return "Pairing failed: \(reason)"
+        case .noBluetoothIdentifier:
+            return "Selected device does not support Bluetooth connection."
+        case .discoveryTimeout:
+            return "No devices found. Make sure your device is powered on and nearby."
+        case .connectionFailed:
+            return "Could not connect to the device. Please try again."
+        }
+    }
+}
+#endif
