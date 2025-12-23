@@ -52,9 +52,12 @@ enum PacketSize {
     static let controlDataMinimum = 4
     /// Minimum size for path discovery results.
     static let pathDiscoveryMinimum = 6
-    /// Minimum size for login success response.
-    /// Format: `[permissions:1][pubkeyPrefix:6]`
+    /// Minimum size for login success response (legacy format).
+    /// Format: `[legacyPermissions:1][pubkeyPrefix:6]`
     static let loginSuccessMinimum = 7
+    /// Size for v7+ login success with ACL permissions.
+    /// Format: `[legacyPermissions:1][pubkeyPrefix:6][timestamp:4][aclPermissions:1][fwVersion:1]`
+    static let loginSuccessExtended = 13
     /// Size for binary response status payload without rxAirtime field (48 bytes).
     static let binaryResponseStatusBase = 48
     /// Minimum size for binary response status payload with rxAirtime field (52 bytes).
@@ -981,15 +984,79 @@ enum Parsers {
     // MARK: - LoginSuccess
 
     /// Parser for successful login responses.
+    ///
+    /// The LOGIN_SUCCESS packet has two formats:
+    ///
+    /// **Legacy format (7 bytes):**
+    /// - byte 0: Legacy permission indicator (0=member, 1=admin, 2=guest)
+    /// - bytes 1-6: pubkey prefix
+    ///
+    /// **v7+ extended format (13 bytes):**
+    /// - byte 0: Legacy permission indicator (0=member, 1=admin, 2=guest)
+    /// - bytes 1-6: pubkey prefix
+    /// - bytes 7-10: server timestamp
+    /// - byte 11: Actual ACL permissions (0=guest, 1=readWrite with admin bit, 2=readWrite)
+    /// - byte 12: firmware version level
+    ///
+    /// The legacy indicator at byte 0 has inverted semantics compared to actual permissions:
+    /// - Legacy 0 = member/readWrite, Legacy 1 = admin, Legacy 2 = guest/readonly
+    ///
+    /// For v7+ we use the actual ACL byte at offset 11 which aligns with RoomPermissionLevel.
     enum LoginSuccess {
         /// Parses permissions and admin status.
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.loginSuccessMinimum else {
                 return .loginSuccess(LoginInfo(permissions: 0, isAdmin: false, publicKeyPrefix: Data()))
             }
-            let permissions = data[0]
-            let isAdmin = (permissions & 0x01) != 0
+
             let pubkeyPrefix = Data(data[1..<7])
+
+            // v7+ format: use actual ACL permissions byte at offset 11
+            // Firmware uses: 0x00=guest, 0x01=admin (bit 0), 0x02=readWrite
+            // PocketMesh RoomPermissionLevel uses: 0x00=guest, 0x01=readWrite, 0x02=admin
+            // We normalize here to match RoomPermissionLevel expectations
+            if data.count >= PacketSize.loginSuccessExtended {
+                let firmwarePermissions = data[11]
+                let isAdmin = (firmwarePermissions & 0x01) != 0
+
+                let normalizedPermissions: UInt8
+                if isAdmin {
+                    normalizedPermissions = 0x02  // RoomPermissionLevel.admin
+                } else if firmwarePermissions == 0x00 {
+                    normalizedPermissions = 0x00  // RoomPermissionLevel.guest
+                } else {
+                    normalizedPermissions = 0x01  // RoomPermissionLevel.readWrite
+                }
+
+                return .loginSuccess(LoginInfo(
+                    permissions: normalizedPermissions,
+                    isAdmin: isAdmin,
+                    publicKeyPrefix: pubkeyPrefix
+                ))
+            }
+
+            // Legacy format: convert legacy indicator to RoomPermissionLevel values
+            // Legacy byte 0: 0=member/readWrite, 1=admin, 2=guest
+            // RoomPermissionLevel: 0x00=guest, 0x01=readWrite, 0x02=admin
+            let legacyIndicator = data[0]
+            let permissions: UInt8
+            let isAdmin: Bool
+
+            switch legacyIndicator {
+            case 1:
+                // Admin
+                permissions = 0x02  // RoomPermissionLevel.admin
+                isAdmin = true
+            case 2:
+                // Guest/readonly
+                permissions = 0x00  // RoomPermissionLevel.guest
+                isAdmin = false
+            default:
+                // Member/readWrite (legacy 0 or unknown values)
+                permissions = 0x01  // RoomPermissionLevel.readWrite
+                isAdmin = false
+            }
+
             return .loginSuccess(LoginInfo(
                 permissions: permissions,
                 isAdmin: isAdmin,
