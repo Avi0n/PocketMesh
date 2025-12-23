@@ -46,4 +46,9 @@ public actor MockContactService: ContactServiceProtocol {
     public func reset() {
         syncContactsInvocations = []
     }
+
+    /// Sets the stubbed result for syncContacts
+    public func setStubbedSyncContactsResult(_ result: Result<ContactSyncResult, Error>) {
+        stubbedSyncContactsResult = result
+    }
 }
