@@ -258,10 +258,7 @@ struct UnifiedMessageBubble: View {
         case .failed:
             return "Failed"
         case .retrying:
-            if message.maxRetryAttempts > 0 {
-                return "Retrying (\(message.retryAttempt + 1)/\(message.maxRetryAttempts))"
-            }
-            return "Retrying"
+            return "Retrying..."
         }
     }
 
