@@ -237,6 +237,12 @@ public actor MessagePollingService {
     }
 }
 
+// MARK: - MessagePollingServiceProtocol Conformance
+
+extension MessagePollingService: MessagePollingServiceProtocol {
+    // Already implements pollAllMessages() -> Int
+}
+
 // MARK: - Message Text Type Constants
 
 /// Text type identifiers for mesh messages

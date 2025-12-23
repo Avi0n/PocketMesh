@@ -54,9 +54,12 @@ public enum BLEPhase: @unchecked Sendable {
         dataContinuation: AsyncStream<Data>.Continuation
     )
 
-    /// iOS auto-reconnect in progress
+    /// iOS auto-reconnect in progress.
+    /// Progressively populated as discovery completes.
     case autoReconnecting(
-        peripheralID: UUID
+        peripheral: CBPeripheral,
+        tx: CBCharacteristic?,
+        rx: CBCharacteristic?
     )
 
     /// Intentionally disconnecting
@@ -95,21 +98,17 @@ public enum BLEPhase: @unchecked Sendable {
              .discoveringCharacteristics(let p, _, _),
              .subscribingToNotifications(let p, _, _, _),
              .connected(let p, _, _, _),
+             .autoReconnecting(let p, _, _),
              .disconnecting(let p):
             return p
-        case .idle, .waitingForBluetooth, .autoReconnecting:
+        case .idle, .waitingForBluetooth:
             return nil
         }
     }
 
     /// The device ID associated with this phase, if any
     public var deviceID: UUID? {
-        switch self {
-        case .autoReconnecting(let id):
-            return id
-        default:
-            return peripheral?.identifier
-        }
+        peripheral?.identifier
     }
 
     /// Check if transition to another phase is valid (for testing)

@@ -6,8 +6,13 @@ import DataScoutCompanion
 
 @main
 struct PocketMeshApp: App {
-    @State private var appState = AppState()
+    @State private var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let container = try! PersistenceStore.createContainer()
+        _appState = State(initialValue: AppState(modelContainer: container))
+    }
 
     var body: some Scene {
         WindowGroup {

@@ -340,3 +340,9 @@ public actor ChannelService {
         try await dataStore.fetchChannel(id: id)
     }
 }
+
+// MARK: - ChannelServiceProtocol Conformance
+
+extension ChannelService: ChannelServiceProtocol {
+    // Already implements syncChannels(deviceID:maxChannels:) -> ChannelSyncResult
+}

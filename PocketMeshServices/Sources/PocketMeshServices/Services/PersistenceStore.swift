@@ -34,6 +34,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
 
     /// Creates a ModelContainer for the app
     public static func createContainer(inMemory: Bool = false) throws -> ModelContainer {
+        if !inMemory {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        }
+
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: inMemory,

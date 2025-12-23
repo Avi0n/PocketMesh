@@ -46,10 +46,13 @@ public actor BLEStateMachine {
     /// Pending write continuation (only one write at a time)
     private var pendingWriteContinuation: CheckedContinuation<Void, Error>?
 
+    /// Queue of tasks waiting to write (serializes concurrent sends)
+    private var writeWaiters: [CheckedContinuation<Void, Never>] = []
+
     // MARK: - Callbacks
 
     private var onDisconnection: (@Sendable (UUID, Error?) -> Void)?
-    private var onReconnection: (@Sendable (UUID) -> Void)?
+    private var onReconnection: (@Sendable (UUID, AsyncStream<Data>) -> Void)?
     private var onBluetoothStateChange: (@Sendable (CBManagerState) -> Void)?
     private var onBluetoothPoweredOn: (@Sendable () -> Void)?
 
@@ -96,6 +99,12 @@ public actor BLEStateMachine {
         return false
     }
 
+    /// Whether the state machine is currently handling iOS auto-reconnect
+    public var isAutoReconnecting: Bool {
+        if case .autoReconnecting = phase { return true }
+        return false
+    }
+
     /// UUID of the currently connected device, or nil if not connected
     public var connectedDeviceID: UUID? {
         phase.deviceID
@@ -113,8 +122,9 @@ public actor BLEStateMachine {
         onDisconnection = handler
     }
 
-    /// Sets a handler for reconnection events
-    public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID) -> Void) {
+    /// Sets a handler for reconnection events.
+    /// The handler receives the device ID and the data stream for receiving data.
+    public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID, AsyncStream<Data>) -> Void) {
         onReconnection = handler
     }
 
@@ -200,6 +210,9 @@ public actor BLEStateMachine {
 
     /// Sends data to the connected device.
     ///
+    /// This method serializes concurrent calls - if a write is already in progress,
+    /// subsequent calls will wait until the previous write completes.
+    ///
     /// - Parameter data: Data to send
     /// - Throws: BLEError if not connected or write fails
     public func send(_ data: Data) async throws {
@@ -209,6 +222,13 @@ public actor BLEStateMachine {
 
         guard peripheral.state == .connected else {
             throw BLEError.notConnected
+        }
+
+        // Wait for any pending write to complete (serializes concurrent sends)
+        if pendingWriteContinuation != nil {
+            await withCheckedContinuation { (waiter: CheckedContinuation<Void, Never>) in
+                writeWaiters.append(waiter)
+            }
         }
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -221,8 +241,18 @@ public actor BLEStateMachine {
                 if let pending = self.pendingWriteContinuation {
                     self.pendingWriteContinuation = nil
                     pending.resume(throwing: BLEError.operationTimeout)
+                    // Resume next waiter
+                    resumeNextWriteWaiter()
                 }
             }
+        }
+    }
+
+    /// Resumes the next task waiting to write, if any.
+    private func resumeNextWriteWaiter() {
+        if !writeWaiters.isEmpty {
+            let waiter = writeWaiters.removeFirst()
+            waiter.resume()
         }
     }
 
@@ -234,6 +264,11 @@ public actor BLEStateMachine {
         if let pending = pendingWriteContinuation {
             pendingWriteContinuation = nil
             pending.resume(throwing: BLEError.notConnected)
+        }
+
+        // Resume all write waiters (they'll fail on the .connected check)
+        while !writeWaiters.isEmpty {
+            writeWaiters.removeFirst().resume()
         }
 
         // Get peripheral before cancelling
@@ -441,18 +476,18 @@ extension BLEStateMachine {
 
         if peripheral.state == .connected {
             // Already connected, just need to rediscover services
-            phase = .autoReconnecting(peripheralID: peripheral.identifier)
+            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
             peripheral.discoverServices([nordicUARTServiceUUID])
         } else if peripheral.state == .connecting {
             // Connection in progress, wait for didConnect
-            phase = .autoReconnecting(peripheralID: peripheral.identifier)
+            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
         } else {
             // Not connected, try to reconnect
             let options: [String: Any] = [
                 CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
                 CBConnectPeripheralOptionEnableAutoReconnect: true
             ]
-            phase = .autoReconnecting(peripheralID: peripheral.identifier)
+            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
             centralManager.connect(peripheral, options: options)
         }
     }
@@ -467,8 +502,8 @@ extension BLEStateMachine {
         logger.info("Did connect: \(peripheral.identifier)")
 
         // Handle auto-reconnect
-        if case .autoReconnecting(let expectedID) = phase,
-           peripheral.identifier == expectedID {
+        if case .autoReconnecting(let expected, _, _) = phase,
+           peripheral.identifier == expected.identifier {
             logger.info("Auto-reconnect: peripheral connected, discovering services")
             peripheral.delegate = delegateHandler
             peripheral.discoverServices([nordicUARTServiceUUID])
@@ -516,12 +551,12 @@ extension BLEStateMachine {
         if isReconnecting {
             logger.info("iOS auto-reconnecting to \(deviceID)")
 
-            // Clean up current state but preserve device ID for reconnection
+            // Clean up current state but preserve peripheral for reconnection
             if case .connected(_, _, _, let dataContinuation) = phase {
                 dataContinuation.finish()
             }
 
-            phase = .autoReconnecting(peripheralID: deviceID)
+            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
             return
         }
 
@@ -546,19 +581,19 @@ extension BLEStateMachine {
         logger.debug("Did discover services for \(peripheral.identifier)")
 
         // Handle auto-reconnect
-        if case .autoReconnecting(let expectedID) = phase,
-           peripheral.identifier == expectedID {
+        if case .autoReconnecting(let expected, _, _) = phase,
+           peripheral.identifier == expected.identifier {
             if let error {
                 logger.warning("Auto-reconnect service discovery failed: \(error.localizedDescription)")
                 transition(to: .idle)
-                onDisconnection?(expectedID, error)
+                onDisconnection?(expected.identifier, error)
                 return
             }
 
             guard let service = peripheral.services?.first(where: { $0.uuid == nordicUARTServiceUUID }) else {
                 logger.warning("Auto-reconnect: service not found")
                 transition(to: .idle)
-                onDisconnection?(expectedID, nil)
+                onDisconnection?(expected.identifier, nil)
                 return
             }
 
@@ -598,22 +633,26 @@ extension BLEStateMachine {
         logger.debug("Did discover characteristics for \(peripheral.identifier)")
 
         // Handle auto-reconnect
-        if case .autoReconnecting(let expectedID) = phase,
-           peripheral.identifier == expectedID {
+        if case .autoReconnecting(let expected, _, _) = phase,
+           peripheral.identifier == expected.identifier {
             if let error {
                 logger.warning("Auto-reconnect characteristic discovery failed: \(error.localizedDescription)")
                 transition(to: .idle)
-                onDisconnection?(expectedID, error)
+                onDisconnection?(expected.identifier, error)
                 return
             }
 
             guard let characteristics = service.characteristics,
+                  let tx = characteristics.first(where: { $0.uuid == txCharacteristicUUID }),
                   let rx = characteristics.first(where: { $0.uuid == rxCharacteristicUUID }) else {
                 logger.warning("Auto-reconnect: characteristics not found")
                 transition(to: .idle)
-                onDisconnection?(expectedID, nil)
+                onDisconnection?(expected.identifier, nil)
                 return
             }
+
+            // Store tx/rx in phase for use when notification subscription completes
+            phase = .autoReconnecting(peripheral: peripheral, tx: tx, rx: rx)
 
             // Subscribe to notifications to complete reconnection
             peripheral.setNotifyValue(true, for: rx)
@@ -675,15 +714,39 @@ extension BLEStateMachine {
 
     private func handleReconnectionNotificationState(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
         // Handle auto-reconnect notification subscription completion
-        guard case .autoReconnecting(let expectedID) = phase,
-              peripheral.identifier == expectedID else {
+        guard case .autoReconnecting(let expected, let tx, let rx) = phase,
+              peripheral.identifier == expected.identifier else {
             return
         }
 
-        if error == nil {
-            logger.info("Auto-reconnect notification subscription complete")
-            onReconnection?(peripheral.identifier)
+        if let error {
+            logger.warning("Auto-reconnect notification subscription failed: \(error.localizedDescription)")
+            transition(to: .idle)
+            onDisconnection?(peripheral.identifier, error)
+            return
         }
+
+        guard let tx, let rx else {
+            logger.error("Auto-reconnect: tx/rx characteristics missing from phase")
+            transition(to: .idle)
+            onDisconnection?(peripheral.identifier, nil)
+            return
+        }
+
+        logger.info("Auto-reconnect notification subscription complete")
+
+        // Create data stream and transition to connected
+        let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
+
+        transition(to: .connected(
+            peripheral: peripheral,
+            tx: tx,
+            rx: rx,
+            dataContinuation: continuation
+        ))
+
+        logger.info("iOS auto-reconnect complete for \(peripheral.identifier)")
+        onReconnection?(peripheral.identifier, stream)
     }
 
     func handleDidUpdateValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
@@ -714,6 +777,9 @@ extension BLEStateMachine {
         } else {
             continuation.resume()
         }
+
+        // Resume next task waiting to write
+        resumeNextWriteWaiter()
     }
 }
 

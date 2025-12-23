@@ -74,7 +74,13 @@ struct ContactsListView: View {
                 viewModel.configure(appState: appState)
                 await loadContacts()
             }
-            .onChange(of: appState.messageEventBroadcaster.contactsRefreshTrigger) { _, _ in
+            .onChange(of: appState.servicesVersion) { _, _ in
+                // Services changed (device switch, reconnect) - reload contacts
+                Task {
+                    await loadContacts()
+                }
+            }
+            .onChange(of: appState.syncCoordinator?.contactsVersion) { _, _ in
                 Task {
                     await loadContacts()
                 }
@@ -178,6 +184,7 @@ struct ContactsListView: View {
 
     private func loadContacts() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
+        viewModel.configure(appState: appState)
         await viewModel.loadContacts(deviceID: deviceID)
     }
 

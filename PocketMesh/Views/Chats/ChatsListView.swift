@@ -101,22 +101,15 @@ struct ChatsListView: View {
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
             }
-            .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
+            .onChange(of: appState.servicesVersion) { _, _ in
+                // Services changed (device switch, reconnect) - reload conversations
                 Task {
                     await loadConversations()
                 }
             }
-            .onChange(of: appState.messageEventBroadcaster.conversationRefreshTrigger) { _, _ in
+            .onChange(of: appState.syncCoordinator?.conversationsVersion) { _, _ in
                 Task {
                     await loadConversations()
-                }
-            }
-            .onChange(of: appState.connectionState) { oldState, newState in
-                // Refresh and sync when device reconnects (state changes to .ready)
-                if newState == .ready && oldState != .ready {
-                    Task {
-                        await syncOnReconnection()
-                    }
                 }
             }
             .onChange(of: appState.pendingRoomSession) { _, _ in
@@ -189,6 +182,7 @@ struct ChatsListView: View {
 
     private func loadConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
+        viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
@@ -203,16 +197,6 @@ struct ChatsListView: View {
     private func refreshConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.loadAllConversations(deviceID: deviceID)
-    }
-
-    private func syncOnReconnection() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
-
-        // Sync channels from device
-        _ = try? await appState.services?.channelService.syncChannels(deviceID: deviceID)
-
-        // Reload conversations and channels
-        await loadConversations()
     }
 
     private func deleteConversations(at offsets: IndexSet) {

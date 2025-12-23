@@ -24,7 +24,7 @@ struct DiscoveryView: View {
         .task {
             await loadDiscoveredContacts()
         }
-        .onChange(of: appState.messageEventBroadcaster.contactsRefreshTrigger) { _, _ in
+        .onChange(of: appState.syncCoordinator?.contactsVersion) { _, _ in
             Task {
                 await loadDiscoveredContacts()
             }

@@ -61,6 +61,12 @@ public final class ConnectionManager {
     /// Whether user wants to be connected. Only changed by explicit user actions.
     private var shouldBeConnected = false
 
+    // MARK: - Callbacks
+
+    /// Called when connection is ready and services are available.
+    /// Use this to wire up UI observation of services.
+    public var onConnectionReady: (() async -> Void)?
+
     /// Number of paired accessories (for troubleshooting UI)
     public var pairedAccessoriesCount: Int {
         accessorySetupKit.pairedAccessories.count
@@ -69,7 +75,7 @@ public final class ConnectionManager {
     // MARK: - Internal Components
 
     private let modelContainer: ModelContainer
-    private var transport: iOSBLETransport?
+    private let transport: iOSBLETransport
     private var session: MeshCoreSession?
     private let accessorySetupKit = AccessorySetupKitService()
 
@@ -110,10 +116,30 @@ public final class ConnectionManager {
     /// - Parameter modelContainer: The SwiftData model container for persistence
     public init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
+        self.transport = iOSBLETransport(stateMachine: stateMachine)
         accessorySetupKit.delegate = self
 
-        // Handle Bluetooth power-cycle recovery
+        // Wire up transport handlers
         Task {
+            // Handle disconnection events
+            await transport.setDisconnectionHandler { [weak self] deviceID, error in
+                Task { @MainActor in
+                    guard let self else { return }
+                    await self.handleConnectionLoss(deviceID: deviceID, error: error)
+                }
+            }
+
+            // Handle iOS auto-reconnect completion
+            // Using transport.setReconnectionHandler ensures the transport captures
+            // the data stream internally before calling our handler
+            await transport.setReconnectionHandler { [weak self] deviceID in
+                Task { @MainActor in
+                    guard let self else { return }
+                    await self.handleIOSAutoReconnect(deviceID: deviceID)
+                }
+            }
+
+            // Handle Bluetooth power-cycle recovery
             await stateMachine.setBluetoothPoweredOnHandler { [weak self] in
                 Task { @MainActor in
                     guard let self,
@@ -146,6 +172,17 @@ public final class ConnectionManager {
         // Auto-reconnect to last device if available
         if let lastDeviceID = lastConnectedDeviceID {
             logger.info("Attempting auto-reconnect to last device: \(lastDeviceID)")
+
+            // Set intent before checking state
+            shouldBeConnected = true
+
+            // If state machine is already auto-reconnecting (from state restoration),
+            // let it complete rather than fighting with it
+            if await stateMachine.isAutoReconnecting {
+                logger.info("State restoration in progress, waiting for auto-reconnect")
+                return
+            }
+
             do {
                 try await connect(to: lastDeviceID)
             } catch {
@@ -171,12 +208,24 @@ public final class ConnectionManager {
     }
 
     /// Connects to a previously paired device.
+    ///
+    /// This method handles all connection scenarios:
+    /// - If disconnected: connects to the device
+    /// - If already connected to this device: no-op
+    /// - If connected to a different device: switches to the new device
+    ///
     /// - Parameter deviceID: The UUID of the device to connect to
     /// - Throws: Connection errors
     public func connect(to deviceID: UUID) async throws {
-        // Prevent concurrent connection attempts
-        guard connectionState == .disconnected else {
-            logger.debug("Connection already in progress or established, skipping")
+        // Handle already-connected cases
+        if connectionState != .disconnected {
+            if connectedDevice?.id == deviceID {
+                logger.debug("Already connected to device: \(deviceID)")
+                return
+            }
+            // Connected to different device - switch to new one
+            logger.info("Switching from current device to: \(deviceID)")
+            try await switchDevice(to: deviceID)
             return
         }
 
@@ -215,7 +264,7 @@ public final class ConnectionManager {
         await session?.stop()
 
         // Disconnect transport
-        await transport?.disconnect()
+        await transport.disconnect()
 
         // Clear state
         await cleanupConnection()
@@ -250,13 +299,6 @@ public final class ConnectionManager {
         await session?.stop()
 
         // Switch transport
-        guard let transport = transport as? iOSBLETransport else {
-            // Fallback to disconnect + connect for old transport
-            await disconnect()
-            try await connect(to: deviceID)
-            return
-        }
-
         try await transport.switchDevice(to: deviceID)
         connectionState = .connected
 
@@ -289,11 +331,17 @@ public final class ConnectionManager {
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
-        // Start event monitoring
-        await newServices.startEventMonitoring(deviceID: deviceID)
+        // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
+        try await newServices.syncCoordinator.onConnectionEstablished(
+            deviceID: deviceID,
+            services: newServices
+        )
 
         connectionState = .ready
         logger.info("Device switch complete - device ready")
+
+        // Notify observers that connection is ready
+        await onConnectionReady?()
     }
 
     /// Forgets the device, removing it from paired accessories.
@@ -449,18 +497,14 @@ public final class ConnectionManager {
     private func performConnection(deviceID: UUID) async throws {
         connectionState = .connecting
 
-        // Create transport with state machine
-        let newTransport = iOSBLETransport(stateMachine: stateMachine)
-        self.transport = newTransport
-
         // Set device ID and connect
-        await newTransport.setDeviceID(deviceID)
-        try await newTransport.connect()
+        await transport.setDeviceID(deviceID)
+        try await transport.connect()
 
         connectionState = .connected
 
         // Create session
-        let newSession = MeshCoreSession(transport: newTransport)
+        let newSession = MeshCoreSession(transport: transport)
         self.session = newSession
 
         // Start session (this calls sendAppStart internally)
@@ -502,11 +546,18 @@ public final class ConnectionManager {
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
-        // Start event monitoring
-        await newServices.startEventMonitoring(deviceID: deviceID)
+        // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
+        // This fixes the handler wiring gap and ensures messages are polled during sync
+        try await newServices.syncCoordinator.onConnectionEstablished(
+            deviceID: deviceID,
+            services: newServices
+        )
 
         connectionState = .ready
         logger.info("Connection complete - device ready")
+
+        // Notify observers that connection is ready
+        await onConnectionReady?()
     }
 
     /// Creates a Device from MeshCore types
@@ -573,7 +624,7 @@ public final class ConnectionManager {
         // User disconnected while iOS was reconnecting
         guard shouldBeConnected else {
             logger.info("Ignoring: user disconnected")
-            await transport?.disconnect()
+            await transport.disconnect()
             return
         }
 
@@ -585,14 +636,8 @@ public final class ConnectionManager {
 
         connectionState = .connecting
 
-        guard let existingTransport = transport else {
-            logger.warning("No transport for session setup")
-            connectionState = .disconnected
-            return
-        }
-
         do {
-            let newSession = MeshCoreSession(transport: existingTransport)
+            let newSession = MeshCoreSession(transport: transport)
             self.session = newSession
 
             try await newSession.start()
@@ -643,16 +688,23 @@ public final class ConnectionManager {
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
 
-            await newServices.startEventMonitoring(deviceID: deviceID)
+            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
 
             connectionState = .ready
             logger.info("iOS auto-reconnect: session ready")
+
+            // Notify observers that connection is ready
+            await onConnectionReady?()
 
         } catch {
             logger.error("Session setup failed: \(error.localizedDescription)")
             await session?.stop()
             session = nil
-            await transport?.disconnect()
+            await transport.disconnect()
             connectionState = .disconnected
             // User can manually retry if needed
         }
@@ -664,7 +716,6 @@ public final class ConnectionManager {
         connectedDevice = nil
         services = nil
         session = nil
-        transport = nil
     }
 }
 

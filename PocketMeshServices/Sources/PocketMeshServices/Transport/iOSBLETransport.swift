@@ -60,9 +60,25 @@ public actor iOSBLETransport: MeshTransport {
 
     /// Sets a handler for reconnection events.
     ///
+    /// When iOS auto-reconnect completes, the transport captures the data stream
+    /// and then calls your handler. The `receivedData` property will be ready
+    /// when your handler is called.
+    ///
     /// - Parameter handler: Called when iOS auto-reconnect completes successfully.
     public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID) -> Void) async {
-        await stateMachine.setReconnectionHandler(handler)
+        await stateMachine.setReconnectionHandler { [weak self] deviceID, stream in
+            Task {
+                // First capture the stream for this transport
+                await self?.setDataStream(stream)
+                // Then call user's handler (stream is now ready)
+                handler(deviceID)
+            }
+        }
+    }
+
+    /// Sets the data stream (used internally for reconnection)
+    private func setDataStream(_ stream: AsyncStream<Data>) {
+        self.dataStream = stream
     }
 
     // MARK: - MeshTransport Protocol
@@ -81,11 +97,28 @@ public actor iOSBLETransport: MeshTransport {
 
     /// Connects to the configured device.
     ///
+    /// This method is idempotent: if already connected to the same device,
+    /// it returns without error. Use ``switchDevice(to:)`` to change devices.
+    ///
     /// - Throws: `BLEError.deviceNotFound` if no device ID is set.
+    /// - Throws: `BLEError.connectionFailed` if connected to a different device.
     /// - Throws: `BLEError` for connection failures.
     public func connect() async throws {
-        guard let deviceID else {
+        let connectedID = await stateMachine.connectedDeviceID
+        let effectiveDeviceID = self.deviceID ?? connectedID
+
+        guard let deviceID = effectiveDeviceID else {
             throw BLEError.deviceNotFound
+        }
+
+        // Already connected - check if it's the same device
+        if await stateMachine.isConnected {
+            if connectedID == deviceID {
+                logger.debug("Already connected to device: \(deviceID)")
+                return
+            } else {
+                throw BLEError.connectionFailed("Already connected to different device: \(connectedID?.uuidString ?? "unknown"). Use switchDevice() instead.")
+            }
         }
 
         logger.info("Connecting to device: \(deviceID)")
