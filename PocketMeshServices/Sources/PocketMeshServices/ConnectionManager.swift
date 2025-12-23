@@ -331,6 +331,9 @@ public final class ConnectionManager {
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
+        // Notify observers BEFORE sync starts so they can wire callbacks
+        await onConnectionReady?()
+
         // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
         try await newServices.syncCoordinator.onConnectionEstablished(
             deviceID: deviceID,
@@ -339,9 +342,6 @@ public final class ConnectionManager {
 
         connectionState = .ready
         logger.info("Device switch complete - device ready")
-
-        // Notify observers that connection is ready
-        await onConnectionReady?()
     }
 
     /// Forgets the device, removing it from paired accessories.
@@ -546,6 +546,10 @@ public final class ConnectionManager {
         // Persist connection for auto-reconnect
         persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
+        // Notify observers BEFORE sync starts so they can wire callbacks
+        // (e.g., AppState needs to set sync activity callbacks for the syncing pill)
+        await onConnectionReady?()
+
         // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
         // This fixes the handler wiring gap and ensures messages are polled during sync
         try await newServices.syncCoordinator.onConnectionEstablished(
@@ -555,9 +559,6 @@ public final class ConnectionManager {
 
         connectionState = .ready
         logger.info("Connection complete - device ready")
-
-        // Notify observers that connection is ready
-        await onConnectionReady?()
     }
 
     /// Creates a Device from MeshCore types
@@ -688,6 +689,9 @@ public final class ConnectionManager {
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
 
+            // Notify observers BEFORE sync starts so they can wire callbacks
+            await onConnectionReady?()
+
             // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
             try await newServices.syncCoordinator.onConnectionEstablished(
                 deviceID: deviceID,
@@ -696,9 +700,6 @@ public final class ConnectionManager {
 
             connectionState = .ready
             logger.info("iOS auto-reconnect: session ready")
-
-            // Notify observers that connection is ready
-            await onConnectionReady?()
 
         } catch {
             logger.error("Session setup failed: \(error.localizedDescription)")

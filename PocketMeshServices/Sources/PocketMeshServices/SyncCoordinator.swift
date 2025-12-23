@@ -84,6 +84,12 @@ public actor SyncCoordinator {
     /// Last successful sync date
     @MainActor public private(set) var lastSyncDate: Date?
 
+    /// Callback when non-message sync activity starts
+    private var onSyncActivityStarted: (@Sendable () async -> Void)?
+
+    /// Callback when non-message sync activity ends
+    private var onSyncActivityEnded: (@Sendable () async -> Void)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -98,6 +104,16 @@ public actor SyncCoordinator {
     @MainActor
     private func setLastSyncDate(_ date: Date) {
         lastSyncDate = date
+    }
+
+    /// Sets callbacks for sync activity tracking (used by UI to show syncing pill)
+    /// Only called for contacts and channels phases, NOT for messages.
+    public func setSyncActivityCallbacks(
+        onStarted: @escaping @Sendable () async -> Void,
+        onEnded: @escaping @Sendable () async -> Void
+    ) {
+        onSyncActivityStarted = onStarted
+        onSyncActivityEnded = onEnded
     }
 
     // MARK: - Notifications
@@ -128,23 +144,36 @@ public actor SyncCoordinator {
     ///   - messagePollingService: Service for message polling
     public func performFullSync(
         deviceID: UUID,
-        contactService: ContactService,
-        channelService: ChannelService,
-        messagePollingService: MessagePollingService
+        contactService: some ContactServiceProtocol,
+        channelService: some ChannelServiceProtocol,
+        messagePollingService: some MessagePollingServiceProtocol
     ) async throws {
         logger.info("Starting full sync for device \(deviceID)")
 
-        // Phase 1: Contacts
-        await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
-        let contactResult = try await contactService.syncContacts(deviceID: deviceID)
-        logger.info("Synced \(contactResult.contactsReceived) contacts")
+        // Notify UI that sync activity started (for pill display)
+        await onSyncActivityStarted?()
 
-        // Phase 2: Channels
-        await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-        let channelResult = try await channelService.syncChannels(deviceID: deviceID)
-        logger.info("Synced \(channelResult.channelsSynced) channels")
+        // Perform contacts and channels sync (activity should show pill)
+        do {
+            // Phase 1: Contacts
+            await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
+            let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
+            logger.info("Synced \(contactResult.contactsReceived) contacts")
 
-        // Phase 3: Messages (the missing piece in the old sync!)
+            // Phase 2: Channels
+            await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
+            let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: 8)
+            logger.info("Synced \(channelResult.channelsSynced) channels")
+        } catch {
+            // End sync activity on error during contacts/channels phase
+            await onSyncActivityEnded?()
+            throw error
+        }
+
+        // End sync activity before messages phase (pill should hide)
+        await onSyncActivityEnded?()
+
+        // Phase 3: Messages (no pill for this phase)
         await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
         let messageCount = try await messagePollingService.pollAllMessages()
         logger.info("Polled \(messageCount) messages")
@@ -198,6 +227,9 @@ public actor SyncCoordinator {
     }
 
     /// Called when disconnecting from device
+    ///
+    /// Note: Don't call onSyncActivityEnded here - performFullSync handles its own cleanup.
+    /// The AppState.wireServicesIfConnected reset of syncActivityCount handles stuck pill.
     public func onDisconnected() async {
         await setState(.idle)
         logger.info("Disconnected, sync state reset to idle")

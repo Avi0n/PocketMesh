@@ -83,9 +83,10 @@ public final class AppState {
     private var syncActivityCount: Int = 0
 
     /// Whether the syncing pill should be displayed
-    /// True for: on-demand operations OR automatic device sync
+    /// True for: contacts/channels sync, on-demand operations, settings changes
+    /// NOT shown for: message polling
     var shouldShowSyncingPill: Bool {
-        syncActivityCount > 0 || syncCoordinator?.state.isSyncing == true
+        syncActivityCount > 0
     }
 
     // MARK: - Derived State
@@ -126,12 +127,26 @@ public final class AppState {
         guard let services else {
             // Clear syncCoordinator when services are nil
             syncCoordinator = nil
+            // Reset sync activity count to prevent stuck pill
+            syncActivityCount = 0
             return
         }
 
         // Store syncCoordinator directly for SwiftUI observation
         // (computed property chains through other objects break observation)
         syncCoordinator = services.syncCoordinator
+
+        // Wire sync activity callbacks for syncing pill display
+        // These are called for contacts and channels phases, NOT for messages
+        // IMPORTANT: Must be set before onConnectionEstablished to avoid race condition
+        await services.syncCoordinator.setSyncActivityCallbacks(
+            onStarted: { @MainActor [weak self] in
+                self?.syncActivityCount += 1
+            },
+            onEnded: { @MainActor [weak self] in
+                self?.syncActivityCount -= 1
+            }
+        )
 
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
