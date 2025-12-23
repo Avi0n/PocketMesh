@@ -1,0 +1,186 @@
+import SwiftUI
+import PocketMeshServices
+import CoreImage.CIFilterBuiltins
+
+/// Sheet for sharing a contact via QR code
+struct ContactQRShareSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let contactName: String
+    let publicKey: Data
+    let contactType: ContactType
+
+    @State private var showCopyFeedback = false
+    @State private var qrImage: UIImage?
+
+    private var contactURI: String {
+        ContactService.exportContactURI(name: contactName, publicKey: publicKey, type: contactType)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                // QR Code Section
+                QRCodeSection(contactName: contactName, qrImage: qrImage)
+
+                // Contact Info Section
+                ContactInfoSection(publicKey: publicKey)
+
+                // Actions Section
+                ActionsSection(
+                    qrImage: qrImage,
+                    shareText: shareText,
+                    contactName: contactName,
+                    showCopyFeedback: $showCopyFeedback,
+                    copyToClipboard: copyToClipboard
+                )
+            }
+            .navigationTitle("Share Contact")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                qrImage = generateQRCode()
+            }
+        }
+    }
+
+    // MARK: - Private Methods
+
+    private func generateQRCode() -> UIImage? {
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(contactURI.utf8)
+        filter.correctionLevel = Constants.qrCorrectionLevel
+
+        guard let outputImage = filter.outputImage else { return nil }
+
+        // Scale up for better quality
+        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: Constants.qrScale, y: Constants.qrScale))
+
+        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
+
+        return UIImage(cgImage: cgImage)
+    }
+
+    private var shareText: String {
+        """
+        PocketMesh Contact: \(contactName)
+        Key: \(publicKey.hexString().lowercased())
+        \(contactURI)
+        """
+    }
+
+    private func copyToClipboard() {
+        UIPasteboard.general.string = publicKey.hexString().lowercased()
+        showCopyFeedback = true
+
+        Task {
+            try? await Task.sleep(for: Constants.copyFeedbackDuration)
+            showCopyFeedback = false
+        }
+    }
+}
+
+// MARK: - Constants
+
+private enum Constants {
+    static let qrScale = 10.0
+    static let qrCorrectionLevel = "M"
+    static let copyFeedbackDuration = Duration.seconds(2)
+    static let qrCodeSize: CGFloat = 200
+}
+
+// MARK: - QR Code Section
+
+private struct QRCodeSection: View {
+    let contactName: String
+    let qrImage: UIImage?
+
+    var body: some View {
+        Section {
+            HStack {
+                Spacer()
+                VStack(spacing: 12) {
+                    if let qrImage {
+                        Image(uiImage: qrImage)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: Constants.qrCodeSize, height: Constants.qrCodeSize)
+                    }
+
+                    Text(contactName)
+                        .font(.title2)
+                        .bold()
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
+// MARK: - Contact Info Section
+
+private struct ContactInfoSection: View {
+    let publicKey: Data
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Public Key")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text(publicKey.hexString(separator: " "))
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+            }
+        }
+    }
+}
+
+// MARK: - Actions Section
+
+private struct ActionsSection: View {
+    let qrImage: UIImage?
+    let shareText: String
+    let contactName: String
+    @Binding var showCopyFeedback: Bool
+    let copyToClipboard: () -> Void
+
+    var body: some View {
+        Section {
+            Button {
+                copyToClipboard()
+            } label: {
+                HStack {
+                    Spacer()
+                    Label(showCopyFeedback ? "Copied!" : "Copy", systemImage: "doc.on.doc")
+                    Spacer()
+                }
+            }
+            .disabled(showCopyFeedback)
+            .alignmentGuide(.listRowSeparatorLeading) { d in d[.leading] }
+
+            if let qrImage {
+                ShareLink(
+                    item: shareText,
+                    subject: Text("PocketMesh Contact"),
+                    preview: SharePreview(contactName, image: Image(uiImage: qrImage))
+                ) {
+                    HStack {
+                        Spacer()
+                        Label("Share", systemImage: "square.and.arrow.up")
+                        Spacer()
+                    }
+                }
+            }
+        }
+    }
+}

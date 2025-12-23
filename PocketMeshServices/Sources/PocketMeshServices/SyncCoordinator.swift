@@ -78,6 +78,9 @@ public actor SyncCoordinator {
     /// Incremented when contacts data changes
     @MainActor public private(set) var contactsVersion: Int = 0
 
+    /// Incremented when conversations data changes
+    @MainActor public private(set) var conversationsVersion: Int = 0
+
     /// Last successful sync date
     @MainActor public private(set) var lastSyncDate: Date?
 
@@ -86,9 +89,6 @@ public actor SyncCoordinator {
 
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
-
-    /// Callback when conversations data changes (for UI observation)
-    private var onConversationsChanged: (@Sendable () async -> Void)?
 
     // MARK: - Initialization
 
@@ -116,15 +116,6 @@ public actor SyncCoordinator {
         onSyncActivityEnded = onEnded
     }
 
-    /// Sets callback for conversations changed notification.
-    /// Called whenever conversation data changes (messages sent/received).
-    /// UI should use this to trigger list refresh.
-    public func setConversationsChangedCallback(
-        _ callback: @escaping @Sendable () async -> Void
-    ) {
-        onConversationsChanged = callback
-    }
-
     // MARK: - Notifications
 
     /// Notify that contacts data changed (triggers UI refresh)
@@ -134,8 +125,9 @@ public actor SyncCoordinator {
     }
 
     /// Notify that conversations data changed (triggers UI refresh)
-    public func notifyConversationsChanged() async {
-        await onConversationsChanged?()
+    @MainActor
+    public func notifyConversationsChanged() {
+        conversationsVersion += 1
     }
 
     // MARK: - Full Sync
@@ -396,12 +388,6 @@ public actor SyncCoordinator {
             } else {
                 self.logger.warning("Dropping CLI response: no contact found for sender")
             }
-        }
-
-        // Room message handler - notify UI when room messages arrive
-        await services.roomServerService.setRoomMessageHandler { [weak self] _ in
-            guard let self else { return }
-            await self.notifyConversationsChanged()
         }
 
         logger.info("Message handlers wired successfully")

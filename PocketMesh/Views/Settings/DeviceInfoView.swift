@@ -8,6 +8,7 @@ struct DeviceInfoView: View {
     @State private var batteryInfo: MeshCore.BatteryInfo?
     @State private var isLoadingBattery: Bool = false
     @State private var lastRefresh: Date?
+    @State private var showShareSheet = false
 
     var body: some View {
         List {
@@ -146,14 +147,25 @@ struct DeviceInfoView: View {
                         Text(device.blePin == 0 ? "Disabled" : "Enabled")
                             .foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("Security")
+                }
 
+                // Identity
+                Section {
                     NavigationLink {
                         PublicKeyView(publicKey: device.publicKey)
                     } label: {
                         Label("Public Key", systemImage: "key")
                     }
+
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Label("Share My Contact", systemImage: "square.and.arrow.up")
+                    }
                 } header: {
-                    Text("Security")
+                    Text("Identity")
                 }
 
                 // Identifier
@@ -185,6 +197,15 @@ struct DeviceInfoView: View {
         }
         .onAppear {
             refreshBatteryInfo()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let device = appState.connectedDevice {
+                ContactQRShareSheet(
+                    contactName: device.nodeName,
+                    publicKey: device.publicKey,
+                    contactType: .chat
+                )
+            }
         }
     }
 
