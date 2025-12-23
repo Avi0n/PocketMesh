@@ -82,6 +82,8 @@ struct ChatsListView: View {
             }
             .task {
                 viewModel.configure(appState: appState)
+                await loadConversations()
+                // Handle pending navigation from other tabs (e.g., Map)
                 handlePendingNavigation()
             }
             .navigationDestination(for: ContactDTO.self) { contact in
@@ -99,9 +101,16 @@ struct ChatsListView: View {
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
             }
-            // Runs on initial appearance AND when conversationsVersion changes
-            .task(id: appState.conversationsVersion) {
-                await loadConversations()
+            .onChange(of: appState.servicesVersion) { _, _ in
+                // Services changed (device switch, reconnect) - reload conversations
+                Task {
+                    await loadConversations()
+                }
+            }
+            .onChange(of: appState.syncCoordinator?.conversationsVersion) { _, _ in
+                Task {
+                    await loadConversations()
+                }
             }
             .onChange(of: appState.pendingRoomSession) { _, _ in
                 handlePendingRoomNavigation()

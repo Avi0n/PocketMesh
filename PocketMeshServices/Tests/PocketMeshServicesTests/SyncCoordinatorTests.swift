@@ -39,6 +39,7 @@ struct SyncCoordinatorTests {
         let coordinator = SyncCoordinator()
         #expect(coordinator.state == .idle)
         #expect(coordinator.contactsVersion == 0)
+        #expect(coordinator.conversationsVersion == 0)
         #expect(coordinator.lastSyncDate == nil)
     }
 
@@ -53,31 +54,28 @@ struct SyncCoordinatorTests {
         #expect(coordinator.contactsVersion == initialVersion + 1)
     }
 
-    @Test("notifyConversationsChanged calls callback")
+    @Test("notifyConversationsChanged increments conversationsVersion")
     @MainActor
-    func notifyConversationsChangedCallsCallback() async {
+    func notifyConversationsChangedIncrementsVersion() async {
         let coordinator = SyncCoordinator()
-        let tracker = CallbackTracker()
-
-        await coordinator.setConversationsChangedCallback {
-            await tracker.markStarted()
-        }
+        let initialVersion = coordinator.conversationsVersion
 
         await coordinator.notifyConversationsChanged()
 
-        let callbackCalled = await tracker.started
-        #expect(callbackCalled, "Callback should have been called")
+        #expect(coordinator.conversationsVersion == initialVersion + 1)
     }
 
-    @Test("Multiple contact notifications increment correctly")
+    @Test("Multiple notifications increment correctly")
     @MainActor
-    func multipleContactNotificationsIncrementCorrectly() async {
+    func multipleNotificationsIncrementCorrectly() async {
         let coordinator = SyncCoordinator()
 
         await coordinator.notifyContactsChanged()
         await coordinator.notifyContactsChanged()
+        await coordinator.notifyConversationsChanged()
 
         #expect(coordinator.contactsVersion == 2)
+        #expect(coordinator.conversationsVersion == 1)
     }
 
     @Test("Sync activity callbacks fire during full sync")

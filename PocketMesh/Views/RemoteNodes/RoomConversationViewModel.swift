@@ -30,7 +30,6 @@ final class RoomConversationViewModel {
 
     private var roomServerService: RoomServerService?
     private var dataStore: DataStore?
-    private weak var appState: AppState?
 
     // MARK: - Initialization
 
@@ -40,7 +39,6 @@ final class RoomConversationViewModel {
     func configure(appState: AppState) {
         self.roomServerService = appState.services?.roomServerService
         self.dataStore = appState.services?.dataStore
-        self.appState = appState
     }
 
     // MARK: - Messages
@@ -83,7 +81,6 @@ final class RoomConversationViewModel {
 
             // Add to local array
             messages.append(message)
-            await appState?.syncCoordinator?.notifyConversationsChanged()
         } catch {
             errorMessage = error.localizedDescription
             // Restore the text so user can retry
