@@ -412,6 +412,9 @@ public actor MessageService {
         // Notify caller that message is saved
         await onMessageCreated?(messageDTO)
 
+        // Capture initial routing state to detect changes
+        let initialPathLength = contact.outPathLength
+
         // Use MeshCoreSession's retry logic
         do {
             let sentInfo = try await session.sendMessageWithRetry(
@@ -440,6 +443,14 @@ public actor MessageService {
                 // All attempts exhausted
                 try await dataStore.updateMessageStatus(id: messageID, status: .failed)
             }
+
+            // Check if routing changed during retry
+            await checkAndNotifyRoutingChange(
+                publicKey: contact.publicKey,
+                contactID: contact.id,
+                deviceID: contact.deviceID,
+                initialPathLength: initialPathLength
+            )
 
             guard let message = try await dataStore.fetchMessage(id: messageID) else {
                 throw MessageServiceError.sendFailed("Failed to fetch saved message")
@@ -490,6 +501,9 @@ public actor MessageService {
         inFlightRetries.insert(messageID)
         defer { inFlightRetries.remove(messageID) }
 
+        // Capture initial routing state to detect changes
+        let initialPathLength = contact.outPathLength
+
         guard let existingMessage = try await dataStore.fetchMessage(id: messageID) else {
             throw MessageServiceError.sendFailed("Message not found")
         }
@@ -501,6 +515,9 @@ public actor MessageService {
             retryAttempt: 0,
             maxRetryAttempts: config.maxAttempts
         )
+
+        // Notify UI that retry has started (triggers message list reload)
+        await retryStatusHandler?(messageID, 0, config.maxAttempts)
 
         do {
             let sentInfo = try await session.sendMessageWithRetry(
@@ -526,6 +543,14 @@ public actor MessageService {
                 try await dataStore.updateMessageStatus(id: messageID, status: .failed)
             }
 
+            // Check if routing changed during retry
+            await checkAndNotifyRoutingChange(
+                publicKey: contact.publicKey,
+                contactID: contact.id,
+                deviceID: contact.deviceID,
+                initialPathLength: initialPathLength
+            )
+
             guard let message = try await dataStore.fetchMessage(id: messageID) else {
                 throw MessageServiceError.sendFailed("Failed to fetch message")
             }
@@ -536,6 +561,45 @@ public actor MessageService {
         } catch {
             try await dataStore.updateMessageStatus(id: messageID, status: .failed)
             throw error
+        }
+    }
+
+    // MARK: - Routing Change Detection
+
+    /// Checks if contact routing changed and notifies handler if so.
+    ///
+    /// Called after sendMessageWithRetry to detect if routing switched
+    /// between direct and flood modes during the retry process.
+    private func checkAndNotifyRoutingChange(
+        publicKey: Data,
+        contactID: UUID,
+        deviceID: UUID,
+        initialPathLength: Int8
+    ) async {
+        do {
+            // Fetch fresh contact state from device
+            let contacts = try await session.getContacts()
+
+            // Find the specific contact by public key
+            guard let updatedContact = contacts.first(where: { $0.publicKey == publicKey }) else {
+                logger.debug("Contact not found in device contacts after retry")
+                return
+            }
+
+            // Check if routing changed
+            let newPathLength = updatedContact.outPathLength
+            if newPathLength != initialPathLength {
+                logger.info("Routing changed for contact \(contactID): \(initialPathLength) -> \(newPathLength)")
+
+                // Save updated contact to database
+                _ = try await dataStore.saveContact(deviceID: deviceID, from: updatedContact.toContactFrame())
+
+                // Notify UI of routing change
+                let isNowFlood = newPathLength < 0
+                await routingChangedHandler?(contactID, isNowFlood)
+            }
+        } catch {
+            logger.warning("Failed to check routing change: \(error.localizedDescription)")
         }
     }
 
