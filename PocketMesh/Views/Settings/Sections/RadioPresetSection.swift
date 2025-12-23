@@ -59,7 +59,7 @@ struct RadioPresetSection: View {
                     Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)))
                         .font(.caption.monospacedDigit()) +
                     // swiftlint:disable:next line_length
-                    Text(" MHz \u{2022} SF\(preset.spreadingFactor) \u{2022} BW\(preset.bandwidthKHz, format: .number) \u{2022} CR\(preset.codingRate)")
+                    Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
                         .font(.caption)
                 }
                 .foregroundStyle(.secondary)
@@ -71,7 +71,7 @@ struct RadioPresetSection: View {
                     Text(freqMHz, format: .number.precision(.fractionLength(3)))
                         .font(.caption.monospacedDigit()) +
                     // swiftlint:disable:next line_length
-                    Text(" MHz \u{2022} SF\(device.spreadingFactor) \u{2022} BW\(bwKHz, format: .number) \u{2022} CR\(device.codingRate)")
+                    Text(" MHz \u{2022} BW\(bwKHz, format: .number) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
                         .font(.caption)
                 }
                 .foregroundStyle(.secondary)

@@ -577,8 +577,8 @@ public final class ConnectionManager {
             buildDate: capabilities.firmwareBuild,
             maxContacts: UInt8(min(capabilities.maxContacts, 255)),
             maxChannels: UInt8(min(capabilities.maxChannels, 255)),
-            frequency: UInt32(selfInfo.radioFrequency),
-            bandwidth: UInt32(selfInfo.radioBandwidth),
+            frequency: UInt32(selfInfo.radioFrequency * 1000),  // Convert MHz to kHz
+            bandwidth: UInt32(selfInfo.radioBandwidth * 1000),  // Convert kHz to Hz
             spreadingFactor: selfInfo.radioSpreadingFactor,
             codingRate: selfInfo.radioCodingRate,
             txPower: selfInfo.txPower,
