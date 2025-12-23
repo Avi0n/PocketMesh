@@ -572,6 +572,19 @@ public final class NotificationService: NSObject {
         )
     }
 
+    /// Remove all delivered notifications for a contact
+    public func removeDeliveredNotifications(forContactID contactID: UUID) async {
+        let center = UNUserNotificationCenter.current()
+        let notifications = await center.deliveredNotifications()
+        let idsToRemove = notifications
+            .filter { $0.request.content.userInfo["contactID"] as? String == contactID.uuidString }
+            .map(\.request.identifier)
+
+        if !idsToRemove.isEmpty {
+            center.removeDeliveredNotifications(withIdentifiers: idsToRemove)
+        }
+    }
+
 }
 
 // MARK: - UNUserNotificationCenterDelegate

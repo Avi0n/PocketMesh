@@ -377,6 +377,12 @@ public final class AppState {
             if self.connectionState == .ready {
                 do {
                     _ = try await services.messageService.sendDirectMessage(text: text, to: contact)
+
+                    // Clear unread state - user replied so they've seen the chat
+                    try? await services.dataStore.clearUnreadCount(contactID: contactID)
+                    await services.notificationService.removeDeliveredNotifications(forContactID: contactID)
+                    await services.notificationService.updateBadgeCount()
+                    await self.syncCoordinator?.notifyConversationsChanged()
                     return
                 } catch {
                     // Fall through to draft handling
