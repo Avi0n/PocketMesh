@@ -98,6 +98,12 @@ public actor SyncCoordinator {
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onConversationsChanged: (@Sendable @MainActor () -> Void)?
 
+    /// Callback when a direct message is received (for MessageEventBroadcaster)
+    private var onDirectMessageReceived: (@Sendable (_ message: MessageDTO, _ contact: ContactDTO) async -> Void)?
+
+    /// Callback when a channel message is received (for MessageEventBroadcaster)
+    private var onChannelMessageReceived: (@Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -131,6 +137,15 @@ public actor SyncCoordinator {
     ) {
         self.onContactsChanged = onContactsChanged
         self.onConversationsChanged = onConversationsChanged
+    }
+
+    /// Sets callbacks for message events (used by AppState for MessageEventBroadcaster)
+    public func setMessageEventCallbacks(
+        onDirectMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ contact: ContactDTO) async -> Void,
+        onChannelMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void
+    ) {
+        self.onDirectMessageReceived = onDirectMessageReceived
+        self.onChannelMessageReceived = onChannelMessageReceived
     }
 
     // MARK: - Notifications
@@ -310,6 +325,11 @@ public actor SyncCoordinator {
 
                 // Notify UI via SyncCoordinator
                 await self.notifyConversationsChanged()
+
+                // Notify MessageEventBroadcaster for real-time chat updates
+                if let contact {
+                    await self.onDirectMessageReceived?(messageDTO, contact)
+                }
             } catch {
                 self.logger.error("Failed to save contact message: \(error)")
             }
@@ -369,6 +389,9 @@ public actor SyncCoordinator {
 
                 // Notify UI via SyncCoordinator
                 await self.notifyConversationsChanged()
+
+                // Notify MessageEventBroadcaster for real-time chat updates
+                await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
             } catch {
                 self.logger.error("Failed to save channel message: \(error)")
             }

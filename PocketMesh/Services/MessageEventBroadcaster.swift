@@ -34,12 +34,6 @@ public final class MessageEventBroadcaster {
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
 
-    /// Reference to notification service for posting notifications
-    var notificationService: NotificationService?
-
-    /// Channel name lookup function (set by AppState)
-    var channelNameLookup: ((_ deviceID: UUID, _ channelIndex: UInt8) async -> String?)?
-
     /// Reference to message service for handling send confirmations
     var messageService: MessageService?
 
@@ -64,51 +58,25 @@ public final class MessageEventBroadcaster {
 
     // MARK: - Direct Message Handling
 
-    /// Handle incoming direct message (called from service layer callback)
-    func handleDirectMessage(_ message: MessageDTO, from contact: ContactDTO) async {
+    /// Handle incoming direct message (called from SyncCoordinator callback)
+    func handleDirectMessage(_ message: MessageDTO, from contact: ContactDTO) {
         self.latestMessage = message
         self.latestEvent = .directMessageReceived(message: message, contact: contact)
         self.newMessageCount += 1
-
-        // Post notification directly (NotificationService is @MainActor)
-        await notificationService?.postDirectMessageNotification(
-            from: contact.displayName,
-            contactID: contact.id,
-            messageText: message.text,
-            messageID: message.id
-        )
     }
 
     // MARK: - Channel Message Handling
 
-    /// Handle incoming channel message (called from service layer callback)
-    func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) async {
+    /// Handle incoming channel message (called from SyncCoordinator callback)
+    func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) {
         self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
         self.newMessageCount += 1
-
-        // Resolve channel name and post notification
-        let channelName = await channelNameLookup?(message.deviceID, channelIndex) ?? "Channel \(channelIndex)"
-        await notificationService?.postChannelMessageNotification(
-            channelName: channelName,
-            channelIndex: channelIndex,
-            deviceID: message.deviceID,
-            senderName: message.senderNodeName,
-            messageText: message.text,
-            messageID: message.id
-        )
     }
 
     // MARK: - Room Message Handling
 
-    /// Handle incoming room message (called from service layer callback)
-    func handleRoomMessage(_ message: RoomMessageDTO, contact: ContactDTO) async {
-        await notificationService?.postRoomMessageNotification(
-            roomName: contact.displayName,
-            senderName: message.authorName,
-            messageText: message.text,
-            messageID: message.id
-        )
-
+    /// Handle incoming room message (called from SyncCoordinator callback)
+    func handleRoomMessage(_ message: RoomMessageDTO, contact: ContactDTO) {
         self.latestEvent = .roomMessageReceived(message: message, sessionID: message.sessionID)
         self.newMessageCount += 1
     }

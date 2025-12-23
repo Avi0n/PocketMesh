@@ -159,11 +159,18 @@ public final class AppState {
             }
         )
 
+        // Wire message event callbacks for real-time chat updates
+        await services.syncCoordinator.setMessageEventCallbacks(
+            onDirectMessageReceived: { [weak self] message, contact in
+                await self?.messageEventBroadcaster.handleDirectMessage(message, from: contact)
+            },
+            onChannelMessageReceived: { [weak self] message, channelIndex in
+                await self?.messageEventBroadcaster.handleChannelMessage(message, channelIndex: channelIndex)
+            }
+        )
+
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
-
-        // Wire notification service to message event broadcaster
-        messageEventBroadcaster.notificationService = services.notificationService
 
         // Set up notification center delegate and check authorization
         UNUserNotificationCenter.current().delegate = services.notificationService
@@ -209,12 +216,6 @@ public final class AppState {
             await MainActor.run {
                 self?.messageEventBroadcaster.handleMessageFailed(messageID: messageID)
             }
-        }
-
-        // Set up channel name lookup for notifications
-        messageEventBroadcaster.channelNameLookup = { [dataStore = services.dataStore] deviceID, channelIndex in
-            let channel = try? await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
-            return channel?.name
         }
 
         // Configure badge count callback
