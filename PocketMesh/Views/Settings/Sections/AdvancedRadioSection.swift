@@ -99,14 +99,6 @@ struct AdvancedRadioSection: View {
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    focusedField = nil
-                }
-            }
-        }
     }
 
     private func loadCurrentSettings() {
