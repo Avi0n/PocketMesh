@@ -275,7 +275,7 @@ struct BluetoothSection: View {
 
     private func renameDevice() {
         isRenaming = true
-        Task {
+        Task { @MainActor in
             defer { isRenaming = false }
 
             do {
