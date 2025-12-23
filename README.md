@@ -27,4 +27,4 @@ For more details, see the [Development Guide](docs/Development.md).
 
 ## License
 
-AGPL 3.0
+GNU General Public License v3.0
