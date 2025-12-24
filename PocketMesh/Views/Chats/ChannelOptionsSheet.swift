@@ -66,57 +66,42 @@ struct ChannelOptionsSheet: View {
                 Button {
                     selectedOption = .createPrivate
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Create a Private Channel")
-                                .foregroundStyle(.primary)
-                            Text("Generate a secret key and QR code to share")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "lock.fill")
-                            .foregroundStyle(.blue)
-                    }
+                    ChannelOptionRow(
+                        title: "Create a Private Channel",
+                        description: "Generate a secret key and QR code to share",
+                        icon: "lock.fill",
+                        iconColor: .blue
+                    )
                 }
+                .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
 
                 // Join Private Channel
                 Button {
                     selectedOption = .joinPrivate
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Join a Private Channel")
-                                .foregroundStyle(.primary)
-                            Text("Enter channel name and secret key")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "key.fill")
-                            .foregroundStyle(.orange)
-                    }
+                    ChannelOptionRow(
+                        title: "Join a Private Channel",
+                        description: "Enter channel name and secret key",
+                        icon: "key.fill",
+                        iconColor: .orange
+                    )
                 }
+                .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
 
                 // Scan QR Code
                 Button {
                     selectedOption = .scanQR
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Scan a QR Code")
-                                .foregroundStyle(.primary)
-                            Text("Join a channel by scanning its QR code")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "qrcode.viewfinder")
-                            .foregroundStyle(.purple)
-                    }
+                    ChannelOptionRow(
+                        title: "Scan a QR Code",
+                        description: "Join a channel by scanning its QR code",
+                        icon: "qrcode.viewfinder",
+                        iconColor: .purple
+                    )
                 }
+                .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
             } header: {
                 Text("Private Channels")
@@ -127,38 +112,28 @@ struct ChannelOptionsSheet: View {
                 Button {
                     selectedOption = .joinPublic
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Join the Public Channel")
-                                .foregroundStyle(.primary)
-                            Text("Re-add the default public broadcast channel")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "globe")
-                            .foregroundStyle(.green)
-                    }
+                    ChannelOptionRow(
+                        title: "Join the Public Channel",
+                        description: "Re-add the default public broadcast channel",
+                        icon: "globe",
+                        iconColor: .green
+                    )
                 }
+                .buttonStyle(.plain)
                 .disabled(hasPublicChannel)
 
                 // Join Hashtag Channel
                 Button {
                     selectedOption = .joinHashtag
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Join a Hashtag Channel")
-                                .foregroundStyle(.primary)
-                            Text("Public channel anyone can join by name")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "number")
-                            .foregroundStyle(.cyan)
-                    }
+                    ChannelOptionRow(
+                        title: "Join a Hashtag Channel",
+                        description: "Public channel anyone can join by name",
+                        icon: "number",
+                        iconColor: .cyan
+                    )
                 }
+                .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
             } header: {
                 Text("Public Channels")
@@ -198,6 +173,31 @@ struct ChannelOptionsSheet: View {
         }
 
         isLoading = false
+    }
+}
+
+/// Reusable row for channel option buttons with proper disabled state styling
+struct ChannelOptionRow: View {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let title: String
+    let description: String
+    let icon: String
+    let iconColor: Color
+
+    var body: some View {
+        Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .foregroundStyle(.primary)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } icon: {
+            Image(systemName: icon)
+                .foregroundStyle(isEnabled ? iconColor : .secondary)
+        }
     }
 }
 
