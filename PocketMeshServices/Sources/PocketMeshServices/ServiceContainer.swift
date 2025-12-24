@@ -220,7 +220,13 @@ public final class ServiceContainer {
         // Sync channels
         guard !Task.isCancelled else { return }
         do {
-            let result = try await channelService.syncChannels(deviceID: deviceID)
+            // Fetch device to get maxChannels
+            guard let device = try await dataStore.fetchDevice(id: deviceID) else {
+                logger.warning("Initial sync: device not found for channel sync")
+                return
+            }
+
+            let result = try await channelService.syncChannels(deviceID: deviceID, maxChannels: device.maxChannels)
             if result.channelsSynced > 0 {
                 logger.info("Initial sync: \(result.channelsSynced) channels synced")
             }

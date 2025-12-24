@@ -178,6 +178,7 @@ public actor SyncCoordinator {
     ///   - messagePollingService: Service for message polling
     public func performFullSync(
         deviceID: UUID,
+        dataStore: PersistenceStore,
         contactService: some ContactServiceProtocol,
         channelService: some ChannelServiceProtocol,
         messagePollingService: some MessagePollingServiceProtocol
@@ -196,8 +197,10 @@ public actor SyncCoordinator {
 
             // Phase 2: Channels
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-            let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: 8)
-            logger.info("Synced \(channelResult.channelsSynced) channels")
+            let device = try await dataStore.fetchDevice(id: deviceID)
+            let maxChannels = device?.maxChannels ?? 0
+            let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
+            logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
         } catch {
             // End sync activity on error during contacts/channels phase
             await onSyncActivityEnded?()
@@ -249,6 +252,7 @@ public actor SyncCoordinator {
         // 3. Perform full sync
         try await performFullSync(
             deviceID: deviceID,
+            dataStore: services.dataStore,
             contactService: services.contactService,
             channelService: services.channelService,
             messagePollingService: services.messagePollingService

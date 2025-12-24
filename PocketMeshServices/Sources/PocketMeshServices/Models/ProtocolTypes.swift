@@ -136,7 +136,6 @@ public enum ProtocolLimits {
     public static let maxFrameSize = 250
     public static let signatureSize = 64
     public static let maxContacts = 100
-    public static let maxChannels = 8
     public static let offlineQueueSize = 16
     public static let maxNameLength = 32
     public static let channelSecretSize = 16

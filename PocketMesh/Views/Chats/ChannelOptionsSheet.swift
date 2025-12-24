@@ -185,8 +185,14 @@ struct ChannelOptionsSheet: View {
             // Check if public channel exists
             hasPublicChannel = usedSlots.contains(0)
 
-            // Slots 1-7 are available for user channels
-            availableSlots = (1...7).filter { !usedSlots.contains(UInt8($0)) }.map { UInt8($0) }
+            // Slots 1 through (maxChannels-1) are available for user channels
+            // Slot 0 is reserved for public channel
+            let maxChannels = appState.connectedDevice?.maxChannels ?? 0
+            if maxChannels > 1 {
+                availableSlots = (1..<maxChannels).filter { !usedSlots.contains($0) }
+            } else {
+                availableSlots = []
+            }
         } catch {
             // Handle error silently, show empty state
         }

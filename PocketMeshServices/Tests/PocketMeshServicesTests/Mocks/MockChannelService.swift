@@ -30,7 +30,7 @@ public actor MockChannelService: ChannelServiceProtocol {
 
     // MARK: - Protocol Methods
 
-    public func syncChannels(deviceID: UUID, maxChannels: UInt8 = 8) async throws -> ChannelSyncResult {
+    public func syncChannels(deviceID: UUID, maxChannels: UInt8) async throws -> ChannelSyncResult {
         syncChannelsInvocations.append(SyncChannelsInvocation(deviceID: deviceID, maxChannels: maxChannels))
         switch stubbedSyncChannelsResult {
         case .success(let result):
