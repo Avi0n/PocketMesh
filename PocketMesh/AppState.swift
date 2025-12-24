@@ -69,6 +69,9 @@ public final class AppState {
     /// Selected tab index
     var selectedTab: Int = 0
 
+    /// Tab bar visibility state - controlled from anywhere, consumed by ChatsListView
+    var tabBarVisibility: Visibility = .visible
+
     /// Contact to navigate to
     var pendingChatContact: ContactDTO?
 
@@ -288,11 +291,13 @@ public final class AppState {
     // MARK: - Navigation
 
     func navigateToChat(with contact: ContactDTO) {
+        tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
         pendingChatContact = contact
         selectedTab = 0
     }
 
     func navigateToRoom(with session: RemoteNodeSessionDTO) {
+        tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
         pendingRoomSession = session
         selectedTab = 0
     }

@@ -15,7 +15,6 @@ struct ChatsListView: View {
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
-    @State private var tabBarVisibility: Visibility = .visible
 
     private var filteredConversations: [Conversation] {
         let conversations = viewModel.allConversations
@@ -88,15 +87,15 @@ struct ChatsListView: View {
             }
             .navigationDestination(for: ContactDTO.self) { contact in
                 ChatView(contact: contact, parentViewModel: viewModel)
-                    .onAppear { tabBarVisibility = .hidden }
+                    .onAppear { appState.tabBarVisibility = .hidden }
             }
             .navigationDestination(for: ChannelDTO.self) { channel in
                 ChannelChatView(channel: channel, parentViewModel: viewModel)
-                    .onAppear { tabBarVisibility = .hidden }
+                    .onAppear { appState.tabBarVisibility = .hidden }
             }
             .navigationDestination(for: RemoteNodeSessionDTO.self) { session in
                 RoomConversationView(session: session)
-                    .onAppear { tabBarVisibility = .hidden }
+                    .onAppear { appState.tabBarVisibility = .hidden }
             }
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
@@ -114,6 +113,12 @@ struct ChatsListView: View {
             }
             .onChange(of: appState.pendingRoomSession) { _, _ in
                 handlePendingRoomNavigation()
+            }
+            .onChange(of: navigationPath) { _, newPath in
+                // Restore tab bar when navigating back to the list
+                if newPath.isEmpty {
+                    appState.tabBarVisibility = .visible
+                }
             }
             .sheet(item: $roomToAuthenticate) { session in
                 RoomAuthenticationSheet(session: session) { authenticatedSession in
@@ -136,7 +141,7 @@ struct ChatsListView: View {
             } message: {
                 Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
             }
-            .toolbarVisibility(tabBarVisibility, for: .tabBar)
+            .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
         }
     }
 
@@ -155,12 +160,10 @@ struct ChatsListView: View {
                     NavigationLink(value: contact) {
                         ConversationRow(contact: contact, viewModel: viewModel)
                     }
-                    .onAppear { tabBarVisibility = .visible }
                 case .channel(let channel):
                     NavigationLink(value: channel) {
                         ChannelConversationRow(channel: channel, viewModel: viewModel)
                     }
-                    .onAppear { tabBarVisibility = .visible }
                 case .room(let session):
                     Button {
                         if session.isConnected {
@@ -172,7 +175,6 @@ struct ChatsListView: View {
                         RoomConversationRow(session: session)
                     }
                     .buttonStyle(.plain)
-                    .onAppear { tabBarVisibility = .visible }
                 }
             }
             .onDelete(perform: deleteConversations)
