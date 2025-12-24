@@ -45,6 +45,8 @@ struct ChannelChatView: View {
                 // Dismiss the chat view when channel is deleted
                 dismiss()
             }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .task {
             viewModel.configure(appState: appState)

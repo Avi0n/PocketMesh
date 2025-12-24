@@ -125,6 +125,8 @@ struct ChatsListView: View {
                     roomToAuthenticate = nil
                     navigationPath.append(authenticatedSession)
                 }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
             .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
                 Button("Cancel", role: .cancel) {

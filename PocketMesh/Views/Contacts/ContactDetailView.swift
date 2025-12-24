@@ -147,6 +147,8 @@ struct ContactDetailView: View {
                     // Navigate to Chats tab with the room conversation
                     appState.navigateToRoom(with: session)
                 }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
         .sheet(item: $activeSheet, onDismiss: presentPendingSheet) { sheet in
@@ -161,6 +163,8 @@ struct ContactDetailView: View {
                         pendingSheet = .repeaterStatus(session)
                         activeSheet = nil  // Triggers dismissal, then onDismiss fires
                     }
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
                 }
             case .repeaterStatus(let session):
                 RepeaterStatusView(session: session)
@@ -183,6 +187,8 @@ struct ContactDetailView: View {
                     showRepeaterAdminAuth = false
                     // Navigation triggers in onDismiss above
                 }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showQRShareSheet) {
@@ -191,6 +197,8 @@ struct ContactDetailView: View {
                 publicKey: currentContact.publicKey,
                 contactType: currentContact.type
             )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .navigationDestination(isPresented: $navigateToSettings) {
             if let session = adminSession {
