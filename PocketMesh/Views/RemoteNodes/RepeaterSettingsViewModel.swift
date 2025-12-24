@@ -55,7 +55,7 @@ final class RepeaterSettingsViewModel {
     var confirmPassword: String = ""
 
     // Expansion state for DisclosureGroups
-    var isDeviceInfoExpanded = true  // Auto-expand Device Info on appear
+    var isDeviceInfoExpanded = false
     var isRadioExpanded = false
     var isIdentityExpanded = false
     var isBehaviorExpanded = false

@@ -25,12 +25,12 @@ struct RepeaterSettingsView: View {
     var body: some View {
         Form {
             headerSection
-            deviceInfoSection
-            radioSettingsSection      // Moved up - primary reason users access this screen
+            radioSettingsSection
             identitySection
             behaviorSection
             securitySection
             actionsSection
+            deviceInfoSection
         }
         .navigationTitle("Repeater Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -45,7 +45,6 @@ struct RepeaterSettingsView: View {
         .task {
             viewModel.configure(appState: appState, session: session)
             await viewModel.registerHandlers(appState: appState)
-            // Device Info auto-loads because isDeviceInfoExpanded = true by default
         }
         .onDisappear {
             viewModel.cleanup()
@@ -103,7 +102,7 @@ struct RepeaterSettingsView: View {
         }
     }
 
-    // MARK: - Device Info Section (auto-expands on appear)
+    // MARK: - Device Info Section
 
     private var deviceInfoSection: some View {
         ExpandableSettingsSection(
