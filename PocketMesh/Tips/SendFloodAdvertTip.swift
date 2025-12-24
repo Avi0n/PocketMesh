@@ -17,6 +17,10 @@ struct SendFloodAdvertTip: Tip {
         Image(systemName: "dot.radiowaves.left.and.right")
     }
 
+    var options: [TipOption] {
+        [Tips.MaxDisplayCount(1)]
+    }
+
     var rules: [Rule] {
         #Rule(Self.hasCompletedOnboarding) { $0.donations.count >= 1 }
     }
