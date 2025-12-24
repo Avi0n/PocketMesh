@@ -38,6 +38,8 @@ struct MapView: View {
                     contact: contact,
                     onMessage: { navigateToChat(with: contact) }
                 )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -261,7 +263,6 @@ private struct ContactDetailSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Computed Properties
