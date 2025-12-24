@@ -212,8 +212,19 @@ public actor SettingsService {
     private let session: MeshCoreSession
     private let logger = Logger(subsystem: "com.pocketmesh", category: "SettingsService")
 
+    /// Callback invoked when device settings are successfully changed.
+    /// Used to update ConnectionManager.connectedDevice for UI refresh.
+    private var onDeviceUpdated: (@Sendable (MeshCore.SelfInfo) async -> Void)?
+
     public init(session: MeshCoreSession) {
         self.session = session
+    }
+
+    /// Sets the callback for device updates after settings changes.
+    public func setDeviceUpdateCallback(
+        _ callback: @escaping @Sendable (MeshCore.SelfInfo) async -> Void
+    ) {
+        onDeviceUpdated = callback
     }
 
     // MARK: - Radio Settings
@@ -378,6 +389,7 @@ public actor SettingsService {
             )
         }
 
+        await onDeviceUpdated?(selfInfo)
         return selfInfo
     }
 
@@ -397,6 +409,7 @@ public actor SettingsService {
             )
         }
 
+        await onDeviceUpdated?(selfInfo)
         return selfInfo
     }
 
@@ -429,6 +442,7 @@ public actor SettingsService {
             )
         }
 
+        await onDeviceUpdated?(selfInfo)
         return selfInfo
     }
 
@@ -455,6 +469,7 @@ public actor SettingsService {
             )
         }
 
+        await onDeviceUpdated?(selfInfo)
         return selfInfo
     }
 
@@ -482,6 +497,7 @@ public actor SettingsService {
             )
         }
 
+        await onDeviceUpdated?(selfInfo)
         return selfInfo
     }
 

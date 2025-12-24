@@ -401,6 +401,13 @@ public final class ConnectionManager {
         logger.info("Stale pairings cleared")
     }
 
+    /// Updates the connected device with new settings from SelfInfo.
+    /// Called by SettingsService after device settings are successfully changed.
+    public func updateDevice(from selfInfo: MeshCore.SelfInfo) {
+        guard let device = connectedDevice else { return }
+        connectedDevice = device.updating(from: selfInfo)
+    }
+
     /// Checks if an accessory is registered with AccessorySetupKit.
     /// - Parameter deviceID: The Bluetooth UUID of the device
     /// - Returns: `true` if the accessory is available for connection

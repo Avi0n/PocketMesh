@@ -162,6 +162,14 @@ public final class AppState {
             }
         )
 
+        // Wire device update callback for settings changes
+        // Updates connectedDevice when radio/node settings are changed via SettingsService
+        await services.settingsService.setDeviceUpdateCallback { [weak self] selfInfo in
+            await MainActor.run {
+                self?.connectionManager.updateDevice(from: selfInfo)
+            }
+        }
+
         // Wire message event callbacks for real-time chat updates
         await services.syncCoordinator.setMessageEventCallbacks(
             onDirectMessageReceived: { [weak self] message, contact in
