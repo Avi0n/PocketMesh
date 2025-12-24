@@ -178,6 +178,64 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let lastContactSync: UInt32
     public let isActive: Bool
 
+    public init(
+        id: UUID,
+        publicKey: Data,
+        nodeName: String,
+        firmwareVersion: UInt8,
+        firmwareVersionString: String,
+        manufacturerName: String,
+        buildDate: String,
+        maxContacts: UInt8,
+        maxChannels: UInt8,
+        frequency: UInt32,
+        bandwidth: UInt32,
+        spreadingFactor: UInt8,
+        codingRate: UInt8,
+        txPower: UInt8,
+        maxTxPower: UInt8,
+        latitude: Double,
+        longitude: Double,
+        blePin: UInt32,
+        manualAddContacts: Bool,
+        multiAcks: Bool,
+        telemetryModeBase: UInt8,
+        telemetryModeLoc: UInt8,
+        telemetryModeEnv: UInt8,
+        advertLocationPolicy: UInt8,
+        lastConnected: Date,
+        lastContactSync: UInt32,
+        isActive: Bool
+    ) {
+        self.id = id
+        self.publicKey = publicKey
+        self.nodeName = nodeName
+        self.firmwareVersion = firmwareVersion
+        self.firmwareVersionString = firmwareVersionString
+        self.manufacturerName = manufacturerName
+        self.buildDate = buildDate
+        self.maxContacts = maxContacts
+        self.maxChannels = maxChannels
+        self.frequency = frequency
+        self.bandwidth = bandwidth
+        self.spreadingFactor = spreadingFactor
+        self.codingRate = codingRate
+        self.txPower = txPower
+        self.maxTxPower = maxTxPower
+        self.latitude = latitude
+        self.longitude = longitude
+        self.blePin = blePin
+        self.manualAddContacts = manualAddContacts
+        self.multiAcks = multiAcks
+        self.telemetryModeBase = telemetryModeBase
+        self.telemetryModeLoc = telemetryModeLoc
+        self.telemetryModeEnv = telemetryModeEnv
+        self.advertLocationPolicy = advertLocationPolicy
+        self.lastConnected = lastConnected
+        self.lastContactSync = lastContactSync
+        self.isActive = isActive
+    }
+
     public init(from device: Device) {
         self.id = device.id
         self.publicKey = device.publicKey
@@ -211,6 +269,40 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// The 6-byte public key prefix used for identifying messages
     public var publicKeyPrefix: Data {
         publicKey.prefix(6)
+    }
+
+    /// Returns a new DeviceDTO with settings updated from SelfInfo.
+    /// Used after device settings are changed via SettingsService.
+    public func updating(from selfInfo: MeshCore.SelfInfo) -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: selfInfo.name,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: UInt32(selfInfo.radioFrequency * 1000),
+            bandwidth: UInt32(selfInfo.radioBandwidth * 1000),
+            spreadingFactor: selfInfo.radioSpreadingFactor,
+            codingRate: selfInfo.radioCodingRate,
+            txPower: selfInfo.txPower,
+            maxTxPower: maxTxPower,
+            latitude: selfInfo.latitude,
+            longitude: selfInfo.longitude,
+            blePin: blePin,
+            manualAddContacts: selfInfo.manualAddContacts,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive
+        )
     }
 }
 
