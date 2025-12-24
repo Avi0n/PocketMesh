@@ -3,12 +3,12 @@ options:
   bundleIdPrefix: com.pocketmesh
   deploymentTarget:
     iOS: "18.0"
-  xcodeVersion: "16.1"
+  xcodeVersion: "26.0"
   generateEmptyDirectories: true
 
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: "6.2"
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     CODE_SIGN_IDENTITY: "Apple Development"
