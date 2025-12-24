@@ -10,7 +10,7 @@ MeshCore-references/
 # AI
 .claude
 .ignore
-CLAUDE.md
+#CLAUDE.md
 AGENTS.md
 thoughts/
 plans/
