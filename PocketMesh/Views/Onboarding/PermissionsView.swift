@@ -135,9 +135,7 @@ struct PermissionsView: View {
             // Navigation buttons
             VStack(spacing: 12) {
                 Button {
-                    withAnimation {
-                        appState.onboardingStep = .deviceScan
-                    }
+                    appState.onboardingPath.append(.deviceScan)
                 } label: {
                     Text(allPermissionsGranted ? "Continue" : "Skip for Now")
                         .font(.headline)
@@ -147,9 +145,7 @@ struct PermissionsView: View {
                 .buttonStyle(.borderedProminent)
 
                 Button {
-                    withAnimation {
-                        appState.onboardingStep = .welcome
-                    }
+                    appState.onboardingPath.removeLast()
                 } label: {
                     Text("Back")
                         .font(.subheadline)

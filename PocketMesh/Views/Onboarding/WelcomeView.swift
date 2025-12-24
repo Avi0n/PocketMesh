@@ -52,9 +52,7 @@ struct WelcomeView: View {
 
             // Continue button
             Button {
-                withAnimation {
-                    appState.onboardingStep = .permissions
-                }
+                appState.onboardingPath.append(.permissions)
             } label: {
                 Text("Get Started")
                     .font(.headline)

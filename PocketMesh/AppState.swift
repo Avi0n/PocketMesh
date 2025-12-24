@@ -61,8 +61,8 @@ public final class AppState {
         }
     }
 
-    /// Current onboarding step
-    var onboardingStep: OnboardingStep = .welcome
+    /// Navigation path for onboarding flow
+    var onboardingPath: [OnboardingStep] = []
 
     // MARK: - Navigation State
 
@@ -339,7 +339,7 @@ public final class AppState {
 
     func resetOnboarding() {
         hasCompletedOnboarding = false
-        onboardingStep = .welcome
+        onboardingPath = []
     }
 
     // MARK: - Activity Tracking Methods
@@ -462,25 +462,9 @@ extension AppState {
 
 // MARK: - Onboarding Step
 
-enum OnboardingStep: Int, CaseIterable {
+enum OnboardingStep: Int, CaseIterable, Hashable {
     case welcome
     case permissions
     case deviceScan
     case radioPreset
-
-    var next: OnboardingStep? {
-        guard let index = OnboardingStep.allCases.firstIndex(of: self),
-              index + 1 < OnboardingStep.allCases.count else {
-            return nil
-        }
-        return OnboardingStep.allCases[index + 1]
-    }
-
-    var previous: OnboardingStep? {
-        guard let index = OnboardingStep.allCases.firstIndex(of: self),
-              index > 0 else {
-            return nil
-        }
-        return OnboardingStep.allCases[index - 1]
-    }
 }

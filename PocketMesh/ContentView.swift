@@ -22,23 +22,23 @@ struct OnboardingView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        Group {
-            switch appState.onboardingStep {
-            case .welcome:
-                WelcomeView()
-            case .permissions:
-                PermissionsView()
-            case .deviceScan:
-                DeviceScanView()
-            case .radioPreset:
-                RadioPresetOnboardingView()
-            }
+        @Bindable var appState = appState
+
+        NavigationStack(path: $appState.onboardingPath) {
+            WelcomeView()
+                .navigationDestination(for: OnboardingStep.self) { step in
+                    switch step {
+                    case .welcome:
+                        WelcomeView()
+                    case .permissions:
+                        PermissionsView()
+                    case .deviceScan:
+                        DeviceScanView()
+                    case .radioPreset:
+                        RadioPresetOnboardingView()
+                    }
+                }
         }
-        .transition(.asymmetric(
-            insertion: .move(edge: .trailing),
-            removal: .move(edge: .leading)
-        ))
-        .animation(.default, value: appState.onboardingStep)
     }
 }
 

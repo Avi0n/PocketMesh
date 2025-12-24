@@ -150,9 +150,7 @@ struct RadioPresetOnboardingView: View {
     }
 
     private func completeOnboarding() {
-        withAnimation {
-            appState.completeOnboarding()
-        }
+        appState.completeOnboarding()
     }
 }
 

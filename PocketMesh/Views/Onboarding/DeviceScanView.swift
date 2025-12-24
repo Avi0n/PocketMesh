@@ -89,9 +89,7 @@ struct DeviceScanView: View {
                 .foregroundStyle(.secondary)
 
                 Button {
-                    withAnimation {
-                        appState.onboardingStep = .permissions
-                    }
+                    appState.onboardingPath.removeLast()
                 } label: {
                     Text("Back")
                         .font(.subheadline)
@@ -130,9 +128,7 @@ struct DeviceScanView: View {
             do {
                 try await appState.connectionManager.pairNewDevice()
                 await appState.wireServicesIfConnected()
-                withAnimation {
-                    appState.onboardingStep = .radioPreset
-                }
+                appState.onboardingPath.append(.radioPreset)
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show
             } catch AccessorySetupKitError.pickerRestricted {
