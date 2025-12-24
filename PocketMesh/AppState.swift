@@ -49,8 +49,8 @@ public final class AppState {
     /// Device ID pending retry
     var pendingReconnectDeviceID: UUID?
 
-    /// Current device battery level in millivolts (nil if not fetched)
-    var deviceBatteryMillivolts: UInt16?
+    /// Current device battery info (nil if not fetched)
+    var deviceBattery: BatteryInfo?
 
     // MARK: - Onboarding State
 
@@ -270,11 +270,10 @@ public final class AppState {
         guard connectionState == .ready else { return }
 
         do {
-            let battery = try await services?.settingsService.getBattery()
-            deviceBatteryMillivolts = battery.map { UInt16(clamping: $0.level) }
+            deviceBattery = try await services?.settingsService.getBattery()
         } catch {
             // Silently fail - battery info is optional
-            deviceBatteryMillivolts = nil
+            deviceBattery = nil
         }
     }
 
