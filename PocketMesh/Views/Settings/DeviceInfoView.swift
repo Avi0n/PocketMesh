@@ -5,9 +5,6 @@ import MeshCore
 /// Detailed device information screen
 struct DeviceInfoView: View {
     @Environment(AppState.self) private var appState
-    @State private var batteryInfo: MeshCore.BatteryInfo?
-    @State private var isLoadingBattery: Bool = false
-    @State private var lastRefresh: Date?
     @State private var showShareSheet = false
 
     var body: some View {
@@ -46,8 +43,17 @@ struct DeviceInfoView: View {
 
                 // Battery and storage
                 Section {
-                    if let battery = batteryInfo {
-                        BatteryRow(millivolts: UInt16(clamping: battery.level))
+                    if let battery = appState.deviceBattery {
+                        HStack {
+                            Label("Battery", systemImage: battery.iconName)
+                                .symbolRenderingMode(.multicolor)
+                            Spacer()
+                            Text("\(battery.percentage)%")
+                                .foregroundStyle(battery.levelColor)
+                            Text("(\(battery.voltage, format: .number.precision(.fractionLength(2)))V)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
                         HStack {
                             Label("Storage Used", systemImage: "internaldrive")
@@ -61,23 +67,11 @@ struct DeviceInfoView: View {
                         HStack {
                             Label("Battery & Storage", systemImage: "battery.100")
                             Spacer()
-                            if isLoadingBattery {
-                                ProgressView()
-                            } else {
-                                Button("Refresh") {
-                                    refreshBatteryInfo()
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            }
+                            ProgressView()
                         }
                     }
                 } header: {
                     Text("Power & Storage")
-                } footer: {
-                    if let lastRefresh {
-                        Text("Last updated: \(lastRefresh, format: .relative(presentation: .named))")
-                    }
                 }
 
                 // Firmware info
@@ -193,10 +187,10 @@ struct DeviceInfoView: View {
         }
         .navigationTitle("Device Info")
         .refreshable {
-            refreshBatteryInfo()
+            await appState.fetchDeviceBattery()
         }
         .onAppear {
-            refreshBatteryInfo()
+            Task { await appState.fetchDeviceBattery() }
         }
         .sheet(isPresented: $showShareSheet) {
             if let device = appState.connectedDevice {
@@ -211,24 +205,6 @@ struct DeviceInfoView: View {
 
     private func formatStorage(used: Int, total: Int) -> String {
         "\(used) / \(total) KB"
-    }
-
-    private func refreshBatteryInfo() {
-        guard !isLoadingBattery,
-              let settingsService = appState.services?.settingsService else { return }
-
-        isLoadingBattery = true
-
-        Task {
-            do {
-                batteryInfo = try await settingsService.getBattery()
-                lastRefresh = Date()
-            } catch {
-                // Leave batteryInfo as nil to show refresh button
-            }
-
-            isLoadingBattery = false
-        }
     }
 }
 
@@ -258,68 +234,6 @@ private struct DeviceIdentityHeader: View {
             Spacer()
         }
         .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Battery Row
-
-private struct BatteryRow: View {
-    let millivolts: UInt16
-
-    var body: some View {
-        HStack {
-            Label("Battery", systemImage: batteryIcon)
-                .symbolRenderingMode(.multicolor)
-
-            Spacer()
-
-            Text(batteryPercentage)
-                .foregroundStyle(batteryColor)
-
-            Text(voltageString)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var batteryIcon: String {
-        let percent = estimatedPercentage
-        switch percent {
-        case 75...100: return "battery.100"
-        case 50..<75: return "battery.75"
-        case 25..<50: return "battery.50"
-        case 10..<25: return "battery.25"
-        default: return "battery.0"
-        }
-    }
-
-    private var batteryPercentage: String {
-        "\(estimatedPercentage)%"
-    }
-
-    private var voltageString: String {
-        let volts = Double(millivolts) / 1000.0
-        return "(\(volts.formatted(.number.precision(.fractionLength(2))))V)"
-    }
-
-    private var batteryColor: Color {
-        let percent = estimatedPercentage
-        switch percent {
-        case 20...100: return .primary
-        case 10..<20: return .orange
-        default: return .red
-        }
-    }
-
-    private var estimatedPercentage: Int {
-        // LiPo voltage to percentage (approximate)
-        // 4.2V = 100%, 3.0V = 0%
-        let voltage = Double(millivolts) / 1000.0
-        let minV = 3.0
-        let maxV = 4.2
-
-        let percent = ((voltage - minV) / (maxV - minV)) * 100
-        return Int(min(100, max(0, percent)))
     }
 }
 

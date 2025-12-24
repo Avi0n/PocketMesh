@@ -63,10 +63,10 @@ struct BLEStatusIndicatorView: View {
                 Section {
                     VStack(alignment: .leading) {
                         Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
-                        if let percent = batteryPercentage, let voltage = batteryVoltage {
+                        if let battery = appState.deviceBattery {
                             Label(
-                                "\(percent)% (\(voltage, format: .number.precision(.fractionLength(2)))v)",
-                                systemImage: batterySymbolName
+                                "\(battery.percentage)% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: battery.iconName
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -158,36 +158,6 @@ struct BLEStatusIndicatorView: View {
             "Connected"
         case .ready:
             "Ready"
-        }
-    }
-
-    // MARK: - Battery Properties
-
-    /// Battery voltage calculated from millivolts
-    private var batteryVoltage: Double? {
-        guard let millivolts = appState.deviceBatteryMillivolts else { return nil }
-        return Double(millivolts) / 1000.0
-    }
-
-    /// Estimated battery percentage from millivolts (LiPo curve)
-    private var batteryPercentage: Int? {
-        guard let voltage = batteryVoltage else { return nil }
-        // LiPo voltage to percentage: 4.2V = 100%, 3.0V = 0%
-        let minV = 3.0
-        let maxV = 4.2
-        let percent = ((voltage - minV) / (maxV - minV)) * 100
-        return Int(min(100, max(0, percent)))
-    }
-
-    /// SF Symbol name for current battery level
-    private var batterySymbolName: String {
-        guard let percent = batteryPercentage else { return "battery.0" }
-        switch percent {
-        case 88...100: return "battery.100"
-        case 63..<88: return "battery.75"
-        case 38..<63: return "battery.50"
-        case 13..<38: return "battery.25"
-        default: return "battery.0"
         }
     }
 
