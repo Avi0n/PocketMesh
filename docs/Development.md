@@ -6,9 +6,9 @@ This guide provides information for developers who want to contribute to the Poc
 
 ### Prerequisites
 
-- **Xcode 16.1+**
+- **Xcode 26.0+** (as specified in `project.yml`)
 - **Swift 6.2+**
-- **XcodeGen**: Used for project file generation.
+- **XcodeGen**: Required for project file generation.
   ```bash
   brew install xcodegen
   ```
@@ -16,14 +16,8 @@ This guide provides information for developers who want to contribute to the Poc
   ```bash
   brew install xcsift
   ```
-- **SwiftLint** (optional): Linting for Swift code style.
-  ```bash
-  brew install swiftlint
-  ```
-- **SwiftFormat** (optional): Automatic code formatting.
-  ```bash
-  brew install swiftformat
-  ```
+
+Note: SwiftLint and SwiftFormat are not currently configured for this project but may be added optionally. See the "Linting and Formatting" section below.
 
 ### Project Setup
 
@@ -47,7 +41,7 @@ PocketMesh uses a modular structure with Swift Packages:
 ```bash
 xcodebuild -project PocketMesh.xcodeproj \
   -scheme PocketMesh \
-  -destination "platform=iOS Simulator,name=iPhone 16e" \
+  -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
   build
 ```
 
@@ -88,7 +82,7 @@ PocketMesh emphasizes comprehensive testing at all layers.
 # Run all tests
 xcodebuild test -project PocketMesh.xcodeproj \
   -scheme PocketMesh \
-  -destination "platform=iOS Simulator,name=iPhone 16e"
+  -destination "platform=iOS Simulator,name=iPhone 16 Pro"
 
 # With xcsift for concise output
 xcodebuild test 2>&1 | xcsift
@@ -107,12 +101,20 @@ For testing without physical hardware:
 let mock = MockTransport()
 let session = MeshCoreSession(transport: mock)
 
-// Inject test data
-await mock.injectData(testPacket)
+// Simulate device response
+await mock.simulateReceive(testPacket)
 
-// Verify sent data
+// Helper methods for common responses
+await mock.simulateOK()
+await mock.simulateError(code: 0x01)
+
+// Verify sent data (sentData is an array)
 let sent = await mock.sentData
-#expect(sent.contains(expectedPacket))
+#expect(sent.count > 0)
+#expect(sent.last == expectedPacket)
+
+// Clear sent data history
+await mock.clearSentData()
 ```
 
 #### MockPersistenceStore
@@ -134,12 +136,12 @@ We use the modern **Swift Testing** framework (`@Test`, `@Suite`, `#expect`) for
 ```swift
 @Suite("MessageService Tests")
 struct MessageServiceTests {
-    @Test("Send message creates pending ACK")
+    @Test("Send message creates pending message")
     func sendMessageCreatesAck() async throws {
         let service = MessageService(...)
         let message = try await service.sendDirectMessage(text: "Hello", to: contact)
 
-        #expect(message.status == .sending)
+        #expect(message.status == .pending)
     }
 }
 ```
@@ -177,25 +179,19 @@ See `CLAUDE.md` for complete coding conventions.
 
 ## Linting and Formatting
 
-### SwiftLint
+### Optional Tools
 
-Run SwiftLint to check for style issues:
+The project does not currently have SwiftLint or SwiftFormat configured. If you wish to use these tools:
 
+**SwiftLint** (optional):
 ```bash
+brew install swiftlint
 swiftlint lint
 ```
 
-Fix auto-correctable issues:
-
+**SwiftFormat** (optional):
 ```bash
-swiftlint lint --fix
-```
-
-### SwiftFormat
-
-Run SwiftFormat to auto-format code:
-
-```bash
+brew install swiftformat
 swiftformat .
 ```
 
@@ -204,12 +200,6 @@ swiftformat .
 Before committing:
 
 ```bash
-# Format code
-swiftformat .
-
-# Check for lint issues
-swiftlint lint
-
 # Build and test
 xcodebuild test 2>&1 | xcsift --Werror
 ```
@@ -224,14 +214,70 @@ To generate the documentation site:
 xcodebuild docbuild -scheme MeshCore
 ```
 
-## Continuous Integration
+## Project Dependencies
 
-CI pipelines should run the following on every PR:
+### DataScoutCompanion
 
-1. `xcodegen generate` to ensure project file validity.
-2. `swiftlint lint` for code style.
-3. `xcodebuild build` for the main scheme.
-4. `xcodebuild test` for all test targets.
+The project integrates [DataScoutCompanion](https://github.com/alex566/DataScoutCompanion) for database debugging via the DataScout macOS application. This dependency is configured in `project.yml`:
+
+```yaml
+packages:
+  DataScoutCompanion:
+    url: https://github.com/alex566/DataScoutCompanion.git
+    from: "0.3.0"
+```
+
+Required Info.plist keys for DataScout integration:
+
+```xml
+<key>NSBonjourServices</key>
+<array>
+    <string>_datascout-sync._tcp</string>
+</array>
+<key>NSLocalNetworkUsageDescription</key>
+<string>PocketMesh uses the local network to enable database debugging with DataScout.</string>
+```
+
+### AccessorySetupKit
+
+For iOS 18+ device pairing, the project uses AccessorySetupKit. The `AccessorySetupKitService` in PocketMeshServices handles the pairing flow.
+
+Required Info.plist keys:
+
+```xml
+<key>NSAccessorySetupKitSupports</key>
+<array>
+    <string>Bluetooth</string>
+</array>
+<key>NSAccessorySetupBluetoothServices</key>
+<array>
+    <string>6E400001-B5A3-F393-E0A9-E50E24DCCA9E</string>
+</array>
+<key>NSAccessorySetupBluetoothNames</key>
+<array>
+    <string>MeshCore-</string>
+</array>
+```
+
+### Bluetooth Requirements
+
+The app requires Bluetooth permissions and background mode:
+
+```xml
+<key>NSBluetoothPeripheralUsageDescription</key>
+<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
+<key>UIBackgroundModes</key>
+<array>
+    <string>bluetooth-central</string>
+</array>
+```
+
+## BLE Transport Architecture
+
+- **MeshCore/Transport/BLETransport.swift**: Base BLE transport protocol implementation
+- **PocketMeshServices/Transport/iOSBLETransport.swift**: iOS-specific BLE transport with CoreBluetooth integration
+- **PocketMeshServices/Transport/BLEStateMachine.swift**: Connection state management
+- **PocketMeshServices/Services/AccessorySetupKitService.swift**: iOS 18+ pairing flow
 
 ## Further Reading
 

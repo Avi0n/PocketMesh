@@ -12,9 +12,9 @@ PocketMesh is a messaging app designed for off-grid communication using MeshCore
 ### Onboarding
 
 1. **Welcome**: Launch the app and tap "Get Started".
-2. **Permissions**: Grant permissions for **Bluetooth**, **Notifications**, and **Location**. These are essential for connecting to your radio and sharing your position with others.
-3. **Discovery**: The app will automatically scan for nearby MeshCore devices. Select your device from the list.
-4. **Pairing**: Follow the on-screen instructions to pair your device. You may need to enter a PIN (default is usually `123456`).
+2. **Permissions**: Grant permissions for **Notifications** and **Location**. Location is needed for sharing your position with other mesh users.
+3. **Discovery**: The app will scan for nearby MeshCore devices using AccessorySetupKit. Select your device from the list.
+4. **Pairing**: Follow the on-screen instructions to pair your device. Bluetooth permission is requested automatically by AccessorySetupKit during device discovery. You may be prompted to enter a device PIN (device-specific).
 
 ---
 
@@ -23,27 +23,26 @@ PocketMesh is a messaging app designed for off-grid communication using MeshCore
 ### Direct Messages
 
 - Go to the **Chats** tab.
-- Tap the **New Chat** button or select an existing contact.
+- Tap the **square.and.pencil** menu button and select **New Chat**, or select an existing contact.
 - Type your message and tap **Send**.
-- **Delivery Status**:
-  - **Queued**: Message is waiting to be sent to your radio.
-  - **Sending**: Your radio is attempting to transmit the message.
-  - **Sent**: The message has been successfully transmitted by your radio.
-  - **Acknowledged**: The recipient's radio has confirmed receipt of the message.
-  - **Failed**: The message could not be delivered after multiple attempts.
+- **Delivery Status** (shown as text labels below outgoing messages):
+  - **"Sending..."**: Message is pending or being transmitted to your radio.
+  - **"Sent"**: The message has been successfully transmitted by your radio.
+  - **"Delivered"**: The recipient's radio has confirmed receipt of the message.
+  - **"Retrying..."**: The app is attempting to resend using flood routing (with spinner indicator).
+  - **"Failed"**: The message could not be delivered after multiple attempts (red bubble background with exclamation icon).
 
 ### Retrying Failed Messages
 
 If a message fails to deliver:
 
-1. Long-press the failed message.
-2. Tap **Retry**.
-3. The app will attempt to resend using flood routing (broadcast to all nearby nodes).
-4. You'll see retry progress: "Retrying 1/4...", "Retrying 2/4...", etc.
+1. Tap the **Retry** button that appears below the failed message.
+2. The app will attempt to resend using flood routing (broadcast to all nearby nodes).
+3. You'll see retry progress: "Retrying 1/4...", "Retrying 2/4...", etc.
 
 ### Group Channels
 
-- PocketMesh supports up to 8 channel slots.
+- PocketMesh supports up to 8 channel slots (0-7).
 - **Slot 0 (Public)**: A default public channel for open communication.
 - **Private Channels**: Configure a channel with a name and a passphrase to create a private group. Others must use the same name and passphrase to join.
 
@@ -58,6 +57,16 @@ Rooms are group conversations hosted on a Room Server node.
 1. Go to **Contacts** tab.
 2. Find a contact with the **Room** type (purple marker on map).
 3. Tap to open the room conversation.
+4. If the room requires authentication, you'll be prompted to enter credentials.
+
+### Room Authentication
+
+When connecting to a room that requires authentication:
+
+1. An authentication sheet will appear automatically.
+2. Enter the required credentials (username/password or authentication code).
+3. If the room is already in your chat list but disconnected, tap it to show the authentication sheet and reconnect.
+4. Once authenticated, you can send and receive messages.
 
 ### Room Features
 
@@ -66,6 +75,7 @@ Rooms are group conversations hosted on a Room Server node.
 - Room servers can be public or require authentication.
 - **Read-only** guests can view but not send messages.
 - **Read/Write** guests can participate fully.
+- To leave a room, swipe left on the room conversation in the Chats list and select **Delete**. This will remove the room, delete all messages, and remove the associated contact.
 
 ---
 
@@ -74,7 +84,7 @@ Rooms are group conversations hosted on a Room Server node.
 ### Discovering Contacts
 
 - Contacts are discovered when they "advertise" their presence on the mesh network.
-- You can manually send an advertisement from the **Contacts** tab to let others find you.
+- You can manually send an advertisement from the **Contacts** tab by going to the **ellipsis menu** (top right) > **Discovery**.
 
 ### QR Code Sharing
 
@@ -82,33 +92,57 @@ Share your contact info or a channel via QR code:
 
 #### Sharing Your Contact
 
-1. Go to **Settings** > **My Profile**.
-2. Tap **Share QR Code**.
-3. Show the QR code to another PocketMesh user.
-4. They scan it to add you as a contact.
+1. Go to **Contacts** tab.
+2. Tap the **ellipsis menu** (top right).
+3. Select **Share My Contact**.
+4. Show the QR code to another PocketMesh user.
+5. They scan it to add you as a contact.
 
 #### Sharing a Channel
 
-1. Go to **Settings** > **Channels**.
-2. Select the channel you want to share.
-3. Tap **Share QR Code**.
-4. The QR code contains the channel name and passphrase.
-5. Others scan it to join the same channel.
+1. Go to **Chats** tab.
+2. Open the channel conversation you want to share.
+3. Tap the **info button** (top right).
+4. The QR code is displayed automatically in the channel info sheet.
+5. The QR code contains the channel name and passphrase.
+6. Others scan it to join the same channel.
 
 #### Scanning a QR Code
 
 1. Go to **Contacts** tab.
-2. Tap the **Scan QR** button.
-3. Point your camera at a PocketMesh QR code.
-4. The contact or channel is automatically added.
+2. Tap the **ellipsis menu** (top right).
+3. Select **Add Contact**.
+4. Tap **Scan QR Code**.
+5. Point your camera at a PocketMesh QR code.
+6. The contact or channel is automatically added.
 
 ### Map View
 
 - The **Map** tab shows the real-time location of your contacts (if they have chosen to share it).
 - Markers are color-coded:
   - **Blue**: Users/Chat nodes.
+  - **Orange**: Favorite contacts.
   - **Green**: Repeaters.
   - **Purple**: Room Servers.
+
+### Contact Actions
+
+You can perform quick actions on contacts using swipe gestures:
+
+- **Swipe right**: Mark as **Favorite** (or remove from favorites).
+- **Swipe left**: **Block** or **Delete** the contact.
+
+### Discovery View
+
+The Discovery view shows contacts that have been discovered on the mesh but not yet added to your device (when auto-add contacts is disabled).
+
+1. Go to **Contacts** tab.
+2. Tap the **ellipsis menu** (top right).
+3. Select **Discovery**.
+4. You'll see a list of discovered contacts with an **Add** button next to each.
+5. Tap **Add** to add a contact to your device.
+
+From the Discovery view, you can also send an advertisement to let other mesh users discover you.
 
 ---
 
@@ -121,28 +155,45 @@ Repeaters extend the range of your mesh network. You can view status information
 1. Go to **Contacts** tab.
 2. Find a contact with the **Repeater** type (green marker on map).
 3. Tap to open the repeater detail view.
-4. Tap **Request Status** to query the repeater.
+4. Status is automatically requested when the view loads. You can refresh by pulling down or tapping the **refresh button** in the toolbar.
 
 ### Status Information
 
+The status section displays:
+
 - **Battery**: Current battery level and voltage.
 - **Uptime**: How long the repeater has been running.
-- **SNR**: Signal-to-noise ratio of the last communication.
-- **Neighbors**: Number of nodes the repeater can see.
+- **Clock**: Repeater's current time.
+- **Last RSSI**: Received Signal Strength Indicator.
+- **Last SNR**: Signal-to-noise ratio of the last communication.
+- **Noise Floor**: Background radio noise level.
+- **Packets Sent**: Total packets transmitted.
+- **Packets Received**: Total packets received.
 
 ### Viewing Neighbors
 
-1. From the repeater detail view, tap **View Neighbors**.
-2. See a list of all nodes the repeater can communicate with.
-3. Each entry shows the node name, type, and signal quality.
+1. From the repeater status view, find the **Neighbors** disclosure group.
+2. Tap to expand and see all nodes the repeater can communicate with.
+3. Neighbors are loaded on-demand when you first expand the section.
+4. Each entry shows the public key prefix, last seen time, and SNR (color-coded: green for good, yellow for fair, red for poor signal).
+
+### Viewing Telemetry
+
+1. From the repeater status view, find the **Telemetry** disclosure group.
+2. Tap to expand and see sensor data from the repeater.
+3. Telemetry data is loaded on-demand when you first expand the section.
+4. Available sensors may include temperature, voltage, and other environmental data depending on the repeater's configuration.
 
 ---
 
 ## 6. Settings
 
+Access Settings from the **Settings** tab.
+
 ### Radio Configuration
 
-- Configure your LoRa radio parameters:
+- Configure your LoRa radio parameters using presets or custom values:
+  - **Presets**: Quick configuration options for common use cases.
   - **Frequency**: The channel you are communicating on.
   - **Transmit Power**: Increase for better range, decrease to save battery.
   - **Spreading Factor & Bandwidth**: Adjust for a balance between speed and range.
@@ -150,12 +201,26 @@ Repeaters extend the range of your mesh network. You can view status information
 ### Device Info
 
 - View battery level, firmware version, and manufacturer details for your connected radio.
+- The Device Info section is collapsible - tap to expand or collapse.
 
-### My Profile
+### Node Settings
 
-- Set your display name (shown to other mesh users).
-- Set your location (shared in advertisements).
-- Share your contact via QR code.
+- Set your **Node Name** (shown to other mesh users on the mesh network).
+- Configure how your device behaves on the mesh.
+
+### Advanced Settings
+
+Advanced settings are available for power users:
+
+1. Go to **Settings** tab.
+2. Scroll to the bottom and tap **Advanced Settings**.
+
+Advanced settings include:
+
+- **Manual Radio Configuration**: Fine-tune radio parameters beyond standard presets.
+- **Contacts Settings**: Configure auto-add contacts behavior and other contact management options.
+- **Telemetry Settings**: Configure sensor data reporting.
+- **Danger Zone**: Reset device, clear data, and other destructive operations.
 
 ---
 
@@ -171,7 +236,7 @@ Repeaters extend the range of your mesh network. You can view status information
 
 - Mesh networking depends on line-of-sight and signal strength.
 - If a message fails, try moving to a higher location or closer to a repeater.
-- You can long-press a failed message to **Retry** using flood mode.
+- You can tap the **Retry** button on a failed message to resend using flood mode.
 
 ### Sync Issues
 

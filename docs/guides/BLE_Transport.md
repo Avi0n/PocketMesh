@@ -4,7 +4,11 @@ This guide covers the BLE transport architecture, connection state machine, and 
 
 ## Overview
 
-PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetooth Low Energy. The transport layer is abstracted behind the `MeshTransport` protocol, with `iOSBLETransport` + `BLEStateMachine` providing the production implementation.
+PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetooth Low Energy. The transport layer is abstracted behind the `MeshTransport` protocol, with `iOSBLETransport` (actor) + `BLEStateMachine` (actor) providing the production implementation.
+
+**Important:** Both `iOSBLETransport` and `BLEStateMachine` are Swift actors, not classes. This means all property access and method calls require `await`, providing automatic thread-safety and isolation guarantees under Swift's concurrency model.
+
+**Note:** MeshCore contains a separate, simpler `BLETransport` implementation that uses a delegate-based pattern. This is distinct from the more complex `iOSBLETransport + BLEStateMachine` implementation in PocketMeshServices, which provides full state machine management, auto-reconnection, and production features.
 
 ## Architecture
 
@@ -17,22 +21,24 @@ PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetoot
                             ▼
 ┌─────────────────────────────────────────────────────┐
 │                   iOSBLETransport                   │
-│              (MeshTransport conformance)            │
+│              (actor: MeshTransport)                 │
 │                                                     │
 │  • Exposes receivedData: AsyncStream<Data>          │
 │  • connect() / disconnect() / send()                │
 │  • setReconnectionHandler() for auto-reconnect      │
+│  • All access requires await                        │
 └─────────────────────────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────┐
 │                    BLEStateMachine                  │
-│               (CoreBluetooth wrapper)               │
+│          (actor: CoreBluetooth wrapper)             │
 │                                                     │
 │  • Manages CBCentralManager                         │
 │  • Handles all delegate callbacks                   │
 │  • State machine with explicit phases               │
 │  • Write serialization                              │
+│  • All access requires await                        │
 └─────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -50,21 +56,32 @@ PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetoot
 **File:** `MeshCore/Sources/MeshCore/Transport/MeshTransport.swift`
 
 ```swift
-public protocol MeshTransport: Actor, Sendable {
+public protocol MeshTransport: Sendable {
     var receivedData: AsyncStream<Data> { get async }
+    var isConnected: Bool { get async }
     func connect() async throws
     func disconnect() async
     func send(_ data: Data) async throws
 }
 ```
 
-All transports are actors for thread-safe state management.
+All transports conform to the `MeshTransport` protocol, which requires `Sendable` conformance. While not strictly required to be actors, implementations typically use actors (like `iOSBLETransport`) to provide thread-safety and isolation for transport state.
+
+## Nordic UART Service (NUS)
+
+PocketMesh uses the Nordic UART Service for BLE communication with the following standard UUIDs:
+
+- **Service UUID:** `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
+- **TX Characteristic UUID:** `6E400002-B5A3-F393-E0A9-E50E24DCCA9E` (write to device)
+- **RX Characteristic UUID:** `6E400003-B5A3-F393-E0A9-E50E24DCCA9E` (receive from device)
+
+The TX characteristic is used to send data to the device, and the RX characteristic is used to receive notifications from the device.
 
 ## Connection State Machine
 
 **File:** `PocketMeshServices/Sources/PocketMeshServices/Transport/BLEPhase.swift`
 
-The `BLEStateMachine` uses explicit phases that own their resources:
+The `BLEStateMachine` actor uses explicit phases that own their resources:
 
 ```swift
 public enum BLEPhase {
@@ -226,14 +243,28 @@ For unit testing without physical hardware:
 
 ```swift
 let mock = MockTransport()
+let session = MeshCoreSession(transport: mock)
+try await session.start()
 
-// Inject test data
-await mock.injectData(testPacket)
+// Simulate receiving data from device
+await mock.simulateReceive(testPacket)
 
-// Verify sent data
+// Verify sent data (sentData is an array [Data])
 let sentData = await mock.sentData
 #expect(sentData.count == 1)
+#expect(!sentData.isEmpty)
+
+// Helper methods
+await mock.simulateOK()              // Simulate successful OK response
+await mock.simulateOK(value: 42)     // Simulate OK with 32-bit value
+await mock.simulateError(code: 0x01) // Simulate error response with code
+await mock.clearSentData()           // Clear sent data history
 ```
+
+The `MockTransport` maintains:
+- `sentData: [Data]` - Array of all data packets sent through the transport
+- `receivedData: AsyncStream<Data>` - Stream of simulated responses
+- `isConnected: Bool` - Connection state
 
 ## Connection States in UI
 
@@ -255,12 +286,31 @@ If connection takes too long (default: 10 seconds), the state machine:
 2. Transitions to `idle`
 3. Throws `BLEError.connectionTimeout`
 
+### Service Discovery Timeout
+
+If service discovery takes too long (default: 40 seconds to allow for pairing dialog), the state machine:
+1. Cancels the discovery attempt
+2. Disconnects the peripheral
+3. Transitions to `idle`
+4. Throws `BLEError.connectionTimeout`
+
+**Note:** The extended 40-second timeout accommodates iOS pairing dialogs, which can take time for user interaction.
+
+### Write Timeout
+
+If a write operation takes too long (default: 5 seconds), the state machine:
+1. Cancels the write operation
+2. Throws `BLEError.operationTimeout`
+3. Connection remains active for retry
+
 ### Service Discovery Failure
 
-If Nordic UART Service is not found:
+If Nordic UART Service is not found during discovery:
 1. Disconnects the peripheral
 2. Transitions to `idle`
-3. Throws `BLEError.serviceNotFound`
+3. Throws `BLEError.characteristicNotFound`
+
+**Source:** `BLEStateMachine.swift:630-633`
 
 ### Characteristic Not Found
 
@@ -268,6 +318,111 @@ If TX or RX characteristics are missing:
 1. Disconnects the peripheral
 2. Transitions to `idle`
 3. Throws `BLEError.characteristicNotFound`
+
+### Pairing Errors
+
+BLE devices may require pairing for secure communication. The state machine detects pairing failures through CBATTError codes:
+
+**Pairing-related error codes:**
+- `5` - insufficientAuthentication (pairing required but not completed)
+- `8` - insufficientAuthorization (authorization failed)
+- `14` - unlikelyError (peer removed pairing information)
+- `15` - insufficientEncryption (encryption failed)
+
+When a pairing failure is detected:
+1. The error is wrapped as `BLEError.pairingFailed(reason)`
+2. Connection may be closed
+3. User should be prompted to pair in iOS Settings
+
+**Source:** `BLEError.swift:77-96`
+
+## Event Handlers
+
+The `BLEStateMachine` actor provides several event handlers for managing connection lifecycle. All handler registration methods require `await` since they access actor-isolated state:
+
+### Disconnection Handler
+
+Called when a device disconnects unexpectedly:
+
+```swift
+await stateMachine.setDisconnectionHandler { deviceID, error in
+    logger.warning("Device \(deviceID) disconnected: \(error?.localizedDescription ?? "unknown")")
+    // Update UI, clean up session
+}
+```
+
+### Reconnection Handler
+
+Called when iOS successfully auto-reconnects to a device:
+
+```swift
+await stateMachine.setReconnectionHandler { deviceID, dataStream in
+    logger.info("Device \(deviceID) reconnected")
+    // Re-initialize session with new data stream
+}
+```
+
+### Auto-Reconnecting Handler
+
+Called when device disconnects but iOS is attempting automatic reconnection:
+
+```swift
+await stateMachine.setAutoReconnectingHandler { deviceID in
+    logger.info("Device \(deviceID) entering auto-reconnect")
+    // Show "Connecting..." in UI
+    // Note: MeshCore session is invalid at this point
+}
+```
+
+### Bluetooth State Handlers
+
+Monitor Bluetooth hardware state changes:
+
+```swift
+// Called on any state change
+await stateMachine.setBluetoothStateChangeHandler { state in
+    switch state {
+    case .poweredOn:
+        logger.info("Bluetooth powered on")
+    case .poweredOff:
+        logger.warning("Bluetooth powered off")
+    case .unauthorized:
+        logger.error("Bluetooth unauthorized")
+    default:
+        break
+    }
+}
+
+// Called specifically when Bluetooth powers on
+await stateMachine.setBluetoothPoweredOnHandler {
+    logger.info("Bluetooth ready")
+    // Trigger device scan, reconnection attempts, etc.
+}
+```
+
+**Source:** `BLEStateMachine.swift:122-149`
+
+## Timeouts and Configuration
+
+The `BLEStateMachine` actor uses configurable timeouts:
+
+| Operation | Default | Purpose |
+|-----------|---------|---------|
+| Connection | 10s | Initial peripheral connection |
+| Service Discovery | 40s | Service/characteristic discovery (allows for pairing dialog) |
+| Write | 5s | Individual write operations |
+
+These can be customized during initialization:
+
+```swift
+let stateMachine = BLEStateMachine(
+    connectionTimeout: 15.0,
+    serviceDiscoveryTimeout: 60.0,
+    writeTimeout: 10.0
+)
+```
+
+**Source:** `BLEStateMachine.swift:66-78`
 
 ## See Also
 

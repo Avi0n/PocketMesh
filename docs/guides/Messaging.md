@@ -14,7 +14,7 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 ┌──────────────────────────────────────────────────────┐
 │                         QUEUE                        │
 │  MessageService.sendMessageWithRetry() called        │
-│  • Message saved to SwiftData with status: .queued   │
+│  • Message saved to SwiftData with status: .pending  │
 │  • onMessageCreated callback notifies UI             │
 └──────────────────────────────────────────────────────┘
                             │
@@ -42,12 +42,14 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 
 | State | Description | UI Display |
 |-------|-------------|------------|
-| `.queued` | Saved locally, waiting to send | Single gray checkmark |
-| `.sending` | Transmission in progress | Single gray checkmark, spinner |
-| `.sent` | Radio transmitted, awaiting ACK | Single gray checkmark |
-| `.delivered` | ACK received from recipient | Double blue checkmarks |
-| `.failed` | All attempts exhausted | Red exclamation, "Retry" option |
-| `.retrying` | Manual retry in progress | Spinner with attempt count |
+| `.pending` | Saved locally, waiting to send | "Sending..." text |
+| `.sending` | Transmission in progress | "Sending..." text |
+| `.sent` | Radio transmitted, awaiting ACK | "Sent" text |
+| `.delivered` | ACK received from recipient | "Delivered" text |
+| `.failed` | All attempts exhausted | "Failed" text + red exclamation icon + red bubble background |
+| `.retrying` | Manual retry in progress | "Retrying..." text + spinner |
+
+**Note:** The retry button only appears for messages with `.failed` status. During `.retrying`, the button is replaced with a spinner to indicate the retry is in progress.
 
 ## Retry Logic
 
@@ -56,9 +58,12 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 **File:** `PocketMeshServices/Sources/PocketMeshServices/Services/MessageService.swift`
 
 Default configuration:
+- `floodFallbackOnRetry: true` - Use flood on manual retry
 - `maxAttempts: 4` - Total send attempts
-- `floodAfter: 2` - Switch to flood after 2 direct attempts
 - `maxFloodAttempts: 2` - Maximum flood attempts
+- `floodAfter: 2` - Switch to flood after 2 direct attempts
+- `minTimeout: 0` - Minimum timeout seconds
+- `triggerPathDiscoveryAfterFlood: true` - Trigger path discovery after flood
 
 ```
 Attempt 1: Direct routing (use contact's outPath)
@@ -100,7 +105,24 @@ try await session.resetPath(publicKey: contact.publicKey)
 
 This clears the contact's cached routing path, forcing the mesh to rediscover the route.
 
-### Manual Retry
+### Automatic vs Manual Retry
+
+**Automatic Retry:**
+- Initiated by `sendMessageWithRetry()` when first sending a message
+- Message status remains in `.pending` or `.sending` during all attempts
+- Status does NOT change to `.retrying` during automatic retry
+- Retry logic managed internally by `MeshCoreSession`
+- No user interaction required
+- If all attempts fail, status changes to `.failed`
+
+**Manual Retry:**
+- Triggered when user taps "Retry" button on a failed message
+- Message status immediately set to `.retrying` (visible in UI with spinner)
+- Uses flood routing by default (`config.floodFallbackOnRetry`)
+- User can see retry is in progress
+- Retry button disappears while `.retrying` status is active
+
+### Manual Retry Details
 
 When a user taps "Retry" on a failed message:
 
@@ -116,10 +138,10 @@ try await dataStore.updateMessageRetryStatus(
 // Uses flood mode for manual retry (config.floodFallbackOnRetry)
 ```
 
-The UI shows retry progress:
-- "Retrying 1/4..."
-- "Retrying 2/4..."
-- etc.
+The UI shows:
+- "Retrying..." text with a spinner icon
+- No attempt count is displayed (e.g., "1/4", "2/4")
+- The retry button is hidden while in `.retrying` status
 
 ## ACK Tracking
 
@@ -149,6 +171,16 @@ PendingAck created
     │
     └───── Timeout (5s check) ─► Mark failed (if not retry-managed)
 ```
+
+**ACK Timeout:**
+The actual ACK timeout used is 1.2x the device-suggested timeout to provide a safety margin:
+
+```swift
+// From MeshCoreSession.swift
+let ackTimeout = timeout ?? (Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2)
+```
+
+This multiplier accounts for potential timing variations in the mesh network.
 
 ### ACK Expiry Checking
 
@@ -189,6 +221,40 @@ try? await dataStore.updateMessageHeardRepeats(
 
 Repeat ACKs indicate the message was heard by multiple nodes - useful for mesh debugging.
 
+## Message Deduplication
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Message.swift`
+
+Messages include a `deduplicationKey` field to prevent duplicate incoming messages from being stored. The key is generated using a combination of timestamp, sender's public key prefix, and a hash of the message content:
+
+```swift
+// Message.generateDeduplicationKey() - lines 194-203
+static func generateDeduplicationKey(
+    timestamp: UInt32,
+    senderKeyPrefix: Data?,
+    text: String
+) -> String {
+    let senderHex = (senderKeyPrefix ?? unknownSenderSentinel).hex
+    let contentHash = SHA256.hash(data: Data(text.utf8))
+    let hashPrefix = contentHash.prefix(4).map { String(format: "%02x", $0) }.joined()
+    return "\(timestamp)-\(senderHex)-\(hashPrefix)"
+}
+
+// Example format: "1703123456-a1b2c3d4e5f6-8f3a9b2c"
+```
+
+**Components:**
+- **Timestamp**: Message timestamp (UInt32)
+- **Sender Key Prefix**: 6-byte public key prefix in hex (or `unknownSenderSentinel` if unavailable)
+- **Content Hash**: First 4 bytes of SHA256 hash of message text
+
+When a message is received, the system checks if a message with the same deduplication key already exists. If found, the duplicate is ignored. This prevents the same message from appearing multiple times if it's received via multiple mesh paths.
+
+The SHA256 hash ensures that:
+- Identical messages from the same sender at the same timestamp are deduplicated
+- Different messages at the same timestamp are stored separately
+- The key is stable across app restarts
+
 ## Channel vs Direct Messaging
 
 ### Direct Messages
@@ -196,6 +262,7 @@ Repeat ACKs indicate the message was heard by multiple nodes - useful for mesh d
 - Sent to a specific contact's public key (6-byte prefix)
 - Encrypted end-to-end
 - Support ACK/delivery confirmation
+- Include deduplication key to prevent duplicates
 - Use `sendMessageWithRetry()` or `sendDirectMessage()`
 
 ### Channel Messages
