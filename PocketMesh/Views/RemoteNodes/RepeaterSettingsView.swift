@@ -25,12 +25,12 @@ struct RepeaterSettingsView: View {
     var body: some View {
         Form {
             headerSection
-            deviceInfoSection
-            radioSettingsSection      // Moved up - primary reason users access this screen
+            radioSettingsSection
             identitySection
             behaviorSection
             securitySection
             actionsSection
+            deviceInfoSection
         }
         .navigationTitle("Repeater Settings")
         .navigationBarTitleDisplayMode(.inline)
