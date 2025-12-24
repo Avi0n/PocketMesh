@@ -1405,7 +1405,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Channel messages are broadcast to all nodes with the same channel configuration.
     ///
     /// - Parameters:
-    ///   - channel: Channel index (0-15).
+    ///   - channel: Channel index (0-255).
     ///   - text: The message text to send.
     ///   - timestamp: Message timestamp. Defaults to current time.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
@@ -1541,7 +1541,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Retrieves configuration for a channel.
     ///
-    /// - Parameter index: Channel index (0-15).
+    /// - Parameter index: Channel index (0-255).
     /// - Returns: Channel information including name and secret.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getChannel(index: UInt8) async throws -> ChannelInfo {
@@ -1554,7 +1554,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Configures a channel with name and secret.
     ///
     /// - Parameters:
-    ///   - index: Channel index (0-15).
+    ///   - index: Channel index (0-255).
     ///   - name: Channel name.
     ///   - secret: The 32-byte channel secret key for encryption.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
@@ -1565,7 +1565,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Configures a channel with automatic secret derivation.
     ///
     /// - Parameters:
-    ///   - index: Channel index (0-15).
+    ///   - index: Channel index (0-255).
     ///   - name: Channel name.
     ///   - secret: Secret derivation strategy. Defaults to deriving from name.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
