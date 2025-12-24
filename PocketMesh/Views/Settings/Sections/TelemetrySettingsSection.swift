@@ -5,17 +5,16 @@ import PocketMeshServices
 struct TelemetrySettingsSection: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
-    @State private var allowTelemetryRequests = false
-    @State private var includeLocation = false
-    @State private var includeEnvironment = false
     @State private var filterByTrusted = false
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
     @State private var isSaving = false
 
+    private var device: DeviceDTO? { appState.connectedDevice }
+
     var body: some View {
         Section {
-            Toggle(isOn: $allowTelemetryRequests) {
+            Toggle(isOn: telemetryEnabledBinding) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Allow Telemetry Requests")
                     Text("Share basic device telemetry with other nodes")
@@ -23,13 +22,10 @@ struct TelemetrySettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .onChange(of: allowTelemetryRequests) { _, _ in
-                updateTelemetry()
-            }
             .disabled(isSaving)
 
-            if allowTelemetryRequests {
-                Toggle(isOn: $includeLocation) {
+            if device?.telemetryModeBase ?? 0 > 0 {
+                Toggle(isOn: locationEnabledBinding) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Include Location")
                         Text("Share GPS coordinates in telemetry")
@@ -37,21 +33,15 @@ struct TelemetrySettingsSection: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .onChange(of: includeLocation) { _, _ in
-                    updateTelemetry()
-                }
                 .disabled(isSaving)
 
-                Toggle(isOn: $includeEnvironment) {
+                Toggle(isOn: environmentEnabledBinding) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Include Environment Sensors")
                         Text("Share temperature, humidity, etc.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                }
-                .onChange(of: includeEnvironment) { _, _ in
-                    updateTelemetry()
                 }
                 .disabled(isSaving)
 
@@ -78,31 +68,49 @@ struct TelemetrySettingsSection: View {
         } footer: {
             Text("Telemetry data helps other nodes monitor mesh health.")
         }
-        .onAppear {
-            loadCurrentSettings()
-        }
         .errorAlert($showError)
         .retryAlert(retryAlert)
     }
 
-    private func loadCurrentSettings() {
-        guard let device = appState.connectedDevice else { return }
-        allowTelemetryRequests = device.telemetryModeBase > 0
-        includeLocation = device.telemetryModeLoc > 0
-        includeEnvironment = device.telemetryModeEnv > 0
+    // MARK: - Bindings
+
+    private var telemetryEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { device?.telemetryModeBase ?? 0 > 0 },
+            set: { saveTelemetry(base: $0 ? 2 : 0) }
+        )
     }
 
-    private func updateTelemetry() {
-        guard let device = appState.connectedDevice,
-              let settingsService = appState.services?.settingsService else { return }
+    private var locationEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { device?.telemetryModeLoc ?? 0 > 0 },
+            set: { saveTelemetry(location: $0 ? 2 : 0) }
+        )
+    }
+
+    private var environmentEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { device?.telemetryModeEnv ?? 0 > 0 },
+            set: { saveTelemetry(environment: $0 ? 2 : 0) }
+        )
+    }
+
+    // MARK: - Save
+
+    private func saveTelemetry(
+        base: UInt8? = nil,
+        location: UInt8? = nil,
+        environment: UInt8? = nil
+    ) {
+        guard let device, let settingsService = appState.services?.settingsService else { return }
 
         isSaving = true
         Task {
             do {
                 let modes = TelemetryModes(
-                    base: allowTelemetryRequests ? 2 : 0,
-                    location: includeLocation ? 2 : 0,
-                    environment: includeEnvironment ? 2 : 0
+                    base: base ?? device.telemetryModeBase,
+                    location: location ?? device.telemetryModeLoc,
+                    environment: environment ?? device.telemetryModeEnv
                 )
                 _ = try await settingsService.setOtherParamsVerified(
                     autoAddContacts: !device.manualAddContacts,
@@ -112,14 +120,12 @@ struct TelemetrySettingsSection: View {
                 )
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
-                loadCurrentSettings() // Revert on error
                 retryAlert.show(
-                    message: error.localizedDescription ?? "Please ensure device is connected and try again.",
-                    onRetry: { updateTelemetry() },
+                    message: error.errorDescription ?? "Connection error",
+                    onRetry: { saveTelemetry(base: base, location: location, environment: environment) },
                     onMaxRetriesExceeded: { dismiss() }
                 )
             } catch {
-                loadCurrentSettings() // Revert on error
                 showError = error.localizedDescription
             }
             isSaving = false

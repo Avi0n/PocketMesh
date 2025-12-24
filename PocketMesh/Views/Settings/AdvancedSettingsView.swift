@@ -41,5 +41,14 @@ struct AdvancedSettingsView: View {
                 }
             }
         }
+        .task {
+            await refreshDeviceSettings()
+        }
+    }
+
+    /// Fetch fresh device settings to ensure cache is up-to-date
+    private func refreshDeviceSettings() async {
+        guard let settingsService = appState.services?.settingsService else { return }
+        _ = try? await settingsService.getSelfInfo()
     }
 }
