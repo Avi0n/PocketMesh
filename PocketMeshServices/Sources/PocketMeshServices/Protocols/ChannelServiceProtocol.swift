@@ -25,7 +25,7 @@ public protocol ChannelServiceProtocol: Actor {
     /// Fetches all channels for a device from the remote device.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - maxChannels: Maximum number of channels to fetch (default: 8)
+    ///   - maxChannels: Maximum number of channels to fetch (from device capacity)
     /// - Returns: Sync result with number of channels synced
     func syncChannels(deviceID: UUID, maxChannels: UInt8) async throws -> ChannelSyncResult
 }

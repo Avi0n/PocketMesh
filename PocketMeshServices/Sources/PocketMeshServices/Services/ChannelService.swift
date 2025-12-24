@@ -78,14 +78,14 @@ public actor ChannelService {
     /// Fetches all channels for a device from the remote device.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - maxChannels: Maximum number of channels to fetch (default: 8)
+    ///   - maxChannels: Maximum number of channels to fetch (from device capacity)
     /// - Returns: Sync result with number of channels synced
-    public func syncChannels(deviceID: UUID, maxChannels: UInt8 = UInt8(ProtocolLimits.maxChannels)) async throws -> ChannelSyncResult {
+    public func syncChannels(deviceID: UUID, maxChannels: UInt8) async throws -> ChannelSyncResult {
         var syncedCount = 0
         var errorIndices: [UInt8] = []
         var channels: [ChannelDTO] = []
 
-        for index: UInt8 in 0..<min(maxChannels, UInt8(ProtocolLimits.maxChannels)) {
+        for index: UInt8 in 0..<maxChannels {
             do {
                 if let channelInfo = try await fetchChannel(index: index) {
                     _ = try await dataStore.saveChannel(deviceID: deviceID, from: channelInfo)
@@ -117,10 +117,6 @@ public actor ChannelService {
     /// - Parameter index: The channel index (0-7)
     /// - Returns: Channel info if found, nil if not configured
     public func fetchChannel(index: UInt8) async throws -> ChannelInfo? {
-        guard index < ProtocolLimits.maxChannels else {
-            throw ChannelServiceError.invalidChannelIndex
-        }
-
         do {
             let meshChannelInfo = try await session.getChannel(index: index)
 
@@ -155,10 +151,6 @@ public actor ChannelService {
         name: String,
         passphrase: String
     ) async throws {
-        guard index < ProtocolLimits.maxChannels else {
-            throw ChannelServiceError.invalidChannelIndex
-        }
-
         let secret = Self.hashSecret(passphrase)
 
         do {
@@ -188,10 +180,6 @@ public actor ChannelService {
         name: String,
         secret: Data
     ) async throws {
-        guard index < ProtocolLimits.maxChannels else {
-            throw ChannelServiceError.invalidChannelIndex
-        }
-
         guard Self.validateSecret(secret) else {
             throw ChannelServiceError.secretHashingFailed
         }
@@ -216,10 +204,6 @@ public actor ChannelService {
     ///   - deviceID: The device UUID
     ///   - index: The channel index (0-7, but 0 is public and shouldn't be cleared)
     public func clearChannel(deviceID: UUID, index: UInt8) async throws {
-        guard index < ProtocolLimits.maxChannels else {
-            throw ChannelServiceError.invalidChannelIndex
-        }
-
         // Set empty name and zero secret to clear
         try await setChannelWithSecret(
             deviceID: deviceID,

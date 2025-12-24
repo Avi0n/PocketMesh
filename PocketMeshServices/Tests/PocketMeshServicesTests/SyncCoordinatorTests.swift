@@ -6,6 +6,43 @@ import Foundation
 @Suite("SyncCoordinator Tests")
 struct SyncCoordinatorTests {
 
+    /// Creates an in-memory persistence store with a test device
+    private func createTestDataStore(deviceID: UUID, maxChannels: UInt8 = 8) async throws -> PersistenceStore {
+        let container = try PersistenceStore.createContainer(inMemory: true)
+        let store = PersistenceStore(modelContainer: container)
+        let device = DeviceDTO(from: Device(
+            id: deviceID,
+            publicKey: Data(repeating: 0x01, count: 32),
+            nodeName: "TestDevice",
+            firmwareVersion: 8,
+            firmwareVersionString: "v1.0.0",
+            manufacturerName: "TestMfg",
+            buildDate: "01 Jan 2025",
+            maxContacts: 100,
+            maxChannels: maxChannels,
+            frequency: 915_000,
+            bandwidth: 250_000,
+            spreadingFactor: 10,
+            codingRate: 5,
+            txPower: 20,
+            maxTxPower: 20,
+            latitude: 0,
+            longitude: 0,
+            blePin: 0,
+            manualAddContacts: false,
+            multiAcks: false,
+            telemetryModeBase: 0,
+            telemetryModeLoc: 0,
+            telemetryModeEnv: 0,
+            advertLocationPolicy: 0,
+            lastConnected: Date(),
+            lastContactSync: 0,
+            isActive: true
+        ))
+        try await store.saveDevice(device)
+        return store
+    }
+
     @Test("SyncState cases are distinct")
     func syncStateCasesDistinct() {
         let idle = SyncState.idle
@@ -86,6 +123,7 @@ struct SyncCoordinatorTests {
         let mockChannelService = MockChannelService()
         let mockMessagePollingService = MockMessagePollingService()
         let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
         let tracker = CallbackTracker()
 
@@ -96,6 +134,7 @@ struct SyncCoordinatorTests {
 
         try await coordinator.performFullSync(
             deviceID: testDeviceID,
+            dataStore: dataStore,
             contactService: mockContactService,
             channelService: mockChannelService,
             messagePollingService: mockMessagePollingService
@@ -115,6 +154,7 @@ struct SyncCoordinatorTests {
         let mockChannelService = MockChannelService()
         let mockMessagePollingService = MockMessagePollingService()
         let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
         let tracker = CallbackTracker()
 
@@ -129,6 +169,7 @@ struct SyncCoordinatorTests {
         do {
             try await coordinator.performFullSync(
                 deviceID: testDeviceID,
+                dataStore: dataStore,
                 contactService: mockContactService,
                 channelService: mockChannelService,
                 messagePollingService: mockMessagePollingService
@@ -150,6 +191,7 @@ struct SyncCoordinatorTests {
         let mockChannelService = MockChannelService()
         let orderTracker = OrderTrackingMessagePollingService()
         let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
@@ -161,6 +203,7 @@ struct SyncCoordinatorTests {
 
         try await coordinator.performFullSync(
             deviceID: testDeviceID,
+            dataStore: dataStore,
             contactService: mockContactService,
             channelService: mockChannelService,
             messagePollingService: orderTracker

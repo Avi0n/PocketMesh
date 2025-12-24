@@ -643,11 +643,6 @@ public actor MessageService {
             throw MessageServiceError.messageTooLong
         }
 
-        // Validate channel index
-        guard channelIndex < ProtocolLimits.maxChannels else {
-            throw MessageServiceError.channelNotFound
-        }
-
         let messageID = UUID()
         let timestamp = UInt32(Date().timeIntervalSince1970)
 
