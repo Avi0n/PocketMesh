@@ -7,6 +7,7 @@ struct DeviceScanView: View {
     @State private var isPairing = false
     @State private var showTroubleshooting = false
     @State private var errorMessage: String?
+    @State private var pairingSuccessTrigger = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -100,6 +101,7 @@ struct DeviceScanView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
+        .sensoryFeedback(.success, trigger: pairingSuccessTrigger)
         .sheet(isPresented: $showTroubleshooting) {
             TroubleshootingSheet()
         }
@@ -128,6 +130,7 @@ struct DeviceScanView: View {
             do {
                 try await appState.connectionManager.pairNewDevice()
                 await appState.wireServicesIfConnected()
+                pairingSuccessTrigger.toggle()
                 appState.onboardingPath.append(.radioPreset)
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show

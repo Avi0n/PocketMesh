@@ -108,7 +108,6 @@ struct PermissionsView: View {
                     description: "Receive alerts for new messages",
                     isGranted: coordinator.notificationAuthorization == .authorized,
                     isDenied: coordinator.notificationAuthorization == .denied,
-                    isOptional: true,
                     action: coordinator.requestNotifications
                 )
 
@@ -118,7 +117,6 @@ struct PermissionsView: View {
                     description: "Share your location with mesh contacts",
                     isGranted: coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways,
                     isDenied: coordinator.locationAuthorization == .denied,
-                    isOptional: true,
                     action: {
                         if coordinator.locationAuthorization == .denied {
                             showingLocationAlert = true

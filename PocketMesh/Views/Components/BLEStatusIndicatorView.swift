@@ -1,5 +1,6 @@
 import OSLog
 import SwiftUI
+import TipKit
 import PocketMeshServices
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStatus")
@@ -12,6 +13,8 @@ struct BLEStatusIndicatorView: View {
     @State private var isSendingAdvert = false
     @State private var successFeedbackTrigger = false
     @State private var errorFeedbackTrigger = false
+
+    private let floodAdvertTip = SendFloodAdvertTip()
 
     var body: some View {
         Group {
@@ -106,6 +109,7 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
+        .popoverTip(floodAdvertTip, arrowEdge: .top)
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel("Bluetooth connection status")
@@ -155,6 +159,7 @@ struct BLEStatusIndicatorView: View {
     // MARK: - Actions
 
     private func sendAdvert(flood: Bool) {
+        floodAdvertTip.invalidate(reason: .actionPerformed)
         guard !isSendingAdvert else { return }
         isSendingAdvert = true
 

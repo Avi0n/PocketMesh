@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import PocketMeshServices
 #if DEBUG
 import DataScoutCompanion
@@ -19,6 +20,9 @@ struct PocketMeshApp: App {
             ContentView()
                 .environment(appState)
                 .task {
+                    try? Tips.configure([
+                        .displayFrequency(.immediate)
+                    ])
                     await appState.initialize()
                     #if DEBUG
                     // ConnectionService.shared.startAdvertising(container: appState.modelContainer)
