@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshServices
+import TipKit
 
 /// Final onboarding step - radio preset selection
 struct RadioPresetOnboardingView: View {
@@ -10,6 +11,7 @@ struct RadioPresetOnboardingView: View {
     @State private var isApplying = false
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
+    @State private var presetSuccessTrigger = false
 
     private var presets: [RadioPreset] {
         RadioPresets.presetsForLocale()
@@ -114,6 +116,7 @@ struct RadioPresetOnboardingView: View {
             .padding(.horizontal)
             .padding(.bottom)
         }
+        .sensoryFeedback(.success, trigger: presetSuccessTrigger)
         .onAppear {
             selectedPresetID = currentPreset?.id
             appliedPresetID = currentPreset?.id
@@ -136,6 +139,7 @@ struct RadioPresetOnboardingView: View {
                 _ = try await settingsService.applyRadioPresetVerified(preset)
                 appliedPresetID = id
                 retryAlert.reset()
+                presetSuccessTrigger.toggle()
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(
                     message: error.errorDescription ?? "Please ensure device is connected and try again.",
@@ -151,6 +155,10 @@ struct RadioPresetOnboardingView: View {
 
     private func completeOnboarding() {
         appState.completeOnboarding()
+        Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            await SendFloodAdvertTip.hasCompletedOnboarding.donate()
+        }
     }
 }
 
