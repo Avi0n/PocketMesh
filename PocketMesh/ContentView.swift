@@ -30,6 +30,8 @@ struct OnboardingView: View {
                 PermissionsView()
             case .deviceScan:
                 DeviceScanView()
+            case .radioPreset:
+                RadioPresetOnboardingView()
             }
         }
         .transition(.asymmetric(

@@ -64,6 +64,16 @@ public enum RadioRegion: String, CaseIterable, Sendable {
             return RadioRegion.allCases
         }
     }
+
+    /// Short code for display in compact UI elements
+    public var shortCode: String {
+        switch self {
+        case .northAmerica: return "NA"
+        case .europe: return "EU"
+        case .oceania: return "AU"
+        case .asia: return "AS"
+        }
+    }
 }
 
 /// Radio configuration preset for common regional settings

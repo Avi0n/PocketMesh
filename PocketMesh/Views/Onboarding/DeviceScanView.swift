@@ -131,7 +131,7 @@ struct DeviceScanView: View {
                 try await appState.connectionManager.pairNewDevice()
                 await appState.wireServicesIfConnected()
                 withAnimation {
-                    appState.completeOnboarding()
+                    appState.onboardingStep = .radioPreset
                 }
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show

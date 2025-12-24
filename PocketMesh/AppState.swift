@@ -466,6 +466,7 @@ enum OnboardingStep: Int, CaseIterable {
     case welcome
     case permissions
     case deviceScan
+    case radioPreset
 
     var next: OnboardingStep? {
         guard let index = OnboardingStep.allCases.firstIndex(of: self),
