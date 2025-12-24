@@ -119,11 +119,6 @@ public final class NotificationService: NSObject {
     public func setup() async {
         await registerCategories()
         await checkAuthorizationStatus()
-
-        // Automatically request authorization if not determined yet
-        if authorizationStatus == .notDetermined {
-            await requestAuthorization()
-        }
     }
 
     // MARK: - Authorization
