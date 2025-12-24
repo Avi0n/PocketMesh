@@ -5,37 +5,37 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 ## Message Lifecycle
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        COMPOSE                               │
-│  User types message in ChatView                              │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                        COMPOSE                       │
+│  User types message in ChatView                      │
+└──────────────────────────────────────────────────────┘
                             │
                             ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         QUEUE                                │
-│  MessageService.sendMessageWithRetry() called                │
-│  • Message saved to SwiftData with status: .queued           │
-│  • onMessageCreated callback notifies UI                     │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                         QUEUE                        │
+│  MessageService.sendMessageWithRetry() called        │
+│  • Message saved to SwiftData with status: .queued   │
+│  • onMessageCreated callback notifies UI             │
+└──────────────────────────────────────────────────────┘
                             │
                             ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         SEND                                 │
-│  MeshCoreSession.sendMessageWithRetry() called               │
-│  • Attempts 1-2: Direct routing                              │
-│  • Attempts 3-4: Flood routing (if direct fails)             │
-│  • Message status: .sending                                  │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                         SEND                         │
+│  MeshCoreSession.sendMessageWithRetry() called       │
+│  • Attempts 1-2: Direct routing                      │
+│  • Attempts 3-4: Flood routing (if direct fails)     │
+│  • Message status: .sending                          │
+└──────────────────────────────────────────────────────┘
                             │
               ┌─────────────┴─────────────┐
               ▼                           ▼
-┌─────────────────────────┐   ┌─────────────────────────┐
-│     ACK RECEIVED        │   │     ALL ATTEMPTS        │
-│                         │   │      EXHAUSTED          │
-│  • Status: .delivered   │   │                         │
-│  • RTT recorded         │   │  • Status: .failed      │
-│  • UI updated           │   │  • User can retry       │
-└─────────────────────────┘   └─────────────────────────┘
+┌─────────────────────────┐   ┌────────────────────────┐
+│     ACK RECEIVED        │   │     ALL ATTEMPTS       │
+│                         │   │      EXHAUSTED         │
+│  • Status: .delivered   │   │                        │
+│  • RTT recorded         │   │  • Status: .failed     │
+│  • UI updated           │   │  • User can retry      │
+└─────────────────────────┘   └────────────────────────┘
 ```
 
 ## Delivery States
@@ -102,7 +102,7 @@ This clears the contact's cached routing path, forcing the mesh to rediscover th
 
 ### Manual Retry
 
-When a user long-presses a failed message and taps "Retry":
+When a user taps "Retry" on a failed message:
 
 ```swift
 // MessageService.retryDirectMessage()

@@ -9,40 +9,40 @@ PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetoot
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     MeshCoreSession                         │
-│                  (uses MeshTransport)                       │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                     MeshCoreSession                 │
+│                  (uses MeshTransport)               │
+└─────────────────────────────────────────────────────┘
                             │
                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   iOSBLETransport                           │
-│              (MeshTransport conformance)                    │
-│                                                             │
-│  • Exposes receivedData: AsyncStream<Data>                  │
-│  • connect() / disconnect() / send()                        │
-│  • setReconnectionHandler() for auto-reconnect              │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                   iOSBLETransport                   │
+│              (MeshTransport conformance)            │
+│                                                     │
+│  • Exposes receivedData: AsyncStream<Data>          │
+│  • connect() / disconnect() / send()                │
+│  • setReconnectionHandler() for auto-reconnect      │
+└─────────────────────────────────────────────────────┘
                             │
                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    BLEStateMachine                          │
-│               (CoreBluetooth wrapper)                       │
-│                                                             │
-│  • Manages CBCentralManager                                 │
-│  • Handles all delegate callbacks                           │
-│  • State machine with explicit phases                       │
-│  • Write serialization                                      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                    BLEStateMachine                  │
+│               (CoreBluetooth wrapper)               │
+│                                                     │
+│  • Manages CBCentralManager                         │
+│  • Handles all delegate callbacks                   │
+│  • State machine with explicit phases               │
+│  • Write serialization                              │
+└─────────────────────────────────────────────────────┘
                             │
                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    CoreBluetooth                            │
-│                                                             │
-│  • CBCentralManager                                         │
-│  • CBPeripheral                                             │
-│  • Nordic UART Service (NUS)                                │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│                    CoreBluetooth                    │
+│                                                     │
+│  • CBCentralManager                                 │
+│  • CBPeripheral                                     │
+│  • Nordic UART Service (NUS)                        │
+└─────────────────────────────────────────────────────┘
 ```
 
 ## MeshTransport Protocol
