@@ -52,6 +52,9 @@ public final class AppState {
     /// Current device battery info (nil if not fetched)
     var deviceBattery: BatteryInfo?
 
+    /// Task for periodic battery refresh (cancel on disconnect/background)
+    private var batteryRefreshTask: Task<Void, Never>?
+
     // MARK: - Onboarding State
 
     /// Whether onboarding is complete
@@ -133,6 +136,8 @@ public final class AppState {
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
             syncActivityCount = 0
+            // Stop battery refresh loop on disconnect
+            stopBatteryRefreshLoop()
             return
         }
 
@@ -240,6 +245,10 @@ public final class AppState {
 
         // Configure notification interaction handlers
         configureNotificationHandlers()
+
+        // Fetch battery immediately and start periodic refresh loop
+        await fetchDeviceBattery()
+        startBatteryRefreshLoop()
     }
 
     // MARK: - Device Actions
@@ -267,27 +276,56 @@ public final class AppState {
 
     /// Fetch device battery level
     func fetchDeviceBattery() async {
-        guard connectionState == .ready else { return }
+        guard let settingsService = services?.settingsService else { return }
 
         do {
-            deviceBattery = try await services?.settingsService.getBattery()
+            deviceBattery = try await settingsService.getBattery()
         } catch {
             // Silently fail - battery info is optional
             deviceBattery = nil
         }
     }
 
+    /// Start periodic battery refresh loop (5-minute interval)
+    private func startBatteryRefreshLoop() {
+        batteryRefreshTask?.cancel()
+        batteryRefreshTask = Task { [weak self] in
+            while true {
+                do {
+                    try await Task.sleep(for: .seconds(300))
+                } catch {
+                    break  // Cancelled, exit cleanly
+                }
+                guard let self, self.services != nil else { break }
+                await self.fetchDeviceBattery()
+            }
+        }
+    }
+
+    /// Stop periodic battery refresh
+    private func stopBatteryRefreshLoop() {
+        batteryRefreshTask?.cancel()
+        batteryRefreshTask = nil
+    }
+
     // MARK: - App Lifecycle
 
     /// Called when app enters background
     func handleEnterBackground() {
-        // Nothing needed - ConnectionManager handles persistence
+        // Stop battery refresh - don't poll while UI isn't visible
+        stopBatteryRefreshLoop()
     }
 
     /// Called when app returns to foreground
     func handleReturnToForeground() async {
         // Update badge count from database
         await services?.notificationService.updateBadgeCount()
+
+        // Refresh battery and restart loop if connected
+        if services != nil {
+            await fetchDeviceBattery()
+            startBatteryRefreshLoop()
+        }
 
         // Check for expired ACKs
         if connectionState == .ready {
