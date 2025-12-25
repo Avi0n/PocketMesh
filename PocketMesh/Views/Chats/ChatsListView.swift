@@ -16,7 +16,6 @@ struct ChatsListView: View {
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
-    @State private var pendingChatContact: ContactDTO?
 
     private var filteredConversations: [Conversation] {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
@@ -126,16 +125,8 @@ struct ChatsListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingNewChat, onDismiss: {
-                if let contact = pendingChatContact {
-                    pendingChatContact = nil
-                    navigationPath.append(contact)
-                }
-            }) {
-                NewChatView(viewModel: viewModel) { contact in
-                    pendingChatContact = contact
-                    showingNewChat = false
-                }
+            .sheet(isPresented: $showingNewChat) {
+                NewChatView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingChannelOptions, onDismiss: {
                 Task {
@@ -423,8 +414,6 @@ struct NewChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     let viewModel: ChatViewModel
-    /// Callback invoked when user selects a contact. Caller should dismiss the sheet and navigate.
-    let onSelectContact: (ContactDTO) -> Void
 
     @State private var contacts: [ContactDTO] = []
     @State private var searchText = ""
@@ -455,8 +444,8 @@ struct NewChatView: View {
                     )
                 } else {
                     List(filteredContacts) { contact in
-                        Button {
-                            onSelectContact(contact)
+                        NavigationLink {
+                            ChatView(contact: contact, parentViewModel: viewModel)
                         } label: {
                             HStack(spacing: 12) {
                                 ContactAvatar(contact: contact, size: 40)
@@ -469,12 +458,8 @@ struct NewChatView: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
-
-                                Spacer()
                             }
-                            .contentShape(.rect)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }

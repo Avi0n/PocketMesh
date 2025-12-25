@@ -62,6 +62,28 @@ struct DeviceScanView: View {
 
             // Action buttons
             VStack(spacing: 12) {
+                #if targetEnvironment(simulator)
+                Button {
+                    connectSimulator()
+                } label: {
+                    HStack(spacing: 8) {
+                        if isPairing {
+                            ProgressView()
+                                .controlSize(.small)
+                                .tint(.white)
+                            Text("Connecting...")
+                        } else {
+                            Image(systemName: "laptopcomputer.and.iphone")
+                            Text("Connect Simulator")
+                        }
+                    }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isPairing)
+                #else
                 Button {
                     startPairing()
                 } label: {
@@ -82,6 +104,7 @@ struct DeviceScanView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isPairing)
+                #endif
 
                 Button("Device not appearing?") {
                     showTroubleshooting = true
@@ -150,6 +173,26 @@ struct DeviceScanView: View {
             }
         }
     }
+
+    #if targetEnvironment(simulator)
+    private func connectSimulator() {
+        isPairing = true
+        errorMessage = nil
+
+        Task {
+            defer { isPairing = false }
+
+            do {
+                try await appState.connectionManager.simulatorConnect()
+                await appState.wireServicesIfConnected()
+                pairingSuccessTrigger.toggle()
+                appState.onboardingPath.append(.radioPreset)
+            } catch {
+                errorMessage = "Simulator connection failed: \(error.localizedDescription)"
+            }
+        }
+    }
+    #endif
 }
 
 /// Troubleshooting sheet for when devices don't appear in the ASK picker
