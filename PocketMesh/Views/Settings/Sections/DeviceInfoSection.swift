@@ -29,12 +29,14 @@ struct DeviceInfoSection: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
-                            Text("\u{2022}")
-                                .foregroundStyle(.tertiary)
+                            if !device.manufacturerName.isEmpty {
+                                Text("\u{2022}")
+                                    .foregroundStyle(.tertiary)
 
-                            Text(device.firmwareVersionString.isEmpty ? "v\(device.firmwareVersion)" : device.firmwareVersionString)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                Text(device.manufacturerName)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
