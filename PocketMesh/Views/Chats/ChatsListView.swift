@@ -312,6 +312,9 @@ struct ChatsListView: View {
                 publicKey: session.publicKey
             )
 
+            // Recalculate badge after room removed
+            await appState.services?.notificationService.updateBadgeCount()
+
             // Refresh conversation list
             await loadConversations()
         } catch {
@@ -327,7 +330,8 @@ struct ChatsListView: View {
                 deviceID: channel.deviceID,
                 index: channel.index
             )
-            // Don't reload - optimistic removal already updated the UI
+            // Recalculate badge after channel removed
+            await appState.services?.notificationService.updateBadgeCount()
         } catch {
             // On failure, reload to restore the channel
             logger.error("Failed to delete channel: \(error)")

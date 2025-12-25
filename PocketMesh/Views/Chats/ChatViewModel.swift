@@ -461,10 +461,14 @@ final class ChatViewModel {
             try await dataStore.deleteMessage(id: message.id)
         }
 
+        // Clear unread count before hiding from list
+        try await dataStore.clearUnreadCount(contactID: contact.id)
+
         // Clear last message date on contact (nil removes it from conversations list)
         try await dataStore.updateContactLastMessage(contactID: contact.id, date: nil)
 
-        // Don't reload - optimistic removal in ChatsListView already updated the UI
+        // Recalculate badge
+        await notificationService?.updateBadgeCount()
     }
 
     // MARK: - Timestamp Helpers
