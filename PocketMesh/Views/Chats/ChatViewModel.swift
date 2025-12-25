@@ -448,8 +448,8 @@ final class ChatViewModel {
             try await dataStore.deleteMessage(id: message.id)
         }
 
-        // Clear last message date on contact
-        try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date.distantPast)
+        // Clear last message date on contact (nil removes it from conversations list)
+        try await dataStore.updateContactLastMessage(contactID: contact.id, date: nil)
 
         // Reload conversations
         await loadConversations(deviceID: contact.deviceID)
