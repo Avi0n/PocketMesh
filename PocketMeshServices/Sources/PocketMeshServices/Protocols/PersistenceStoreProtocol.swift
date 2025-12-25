@@ -82,8 +82,8 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete a contact
     func deleteContact(id: UUID) async throws
 
-    /// Update contact's last message info
-    func updateContactLastMessage(contactID: UUID, date: Date) async throws
+    /// Update contact's last message info (nil clears the date, removing from conversations list)
+    func updateContactLastMessage(contactID: UUID, date: Date?) async throws
 
     /// Increment unread count for a contact
     func incrementUnreadCount(contactID: UUID) async throws

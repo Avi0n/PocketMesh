@@ -431,8 +431,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Update contact's last message info
-    public func updateContactLastMessage(contactID: UUID, date: Date) throws {
+    /// Update contact's last message info (nil clears the date, removing from conversations list)
+    public func updateContactLastMessage(contactID: UUID, date: Date?) throws {
         let targetID = contactID
         let predicate = #Predicate<Contact> { contact in
             contact.id == targetID
