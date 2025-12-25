@@ -342,8 +342,8 @@ struct ContactDetailView: View {
                 }
 
             case .chat:
-                // Send message - only show when NOT from direct chat
-                if !showFromDirectChat {
+                // Send message - only show when NOT from direct chat and NOT blocked
+                if !showFromDirectChat && !currentContact.isBlocked {
                     Button {
                         appState.navigateToChat(with: currentContact)
                     } label: {
