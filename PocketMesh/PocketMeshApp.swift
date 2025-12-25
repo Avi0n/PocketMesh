@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import TipKit
 import PocketMeshServices
 #if DEBUG
@@ -9,10 +10,16 @@ import DataScoutCompanion
 struct PocketMeshApp: App {
     @State private var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
+    #if DEBUG
+    private let modelContainer: ModelContainer
+    #endif
 
     init() {
         let container = try! PersistenceStore.createContainer()
         _appState = State(initialValue: AppState(modelContainer: container))
+        #if DEBUG
+        self.modelContainer = container
+        #endif
     }
 
     var body: some Scene {
@@ -25,7 +32,7 @@ struct PocketMeshApp: App {
                     ])
                     await appState.initialize()
                     #if DEBUG
-                    // ConnectionService.shared.startAdvertising(container: appState.modelContainer)
+                    ConnectionService.shared.startAdvertising(container: modelContainer)
                     #endif
                 }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
