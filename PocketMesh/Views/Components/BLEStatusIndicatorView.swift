@@ -59,8 +59,8 @@ struct BLEStatusIndicatorView: View {
                         Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
                         if let battery = appState.deviceBattery {
                             Label(
-                                "\(battery.percentage)% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
-                                systemImage: battery.iconName
+                                "\(battery.percentage(using: appState.activeBatteryOCVArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: battery.iconName(using: appState.activeBatteryOCVArray)
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)

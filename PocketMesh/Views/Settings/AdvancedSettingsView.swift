@@ -18,6 +18,9 @@ struct AdvancedSettingsView: View {
                 // Telemetry Settings
                 TelemetrySettingsSection()
 
+                // Battery Curve
+                BatteryCurveSection()
+
                 // Danger Zone
                 DangerZoneSection()
             }

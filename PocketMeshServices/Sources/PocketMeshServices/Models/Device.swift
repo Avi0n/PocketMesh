@@ -87,6 +87,12 @@ public final class Device {
     /// Whether this is the currently active device
     public var isActive: Bool
 
+    /// Selected OCV preset name (nil = liIon default)
+    public var ocvPreset: String?
+
+    /// Custom OCV array as comma-separated string (e.g., "4240,4112,4029,...")
+    public var customOCVArrayString: String?
+
     public init(
         id: UUID = UUID(),
         publicKey: Data,
@@ -114,7 +120,9 @@ public final class Device {
         advertLocationPolicy: UInt8 = 0,
         lastConnected: Date = Date(),
         lastContactSync: UInt32 = 0,
-        isActive: Bool = false
+        isActive: Bool = false,
+        ocvPreset: String? = nil,
+        customOCVArrayString: String? = nil
     ) {
         self.id = id
         self.publicKey = publicKey
@@ -143,6 +151,8 @@ public final class Device {
         self.lastConnected = lastConnected
         self.lastContactSync = lastContactSync
         self.isActive = isActive
+        self.ocvPreset = ocvPreset
+        self.customOCVArrayString = customOCVArrayString
     }
 }
 
@@ -177,6 +187,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let lastConnected: Date
     public let lastContactSync: UInt32
     public let isActive: Bool
+    public let ocvPreset: String?
+    public let customOCVArrayString: String?
 
     public init(
         id: UUID,
@@ -205,7 +217,9 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         advertLocationPolicy: UInt8,
         lastConnected: Date,
         lastContactSync: UInt32,
-        isActive: Bool
+        isActive: Bool,
+        ocvPreset: String?,
+        customOCVArrayString: String?
     ) {
         self.id = id
         self.publicKey = publicKey
@@ -234,6 +248,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.lastConnected = lastConnected
         self.lastContactSync = lastContactSync
         self.isActive = isActive
+        self.ocvPreset = ocvPreset
+        self.customOCVArrayString = customOCVArrayString
     }
 
     public init(from device: Device) {
@@ -264,11 +280,33 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.lastConnected = device.lastConnected
         self.lastContactSync = device.lastContactSync
         self.isActive = device.isActive
+        self.ocvPreset = device.ocvPreset
+        self.customOCVArrayString = device.customOCVArrayString
     }
 
     /// The 6-byte public key prefix used for identifying messages
     public var publicKeyPrefix: Data {
         publicKey.prefix(6)
+    }
+
+    /// The active OCV array for this device (preset or custom)
+    public var activeOCVArray: [Int] {
+        // If custom preset with valid custom string, parse it
+        if ocvPreset == OCVPreset.custom.rawValue, let customString = customOCVArrayString {
+            let parsed = customString.split(separator: ",")
+                .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            if parsed.count == 11 {
+                return parsed
+            }
+        }
+
+        // Use preset if set
+        if let presetName = ocvPreset, let preset = OCVPreset(rawValue: presetName) {
+            return preset.ocvArray
+        }
+
+        // Default to Li-Ion
+        return OCVPreset.liIon.ocvArray
     }
 
     /// Returns a new DeviceDTO with settings updated from SelfInfo.
@@ -301,7 +339,9 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             advertLocationPolicy: advertLocationPolicy,
             lastConnected: lastConnected,
             lastContactSync: lastContactSync,
-            isActive: isActive
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString
         )
     }
 }

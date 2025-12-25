@@ -106,6 +106,11 @@ public final class AppState {
     /// Whether connecting
     var isConnecting: Bool { connectionState == .connecting }
 
+    /// The active OCV array for the connected device
+    var activeBatteryOCVArray: [Int] {
+        connectedDevice?.activeOCVArray ?? OCVPreset.liIon.ocvArray
+    }
+
     // MARK: - Initialization
 
     init(modelContainer: ModelContainer) {
@@ -172,6 +177,14 @@ public final class AppState {
         await services.settingsService.setDeviceUpdateCallback { [weak self] selfInfo in
             await MainActor.run {
                 self?.connectionManager.updateDevice(from: selfInfo)
+            }
+        }
+
+        // Wire device update callback for device data changes
+        // Updates connectedDevice when local device settings (like OCV) are changed via DeviceService
+        await services.deviceService.setDeviceUpdateCallback { [weak self] deviceDTO in
+            await MainActor.run {
+                self?.connectionManager.updateDevice(with: deviceDTO)
             }
         }
 

@@ -335,11 +335,15 @@ public final class ConnectionManager {
         await newServices.wireServices()
         self.services = newServices
 
+        // Fetch existing device to preserve local settings (e.g., OCV preset)
+        let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: meshCoreSelfInfo,
-            capabilities: deviceCapabilities
+            capabilities: deviceCapabilities,
+            existingDevice: existingDevice
         )
 
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
@@ -406,6 +410,12 @@ public final class ConnectionManager {
     public func updateDevice(from selfInfo: MeshCore.SelfInfo) {
         guard let device = connectedDevice else { return }
         connectedDevice = device.updating(from: selfInfo)
+    }
+
+    /// Updates the connected device with a new DeviceDTO.
+    /// Called by DeviceService after local device settings are successfully changed.
+    public func updateDevice(with deviceDTO: DeviceDTO) {
+        connectedDevice = deviceDTO
     }
 
     /// Checks if an accessory is registered with AccessorySetupKit.
@@ -557,11 +567,15 @@ public final class ConnectionManager {
         await newServices.wireServices()
         self.services = newServices
 
+        // Fetch existing device to preserve local settings (e.g., OCV preset)
+        let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: meshCoreSelfInfo,
-            capabilities: deviceCapabilities
+            capabilities: deviceCapabilities,
+            existingDevice: existingDevice
         )
 
         try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
@@ -589,7 +603,8 @@ public final class ConnectionManager {
     private func createDevice(
         deviceID: UUID,
         selfInfo: MeshCore.SelfInfo,
-        capabilities: MeshCore.DeviceCapabilities
+        capabilities: MeshCore.DeviceCapabilities,
+        existingDevice: DeviceDTO? = nil
     ) -> Device {
         Device(
             id: deviceID,
@@ -617,8 +632,10 @@ public final class ConnectionManager {
             telemetryModeEnv: selfInfo.telemetryModeEnvironment,
             advertLocationPolicy: selfInfo.advertisementLocationPolicy,
             lastConnected: Date(),
-            lastContactSync: 0,
-            isActive: true
+            lastContactSync: existingDevice?.lastContactSync ?? 0,
+            isActive: true,
+            ocvPreset: existingDevice?.ocvPreset,
+            customOCVArrayString: existingDevice?.customOCVArrayString
         )
     }
 
@@ -731,7 +748,10 @@ public final class ConnectionManager {
 
             self.services = newServices
 
-            let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities)
+            // Fetch existing device to preserve local settings (e.g., OCV preset)
+            let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+
+            let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities, existingDevice: existingDevice)
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
 
