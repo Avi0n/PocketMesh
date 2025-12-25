@@ -90,6 +90,19 @@ final class ChatViewModel {
 
     // MARK: - Conversation List
 
+    /// Removes a conversation from local arrays (optimistic UI update).
+    /// Call before async deletion to prevent SwiftUI List animation glitches.
+    func removeConversation(_ conversation: Conversation) {
+        switch conversation {
+        case .direct(let contact):
+            conversations.removeAll { $0.id == contact.id }
+        case .channel(let channel):
+            channels.removeAll { $0.id == channel.id }
+        case .room(let session):
+            roomSessions.removeAll { $0.id == session.id }
+        }
+    }
+
     /// Load conversations for a device
     func loadConversations(deviceID: UUID) async {
         guard let dataStore else { return }
@@ -451,8 +464,7 @@ final class ChatViewModel {
         // Clear last message date on contact (nil removes it from conversations list)
         try await dataStore.updateContactLastMessage(contactID: contact.id, date: nil)
 
-        // Reload conversations
-        await loadConversations(deviceID: contact.deviceID)
+        // Don't reload - optimistic removal in ChatsListView already updated the UI
     }
 
     // MARK: - Timestamp Helpers

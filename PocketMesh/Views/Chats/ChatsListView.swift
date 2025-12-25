@@ -276,15 +276,21 @@ struct ChatsListView: View {
 
         for conversation in conversationsToDelete {
             switch conversation {
+            case .room(let session):
+                // Room needs confirmation - don't remove yet
+                roomToDelete = session
+                showRoomDeleteAlert = true
+
             case .direct(let contact):
+                // Optimistic removal, then async cleanup
+                viewModel.removeConversation(conversation)
                 Task {
                     try? await viewModel.deleteConversation(for: contact)
                 }
-            case .room(let session):
-                // Show confirmation alert for room deletion
-                roomToDelete = session
-                showRoomDeleteAlert = true
+
             case .channel(let channel):
+                // Optimistic removal, then async cleanup
+                viewModel.removeConversation(conversation)
                 Task {
                     await deleteChannel(channel)
                 }
@@ -321,9 +327,11 @@ struct ChatsListView: View {
                 deviceID: channel.deviceID,
                 index: channel.index
             )
-            await loadConversations()
+            // Don't reload - optimistic removal already updated the UI
         } catch {
+            // On failure, reload to restore the channel
             logger.error("Failed to delete channel: \(error)")
+            await loadConversations()
         }
     }
 }
