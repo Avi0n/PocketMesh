@@ -45,11 +45,11 @@ struct DeviceInfoView: View {
                 Section {
                     if let battery = appState.deviceBattery {
                         HStack {
-                            Label("Battery", systemImage: battery.iconName)
+                            Label("Battery", systemImage: battery.iconName(using: appState.activeBatteryOCVArray))
                                 .symbolRenderingMode(.multicolor)
                             Spacer()
-                            Text("\(battery.percentage)%")
-                                .foregroundStyle(battery.levelColor)
+                            Text("\(battery.percentage(using: appState.activeBatteryOCVArray))%")
+                                .foregroundStyle(battery.levelColor(using: appState.activeBatteryOCVArray))
                             Text("(\(battery.voltage, format: .number.precision(.fractionLength(2)))V)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)

@@ -16,6 +16,37 @@ extension BatteryInfo {
         return Int(min(100, max(0, percent)))
     }
 
+    /// Calculate percentage using OCV array lookup with linear interpolation.
+    /// The OCV array should have 11 values mapping to 100%, 90%, 80%... 0%.
+    func percentage(using ocvArray: [Int]) -> Int {
+        guard ocvArray.count == 11 else { return percentage }  // Fallback to linear
+
+        let mV = level
+
+        // Above max voltage = 100%
+        if mV >= ocvArray[0] {
+            return 100
+        }
+
+        // Below min voltage = 0%
+        if mV <= ocvArray[10] {
+            return 0
+        }
+
+        // Find segment and interpolate
+        for i in 0..<10 {
+            let upperV = ocvArray[i]
+            let lowerV = ocvArray[i + 1]
+            if mV >= lowerV {
+                let segmentPercent = Double(mV - lowerV) / Double(upperV - lowerV)
+                let basePercent = (10 - i - 1) * 10  // 90, 80, 70, ...
+                return basePercent + Int((segmentPercent * 10).rounded())
+            }
+        }
+
+        return 0
+    }
+
     /// SF Symbol name for battery level
     var iconName: String {
         switch percentage {
@@ -27,9 +58,29 @@ extension BatteryInfo {
         }
     }
 
+    /// SF Symbol name for battery level using OCV array
+    func iconName(using ocvArray: [Int]) -> String {
+        switch percentage(using: ocvArray) {
+        case 88...100: "battery.100"
+        case 63..<88: "battery.75"
+        case 38..<63: "battery.50"
+        case 13..<38: "battery.25"
+        default: "battery.0"
+        }
+    }
+
     /// Color for battery display based on level
     var levelColor: Color {
         switch percentage {
+        case 20...100: .primary
+        case 10..<20: .orange
+        default: .red
+        }
+    }
+
+    /// Color for battery display based on OCV level
+    func levelColor(using ocvArray: [Int]) -> Color {
+        switch percentage(using: ocvArray) {
         case 20...100: .primary
         case 10..<20: .orange
         default: .red

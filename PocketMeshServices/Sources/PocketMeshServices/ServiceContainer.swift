@@ -65,6 +65,9 @@ public final class ServiceContainer {
     /// Service for device settings management
     public let settingsService: SettingsService
 
+    /// Service for device data persistence
+    public let deviceService: DeviceService
+
     /// Service for advertisements and path discovery
     public let advertisementService: AdvertisementService
 
@@ -118,6 +121,7 @@ public final class ServiceContainer {
         self.messageService = MessageService(session: session, dataStore: dataStore)
         self.channelService = ChannelService(session: session, dataStore: dataStore)
         self.settingsService = SettingsService(session: session)
+        self.deviceService = DeviceService(dataStore: dataStore)
         self.advertisementService = AdvertisementService(session: session, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(session: session, dataStore: dataStore)
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
