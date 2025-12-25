@@ -305,7 +305,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         contacts.removeValue(forKey: id)
     }
 
-    public func updateContactLastMessage(contactID: UUID, date: Date) async throws {
+    public func updateContactLastMessage(contactID: UUID, date: Date?) async throws {
         if var contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
