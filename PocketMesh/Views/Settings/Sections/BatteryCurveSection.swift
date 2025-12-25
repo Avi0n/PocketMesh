@@ -27,7 +27,9 @@ struct BatteryCurveSection: View {
                 if newValue != .custom {
                     isUpdatingFromPreset = true
                     voltageValues = newValue.ocvArray
-                    isUpdatingFromPreset = false
+                    Task { @MainActor in
+                        isUpdatingFromPreset = false
+                    }
                     saveToDevice()
                 }
             }
