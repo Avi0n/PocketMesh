@@ -83,6 +83,10 @@ public final class ConnectionManager {
     /// This prevents state restoration race conditions that cause "API MISUSE" errors.
     private let stateMachine = BLEStateMachine()
 
+    /// Timer to transition UI from "connecting" to "disconnected" after timeout.
+    /// iOS auto-reconnect continues in background even after this fires.
+    private var autoReconnectTimeoutTask: Task<Void, Never>?
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -121,6 +125,12 @@ public final class ConnectionManager {
     private func clearPersistedConnection() {
         UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
         UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
+    }
+
+    /// Cancels the auto-reconnect UI timeout timer
+    private func cancelAutoReconnectTimeout() {
+        autoReconnectTimeoutTask?.cancel()
+        autoReconnectTimeoutTask = nil
     }
 
     // MARK: - Initialization
@@ -278,6 +288,9 @@ public final class ConnectionManager {
 
         logger.info("Connecting to device: \(deviceID)")
 
+        // Cancel any pending auto-reconnect timeout
+        cancelAutoReconnectTimeout()
+
         // Clear intentional disconnect flag - user is explicitly connecting
         shouldBeConnected = true
 
@@ -300,6 +313,9 @@ public final class ConnectionManager {
     /// Disconnects from the current device.
     public func disconnect() async {
         logger.info("Disconnecting from device (user-initiated)")
+
+        // Cancel any pending auto-reconnect timeout
+        cancelAutoReconnectTimeout()
 
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
@@ -733,6 +749,9 @@ public final class ConnectionManager {
     private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
         logger.warning("Connection lost to device \(deviceID): \(error?.localizedDescription ?? "unknown")")
 
+        // Cancel any pending auto-reconnect timeout
+        cancelAutoReconnectTimeout()
+
         await services?.stopEventMonitoring()
         connectionState = .disconnected
         connectedDevice = nil
@@ -764,6 +783,19 @@ public final class ConnectionManager {
         // Show "connecting" state with pulsing blue icon
         // Keep connectedDevice set so we can show device name during reconnection
         connectionState = .connecting
+
+        // Start timeout to transition UI to disconnected after 10s
+        // iOS auto-reconnect continues in background even after this fires
+        cancelAutoReconnectTimeout()
+        autoReconnectTimeoutTask = Task {
+            try? await Task.sleep(for: .seconds(10))
+            guard !Task.isCancelled else { return }
+            if connectionState == .connecting {
+                logger.info("Auto-reconnect timeout: transitioning UI to disconnected")
+                connectionState = .disconnected
+                connectedDevice = nil
+            }
+        }
     }
 
     /// Handles iOS system auto-reconnect completion.
@@ -772,6 +804,9 @@ public final class ConnectionManager {
     /// this method re-establishes the session layer without creating a new transport.
     private func handleIOSAutoReconnect(deviceID: UUID) async {
         logger.info("iOS auto-reconnect complete for \(deviceID)")
+
+        // Cancel UI timeout since reconnection succeeded
+        cancelAutoReconnectTimeout()
 
         // User disconnected while iOS was reconnecting
         guard shouldBeConnected else {
