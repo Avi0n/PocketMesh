@@ -9,6 +9,7 @@ struct ChatsListView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = ChatViewModel()
     @State private var searchText = ""
+    @State private var selectedFilter: ChatFilter? = nil
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
     @State private var navigationPath = NavigationPath()
@@ -17,12 +18,55 @@ struct ChatsListView: View {
     @State private var showRoomDeleteAlert = false
 
     private var filteredConversations: [Conversation] {
-        let conversations = viewModel.allConversations
-        if searchText.isEmpty {
-            return conversations
+        viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
+    }
+
+    private var filterAccessibilityLabel: String {
+        if let filter = selectedFilter {
+            return "Filter conversations, currently showing \(filter.rawValue)"
         }
-        return conversations.filter { conversation in
-            conversation.displayName.localizedStandardContains(searchText)
+        return "Filter conversations"
+    }
+
+    private var emptyStateMessage: (title: String, description: String, systemImage: String) {
+        switch selectedFilter {
+        case .none:
+            return ("No Conversations", "Start a conversation from Contacts", "message")
+        case .unread:
+            return ("No Unread Messages", "You're all caught up", "checkmark.circle")
+        case .directMessages:
+            return ("No Direct Messages", "Start a chat from Contacts", "person")
+        case .channels:
+            return ("No Channels", "Join or create a channel", "number")
+        case .favorites:
+            return ("No Favorites", "Mark contacts as favorites to see them here", "star")
+        }
+    }
+
+    private var filterIcon: String {
+        selectedFilter == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
+    }
+
+    @ViewBuilder
+    private var filterMenu: some View {
+        Menu {
+            Picker("Filter", selection: $selectedFilter) {
+                Text("All").tag(nil as ChatFilter?)
+                ForEach(ChatFilter.allCases) { filter in
+                    Label(filter.rawValue, systemImage: filter.systemImage)
+                        .tag(filter as ChatFilter?)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            if selectedFilter == nil {
+                Label("Filter", systemImage: filterIcon)
+                    .accessibilityLabel(filterAccessibilityLabel)
+            } else {
+                Label("Filter", systemImage: filterIcon)
+                    .foregroundStyle(.tint)
+                    .accessibilityLabel(filterAccessibilityLabel)
+            }
         }
     }
 
@@ -32,21 +76,36 @@ struct ChatsListView: View {
                 if viewModel.isLoading && viewModel.allConversations.isEmpty {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.allConversations.isEmpty {
-                    ContentUnavailableView(
-                        "No Conversations",
-                        systemImage: "message",
-                        description: Text("Start a conversation from Contacts")
-                    )
+                } else if filteredConversations.isEmpty {
+                    ContentUnavailableView {
+                        Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
+                    } description: {
+                        Text(emptyStateMessage.description)
+                    } actions: {
+                        if selectedFilter != nil {
+                            Button("Clear Filter") {
+                                selectedFilter = nil
+                            }
+                        }
+                    }
                 } else {
                     conversationList
                 }
             }
             .navigationTitle("Chats")
             .searchable(text: $searchText, prompt: "Search conversations")
+            .searchScopes($selectedFilter, activation: .onSearchPresentation) {
+                Text("All").tag(nil as ChatFilter?)
+                ForEach(ChatFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter as ChatFilter?)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     BLEStatusIndicatorView()
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    filterMenu
                 }
                 ToolbarItem(placement: .automatic) {
                     Menu {
