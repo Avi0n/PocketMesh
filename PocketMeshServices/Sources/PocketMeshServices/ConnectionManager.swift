@@ -88,6 +88,19 @@ public final class ConnectionManager {
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
     private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
 
+    // MARK: - Simulator Support
+
+    #if targetEnvironment(simulator)
+    /// Simulator connection mode (only available on simulator)
+    private let simulatorMode = SimulatorConnectionMode()
+
+    /// Whether running in simulator mode
+    public var isSimulatorMode: Bool { true }
+    #else
+    /// Whether running in simulator mode
+    public var isSimulatorMode: Bool { false }
+    #endif
+
     // MARK: - Last Device Persistence
 
     /// The last connected device ID (for auto-reconnect)
@@ -169,6 +182,22 @@ public final class ConnectionManager {
     public func activate() async {
         logger.info("Activating ConnectionManager")
 
+        #if targetEnvironment(simulator)
+        // On simulator, skip ASK entirely and auto-reconnect to simulator device
+        if let lastDeviceID = lastConnectedDeviceID,
+           lastDeviceID == MockDataProvider.simulatorDeviceID {
+            logger.info("Simulator: auto-reconnecting to mock device")
+            shouldBeConnected = true
+            do {
+                try await simulatorConnect()
+            } catch {
+                logger.warning("Simulator auto-reconnect failed: \(error.localizedDescription)")
+            }
+            return
+        }
+        // Simulator doesn't support real BLE devices - show connection UI for simulator pairing
+        return
+        #else
         // Activate AccessorySetupKit session first (required before any BLE operations)
         do {
             try await accessorySetupKit.activateSession()
@@ -198,6 +227,7 @@ public final class ConnectionManager {
                 // Don't propagate - auto-reconnect failure is not fatal
             }
         }
+        #endif
     }
 
     /// Pairs a new device using AccessorySetupKit picker.
@@ -291,6 +321,64 @@ public final class ConnectionManager {
 
         logger.info("Disconnected")
     }
+
+    #if targetEnvironment(simulator)
+    /// Connects to the simulator device with mock data.
+    /// Only available on simulator builds.
+    public func simulatorConnect() async throws {
+        logger.info("Starting simulator connection")
+
+        connectionState = .connecting
+        shouldBeConnected = true
+
+        do {
+            // Connect simulator mode
+            await simulatorMode.connect()
+
+            // Create services with a placeholder session
+            // Note: We need a MeshCoreSession but won't actually use it for communication
+            // The mock data is seeded directly into the persistence store
+            let mockTransport = SimulatorMockTransport()
+            let session = MeshCoreSession(transport: mockTransport)
+            self.session = session
+
+            // Create services
+            let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+            await newServices.wireServices()
+            self.services = newServices
+
+            // Seed mock data
+            try await simulatorMode.seedDataStore(newServices.dataStore)
+
+            // Set connected device
+            self.connectedDevice = MockDataProvider.simulatorDevice
+
+            // Persist for auto-reconnect
+            persistConnection(
+                deviceID: MockDataProvider.simulatorDeviceID,
+                deviceName: "PocketMesh Sim"
+            )
+
+            // Notify observers
+            await onConnectionReady?()
+
+            connectionState = .ready
+            logger.info("Simulator connection complete")
+        } catch {
+            // Cleanup on failure
+            await cleanupConnection()
+            throw error
+        }
+    }
+
+    /// Whether the last connection was a simulator connection
+    public var wasSimulatorConnection: Bool {
+        lastConnectedDeviceID == MockDataProvider.simulatorDeviceID
+    }
+    #else
+    /// Whether the last connection was a simulator connection (always false on device)
+    public var wasSimulatorConnection: Bool { false }
+    #endif
 
     /// Switches to a different device.
     ///
