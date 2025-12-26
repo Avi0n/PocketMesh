@@ -217,7 +217,6 @@ struct ChannelChatView: View {
             isFocused: $isInputFocused,
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
             accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
-            isSending: viewModel.isSending,
             maxCharacters: maxChannelMessageLength
         ) {
             Task {

@@ -465,6 +465,111 @@ public actor MessageService {
         }
     }
 
+    /// Creates a pending message without sending it.
+    ///
+    /// Use this when you want to show the message in the UI immediately
+    /// and send it later via `sendExistingMessage`.
+    ///
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - contact: The recipient contact
+    ///   - textType: The type of text content (default: .plain)
+    ///   - replyToID: Optional ID of message being replied to
+    ///
+    /// - Returns: The created message DTO with pending status
+    public func createPendingMessage(
+        text: String,
+        to contact: ContactDTO,
+        textType: TextType = .plain,
+        replyToID: UUID? = nil
+    ) async throws -> MessageDTO {
+        guard contact.type != .repeater else {
+            throw MessageServiceError.invalidRecipient
+        }
+
+        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        let messageDTO = createOutgoingMessage(
+            id: messageID,
+            deviceID: contact.deviceID,
+            contactID: contact.id,
+            text: text,
+            timestamp: timestamp,
+            textType: textType,
+            replyToID: replyToID
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        return messageDTO
+    }
+
+    /// Sends an already-created pending message.
+    ///
+    /// Use this after `createPendingMessage` to send the message.
+    /// This allows showing the message in UI immediately while sending in background.
+    ///
+    /// - Parameters:
+    ///   - messageID: The ID of the pending message to send
+    ///   - contact: The recipient contact
+    ///
+    /// - Returns: The updated message DTO with delivery status
+    public func sendExistingMessage(
+        messageID: UUID,
+        to contact: ContactDTO
+    ) async throws -> MessageDTO {
+        guard let existingMessage = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Message not found")
+        }
+
+        let initialPathLength = contact.outPathLength
+
+        do {
+            let sentInfo = try await session.sendMessageWithRetry(
+                to: contact.publicKey,
+                text: existingMessage.text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(existingMessage.timestamp)),
+                maxAttempts: config.maxAttempts,
+                floodAfter: config.floodAfter,
+                maxFloodAttempts: config.maxFloodAttempts
+            )
+
+            if let sentInfo {
+                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+                try await dataStore.updateMessageAck(
+                    id: messageID,
+                    ackCode: ackCodeUInt32,
+                    status: .delivered
+                )
+                try await dataStore.updateContactLastMessage(contactID: contact.id, date: Date())
+            } else {
+                try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            }
+
+            await checkAndNotifyRoutingChange(
+                publicKey: contact.publicKey,
+                contactID: contact.id,
+                deviceID: contact.deviceID,
+                initialPathLength: initialPathLength
+            )
+
+            guard let message = try await dataStore.fetchMessage(id: messageID) else {
+                throw MessageServiceError.sendFailed("Failed to fetch message after send")
+            }
+            return message
+        } catch let error as MeshCoreError {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw MessageServiceError.sessionError(error)
+        } catch {
+            try await dataStore.updateMessageStatus(id: messageID, status: .failed)
+            throw error
+        }
+    }
+
     /// Retries sending a failed message with automatic retry logic.
     ///
     /// Use this method to retry messages that previously failed. The retry uses the same
