@@ -240,12 +240,9 @@ struct ChatView: View {
             isFocused: $isInputFocused,
             placeholder: "Private Message",
             accentColor: .blue,
-            isSending: viewModel.isSending,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
-            Task {
-                await viewModel.sendMessage()
-            }
+            Task { await viewModel.sendMessage() }
         }
     }
 }

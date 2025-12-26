@@ -7,7 +7,6 @@ struct ChatInputBar: View {
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
     let accentColor: Color
-    let isSending: Bool
     let maxCharacters: Int
     let onSend: () -> Void
 
@@ -67,7 +66,7 @@ struct ChatInputBar: View {
     private var sendButton: some View {
         if #available(iOS 26.0, *) {
             Button(action: onSend) {
-                Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
+                Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .foregroundStyle(canSend ? accentColor : .secondary)
             }
@@ -77,7 +76,7 @@ struct ChatInputBar: View {
             .accessibilityHint(sendAccessibilityHint)
         } else {
             Button(action: onSend) {
-                Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
+                Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
                     .foregroundStyle(canSend ? accentColor : .secondary)
             }
@@ -88,9 +87,7 @@ struct ChatInputBar: View {
     }
 
     private var sendAccessibilityLabel: String {
-        if isSending {
-            return "Sending message"
-        } else if isOverLimit {
+        if isOverLimit {
             return "Message too long"
         } else {
             return "Send message"
@@ -108,7 +105,7 @@ struct ChatInputBar: View {
     }
 
     private var canSend: Bool {
-        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending && !isOverLimit
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
     }
 }
 

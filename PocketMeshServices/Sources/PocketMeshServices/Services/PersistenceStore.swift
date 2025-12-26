@@ -490,7 +490,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
         var descriptor = FetchDescriptor(
             predicate: predicate,
-            sortBy: [SortDescriptor(\Message.timestamp, order: .reverse)]
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
         )
         descriptor.fetchLimit = limit
         descriptor.fetchOffset = offset
@@ -508,7 +511,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
         var descriptor = FetchDescriptor(
             predicate: predicate,
-            sortBy: [SortDescriptor(\Message.timestamp, order: .reverse)]
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
         )
         descriptor.fetchLimit = limit
         descriptor.fetchOffset = offset

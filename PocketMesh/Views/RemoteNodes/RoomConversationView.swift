@@ -149,7 +149,6 @@ struct RoomConversationView: View {
             isFocused: $isInputFocused,
             placeholder: "Public Message",
             accentColor: .orange,
-            isSending: viewModel.isSending,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
             Task {

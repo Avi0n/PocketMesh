@@ -55,8 +55,20 @@ final class ChatViewModel {
     /// Message text being composed
     var composingText = ""
 
-    /// Whether a message is being sent
-    var isSending = false
+    /// A message waiting to be sent, with its target contact captured at enqueue time
+    private struct QueuedMessage {
+        let messageID: UUID
+        let contactID: UUID
+    }
+
+    /// Queue of message IDs waiting to be sent
+    private var sendQueue: [QueuedMessage] = []
+
+    /// Whether the queue processor is running
+    private(set) var isProcessingQueue = false
+
+    /// Number of messages in the send queue (for testing)
+    var sendQueueCount: Int { sendQueue.count }
 
     /// Last message previews cache
     private var lastMessageCache: [UUID: MessageDTO] = [:]
@@ -191,6 +203,7 @@ final class ChatViewModel {
     }
 
     /// Send a message to the current contact
+    /// This is non-blocking - message is created and shown immediately, sent in background
     func sendMessage() async {
         guard let contact = currentContact,
               let messageService,
@@ -200,35 +213,23 @@ final class ChatViewModel {
 
         let text = composingText.trimmingCharacters(in: .whitespacesAndNewlines)
         composingText = ""
-        isSending = true
         errorMessage = nil
 
         do {
-            _ = try await messageService.sendMessageWithRetry(
-                text: text,
-                to: contact,
-                onMessageCreated: { [weak self] _ in
-                    // Reload messages immediately when message is saved (before retry loop starts)
-                    guard let self else { return }
-                    await MainActor.run {
-                        Task {
-                            await self.loadMessages(for: contact)
-                        }
-                    }
-                }
-            )
+            // Create message immediately and show it
+            let message = try await messageService.createPendingMessage(text: text, to: contact)
+            messages.append(message)
 
-            // Final reload to show delivered status
-            await loadMessages(for: contact)
+            // Queue for sending
+            sendQueue.append(QueuedMessage(messageID: message.id, contactID: contact.id))
 
-            // Update conversations list to reflect new message
-            await loadConversations(deviceID: contact.deviceID)
+            // Start processor if not already running
+            if !isProcessingQueue {
+                Task { await processQueue() }
+            }
         } catch {
             errorMessage = error.localizedDescription
-            // Note: composingText already cleared - failed message can be retried from bubble
         }
-
-        isSending = false
     }
 
     /// Refresh messages for current contact
@@ -277,7 +278,6 @@ final class ChatViewModel {
 
         let text = composingText.trimmingCharacters(in: .whitespacesAndNewlines)
         composingText = ""
-        isSending = true
         errorMessage = nil
 
         do {
@@ -297,8 +297,6 @@ final class ChatViewModel {
             // Restore the text so user can retry
             composingText = text
         }
-
-        isSending = false
     }
 
     /// Get the last message preview for a contact
@@ -363,14 +361,13 @@ final class ChatViewModel {
 
         logger.debug("retryMessage: starting retry for contact \(contact.displayName)")
 
-        isSending = true
         errorMessage = nil
 
         do {
             // Retry the existing message (preserves message identity)
             logger.debug("retryMessage: calling retryDirectMessage with messageID")
-            _ = try await messageService.retryDirectMessage(messageID: message.id, to: contact)
-            logger.info("retryMessage: retryDirectMessage succeeded")
+            let result = try await messageService.retryDirectMessage(messageID: message.id, to: contact)
+            logger.info("retryMessage: completed with status \(String(describing: result.status))")
 
             // Reload messages to show updated status
             await loadMessages(for: contact)
@@ -381,8 +378,6 @@ final class ChatViewModel {
             // Reload to show the failed status
             await loadMessages(for: contact)
         }
-
-        isSending = false
     }
 
     /// Retry sending a failed channel message.
@@ -483,5 +478,59 @@ final class ChatViewModel {
 
         let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
         return gap > 300
+    }
+
+    // MARK: - Message Queue
+
+    /// Add a message to the send queue (for testing)
+    func enqueueMessage(_ messageID: UUID, contactID: UUID) {
+        sendQueue.append(QueuedMessage(messageID: messageID, contactID: contactID))
+    }
+
+    /// Process the queue (exposed for testing)
+    func processQueueForTesting() async {
+        await processQueue()
+    }
+
+    /// Process queued messages serially
+    private func processQueue() async {
+        guard let messageService,
+              let dataStore else { return }
+
+        isProcessingQueue = true
+
+        var lastDeviceID: UUID?
+
+        while !sendQueue.isEmpty {
+            let queued = sendQueue.removeFirst()
+
+            // Fetch the target contact by ID - it may differ from currentContact
+            guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
+                // Contact was deleted, skip this message
+                logger.debug("Skipping queued message - contact \(queued.contactID) was deleted")
+                continue
+            }
+
+            lastDeviceID = contact.deviceID
+
+            do {
+                _ = try await messageService.sendExistingMessage(
+                    messageID: queued.messageID,
+                    to: contact
+                )
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+
+        // Single reload after queue drains - syncs statuses and conversation list
+        if let contact = currentContact {
+            await loadMessages(for: contact)
+        }
+        if let deviceID = lastDeviceID {
+            await loadConversations(deviceID: deviceID)
+        }
+
+        isProcessingQueue = false
     }
 }
