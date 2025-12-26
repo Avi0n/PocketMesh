@@ -1,25 +1,30 @@
 import SwiftUI
 import PocketMeshServices
 
-/// Battery curve configuration section for Advanced Settings
+/// Battery curve configuration section
+/// Pure UI component - caller provides data and save callback
 struct BatteryCurveSection: View {
-    @Environment(AppState.self) private var appState
+    let availablePresets: [OCVPreset]
+    let headerText: String
+    let footerText: String
 
-    @State private var selectedPreset: OCVPreset = .liIon
-    @State private var voltageValues: [Int] = OCVPreset.liIon.ocvArray
+    @Binding var selectedPreset: OCVPreset
+    @Binding var voltageValues: [Int]
+
+    let onSave: (OCVPreset, [Int]) async -> Void
+
     @State private var isEditingValues = false
     @State private var validationError: String?
-    /// Tracks whether voltageValues change is from preset selection (not user edit)
     @State private var isUpdatingFromPreset = false
 
     var body: some View {
         Section {
             // Preset picker
             Picker("Preset", selection: $selectedPreset) {
-                ForEach(OCVPreset.selectablePresets, id: \.self) { preset in
+                ForEach(availablePresets, id: \.self) { preset in
                     Text(preset.displayName).tag(preset)
                 }
-                if selectedPreset == .custom {
+                if selectedPreset == .custom && !availablePresets.contains(.custom) {
                     Text("Custom").tag(OCVPreset.custom)
                 }
             }
@@ -30,11 +35,12 @@ struct BatteryCurveSection: View {
                     Task { @MainActor in
                         isUpdatingFromPreset = false
                     }
-                    saveToDevice()
+                    Task {
+                        await onSave(newValue, newValue.ocvArray)
+                    }
                 }
             }
 
-            // Chart
             BatteryCurveChart(ocvArray: voltageValues)
 
             // Edit values disclosure
@@ -53,102 +59,48 @@ struct BatteryCurveSection: View {
                     .foregroundStyle(.red)
             }
         } header: {
-            Text("Battery Curve")
+            if !headerText.isEmpty {
+                Text(headerText)
+            }
         } footer: {
-            Text("Configure the voltage-to-percentage curve for your device's battery.")
-        }
-        .task(id: appState.connectedDevice?.id) {
-            loadFromDevice()
-        }
-    }
-
-    private func loadFromDevice() {
-        guard let device = appState.connectedDevice else { return }
-
-        isUpdatingFromPreset = true
-        defer { isUpdatingFromPreset = false }
-
-        if let presetName = device.ocvPreset {
-            if presetName == OCVPreset.custom.rawValue, let customString = device.customOCVArrayString {
-                let parsed = customString.split(separator: ",")
-                    .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-                if parsed.count == 11 {
-                    voltageValues = parsed
-                    selectedPreset = .custom
-                    return
-                }
-            }
-            if let preset = OCVPreset(rawValue: presetName) {
-                selectedPreset = preset
-                voltageValues = preset.ocvArray
-                return
+            if !footerText.isEmpty {
+                Text(footerText)
             }
         }
-
-        // Default
-        selectedPreset = .liIon
-        voltageValues = OCVPreset.liIon.ocvArray
     }
 
     private func handleValueChanged() {
-        // Ignore if this change came from preset selection
         guard !isUpdatingFromPreset else { return }
 
-        // Validate
         if let error = validateVoltageValues() {
             validationError = error
             return
         }
         validationError = nil
 
-        // Mark as custom (user manually edited a value)
         selectedPreset = .custom
-        saveToDevice()
+        Task {
+            await onSave(.custom, voltageValues)
+        }
     }
 
     private func validateVoltageValues() -> String? {
-        // Check all values in valid range
         for (index, value) in voltageValues.enumerated() {
             if value < 1000 || value > 5000 {
                 return "Value at \((10 - index) * 10)% must be 1000-5000 mV"
             }
         }
 
-        // Check descending order
-        for i in 0..<(voltageValues.count - 1) {
-            if voltageValues[i] <= voltageValues[i + 1] {
-                return "Values must be in descending order"
-            }
+        for (current, next) in zip(voltageValues, voltageValues.dropFirst()) where current <= next {
+            return "Values must be in descending order"
         }
 
         return nil
     }
-
-    private func saveToDevice() {
-        Task {
-            guard let deviceService = appState.services?.deviceService,
-                  let deviceID = appState.connectedDevice?.id else { return }
-
-            if selectedPreset == .custom {
-                let customString = voltageValues.map(String.init).joined(separator: ",")
-                try? await deviceService.updateOCVSettings(
-                    deviceID: deviceID,
-                    preset: OCVPreset.custom.rawValue,
-                    customArray: customString
-                )
-            } else {
-                try? await deviceService.updateOCVSettings(
-                    deviceID: deviceID,
-                    preset: selectedPreset.rawValue,
-                    customArray: nil
-                )
-            }
-        }
-    }
 }
 
 /// Two-column grid of voltage input fields
-private struct VoltageFieldsGrid: View {
+struct VoltageFieldsGrid: View {
     @Binding var voltageValues: [Int]
     @Binding var validationError: String?
     let onValueChanged: () -> Void
@@ -182,7 +134,7 @@ private struct VoltageFieldsGrid: View {
 }
 
 /// Individual voltage input field
-private struct VoltageField: View {
+struct VoltageField: View {
     let percent: Int
     @Binding var value: Int
     let hasError: Bool
@@ -206,6 +158,8 @@ private struct VoltageField: View {
                     onValueChanged()
                 }
                 .accessibilityLabel("Voltage at \(percent) percent")
+                .accessibilityValue("\(value) millivolts")
+                .accessibilityHint("Enter the expected voltage at this charge level")
 
             Text("mV")
                 .font(.caption)
@@ -215,10 +169,19 @@ private struct VoltageField: View {
 }
 
 #Preview {
+    @Previewable @State var preset: OCVPreset = .liIon
+    @Previewable @State var values: [Int] = OCVPreset.liIon.ocvArray
+
     NavigationStack {
         List {
-            BatteryCurveSection()
+            BatteryCurveSection(
+                availablePresets: OCVPreset.selectablePresets,
+                headerText: "Battery Curve",
+                footerText: "Configure the voltage-to-percentage curve for your device's battery.",
+                selectedPreset: $preset,
+                voltageValues: $values,
+                onSave: { _, _ in }
+            )
         }
     }
-    .environment(AppState())
 }

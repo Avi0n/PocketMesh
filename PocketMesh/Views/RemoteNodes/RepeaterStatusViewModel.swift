@@ -43,9 +43,32 @@ final class RepeaterStatusViewModel {
     /// Error message if any
     var errorMessage: String?
 
+    // MARK: - OCV Curve Properties
+
+    /// Whether the battery curve disclosure group is expanded
+    var isBatteryCurveExpanded = false
+
+    /// Selected OCV preset
+    var selectedOCVPreset: OCVPreset = .liIon
+
+    /// Current OCV voltage values
+    var ocvValues: [Int] = OCVPreset.liIon.ocvArray
+
+    /// Error from OCV save operation
+    var ocvError: String?
+
+    /// Contact ID for saving OCV settings
+    private var contactID: UUID?
+
+    /// Current OCV array for telemetry percentage calculation
+    var currentOCVArray: [Int] {
+        ocvValues
+    }
+
     // MARK: - Dependencies
 
     private var repeaterAdminService: RepeaterAdminService?
+    private var contactService: ContactService?
 
     // MARK: - Initialization
 
@@ -54,6 +77,7 @@ final class RepeaterStatusViewModel {
     /// Configure with services from AppState
     func configure(appState: AppState) {
         self.repeaterAdminService = appState.services?.repeaterAdminService
+        self.contactService = appState.services?.contactService
         // Handler registration moved to registerHandlers() called from view's .task modifier
     }
 
@@ -287,11 +311,9 @@ final class RepeaterStatusViewModel {
     var batteryDisplay: String {
         guard let mv = status?.batteryMillivolts else { return Self.emDash }
         let volts = Double(mv) / 1000.0
-        // LiPo battery voltage range: 4.2V (100%) to 3.0V (0%)
-        // Note: This assumes standard LiPo chemistry; actual range may vary by device
-        let percent = ((volts - 3.0) / 1.2) * 100
-        let clampedPercent = Int(min(100, max(0, percent)))
-        return "\(volts.formatted(.number.precision(.fractionLength(2))))V (\(clampedPercent)%)"
+        let battery = BatteryInfo(level: Int(mv))
+        let percent = battery.percentage(using: currentOCVArray)
+        return "\(volts.formatted(.number.precision(.fractionLength(2))))V (\(percent)%)"
     }
 
     var lastRSSIDisplay: String {
@@ -321,5 +343,74 @@ final class RepeaterStatusViewModel {
 
     var clockDisplay: String {
         clockTime ?? Self.emDash
+    }
+
+    // MARK: - OCV Settings
+
+    /// Load OCV settings for a contact by public key
+    func loadOCVSettings(publicKey: Data, deviceID: UUID) async {
+        guard let contactService else { return }
+
+        do {
+            if let contact = try await contactService.getContact(deviceID: deviceID, publicKey: publicKey) {
+                contactID = contact.id
+
+                if let presetName = contact.ocvPreset {
+                    if presetName == OCVPreset.custom.rawValue, let customString = contact.customOCVArrayString {
+                        let parsed = customString.split(separator: ",")
+                            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                        if parsed.count == 11 {
+                            ocvValues = parsed
+                            selectedOCVPreset = .custom
+                            return
+                        }
+                    }
+                    if let preset = OCVPreset(rawValue: presetName) {
+                        selectedOCVPreset = preset
+                        ocvValues = preset.ocvArray
+                        return
+                    }
+                }
+
+                selectedOCVPreset = .liIon
+                ocvValues = OCVPreset.liIon.ocvArray
+            }
+        } catch {
+            ocvError = "Failed to load battery curve settings"
+        }
+    }
+
+    /// Save OCV settings for the current contact
+    func saveOCVSettings(preset: OCVPreset, values: [Int]) async {
+        guard let contactService,
+              let contactID else {
+            ocvError = "Cannot save: contact not found"
+            return
+        }
+
+        ocvError = nil
+
+        do {
+            if preset == .custom {
+                let customString = values.map(String.init).joined(separator: ",")
+                try await contactService.updateContactOCVSettings(
+                    contactID: contactID,
+                    preset: OCVPreset.custom.rawValue,
+                    customArray: customString
+                )
+            } else {
+                try await contactService.updateContactOCVSettings(
+                    contactID: contactID,
+                    preset: preset.rawValue,
+                    customArray: nil
+                )
+            }
+
+            // Update local state
+            selectedOCVPreset = preset
+            ocvValues = values
+        } catch {
+            ocvError = "Failed to save: \(error.localizedDescription)"
+        }
     }
 }
