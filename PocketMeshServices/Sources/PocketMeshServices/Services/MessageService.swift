@@ -697,12 +697,15 @@ public actor MessageService {
 
             guard let tracking = pendingAcks[code] else { return }
 
+            let roundTripMs = UInt32(Date().timeIntervalSince(tracking.sentAt) * 1000)
+
             try? await dataStore.updateMessageByAckCode(
                 tracking.ackCodeUInt32,
-                status: .delivered
+                status: .delivered,
+                roundTripTime: roundTripMs
             )
 
-            ackConfirmationHandler?(tracking.ackCodeUInt32, 0)
+            ackConfirmationHandler?(tracking.ackCodeUInt32, roundTripMs)
 
             logger.info("ACK received")
         } else {
