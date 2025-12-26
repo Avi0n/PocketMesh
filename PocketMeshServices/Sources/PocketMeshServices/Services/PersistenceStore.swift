@@ -333,6 +333,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isFavorite = dto.isFavorite
             existing.lastMessageDate = dto.lastMessageDate
             existing.unreadCount = dto.unreadCount
+            existing.ocvPreset = dto.ocvPreset
+            existing.customOCVArrayString = dto.customOCVArrayString
         } else {
             let contact = Contact(
                 id: dto.id,
@@ -351,7 +353,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 isBlocked: dto.isBlocked,
                 isFavorite: dto.isFavorite,
                 lastMessageDate: dto.lastMessageDate,
-                unreadCount: dto.unreadCount
+                unreadCount: dto.unreadCount,
+                ocvPreset: dto.ocvPreset,
+                customOCVArrayString: dto.customOCVArrayString
             )
             modelContext.insert(contact)
         }
