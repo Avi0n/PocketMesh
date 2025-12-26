@@ -170,32 +170,33 @@ struct UnifiedMessageBubble: View {
             Label("Copy", systemImage: "doc.on.doc")
         }
 
-        Menu {
+        // Outgoing message details shown directly (no submenu)
+        if message.isOutgoing {
             Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
 
-            if !message.isOutgoing {
-                Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
-            }
-
-            if !message.isOutgoing, let snr = message.snr {
-                Text("SNR: \(snrFormatted(snr))")
-            }
-
-            // Show hop count for incoming messages
-            if !message.isOutgoing {
-                Text("Hops: \(hopCountFormatted(message.pathLength))")
-            }
-
-            // Show heard repeats for outgoing delivered messages
-            if message.isOutgoing && message.status == .delivered && message.heardRepeats > 0 {
+            if message.status == .delivered && message.heardRepeats > 0 {
                 Text("Heard: \(message.heardRepeats) repeat\(message.heardRepeats == 1 ? "" : "s")")
             }
 
-            if let rtt = message.roundTripTime, message.isOutgoing {
+            if let rtt = message.roundTripTime {
                 Text("Round trip: \(rtt)ms")
             }
-        } label: {
-            Label("Details", systemImage: "info.circle")
+        }
+
+        // Incoming message details in submenu (more fields)
+        if !message.isOutgoing {
+            Menu {
+                Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
+                Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
+
+                if let snr = message.snr {
+                    Text("SNR: \(snrFormatted(snr))")
+                }
+
+                Text("Hops: \(hopCountFormatted(message.pathLength))")
+            } label: {
+                Label("Details", systemImage: "info.circle")
+            }
         }
 
         // Only show Delete if handler is provided
