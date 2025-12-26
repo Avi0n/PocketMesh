@@ -362,6 +362,48 @@ public actor ContactService {
     public func confirmContact(id: UUID) async throws {
         try await dataStore.confirmContact(id: id)
     }
+
+    /// Updates OCV settings for a contact
+    /// - Parameters:
+    ///   - contactID: The contact's ID
+    ///   - preset: The OCV preset name
+    ///   - customArray: Custom OCV array string (for custom preset)
+    public func updateContactOCVSettings(
+        contactID: UUID,
+        preset: String,
+        customArray: String?
+    ) async throws {
+        guard let existing = try await dataStore.fetchContact(id: contactID) else {
+            throw ContactServiceError.contactNotFound
+        }
+
+        let updated = ContactDTO(
+            from: Contact(
+                id: existing.id,
+                deviceID: existing.deviceID,
+                publicKey: existing.publicKey,
+                name: existing.name,
+                typeRawValue: existing.typeRawValue,
+                flags: existing.flags,
+                outPathLength: existing.outPathLength,
+                outPath: existing.outPath,
+                lastAdvertTimestamp: existing.lastAdvertTimestamp,
+                latitude: existing.latitude,
+                longitude: existing.longitude,
+                lastModified: existing.lastModified,
+                nickname: existing.nickname,
+                isBlocked: existing.isBlocked,
+                isFavorite: existing.isFavorite,
+                lastMessageDate: existing.lastMessageDate,
+                unreadCount: existing.unreadCount,
+                isDiscovered: existing.isDiscovered,
+                ocvPreset: preset,
+                customOCVArrayString: customArray
+            )
+        )
+
+        try await dataStore.saveContact(updated)
+    }
 }
 
 // MARK: - ContactServiceProtocol Conformance

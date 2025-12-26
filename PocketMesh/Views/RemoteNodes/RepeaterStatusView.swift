@@ -15,8 +15,10 @@ struct RepeaterStatusView: View {
                 headerSection
                 statusSection
                 telemetrySection
-                neighborsSection  // Moved to bottom with lazy loading
+                neighborsSection
+                batteryCurveSection
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Repeater Status")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -32,6 +34,18 @@ struct RepeaterStatusView: View {
                     }
                     .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry)
                 }
+
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil,
+                            from: nil,
+                            for: nil
+                        )
+                    }
+                }
             }
             .task {
                 viewModel.configure(appState: appState)
@@ -40,6 +54,11 @@ struct RepeaterStatusView: View {
                 // Request Status first (includes clock query)
                 await viewModel.requestStatus(for: session)
                 // Note: Telemetry and Neighbors are NOT auto-loaded - user must expand the section
+
+                // Pre-load OCV settings for battery percentage calculation
+                if let deviceID = appState.connectedDevice?.id {
+                    await viewModel.loadOCVSettings(publicKey: session.publicKey, deviceID: deviceID)
+                }
             }
             .refreshable {
                 await viewModel.requestStatus(for: session)
@@ -148,6 +167,38 @@ struct RepeaterStatusView: View {
         }
     }
 
+    // MARK: - Battery Curve Section
+
+    private var batteryCurveSection: some View {
+        Section {
+            DisclosureGroup(isExpanded: $viewModel.isBatteryCurveExpanded) {
+                BatteryCurveSection(
+                    availablePresets: OCVPreset.batteryChemistryPresets,
+                    headerText: "",
+                    footerText: "",
+                    selectedPreset: $viewModel.selectedOCVPreset,
+                    voltageValues: $viewModel.ocvValues,
+                    onSave: viewModel.saveOCVSettings
+                )
+
+                if let error = viewModel.ocvError {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            } label: {
+                Text("Battery Curve")
+            }
+            .onChange(of: viewModel.isBatteryCurveExpanded) { _, isExpanded in
+                if isExpanded, let deviceID = appState.connectedDevice?.id {
+                    Task {
+                        await viewModel.loadOCVSettings(publicKey: session.publicKey, deviceID: deviceID)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Telemetry Section
 
     private var telemetrySection: some View {
@@ -165,7 +216,7 @@ struct RepeaterStatusView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(telemetry.dataPoints, id: \.channel) { dataPoint in
-                            TelemetryRow(dataPoint: dataPoint)
+                            TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)
                         }
                     }
                 } else {
@@ -267,10 +318,15 @@ private struct NeighborRow: View {
 
 private struct TelemetryRow: View {
     let dataPoint: LPPDataPoint
+    let ocvArray: [Int]
 
     var body: some View {
-        if dataPoint.type == .voltage, let percentage = dataPoint.batteryPercentage {
-            // For voltage, show both voltage and calculated battery percentage
+        if dataPoint.type == .voltage, case .float(let voltage) = dataPoint.value {
+            // Calculate percentage using OCV array
+            let millivolts = Int(voltage * 1000)
+            let battery = BatteryInfo(level: millivolts)
+            let percentage = battery.percentage(using: ocvArray)
+
             LabeledContent(dataPoint.typeName) {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(dataPoint.formattedValue)

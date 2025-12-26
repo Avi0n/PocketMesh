@@ -61,6 +61,12 @@ public final class Contact {
     /// Contacts from NEW_ADVERT push have this set to true until explicitly added
     public var isDiscovered: Bool
 
+    /// Selected OCV preset name (nil = liIon default)
+    public var ocvPreset: String?
+
+    /// Custom OCV array as comma-separated string (e.g., "4240,4112,4029,...")
+    public var customOCVArrayString: String?
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -79,7 +85,9 @@ public final class Contact {
         isFavorite: Bool = false,
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
-        isDiscovered: Bool = false
+        isDiscovered: Bool = false,
+        ocvPreset: String? = nil,
+        customOCVArrayString: String? = nil
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -99,6 +107,8 @@ public final class Contact {
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.isDiscovered = isDiscovered
+        self.ocvPreset = ocvPreset
+        self.customOCVArrayString = customOCVArrayString
     }
 
     /// Creates a Contact from a protocol ContactFrame
@@ -209,6 +219,8 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let lastMessageDate: Date?
     public let unreadCount: Int
     public let isDiscovered: Bool
+    public let ocvPreset: String?
+    public let customOCVArrayString: String?
 
     public init(from contact: Contact) {
         self.id = contact.id
@@ -229,6 +241,8 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
         self.isDiscovered = contact.isDiscovered
+        self.ocvPreset = contact.ocvPreset
+        self.customOCVArrayString = contact.customOCVArrayString
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -250,7 +264,9 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         isFavorite: Bool,
         isDiscovered: Bool,
         lastMessageDate: Date?,
-        unreadCount: Int
+        unreadCount: Int,
+        ocvPreset: String? = nil,
+        customOCVArrayString: String? = nil
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -270,6 +286,8 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isDiscovered = isDiscovered
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.ocvPreset = ocvPreset
+        self.customOCVArrayString = customOCVArrayString
     }
 
     public var type: ContactType {
@@ -294,6 +312,26 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
 
     public var publicKeyHex: String {
         publicKey.hexString()
+    }
+
+    /// The active OCV array for this contact (preset or custom)
+    public var activeOCVArray: [Int] {
+        // If custom preset with valid custom string, parse it
+        if ocvPreset == OCVPreset.custom.rawValue, let customString = customOCVArrayString {
+            let parsed = customString.split(separator: ",")
+                .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+            if parsed.count == 11 {
+                return parsed
+            }
+        }
+
+        // Use preset if set
+        if let presetName = ocvPreset, let preset = OCVPreset(rawValue: presetName) {
+            return preset.ocvArray
+        }
+
+        // Default to Li-Ion
+        return OCVPreset.liIon.ocvArray
     }
 
     /// Converts to a protocol ContactFrame for sending to device

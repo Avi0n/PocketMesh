@@ -1,5 +1,13 @@
 import Foundation
 
+/// Categories for OCV presets
+public enum OCVPresetCategory: Sendable {
+    /// Generic battery chemistry (Li-Ion, LiFePO4, etc.)
+    case batteryChemistry
+    /// Specific commercial device
+    case deviceSpecific
+}
+
 /// Battery OCV (Open Circuit Voltage) presets for accurate percentage calculation.
 /// Each preset contains 11 millivolt values mapping to 100%, 90%, 80%... 0%.
 ///
@@ -74,8 +82,24 @@ public enum OCVPreset: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// The category of this preset
+    public var category: OCVPresetCategory {
+        switch self {
+        case .liIon, .liFePO4, .leadAcid, .alkaline, .niMH, .lto:
+            .batteryChemistry
+        case .trackerT1000E, .heltecPocket5000, .heltecPocket10000,
+             .seeedWioTracker, .seeedSolarNode, .r1Neo, .wisMeshTag, .custom:
+            .deviceSpecific
+        }
+    }
+
     /// All presets except custom (for picker display)
     public static var selectablePresets: [OCVPreset] {
         allCases.filter { $0 != .custom }
+    }
+
+    /// Battery chemistry presets only (excludes device-specific and custom)
+    public static var batteryChemistryPresets: [OCVPreset] {
+        allCases.filter { $0.category == .batteryChemistry }
     }
 }
