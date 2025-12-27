@@ -1,6 +1,7 @@
 # PocketMesh
 
-A native iOS application for seamless messaging and configuration over MeshCore mesh networking devices.
+An unofficial native iOS MeshCore client.   
+Disclaimer: Built entirely with AI.
 
 ## Documentation
 
