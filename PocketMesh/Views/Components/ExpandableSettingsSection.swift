@@ -61,6 +61,7 @@ struct ExpandableSettingsSection<Content: View>: View {
                                 .font(.caption)
                         }
                         .buttonStyle(.borderless)
+                        .padding(.trailing)
                     }
                 }
             }
