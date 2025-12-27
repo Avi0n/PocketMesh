@@ -90,7 +90,7 @@ struct PermissionsView: View {
                     .font(.largeTitle)
                     .bold()
 
-                Text("PocketMesh needs your permission to work properly")
+                Text("Allow Notifications for the best experience")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

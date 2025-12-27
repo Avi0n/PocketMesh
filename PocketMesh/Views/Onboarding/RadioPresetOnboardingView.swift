@@ -40,7 +40,7 @@ struct RadioPresetOnboardingView: View {
                     .font(.largeTitle)
                     .bold()
 
-                Text("All mesh devices must use the same settings to communicate")
+                Text("You can change these settings at any time in PocketMesh's Settings. If you're not sure which preset to use, ask in the [MeshCore Discord](https://meshcore.co.uk/contact.html)")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

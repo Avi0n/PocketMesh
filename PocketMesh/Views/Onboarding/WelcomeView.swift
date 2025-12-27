@@ -19,7 +19,7 @@ struct WelcomeView: View {
                     .font(.largeTitle)
                     .bold()
 
-                Text("Off-grid mesh messaging")
+                Text("Unofficial MeshCore client for iOS")
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -38,12 +38,6 @@ struct WelcomeView: View {
                     icon: "person.2.fill",
                     title: "Contact Discovery",
                     description: "Find other mesh users nearby"
-                )
-
-                FeatureRow(
-                    icon: "map.fill",
-                    title: "Location Sharing",
-                    description: "See your contacts on a map"
                 )
             }
             .padding(.horizontal)
