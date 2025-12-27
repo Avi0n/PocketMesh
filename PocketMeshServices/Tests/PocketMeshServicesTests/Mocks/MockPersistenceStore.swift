@@ -281,6 +281,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             isBlocked: false,
             isFavorite: false,
             isDiscovered: false,
+            isArchived: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -306,7 +307,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func updateContactLastMessage(contactID: UUID, date: Date?) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -324,6 +325,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
+                isArchived: contact.isArchived,
                 lastMessageDate: date,
                 unreadCount: contact.unreadCount
             )
@@ -331,7 +333,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func incrementUnreadCount(contactID: UUID) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -349,6 +351,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
+                isArchived: contact.isArchived,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount + 1
             )
@@ -356,7 +359,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func clearUnreadCount(contactID: UUID) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -374,6 +377,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
+                isArchived: contact.isArchived,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: 0
             )
@@ -388,7 +392,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func confirmContact(id: UUID) async throws {
-        if var contact = contacts[id] {
+        if let contact = contacts[id] {
             contacts[id] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -406,6 +410,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isFavorite: contact.isFavorite,
                 isDiscovered: false,
+                isArchived: contact.isArchived,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount
             )

@@ -333,6 +333,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isFavorite = dto.isFavorite
             existing.lastMessageDate = dto.lastMessageDate
             existing.unreadCount = dto.unreadCount
+            existing.isDiscovered = dto.isDiscovered
+            existing.isArchived = dto.isArchived
             existing.ocvPreset = dto.ocvPreset
             existing.customOCVArrayString = dto.customOCVArrayString
         } else {
@@ -354,6 +356,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 isFavorite: dto.isFavorite,
                 lastMessageDate: dto.lastMessageDate,
                 unreadCount: dto.unreadCount,
+                isDiscovered: dto.isDiscovered,
+                isArchived: dto.isArchived,
                 ocvPreset: dto.ocvPreset,
                 customOCVArrayString: dto.customOCVArrayString
             )

@@ -173,7 +173,24 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    public func shareContact(publicKey: Data) async throws {
+        // No-op for mock
+    }
+
+    public func exportContact(publicKey: Data?) async throws -> String {
+        "meshcore://contact/mock"
+    }
+
+    public func importContact(cardData: Data) async throws {
+        // No-op for mock
+    }
+
     // MARK: - Test Helpers
+
+    /// Set the stubbed contacts (for actor-safe mutation from tests)
+    public func setStubbedContacts(_ contacts: [MeshContact]) {
+        stubbedContacts = contacts
+    }
 
     /// Resets all recorded invocations
     public func reset() {

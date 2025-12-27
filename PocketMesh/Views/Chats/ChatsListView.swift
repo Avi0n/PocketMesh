@@ -348,7 +348,15 @@ struct ConversationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             // Avatar
-            ContactAvatar(contact: contact, size: 44)
+            if contact.isArchived {
+                Image(systemName: "archivebox.fill")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 44, height: 44)
+                    .accessibilityLabel("\(contact.displayName), archived")
+            } else {
+                ContactAvatar(contact: contact, size: 44)
+            }
 
             // Content
             VStack(alignment: .leading, spacing: 4) {

@@ -61,6 +61,9 @@ public final class Contact {
     /// Contacts from NEW_ADVERT push have this set to true until explicitly added
     public var isDiscovered: Bool
 
+    /// Whether this contact has been removed from the device but preserved locally
+    public var isArchived: Bool
+
     /// Selected OCV preset name (nil = liIon default)
     public var ocvPreset: String?
 
@@ -86,6 +89,7 @@ public final class Contact {
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
         isDiscovered: Bool = false,
+        isArchived: Bool = false,
         ocvPreset: String? = nil,
         customOCVArrayString: String? = nil
     ) {
@@ -107,6 +111,7 @@ public final class Contact {
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.isDiscovered = isDiscovered
+        self.isArchived = isArchived
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
     }
@@ -219,6 +224,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let lastMessageDate: Date?
     public let unreadCount: Int
     public let isDiscovered: Bool
+    public let isArchived: Bool
     public let ocvPreset: String?
     public let customOCVArrayString: String?
 
@@ -241,6 +247,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
         self.isDiscovered = contact.isDiscovered
+        self.isArchived = contact.isArchived
         self.ocvPreset = contact.ocvPreset
         self.customOCVArrayString = contact.customOCVArrayString
     }
@@ -263,6 +270,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         isBlocked: Bool,
         isFavorite: Bool,
         isDiscovered: Bool,
+        isArchived: Bool,
         lastMessageDate: Date?,
         unreadCount: Int,
         ocvPreset: String? = nil,
@@ -284,6 +292,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isBlocked = isBlocked
         self.isFavorite = isFavorite
         self.isDiscovered = isDiscovered
+        self.isArchived = isArchived
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.ocvPreset = ocvPreset
@@ -348,5 +357,10 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
             longitude: longitude,
             lastModified: lastModified
         )
+    }
+
+    /// Converts to MeshContact for session operations
+    public func toMeshContact() -> MeshContact {
+        toContactFrame().toMeshContact()
     }
 }

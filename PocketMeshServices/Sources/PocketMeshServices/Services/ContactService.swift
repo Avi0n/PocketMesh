@@ -12,6 +12,7 @@ public enum ContactServiceError: Error, Sendable {
     case contactNotFound
     case contactTableFull
     case sessionError(MeshCoreError)
+    case restoreFailed(reason: String)
 }
 
 // MARK: - Sync Result
@@ -37,8 +38,8 @@ public actor ContactService {
 
     // MARK: - Properties
 
-    private let session: MeshCoreSession
-    private let dataStore: PersistenceStore
+    private let session: any MeshCoreSessionProtocol
+    private let dataStore: any PersistenceStoreProtocol
     private let logger = Logger(subsystem: "com.pocketmesh", category: "ContactService")
 
     /// Sync coordinator for UI refresh notifications
@@ -49,7 +50,7 @@ public actor ContactService {
 
     // MARK: - Initialization
 
-    public init(session: MeshCoreSession, dataStore: PersistenceStore) {
+    public init(session: any MeshCoreSessionProtocol, dataStore: any PersistenceStoreProtocol) {
         self.session = session
         self.dataStore = dataStore
     }
@@ -84,7 +85,34 @@ public actor ContactService {
 
             for meshContact in meshContacts {
                 let frame = meshContact.toContactFrame()
-                _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+                let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                // Unarchive contact if it was archived (contact is back on device)
+                if let existing = try await dataStore.fetchContact(id: contactID), existing.isArchived {
+                    let updated = ContactDTO(
+                        id: existing.id,
+                        deviceID: existing.deviceID,
+                        publicKey: existing.publicKey,
+                        name: existing.name,
+                        typeRawValue: existing.typeRawValue,
+                        flags: existing.flags,
+                        outPathLength: existing.outPathLength,
+                        outPath: existing.outPath,
+                        lastAdvertTimestamp: existing.lastAdvertTimestamp,
+                        latitude: existing.latitude,
+                        longitude: existing.longitude,
+                        lastModified: existing.lastModified,
+                        nickname: existing.nickname,
+                        isBlocked: existing.isBlocked,
+                        isFavorite: existing.isFavorite,
+                        isDiscovered: existing.isDiscovered,
+                        isArchived: false,
+                        lastMessageDate: existing.lastMessageDate,
+                        unreadCount: existing.unreadCount
+                    )
+                    try await dataStore.saveContact(updated)
+                }
+
                 receivedCount += 1
 
                 let modifiedTimestamp = UInt32(meshContact.lastModified.timeIntervalSince1970)
@@ -93,6 +121,37 @@ public actor ContactService {
                 }
 
                 syncProgressHandler?(receivedCount, meshContacts.count)
+            }
+
+            // Archive contacts no longer on device
+            let devicePublicKeys = Set(meshContacts.map { $0.publicKey })
+            let localContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+
+            for contact in localContacts where !contact.isArchived && !contact.isDiscovered {
+                if !devicePublicKeys.contains(contact.publicKey) {
+                    let updated = ContactDTO(
+                        id: contact.id,
+                        deviceID: contact.deviceID,
+                        publicKey: contact.publicKey,
+                        name: contact.name,
+                        typeRawValue: contact.typeRawValue,
+                        flags: contact.flags,
+                        outPathLength: contact.outPathLength,
+                        outPath: contact.outPath,
+                        lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                        latitude: contact.latitude,
+                        longitude: contact.longitude,
+                        lastModified: contact.lastModified,
+                        nickname: contact.nickname,
+                        isBlocked: contact.isBlocked,
+                        isFavorite: contact.isFavorite,
+                        isDiscovered: contact.isDiscovered,
+                        isArchived: true,
+                        lastMessageDate: contact.lastMessageDate,
+                        unreadCount: contact.unreadCount
+                    )
+                    try await dataStore.saveContact(updated)
+                }
             }
 
             return ContactSyncResult(
@@ -163,6 +222,58 @@ public actor ContactService {
             }
             throw ContactServiceError.sessionError(error)
         }
+    }
+
+    // MARK: - Restore Contact
+
+    /// Restores an archived contact to the device
+    /// - Parameter contactID: The ID of the contact to restore
+    /// - Throws: ContactServiceError if restore fails
+    public func restoreContact(contactID: UUID) async throws {
+        // Fetch contact
+        guard let contact = try await dataStore.fetchContact(id: contactID) else {
+            throw ContactServiceError.contactNotFound
+        }
+
+        guard contact.isArchived else {
+            return // Already on device, nothing to do
+        }
+
+        // Send to device
+        let frame = contact.toContactFrame()
+        let meshContact = frame.toMeshContact()
+        do {
+            try await session.addContact(meshContact)
+        } catch {
+            throw ContactServiceError.restoreFailed(reason: error.localizedDescription)
+        }
+
+        // Mark unarchived locally (sync will confirm)
+        let updated = ContactDTO(
+            id: contact.id,
+            deviceID: contact.deviceID,
+            publicKey: contact.publicKey,
+            name: contact.name,
+            typeRawValue: contact.typeRawValue,
+            flags: contact.flags,
+            outPathLength: contact.outPathLength,
+            outPath: contact.outPath,
+            lastAdvertTimestamp: contact.lastAdvertTimestamp,
+            latitude: contact.latitude,
+            longitude: contact.longitude,
+            lastModified: contact.lastModified,
+            nickname: contact.nickname,
+            isBlocked: contact.isBlocked,
+            isFavorite: contact.isFavorite,
+            isDiscovered: contact.isDiscovered,
+            isArchived: false,
+            lastMessageDate: contact.lastMessageDate,
+            unreadCount: contact.unreadCount
+        )
+        try await dataStore.saveContact(updated)
+
+        // Notify UI to refresh contacts list
+        await syncCoordinator?.notifyContactsChanged()
     }
 
     // MARK: - Reset Path

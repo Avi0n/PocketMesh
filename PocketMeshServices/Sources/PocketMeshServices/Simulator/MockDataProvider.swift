@@ -87,6 +87,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: now.addingTimeInterval(-1800),  // 30 min ago
                 unreadCount: 3
             ),
@@ -109,6 +110,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: true,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: now.addingTimeInterval(-900),  // 15 min ago
                 unreadCount: 0
             ),
@@ -131,6 +133,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -153,11 +156,12 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
 
-            // Eve Thompson - chat, blocked, 4 hops
+            // Eve Thompson - chat, blocked, archived, 4 hops
             ContactDTO(
                 id: eveThompsonID,
                 deviceID: simulatorDeviceID,
@@ -175,7 +179,8 @@ public enum MockDataProvider {
                 isBlocked: true,
                 isFavorite: false,
                 isDiscovered: false,
-                lastMessageDate: nil,
+                isArchived: true,
+                lastMessageDate: now.addingTimeInterval(-604600),  // 1 week ago
                 unreadCount: 0
             ),
 
@@ -197,6 +202,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: now.addingTimeInterval(-7200),  // 2 hours ago
                 unreadCount: 0
             ),
@@ -219,6 +225,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: false,
+                isArchived: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -241,6 +248,7 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isFavorite: false,
                 isDiscovered: true,  // Just discovered
+                isArchived: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             )
@@ -642,8 +650,82 @@ public enum MockDataProvider {
                 )
             ]
 
+        case eveThompsonID:
+            // Eve: archived contact with message history
+            return [
+                MessageDTO(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000001")!,
+                    deviceID: deviceID,
+                    contactID: contactID,
+                    channelIndex: nil,
+                    text: "Hey, can you pick up some groceries?",
+                    timestamp: UInt32(now.addingTimeInterval(-604800).timeIntervalSince1970),  // 1 week ago
+                    createdAt: now.addingTimeInterval(-604800),
+                    direction: .outgoing,
+                    status: .delivered,
+                    textType: .plain,
+                    ackCode: 54321,
+                    pathLength: 4,
+                    snr: nil,
+                    senderKeyPrefix: nil,
+                    senderNodeName: nil,
+                    isRead: true,
+                    replyToID: nil,
+                    roundTripTime: 4500,
+                    heardRepeats: 0,
+                    retryAttempt: 0,
+                    maxRetryAttempts: 3
+                ),
+                MessageDTO(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000002")!,
+                    deviceID: deviceID,
+                    contactID: contactID,
+                    channelIndex: nil,
+                    text: "Sure, what do you need?",
+                    timestamp: UInt32(now.addingTimeInterval(-604700).timeIntervalSince1970),
+                    createdAt: now.addingTimeInterval(-604700),
+                    direction: .incoming,
+                    status: .delivered,
+                    textType: .plain,
+                    ackCode: nil,
+                    pathLength: 4,
+                    snr: 3.2,
+                    senderKeyPrefix: mockPublicKey(seed: 50).prefix(6),
+                    senderNodeName: nil,
+                    isRead: true,
+                    replyToID: nil,
+                    roundTripTime: nil,
+                    heardRepeats: 0,
+                    retryAttempt: 0,
+                    maxRetryAttempts: 0
+                ),
+                MessageDTO(
+                    id: UUID(uuidString: "50000000-0000-0000-0000-000000000003")!,
+                    deviceID: deviceID,
+                    contactID: contactID,
+                    channelIndex: nil,
+                    text: "Milk and bread. Thanks!",
+                    timestamp: UInt32(now.addingTimeInterval(-604600).timeIntervalSince1970),
+                    createdAt: now.addingTimeInterval(-604600),
+                    direction: .outgoing,
+                    status: .delivered,
+                    textType: .plain,
+                    ackCode: 54322,
+                    pathLength: 4,
+                    snr: nil,
+                    senderKeyPrefix: nil,
+                    senderNodeName: nil,
+                    isRead: true,
+                    replyToID: nil,
+                    roundTripTime: 4200,
+                    heardRepeats: 0,
+                    retryAttempt: 0,
+                    maxRetryAttempts: 3
+                )
+            ]
+
         default:
-            // No messages for other contacts (Charlie, Diana, Eve, Ghost, Hannah)
+            // No messages for other contacts (Charlie, Diana, Ghost, Hannah)
             return []
         }
     }

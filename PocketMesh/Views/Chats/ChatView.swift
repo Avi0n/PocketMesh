@@ -25,7 +25,11 @@ struct ChatView: View {
     var body: some View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                inputBar
+                if contact.isArchived {
+                    archivedFooter
+                } else {
+                    inputBar
+                }
             }
             .keyboardAwareScrollEdgeEffect(isFocused: isInputFocused)
             .navigationTitle(contact.displayName)
@@ -243,6 +247,54 @@ struct ChatView: View {
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
             Task { await viewModel.sendMessage() }
+        }
+    }
+
+    // MARK: - Archived Footer
+
+    @ViewBuilder
+    private var archivedFooter: some View {
+        if #available(iOS 26, *) {
+            archivedFooterContent
+                .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                .padding(.horizontal)
+        } else {
+            archivedFooterContent
+                .background(.ultraThinMaterial)
+                .clipShape(.rect(cornerRadius: 20))
+                .padding(.horizontal)
+        }
+    }
+
+    private var archivedFooterContent: some View {
+        HStack {
+            Text("This contact is archived")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            restoreButton
+        }
+        .padding()
+    }
+
+    @ViewBuilder
+    private var restoreButton: some View {
+        if #available(iOS 26, *) {
+            Button("Restore", systemImage: "arrow.uturn.up") {
+                Task {
+                    try? await appState.services?.contactService.restoreContact(contactID: contact.id)
+                }
+            }
+            .buttonStyle(.glassProminent)
+            .accessibilityHint("Returns this contact to your mesh device so you can send messages")
+        } else {
+            Button("Restore", systemImage: "arrow.uturn.up") {
+                Task {
+                    try? await appState.services?.contactService.restoreContact(contactID: contact.id)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityHint("Returns this contact to your mesh device so you can send messages")
         }
     }
 }

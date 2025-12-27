@@ -28,6 +28,7 @@ final class ConversationFilteringTests: XCTestCase {
             isBlocked: false,
             isFavorite: isFavorite,
             isDiscovered: false,
+            isArchived: false,
             lastMessageDate: Date(),
             unreadCount: unreadCount
         )

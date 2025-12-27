@@ -270,7 +270,14 @@ struct ContactDetailView: View {
     private var profileSection: some View {
         Section {
             VStack(spacing: 16) {
-                ContactAvatar(contact: currentContact, size: 100)
+                if currentContact.isArchived {
+                    Image(systemName: "archivebox.fill")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                } else {
+                    ContactAvatar(contact: currentContact, size: 100)
+                }
 
                 VStack(spacing: 4) {
                     Text(currentContact.displayName)
@@ -280,6 +287,12 @@ struct ContactDetailView: View {
                     Text(contactTypeLabel)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    if currentContact.isArchived {
+                        Text("Archived")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
 
                     // Status indicators
                     HStack(spacing: 12) {
@@ -312,6 +325,17 @@ struct ContactDetailView: View {
 
     private var actionsSection: some View {
         Section {
+            // Restore button for archived contacts
+            if currentContact.isArchived {
+                Button("Restore to Device", systemImage: "arrow.uturn.up") {
+                    Task {
+                        try? await appState.services?.contactService.restoreContact(contactID: currentContact.id)
+                        await refreshContact()
+                    }
+                }
+                .accessibilityHint("Returns this contact to your mesh device so you can send messages")
+            }
+
             // Role-specific actions based on contact type
             switch currentContact.type {
             case .room:
