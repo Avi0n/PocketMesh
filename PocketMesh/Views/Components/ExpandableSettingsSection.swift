@@ -17,18 +17,12 @@ struct ExpandableSettingsSection<Content: View>: View {
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $isExpanded) {
-                // Priority: Show content as soon as ANY data is available
-                // This ensures partial data displays immediately while other queries complete
-                if isLoaded() {
-                    content()
-                } else if isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView("Loading...")
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                } else if let error {
+                // Always show content - individual fields handle nil/loading states
+                // with "loading..." overlays when their values haven't arrived yet
+                content()
+
+                // Show error banner if something failed
+                if let error, !isLoaded() {
                     VStack(spacing: 12) {
                         Label("Failed to load", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
@@ -41,19 +35,16 @@ struct ExpandableSettingsSection<Content: View>: View {
                         .buttonStyle(.bordered)
                     }
                     .padding(.vertical, 8)
-                } else {
-                    // Should auto-load, but show placeholder if not
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
                 }
             } label: {
                 HStack {
                     Label(title, systemImage: icon)
                     Spacer()
-                    if isLoaded() && !isLoading {
+                    if isLoading {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .padding(.trailing)
+                    } else if isLoaded() {
                         Button {
                             Task { await onLoad() }
                         } label: {
