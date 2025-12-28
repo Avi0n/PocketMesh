@@ -18,37 +18,42 @@ final class RepeaterSettingsViewModel {
     var deviceInfoLoaded: Bool { firmwareVersion != nil || deviceTime != nil }
 
     // Identity settings (from get name, get lat, get lon)
-    var name: String = ""
-    var latitude: Double = 0.0
-    var longitude: Double = 0.0
+    var name: String?
+    var latitude: Double?
+    var longitude: Double?
+    private var originalName: String?
+    private var originalLatitude: Double?
+    private var originalLongitude: Double?
     var isLoadingIdentity = false
     var identityError: String?
-    /// Tracks if ANY identity data has been received (not requiring ALL queries to complete)
-    private var hasReceivedIdentityData = false
-    var identityLoaded: Bool { hasReceivedIdentityData }
+    var identityLoaded: Bool { originalName != nil || originalLatitude != nil || originalLongitude != nil }
 
     // Radio settings (from get radio, get tx)
-    var frequency: Double = 915.0  // MHz
-    var bandwidth: Double = 250.0  // kHz
-    var spreadingFactor: Int = 10
-    var codingRate: Int = 5
-    var txPower: Int = 20  // dBm
+    var frequency: Double?
+    var bandwidth: Double?
+    var spreadingFactor: Int?
+    var codingRate: Int?
+    var txPower: Int?
     var isLoadingRadio = false
     var radioError: String?
-    /// Tracks if ANY radio data has been received (not requiring ALL queries to complete)
-    private var hasReceivedRadioData = false
-    var radioLoaded: Bool { hasReceivedRadioData }
+    var radioLoaded: Bool { frequency != nil || txPower != nil }
 
     // Behavior settings (from get repeat, get advert.interval, get flood.max)
-    var advertIntervalMinutes: Int = 60  // Firmware valid range: 60-240
-    var floodAdvertIntervalHours: Int = 3  // Firmware valid range: 3-48
-    var floodMaxHops: Int = 3
-    var repeaterEnabled: Bool = true
+    var advertIntervalMinutes: Int?
+    var floodAdvertIntervalHours: Int?
+    var floodMaxHops: Int?
+    var repeaterEnabled: Bool?
+    private var originalAdvertIntervalMinutes: Int?
+    private var originalFloodAdvertIntervalHours: Int?
+    private var originalFloodMaxHops: Int?
+    private var originalRepeaterEnabled: Bool?
     var isLoadingBehavior = false
     var behaviorError: String?
-    /// Tracks if ANY behavior data has been received (not requiring ALL queries to complete)
-    private var hasReceivedBehaviorData = false
-    var behaviorLoaded: Bool { hasReceivedBehaviorData }
+    var behaviorLoaded: Bool { repeaterEnabled != nil || advertIntervalMinutes != nil }
+
+    // Validation errors for behavior fields
+    var advertIntervalError: String?
+    var floodAdvertIntervalError: String?
 
     // Password change (no query available)
     var newPassword: String = ""
@@ -67,62 +72,103 @@ final class RepeaterSettingsViewModel {
     var errorMessage: String?
     var successMessage: String?
     var showSuccessAlert = false
+    var identityApplySuccess = false
+    var behaviorApplySuccess = false
 
     /// Track if radio settings have been modified (requires restart)
     var radioSettingsModified = false
 
     /// Track if identity settings have been modified
-    var identitySettingsModified = false
+    var identitySettingsModified: Bool {
+        (name != nil && name != originalName) ||
+        (latitude != nil && latitude != originalLatitude) ||
+        (longitude != nil && longitude != originalLongitude)
+    }
 
     /// Track if behavior settings have been modified
-    var behaviorSettingsModified = false
+    var behaviorSettingsModified: Bool {
+        (repeaterEnabled != nil && repeaterEnabled != originalRepeaterEnabled) ||
+        (advertIntervalMinutes != nil && advertIntervalMinutes != originalAdvertIntervalMinutes) ||
+        (floodAdvertIntervalHours != nil && floodAdvertIntervalHours != originalFloodAdvertIntervalHours) ||
+        (floodMaxHops != nil && floodMaxHops != originalFloodMaxHops)
+    }
 
     // MARK: - Dependencies
 
     private var repeaterAdminService: RepeaterAdminService?
     private let logger = Logger(subsystem: "PocketMesh", category: "RepeaterSettings")
 
-    // MARK: - Command Queue
+    /// Stream continuation for receiving CLI responses
+    private var responseStreamContinuation: AsyncStream<String>.Continuation?
 
-    /// Queue for CLI commands to prevent interleaving while allowing concurrent section requests
-    private var commandQueue: [@Sendable () async -> Void] = []
-    private var isProcessingQueue = false
-    private var processingTask: Task<Void, Never>?
-
-    /// Add a command to the queue and process if idle
-    private func enqueue(_ command: @escaping @Sendable () async -> Void) {
-        commandQueue.append(command)
-        processQueueIfIdle()
-    }
-
-    /// Process queued commands serially
-    private func processQueueIfIdle() {
-        guard !isProcessingQueue, !commandQueue.isEmpty else { return }
-        isProcessingQueue = true
-
-        processingTask = Task {
-            while !commandQueue.isEmpty && !Task.isCancelled {
-                let command = commandQueue.removeFirst()
-                await command()
-            }
-            await MainActor.run {
-                self.isProcessingQueue = false
-            }
-        }
-    }
+    /// Currently expected command (for logging/debugging)
+    private var currentCommand: String?
 
     // MARK: - Cleanup
 
-    /// Cancel all pending tasks when view disappears
-    /// Call from .onDisappear to prevent updates to deallocated ViewModel
+    /// Cancel any pending operations when view disappears
     func cleanup() {
-        processingTask?.cancel()
-        processingTask = nil
-        for (_, task) in timeoutTasks {
-            task.cancel()
+        responseStreamContinuation?.finish()
+        responseStreamContinuation = nil
+        currentCommand = nil
+    }
+
+    // MARK: - Synchronous Command-Response
+
+    /// Send a CLI command and wait for its response
+    /// - Parameters:
+    ///   - command: The CLI command to send (e.g., "get name", "ver")
+    ///   - timeout: Maximum time to wait for response (default 5 seconds)
+    /// - Returns: The raw response text from the repeater
+    /// - Throws: RepeaterSettingsError.timeout if no response received
+    private func sendAndWait(_ command: String, timeout: Duration = .seconds(5)) async throws -> String {
+        guard let session, let service = repeaterAdminService else {
+            throw RepeaterSettingsError.noService
         }
-        timeoutTasks.removeAll()
-        pendingQueries.removeAll()
+
+        currentCommand = command
+        defer {
+            currentCommand = nil
+            responseStreamContinuation?.finish()
+            responseStreamContinuation = nil
+        }
+
+        // Create stream FIRST (before sending command) to avoid missing fast responses
+        let (stream, continuation) = AsyncStream<String>.makeStream()
+        self.responseStreamContinuation = continuation
+
+        // Send command - response arrives via handleCLIResponse
+        _ = try await service.sendCommand(sessionID: session.id, command: command)
+        logger.debug("Sent command: \(command)")
+
+        // Race response against timeout
+        // Keep consuming responses until we get one that parses for our command
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                for await response in stream {
+                    // Validate response matches expected command
+                    let parsed = CLIResponse.parse(response, forQuery: command)
+                    if case .raw = parsed {
+                        // Unrecognized response - likely from a different command, keep waiting
+                        self.logger.warning("Discarding mismatched response '\(response.prefix(20))' for command '\(command)'")
+                    } else {
+                        return response
+                    }
+                }
+                throw RepeaterSettingsError.timeout
+            }
+
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw RepeaterSettingsError.timeout
+            }
+
+            guard let result = try await group.next() else {
+                throw RepeaterSettingsError.timeout
+            }
+            group.cancelAll()
+            return result
+        }
     }
 
     // MARK: - Configuration
@@ -133,409 +179,207 @@ final class RepeaterSettingsViewModel {
         self.name = session.name
     }
 
-    // MARK: - Pending Query Tracking
-
-    /// Track which queries are in-flight for response correlation
-    /// Uses Array (not Set) for deterministic FIFO ordering when correlating responses
-    private var pendingQueries: [String] = []
-
-    /// Per-section timeout tasks for clearing stale loading states
-    /// Using dictionary allows multiple sections to load concurrently with independent timeouts
-    private var timeoutTasks: [String: Task<Void, Never>] = [:]
-
     // MARK: - Fetch Methods (Pull-to-Load)
 
     /// Fetch device info (firmware version and time)
     func fetchDeviceInfo() async {
-        guard let session, let service = repeaterAdminService else { return }
-
         isLoadingDeviceInfo = true
-        pendingQueries.append("ver")
-        pendingQueries.append("clock")
         deviceInfoError = nil
-        startTimeout(for: "deviceInfo")
 
+        // Get firmware version
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "ver")
-            _ = try await service.sendCommand(sessionID: session.id, command: "clock")
+            let response = try await sendAndWait("ver")
+            if case .version(let version) = CLIResponse.parse(response, forQuery: "ver") {
+                self.firmwareVersion = version
+                logger.debug("Received firmware version: \(version)")
+            }
         } catch {
-            logger.error("Failed to query device info: \(error)")
-            deviceInfoError = error.localizedDescription
-            isLoadingDeviceInfo = false
-            pendingQueries.removeAll { $0 == "ver" || $0 == "clock" }
+            logger.warning("Failed to get firmware version: \(error)")
         }
+
+        // Get device time
+        do {
+            let response = try await sendAndWait("clock")
+            if case .deviceTime(let time) = CLIResponse.parse(response, forQuery: "clock") {
+                self.deviceTime = time
+                logger.debug("Received device time: \(time)")
+            }
+        } catch {
+            logger.warning("Failed to get device time: \(error)")
+        }
+
+        // Only show error if no data was received
+        if !deviceInfoLoaded {
+            deviceInfoError = "Failed to load device info"
+        }
+
+        isLoadingDeviceInfo = false
     }
 
     /// Fetch identity settings (name, latitude, longitude)
     func fetchIdentity() async {
-        guard let session, let service = repeaterAdminService else { return }
-
         isLoadingIdentity = true
-        identitySettingsModified = false  // Reset on fresh load
-        pendingQueries.append("get name")
-        pendingQueries.append("get lat")
-        pendingQueries.append("get lon")
         identityError = nil
-        startTimeout(for: "identity")
 
+        // Get name
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "get name")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get lat")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get lon")
+            let response = try await sendAndWait("get name")
+            if case .name(let n) = CLIResponse.parse(response, forQuery: "get name") {
+                self.name = n
+                self.originalName = n
+                logger.debug("Received name: \(n)")
+            }
         } catch {
-            logger.error("Failed to query identity: \(error)")
-            identityError = error.localizedDescription
-            isLoadingIdentity = false
-            pendingQueries.removeAll { ["get name", "get lat", "get lon"].contains($0) }
+            logger.warning("Failed to get name: \(error)")
         }
+
+        // Get latitude
+        do {
+            let response = try await sendAndWait("get lat")
+            if case .latitude(let lat) = CLIResponse.parse(response, forQuery: "get lat") {
+                self.latitude = lat
+                self.originalLatitude = lat
+                logger.debug("Received latitude: \(lat)")
+            }
+        } catch {
+            logger.warning("Failed to get latitude: \(error)")
+        }
+
+        // Get longitude
+        do {
+            let response = try await sendAndWait("get lon")
+            if case .longitude(let lon) = CLIResponse.parse(response, forQuery: "get lon") {
+                self.longitude = lon
+                self.originalLongitude = lon
+                logger.debug("Received longitude: \(lon)")
+            }
+        } catch {
+            logger.warning("Failed to get longitude: \(error)")
+        }
+
+        // Only show error if no data was received
+        if !identityLoaded {
+            identityError = "Failed to load identity settings"
+        }
+
+        isLoadingIdentity = false
     }
 
     /// Fetch radio settings (frequency, bandwidth, SF, CR, TX power)
     func fetchRadioSettings() async {
-        guard let session, let service = repeaterAdminService else { return }
-
         isLoadingRadio = true
-        pendingQueries.append("get radio")
-        pendingQueries.append("get tx")
         radioError = nil
-        startTimeout(for: "radio")
 
+        // Get radio parameters
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "get radio")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get tx")
+            let response = try await sendAndWait("get radio")
+            if case .radio(let freq, let bw, let sf, let cr) = CLIResponse.parse(response, forQuery: "get radio") {
+                self.frequency = freq
+                self.bandwidth = bw
+                self.spreadingFactor = sf
+                self.codingRate = cr
+                logger.debug("Received radio: \(freq),\(bw),\(sf),\(cr)")
+            }
         } catch {
-            logger.error("Failed to query radio settings: \(error)")
-            radioError = error.localizedDescription
-            isLoadingRadio = false
-            pendingQueries.removeAll { $0 == "get radio" || $0 == "get tx" }
+            logger.warning("Failed to get radio settings: \(error)")
         }
+
+        // Get TX power
+        do {
+            let response = try await sendAndWait("get tx")
+            if case .txPower(let power) = CLIResponse.parse(response, forQuery: "get tx") {
+                self.txPower = power
+                logger.debug("Received TX power: \(power)")
+            }
+        } catch {
+            logger.warning("Failed to get TX power: \(error)")
+        }
+
+        // Only show error if no data was received
+        if !radioLoaded {
+            radioError = "Failed to load radio settings"
+        }
+
+        isLoadingRadio = false
     }
 
     /// Fetch behavior settings (repeat mode, advert intervals, flood max)
     func fetchBehaviorSettings() async {
-        guard let session, let service = repeaterAdminService else { return }
-
         isLoadingBehavior = true
-        behaviorSettingsModified = false  // Reset on fresh load
-        pendingQueries.append("get repeat")
-        pendingQueries.append("get advert.interval")
-        pendingQueries.append("get flood.advert.interval")
-        pendingQueries.append("get flood.max")
         behaviorError = nil
-        startTimeout(for: "behavior")
 
+        // Get repeat mode
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "get repeat")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get advert.interval")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get flood.advert.interval")
-            _ = try await service.sendCommand(sessionID: session.id, command: "get flood.max")
-        } catch {
-            logger.error("Failed to query behavior settings: \(error)")
-            behaviorError = error.localizedDescription
-            isLoadingBehavior = false
-            pendingQueries.removeAll { ["get repeat", "get advert.interval", "get flood.advert.interval", "get flood.max"].contains($0) }
-        }
-    }
-
-    /// Start timeout for a section's loading state
-    /// Each section has its own independent timeout task
-    private func startTimeout(for section: String) {
-        // Cancel any existing timeout for this section
-        timeoutTasks[section]?.cancel()
-
-        timeoutTasks[section] = Task {
-            try? await Task.sleep(for: .seconds(10))
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                switch section {
-                case "deviceInfo":
-                    if isLoadingDeviceInfo {
-                        // Only show error if no data was received at all
-                        if !deviceInfoLoaded {
-                            deviceInfoError = "Request timed out"
-                        }
-                        isLoadingDeviceInfo = false
-                        pendingQueries.removeAll { $0 == "ver" || $0 == "clock" }
-                    }
-                case "identity":
-                    if isLoadingIdentity {
-                        // Only show error if no data was received at all
-                        if !hasReceivedIdentityData {
-                            identityError = "Request timed out"
-                        }
-                        isLoadingIdentity = false
-                        pendingQueries.removeAll { ["get name", "get lat", "get lon"].contains($0) }
-                    }
-                case "radio":
-                    if isLoadingRadio {
-                        // Only show error if no data was received at all
-                        if !hasReceivedRadioData {
-                            radioError = "Request timed out"
-                        }
-                        isLoadingRadio = false
-                        pendingQueries.removeAll { $0 == "get radio" || $0 == "get tx" }
-                    }
-                case "behavior":
-                    if isLoadingBehavior {
-                        // Only show error if no data was received at all
-                        if !hasReceivedBehaviorData {
-                            behaviorError = "Request timed out"
-                        }
-                        isLoadingBehavior = false
-                        pendingQueries.removeAll { ["get repeat", "get advert.interval", "get flood.advert.interval", "get flood.max"].contains($0) }
-                    }
-                default:
-                    break
-                }
-                timeoutTasks.removeValue(forKey: section)
+            let response = try await sendAndWait("get repeat")
+            if case .repeatMode(let enabled) = CLIResponse.parse(response, forQuery: "get repeat") {
+                self.repeaterEnabled = enabled
+                self.originalRepeaterEnabled = enabled
+                logger.debug("Received repeat mode: \(enabled)")
             }
+        } catch {
+            logger.warning("Failed to get repeat mode: \(error)")
         }
+
+        // Get advert interval
+        do {
+            let response = try await sendAndWait("get advert.interval")
+            if case .advertInterval(let minutes) = CLIResponse.parse(response, forQuery: "get advert.interval") {
+                self.advertIntervalMinutes = minutes
+                self.originalAdvertIntervalMinutes = minutes
+                logger.debug("Received advert interval: \(minutes)")
+            }
+        } catch {
+            logger.warning("Failed to get advert interval: \(error)")
+        }
+
+        // Get flood advert interval
+        do {
+            let response = try await sendAndWait("get flood.advert.interval")
+            if case .floodAdvertInterval(let hours) = CLIResponse.parse(response, forQuery: "get flood.advert.interval") {
+                self.floodAdvertIntervalHours = hours
+                self.originalFloodAdvertIntervalHours = hours
+                logger.debug("Received flood advert interval: \(hours) hours")
+            }
+        } catch {
+            logger.warning("Failed to get flood advert interval: \(error)")
+        }
+
+        // Get flood max
+        do {
+            let response = try await sendAndWait("get flood.max")
+            if case .floodMax(let hops) = CLIResponse.parse(response, forQuery: "get flood.max") {
+                self.floodMaxHops = hops
+                self.originalFloodMaxHops = hops
+                logger.debug("Received flood max: \(hops)")
+            }
+        } catch {
+            logger.warning("Failed to get flood max: \(error)")
+        }
+
+        // Only show error if no data was received
+        if !behaviorLoaded {
+            behaviorError = "Failed to load behavior settings"
+        }
+
+        isLoadingBehavior = false
     }
 
     // MARK: - CLI Response Handling
 
     /// Handle CLI response from push notification
-    /// Called by the handler registered in registerHandlers()
+    /// Yields to the waiting stream (does not finish - sendAndWait handles that)
     func handleCLIResponse(_ message: ContactMessage, from contact: ContactDTO) {
         // Verify response is for our session
         guard let expectedPrefix = session?.publicKeyPrefix,
               contact.publicKeyPrefix == expectedPrefix else {
-            return  // Ignore responses for other sessions
+            return
         }
 
-        // Determine which query this response is for based on pending queries
-        // IMPORTANT: Order matters - check specific patterns before broad ones
-        // Priority: specific patterns (ver, clock, radio) → numeric patterns (lat, lon, tx, intervals) → catch-all (name)
-        var trimmedText = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        // Strip MeshCore CLI prompt prefix if present (must match CLIResponse.parse() behavior)
-        // Firmware prepends "> " to all CLI command responses
-        if trimmedText.hasPrefix("> ") {
-            trimmedText = String(trimmedText.dropFirst(2))
-        }
-
-        let queryHint = pendingQueries.first { query in
-            switch query {
-            // Most specific patterns first
-            case "ver": return message.text.contains("MeshCore") || (message.text.hasPrefix("v") && message.text.contains("("))
-            case "clock": return message.text.contains("UTC") || (message.text.contains(":") && message.text.contains("/"))
-            case "get radio": return message.text.contains(",") && message.text.split(separator: ",").count >= 4
-            case "get repeat": return trimmedText.lowercased() == "on" || trimmedText.lowercased() == "off"
-            // Numeric patterns - use FIFO matching since all return integers/doubles
-            // The first pending query expecting a numeric response gets matched
-            case "get lat":
-                return pendingQueries.first == "get lat"
-                    && Double(trimmedText) != nil && !message.text.contains(",")
-            case "get lon":
-                return pendingQueries.first == "get lon"
-                    && Double(trimmedText) != nil && !message.text.contains(",")
-            case "get tx":
-                return pendingQueries.first == "get tx"
-                    && Int(trimmedText) != nil && !message.text.contains(",")
-            case "get advert.interval":
-                return pendingQueries.first == "get advert.interval"
-                    && Int(trimmedText) != nil && !message.text.contains(",")
-            case "get flood.advert.interval":
-                return pendingQueries.first == "get flood.advert.interval"
-                    && Int(trimmedText) != nil && !message.text.contains(",")
-            case "get flood.max":
-                return pendingQueries.first == "get flood.max"
-                    && Int(trimmedText) != nil && !message.text.contains(",")
-            // Catch-all for text responses - checked LAST
-            case "get name": return !message.text.contains(",") && !message.text.contains("UTC") && !message.text.contains("(") && Double(trimmedText) == nil
-            default: return false
-            }
-        }
-
-        let response = CLIResponse.parse(message.text, forQuery: queryHint)
-
-        switch response {
-        case .version(let version):
-            self.firmwareVersion = version
-            pendingQueries.removeAll { $0 == "ver" }
-            checkDeviceInfoComplete()
-            logger.debug("Received firmware version: \(version)")
-
-        case .deviceTime(let time):
-            self.deviceTime = time
-            pendingQueries.removeAll { $0 == "clock" }
-            checkDeviceInfoComplete()
-            logger.debug("Received device time: \(time)")
-
-        case .name(let name):
-            self.name = name
-            pendingQueries.removeAll { $0 == "get name" }
-            checkIdentityComplete()
-            logger.debug("Received name: \(name)")
-
-        case .latitude(let lat):
-            self.latitude = lat
-            pendingQueries.removeAll { $0 == "get lat" }
-            checkIdentityComplete()
-            logger.debug("Received latitude: \(lat)")
-
-        case .longitude(let lon):
-            self.longitude = lon
-            pendingQueries.removeAll { $0 == "get lon" }
-            checkIdentityComplete()
-            logger.debug("Received longitude: \(lon)")
-
-        case .radio(let freq, let bw, let sf, let cr):
-            self.frequency = freq
-            self.bandwidth = bw
-            self.spreadingFactor = sf
-            self.codingRate = cr
-            pendingQueries.removeAll { $0 == "get radio" }
-            checkRadioComplete()
-            logger.debug("Received radio: \(freq),\(bw),\(sf),\(cr)")
-
-        case .txPower(let power):
-            self.txPower = power
-            pendingQueries.removeAll { $0 == "get tx" }
-            checkRadioComplete()
-            logger.debug("Received TX power: \(power)")
-
-        case .repeatMode(let enabled):
-            self.repeaterEnabled = enabled
-            pendingQueries.removeAll { $0 == "get repeat" }
-            checkBehaviorComplete()
-            logger.debug("Received repeat mode: \(enabled)")
-
-        case .advertInterval(let minutes):
-            self.advertIntervalMinutes = minutes
-            pendingQueries.removeAll { $0 == "get advert.interval" }
-            checkBehaviorComplete()
-            logger.debug("Received advert interval: \(minutes)")
-
-        case .floodAdvertInterval(let hours):
-            self.floodAdvertIntervalHours = hours
-            pendingQueries.removeAll { $0 == "get flood.advert.interval" }
-            checkBehaviorComplete()
-            logger.debug("Received flood advert interval: \(hours) hours")
-
-        case .floodMax(let hops):
-            self.floodMaxHops = hops
-            pendingQueries.removeAll { $0 == "get flood.max" }
-            checkBehaviorComplete()
-            logger.debug("Received flood max: \(hops)")
-
-        case .error(let message):
-            handleErrorResponse(message)
-            logger.warning("CLI error response: \(message)")
-
-        case .unknownCommand(let message):
-            // Handle gracefully - firmware may not support this command
-            // Remove the pending query and log, but don't treat as fatal error
-            handleUnknownCommand(message)
-            logger.info("Unknown command response (firmware may not support): \(message)")
-
-        case .ok:
-            // Generic success for set commands - clear first pending set query (FIFO order)
-            if let index = pendingQueries.firstIndex(where: { $0.hasPrefix("set ") || $0 == "password" }) {
-                pendingQueries.remove(at: index)
-            }
-
-        case .raw(let text):
-            // Unknown response format - remove first pending query (FIFO order)
-            logger.debug("Unrecognized CLI response: \(text)")
-            if !pendingQueries.isEmpty {
-                pendingQueries.removeFirst()
-            }
-        }
-    }
-
-    private func checkDeviceInfoComplete() {
-        if !pendingQueries.contains("ver") && !pendingQueries.contains("clock") {
-            isLoadingDeviceInfo = false
-            timeoutTasks["deviceInfo"]?.cancel()
-            timeoutTasks.removeValue(forKey: "deviceInfo")
-        }
-    }
-
-    private func checkIdentityComplete() {
-        // Mark as having received data (shows partial results immediately)
-        hasReceivedIdentityData = true
-        identityError = nil  // Clear error when we receive valid data
-
-        // Stop loading spinner when ALL queries complete
-        let identityQueries = ["get name", "get lat", "get lon"]
-        if identityQueries.allSatisfy({ !pendingQueries.contains($0) }) {
-            isLoadingIdentity = false
-            timeoutTasks["identity"]?.cancel()
-            timeoutTasks.removeValue(forKey: "identity")
-        }
-    }
-
-    private func checkRadioComplete() {
-        // Mark as having received data (shows partial results immediately)
-        hasReceivedRadioData = true
-        radioError = nil  // Clear error when we receive valid data
-
-        // Stop loading spinner when ALL queries complete
-        if !pendingQueries.contains("get radio") && !pendingQueries.contains("get tx") {
-            isLoadingRadio = false
-            timeoutTasks["radio"]?.cancel()
-            timeoutTasks.removeValue(forKey: "radio")
-        }
-    }
-
-    private func checkBehaviorComplete() {
-        // Mark as having received data (shows partial results immediately)
-        hasReceivedBehaviorData = true
-        behaviorError = nil  // Clear error when we receive valid data
-
-        // Stop loading spinner when ALL queries complete
-        let behaviorQueries = ["get repeat", "get advert.interval", "get flood.advert.interval", "get flood.max"]
-        if behaviorQueries.allSatisfy({ !pendingQueries.contains($0) }) {
-            isLoadingBehavior = false
-            timeoutTasks["behavior"]?.cancel()
-            timeoutTasks.removeValue(forKey: "behavior")
-        }
-    }
-
-    private func handleErrorResponse(_ message: String) {
-        // Match error to the appropriate section based on pending queries
-        if pendingQueries.contains("ver") || pendingQueries.contains("clock") {
-            deviceInfoError = message
-            pendingQueries.removeAll { $0 == "ver" || $0 == "clock" }
-            isLoadingDeviceInfo = false
-            timeoutTasks["deviceInfo"]?.cancel()
-            timeoutTasks.removeValue(forKey: "deviceInfo")
-        } else if pendingQueries.contains("get name") || pendingQueries.contains("get lat") || pendingQueries.contains("get lon") {
-            identityError = message
-            pendingQueries.removeAll { ["get name", "get lat", "get lon"].contains($0) }
-            isLoadingIdentity = false
-            timeoutTasks["identity"]?.cancel()
-            timeoutTasks.removeValue(forKey: "identity")
-        } else if pendingQueries.contains("get radio") || pendingQueries.contains("get tx") {
-            radioError = message
-            pendingQueries.removeAll { $0 == "get radio" || $0 == "get tx" }
-            isLoadingRadio = false
-            timeoutTasks["radio"]?.cancel()
-            timeoutTasks.removeValue(forKey: "radio")
-        } else if pendingQueries.contains(where: { $0.hasPrefix("get ") }) {
-            behaviorError = message
-            pendingQueries.removeAll { $0.hasPrefix("get ") }
-            isLoadingBehavior = false
-            timeoutTasks["behavior"]?.cancel()
-            timeoutTasks.removeValue(forKey: "behavior")
-        }
-    }
-
-    /// Handle "unknown command" responses gracefully
-    /// Some firmware versions may not support all get commands
-    private func handleUnknownCommand(_ message: String) {
-        // Remove the first pending query (FIFO order) that might have caused this
-        // Don't treat as fatal - just clear the pending query and let section complete
-        if !pendingQueries.isEmpty {
-            let query = pendingQueries.removeFirst()
-            logger.debug("Cleared pending query '\(query)' due to unknown command response")
-
-            // Trigger completion checks - section may still be usable with partial data
-            checkDeviceInfoComplete()
-            checkIdentityComplete()
-            checkRadioComplete()
-            checkBehaviorComplete()
+        // Yield to waiting stream (don't finish - let sendAndWait validate and decide)
+        if let continuation = responseStreamContinuation {
+            continuation.yield(message.text)
+        } else {
+            logger.debug("Response with no waiting command: \(message.text.prefix(50))")
         }
     }
 
@@ -552,25 +396,41 @@ final class RepeaterSettingsViewModel {
     // MARK: - Settings Actions
 
     /// Apply all radio settings including TX power (requires restart)
-    /// This is the only section with an explicit Apply button
     func applyRadioSettings() async {
-        guard let session, let service = repeaterAdminService else { return }
+        guard let frequency, let bandwidth, let spreadingFactor, let codingRate, let txPower else {
+            errorMessage = "Radio settings not loaded"
+            return
+        }
 
         isApplying = true
         errorMessage = nil
 
         do {
-            // Format: set radio {freq},{bw},{sf},{cr}
+            var allSucceeded = true
+
             let radioCommand = "set radio \(frequency),\(bandwidth),\(spreadingFactor),\(codingRate)"
-            _ = try await service.sendCommand(sessionID: session.id, command: radioCommand)
+            let radioResponse = try await sendAndWait(radioCommand)
+            if case .ok = CLIResponse.parse(radioResponse) {
+                // Radio params accepted
+            } else {
+                allSucceeded = false
+            }
 
-            // Format: set tx {dbm}
             let txCommand = "set tx \(txPower)"
-            _ = try await service.sendCommand(sessionID: session.id, command: txCommand)
+            let txResponse = try await sendAndWait(txCommand)
+            if case .ok = CLIResponse.parse(txResponse) {
+                // TX power accepted
+            } else {
+                allSucceeded = false
+            }
 
-            radioSettingsModified = false
-            successMessage = "Radio settings applied. Restart device to take effect."
-            showSuccessAlert = true
+            if allSucceeded {
+                radioSettingsModified = false
+                successMessage = "Radio settings applied. Restart device to take effect."
+                showSuccessAlert = true
+            } else {
+                errorMessage = "Some radio settings failed to apply"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -578,21 +438,52 @@ final class RepeaterSettingsViewModel {
         isApplying = false
     }
 
-    /// Apply all identity settings (name, latitude, longitude)
+    /// Apply only changed identity settings (name, latitude, longitude)
     func applyIdentitySettings() async {
-        guard let session, let service = repeaterAdminService else { return }
-
         isApplying = true
         errorMessage = nil
 
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "set name \(name)")
-            _ = try await service.sendCommand(sessionID: session.id, command: "set lat \(latitude)")
-            _ = try await service.sendCommand(sessionID: session.id, command: "set lon \(longitude)")
+            var allSucceeded = true
 
-            identitySettingsModified = false
-            successMessage = "Identity settings applied"
-            showSuccessAlert = true
+            if let name, name != originalName {
+                let response = try await sendAndWait("set name \(name)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalName = name
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if let latitude, latitude != originalLatitude {
+                let response = try await sendAndWait("set lat \(latitude)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalLatitude = latitude
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if let longitude, longitude != originalLongitude {
+                let response = try await sendAndWait("set lon \(longitude)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalLongitude = longitude
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if allSucceeded {
+                withAnimation {
+                    isApplying = false
+                    identityApplySuccess = true
+                }
+                try? await Task.sleep(for: .seconds(1.5))
+                withAnimation { identityApplySuccess = false }
+                return
+            } else {
+                errorMessage = "Some settings failed to apply"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -600,22 +491,84 @@ final class RepeaterSettingsViewModel {
         isApplying = false
     }
 
-    /// Apply all behavior settings (repeat mode, intervals, flood max)
+    /// Apply only changed behavior settings (repeat mode, intervals, flood max)
     func applyBehaviorSettings() async {
-        guard let session, let service = repeaterAdminService else { return }
+        // Clear previous validation errors
+        advertIntervalError = nil
+        floodAdvertIntervalError = nil
+
+        // Validate 0-hop interval: accepts 0 (disabled) or 60-240
+        if let interval = advertIntervalMinutes {
+            if interval != 0 && (interval < 60 || interval > 240) {
+                advertIntervalError = "Accepts 0 (disabled) or 60-240 min"
+            }
+        }
+
+        // Validate flood interval: accepts 3-48
+        if let interval = floodAdvertIntervalHours {
+            if interval < 3 || interval > 48 {
+                floodAdvertIntervalError = "Accepts 3-48 hours"
+            }
+        }
+
+        // Don't proceed if validation failed
+        if advertIntervalError != nil || floodAdvertIntervalError != nil {
+            return
+        }
 
         isApplying = true
         errorMessage = nil
 
         do {
-            _ = try await service.sendCommand(sessionID: session.id, command: "set repeat \(repeaterEnabled ? "on" : "off")")
-            _ = try await service.sendCommand(sessionID: session.id, command: "set advert.interval \(advertIntervalMinutes)")
-            _ = try await service.sendCommand(sessionID: session.id, command: "set flood.advert.interval \(floodAdvertIntervalHours)")
-            _ = try await service.sendCommand(sessionID: session.id, command: "set flood.max \(floodMaxHops)")
+            var allSucceeded = true
 
-            behaviorSettingsModified = false
-            successMessage = "Behavior settings applied"
-            showSuccessAlert = true
+            if let repeaterEnabled, repeaterEnabled != originalRepeaterEnabled {
+                let response = try await sendAndWait("set repeat \(repeaterEnabled ? "on" : "off")")
+                if case .ok = CLIResponse.parse(response) {
+                    originalRepeaterEnabled = repeaterEnabled
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if let advertIntervalMinutes, advertIntervalMinutes != originalAdvertIntervalMinutes {
+                let response = try await sendAndWait("set advert.interval \(advertIntervalMinutes)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalAdvertIntervalMinutes = advertIntervalMinutes
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if let floodAdvertIntervalHours, floodAdvertIntervalHours != originalFloodAdvertIntervalHours {
+                let response = try await sendAndWait("set flood.advert.interval \(floodAdvertIntervalHours)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalFloodAdvertIntervalHours = floodAdvertIntervalHours
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if let floodMaxHops, floodMaxHops != originalFloodMaxHops {
+                let response = try await sendAndWait("set flood.max \(floodMaxHops)")
+                if case .ok = CLIResponse.parse(response) {
+                    originalFloodMaxHops = floodMaxHops
+                } else {
+                    allSucceeded = false
+                }
+            }
+
+            if allSucceeded {
+                withAnimation {
+                    isApplying = false
+                    behaviorApplySuccess = true
+                }
+                try? await Task.sleep(for: .seconds(1.5))
+                withAnimation { behaviorApplySuccess = false }
+                return
+            } else {
+                errorMessage = "Some settings failed to apply"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -625,16 +578,14 @@ final class RepeaterSettingsViewModel {
 
     // MARK: - Location Picker Support
 
-    /// Update location from map picker (sets modified flag, does not apply)
+    /// Update location from map picker (triggers modified detection via computed property)
     func setLocationFromPicker(latitude: Double, longitude: Double) {
         self.latitude = latitude
         self.longitude = longitude
-        identitySettingsModified = true
     }
 
     /// Change admin password (requires explicit action due to security)
     func changePassword() async {
-        guard let session, let service = repeaterAdminService else { return }
         guard !newPassword.isEmpty else {
             errorMessage = "Password cannot be empty"
             return
@@ -648,12 +599,15 @@ final class RepeaterSettingsViewModel {
         errorMessage = nil
 
         do {
-            let command = "password \(newPassword)"
-            _ = try await service.sendCommand(sessionID: session.id, command: command)
-            successMessage = "Password changed successfully"
-            showSuccessAlert = true
-            newPassword = ""
-            confirmPassword = ""
+            let response = try await sendAndWait("password \(newPassword)")
+            if case .ok = CLIResponse.parse(response) {
+                successMessage = "Password changed successfully"
+                showSuccessAlert = true
+                newPassword = ""
+                confirmPassword = ""
+            } else {
+                errorMessage = "Failed to change password"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -699,11 +653,14 @@ final class RepeaterSettingsViewModel {
 
 enum RepeaterSettingsError: LocalizedError {
     case notConnected
+    case timeout
+    case noService
 
     var errorDescription: String? {
         switch self {
-        case .notConnected:
-            return "Not connected to repeater"
+        case .notConnected: return "Not connected to repeater"
+        case .timeout: return "Command timed out"
+        case .noService: return "Repeater service not available"
         }
     }
 }

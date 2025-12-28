@@ -5,11 +5,13 @@ import CoreLocation
 struct RepeaterSettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var focusedField: RadioField?
+    @FocusState private var focusedField: Field?
 
-    private enum RadioField: Hashable {
+    private enum Field: Hashable {
         case frequency
         case txPower
+        case advertInterval
+        case floodAdvertInterval
     }
 
     let session: RemoteNodeSessionDTO
@@ -29,8 +31,8 @@ struct RepeaterSettingsView: View {
             identitySection
             behaviorSection
             securitySection
-            actionsSection
             deviceInfoSection
+            actionsSection
         }
         .navigationTitle("Repeater Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -66,8 +68,8 @@ struct RepeaterSettingsView: View {
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(
                 initialCoordinate: CLLocationCoordinate2D(
-                    latitude: viewModel.latitude,
-                    longitude: viewModel.longitude
+                    latitude: viewModel.latitude ?? 0,
+                    longitude: viewModel.longitude ?? 0
                 )
             ) { coordinate in
                 viewModel.setLocationFromPicker(
@@ -78,7 +80,7 @@ struct RepeaterSettingsView: View {
         }
     }
 
-    // MARK: - Header Section (with connection status)
+    // MARK: - Header Section
 
     private var headerSection: some View {
         Section {
@@ -88,14 +90,6 @@ struct RepeaterSettingsView: View {
                     NodeAvatar(publicKey: session.publicKey, role: .repeater, size: 60)
                     Text(session.name)
                         .font(.headline)
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(.green)
-                            .frame(width: 8, height: 8)
-                        Text("Connected")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
                 Spacer()
             }
@@ -137,7 +131,7 @@ struct RepeaterSettingsView: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.yellow)
-                    Text("Changes require device restart")
+                    Text("Applying these changes will restart the repeater")
                         .font(.subheadline)
                 }
                 .padding()
@@ -149,17 +143,30 @@ struct RepeaterSettingsView: View {
             HStack {
                 Text("Frequency (MHz)")
                 Spacer()
-                TextField("MHz", value: $viewModel.frequency, format: .number.precision(.fractionLength(3)))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 100)
-                    .focused($focusedField, equals: .frequency)
-                    .onChange(of: viewModel.frequency) { _, _ in
-                        viewModel.radioSettingsModified = true
-                    }
+                if let frequency = viewModel.frequency {
+                    TextField("MHz", value: Binding(
+                        get: { frequency },
+                        set: { viewModel.frequency = $0 }
+                    ), format: .number.precision(.fractionLength(3)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 100)
+                        .focused($focusedField, equals: .frequency)
+                        .onChange(of: viewModel.frequency) { _, _ in
+                            viewModel.radioSettingsModified = true
+                        }
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 100, alignment: .trailing)
+                }
             }
 
-            Picker("Bandwidth (kHz)", selection: $viewModel.bandwidth) {
+            Picker("Bandwidth (kHz)", selection: Binding(
+                get: { viewModel.bandwidth ?? 125.0 },
+                set: { viewModel.bandwidth = $0 }
+            )) {
                 ForEach(bandwidthOptionsKHz, id: \.self) { bwKHz in
                     Text("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kHz")
                         .tag(bwKHz)
@@ -173,7 +180,10 @@ struct RepeaterSettingsView: View {
                 viewModel.radioSettingsModified = true
             }
 
-            Picker("Spreading Factor", selection: $viewModel.spreadingFactor) {
+            Picker("Spreading Factor", selection: Binding(
+                get: { viewModel.spreadingFactor ?? 10 },
+                set: { viewModel.spreadingFactor = $0 }
+            )) {
                 ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
                     Text("SF\(sf)")
                         .tag(sf)
@@ -187,7 +197,10 @@ struct RepeaterSettingsView: View {
                 viewModel.radioSettingsModified = true
             }
 
-            Picker("Coding Rate", selection: $viewModel.codingRate) {
+            Picker("Coding Rate", selection: Binding(
+                get: { viewModel.codingRate ?? 8 },
+                set: { viewModel.codingRate = $0 }
+            )) {
                 ForEach(RadioOptions.codingRates, id: \.self) { cr in
                     Text("\(cr)")
                         .tag(cr)
@@ -204,14 +217,24 @@ struct RepeaterSettingsView: View {
             HStack {
                 Text("TX Power (dBm)")
                 Spacer()
-                TextField("dBm", value: $viewModel.txPower, format: .number)
-                    .keyboardType(.numberPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 60)
-                    .focused($focusedField, equals: .txPower)
-                    .onChange(of: viewModel.txPower) { _, _ in
-                        viewModel.radioSettingsModified = true
-                    }
+                if let txPower = viewModel.txPower {
+                    TextField("dBm", value: Binding(
+                        get: { txPower },
+                        set: { viewModel.txPower = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused($focusedField, equals: .txPower)
+                        .onChange(of: viewModel.txPower) { _, _ in
+                            viewModel.radioSettingsModified = true
+                        }
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 60, alignment: .trailing)
+                }
             }
 
             // Single Apply button for all radio settings
@@ -244,34 +267,65 @@ struct RepeaterSettingsView: View {
             error: $viewModel.identityError,
             onLoad: { await viewModel.fetchIdentity() }
         ) {
-            TextField("Name", text: $viewModel.name)
-                .textContentType(.name)
-                .onChange(of: viewModel.name) { _, _ in
-                    viewModel.identitySettingsModified = true
+            if let name = viewModel.name {
+                TextField("Name", text: Binding(
+                    get: { name },
+                    set: { viewModel.name = $0 }
+                ))
+                    .textContentType(.name)
+            } else if viewModel.isLoadingIdentity {
+                HStack {
+                    Text("Name")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            } else {
+                TextField("Name", text: Binding(
+                    get: { "" },
+                    set: { viewModel.name = $0 }
+                ))
+                    .textContentType(.name)
+            }
 
             HStack {
                 Text("Latitude")
                 Spacer()
-                TextField("Lat", value: $viewModel.latitude, format: .number.precision(.fractionLength(6)))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 120)
-                    .onChange(of: viewModel.latitude) { _, _ in
-                        viewModel.identitySettingsModified = true
-                    }
+                if let latitude = viewModel.latitude {
+                    TextField("Lat", value: Binding(
+                        get: { latitude },
+                        set: { viewModel.latitude = $0 }
+                    ), format: .number.precision(.fractionLength(6)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 120)
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 120, alignment: .trailing)
+                }
             }
 
             HStack {
                 Text("Longitude")
                 Spacer()
-                TextField("Lon", value: $viewModel.longitude, format: .number.precision(.fractionLength(6)))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 120)
-                    .onChange(of: viewModel.longitude) { _, _ in
-                        viewModel.identitySettingsModified = true
-                    }
+                if let longitude = viewModel.longitude {
+                    TextField("Lon", value: Binding(
+                        get: { longitude },
+                        set: { viewModel.longitude = $0 }
+                    ), format: .number.precision(.fractionLength(6)))
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 120)
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 120, alignment: .trailing)
+                }
             }
 
             Button {
@@ -287,13 +341,19 @@ struct RepeaterSettingsView: View {
                     Spacer()
                     if viewModel.isApplying {
                         ProgressView()
+                    } else if viewModel.identityApplySuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
                     } else {
                         Text("Apply Identity Settings")
+                            .transition(.opacity)
                     }
                     Spacer()
                 }
+                .animation(.default, value: viewModel.identityApplySuccess)
             }
-            .disabled(viewModel.isApplying || !viewModel.identitySettingsModified)
+            .disabled(viewModel.isApplying || viewModel.identityApplySuccess || !viewModel.identitySettingsModified)
         }
     }
 
@@ -309,25 +369,81 @@ struct RepeaterSettingsView: View {
             error: $viewModel.behaviorError,
             onLoad: { await viewModel.fetchBehaviorSettings() }
         ) {
-            Toggle("Repeater Mode", isOn: $viewModel.repeaterEnabled)
-                .onChange(of: viewModel.repeaterEnabled) { _, _ in
-                    viewModel.behaviorSettingsModified = true
+            Toggle("Repeater Mode", isOn: Binding(
+                get: { viewModel.repeaterEnabled ?? false },
+                set: { viewModel.repeaterEnabled = $0 }
+            ))
+                .overlay(alignment: .trailing) {
+                    if viewModel.repeaterEnabled == nil && viewModel.isLoadingBehavior {
+                        Text("loading...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.trailing, 60)
+                    }
                 }
 
-            Stepper("Advert Interval (0-hop): \(viewModel.advertIntervalMinutes) min", value: $viewModel.advertIntervalMinutes, in: 60...240)
-                .onChange(of: viewModel.advertIntervalMinutes) { _, _ in
-                    viewModel.behaviorSettingsModified = true
+            HStack {
+                Text("Advert Interval (0-hop)")
+                Spacer()
+                if let interval = viewModel.advertIntervalMinutes {
+                    TextField("min", value: Binding(
+                        get: { interval },
+                        set: { viewModel.advertIntervalMinutes = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused($focusedField, equals: .advertInterval)
+                    Text("min")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            }
 
-            Stepper("Advert Interval (flood): \(viewModel.floodAdvertIntervalHours) hours", value: $viewModel.floodAdvertIntervalHours, in: 3...48)
-                .onChange(of: viewModel.floodAdvertIntervalHours) { _, _ in
-                    viewModel.behaviorSettingsModified = true
-                }
+            if let error = viewModel.advertIntervalError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
 
-            Stepper("Max Flood Hops: \(viewModel.floodMaxHops)", value: $viewModel.floodMaxHops, in: 0...10)
-                .onChange(of: viewModel.floodMaxHops) { _, _ in
-                    viewModel.behaviorSettingsModified = true
+            HStack {
+                Text("Advert Interval (flood)")
+                Spacer()
+                if let interval = viewModel.floodAdvertIntervalHours {
+                    TextField("hrs", value: Binding(
+                        get: { interval },
+                        set: { viewModel.floodAdvertIntervalHours = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused($focusedField, equals: .floodAdvertInterval)
+                    Text("hrs")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            }
+
+            if let error = viewModel.floodAdvertIntervalError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            Stepper(
+                "Max Flood Hops: \(viewModel.floodMaxHops.map { "\($0)" } ?? "...")",
+                value: Binding(
+                    get: { viewModel.floodMaxHops ?? 4 },
+                    set: { viewModel.floodMaxHops = $0 }
+                ),
+                in: 0...10
+            )
 
             Button {
                 Task { await viewModel.applyBehaviorSettings() }
@@ -336,13 +452,19 @@ struct RepeaterSettingsView: View {
                     Spacer()
                     if viewModel.isApplying {
                         ProgressView()
+                    } else if viewModel.behaviorApplySuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
                     } else {
                         Text("Apply Behavior Settings")
+                            .transition(.opacity)
                     }
                     Spacer()
                 }
+                .animation(.default, value: viewModel.behaviorApplySuccess)
             }
-            .disabled(viewModel.isApplying || !viewModel.behaviorSettingsModified)
+            .disabled(viewModel.isApplying || viewModel.behaviorApplySuccess || !viewModel.behaviorSettingsModified)
         }
     }
 
