@@ -12,6 +12,11 @@ struct TracePathView: View {
     @State private var dragHapticTrigger = 0
     @State private var copyHapticTrigger = 0
 
+    @State private var showingSavedPaths = false
+    @State private var showingSaveDialog = false
+    @State private var savePathName = ""
+    @State private var saveHapticTrigger = 0
+
     var body: some View {
         List {
             headerSection
@@ -24,8 +29,13 @@ struct TracePathView: View {
         .navigationTitle("Trace Path")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                EditButton()
+            ToolbarItem(placement: .primaryAction) {
+                HStack(spacing: 16) {
+                    Button("Saved", systemImage: "bookmark") {
+                        showingSavedPaths = true
+                    }
+                    EditButton()
+                }
             }
         }
         .environment(\.editMode, $editMode)
@@ -35,6 +45,12 @@ struct TracePathView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
+        .sheet(isPresented: $showingSavedPaths) {
+            SavedPathsSheet { selectedPath in
+                viewModel.loadSavedPath(selectedPath)
+            }
+        }
+        .sensoryFeedback(.success, trigger: saveHapticTrigger)
         .task {
             viewModel.configure(appState: appState)
             viewModel.startListening()
@@ -100,6 +116,13 @@ struct TracePathView: View {
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
                 }
+
+                if viewModel.isRunningSavedPath {
+                    Button("Clear Path", systemImage: "xmark.circle", role: .destructive) {
+                        viewModel.clearSavedPath()
+                    }
+                    .foregroundStyle(.red)
+                }
             }
         } header: {
             Text("Outbound Path")
@@ -133,7 +156,7 @@ struct TracePathView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(repeater.displayName)
-                                Text(String(format: "%02X", repeater.publicKey[0]))
+                                Text(repeater.publicKey[0].hexString)
                                     .font(.caption.monospaced())
                                     .foregroundStyle(.secondary)
                             }
@@ -161,13 +184,22 @@ struct TracePathView: View {
                         TraceResultHopRow(hop: hop)
                     }
 
-                    // Duration row
-                    HStack {
-                        Text("Round Trip")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(result.durationMs) ms")
-                            .font(.body.monospacedDigit())
+                    // Duration row with optional comparison
+                    if viewModel.isRunningSavedPath, let previous = viewModel.previousRun {
+                        comparisonRow(currentMs: result.durationMs, previousRun: previous)
+                    } else {
+                        HStack {
+                            Text("Round Trip")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(result.durationMs) ms")
+                                .font(.body.monospacedDigit())
+                        }
+                    }
+
+                    // Save path action (only for successful traces when not running a saved path)
+                    if !viewModel.isRunningSavedPath {
+                        savePathRow
                     }
                 } else if let error = result.errorMessage {
                     Label(error, systemImage: "exclamationmark.triangle")
@@ -176,6 +208,107 @@ struct TracePathView: View {
             }
         } header: {
             Text("Trace Results")
+        }
+    }
+
+    // MARK: - Save Path Row
+
+    @ViewBuilder
+    private var savePathRow: some View {
+        if showingSaveDialog {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Path name", text: $savePathName)
+                    .textFieldStyle(.roundedBorder)
+
+                HStack {
+                    Button("Cancel") {
+                        showingSaveDialog = false
+                        savePathName = ""
+                    }
+                    .buttonStyle(.bordered)
+
+                    Spacer()
+
+                    Button("Save") {
+                        Task {
+                            let success = await viewModel.savePath(name: savePathName)
+                            if success {
+                                saveHapticTrigger += 1
+                            }
+                            showingSaveDialog = false
+                            savePathName = ""
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(savePathName.trimmingCharacters(in: .whitespaces).isEmpty || !viewModel.canSavePath)
+                }
+            }
+            .padding(.vertical, 4)
+        } else {
+            Button {
+                savePathName = viewModel.generatePathName()
+                showingSaveDialog = true
+            } label: {
+                HStack {
+                    Label("Save Path", systemImage: "bookmark")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .foregroundStyle(.primary)
+            .disabled(!viewModel.canSavePath)
+        }
+    }
+
+    // MARK: - Comparison Row
+
+    @ViewBuilder
+    private func comparisonRow(currentMs: Int, previousRun: TracePathRunDTO) -> some View {
+        let diff = currentMs - previousRun.roundTripMs
+        let percentChange = previousRun.roundTripMs > 0
+            ? Double(diff) / Double(previousRun.roundTripMs) * 100
+            : 0
+
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Round Trip")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(currentMs) ms")
+                    .font(.body.monospacedDigit())
+
+                // Change indicator
+                if diff != 0 {
+                    Text(diff > 0 ? "▲" : "▼")
+                        .foregroundStyle(diff > 0 ? .red : .green)
+                    Text(abs(percentChange), format: .number.precision(.fractionLength(0)))
+                        .font(.caption.monospacedDigit())
+                    + Text("%")
+                        .font(.caption)
+                }
+            }
+
+            Text("vs. \(previousRun.roundTripMs) ms on \(previousRun.date.formatted(date: .abbreviated, time: .omitted))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        // Sparkline with history link
+        if let savedPath = viewModel.activeSavedPath, !savedPath.recentRTTs.isEmpty {
+            HStack {
+                MiniSparkline(values: savedPath.recentRTTs)
+                    .frame(height: 20)
+
+                Spacer()
+
+                NavigationLink {
+                    SavedPathDetailView(savedPath: savedPath)
+                } label: {
+                    Text("View \(savedPath.runCount) runs")
+                        .font(.caption)
+                }
+            }
         }
     }
 
@@ -228,11 +361,11 @@ private struct TracePathHopRow: View {
         VStack(alignment: .leading) {
             if let name = hop.resolvedName {
                 Text(name)
-                Text(String(format: "%02X", hop.hashByte))
+                Text(hop.hashByte.hexString)
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
             } else {
-                Text(String(format: "%02X", hop.hashByte))
+                Text(hop.hashByte.hexString)
                     .font(.body.monospaced())
             }
         }
@@ -264,7 +397,7 @@ private struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 } else if let hashByte = hop.hashByte {
                     HStack {
-                        Text(String(format: "%02X", hashByte))
+                        Text(hashByte.hexString)
                             .font(.body.monospaced())
                         if let name = hop.resolvedName {
                             Text(name)
@@ -276,9 +409,9 @@ private struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // SNR display (only for intermediate hops and end node)
+                // SNR display (not for start node - we're the sender)
                 if hop.isStartNode {
-                    // No SNR for start node - we're the sender
+                    // No SNR for start node
                 } else if hop.isEndNode {
                     Text("Return SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
                         .font(.caption)
@@ -292,7 +425,7 @@ private struct TraceResultHopRow: View {
 
             Spacer()
 
-            // Signal strength indicator (only for intermediate hops and end node)
+            // Signal strength indicator (not for start node - we're the sender)
             if !hop.isStartNode {
                 Image(systemName: "cellularbars", variableValue: hop.signalLevel)
                     .foregroundStyle(hop.signalColor)

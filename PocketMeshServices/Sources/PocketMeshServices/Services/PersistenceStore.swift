@@ -29,7 +29,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         Message.self,
         Channel.self,
         RemoteNodeSession.self,
-        RoomMessage.self
+        RoomMessage.self,
+        SavedTracePath.self,
+        TracePathRun.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -210,6 +212,15 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let channels = try modelContext.fetch(FetchDescriptor(predicate: channelPredicate))
         for channel in channels {
             modelContext.delete(channel)
+        }
+
+        // Delete associated saved trace paths (runs cascade automatically)
+        let pathPredicate = #Predicate<SavedTracePath> { path in
+            path.deviceID == targetID
+        }
+        let paths = try modelContext.fetch(FetchDescriptor(predicate: pathPredicate))
+        for path in paths {
+            modelContext.delete(path)
         }
 
         // Delete the device
@@ -1256,5 +1267,100 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         var descriptor = FetchDescriptor(predicate: predicate)
         descriptor.fetchLimit = 1
         return try modelContext.fetch(descriptor).first.map { ContactDTO(from: $0) }
+    }
+
+    // MARK: - Saved Trace Path Operations
+
+    public func fetchSavedTracePaths(deviceID: UUID) throws -> [SavedTracePathDTO] {
+        let targetDeviceID = deviceID
+        let descriptor = FetchDescriptor<SavedTracePath>(
+            predicate: #Predicate { $0.deviceID == targetDeviceID },
+            sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
+        )
+        let paths = try modelContext.fetch(descriptor)
+        return paths.map { SavedTracePathDTO(from: $0) }
+    }
+
+    public func fetchSavedTracePath(id: UUID) throws -> SavedTracePathDTO? {
+        let targetID = id
+        let descriptor = FetchDescriptor<SavedTracePath>(
+            predicate: #Predicate { $0.id == targetID }
+        )
+        guard let path = try modelContext.fetch(descriptor).first else { return nil }
+        return SavedTracePathDTO(from: path)
+    }
+
+    public func createSavedTracePath(
+        deviceID: UUID,
+        name: String,
+        pathBytes: Data,
+        initialRun: TracePathRunDTO?
+    ) throws -> SavedTracePathDTO {
+        let path = SavedTracePath(
+            deviceID: deviceID,
+            name: name,
+            pathBytes: pathBytes
+        )
+
+        if let runDTO = initialRun {
+            let run = TracePathRun(
+                id: runDTO.id,
+                date: runDTO.date,
+                success: runDTO.success,
+                roundTripMs: runDTO.roundTripMs,
+                hopsData: (try? JSONEncoder().encode(runDTO.hopsSNR)) ?? Data()
+            )
+            run.savedPath = path
+            path.runs.append(run)
+            modelContext.insert(run)
+        }
+
+        modelContext.insert(path)
+        try modelContext.save()
+        return SavedTracePathDTO(from: path)
+    }
+
+    public func updateSavedTracePathName(id: UUID, name: String) throws {
+        let targetID = id
+        let descriptor = FetchDescriptor<SavedTracePath>(
+            predicate: #Predicate { $0.id == targetID }
+        )
+        guard let path = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.fetchFailed("SavedTracePath not found")
+        }
+        path.name = name
+        try modelContext.save()
+    }
+
+    public func deleteSavedTracePath(id: UUID) throws {
+        let targetID = id
+        let descriptor = FetchDescriptor<SavedTracePath>(
+            predicate: #Predicate { $0.id == targetID }
+        )
+        guard let path = try modelContext.fetch(descriptor).first else { return }
+        modelContext.delete(path)
+        try modelContext.save()
+    }
+
+    public func appendTracePathRun(pathID: UUID, run runDTO: TracePathRunDTO) throws {
+        let targetID = pathID
+        let descriptor = FetchDescriptor<SavedTracePath>(
+            predicate: #Predicate { $0.id == targetID }
+        )
+        guard let path = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.fetchFailed("SavedTracePath not found")
+        }
+
+        let run = TracePathRun(
+            id: runDTO.id,
+            date: runDTO.date,
+            success: runDTO.success,
+            roundTripMs: runDTO.roundTripMs,
+            hopsData: (try? JSONEncoder().encode(runDTO.hopsSNR)) ?? Data()
+        )
+        run.savedPath = path
+        path.runs.append(run)
+        modelContext.insert(run)
+        try modelContext.save()
     }
 }
