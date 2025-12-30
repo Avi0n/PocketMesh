@@ -146,6 +146,9 @@ public actor AdvertisementService {
         case .pathResponse(let result):
             await handlePathDiscoveryResponse(result: result, deviceID: deviceID)
 
+        case .traceData(let traceInfo):
+            await handleTraceData(traceInfo: traceInfo, deviceID: deviceID)
+
         default:
             break
         }
@@ -315,6 +318,19 @@ public actor AdvertisementService {
             pathDiscoveryHandler?(result)
         } catch {
             logger.error("Error handling path discovery response: \(error.localizedDescription)")
+        }
+    }
+
+    /// Handle trace data response
+    private func handleTraceData(traceInfo: TraceInfo, deviceID: UUID) async {
+        logger.info("Received trace data: tag=\(traceInfo.tag), hops=\(traceInfo.path.count)")
+        // Post notification for ViewModel to handle
+        await MainActor.run {
+            NotificationCenter.default.post(
+                name: .traceDataReceived,
+                object: nil,
+                userInfo: ["traceInfo": traceInfo, "deviceID": deviceID]
+            )
         }
     }
 }
