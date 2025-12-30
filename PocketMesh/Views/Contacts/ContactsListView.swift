@@ -67,6 +67,12 @@ struct ContactsListView: View {
                             Label("Discovery", systemImage: "antenna.radiowaves.left.and.right")
                         }
 
+                        NavigationLink {
+                            TracePathView()
+                        } label: {
+                            Label("Trace Path", systemImage: "point.3.connected.trianglepath.dotted")
+                        }
+
                         Divider()
 
                         Button {
