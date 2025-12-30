@@ -60,11 +60,28 @@ final class TracePathViewModel {
     var isRunning = false
     var result: TraceResult?
 
+    // MARK: - Saved Path State
+
+    var activeSavedPath: SavedTracePathDTO?
+    var isRunningSavedPath: Bool { activeSavedPath != nil }
+    /// Returns the second-most-recent successful run for comparison display
+    var previousRun: TracePathRunDTO? {
+        let successfulRuns = activeSavedPath?.runs
+            .filter { $0.success }
+            .sorted(by: { $0.date > $1.date }) ?? []
+        return successfulRuns.count >= 2 ? successfulRuns[1] : nil
+    }
+
     // MARK: - Trace Correlation
 
     private var pendingTag: UInt32?
     private var traceStartTime: Date?
     private var traceTask: Task<Void, Never>?
+
+    // MARK: - Path Hash Tracking (for save validation)
+
+    private var pendingPathHash: [UInt8]?
+    private var resultPathHash: [UInt8]?
 
     // MARK: - Event Subscription
 
@@ -102,12 +119,18 @@ final class TracePathViewModel {
 
     /// Comma-separated path string for display/copy
     var fullPathString: String {
-        fullPathBytes.map { String(format: "%02X", $0) }.joined(separator: ",")
+        fullPathBytes.map { $0.hexString }.joined(separator: ",")
     }
 
     /// Can run trace if path has at least one hop and device connected
     var canRunTrace: Bool {
         !outboundPath.isEmpty && appState?.connectedDevice != nil && !isRunning
+    }
+
+    /// Can save path if result is successful and path hasn't changed since trace ran
+    var canSavePath: Bool {
+        guard let result, result.success else { return false }
+        return fullPathBytes == resultPathHash
     }
 
     // MARK: - Configuration
@@ -148,22 +171,119 @@ final class TracePathViewModel {
         let hashByte = repeater.publicKey[0]
         let hop = PathHop(hashByte: hashByte, resolvedName: repeater.displayName)
         outboundPath.append(hop)
+        activeSavedPath = nil
+        resultPathHash = nil
+        pendingPathHash = nil
     }
 
     /// Remove a repeater from the path
     func removeRepeater(at index: Int) {
         guard outboundPath.indices.contains(index) else { return }
         outboundPath.remove(at: index)
+        activeSavedPath = nil
+        resultPathHash = nil
+        pendingPathHash = nil
     }
 
     /// Move a repeater within the path
     func moveRepeater(from source: IndexSet, to destination: Int) {
         outboundPath.move(fromOffsets: source, toOffset: destination)
+        activeSavedPath = nil
+        resultPathHash = nil
+        pendingPathHash = nil
     }
 
     /// Copy full path string to clipboard
     func copyPathToClipboard() {
         UIPasteboard.general.string = fullPathString
+    }
+
+    /// Generate a default name from the path (e.g., "Tower → ... → Ridge")
+    func generatePathName() -> String {
+        let names = outboundPath.compactMap { $0.resolvedName }
+        switch names.count {
+        case 0:
+            return "Path \(fullPathString.prefix(8))"
+        case 1:
+            return names[0]
+        case 2:
+            return "\(names[0]) → \(names[1])"
+        default:
+            return "\(names[0]) → ... → \(names[names.count - 1])"
+        }
+    }
+
+    /// Save the current path with the given name
+    /// - Returns: `true` if save succeeded, `false` otherwise
+    @discardableResult
+    func savePath(name: String) async -> Bool {
+        guard let appState,
+              let deviceID = appState.connectedDevice?.id,
+              let dataStore = appState.services?.dataStore,
+              let result = result, result.success else { return false }
+
+        // Create initial run DTO (filter to intermediate hops only)
+        let hopsSNR = result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode }
+            .map { $0.snr }
+        let initialRun = TracePathRunDTO(
+            id: UUID(),
+            date: Date(),
+            success: true,
+            roundTripMs: result.durationMs,
+            hopsSNR: hopsSNR
+        )
+
+        do {
+            let savedPath = try await dataStore.createSavedTracePath(
+                deviceID: deviceID,
+                name: name,
+                pathBytes: Data(fullPathBytes),
+                initialRun: initialRun
+            )
+            activeSavedPath = savedPath
+            logger.info("Saved path: \(name)")
+            return true
+        } catch {
+            logger.error("Failed to save path: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Load a saved path into the builder
+    func loadSavedPath(_ savedPath: SavedTracePathDTO) {
+        // Clear existing path
+        outboundPath.removeAll()
+        result = nil
+        resultPathHash = nil
+        pendingPathHash = nil
+
+        // Reconstruct outbound path from saved bytes
+        // The saved pathBytes contains full path (outbound + return)
+        // We need to extract just the outbound portion
+        let fullPath = savedPath.pathHashBytes
+        guard !fullPath.isEmpty else { return }
+
+        // Outbound is first half (rounded up)
+        let outboundCount = (fullPath.count + 1) / 2
+        let outboundBytes = Array(fullPath.prefix(outboundCount))
+
+        for hashByte in outboundBytes {
+            let name = resolveHashToName(hashByte)
+            outboundPath.append(PathHop(hashByte: hashByte, resolvedName: name))
+        }
+
+        activeSavedPath = savedPath
+        logger.info("Loaded saved path: \(savedPath.name) with \(outboundBytes.count) hops")
+    }
+
+    /// Clear the saved path state (reset to fresh builder)
+    func clearSavedPath() {
+        activeSavedPath = nil
+        outboundPath.removeAll()
+        result = nil
+        resultPathHash = nil
+        pendingPathHash = nil
     }
 
     // MARK: - Trace Execution
@@ -179,6 +299,8 @@ final class TracePathViewModel {
 
         isRunning = true
         result = nil
+        resultPathHash = nil
+        pendingPathHash = fullPathBytes
 
         // Generate random tag for correlation
         let tag = UInt32.random(in: 0...UInt32.max)
@@ -200,6 +322,31 @@ final class TracePathViewModel {
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
             result = .sendFailed("Failed to send trace packet")
+            resultPathHash = nil
+            pendingPathHash = nil
+
+            // Record failed run for saved paths
+            if let savedPath = activeSavedPath,
+               let dataStore = appState.services?.dataStore {
+                let failedRun = TracePathRunDTO(
+                    id: UUID(),
+                    date: Date(),
+                    success: false,
+                    roundTripMs: 0,
+                    hopsSNR: []
+                )
+                Task { @MainActor in
+                    do {
+                        try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
+                        if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                            activeSavedPath = updated
+                        }
+                    } catch {
+                        logger.error("Failed to record send failure: \(error.localizedDescription)")
+                    }
+                }
+            }
+
             isRunning = false
             pendingTag = nil
             return
@@ -214,6 +361,29 @@ final class TracePathViewModel {
                 if !Task.isCancelled && pendingTag == tag {
                     logger.warning("Trace timeout for tag \(tag)")
                     result = .timeout()
+                    resultPathHash = nil
+                    pendingPathHash = nil
+
+                    // Record failed run for saved paths
+                    if let savedPath = activeSavedPath,
+                       let dataStore = appState.services?.dataStore {
+                        let failedRun = TracePathRunDTO(
+                            id: UUID(),
+                            date: Date(),
+                            success: false,
+                            roundTripMs: 0,
+                            hopsSNR: []
+                        )
+                        do {
+                            try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
+                            if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                                activeSavedPath = updated
+                            }
+                        } catch {
+                            logger.error("Failed to record timeout: \(error.localizedDescription)")
+                        }
+                    }
+
                     isRunning = false
                     pendingTag = nil
                 }
@@ -285,10 +455,51 @@ final class TracePathViewModel {
             errorMessage: nil
         )
 
+        // Transfer path hash on success
+        resultPathHash = pendingPathHash
+        pendingPathHash = nil
+
         isRunning = false
         pendingTag = nil
         traceStartTime = nil
 
+        // Auto-append run if this is a saved path
+        if let savedPath = activeSavedPath,
+           let dataStore = appState?.services?.dataStore {
+            let hopsSNR = hops
+                .filter { !$0.isStartNode && !$0.isEndNode }
+                .map { $0.snr }
+            let runDTO = TracePathRunDTO(
+                id: UUID(),
+                date: Date(),
+                success: true,
+                roundTripMs: durationMs,
+                hopsSNR: hopsSNR
+            )
+
+            Task { @MainActor in
+                do {
+                    try await dataStore.appendTracePathRun(pathID: savedPath.id, run: runDTO)
+                    // Refresh saved path to get updated runs
+                    if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                        activeSavedPath = updated
+                    }
+                    logger.info("Appended run to saved path")
+                } catch {
+                    logger.error("Failed to append run: \(error.localizedDescription)")
+                }
+            }
+        }
+
         logger.info("Trace completed: \(hops.count) hops, \(durationMs)ms")
     }
+
+    // MARK: - Testing Support
+
+    #if DEBUG
+    /// Test helper to set pending tag without running a full trace
+    func setPendingTagForTesting(_ tag: UInt32) {
+        pendingTag = tag
+    }
+    #endif
 }

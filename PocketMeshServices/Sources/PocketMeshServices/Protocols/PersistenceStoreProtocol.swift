@@ -126,4 +126,24 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Clear unread count for a channel
     func clearChannelUnreadCount(channelID: UUID) async throws
+
+    // MARK: - Saved Trace Paths
+
+    /// Fetch all saved trace paths for a device
+    func fetchSavedTracePaths(deviceID: UUID) async throws -> [SavedTracePathDTO]
+
+    /// Fetch a single saved trace path by ID
+    func fetchSavedTracePath(id: UUID) async throws -> SavedTracePathDTO?
+
+    /// Create a new saved trace path
+    func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO
+
+    /// Update a saved trace path's name
+    func updateSavedTracePathName(id: UUID, name: String) async throws
+
+    /// Delete a saved trace path
+    func deleteSavedTracePath(id: UUID) async throws
+
+    /// Append a run to a saved trace path
+    func appendTracePathRun(pathID: UUID, run: TracePathRunDTO) async throws
 }
