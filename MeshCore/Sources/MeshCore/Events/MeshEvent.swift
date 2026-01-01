@@ -300,6 +300,16 @@ public enum MeshEvent: Sendable {
     /// Emitted in response to ``MeshCoreSession/sendNodeDiscoverRequest(filter:prefixOnly:tag:since:)``.
     case discoverResponse(DiscoverResponse)
 
+    /// Indicates an advertisement path response.
+    ///
+    /// Emitted in response to advertisement path queries (0x16).
+    case advertPathResponse(AdvertPathResponse)
+
+    /// Indicates a tuning parameters response.
+    ///
+    /// Emitted in response to tuning parameters queries (0x17).
+    case tuningParamsResponse(TuningParamsResponse)
+
     // MARK: - Key Management
 
     /// Indicates that a private key was exported.
@@ -692,18 +702,42 @@ public struct TraceInfo: Sendable, Equatable {
 
 /// Represents a node in a trace path.
 public struct TraceNode: Sendable, Equatable {
-    /// The hash of the node's public key, if available.
-    public let hash: UInt8?
+    /// The hash bytes of the node's public key, if available.
+    /// Size depends on path_sz flag: 1, 2, 4, or 8 bytes.
+    /// Nil for destination node or if hash is 0xFF (single-byte mode).
+    public let hashBytes: Data?
+
     /// The signal-to-noise ratio at this hop.
     public let snr: Double
 
-    /// Initializes a new trace node object.
-    /// 
+    /// Legacy accessor: first byte of hash, or nil if no hash.
+    /// Use hashBytes for multi-byte hashes (path_sz > 0).
+    public var hash: UInt8? {
+        guard let bytes = hashBytes, !bytes.isEmpty else { return nil }
+        return bytes[0]
+    }
+
+    /// Initializes a new trace node with hash bytes.
+    ///
     /// - Parameters:
-    ///   - hash: The node hash.
+    ///   - hashBytes: The hash bytes (nil for destination).
+    ///   - snr: The signal-to-noise ratio.
+    public init(hashBytes: Data?, snr: Double) {
+        self.hashBytes = hashBytes
+        self.snr = snr
+    }
+
+    /// Legacy initializer for single-byte hashes.
+    ///
+    /// - Parameters:
+    ///   - hash: Single-byte hash (nil for destination).
     ///   - snr: The signal-to-noise ratio.
     public init(hash: UInt8?, snr: Double) {
-        self.hash = hash
+        if let h = hash {
+            self.hashBytes = Data([h])
+        } else {
+            self.hashBytes = nil
+        }
         self.snr = snr
     }
 }
@@ -981,6 +1015,50 @@ public struct DiscoverResponse: Sendable, Equatable {
         self.pathLength = pathLength
         self.tag = tag
         self.publicKey = publicKey
+    }
+}
+
+/// Represents an advertisement path response.
+///
+/// Contains the path data received in response to an advertisement path query.
+public struct AdvertPathResponse: Sendable, Equatable {
+    /// The timestamp when the advertisement was received.
+    public let recvTimestamp: UInt32
+    /// The length of the path in bytes.
+    public let pathLength: UInt8
+    /// The raw path data.
+    public let path: Data
+
+    /// Initializes a new advertisement path response.
+    ///
+    /// - Parameters:
+    ///   - recvTimestamp: The receive timestamp.
+    ///   - pathLength: The path length.
+    ///   - path: The path data.
+    public init(recvTimestamp: UInt32, pathLength: UInt8, path: Data) {
+        self.recvTimestamp = recvTimestamp
+        self.pathLength = pathLength
+        self.path = path
+    }
+}
+
+/// Represents a tuning parameters response.
+///
+/// Contains radio tuning parameters used for adaptive timing calculations.
+public struct TuningParamsResponse: Sendable, Equatable {
+    /// The base delay for receive operations in milliseconds.
+    public let rxDelayBase: Double
+    /// The airtime scaling factor.
+    public let airtimeFactor: Double
+
+    /// Initializes a new tuning parameters response.
+    ///
+    /// - Parameters:
+    ///   - rxDelayBase: The RX delay base in milliseconds.
+    ///   - airtimeFactor: The airtime factor.
+    public init(rxDelayBase: Double, airtimeFactor: Double) {
+        self.rxDelayBase = rxDelayBase
+        self.airtimeFactor = airtimeFactor
     }
 }
 

@@ -518,26 +518,49 @@ public enum PacketBuilder: Sendable {
 
     // MARK: - Additional Commands (from Python reference)
 
-    /// Builds an updateContact command to modify contact properties or routing.
+    /// Builds an updateContact command to sync a full contact record to firmware.
     ///
-    /// - Parameters:
-    ///   - publicKey: The 32-byte public key of the contact.
-    ///   - flags: Optional 8-bit flags to set.
-    ///   - pathLen: Optional path length to update.
-    ///   - path: Optional path data (up to 64 bytes).
-    /// - Returns: The command packet data.
-    public static func updateContact(publicKey: Data, flags: UInt8? = nil, pathLen: Int8? = nil, path: Data? = nil) -> Data {
-        var data = Data([CommandCode.updateContact.rawValue])
-        data.append(publicKey.prefix(32))
-        // Flags and path update logic based on Python reference
-        if let flags = flags {
-            data.append(flags)
-        }
-        if let pathLen = pathLen, let path = path {
-            data.append(UInt8(bitPattern: pathLen))
-            data.append(path.prefix(64))
-        }
-        return data
+    /// - Parameter contact: The contact to update.
+    /// - Returns: The command packet data (147 bytes).
+    ///
+    /// ### Binary Format
+    /// (Per firmware MyMesh.cpp updateContactFromFrame and Python meshcore_py)
+    /// - Offset 0 (1 byte): Command code `0x09`
+    /// - Offset 1 (32 bytes): Public key
+    /// - Offset 33 (1 byte): Type
+    /// - Offset 34 (1 byte): Flags
+    /// - Offset 35 (1 byte): Out path length (signed Int8 as UInt8)
+    /// - Offset 36 (64 bytes): Out path (zero-padded)
+    /// - Offset 100 (32 bytes): Advertised name (UTF-8, zero-padded)
+    /// - Offset 132 (4 bytes): Last advert timestamp (UInt32 LE)
+    /// - Offset 136 (4 bytes): Latitude (Int32 LE, scaled by 1,000,000)
+    /// - Offset 140 (4 bytes): Longitude (Int32 LE, scaled by 1,000,000)
+    /// - Offset 144 (3 bytes): Reserved/padding (zeros)
+    ///
+    /// Total: 147 bytes
+    public static func updateContact(_ contact: MeshContact) -> Data {
+        var data = Data([CommandCode.updateContact.rawValue])              // 1 byte
+        data.append(contact.publicKey.paddedOrTruncated(to: 32))           // 32 bytes
+        data.append(contact.type)                                           // 1 byte
+        data.append(contact.flags)                                          // 1 byte
+        data.append(UInt8(bitPattern: contact.outPathLength))               // 1 byte
+        data.append(contact.outPath.paddedOrTruncated(to: 64))              // 64 bytes
+        data.append(contact.advertisedName.utf8PaddedOrTruncated(to: 32))   // 32 bytes
+
+        let timestamp = UInt32(contact.lastAdvertisement.timeIntervalSince1970)
+        data.appendLittleEndian(timestamp)                                  // 4 bytes
+
+        let lat = Int32(contact.latitude * 1_000_000)
+        data.appendLittleEndian(lat)                                        // 4 bytes
+
+        let lon = Int32(contact.longitude * 1_000_000)
+        data.appendLittleEndian(lon)                                        // 4 bytes
+
+        // Total: 1 + 32 + 1 + 1 + 1 + 64 + 32 + 4 + 4 + 4 = 144 bytes
+        // Firmware expects 147, so add 3 reserved bytes
+        data.append(contentsOf: [0x00, 0x00, 0x00])                         // 3 bytes
+
+        return data  // 147 bytes
     }
 
     /// Builds a setTuning command to adjust low-level radio timing.
@@ -735,8 +758,15 @@ public enum PacketBuilder: Sendable {
     /// Builds a factoryReset command to wipe all settings and data from the device.
     ///
     /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// (Per firmware MyMesh.cpp - requires guard string)
+    /// - Offset 0 (1 byte): Command code `0x33`
+    /// - Offset 1 (5 bytes): Guard string "reset" (UTF-8)
     public static func factoryReset() -> Data {
-        Data([CommandCode.factoryReset.rawValue])
+        var data = Data([CommandCode.factoryReset.rawValue])
+        data.append(contentsOf: "reset".utf8)
+        return data
     }
 
     // MARK: - Control Data Commands
@@ -778,5 +808,81 @@ public enum PacketBuilder: Sendable {
             data.append(contentsOf: withUnsafeBytes(of: since.littleEndian) { Array($0) })
         }
         return data
+    }
+
+    // MARK: - Additional Commands (Issue #1)
+
+    /// Builds a sendRawData command to send raw data through the mesh.
+    ///
+    /// - Parameters:
+    ///   - path: The routing path data.
+    ///   - payload: The raw payload to send.
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x19`
+    /// - Offset 1 (1 byte): Path length
+    /// - Offset 2 (N bytes): Path data
+    /// - Offset 2+N (M bytes): Payload
+    public static func sendRawData(path: Data, payload: Data) -> Data {
+        var data = Data([CommandCode.sendRawData.rawValue])
+        let clampedPath = path.prefix(255)
+        data.append(UInt8(clampedPath.count))
+        data.append(clampedPath)
+        data.append(payload)
+        return data
+    }
+
+    /// Builds a hasConnection command to check if a connection exists to a node.
+    ///
+    /// - Parameter publicKey: The 32-byte public key of the node.
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x1C`
+    /// - Offset 1 (32 bytes): Full public key
+    public static func hasConnection(publicKey: Data) -> Data {
+        var data = Data([CommandCode.hasConnection.rawValue])
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
+    /// Builds a getContactByKey command to retrieve a contact by public key.
+    ///
+    /// - Parameter publicKey: The 32-byte public key of the contact.
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x1E`
+    /// - Offset 1 (32 bytes): Full public key
+    public static func getContactByKey(publicKey: Data) -> Data {
+        var data = Data([CommandCode.getContactByKey.rawValue])
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
+    /// Builds a getAdvertPath command to retrieve the advertisement path to a contact.
+    ///
+    /// - Parameter publicKey: The 32-byte public key of the contact.
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x2A`
+    /// - Offset 1 (1 byte): Reserved `0x00`
+    /// - Offset 2 (32 bytes): Full public key
+    public static func getAdvertPath(publicKey: Data) -> Data {
+        var data = Data([CommandCode.getAdvertPath.rawValue, 0x00])
+        data.append(publicKey.prefix(32))
+        return data
+    }
+
+    /// Builds a getTuningParams command to retrieve radio tuning parameters.
+    ///
+    /// - Returns: The command packet data.
+    ///
+    /// ### Binary Format
+    /// - Offset 0 (1 byte): Command code `0x2B`
+    public static func getTuningParams() -> Data {
+        Data([CommandCode.getTuningParams.rawValue])
     }
 }

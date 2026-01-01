@@ -1,15 +1,6 @@
 {
-  "originHash" : "d466adc75c7bf0e594b3268717c8e1c7990bcfa7b2851845b5972faca919e01e",
+  "originHash" : "7102575be6b54dd064d1c7542a11ed3c6eb83fc995eabb3306cebbe2205adfa3",
   "pins" : [
-    {
-      "identity" : "datascoutcompanion",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/alex566/DataScoutCompanion.git",
-      "state" : {
-        "revision" : "3f98e91e4eba308331d6aa6fbe21ad2a92b20d8a",
-        "version" : "0.3.0"
-      }
-    },
     {
       "identity" : "swift-docc-plugin",
       "kind" : "remoteSourceControl",
