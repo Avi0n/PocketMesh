@@ -48,12 +48,18 @@ public enum CommandCode: UInt8, Sendable {
     case exportPrivateKey = 0x17
     /// Imports a private key to the node.
     case importPrivateKey = 0x18
+    /// Sends raw data through the mesh.
+    case sendRawData = 0x19
     /// Initiates a remote node login.
     case sendLogin = 0x1A
     /// Requests status information from a remote node.
     case sendStatusRequest = 0x1B
+    /// Checks if a connection exists to a specific node.
+    case hasConnection = 0x1C
     /// Logs out from a remote node.
     case sendLogout = 0x1D
+    /// Retrieves a contact by public key.
+    case getContactByKey = 0x1E
     /// Requests channel configuration for a specific index.
     case getChannel = 0x1F
     /// Sets channel configuration for a specific index.
@@ -76,6 +82,10 @@ public enum CommandCode: UInt8, Sendable {
     case getCustomVars = 0x28
     /// Sets a custom variable value.
     case setCustomVar = 0x29
+    /// Retrieves the advertisement path to a contact.
+    case getAdvertPath = 0x2A
+    /// Retrieves tuning parameters.
+    case getTuningParams = 0x2B
     /// Initiates a binary data request.
     case binaryRequest = 0x32
     /// Performs a factory reset of the device.
@@ -136,6 +146,10 @@ public enum ResponseCode: UInt8, Sendable {
     case signature = 0x14
     /// Contains custom variable values.
     case customVars = 0x15
+    /// Contains advertisement path information.
+    case advertPath = 0x16
+    /// Contains tuning parameters.
+    case tuningParams = 0x17
     /// Contains device statistics.
     case stats = 0x18
 
@@ -244,7 +258,7 @@ extension ResponseCode {
         switch self {
         case .ok, .error:
             return .simple
-        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled:
+        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams:
             return .device
         case .contactStart, .contact, .contactEnd, .contactURI:
             return .contact

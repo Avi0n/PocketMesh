@@ -115,3 +115,43 @@ extension UInt8 {
         Int8(bitPattern: self).snrValue
     }
 }
+
+// MARK: - Data Padding and Writing
+
+extension Data {
+    /// Returns data padded with zeros or truncated to the specified length.
+    ///
+    /// - Parameter length: The target length.
+    /// - Returns: Data of exactly the specified length, or empty data if length is negative.
+    public func paddedOrTruncated(to length: Int) -> Data {
+        guard length >= 0 else { return Data() }
+        if count >= length {
+            return Data(prefix(length))
+        }
+        return self + Data(repeating: 0, count: length - count)
+    }
+
+    /// Appends a little-endian UInt32 to the data.
+    ///
+    /// - Parameter value: The value to append.
+    public mutating func appendLittleEndian(_ value: UInt32) {
+        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
+    }
+
+    /// Appends a little-endian Int32 to the data.
+    ///
+    /// - Parameter value: The value to append.
+    public mutating func appendLittleEndian(_ value: Int32) {
+        Swift.withUnsafeBytes(of: value.littleEndian) { append(contentsOf: $0) }
+    }
+}
+
+extension String {
+    /// Returns the UTF-8 bytes of the string, padded or truncated to the specified length.
+    ///
+    /// - Parameter length: The target length.
+    /// - Returns: Data of exactly the specified length.
+    public func utf8PaddedOrTruncated(to length: Int) -> Data {
+        Data(utf8).paddedOrTruncated(to: length)
+    }
+}

@@ -47,11 +47,13 @@ enum PacketSize {
     /// Minimum size for trace route data.
     static let traceDataMinimum = 11
     /// Minimum size for raw packet data.
-    static let rawDataMinimum = 2
+    /// Format: `[snr:1][rssi:1][reserved:1]`
+    static let rawDataMinimum = 3
     /// Minimum size for control protocol data.
     static let controlDataMinimum = 4
     /// Minimum size for path discovery results.
-    static let pathDiscoveryMinimum = 6
+    /// Format: `reserved(1) + pubkey(6) + out_path_len(1) + in_path_len(1) = 9 bytes`
+    static let pathDiscoveryMinimum = 9
     /// Minimum size for login success response (legacy format).
     /// Format: `[legacyPermissions:1][pubkeyPrefix:6]`
     static let loginSuccessMinimum = 7
@@ -632,20 +634,27 @@ enum Parsers {
 
     /// Parser for remote sensor telemetry.
     enum TelemetryResponse {
-        /// Parses telemetry data.
+        /// Parses a telemetry push notification.
         ///
-        /// Format: `pubkey_prefix[6] + optional_tag[4] + raw_lpp_payload[N]`
+        /// ### Binary Format
+        /// (Per firmware MyMesh.cpp push_telemetry_response)
+        /// - Offset 0 (1 byte): Reserved
+        /// - Offset 1 (6 bytes): Public key prefix
+        /// - Offset 7 (N bytes): Raw LPP telemetry data
         static func parse(_ data: Data) -> MeshEvent {
-            guard data.count >= 6 else {
-                return .parseFailure(data: data, reason: "TelemetryResponse too short")
+            // Minimum: reserved(1) + pubkey(6) = 7 bytes
+            guard data.count >= 7 else {
+                return .parseFailure(data: data, reason: "TelemetryResponse too short: \(data.count) bytes, need 7")
             }
-            let pubkeyPrefix = Data(data.prefix(6))
-            let tag: Data? = data.count >= 10 ? Data(data[6..<10]) : nil
-            let rawData = Data(data.dropFirst(tag != nil ? 10 : 6))
+
+            // Skip reserved byte at offset 0
+            let pubkeyPrefix = Data(data[1..<7])
+            // LPP data starts at byte 7, no tag in push frames
+            let rawData = Data(data.dropFirst(7))
 
             return .telemetryResponse(MeshCore.TelemetryResponse(
                 publicKeyPrefix: pubkeyPrefix,
-                tag: tag,
+                tag: nil,
                 rawData: rawData
             ))
         }
@@ -698,31 +707,51 @@ enum Parsers {
 
     /// Parser for path discovery results.
     enum PathDiscoveryResponse {
-        /// Parses path info including out-bound and in-bound mesh routes.
+        /// Parses a path discovery response.
+        ///
+        /// ### Binary Format
+        /// (Per firmware MyMesh.cpp push_path_discovery_response)
+        /// - Offset 0 (1 byte): Reserved
+        /// - Offset 1 (6 bytes): Public key prefix
+        /// - Offset 7 (1 byte): Outbound path length
+        /// - Offset 8 (N bytes): Outbound path data
+        /// - Offset 8+N (1 byte): Inbound path length
+        /// - Offset 9+N (M bytes): Inbound path data
         static func parse(_ data: Data) -> MeshEvent {
+            // Minimum: reserved(1) + pubkey(6) + out_path_len(1) + in_path_len(1) = 9 bytes
             guard data.count >= PacketSize.pathDiscoveryMinimum else {
                 return .parseFailure(
                     data: data,
-                    reason: "PathDiscoveryResponse too short: \(data.count) < \(PacketSize.pathDiscoveryMinimum)"
+                    reason: "PathDiscoveryResponse too short: \(data.count) bytes, need \(PacketSize.pathDiscoveryMinimum)"
                 )
             }
-            let pubkeyPrefix = Data(data.prefix(6))
-            // Parse out and in paths if present
-            var offset = 6
+
+            // Skip reserved byte at offset 0
+            let pubkeyPrefix = Data(data[1..<7])
+            var offset = 7
+
             var outPath = Data()
             var inPath = Data()
+
+            // Parse outbound path
             if data.count > offset {
-                let pathLen = Int(data[offset]); offset += 1
+                let pathLen = Int(data[offset])
+                offset += 1
                 if pathLen > 0 && data.count >= offset + pathLen {
-                    outPath = Data(data[offset..<offset+pathLen]); offset += pathLen
+                    outPath = Data(data[offset..<offset + pathLen])
+                    offset += pathLen
                 }
             }
+
+            // Parse inbound path
             if data.count > offset {
-                let pathLen = Int(data[offset]); offset += 1
+                let pathLen = Int(data[offset])
+                offset += 1
                 if pathLen > 0 && data.count >= offset + pathLen {
-                    inPath = Data(data[offset..<offset+pathLen])
+                    inPath = Data(data[offset..<offset + pathLen])
                 }
             }
+
             return .pathResponse(PathInfo(
                 publicKeyPrefix: pubkeyPrefix,
                 outPath: outPath,
@@ -736,6 +765,21 @@ enum Parsers {
     /// Parser for low-level protocol control data.
     enum ControlData {
         /// Parses SNR, RSSI, and payload from a control packet.
+        ///
+        /// This parser automatically detects DISCOVER_RESP payloads (upper nibble 0x9)
+        /// and returns a structured `.discoverResponse` event instead of raw `.controlData`.
+        ///
+        /// ### Binary Format
+        /// - Offset 0 (1 byte): SNR scaled by 4 (Int8)
+        /// - Offset 1 (1 byte): RSSI (Int8)
+        /// - Offset 2 (1 byte): Path length
+        /// - Offset 3 (1 byte): Payload type (upper nibble 0x9 = DISCOVER_RESP)
+        /// - Offset 4+ (N bytes): Payload data
+        ///
+        /// ### DISCOVER_RESP Inner Payload Format
+        /// - Offset 0 (1 byte): SNR in scaled by 4 (Int8)
+        /// - Offset 1-4 (4 bytes): Tag (UInt32 LE)
+        /// - Offset 5+ (8 or 32 bytes): Public key (prefix or full)
         static func parse(_ data: Data) -> MeshEvent {
             guard data.count >= PacketSize.controlDataMinimum else {
                 return .parseFailure(
@@ -748,6 +792,34 @@ enum Parsers {
             let pathLen = data[2]
             let payloadType = data[3]
             let payload = Data(data.dropFirst(4))
+
+            // Check for DISCOVER_RESP (upper nibble 0x9)
+            // Minimum inner payload: snr_in(1) + tag(4) = 5 bytes
+            if payloadType & 0xF0 == 0x90 && payload.count >= 5 {
+                let nodeType = payloadType & 0x0F
+                let snrIn = Double(Int8(bitPattern: payload[0])) / 4.0
+                let tag = Data(payload[1..<5])
+
+                // Pubkey: 32 bytes if available, otherwise 8-byte prefix
+                let pubkey: Data
+                if payload.count >= 37 {
+                    pubkey = Data(payload[5..<37])
+                } else if payload.count >= 13 {
+                    pubkey = Data(payload[5..<13])
+                } else {
+                    pubkey = Data(payload.dropFirst(5))
+                }
+
+                return .discoverResponse(DiscoverResponse(
+                    nodeType: nodeType,
+                    snrIn: snrIn,
+                    snr: snr,
+                    rssi: rssi,
+                    pathLength: pathLen,
+                    tag: tag,
+                    publicKey: pubkey
+                ))
+            }
 
             return .controlData(ControlDataInfo(
                 snr: snr,
@@ -912,50 +984,77 @@ enum Parsers {
 
     /// Parser for full trace route results.
     enum TraceData {
-        /// Parses detailed trace info including hop hashes and per-hop SNR.
+        /// Parses trace route data.
         ///
         /// ### Binary Format
-        /// (Per Python reader.py)
-        /// `[reserved(1)][path_len(1)][flags(1)][tag(4)][auth(4)][path_hashes...][path_snrs...][final_snr]`
+        /// (Per firmware MyMesh.cpp onTraceRecv, v1.11+)
+        /// - Offset 0 (1 byte): Reserved
+        /// - Offset 1 (1 byte): Path length (total hash bytes, not hop count)
+        /// - Offset 2 (1 byte): Flags (bits 0-1: path_sz, determines hash size)
+        /// - Offset 3 (4 bytes): Tag (UInt32 LE)
+        /// - Offset 7 (4 bytes): Auth code (UInt32 LE)
+        /// - Offset 11 (pathLen bytes): Hash bytes
+        /// - Offset 11+pathLen (hopCount bytes): SNR bytes (one per hop)
+        /// - Offset 11+pathLen+hopCount (1 byte): Final SNR at destination
+        ///
+        /// path_sz encoding:
+        /// - 0: 1-byte hashes (pathLen = hopCount)
+        /// - 1: 2-byte hashes (hopCount = pathLen / 2)
+        /// - 2: 4-byte hashes (hopCount = pathLen / 4)
+        /// - 3: 8-byte hashes (hopCount = pathLen / 8)
         static func parse(_ data: Data) -> MeshEvent {
+            // Minimum: reserved(1) + pathLen(1) + flags(1) + tag(4) + authCode(4) = 11 bytes
             guard data.count >= PacketSize.traceDataMinimum else {
                 return .parseFailure(
                     data: data,
-                    reason: "TraceData too short: \(data.count) < \(PacketSize.traceDataMinimum)"
+                    reason: "TraceData too short: \(data.count) bytes, need \(PacketSize.traceDataMinimum)"
                 )
             }
 
-            let pathLength = data[1]
+            let pathLength = Int(data[1])
             let flags = data[2]
+            let pathSz = Int(flags & 0x03)
+            let hashSize = 1 << pathSz  // 1, 2, 4, or 8 bytes per hop
+            let hopCount = pathLength > 0 ? pathLength / hashSize : 0
+
             let tag = data.readUInt32LE(at: 3)
             let authCode = data.readUInt32LE(at: 7)
 
-            var path: [TraceNode] = []
-            let pathStartOffset = 11
+            let hashesStart = 11
+            let snrsStart = hashesStart + pathLength
+            let finalSnrOffset = snrsStart + hopCount
 
-            if pathLength > 0 && data.count >= pathStartOffset + Int(pathLength) * 2 + 1 {
-                for i in 0..<Int(pathLength) {
-                    let hashOffset = pathStartOffset + i
-                    let snrOffset = pathStartOffset + Int(pathLength) + i
-                    guard hashOffset < data.count && snrOffset < data.count else { break }
-
-                    let hash: UInt8? = data[hashOffset] == 0xFF ? nil : data[hashOffset]
-                    let snr = Double(Int8(bitPattern: data[snrOffset])) / 4.0
-                    path.append(TraceNode(hash: hash, snr: snr))
-                }
-
-                let finalSnrOffset = pathStartOffset + Int(pathLength) * 2
-                if finalSnrOffset < data.count {
-                    let finalSnr = Double(Int8(bitPattern: data[finalSnrOffset])) / 4.0
-                    path.append(TraceNode(hash: nil, snr: finalSnr))
-                }
+            // Validate we have enough data
+            guard data.count >= finalSnrOffset + 1 else {
+                return .parseFailure(
+                    data: data,
+                    reason: "TraceData too short for path: need \(finalSnrOffset + 1), have \(data.count)"
+                )
             }
+
+            var path: [TraceNode] = []
+
+            // Parse each hop
+            for i in 0..<hopCount {
+                let hashOffset = hashesStart + (i * hashSize)
+                let hashBytes = Data(data[hashOffset..<(hashOffset + hashSize)])
+                let snrOffset = snrsStart + i
+                let snr = Double(Int8(bitPattern: data[snrOffset])) / 4.0
+
+                // Check if all hash bytes are 0xFF (destination marker)
+                let isDestination = hashBytes.allSatisfy { $0 == 0xFF }
+                path.append(TraceNode(hashBytes: isDestination ? nil : hashBytes, snr: snr))
+            }
+
+            // Final SNR at destination
+            let finalSnr = Double(Int8(bitPattern: data[finalSnrOffset])) / 4.0
+            path.append(TraceNode(hashBytes: nil, snr: finalSnr))
 
             return .traceData(TraceInfo(
                 tag: tag,
                 authCode: authCode,
                 flags: flags,
-                pathLength: pathLength,
+                pathLength: UInt8(pathLength),
                 path: path
             ))
         }
@@ -965,14 +1064,24 @@ enum Parsers {
 
     /// Parser for generic raw packet notifications.
     enum RawData {
-        /// Parses SNR and RSSI for a raw packet.
+        /// Parses raw radio data.
+        ///
+        /// ### Binary Format
+        /// (Per firmware MyMesh.cpp push_raw_data)
+        /// - Offset 0 (1 byte): SNR scaled by 4 (Int8)
+        /// - Offset 1 (1 byte): RSSI (Int8)
+        /// - Offset 2 (1 byte): Reserved (0xFF)
+        /// - Offset 3 (N bytes): Payload data
         static func parse(_ data: Data) -> MeshEvent {
+            // Minimum: snr(1) + rssi(1) + reserved(1) = 3 bytes
             guard data.count >= PacketSize.rawDataMinimum else {
-                return .parseFailure(data: data, reason: "RawData too short")
+                return .parseFailure(data: data, reason: "RawData too short: \(data.count) bytes, need \(PacketSize.rawDataMinimum)")
             }
+
             let snr = Double(Int8(bitPattern: data[0])) / 4.0
             let rssi = Int(Int8(bitPattern: data[1]))
-            let payload = Data(data.dropFirst(2))
+            // Skip reserved byte at offset 2
+            let payload = Data(data.dropFirst(3))
 
             return .rawData(RawDataInfo(snr: snr, rssi: rssi, payload: payload))
         }
@@ -1074,6 +1183,67 @@ enum Parsers {
                 permissions: permissions,
                 isAdmin: isAdmin,
                 publicKeyPrefix: pubkeyPrefix
+            ))
+        }
+    }
+
+    // MARK: - New Response Parsers (Issue #1)
+
+    /// Parser for advertisement path responses.
+    ///
+    /// ### Binary Format
+    /// - Offset 0-3 (4 bytes): Receive timestamp (UInt32 LE)
+    /// - Offset 4 (1 byte): Path length
+    /// - Offset 5+ (N bytes): Path data (length = pathLength)
+    public enum AdvertPathResponse {
+        /// Parses an advertisement path response.
+        ///
+        /// - Parameter data: Raw response data.
+        /// - Returns: An `.advertPathResponse` event or `.parseFailure`.
+        static func parse(_ data: Data) -> MeshEvent {
+            guard data.count >= 5 else {
+                return .parseFailure(
+                    data: data,
+                    reason: "AdvertPathResponse too short: \(data.count) bytes, need 5"
+                )
+            }
+
+            let timestamp = data.readUInt32LE(at: 0)
+            let pathLen = data[4]
+            let path = Data(data.dropFirst(5).prefix(Int(pathLen)))
+
+            return .advertPathResponse(MeshCore.AdvertPathResponse(
+                recvTimestamp: timestamp,
+                pathLength: pathLen,
+                path: path
+            ))
+        }
+    }
+
+    /// Parser for tuning parameters responses.
+    ///
+    /// ### Binary Format
+    /// - Offset 0-3 (4 bytes): RX delay base * 1000 (UInt32 LE)
+    /// - Offset 4-7 (4 bytes): Airtime factor * 1000 (UInt32 LE)
+    public enum TuningParamsResponse {
+        /// Parses a tuning parameters response.
+        ///
+        /// - Parameter data: Raw response data.
+        /// - Returns: A `.tuningParamsResponse` event or `.parseFailure`.
+        static func parse(_ data: Data) -> MeshEvent {
+            guard data.count >= 8 else {
+                return .parseFailure(
+                    data: data,
+                    reason: "TuningParamsResponse too short: \(data.count) bytes, need 8"
+                )
+            }
+
+            let rxDelayRaw = data.readUInt32LE(at: 0)
+            let airtimeRaw = data.readUInt32LE(at: 4)
+
+            return .tuningParamsResponse(MeshCore.TuningParamsResponse(
+                rxDelayBase: Double(rxDelayRaw) / 1000.0,
+                airtimeFactor: Double(airtimeRaw) / 1000.0
             ))
         }
     }

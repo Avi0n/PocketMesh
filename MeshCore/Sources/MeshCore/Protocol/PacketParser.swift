@@ -137,6 +137,12 @@ extension PacketParser {
             // Extracted - needs validation
             return Parsers.PrivateKey.parse(payload)
 
+        case .advertPath:
+            return Parsers.AdvertPathResponse.parse(payload)
+
+        case .tuningParams:
+            return Parsers.TuningParamsResponse.parse(payload)
+
         default:
             return .parseFailure(data: payload, reason: "Unexpected code in device response: \(code)")
         }
