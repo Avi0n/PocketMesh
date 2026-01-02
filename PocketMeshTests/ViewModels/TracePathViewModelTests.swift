@@ -279,3 +279,207 @@ struct TraceResponseHopParsingTests {
     }
 }
 
+// MARK: - Result ID Tests
+
+@Suite("Result ID Behavior")
+@MainActor
+struct ResultIDBehaviorTests {
+
+    @Test("resultID is set on successful trace")
+    func resultIDSetOnSuccess() {
+        let viewModel = TracePathViewModel()
+
+        // Simulate successful trace response
+        let traceInfo = TraceInfo(
+            tag: 12345,
+            authCode: 0,
+            flags: 0,
+            pathLength: 1,
+            path: [
+                TraceNode(hash: 0xAB, snr: 5.0),
+                TraceNode(hash: nil, snr: 3.0)
+            ]
+        )
+
+        viewModel.setPendingTagForTesting(12345)
+        #expect(viewModel.resultID == nil)
+
+        viewModel.handleTraceResponse(traceInfo)
+
+        #expect(viewModel.resultID != nil)
+    }
+
+    @Test("resultID changes on each successful trace")
+    func resultIDChangesOnEachTrace() {
+        let viewModel = TracePathViewModel()
+
+        let traceInfo = TraceInfo(
+            tag: 12345,
+            authCode: 0,
+            flags: 0,
+            pathLength: 1,
+            path: [
+                TraceNode(hash: 0xAB, snr: 5.0),
+                TraceNode(hash: nil, snr: 3.0)
+            ]
+        )
+
+        viewModel.setPendingTagForTesting(12345)
+        viewModel.handleTraceResponse(traceInfo)
+        let firstID = viewModel.resultID
+
+        // Run another trace
+        viewModel.setPendingTagForTesting(12346)
+        let traceInfo2 = TraceInfo(
+            tag: 12346,
+            authCode: 0,
+            flags: 0,
+            pathLength: 1,
+            path: [
+                TraceNode(hash: 0xAB, snr: 5.0),
+                TraceNode(hash: nil, snr: 3.0)
+            ]
+        )
+        viewModel.handleTraceResponse(traceInfo2)
+
+        #expect(viewModel.resultID != firstID)
+    }
+}
+
+// MARK: - Error Handling Tests
+
+@Suite("Error Handling")
+@MainActor
+struct ErrorHandlingTests {
+
+    @Test("setError sets errorMessage")
+    func setErrorSetsMessage() {
+        let viewModel = TracePathViewModel()
+
+        #expect(viewModel.errorMessage == nil)
+
+        viewModel.setError("Test error")
+
+        #expect(viewModel.errorMessage == "Test error")
+    }
+
+    @Test("clearError clears errorMessage")
+    func clearErrorClearsMessage() {
+        let viewModel = TracePathViewModel()
+        viewModel.setError("Test error")
+
+        #expect(viewModel.errorMessage != nil)
+
+        viewModel.clearError()
+
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("setError replaces previous error")
+    func setErrorReplacesPrevious() {
+        let viewModel = TracePathViewModel()
+
+        viewModel.setError("First error")
+        viewModel.setError("Second error")
+
+        #expect(viewModel.errorMessage == "Second error")
+    }
+
+    @Test("addRepeater clears error")
+    func addRepeaterClearsError() {
+        let viewModel = TracePathViewModel()
+        viewModel.setError("Test error")
+
+        #expect(viewModel.errorMessage != nil)
+
+        viewModel.addRepeater(createTestContact())
+
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("removeRepeater clears error")
+    func removeRepeaterClearsError() {
+        let viewModel = TracePathViewModel()
+        viewModel.addRepeater(createTestContact())
+        viewModel.setError("Test error")
+
+        #expect(viewModel.errorMessage != nil)
+
+        viewModel.removeRepeater(at: 0)
+
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("moveRepeater clears error")
+    func moveRepeaterClearsError() {
+        let viewModel = TracePathViewModel()
+        viewModel.addRepeater(createTestContact())
+        viewModel.addRepeater(createTestContact())
+        viewModel.setError("Test error")
+
+        #expect(viewModel.errorMessage != nil)
+
+        viewModel.moveRepeater(from: IndexSet(integer: 0), to: 2)
+
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("error auto-clears after delay")
+    func errorAutoClearsAfterDelay() async throws {
+        let viewModel = TracePathViewModel()
+        viewModel.errorAutoClearDelay = .milliseconds(100)
+
+        viewModel.setError("Test error")
+        #expect(viewModel.errorMessage != nil)
+
+        // Wait slightly more than the auto-clear delay
+        try await Task.sleep(for: .milliseconds(150))
+
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("clearError cancels pending auto-clear")
+    func clearErrorCancelsPendingAutoClear() async throws {
+        let viewModel = TracePathViewModel()
+        viewModel.errorAutoClearDelay = .milliseconds(100)
+
+        viewModel.setError("Test error")
+
+        // Clear error before auto-clear would happen
+        viewModel.clearError()
+
+        // Wait for what would have been auto-clear time
+        try await Task.sleep(for: .milliseconds(150))
+
+        // Should still be nil (auto-clear was cancelled)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    @Test("new setError cancels previous auto-clear timer")
+    func newErrorCancelsPreviousTimer() async throws {
+        let viewModel = TracePathViewModel()
+        viewModel.errorAutoClearDelay = .milliseconds(200)
+
+        // Set first error
+        viewModel.setError("First error")
+
+        // Wait 100ms (less than 200ms auto-clear)
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Set second error - this should cancel the first timer
+        viewModel.setError("Second error")
+
+        // Wait 150ms more (250ms total since first error, but only 150ms since second)
+        try await Task.sleep(for: .milliseconds(150))
+
+        // Should still show second error (first timer was cancelled, second hasn't expired)
+        #expect(viewModel.errorMessage == "Second error")
+
+        // Wait another 100ms (250ms total since second error)
+        try await Task.sleep(for: .milliseconds(100))
+
+        // Now it should be cleared
+        #expect(viewModel.errorMessage == nil)
+    }
+}
+

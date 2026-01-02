@@ -31,7 +31,8 @@ struct TraceHop: Identifiable {
 }
 
 /// Result of a trace operation
-struct TraceResult {
+struct TraceResult: Identifiable {
+    let id = UUID()
     let hops: [TraceHop]
     let durationMs: Int
     let success: Bool
@@ -59,6 +60,13 @@ final class TracePathViewModel {
 
     var isRunning = false
     var result: TraceResult?
+    var resultID: UUID?  // Set to new UUID only on successful trace
+    var errorMessage: String?
+    var errorHapticTrigger = 0  // Incremented on each error for haptic feedback
+    private var errorClearTask: Task<Void, Never>?
+
+    /// Duration before error auto-clears. Injectable for testing.
+    var errorAutoClearDelay: Duration = .seconds(4)
 
     // MARK: - Saved Path State
 
@@ -139,6 +147,25 @@ final class TracePathViewModel {
         self.appState = appState
     }
 
+    // MARK: - Error Handling
+
+    func setError(_ message: String) {
+        errorClearTask?.cancel()
+        errorMessage = message
+        errorHapticTrigger += 1
+        errorClearTask = Task { @MainActor in
+            try? await Task.sleep(for: errorAutoClearDelay)
+            if !Task.isCancelled {
+                errorMessage = nil
+            }
+        }
+    }
+
+    func clearError() {
+        errorClearTask?.cancel()
+        errorMessage = nil
+    }
+
     // MARK: - Name Resolution
 
     /// Resolve a hash byte to contact name (single match only)
@@ -168,6 +195,7 @@ final class TracePathViewModel {
 
     /// Add a repeater to the outbound path
     func addRepeater(_ repeater: ContactDTO) {
+        clearError()
         let hashByte = repeater.publicKey[0]
         let hop = PathHop(hashByte: hashByte, resolvedName: repeater.displayName)
         outboundPath.append(hop)
@@ -178,6 +206,7 @@ final class TracePathViewModel {
 
     /// Remove a repeater from the path
     func removeRepeater(at index: Int) {
+        clearError()
         guard outboundPath.indices.contains(index) else { return }
         outboundPath.remove(at: index)
         activeSavedPath = nil
@@ -187,6 +216,7 @@ final class TracePathViewModel {
 
     /// Move a repeater within the path
     func moveRepeater(from source: IndexSet, to destination: Int) {
+        clearError()
         outboundPath.move(fromOffsets: source, toOffset: destination)
         activeSavedPath = nil
         resultPathHash = nil
@@ -277,13 +307,40 @@ final class TracePathViewModel {
         logger.info("Loaded saved path: \(savedPath.name) with \(outboundBytes.count) hops")
     }
 
-    /// Clear the saved path state (reset to fresh builder)
-    func clearSavedPath() {
+    /// Clear the path (resets to empty state)
+    func clearPath() {
+        clearError()
         activeSavedPath = nil
         outboundPath.removeAll()
         result = nil
         resultPathHash = nil
         pendingPathHash = nil
+    }
+
+    /// Find a saved path matching the current path bytes
+    /// Returns the most recently used match if multiple exist
+    private func findMatchingSavedPath() async -> SavedTracePathDTO? {
+        guard let appState,
+              let deviceID = appState.connectedDevice?.id,
+              let dataStore = appState.services?.dataStore else { return nil }
+
+        let pathBytes = fullPathBytes
+        guard !pathBytes.isEmpty else { return nil }
+
+        do {
+            let savedPaths = try await dataStore.fetchSavedTracePaths(deviceID: deviceID)
+            let matches = savedPaths.filter { $0.pathHashBytes == pathBytes }
+
+            // Return most recently used (by latest run date)
+            return matches.max { path1, path2 in
+                let date1 = path1.runs.map(\.date).max() ?? .distantPast
+                let date2 = path2.runs.map(\.date).max() ?? .distantPast
+                return date1 < date2
+            }
+        } catch {
+            logger.error("Failed to fetch saved paths for matching: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     // MARK: - Trace Execution
@@ -296,6 +353,18 @@ final class TracePathViewModel {
 
         // Cancel any pending trace
         traceTask?.cancel()
+
+        // Clear previous results and errors
+        resultID = nil
+        clearError()
+
+        // Match to saved path if not already running one
+        if activeSavedPath == nil {
+            if let matchedPath = await findMatchingSavedPath() {
+                activeSavedPath = matchedPath
+                logger.info("Matched path to saved path: \(matchedPath.name)")
+            }
+        }
 
         isRunning = true
         result = nil
@@ -321,7 +390,7 @@ final class TracePathViewModel {
             logger.info("Sent trace with tag \(tag), path: \(self.fullPathString)")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
-            result = .sendFailed("Failed to send trace packet")
+            setError("Failed to send trace packet")
             resultPathHash = nil
             pendingPathHash = nil
 
@@ -360,7 +429,7 @@ final class TracePathViewModel {
                 // Timeout - no response received
                 if !Task.isCancelled && pendingTag == tag {
                     logger.warning("Trace timeout for tag \(tag)")
-                    result = .timeout()
+                    setError("No response received")
                     resultPathHash = nil
                     pendingPathHash = nil
 
@@ -454,6 +523,7 @@ final class TracePathViewModel {
             success: true,
             errorMessage: nil
         )
+        resultID = UUID()
 
         // Transfer path hash on success
         resultPathHash = pendingPathHash
