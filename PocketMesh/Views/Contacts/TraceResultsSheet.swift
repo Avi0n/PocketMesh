@@ -38,7 +38,7 @@ struct TraceResultsSheet: View {
     private var outboundPathSection: some View {
         Section {
             HStack {
-                Text(viewModel.fullPathString)
+                Text(result.tracedPathString)
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
 
@@ -46,7 +46,7 @@ struct TraceResultsSheet: View {
 
                 Button("Copy Path", systemImage: "doc.on.doc") {
                     copyHapticTrigger += 1
-                    viewModel.copyPathToClipboard()
+                    UIPasteboard.general.string = result.tracedPathString
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -212,9 +212,9 @@ struct TraceResultHopRow: View {
                     Text("Received response")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                } else if let hashByte = hop.hashByte {
+                } else if let hashDisplay = hop.hashDisplayString {
                     HStack {
-                        Text(hashByte.hexString)
+                        Text(hashDisplay)
                             .font(.body.monospaced())
                         if let name = hop.resolvedName {
                             Text(name)
@@ -226,13 +226,11 @@ struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // SNR display (not for start node - we're the sender)
-                if hop.isStartNode {
-                    // No SNR for start node
-                } else if hop.isEndNode {
-                    Text("Return SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // SNR display using sender attribution:
+                // Shows how well the NEXT hop received this node's transmission.
+                // End node has no SNR (no next hop to measure).
+                if hop.isEndNode {
+                    // No SNR for end node - no next hop
                 } else {
                     Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
                         .font(.caption)
@@ -242,8 +240,8 @@ struct TraceResultHopRow: View {
 
             Spacer()
 
-            // Signal strength indicator (not for start node - we're the sender)
-            if !hop.isStartNode {
+            // Signal strength indicator (not for end node - no next hop)
+            if !hop.isEndNode {
                 Image(systemName: "cellularbars", variableValue: hop.signalLevel)
                     .foregroundStyle(hop.signalColor)
                     .font(.title2)
