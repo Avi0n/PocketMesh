@@ -156,9 +156,11 @@ struct TracePathView: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(repeater.displayName)
-                                Text(repeater.publicKey[0].hexString)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
+                                if let firstByte = repeater.publicKey.first {
+                                    Text(firstByte.hexString)
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             Image(systemName: "plus.circle")

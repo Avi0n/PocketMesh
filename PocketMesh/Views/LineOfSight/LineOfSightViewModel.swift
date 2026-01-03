@@ -91,6 +91,9 @@ final class LineOfSightViewModel {
     private(set) var analysisStatus: AnalysisStatus = .idle
     private(set) var elevationProfile: [ElevationSample] = []
 
+    /// Tracks whether any point elevation fetch failed (using sea level fallback)
+    private(set) var elevationFetchFailed = false
+
     // MARK: - Task Management
 
     private var analysisTask: Task<Void, Never>?
@@ -372,6 +375,7 @@ final class LineOfSightViewModel {
         analysisTask = nil
         analysisStatus = .idle
         elevationProfile = []
+        elevationFetchFailed = false
     }
 
     private func fetchElevationForPointA() async {
@@ -385,8 +389,9 @@ final class LineOfSightViewModel {
         } catch {
             if Task.isCancelled { return }
             logger.error("Failed to fetch point A elevation: \(error.localizedDescription)")
-            // Set to 0 as fallback so analysis can proceed
+            // Set to 0 as fallback so analysis can proceed (sea level approximation)
             pointA?.groundElevation = 0
+            elevationFetchFailed = true
         }
     }
 
@@ -401,8 +406,9 @@ final class LineOfSightViewModel {
         } catch {
             if Task.isCancelled { return }
             logger.error("Failed to fetch point B elevation: \(error.localizedDescription)")
-            // Set to 0 as fallback so analysis can proceed
+            // Set to 0 as fallback so analysis can proceed (sea level approximation)
             pointB?.groundElevation = 0
+            elevationFetchFailed = true
         }
     }
 }

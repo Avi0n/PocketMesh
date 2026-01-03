@@ -346,9 +346,18 @@ struct LineOfSightView: View {
             )
 
             if viewModel.pointA == nil || viewModel.pointB == nil {
-                Text("Tap the pin button in the toolbar to select points")
+                Text("Tap the pin button on the map to select points")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if viewModel.elevationFetchFailed {
+                Label(
+                    "Elevation data unavailable. Using sea level (0m) as approximation.",
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.caption)
+                .foregroundStyle(.orange)
             }
         }
     }

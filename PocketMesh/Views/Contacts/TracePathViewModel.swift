@@ -168,7 +168,7 @@ final class TracePathViewModel {
 
     /// Add a repeater to the outbound path
     func addRepeater(_ repeater: ContactDTO) {
-        let hashByte = repeater.publicKey[0]
+        guard let hashByte = repeater.publicKey.first else { return }
         let hop = PathHop(hashByte: hashByte, resolvedName: repeater.displayName)
         outboundPath.append(hop)
         activeSavedPath = nil

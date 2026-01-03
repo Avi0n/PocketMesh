@@ -56,11 +56,6 @@ enum RFCalculator {
     /// Earth's radius in kilometers
     static let earthRadiusKm: Double = 6371
 
-    /// Default k-factor for earth bulge calculation.
-    /// This represents a conservative estimate that accounts for
-    /// suboptimal atmospheric conditions.
-    static let defaultK: Double = 0.25
-
     // MARK: - Wavelength
 
     /// Calculates the wavelength in meters for a given frequency.
@@ -110,13 +105,13 @@ enum RFCalculator {
     /// - Parameters:
     ///   - distanceToAMeters: Distance from point A to the calculation point in meters.
     ///   - distanceToBMeters: Distance from the calculation point to point B in meters.
-    ///   - k: The effective earth radius factor. Default is 0.25 for conservative estimates.
-    ///        Standard atmosphere uses k=1.33 (4/3).
+    ///   - k: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///        1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: The earth bulge in meters.
     static func earthBulge(
         distanceToAMeters: Double,
         distanceToBMeters: Double,
-        k: Double = defaultK
+        k: Double
     ) -> Double {
         guard distanceToAMeters > 0, distanceToBMeters > 0, k > 0 else { return 0 }
 
@@ -253,14 +248,15 @@ enum RFCalculator {
     ///   - pointAHeightMeters: Antenna height at point A in meters above ground.
     ///   - pointBHeightMeters: Antenna height at point B in meters above ground.
     ///   - frequencyMHz: The operating frequency in megahertz.
-    ///   - k: The effective earth radius factor. Default is 0.25 for conservative estimates.
+    ///   - k: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///        1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: A PathAnalysisResult containing loss calculations and clearance status.
     static func analyzePath(
         elevationProfile: [ElevationSample],
         pointAHeightMeters: Double,
         pointBHeightMeters: Double,
         frequencyMHz: Double,
-        k: Double = defaultK
+        k: Double
     ) -> PathAnalysisResult {
         guard elevationProfile.count >= 2 else {
             return PathAnalysisResult(

@@ -85,12 +85,12 @@ actor ElevationService: ElevationServiceProtocol {
 
         var coordinatesToFetch = path
 
-        // Log warning and truncate if exceeding max points
+        // Subsample if exceeding max points, ensuring endpoints are preserved
         if coordinatesToFetch.count > Self.maxPointsPerRequest {
             logger.warning(
-                "Requested \(path.count) elevation points, truncating to \(Self.maxPointsPerRequest)"
+                "Requested \(path.count) elevation points, subsampling to \(Self.maxPointsPerRequest)"
             )
-            coordinatesToFetch = Array(coordinatesToFetch.prefix(Self.maxPointsPerRequest))
+            coordinatesToFetch = subsample(path, targetCount: Self.maxPointsPerRequest)
         }
 
         // Build URL with query parameters (using POSIX locale to ensure dot decimal separator)
@@ -218,5 +218,33 @@ actor ElevationService: ElevationServiceProtocol {
         } catch {
             throw ElevationServiceError.invalidResponse
         }
+    }
+
+    /// Subsample an array to a target count, preserving first and last elements
+    private func subsample<T>(_ array: [T], targetCount: Int) -> [T] {
+        guard array.count > targetCount, targetCount >= 2 else {
+            return array
+        }
+
+        var result: [T] = []
+        result.reserveCapacity(targetCount)
+
+        // Always include first element
+        result.append(array[0])
+
+        // Calculate step for middle elements (targetCount - 2 middle samples)
+        let middleCount = targetCount - 2
+        if middleCount > 0 {
+            let step = Double(array.count - 2) / Double(middleCount + 1)
+            for i in 1...middleCount {
+                let index = Int(Double(i) * step)
+                result.append(array[index])
+            }
+        }
+
+        // Always include last element
+        result.append(array[array.count - 1])
+
+        return result
     }
 }

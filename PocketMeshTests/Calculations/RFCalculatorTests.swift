@@ -17,11 +17,6 @@ struct RFCalculatorTests {
         #expect(RFCalculator.earthRadiusKm == 6371)
     }
 
-    @Test("Default k-factor is 0.25")
-    func defaultKFactor() {
-        #expect(RFCalculator.defaultK == 0.25)
-    }
-
     // MARK: - Wavelength Tests
 
     @Test("Wavelength at 910 MHz is approximately 0.3294m")
@@ -144,32 +139,18 @@ struct RFCalculatorTests {
         #expect(abs(bulgeStandard - 0.53) < 0.05)
     }
 
-    @Test("Earth bulge uses default k when not specified")
-    func earthBulgeUsesDefaultK() {
-        let bulgeWithDefault = RFCalculator.earthBulge(
-            distanceToAMeters: 3000,
-            distanceToBMeters: 3000
-        )
-
-        let bulgeWithExplicitK = RFCalculator.earthBulge(
-            distanceToAMeters: 3000,
-            distanceToBMeters: 3000,
-            k: RFCalculator.defaultK
-        )
-
-        #expect(bulgeWithDefault == bulgeWithExplicitK)
-    }
-
     @Test("Earth bulge is symmetric")
     func earthBulgeSymmetric() {
         let bulge1 = RFCalculator.earthBulge(
             distanceToAMeters: 2000,
-            distanceToBMeters: 4000
+            distanceToBMeters: 4000,
+            k: 1.0
         )
 
         let bulge2 = RFCalculator.earthBulge(
             distanceToAMeters: 4000,
-            distanceToBMeters: 2000
+            distanceToBMeters: 2000,
+            k: 1.0
         )
 
         #expect(abs(bulge1 - bulge2) < 0.001)
@@ -177,8 +158,8 @@ struct RFCalculatorTests {
 
     @Test("Earth bulge returns 0 for invalid inputs")
     func earthBulgeInvalidInputs() {
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 0, distanceToBMeters: 100) == 0)
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 0) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 0, distanceToBMeters: 100, k: 1.0) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 0, k: 1.0) == 0)
         #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, k: 0) == 0)
         #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, k: -1) == 0)
     }
@@ -446,7 +427,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.clearanceStatus == .clear)
@@ -468,7 +450,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         // FSPL for 6km at 910MHz is approximately 107.2 dB
@@ -496,7 +479,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -517,7 +501,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.additionalDiffractionLoss > 10)
@@ -543,7 +528,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         // With 25m hill: LOS at 50m, terrain at ~28m (25 + 3m bulge)
@@ -570,7 +556,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         // Hill at 45m + ~3m bulge = ~48m, LOS at 50m
@@ -590,7 +577,8 @@ struct PathAnalysisTests {
             elevationProfile: [],
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -609,7 +597,8 @@ struct PathAnalysisTests {
             elevationProfile: [sample],
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -634,7 +623,8 @@ struct PathAnalysisTests {
             elevationProfile: samples,
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -655,7 +645,8 @@ struct PathAnalysisTests {
             elevationProfile: profile,
             pointAHeightMeters: 100,  // Higher antenna at A
             pointBHeightMeters: 20,   // Lower antenna at B
-            frequencyMHz: 910
+            frequencyMHz: 910,
+            k: 1.0
         )
 
         // LOS slopes downward from A to B
