@@ -1,0 +1,169 @@
+import Testing
+@testable import PocketMesh
+
+@Suite("FresnelZoneRenderer Tests")
+struct FresnelZoneRendererTests {
+
+    @Test("ProfileSample computes yTop and yBottom correctly")
+    func profileSampleBounds() {
+        let sample = ProfileSample(
+            x: 3000,
+            yTerrain: 100,
+            yLOS: 150,
+            fresnelRadius: 20
+        )
+
+        #expect(sample.yTop == 170)    // 150 + 20
+        #expect(sample.yBottom == 130) // 150 - 20
+    }
+
+    @Test("isObstructed returns true when terrain above yBottom")
+    func isObstructedDetectsIntrusion() {
+        let clear = ProfileSample(x: 0, yTerrain: 100, yLOS: 150, fresnelRadius: 20)
+        let obstructed = ProfileSample(x: 0, yTerrain: 140, yLOS: 150, fresnelRadius: 20)
+
+        #expect(clear.isObstructed == false)     // 100 < 130 (yBottom)
+        #expect(obstructed.isObstructed == true) // 140 > 130 (yBottom)
+    }
+
+    @Test("yVisibleBottom clamps to prevent path inversion")
+    func yVisibleBottomClamps() {
+        // Normal: terrain below yBottom
+        let normal = ProfileSample(x: 0, yTerrain: 100, yLOS: 150, fresnelRadius: 20)
+        #expect(normal.yVisibleBottom == 130) // yBottom, not terrain
+
+        // Intrusion: terrain above yBottom but below yTop
+        let intrusion = ProfileSample(x: 0, yTerrain: 140, yLOS: 150, fresnelRadius: 20)
+        #expect(intrusion.yVisibleBottom == 140) // terrain level
+
+        // Fully blocked: terrain above yTop
+        let blocked = ProfileSample(x: 0, yTerrain: 180, yLOS: 150, fresnelRadius: 20)
+        #expect(blocked.yVisibleBottom == 170) // clamped to yTop
+    }
+
+    @Test("losHeight interpolates linearly between endpoints")
+    func losHeightInterpolation() {
+        // Point A at 100m, Point B at 200m, 10km apart
+        let heightA = 100.0
+        let heightB = 200.0
+        let totalDistance = 10000.0
+
+        // At start
+        #expect(FresnelZoneRenderer.losHeight(
+            atDistance: 0,
+            totalDistance: totalDistance,
+            heightA: heightA,
+            heightB: heightB
+        ) == 100)
+
+        // At midpoint
+        #expect(FresnelZoneRenderer.losHeight(
+            atDistance: 5000,
+            totalDistance: totalDistance,
+            heightA: heightA,
+            heightB: heightB
+        ) == 150)
+
+        // At end
+        #expect(FresnelZoneRenderer.losHeight(
+            atDistance: 10000,
+            totalDistance: totalDistance,
+            heightA: heightA,
+            heightB: heightB
+        ) == 200)
+    }
+
+    @Test("findSegments returns single segment for uniform obstruction state")
+    func findSegmentsUniform() {
+        // All clear samples
+        let samples = [
+            ProfileSample(x: 0, yTerrain: 0, yLOS: 100, fresnelRadius: 20),
+            ProfileSample(x: 1000, yTerrain: 0, yLOS: 100, fresnelRadius: 25),
+            ProfileSample(x: 2000, yTerrain: 0, yLOS: 100, fresnelRadius: 20),
+        ]
+
+        let segments = FresnelZoneRenderer.findSegments(samples: samples)
+
+        #expect(segments.count == 1)
+        #expect(segments[0].xStart == 0)
+        #expect(segments[0].xEnd == 2000)
+        #expect(segments[0].isObstructed == false)
+    }
+
+    @Test("findSegments finds transitions between clear and obstructed")
+    func findSegmentsWithTransitions() {
+        // Clear -> Obstructed -> Clear
+        let samples = [
+            ProfileSample(x: 0, yTerrain: 50, yLOS: 100, fresnelRadius: 20),      // clear (50 < 80)
+            ProfileSample(x: 1000, yTerrain: 70, yLOS: 100, fresnelRadius: 20),   // clear (70 < 80)
+            ProfileSample(x: 2000, yTerrain: 90, yLOS: 100, fresnelRadius: 20),   // obstructed (90 > 80)
+            ProfileSample(x: 3000, yTerrain: 85, yLOS: 100, fresnelRadius: 20),   // obstructed (85 > 80)
+            ProfileSample(x: 4000, yTerrain: 60, yLOS: 100, fresnelRadius: 20),   // clear (60 < 80)
+        ]
+
+        let segments = FresnelZoneRenderer.findSegments(samples: samples)
+
+        #expect(segments.count == 3)
+        #expect(segments[0].isObstructed == false)
+        #expect(segments[1].isObstructed == true)
+        #expect(segments[2].isObstructed == false)
+
+        // Check boundary interpolation (crossing at yTerrain == yBottom == 80)
+        // Between sample 1 (yTerrain=70) and sample 2 (yTerrain=90)
+        // prevDelta = 80 - 70 = 10, currDelta = 80 - 90 = -10
+        // t = 10 / (10 - (-10)) = 10/20 = 0.5
+        // xCross = 1000 + 0.5 * (2000 - 1000) = 1500
+        #expect(abs(segments[0].xEnd - 1500) < 1)
+    }
+
+    @Test("buildProfileSamples creates samples with correct geometry")
+    func buildProfileSamplesGeometry() {
+        // Create simple elevation profile: flat at 100m, 6km apart
+        let elevationProfile = [
+            ElevationSample(
+                coordinate: .init(latitude: 0, longitude: 0),
+                elevation: 100,
+                distanceFromAMeters: 0
+            ),
+            ElevationSample(
+                coordinate: .init(latitude: 0, longitude: 0),
+                elevation: 100,
+                distanceFromAMeters: 3000
+            ),
+            ElevationSample(
+                coordinate: .init(latitude: 0, longitude: 0),
+                elevation: 100,
+                distanceFromAMeters: 6000
+            ),
+        ]
+
+        let samples = FresnelZoneRenderer.buildProfileSamples(
+            from: elevationProfile,
+            pointAHeight: 50,  // antenna height above ground
+            pointBHeight: 50,
+            frequencyMHz: 910,
+            refractionK: 1.33  // standard atmosphere
+        )
+
+        #expect(samples.count == 3)
+
+        // First sample (at endpoint - no earth bulge)
+        #expect(samples[0].x == 0)
+        #expect(samples[0].yTerrain == 100)  // no bulge at endpoint
+        #expect(samples[0].yLOS == 150)  // 100 ground + 50 antenna
+        #expect(samples[0].fresnelRadius == 0)  // at endpoint
+
+        // Middle sample (earth bulge applies: ~0.53m at 3km/3km with k=1.33)
+        #expect(samples[1].x == 3000)
+        #expect(samples[1].yTerrain > 100.5)  // 100 + earth bulge (~0.53m)
+        #expect(samples[1].yTerrain < 100.6)
+        #expect(samples[1].yLOS == 150)  // same height (symmetric)
+        #expect(samples[1].fresnelRadius > 20)  // ~22m at midpoint
+
+        // Last sample (at endpoint - no earth bulge)
+        #expect(samples[2].x == 6000)
+        #expect(samples[2].yTerrain == 100)  // no bulge at endpoint
+        #expect(samples[2].yLOS == 150)
+        #expect(samples[2].fresnelRadius == 0)  // at endpoint
+    }
+}
