@@ -93,7 +93,7 @@ public extension RoomMessage {
 // MARK: - Sendable DTO
 
 /// A sendable snapshot of RoomMessage for cross-actor transfers
-public struct RoomMessageDTO: Sendable, Equatable, Identifiable {
+public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
     public let id: UUID
     public let sessionID: UUID
     public let authorKeyPrefix: Data
