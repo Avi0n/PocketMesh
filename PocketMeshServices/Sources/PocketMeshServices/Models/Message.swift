@@ -206,7 +206,7 @@ public extension Message {
 // MARK: - Sendable DTO
 
 /// A sendable snapshot of Message for cross-actor transfers
-public struct MessageDTO: Sendable, Equatable, Identifiable {
+public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let id: UUID
     public let deviceID: UUID
     public let contactID: UUID?

@@ -14,7 +14,9 @@ struct ChatView: View {
 
     @State private var viewModel = ChatViewModel()
     @State private var showingContactInfo = false
-    @State private var scrollPosition = ScrollPosition(edge: .bottom)
+    @State private var isAtBottom = true
+    @State private var unreadCount = 0
+    @State private var scrollToBottomRequest = 0
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
@@ -27,7 +29,6 @@ struct ChatView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 inputBar
             }
-            .keyboardAwareScrollEdgeEffect(isFocused: isInputFocused)
             .navigationTitle(contact.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -144,33 +145,52 @@ struct ChatView: View {
     // MARK: - Messages View
 
     private var messagesView: some View {
-        ScrollView {
-            LazyVStack(spacing: 8) {
-                if viewModel.isLoading && viewModel.messages.isEmpty {
-                    ProgressView()
-                        .padding()
-                } else if viewModel.messages.isEmpty {
-                    emptyMessagesView
-                } else {
-                    messagesContent
+        Group {
+            if viewModel.isLoading && viewModel.messages.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.messages.isEmpty {
+                emptyMessagesView
+            } else {
+                ChatTableView(
+                    items: viewModel.messages,
+                    cellContent: { message in
+                        messageBubble(for: message)
+                    },
+                    isAtBottom: $isAtBottom,
+                    unreadCount: $unreadCount,
+                    scrollToBottomRequest: $scrollToBottomRequest
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    ScrollToBottomFAB(
+                        isVisible: !isAtBottom,
+                        unreadCount: unreadCount,
+                        onTap: { scrollToBottomRequest += 1 }
+                    )
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
                 }
             }
-            .padding(.vertical)
         }
-        .defaultScrollAnchor(.bottom, for: .initialOffset)
-        .defaultScrollAnchor(.bottom, for: .alignment)
-        .scrollPosition($scrollPosition)
-        .scrollDismissesKeyboard(.interactively)
-        .onChange(of: viewModel.messages.count) { _, _ in
-            // Scroll to bottom when new messages arrive
-            scrollPosition.scrollTo(edge: .bottom)
-        }
-        .onChange(of: isInputFocused) { _, isFocused in
-            // Scroll to bottom when keyboard appears
-            if isFocused {
-                scrollPosition.scrollTo(edge: .bottom)
+    }
+
+    private func messageBubble(for message: MessageDTO) -> some View {
+        let index = viewModel.messages.firstIndex(where: { $0.id == message.id }) ?? 0
+        return UnifiedMessageBubble(
+            message: message,
+            contactName: contact.displayName,
+            contactNodeName: contact.name,
+            deviceName: appState.connectedDevice?.nodeName ?? "Me",
+            configuration: .directMessage,
+            showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+            onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+            onReply: { replyText in
+                setReplyText(replyText)
+            },
+            onDelete: {
+                deleteMessage(message)
             }
-        }
+        )
     }
 
     private var emptyMessagesView: some View {
@@ -192,26 +212,6 @@ struct ChatView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
-    }
-
-    private var messagesContent: some View {
-        ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
-            UnifiedMessageBubble(
-                message: message,
-                contactName: contact.displayName,
-                contactNodeName: contact.name,
-                deviceName: appState.connectedDevice?.nodeName ?? "Me",
-                configuration: .directMessage,
-                showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
-                onRetry: message.hasFailed ? { retryMessage(message) } : nil,
-                onReply: { replyText in
-                    setReplyText(replyText)
-                },
-                onDelete: {
-                    deleteMessage(message)
-                }
-            )
-        }
     }
 
     private func setReplyText(_ text: String) {
@@ -244,14 +244,6 @@ struct ChatView: View {
         ) {
             Task { await viewModel.sendMessage() }
         }
-    }
-}
-
-// MARK: - Array Enumerated Extension
-
-extension Array {
-    func enumeratedElements() -> [(offset: Int, element: Element)] {
-        Array<(offset: Int, element: Element)>(enumerated())
     }
 }
 
