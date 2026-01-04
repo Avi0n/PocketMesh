@@ -167,3 +167,49 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         }
     }
 }
+
+// MARK: - SwiftUI Wrapper
+
+/// SwiftUI wrapper for ChatTableViewController
+struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: UIViewControllerRepresentable where Item.ID: Sendable {
+
+    let items: [Item]
+    let cellContent: (Item) -> Content
+    @Binding var isAtBottom: Bool
+    @Binding var unreadCount: Int
+    @Binding var scrollToBottomRequest: Int
+
+    func makeUIViewController(context: Context) -> ChatTableViewController<Item> {
+        let controller = ChatTableViewController<Item>()
+        controller.configure { item in
+            AnyView(cellContent(item))
+        }
+        controller.onScrollStateChanged = { atBottom, unread in
+            Task { @MainActor in
+                isAtBottom = atBottom
+                unreadCount = unread
+            }
+        }
+        context.coordinator.lastScrollRequest = scrollToBottomRequest
+        return controller
+    }
+
+    func updateUIViewController(_ controller: ChatTableViewController<Item>, context: Context) {
+        // Update items
+        controller.updateItems(items)
+
+        // Handle scroll-to-bottom requests
+        if scrollToBottomRequest != context.coordinator.lastScrollRequest {
+            context.coordinator.lastScrollRequest = scrollToBottomRequest
+            controller.scrollToBottom(animated: true)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    class Coordinator {
+        var lastScrollRequest: Int = 0
+    }
+}
