@@ -425,21 +425,19 @@ final class ChatViewModel {
             // Remove from local array
             messages.removeAll { $0.id == message.id }
 
-            // Update last message date + preview cache
+            // Update last message date if needed
             if let currentContact {
-                let lastMessage = messages.last
-                lastMessageCache[currentContact.id] = lastMessage
-                try await dataStore.updateContactLastMessage(
-                    contactID: currentContact.id,
-                    date: lastMessage?.date ?? .distantPast
-                )
-            } else if let currentChannel {
-                let lastMessage = messages.last
-                lastMessageCache[currentChannel.id] = lastMessage
-                try await dataStore.updateChannelLastMessage(
-                    channelID: currentChannel.id,
-                    date: lastMessage?.date ?? .distantPast
-                )
+                if let lastMessage = messages.last {
+                    try await dataStore.updateContactLastMessage(
+                        contactID: currentContact.id,
+                        date: lastMessage.date
+                    )
+                } else {
+                    try await dataStore.updateContactLastMessage(
+                        contactID: currentContact.id,
+                        date: Date.distantPast
+                    )
+                }
             }
         } catch {
             errorMessage = error.localizedDescription

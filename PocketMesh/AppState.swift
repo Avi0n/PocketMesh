@@ -16,6 +16,11 @@ public final class AppState {
 
     private let logger = Logger(subsystem: "com.pocketmesh", category: "AppState")
 
+    // MARK: - Location
+
+    /// App-wide location service for permission management
+    public let locationService = LocationService()
+
     // MARK: - Connection (via ConnectionManager)
 
     /// The connection manager for device lifecycle

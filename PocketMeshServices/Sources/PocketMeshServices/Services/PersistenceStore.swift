@@ -711,21 +711,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Updates the round-trip time for a message
-    public func updateMessageRoundTripTime(id: UUID, roundTripTime: UInt32) throws {
-        let targetID = id
-        let predicate = #Predicate<Message> { message in
-            message.id == targetID
-        }
-        var descriptor = FetchDescriptor(predicate: predicate)
-        descriptor.fetchLimit = 1
-
-        if let message = try modelContext.fetch(descriptor).first {
-            message.roundTripTime = roundTripTime
-            try modelContext.save()
-        }
-    }
-
     /// Delete a message
     public func deleteMessage(id: UUID) throws {
         let targetID = id

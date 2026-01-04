@@ -52,9 +52,6 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Update heard repeats count
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws
 
-    /// Update round-trip time for a message
-    func updateMessageRoundTripTime(id: UUID, roundTripTime: UInt32) async throws
-
     /// Check if a message with the given deduplication key exists
     func isDuplicateMessage(deduplicationKey: String) async throws -> Bool
 

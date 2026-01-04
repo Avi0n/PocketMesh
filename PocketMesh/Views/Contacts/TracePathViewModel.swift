@@ -10,16 +10,11 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePath")
 /// Represents a single hop in a trace result
 struct TraceHop: Identifiable {
     let id = UUID()
-    let hashBytes: Data?          // nil for start/end node (local device)
+    let hashByte: UInt8?          // nil for start/end node (local device)
     let resolvedName: String?     // From contacts lookup
     let snr: Double
     let isStartNode: Bool
     let isEndNode: Bool
-
-    /// Display string for hash (shows all bytes)
-    var hashDisplayString: String? {
-        hashBytes?.map { $0.hexString }.joined()
-    }
 
     var signalLevel: Double {
         // Map SNR to 0-1 range for cellularbars variableValue
@@ -36,27 +31,18 @@ struct TraceHop: Identifiable {
 }
 
 /// Result of a trace operation
-struct TraceResult: Identifiable {
-    let id = UUID()
+struct TraceResult {
     let hops: [TraceHop]
     let durationMs: Int
     let success: Bool
     let errorMessage: String?
-    let tracedPathBytes: [UInt8]  // Path that was actually traced
 
-    /// Comma-separated path string for display/copy
-    var tracedPathString: String {
-        tracedPathBytes.map { $0.hexString }.joined(separator: ",")
+    static func timeout() -> TraceResult {
+        TraceResult(hops: [], durationMs: 0, success: false, errorMessage: "No response received")
     }
 
-    static func timeout(attemptedPath: [UInt8]) -> TraceResult {
-        TraceResult(hops: [], durationMs: 0, success: false,
-                    errorMessage: "No response received", tracedPathBytes: attemptedPath)
-    }
-
-    static func sendFailed(_ message: String, attemptedPath: [UInt8]) -> TraceResult {
-        TraceResult(hops: [], durationMs: 0, success: false,
-                    errorMessage: message, tracedPathBytes: attemptedPath)
+    static func sendFailed(_ message: String) -> TraceResult {
+        TraceResult(hops: [], durationMs: 0, success: false, errorMessage: message)
     }
 }
 
@@ -73,13 +59,6 @@ final class TracePathViewModel {
 
     var isRunning = false
     var result: TraceResult?
-    var resultID: UUID?  // Set to new UUID only on successful trace
-    var errorMessage: String?
-    var errorHapticTrigger = 0  // Incremented on each error for haptic feedback
-    private var errorClearTask: Task<Void, Never>?
-
-    /// Duration before error auto-clears. Injectable for testing.
-    var errorAutoClearDelay: Duration = .seconds(4)
 
     // MARK: - Saved Path State
 
@@ -96,14 +75,13 @@ final class TracePathViewModel {
     // MARK: - Trace Correlation
 
     private var pendingTag: UInt32?
-    private var pendingDeviceID: UUID?  // Track which device initiated trace
     private var traceStartTime: Date?
     private var traceTask: Task<Void, Never>?
 
     // MARK: - Path Hash Tracking (for save validation)
 
     private var pendingPathHash: [UInt8]?
-    // resultPathHash removed - now derived from result.tracedPathBytes
+    private var resultPathHash: [UInt8]?
 
     // MARK: - Event Subscription
 
@@ -115,8 +93,7 @@ final class TracePathViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
                 guard let traceInfo = notification.userInfo?["traceInfo"] as? TraceInfo else { return }
-                let deviceID = notification.userInfo?["deviceID"] as? UUID
-                self?.handleTraceResponse(traceInfo, deviceID: deviceID)
+                self?.handleTraceResponse(traceInfo)
             }
             .store(in: &cancellables)
     }
@@ -153,32 +130,13 @@ final class TracePathViewModel {
     /// Can save path if result is successful and path hasn't changed since trace ran
     var canSavePath: Bool {
         guard let result, result.success else { return false }
-        return fullPathBytes == result.tracedPathBytes
+        return fullPathBytes == resultPathHash
     }
 
     // MARK: - Configuration
 
     func configure(appState: AppState) {
         self.appState = appState
-    }
-
-    // MARK: - Error Handling
-
-    func setError(_ message: String) {
-        errorClearTask?.cancel()
-        errorMessage = message
-        errorHapticTrigger += 1
-        errorClearTask = Task { @MainActor in
-            try? await Task.sleep(for: errorAutoClearDelay)
-            if !Task.isCancelled {
-                errorMessage = nil
-            }
-        }
-    }
-
-    func clearError() {
-        errorClearTask?.cancel()
-        errorMessage = nil
     }
 
     // MARK: - Name Resolution
@@ -210,28 +168,28 @@ final class TracePathViewModel {
 
     /// Add a repeater to the outbound path
     func addRepeater(_ repeater: ContactDTO) {
-        clearError()
-        let hashByte = repeater.publicKey[0]
+        guard let hashByte = repeater.publicKey.first else { return }
         let hop = PathHop(hashByte: hashByte, resolvedName: repeater.displayName)
         outboundPath.append(hop)
         activeSavedPath = nil
+        resultPathHash = nil
         pendingPathHash = nil
     }
 
     /// Remove a repeater from the path
     func removeRepeater(at index: Int) {
-        clearError()
         guard outboundPath.indices.contains(index) else { return }
         outboundPath.remove(at: index)
         activeSavedPath = nil
+        resultPathHash = nil
         pendingPathHash = nil
     }
 
     /// Move a repeater within the path
     func moveRepeater(from source: IndexSet, to destination: Int) {
-        clearError()
         outboundPath.move(fromOffsets: source, toOffset: destination)
         activeSavedPath = nil
+        resultPathHash = nil
         pendingPathHash = nil
     }
 
@@ -280,7 +238,7 @@ final class TracePathViewModel {
             let savedPath = try await dataStore.createSavedTracePath(
                 deviceID: deviceID,
                 name: name,
-                pathBytes: Data(result.tracedPathBytes),
+                pathBytes: Data(fullPathBytes),
                 initialRun: initialRun
             )
             activeSavedPath = savedPath
@@ -297,6 +255,7 @@ final class TracePathViewModel {
         // Clear existing path
         outboundPath.removeAll()
         result = nil
+        resultPathHash = nil
         pendingPathHash = nil
 
         // Reconstruct outbound path from saved bytes
@@ -318,39 +277,13 @@ final class TracePathViewModel {
         logger.info("Loaded saved path: \(savedPath.name) with \(outboundBytes.count) hops")
     }
 
-    /// Clear the path (resets to empty state)
-    func clearPath() {
-        clearError()
+    /// Clear the saved path state (reset to fresh builder)
+    func clearSavedPath() {
         activeSavedPath = nil
         outboundPath.removeAll()
         result = nil
+        resultPathHash = nil
         pendingPathHash = nil
-    }
-
-    /// Find a saved path matching the current path bytes
-    /// Returns the most recently used match if multiple exist
-    private func findMatchingSavedPath() async -> SavedTracePathDTO? {
-        guard let appState,
-              let deviceID = appState.connectedDevice?.id,
-              let dataStore = appState.services?.dataStore else { return nil }
-
-        let pathBytes = fullPathBytes
-        guard !pathBytes.isEmpty else { return nil }
-
-        do {
-            let savedPaths = try await dataStore.fetchSavedTracePaths(deviceID: deviceID)
-            let matches = savedPaths.filter { $0.pathHashBytes == pathBytes }
-
-            // Return most recently used (by latest run date)
-            return matches.max { path1, path2 in
-                let date1 = path1.runs.map(\.date).max() ?? .distantPast
-                let date2 = path2.runs.map(\.date).max() ?? .distantPast
-                return date1 < date2
-            }
-        } catch {
-            logger.error("Failed to fetch saved paths for matching: \(error.localizedDescription)")
-            return nil
-        }
     }
 
     // MARK: - Trace Execution
@@ -364,26 +297,14 @@ final class TracePathViewModel {
         // Cancel any pending trace
         traceTask?.cancel()
 
-        // Clear previous results and errors
-        resultID = nil
-        clearError()
-
-        // Match to saved path if not already running one
-        if activeSavedPath == nil {
-            if let matchedPath = await findMatchingSavedPath() {
-                activeSavedPath = matchedPath
-                logger.info("Matched path to saved path: \(matchedPath.name)")
-            }
-        }
-
         isRunning = true
         result = nil
+        resultPathHash = nil
         pendingPathHash = fullPathBytes
 
         // Generate random tag for correlation
         let tag = UInt32.random(in: 0...UInt32.max)
         pendingTag = tag
-        pendingDeviceID = appState.connectedDevice?.id  // Capture device
         traceStartTime = Date()
 
         // Build path data
@@ -400,7 +321,8 @@ final class TracePathViewModel {
             logger.info("Sent trace with tag \(tag), path: \(self.fullPathString)")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
-            setError("Failed to send trace packet")
+            result = .sendFailed("Failed to send trace packet")
+            resultPathHash = nil
             pendingPathHash = nil
 
             // Record failed run for saved paths
@@ -427,7 +349,6 @@ final class TracePathViewModel {
 
             isRunning = false
             pendingTag = nil
-            pendingDeviceID = nil
             return
         }
 
@@ -439,7 +360,8 @@ final class TracePathViewModel {
                 // Timeout - no response received
                 if !Task.isCancelled && pendingTag == tag {
                     logger.warning("Trace timeout for tag \(tag)")
-                    setError("No response received")
+                    result = .timeout()
+                    resultPathHash = nil
                     pendingPathHash = nil
 
                     // Record failed run for saved paths
@@ -464,7 +386,6 @@ final class TracePathViewModel {
 
                     isRunning = false
                     pendingTag = nil
-                    pendingDeviceID = nil
                 }
             } catch {
                 // Task cancelled (response received)
@@ -473,15 +394,9 @@ final class TracePathViewModel {
     }
 
     /// Handle trace response from event stream
-    func handleTraceResponse(_ traceInfo: TraceInfo, deviceID: UUID?) {
+    func handleTraceResponse(_ traceInfo: TraceInfo) {
         guard traceInfo.tag == pendingTag else {
             logger.debug("Ignoring trace response with non-matching tag \(traceInfo.tag)")
-            return
-        }
-
-        // Validate device ID if both are available; skip if either is nil
-        if let pending = pendingDeviceID, let received = deviceID, pending != received {
-            logger.warning("Ignoring trace response from different device")
             return
         }
 
@@ -497,65 +412,55 @@ final class TracePathViewModel {
             durationMs = 0
         }
 
-        // Build hops from response using sender attribution model:
-        // Each node's SNR shows how well the NEXT hop received its transmission.
-        // This answers "how good was this node's outgoing signal?"
+        // Build hops from response
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
-        let path = traceInfo.path
 
-        // Start node gets SNR from first path node (how first repeater heard our transmission)
-        let startSnr = path.first?.snr ?? 0
+        // Start node (local device - no incoming SNR, we're the sender)
         hops.append(TraceHop(
-            hashBytes: nil,
+            hashByte: nil,
             resolvedName: deviceName,
-            snr: startSnr,
+            snr: 0,
             isStartNode: true,
             isEndNode: false
         ))
 
-        // Intermediate hops - each gets SNR from the NEXT node's measurement
-        for (index, node) in path.enumerated() where node.hashBytes != nil {
-            let resolvedName: String?
-            if let bytes = node.hashBytes, bytes.count == 1 {
-                resolvedName = resolveHashToName(bytes[0])
-            } else {
-                resolvedName = nil  // Multi-byte: no resolution possible
-            }
-
-            // Get SNR from next position in path (sender attribution)
-            let nextSnr = index + 1 < path.count ? path[index + 1].snr : 0
-
+        // Intermediate hops (all nodes with a hash are repeaters)
+        for node in traceInfo.path where node.hash != nil {
+            let resolvedName = node.hash.flatMap { resolveHashToName($0) }
             hops.append(TraceHop(
-                hashBytes: node.hashBytes,
+                hashByte: node.hash,
                 resolvedName: resolvedName,
-                snr: nextSnr,
+                snr: node.snr,
                 isStartNode: false,
                 isEndNode: false
             ))
         }
 
-        // End node - no SNR (no next hop to measure our transmission)
-        hops.append(TraceHop(
-            hashBytes: nil,
-            resolvedName: deviceName,
-            snr: 0,
-            isStartNode: false,
-            isEndNode: true
-        ))
+        // End node (return to local device - the node with hash == nil)
+        if let returnNode = traceInfo.path.last, returnNode.hash == nil {
+            hops.append(TraceHop(
+                hashByte: nil,
+                resolvedName: deviceName,
+                snr: returnNode.snr,
+                isStartNode: false,
+                isEndNode: true
+            ))
+        }
 
         result = TraceResult(
             hops: hops,
             durationMs: durationMs,
             success: true,
-            errorMessage: nil,
-            tracedPathBytes: pendingPathHash ?? []
+            errorMessage: nil
         )
-        resultID = UUID()
+
+        // Transfer path hash on success
+        resultPathHash = pendingPathHash
         pendingPathHash = nil
+
         isRunning = false
         pendingTag = nil
-        pendingDeviceID = nil
         traceStartTime = nil
 
         // Auto-append run if this is a saved path
@@ -595,16 +500,6 @@ final class TracePathViewModel {
     /// Test helper to set pending tag without running a full trace
     func setPendingTagForTesting(_ tag: UInt32) {
         pendingTag = tag
-    }
-
-    /// Test helper to set pending device ID
-    func setPendingDeviceIDForTesting(_ deviceID: UUID?) {
-        pendingDeviceID = deviceID
-    }
-
-    /// Test helper to set pending path hash
-    func setPendingPathHashForTesting(_ pathHash: [UInt8]?) {
-        pendingPathHash = pathHash
     }
     #endif
 }

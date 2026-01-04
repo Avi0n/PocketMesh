@@ -102,48 +102,4 @@ struct MessageServiceTests {
         #expect(config.minTimeout == 10.0)
         #expect(config.triggerPathDiscoveryAfterFlood == false)
     }
-
-    // MARK: - Channel Message Integration Tests
-
-    @Test("sendChannelMessage registers ACK for tracking")
-    func sendChannelMessageRegistersAck() async throws {
-        // Setup
-        let mockSession = MockMeshCoreSession()
-        let mockStore = MockPersistenceStore()
-        let service = MessageService(session: mockSession, dataStore: mockStore)
-
-        let deviceID = UUID()
-        let channelIndex: UInt8 = 1
-
-        // Create channel in store
-        let channel = ChannelDTO(
-            id: UUID(),
-            deviceID: deviceID,
-            index: channelIndex,
-            name: "Test",
-            secret: Data(repeating: 0, count: 16),
-            isEnabled: true,
-            lastMessageDate: nil,
-            unreadCount: 0
-        )
-        try await mockStore.saveChannel(channel)
-
-        // Act
-        let messageID = try await service.sendChannelMessage(
-            text: "Hello channel",
-            channelIndex: channelIndex,
-            deviceID: deviceID
-        )
-
-        // Assert - message was sent via session
-        let invocations = await mockSession.sendChannelMessageInvocations
-        #expect(invocations.count == 1)
-        #expect(invocations.first?.channel == channelIndex)
-        #expect(invocations.first?.text == "Hello channel")
-
-        // Assert - message saved with .sent status
-        let savedMessage = try await mockStore.fetchMessage(id: messageID)
-        #expect(savedMessage != nil)
-        #expect(savedMessage?.status == .sent)
-    }
 }

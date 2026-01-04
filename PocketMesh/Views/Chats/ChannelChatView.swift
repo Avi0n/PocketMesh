@@ -33,10 +33,11 @@ struct ChannelChatView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Button("Info", systemImage: "info.circle") {
+                Button {
                     showingChannelInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
                 }
-                .labelStyle(.iconOnly)
             }
         }
         .sheet(isPresented: $showingChannelInfo) {
@@ -119,16 +120,6 @@ struct ChannelChatView: View {
                 if viewModel.isLoading && viewModel.messages.isEmpty {
                     ProgressView()
                         .padding()
-                } else if let errorMessage = viewModel.errorMessage, viewModel.messages.isEmpty {
-                    ContentUnavailableView {
-                        Label("Unable to Load Messages", systemImage: "exclamationmark.triangle")
-                    } description: {
-                        Text(errorMessage)
-                    } actions: {
-                        Button("Retry") {
-                            Task { await viewModel.loadChannelMessages(for: channel) }
-                        }
-                    }
                 } else if viewModel.messages.isEmpty {
                     emptyMessagesView
                 } else {
@@ -142,9 +133,11 @@ struct ChannelChatView: View {
         .scrollPosition($scrollPosition)
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: viewModel.messages.count) { _, _ in
+            // Scroll to bottom when new messages arrive
             scrollPosition.scrollTo(edge: .bottom)
         }
         .onChange(of: isInputFocused) { _, isFocused in
+            // Scroll to bottom when keyboard appears
             if isFocused {
                 scrollPosition.scrollTo(edge: .bottom)
             }
@@ -171,13 +164,16 @@ struct ChannelChatView: View {
     }
 
     private var messagesContent: some View {
-        ForEach(viewModel.messages.indexed(), id: \.element.id) { index, message in
+        ForEach(viewModel.messages.enumeratedElements(), id: \.element.id) { index, message in
             UnifiedMessageBubble(
                 message: message,
                 contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
                 contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
-                configuration: bubbleConfiguration,
+                configuration: .channel(
+                    isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
+                    contacts: viewModel.conversations
+                ),
                 showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
                 onRetry: message.hasFailed ? { retryMessage(message) } : nil,
                 onReply: { replyText in
@@ -188,13 +184,6 @@ struct ChannelChatView: View {
                 }
             )
         }
-    }
-
-    private var bubbleConfiguration: MessageBubbleConfiguration {
-        .channel(
-            isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
-            contacts: viewModel.conversations
-        )
     }
 
     private func setReplyText(_ text: String) {

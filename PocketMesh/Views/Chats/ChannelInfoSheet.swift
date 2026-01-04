@@ -125,7 +125,7 @@ struct ChannelInfoSheet: View {
                 Spacer()
                 VStack(spacing: 12) {
                     if let qrImage = generateQRCode() {
-                        Image(decorative: qrImage, scale: 1, orientation: .up)
+                        Image(uiImage: qrImage)
                             .interpolation(.none)
                             .resizable()
                             .scaledToFit()
@@ -156,6 +156,13 @@ struct ChannelInfoSheet: View {
                     Text(channel.secret.hexString())
                         .font(.system(.body, design: .monospaced))
                         .textSelection(.enabled)
+
+                    Spacer()
+
+                    Button("Copy", systemImage: "doc.on.doc") {
+                        UIPasteboard.general.string = channel.secret.hexString()
+                    }
+                    .labelStyle(.iconOnly)
                 }
             }
         } header: {
@@ -190,7 +197,7 @@ struct ChannelInfoSheet: View {
 
     // MARK: - Private Methods
 
-    private func generateQRCode() -> CGImage? {
+    private func generateQRCode() -> UIImage? {
         // Format: meshcore://channel/add?name=<name>&secret=<hex>
         let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString())"
 
@@ -207,7 +214,7 @@ struct ChannelInfoSheet: View {
 
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
 
-        return cgImage
+        return UIImage(cgImage: cgImage)
     }
 
     private func deleteChannel() async {

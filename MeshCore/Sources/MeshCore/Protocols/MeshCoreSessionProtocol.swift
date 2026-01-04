@@ -24,15 +24,6 @@ public protocol MeshCoreSessionProtocol: Actor {
     /// Provides an observable connection state stream for UI binding.
     var connectionState: AsyncStream<ConnectionState> { get }
 
-    // MARK: - Events
-
-    /// Subscribes to all events from the device.
-    ///
-    /// Each subscriber receives all events independently.
-    ///
-    /// - Returns: An async stream of mesh events that yields ``MeshEvent`` values as they are received.
-    func events() async -> AsyncStream<MeshEvent>
-
     // MARK: - Message Operations (used by MessageService)
 
     /// Sends a direct message to a contact.
@@ -55,35 +46,12 @@ public protocol MeshCoreSessionProtocol: Actor {
     ///   - channel: The channel index (0-7).
     ///   - text: The message text to send.
     ///   - timestamp: The timestamp of the message.
-    /// - Returns: A `MessageSentInfo` object containing the ACK code for delivery tracking.
     /// - Throws: `MeshCoreError` if the channel message fails to send.
     func sendChannelMessage(
         channel: UInt8,
         text: String,
         timestamp: Date
-    ) async throws -> MessageSentInfo
-
-    /// Sends a message with automatic retry and path fallback.
-    ///
-    /// - Parameters:
-    ///   - destination: The recipient's full 32-byte public key.
-    ///   - text: The message text to send.
-    ///   - timestamp: The timestamp of the message.
-    ///   - maxAttempts: Maximum total attempts to make.
-    ///   - floodAfter: Number of failed attempts before switching to flood routing.
-    ///   - maxFloodAttempts: Maximum attempts while in flood mode.
-    ///   - timeout: Optional custom timeout per attempt.
-    /// - Returns: Information about the sent message if acknowledged, otherwise `nil`.
-    /// - Throws: `MeshCoreError` if the message cannot be sent.
-    func sendMessageWithRetry(
-        to destination: Data,
-        text: String,
-        timestamp: Date,
-        maxAttempts: Int,
-        floodAfter: Int,
-        maxFloodAttempts: Int,
-        timeout: TimeInterval?
-    ) async throws -> MessageSentInfo?
+    ) async throws
 
     // MARK: - Contact Operations (used by ContactService)
 

@@ -1400,7 +1400,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
-    /// Sends a broadcast message to a channel.
+    /// Sends a message to a channel.
     ///
     /// Channel messages are broadcast to all nodes with the same channel configuration.
     ///
@@ -1408,18 +1408,13 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - channel: Channel index (0-255).
     ///   - text: The message text to send.
     ///   - timestamp: Message timestamp. Defaults to current time.
-    /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func sendChannelMessage(
         channel: UInt8,
         text: String,
         timestamp: Date = Date()
-    ) async throws -> MessageSentInfo {
-        let data = PacketBuilder.sendChannelMessage(channel: channel, text: text, timestamp: timestamp)
-        return try await sendAndWaitWithError(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+    ) async throws {
+        try await sendSimpleCommand(PacketBuilder.sendChannelMessage(channel: channel, text: text, timestamp: timestamp))
     }
 
     /// Sends a login request to a remote node.

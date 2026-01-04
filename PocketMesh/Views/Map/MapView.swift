@@ -7,6 +7,8 @@ struct MapView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = MapViewModel()
     @State private var selectedContactForDetail: ContactDTO?
+    @State private var showLineOfSight = false
+    @State private var lineOfSightContact: ContactDTO?
     @Namespace private var mapScope
 
     var body: some View {
@@ -25,10 +27,18 @@ struct MapView: View {
                     BLEStatusIndicatorView()
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showLineOfSight = true
+                    } label: {
+                        Label("Line of Sight", systemImage: "eye")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     refreshButton
                 }
             }
             .task {
+                appState.locationService.requestPermissionIfNeeded()
                 viewModel.configure(appState: appState)
                 await viewModel.loadContactsWithLocation()
                 viewModel.centerOnAllContacts()
@@ -36,10 +46,19 @@ struct MapView: View {
             .sheet(item: $selectedContactForDetail) { contact in
                 ContactDetailSheet(
                     contact: contact,
-                    onMessage: { navigateToChat(with: contact) }
+                    onMessage: { navigateToChat(with: contact) },
+                    onLineOfSight: { lineOfSightContact = contact }
                 )
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+            }
+            .fullScreenCover(isPresented: $showLineOfSight) {
+                LineOfSightView()
+                    .environment(appState)
+            }
+            .fullScreenCover(item: $lineOfSightContact) { contact in
+                LineOfSightView(preselectedContact: contact)
+                    .environment(appState)
             }
         }
     }
@@ -195,6 +214,7 @@ struct MapView: View {
 private struct ContactDetailSheet: View {
     let contact: ContactDTO
     let onMessage: () -> Void
+    let onLineOfSight: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -250,6 +270,15 @@ private struct ContactDetailSheet: View {
                         onMessage()
                     } label: {
                         Label("Send Message", systemImage: "message.fill")
+                    }
+
+                    if contact.hasLocation {
+                        Button {
+                            dismiss()
+                            onLineOfSight()
+                        } label: {
+                            Label("Line of Sight", systemImage: "eye")
+                        }
                     }
                 }
             }
