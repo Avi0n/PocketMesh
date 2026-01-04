@@ -65,7 +65,11 @@ struct MainTabView: View {
                 MapView()
             }
 
-            Tab("Settings", systemImage: "gear", value: 3) {
+            Tab("Tools", systemImage: "wrench.and.screwdriver", value: 3) {
+                ToolsView()
+            }
+
+            Tab("Settings", systemImage: "gear", value: 4) {
                 SettingsView()
             }
         }
