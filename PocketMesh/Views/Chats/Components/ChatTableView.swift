@@ -236,20 +236,24 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     func scrollToBottom(animated: Bool) {
         guard !items.isEmpty else { return }
 
-        logger.debug("scrollToBottom: animated=\(animated), contentOffset.y=\(self.tableView.contentOffset.y)")
+        // If already at bottom, no animation will occur - don't set flag
+        // UIKit won't fire scrollViewDidEndScrollingAnimation when there's no movement
+        let alreadyAtBottom = tableView.contentOffset.y <= 1
+
+        logger.debug("scrollToBottom: animated=\(animated), alreadyAtBottom=\(alreadyAtBottom), contentOffset.y=\(self.tableView.contentOffset.y)")
 
         // Set state BEFORE scroll to prevent scroll delegate from overriding
         isAtBottom = true
         unreadCount = 0
         lastSeenItemID = items.last?.id
-        isScrollingToBottom = animated  // Flag active during animated scroll
+        isScrollingToBottom = animated && !alreadyAtBottom  // Only set if animation will actually run
 
         // In flipped table with reversed data: row 0 = newest message
         // Scroll row 0 to .top anchor (which is visual BOTTOM in flipped table)
         tableView.scrollToRow(at: IndexPath(row: 0, section: 0), at: .top, animated: animated)
 
-        // Clear flag immediately if not animated (no animation callback)
-        if !animated {
+        // Clear flag immediately if not animated or already at bottom
+        if !animated || alreadyAtBottom {
             isScrollingToBottom = false
         }
 
