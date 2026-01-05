@@ -192,20 +192,38 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         snapshot.appendSections([.main])
         snapshot.appendItems(newItems.reversed().map(\.id))
 
-        // Find items that changed content (same ID, different hash) and reload them.
-        // Without this, diffable data source won't update cells for items with same ID.
-        // Using reloadItems instead of reconfigureItems to ensure fresh cell creation
-        // with updated closures (e.g., onRetry callback).
+        // Find items that changed content (same ID, different hash).
+        // Without reloading these, diffable data source won't update cells for items with same ID.
         let oldItemsByID = Dictionary(uniqueKeysWithValues: oldItems.map { ($0.id, $0) })
         let changedIDs = newItems.compactMap { newItem -> Item.ID? in
             guard let oldItem = oldItemsByID[newItem.id] else { return nil }
             return oldItem != newItem ? newItem.id : nil
         }
-        if !changedIDs.isEmpty {
-            snapshot.reloadItems(changedIDs)
-        }
 
-        dataSource?.apply(snapshot, animatingDifferences: animated && previousCount > 0)
+        // Two-phase apply to handle structural changes and content updates differently:
+        // 1. Structural changes (new/deleted items) - animate for smooth UX
+        // 2. Content updates (status changes) - no animation to prevent flash
+        let hasStructuralChanges = newItems.count != oldItems.count ||
+            Set(newItems.map(\.id)) != Set(oldItems.map(\.id))
+
+        if hasStructuralChanges {
+            // Apply structural changes with animation
+            dataSource?.apply(snapshot, animatingDifferences: animated && previousCount > 0)
+
+            // Then reload changed items without animation (separate apply)
+            if !changedIDs.isEmpty {
+                var reloadSnapshot = dataSource?.snapshot() ?? snapshot
+                reloadSnapshot.reloadItems(changedIDs)
+                dataSource?.apply(reloadSnapshot, animatingDifferences: false)
+            }
+        } else if !changedIDs.isEmpty {
+            // No structural changes, just content updates - reload without animation
+            snapshot.reloadItems(changedIDs)
+            dataSource?.apply(snapshot, animatingDifferences: false)
+        } else {
+            // No changes at all, but still apply to sync state
+            dataSource?.apply(snapshot, animatingDifferences: false)
+        }
 
         logger.debug("updateItems: snapshot applied, isAtBottom now=\(self.isAtBottom)")
 
