@@ -488,6 +488,17 @@ final class ChatViewModel {
         return gap > 300
     }
 
+    /// Determines if the message direction changed from the previous message.
+    /// Used to add visual separation between incoming and outgoing message groups.
+    static func isDirectionChange(at index: Int, in messages: [MessageDTO]) -> Bool {
+        guard index > 0 else { return false }
+
+        let currentMessage = messages[index]
+        let previousMessage = messages[index - 1]
+
+        return currentMessage.direction != previousMessage.direction
+    }
+
     // MARK: - Message Queue
 
     /// Add a message to the send queue (for testing)

@@ -26,7 +26,7 @@ struct ChatView: View {
 
     var body: some View {
         messagesView
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
             }
             .navigationTitle(contact.displayName)
@@ -185,6 +185,7 @@ struct ChatView: View {
             deviceName: appState.connectedDevice?.nodeName ?? "Me",
             configuration: .directMessage,
             showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+            showDirectionGap: ChatViewModel.isDirectionChange(at: index, in: viewModel.messages),
             onRetry: { retryMessage(message) },
             onReply: { replyText in
                 setReplyText(replyText)

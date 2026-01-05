@@ -23,7 +23,7 @@ struct ChannelChatView: View {
 
     var body: some View {
         messagesView
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
             }
             .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
@@ -159,6 +159,7 @@ struct ChannelChatView: View {
                 contacts: viewModel.conversations
             ),
             showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+            showDirectionGap: ChatViewModel.isDirectionChange(at: index, in: viewModel.messages),
             onRetry: { retryMessage(message) },
             onReply: { replyText in
                 setReplyText(replyText)

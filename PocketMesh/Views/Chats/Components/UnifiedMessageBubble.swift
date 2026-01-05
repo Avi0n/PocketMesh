@@ -58,6 +58,7 @@ struct UnifiedMessageBubble: View {
     let deviceName: String
     let configuration: MessageBubbleConfiguration
     let showTimestamp: Bool
+    let showDirectionGap: Bool
     let onRetry: (() -> Void)?
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
@@ -69,6 +70,7 @@ struct UnifiedMessageBubble: View {
         deviceName: String = "Me",
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
+        showDirectionGap: Bool = false,
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil
@@ -79,6 +81,7 @@ struct UnifiedMessageBubble: View {
         self.deviceName = deviceName
         self.configuration = configuration
         self.showTimestamp = showTimestamp
+        self.showDirectionGap = showDirectionGap
         self.onRetry = onRetry
         self.onReply = onReply
         self.onDelete = onDelete
@@ -127,6 +130,8 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal)
+        .padding(.top, showDirectionGap ? 12 : 0)
+        .padding(.bottom, message.isOutgoing ? 4 : 0)
     }
 
     // MARK: - Computed Properties
