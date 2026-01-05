@@ -152,4 +152,42 @@ struct FresnelZoneRendererTests {
         #expect(samples[2].yLOS == 150)
         #expect(samples[2].fresnelRadius == 0)  // at endpoint
     }
+
+    @Test("buildProfileSamples handles segment slice correctly (R→B case)")
+    func buildProfileSamplesSegmentSlice() {
+        // Create elevation profile: flat at 100m, 12km total
+        // Then take a slice from midpoint (R at 6km) to end (B at 12km)
+        let fullProfile = [
+            ElevationSample(coordinate: .init(latitude: 0, longitude: 0), elevation: 100, distanceFromAMeters: 0),
+            ElevationSample(coordinate: .init(latitude: 0, longitude: 0), elevation: 100, distanceFromAMeters: 3000),
+            ElevationSample(coordinate: .init(latitude: 0, longitude: 0), elevation: 100, distanceFromAMeters: 6000),  // R
+            ElevationSample(coordinate: .init(latitude: 0, longitude: 0), elevation: 100, distanceFromAMeters: 9000),
+            ElevationSample(coordinate: .init(latitude: 0, longitude: 0), elevation: 100, distanceFromAMeters: 12000), // B
+        ]
+
+        // Take slice from R (index 2) to B (index 4) - simulates R→B segment
+        let segmentRB = Array(fullProfile[2...])
+
+        let samples = FresnelZoneRenderer.buildProfileSamples(
+            from: segmentRB,
+            pointAHeight: 50,  // repeater height
+            pointBHeight: 50,  // B height
+            frequencyMHz: 910,
+            refractionK: 1.33
+        )
+
+        #expect(samples.count == 3)
+
+        // First sample is at R (segment start) - radius must be 0
+        #expect(samples[0].x == 6000)  // x-coordinate preserved (global)
+        #expect(samples[0].fresnelRadius == 0, "Fresnel radius at segment start (R) must be 0")
+
+        // Middle sample at 9km (segment midpoint)
+        #expect(samples[1].x == 9000)
+        #expect(samples[1].fresnelRadius > 20, "Fresnel radius at segment midpoint should be maximum")
+
+        // Last sample is at B (segment end) - radius must be 0
+        #expect(samples[2].x == 12000)
+        #expect(samples[2].fresnelRadius == 0, "Fresnel radius at segment end (B) must be 0")
+    }
 }

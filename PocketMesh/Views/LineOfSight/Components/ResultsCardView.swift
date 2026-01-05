@@ -23,7 +23,6 @@ struct ResultsCardView: View {
                 }
             }
             .padding()
-            .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
         }
     }
 
@@ -102,7 +101,7 @@ struct ResultsCardView: View {
                         .monospacedDigit()
                 }
 
-                if let diffractionText = LOSFormatters.formatDiffractionLoss(result.additionalDiffractionLoss) {
+                if let diffractionText = LOSFormatters.formatDiffractionLoss(result.peakDiffractionLoss) {
                     GridRow {
                         Text("Diffraction loss")
                             .foregroundStyle(.secondary)
@@ -173,7 +172,6 @@ struct ResultsCardView: View {
         .font(.caption)
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 6))
     }
 }
 
@@ -183,7 +181,7 @@ struct ResultsCardView: View {
     let result = PathAnalysisResult(
         distanceMeters: 12400,
         freeSpacePathLoss: 118.2,
-        additionalDiffractionLoss: 0,
+        peakDiffractionLoss: 0,
         totalPathLoss: 118.2,
         clearanceStatus: .clear,
         worstClearancePercent: 92,
@@ -200,7 +198,7 @@ struct ResultsCardView: View {
     let result = PathAnalysisResult(
         distanceMeters: 12400,
         freeSpacePathLoss: 118.2,
-        additionalDiffractionLoss: 8.4,
+        peakDiffractionLoss: 8.4,
         totalPathLoss: 126.6,
         clearanceStatus: .partialObstruction,
         worstClearancePercent: 47,
@@ -220,7 +218,7 @@ struct ResultsCardView: View {
     let result = PathAnalysisResult(
         distanceMeters: 8500,
         freeSpacePathLoss: 112.5,
-        additionalDiffractionLoss: 22.3,
+        peakDiffractionLoss: 22.3,
         totalPathLoss: 134.8,
         clearanceStatus: .blocked,
         worstClearancePercent: -15,
@@ -232,5 +230,183 @@ struct ResultsCardView: View {
     )
 
     return ResultsCardView(result: result, isExpanded: .constant(true))
+        .padding()
+}
+
+// MARK: - Relay Results Card View
+
+/// Card view for relay path analysis results showing dual-segment analysis
+struct RelayResultsCardView: View {
+    let result: RelayPathAnalysisResult
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Results")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 0) {
+                collapsedContent
+
+                if isExpanded {
+                    Divider()
+                        .padding(.vertical, 12)
+                    expandedContent
+                }
+            }
+            .padding()
+        }
+    }
+
+    // MARK: - Collapsed Content
+
+    private var collapsedContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack {
+                    ClearanceStatusView(
+                        status: result.overallStatus,
+                        clearancePercent: min(
+                            result.segmentAR.worstClearancePercent,
+                            result.segmentRB.worstClearancePercent
+                        )
+                    )
+                    Spacer()
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+
+            Divider()
+
+            // Segment summary
+            VStack(alignment: .leading, spacing: 4) {
+                segmentRow(segment: result.segmentAR)
+                segmentRow(segment: result.segmentRB)
+            }
+
+            Divider()
+
+            HStack {
+                Text("Total: \(LOSFormatters.formatDistance(result.totalDistanceMeters))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+    }
+
+    private func segmentRow(segment: SegmentAnalysisResult) -> some View {
+        HStack {
+            Circle()
+                .fill(segment.clearanceStatus.color)
+                .frame(width: 8, height: 8)
+
+            Text("\(segment.startLabel) \u{2192} \(segment.endLabel)")
+                .font(.caption)
+
+            Text(segment.clearanceStatus.rawValue)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(LOSFormatters.formatDistance(segment.distanceMeters))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Expanded Content
+
+    private var expandedContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            segmentDetailView(segment: result.segmentAR)
+            segmentDetailView(segment: result.segmentRB)
+        }
+    }
+
+    private func segmentDetailView(segment: SegmentAnalysisResult) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("\(segment.startLabel) \u{2192} \(segment.endLabel)")
+                .font(.subheadline)
+                .bold()
+
+            Grid(alignment: .leading, verticalSpacing: 4) {
+                GridRow {
+                    Text("Status")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(segment.clearanceStatus.rawValue)
+                }
+                GridRow {
+                    Text("Distance")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(LOSFormatters.formatDistance(segment.distanceMeters))
+                }
+                GridRow {
+                    Text("Worst clearance")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(LOSFormatters.formatClearancePercent(segment.worstClearancePercent))%")
+                }
+            }
+            .font(.caption)
+        }
+        .padding()
+    }
+}
+
+// MARK: - Relay Results Previews
+
+#Preview("Relay - Clear Path") {
+    let result = RelayPathAnalysisResult(
+        segmentAR: SegmentAnalysisResult(
+            startLabel: "A",
+            endLabel: "R",
+            clearanceStatus: .clear,
+            distanceMeters: 5200,
+            worstClearancePercent: 85
+        ),
+        segmentRB: SegmentAnalysisResult(
+            startLabel: "R",
+            endLabel: "B",
+            clearanceStatus: .clear,
+            distanceMeters: 7200,
+            worstClearancePercent: 92
+        )
+    )
+
+    return RelayResultsCardView(result: result, isExpanded: .constant(false))
+        .padding()
+}
+
+#Preview("Relay - Mixed Clearance - Expanded") {
+    let result = RelayPathAnalysisResult(
+        segmentAR: SegmentAnalysisResult(
+            startLabel: "A",
+            endLabel: "R",
+            clearanceStatus: .clear,
+            distanceMeters: 5200,
+            worstClearancePercent: 85
+        ),
+        segmentRB: SegmentAnalysisResult(
+            startLabel: "R",
+            endLabel: "B",
+            clearanceStatus: .partialObstruction,
+            distanceMeters: 7200,
+            worstClearancePercent: 45
+        )
+    )
+
+    return RelayResultsCardView(result: result, isExpanded: .constant(true))
         .padding()
 }

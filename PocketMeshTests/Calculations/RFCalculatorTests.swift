@@ -456,7 +456,7 @@ struct PathAnalysisTests {
 
         // FSPL for 6km at 910MHz is approximately 107.2 dB
         #expect(abs(result.freeSpacePathLoss - 107.2) < 1.0)
-        #expect(result.additionalDiffractionLoss == 0)
+        #expect(result.peakDiffractionLoss == 0)
         #expect(result.totalPathLoss == result.freeSpacePathLoss)
     }
 
@@ -505,7 +505,7 @@ struct PathAnalysisTests {
             k: 1.0
         )
 
-        #expect(result.additionalDiffractionLoss > 10)
+        #expect(result.peakDiffractionLoss > 10)
         #expect(result.totalPathLoss > result.freeSpacePathLoss)
     }
 
@@ -744,5 +744,59 @@ struct PathAnalysisResultFieldsTests {
         )
 
         #expect(result.refractionK == 1.33)
+    }
+}
+
+// MARK: - Segment Analysis with ArraySlice Tests
+
+@Suite("Segment Analysis with ArraySlice")
+struct SegmentAnalysisTests {
+
+    @Test("analyzePathSegment works with ArraySlice")
+    func analyzePathSegmentWithSlice() {
+        // Create a profile with 11 samples (0-10km, 1km intervals)
+        let samples = (0...10).map { i in
+            ElevationSample(
+                coordinate: CLLocationCoordinate2D(latitude: 37.0 + Double(i) * 0.01, longitude: -122.0),
+                elevation: 100, // flat terrain
+                distanceFromAMeters: Double(i) * 1000
+            )
+        }
+
+        // Analyze first half (0-5km)
+        let firstHalf = samples[0...5]
+        let result = RFCalculator.analyzePathSegment(
+            elevationProfile: firstHalf,
+            startHeightMeters: 50, // 50m antenna height for adequate Fresnel clearance
+            endHeightMeters: 50,
+            frequencyMHz: 906,
+            k: 1.0
+        )
+
+        #expect(result.distanceMeters == 5000)
+        #expect(result.clearanceStatus == .clear) // flat terrain with 50m antennas should be clear
+    }
+
+    @Test("analyzePathSegment handles overlapping slice indices")
+    func analyzePathSegmentOverlappingSlice() {
+        let samples = (0...10).map { i in
+            ElevationSample(
+                coordinate: CLLocationCoordinate2D(latitude: 37.0 + Double(i) * 0.01, longitude: -122.0),
+                elevation: 100,
+                distanceFromAMeters: Double(i) * 1000
+            )
+        }
+
+        // Analyze from index 5 to 10 (second half, includes repeater at index 5)
+        let secondHalf = samples[5...10]
+        let result = RFCalculator.analyzePathSegment(
+            elevationProfile: secondHalf,
+            startHeightMeters: 10,
+            endHeightMeters: 10,
+            frequencyMHz: 906,
+            k: 1.0
+        )
+
+        #expect(result.distanceMeters == 5000)
     }
 }

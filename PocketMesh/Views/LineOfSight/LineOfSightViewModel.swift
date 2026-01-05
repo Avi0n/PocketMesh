@@ -7,10 +7,61 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "LineOfSight"
 
 // MARK: - Point Identification
 
-/// Identifies which point (A or B) for line of sight analysis
-enum PointID {
+/// Identifies which point for editing in the UI
+enum PointID: Hashable {
     case pointA
     case pointB
+    case repeater
+}
+
+// MARK: - Repeater Point
+
+/// A repeater point for relay analysis.
+/// Can be on-path (from slider, uses cached profile) or off-path (relocated, needs fresh profiles).
+struct RepeaterPoint: Equatable {
+    /// The repeater's location
+    var coordinate: CLLocationCoordinate2D
+
+    /// Ground elevation at coordinate (fetched async)
+    var groundElevation: Double?
+
+    /// Additional height above ground in meters
+    var additionalHeight: Int
+
+    /// True if repeater is on the A-B path (from slider), false if relocated off-path
+    var isOnPath: Bool
+
+    /// Path fraction (only meaningful when isOnPath is true)
+    /// Used for terrain profile slider positioning
+    var pathFraction: Double {
+        didSet {
+            let clamped = pathFraction.clamped(to: 0.05...0.95)
+            if clamped != pathFraction { pathFraction = clamped }
+        }
+    }
+
+    init(coordinate: CLLocationCoordinate2D, groundElevation: Double? = nil, additionalHeight: Int = 10, isOnPath: Bool = true, pathFraction: Double = 0.5) {
+        self.coordinate = coordinate
+        self.groundElevation = groundElevation
+        self.additionalHeight = additionalHeight
+        self.isOnPath = isOnPath
+        self.pathFraction = pathFraction.clamped(to: 0.05...0.95)
+    }
+
+    static func == (lhs: RepeaterPoint, rhs: RepeaterPoint) -> Bool {
+        lhs.coordinate.latitude == rhs.coordinate.latitude &&
+        lhs.coordinate.longitude == rhs.coordinate.longitude &&
+        lhs.groundElevation == rhs.groundElevation &&
+        lhs.additionalHeight == rhs.additionalHeight &&
+        lhs.isOnPath == rhs.isOnPath &&
+        lhs.pathFraction == rhs.pathFraction
+    }
+}
+
+private extension Comparable {
+    func clamped(to range: ClosedRange<Self>) -> Self {
+        min(max(self, range.lowerBound), range.upperBound)
+    }
 }
 
 // MARK: - Selected Point
@@ -47,6 +98,7 @@ enum AnalysisStatus: Equatable {
     case idle
     case loading
     case result(PathAnalysisResult)
+    case relayResult(RelayPathAnalysisResult)
     case error(String)
 }
 
@@ -83,10 +135,87 @@ final class LineOfSightViewModel {
 
     private(set) var repeatersWithLocation: [ContactDTO] = []
 
+    // MARK: - Repeater State
+
+    /// The active repeater point (nil when not in use)
+    var repeaterPoint: RepeaterPoint?
+
+    /// Whether repeater row should be visible (analysis shows marginal or worse)
+    var shouldShowRepeaterRow: Bool {
+        // Always show if repeater exists (even after relocation clears results)
+        if repeaterPoint != nil {
+            return true
+        }
+        // Show placeholder when direct analysis is marginal or worse
+        return shouldShowRepeaterPlaceholder
+    }
+
+    /// Whether to show the "Add Repeater" placeholder (no repeater exists, but analysis suggests one would help)
+    var shouldShowRepeaterPlaceholder: Bool {
+        guard case .result(let result) = analysisStatus else {
+            return false
+        }
+        // Only show if there are obstruction points (required by addRepeater())
+        return result.clearanceStatus != .clear && !result.obstructionPoints.isEmpty
+    }
+
+    /// Ground elevation at repeater position.
+    /// For on-path: interpolated from cached A→B profile.
+    /// For off-path: uses the fetched elevation stored in repeaterPoint.
+    var repeaterGroundElevation: Double? {
+        guard let repeaterPoint else { return nil }
+        if repeaterPoint.isOnPath {
+            return elevationAt(pathFraction: repeaterPoint.pathFraction)
+        } else {
+            return repeaterPoint.groundElevation
+        }
+    }
+
+    /// Path fraction for repeater visualization in terrain profile
+    /// For on-path: uses pathFraction directly
+    /// For off-path: computes from A→R distance / total distance
+    var repeaterVisualizationPathFraction: Double? {
+        guard let repeaterPoint else { return nil }
+        if repeaterPoint.isOnPath {
+            return repeaterPoint.pathFraction
+        }
+        // For off-path, compute from stored profiles
+        guard let arLast = elevationProfileAR.last,
+              let rbLast = elevationProfileRB.last,
+              rbLast.distanceFromAMeters > 0 else { return nil }
+        return arLast.distanceFromAMeters / rbLast.distanceFromAMeters
+    }
+
+    /// Segment A→R distance in meters (nil when on-path or no repeater)
+    var segmentARDistanceMeters: Double? {
+        guard let repeaterPoint, !repeaterPoint.isOnPath else { return nil }
+        guard case .relayResult(let result) = analysisStatus else { return nil }
+        return result.segmentAR.distanceMeters
+    }
+
+    /// Segment R→B distance in meters (nil when on-path or no repeater)
+    var segmentRBDistanceMeters: Double? {
+        guard let repeaterPoint, !repeaterPoint.isOnPath else { return nil }
+        guard case .relayResult(let result) = analysisStatus else { return nil }
+        return result.segmentRB.distanceMeters
+    }
+
     // MARK: - Analysis State
 
     private(set) var analysisStatus: AnalysisStatus = .idle
     private(set) var elevationProfile: [ElevationSample] = []
+
+    /// Profile samples for primary segment (A→B or A→R when repeater active)
+    private(set) var profileSamples: [ProfileSample] = []
+
+    /// Profile samples for R→B segment (empty when no repeater)
+    private(set) var profileSamplesRB: [ProfileSample] = []
+
+    /// Elevation profile A→R for off-path repeater
+    private(set) var elevationProfileAR: [ElevationSample] = []
+
+    /// Elevation profile R→B for off-path repeater
+    private(set) var elevationProfileRB: [ElevationSample] = []
 
     /// Tracks whether any point elevation fetch failed (using sea level fallback)
     private(set) var elevationFetchFailed = false
@@ -107,6 +236,25 @@ final class LineOfSightViewModel {
 
     var canAnalyze: Bool {
         pointA?.groundElevation != nil && pointB?.groundElevation != nil
+    }
+
+    /// Returns the elevation profile to display in terrain visualization.
+    /// For on-path or no repeater: returns cached A-B profile.
+    /// For off-path: returns concatenated A→R→B profiles.
+    var terrainElevationProfile: [ElevationSample] {
+        guard let repeaterPoint, !repeaterPoint.isOnPath else {
+            return elevationProfile
+        }
+
+        // For off-path repeater, concatenate A→R and R→B profiles
+        // Note: elevationProfileRB already has distances adjusted (offset by AR distance)
+        // from analyzeWithRepeaterOffPath(), so we use it directly without re-adjusting
+        guard !elevationProfileAR.isEmpty, !elevationProfileRB.isEmpty else {
+            return elevationProfile  // Fallback if off-path profiles not yet loaded
+        }
+
+        // dropFirst() removes the duplicate point at R (already in elevationProfileAR)
+        return elevationProfileAR + Array(elevationProfileRB.dropFirst())
     }
 
     // MARK: - Initialization
@@ -230,6 +378,10 @@ final class LineOfSightViewModel {
         case .pointB:
             guard pointB != nil else { return }
             pointB?.additionalHeight = clampedHeight
+        case .repeater:
+            // Repeater height is handled separately via updateRepeaterHeight
+            updateRepeaterHeight(meters: clampedHeight)
+            return
         }
 
         // Height change invalidates analysis
@@ -285,6 +437,8 @@ final class LineOfSightViewModel {
 
         pointA = nil
         pointB = nil
+        repeaterPoint = nil
+        elevationFetchFailed = false
         analysisStatus = .idle
         elevationProfile = []
     }
@@ -294,6 +448,7 @@ final class LineOfSightViewModel {
         pointAElevationTask = nil
 
         pointA = nil
+        repeaterPoint = nil
         invalidateAnalysis()
     }
 
@@ -302,10 +457,307 @@ final class LineOfSightViewModel {
         pointBElevationTask = nil
 
         pointB = nil
+        repeaterPoint = nil
         invalidateAnalysis()
     }
 
+    // MARK: - Repeater Methods
+
+    /// Adds repeater at the worst obstruction point
+    func addRepeater() {
+        guard case .result(let result) = analysisStatus,
+              !result.obstructionPoints.isEmpty,
+              let worstPoint = result.obstructionPoints.min(by: { $0.fresnelClearancePercent < $1.fresnelClearancePercent }) else {
+            return
+        }
+
+        // Convert distance to path fraction
+        let pathFraction = worstPoint.distanceFromAMeters / result.distanceMeters
+
+        // Get coordinate and elevation from cached profile
+        guard let coordinate = coordinateAt(pathFraction: pathFraction),
+              let elevation = elevationAt(pathFraction: pathFraction) else { return }
+
+        repeaterPoint = RepeaterPoint(
+            coordinate: coordinate,
+            groundElevation: elevation,
+            additionalHeight: 10,
+            isOnPath: true,
+            pathFraction: pathFraction
+        )
+    }
+
+    /// Updates repeater position along the path (for on-path repeaters)
+    func updateRepeaterPosition(pathFraction: Double) {
+        guard var repeater = repeaterPoint, repeater.isOnPath else { return }
+
+        // Update path fraction and derive coordinate/elevation from cached profile
+        repeater.pathFraction = pathFraction
+        if let coordinate = coordinateAt(pathFraction: pathFraction) {
+            repeater.coordinate = coordinate
+        }
+        if let elevation = elevationAt(pathFraction: pathFraction) {
+            repeater.groundElevation = elevation
+        }
+
+        repeaterPoint = repeater
+    }
+
+    /// Updates repeater height above ground
+    func updateRepeaterHeight(meters: Int) {
+        guard repeaterPoint != nil else { return }
+        repeaterPoint?.additionalHeight = max(0, meters)
+    }
+
+    /// Sets repeater to an off-path location
+    /// - Parameter coordinate: The new coordinate for the repeater
+    func setRepeaterOffPath(coordinate: CLLocationCoordinate2D) {
+        let existingHeight = repeaterPoint?.additionalHeight ?? 10
+
+        repeaterPoint = RepeaterPoint(
+            coordinate: coordinate,
+            groundElevation: nil,  // Will be fetched
+            additionalHeight: existingHeight,
+            isOnPath: false,
+            pathFraction: 0.5  // Not used for off-path
+        )
+
+        // Fetch elevation for the new coordinate
+        Task {
+            do {
+                let elevation = try await elevationService.fetchElevation(at: coordinate)
+                repeaterPoint?.groundElevation = elevation
+            } catch {
+                logger.error("Failed to fetch repeater elevation: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Removes repeater and reverts to single-path analysis
+    func clearRepeater() {
+        repeaterPoint = nil
+        reanalyzeWithCachedProfileIfNeeded()
+    }
+
+    /// Analyzes the path with the current repeater position
+    func analyzeWithRepeater() {
+        guard let repeaterPoint,
+              pointA != nil,
+              pointB != nil else { return }
+
+        if repeaterPoint.isOnPath {
+            // On-path: use cached profile (existing logic)
+            analyzeWithRepeaterOnPath()
+        } else {
+            // Off-path: fetch fresh profiles
+            Task {
+                await analyzeWithRepeaterOffPath()
+            }
+        }
+    }
+
+    /// On-path analysis using cached elevation profile
+    private func analyzeWithRepeaterOnPath() {
+        guard let repeaterPoint,
+              let pointA,
+              let pointB,
+              elevationProfile.count >= 2 else { return }
+
+        let profile = elevationProfile
+        let pointAHeight = Double(pointA.additionalHeight)
+        let pointBHeight = Double(pointB.additionalHeight)
+        let repeaterHeight = Double(repeaterPoint.additionalHeight)
+        let freq = frequencyMHz
+        let k = refractionK
+        let pathFraction = repeaterPoint.pathFraction
+
+        // Calculate split index
+        let splitIndex = Int(pathFraction * Double(profile.count - 1))
+        guard splitIndex > 0, splitIndex < profile.count - 1 else { return }
+
+        // Create segments using ArraySlice (zero allocation)
+        let segmentARSlice = profile[0...splitIndex]
+        let segmentRBSlice = profile[splitIndex...]
+
+        // Analyze both segments
+        let arResult = RFCalculator.analyzePathSegment(
+            elevationProfile: segmentARSlice,
+            startHeightMeters: pointAHeight,
+            endHeightMeters: repeaterHeight,
+            frequencyMHz: freq,
+            k: k
+        )
+
+        let rbResult = RFCalculator.analyzePathSegment(
+            elevationProfile: segmentRBSlice,
+            startHeightMeters: repeaterHeight,
+            endHeightMeters: pointBHeight,
+            frequencyMHz: freq,
+            k: k
+        )
+
+        // Create segment results
+        let segmentAR = SegmentAnalysisResult(
+            startLabel: "A",
+            endLabel: "R",
+            clearanceStatus: arResult.clearanceStatus,
+            distanceMeters: arResult.distanceMeters,
+            worstClearancePercent: arResult.worstClearancePercent
+        )
+
+        let segmentRB = SegmentAnalysisResult(
+            startLabel: "R",
+            endLabel: "B",
+            clearanceStatus: rbResult.clearanceStatus,
+            distanceMeters: rbResult.distanceMeters,
+            worstClearancePercent: rbResult.worstClearancePercent
+        )
+
+        let relayResult = RelayPathAnalysisResult(
+            segmentAR: segmentAR,
+            segmentRB: segmentRB
+        )
+
+        // Build profile samples for dual Fresnel zone rendering
+        profileSamples = FresnelZoneRenderer.buildProfileSamples(
+            from: Array(segmentARSlice),
+            pointAHeight: pointAHeight,
+            pointBHeight: repeaterHeight,
+            frequencyMHz: freq,
+            refractionK: k
+        )
+        profileSamplesRB = FresnelZoneRenderer.buildProfileSamples(
+            from: Array(segmentRBSlice),
+            pointAHeight: repeaterHeight,
+            pointBHeight: pointBHeight,
+            frequencyMHz: freq,
+            refractionK: k
+        )
+
+        analysisStatus = .relayResult(relayResult)
+    }
+
+    /// Off-path analysis - fetches A→R and R→B profiles
+    private func analyzeWithRepeaterOffPath() async {
+        guard let repeaterPoint,
+              let pointA,
+              let pointB else { return }
+
+        analysisStatus = .loading
+
+        do {
+            let pointACoord = pointA.coordinate
+            let repeaterCoord = repeaterPoint.coordinate
+            let pointBCoord = pointB.coordinate
+            let pointAHeight = Double(pointA.additionalHeight)
+            let pointBHeight = Double(pointB.additionalHeight)
+            let repeaterHeight = Double(repeaterPoint.additionalHeight)
+            let freq = frequencyMHz
+            let k = refractionK
+
+            // Fetch A→R profile
+            let distanceAR = RFCalculator.distance(from: pointACoord, to: repeaterCoord)
+            let sampleCountAR = ElevationService.optimalSampleCount(distanceMeters: distanceAR)
+            let sampleCoordsAR = ElevationService.sampleCoordinates(
+                from: pointACoord,
+                to: repeaterCoord,
+                sampleCount: sampleCountAR
+            )
+            let profileAR = try await elevationService.fetchElevations(along: sampleCoordsAR)
+
+            // Fetch R→B profile
+            let distanceRB = RFCalculator.distance(from: repeaterCoord, to: pointBCoord)
+            let sampleCountRB = ElevationService.optimalSampleCount(distanceMeters: distanceRB)
+            let sampleCoordsRB = ElevationService.sampleCoordinates(
+                from: repeaterCoord,
+                to: pointBCoord,
+                sampleCount: sampleCountRB
+            )
+            let profileRB = try await elevationService.fetchElevations(along: sampleCoordsRB)
+
+            // Analyze both segments
+            let arResult = RFCalculator.analyzePathSegment(
+                elevationProfile: profileAR[...],
+                startHeightMeters: pointAHeight,
+                endHeightMeters: repeaterHeight,
+                frequencyMHz: freq,
+                k: k
+            )
+
+            let rbResult = RFCalculator.analyzePathSegment(
+                elevationProfile: profileRB[...],
+                startHeightMeters: repeaterHeight,
+                endHeightMeters: pointBHeight,
+                frequencyMHz: freq,
+                k: k
+            )
+
+            // Create segment results
+            let segmentAR = SegmentAnalysisResult(
+                startLabel: "A",
+                endLabel: "R",
+                clearanceStatus: arResult.clearanceStatus,
+                distanceMeters: arResult.distanceMeters,
+                worstClearancePercent: arResult.worstClearancePercent
+            )
+
+            let segmentRB = SegmentAnalysisResult(
+                startLabel: "R",
+                endLabel: "B",
+                clearanceStatus: rbResult.clearanceStatus,
+                distanceMeters: rbResult.distanceMeters,
+                worstClearancePercent: rbResult.worstClearancePercent
+            )
+
+            let relayResult = RelayPathAnalysisResult(
+                segmentAR: segmentAR,
+                segmentRB: segmentRB
+            )
+
+            // Offset R→B profile distances to continue from A→R endpoint
+            // (fetchElevations returns distances relative to segment start, not global A)
+            let profileRBAdjusted = profileRB.map { sample in
+                ElevationSample(
+                    coordinate: sample.coordinate,
+                    elevation: sample.elevation,
+                    distanceFromAMeters: sample.distanceFromAMeters + distanceAR
+                )
+            }
+
+            // Build profile samples for terrain visualization
+            profileSamples = FresnelZoneRenderer.buildProfileSamples(
+                from: profileAR,
+                pointAHeight: pointAHeight,
+                pointBHeight: repeaterHeight,
+                frequencyMHz: freq,
+                refractionK: k
+            )
+            profileSamplesRB = FresnelZoneRenderer.buildProfileSamples(
+                from: profileRBAdjusted,
+                pointAHeight: repeaterHeight,
+                pointBHeight: pointBHeight,
+                frequencyMHz: freq,
+                refractionK: k
+            )
+
+            // Store profiles for terrain visualization
+            elevationProfileAR = profileAR
+            elevationProfileRB = profileRBAdjusted
+
+            analysisStatus = .relayResult(relayResult)
+
+        } catch {
+            analysisStatus = .error(error.localizedDescription)
+            logger.error("Off-path analysis failed: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Analysis
+
+    /// Clears analysis results without clearing points
+    func clearAnalysisResults() {
+        analysisStatus = .idle
+    }
 
     func analyze() {
         guard let pointA = pointA,
@@ -363,6 +815,14 @@ final class LineOfSightViewModel {
 
                 // Update state on MainActor
                 elevationProfile = profile
+                profileSamples = FresnelZoneRenderer.buildProfileSamples(
+                    from: profile,
+                    pointAHeight: pointAHeight,
+                    pointBHeight: pointBHeight,
+                    frequencyMHz: freq,
+                    refractionK: k
+                )
+                profileSamplesRB = []
                 analysisStatus = .result(result)
                 logger.info("Analysis complete: \(result.clearanceStatus.rawValue), \(result.distanceKm)km")
 
@@ -389,7 +849,10 @@ final class LineOfSightViewModel {
     private func invalidateAnalysis() {
         invalidateAnalysisOnly()
         elevationProfile = []
+        profileSamples = []
+        profileSamplesRB = []
         elevationFetchFailed = false
+        repeaterPoint = nil  // Repeater is invalid without profile
     }
 
     /// Re-runs analysis using cached elevation profile when RF settings change
@@ -400,6 +863,12 @@ final class LineOfSightViewModel {
               let pointB = pointB,
               pointA.groundElevation != nil,
               pointB.groundElevation != nil else {
+            return
+        }
+
+        // If repeater is active, use relay analysis to preserve mode
+        if repeaterPoint != nil {
+            analyzeWithRepeater()
             return
         }
 
@@ -427,6 +896,14 @@ final class LineOfSightViewModel {
 
             if Task.isCancelled { return }
 
+            profileSamples = FresnelZoneRenderer.buildProfileSamples(
+                from: profile,
+                pointAHeight: pointAHeight,
+                pointBHeight: pointBHeight,
+                frequencyMHz: freq,
+                refractionK: k
+            )
+            profileSamplesRB = []
             analysisStatus = .result(result)
             logger.debug("Re-analyzed with cached profile: \(freq) MHz, k=\(k)")
         }
@@ -465,4 +942,62 @@ final class LineOfSightViewModel {
             elevationFetchFailed = true
         }
     }
+
+    // MARK: - Elevation Interpolation
+
+    /// Returns interpolation indices and factor for a given path fraction
+    /// - Parameter pathFraction: Position along path (0.0 = A, 1.0 = B), clamped to valid range
+    /// - Returns: Tuple of (lowerIndex, upperIndex, interpolationFactor) or nil if profile has fewer than 2 samples
+    private func interpolationIndices(for pathFraction: Double) -> (lower: Int, upper: Int, t: Double)? {
+        guard elevationProfile.count >= 2 else { return nil }
+
+        let clamped = pathFraction.clamped(to: 0.0...1.0)
+        let index = clamped * Double(elevationProfile.count - 1)
+        let lowerIndex = Int(index)
+        let upperIndex = min(lowerIndex + 1, elevationProfile.count - 1)
+        let t = index - Double(lowerIndex)
+
+        return (lowerIndex, upperIndex, t)
+    }
+
+    /// Interpolates ground elevation at a given path fraction
+    /// - Parameter pathFraction: Position along path (0.0 = A, 1.0 = B), clamped to valid range
+    /// - Returns: Interpolated ground elevation in meters, or nil if profile has fewer than 2 samples
+    func elevationAt(pathFraction: Double) -> Double? {
+        guard let indices = interpolationIndices(for: pathFraction) else { return nil }
+
+        let lowerElevation = elevationProfile[indices.lower].elevation
+        let upperElevation = elevationProfile[indices.upper].elevation
+
+        return lowerElevation + indices.t * (upperElevation - lowerElevation)
+    }
+
+    /// Interpolates coordinate at a given path fraction
+    /// - Parameter pathFraction: Position along path (0.0 = A, 1.0 = B), clamped to valid range
+    /// - Returns: Interpolated coordinate, or nil if profile has fewer than 2 samples
+    func coordinateAt(pathFraction: Double) -> CLLocationCoordinate2D? {
+        guard let indices = interpolationIndices(for: pathFraction) else { return nil }
+
+        let lower = elevationProfile[indices.lower].coordinate
+        let upper = elevationProfile[indices.upper].coordinate
+
+        return CLLocationCoordinate2D(
+            latitude: lower.latitude + indices.t * (upper.latitude - lower.latitude),
+            longitude: lower.longitude + indices.t * (upper.longitude - lower.longitude)
+        )
+    }
+
+    // MARK: - Testing Helpers
+
+    #if DEBUG
+    /// Testing helper to set analysis status directly
+    func setAnalysisStatusForTesting(_ result: PathAnalysisResult) {
+        analysisStatus = .result(result)
+    }
+
+    /// Testing helper to set elevation profile directly
+    func setElevationProfileForTesting(_ profile: [ElevationSample]) {
+        elevationProfile = profile
+    }
+    #endif
 }

@@ -22,12 +22,16 @@ enum FresnelZoneRenderer {
 
     /// Build profile samples from elevation data
     /// - Parameters:
-    ///   - elevationProfile: Array of elevation samples from terrain API
-    ///   - pointAHeight: Antenna height at point A in meters above ground
-    ///   - pointBHeight: Antenna height at point B in meters above ground
+    ///   - elevationProfile: Array of elevation samples from terrain API (can be a segment slice)
+    ///   - pointAHeight: Antenna height at segment start in meters above ground
+    ///   - pointBHeight: Antenna height at segment end in meters above ground
     ///   - frequencyMHz: Operating frequency for Fresnel zone calculation
     ///   - refractionK: Effective earth radius factor for earth bulge calculation
     /// - Returns: Array of ProfileSample with computed LOS heights and Fresnel radii
+    ///
+    /// Note: When passing a segment slice (e.g., R→B), the samples may have non-zero
+    /// distanceFromAMeters values. This method calculates Fresnel zones relative to
+    /// the segment boundaries while preserving original x-coordinates for rendering.
     static func buildProfileSamples(
         from elevationProfile: [ElevationSample],
         pointAHeight: Double,
@@ -38,35 +42,41 @@ enum FresnelZoneRenderer {
         guard let first = elevationProfile.first,
               let last = elevationProfile.last else { return [] }
 
-        let totalDistance = last.distanceFromAMeters
+        // Calculate segment-relative distances for Fresnel/LOS calculations
+        // This handles both full paths (offset=0) and segment slices (offset>0)
+        let segmentOffset = first.distanceFromAMeters
+        let segmentLength = last.distanceFromAMeters - segmentOffset
+
         let heightA = first.elevation + pointAHeight
         let heightB = last.elevation + pointBHeight
 
         return elevationProfile.map { sample in
-            let distanceFromA = sample.distanceFromAMeters
-            let distanceToB = totalDistance - distanceFromA
+            // Use segment-relative distances for physics calculations
+            let distanceFromSegmentStart = sample.distanceFromAMeters - segmentOffset
+            let distanceToSegmentEnd = segmentLength - distanceFromSegmentStart
 
             let yLOS = losHeight(
-                atDistance: distanceFromA,
-                totalDistance: totalDistance,
+                atDistance: distanceFromSegmentStart,
+                totalDistance: segmentLength,
                 heightA: heightA,
                 heightB: heightB
             )
 
             let radius = RFCalculator.fresnelRadius(
                 frequencyMHz: frequencyMHz,
-                distanceToAMeters: distanceFromA,
-                distanceToBMeters: distanceToB
+                distanceToAMeters: distanceFromSegmentStart,
+                distanceToBMeters: distanceToSegmentEnd
             )
 
             let earthBulge = RFCalculator.earthBulge(
-                distanceToAMeters: distanceFromA,
-                distanceToBMeters: distanceToB,
+                distanceToAMeters: distanceFromSegmentStart,
+                distanceToBMeters: distanceToSegmentEnd,
                 k: refractionK
             )
 
+            // Preserve original x-coordinate for correct rendering position
             return ProfileSample(
-                x: distanceFromA,
+                x: sample.distanceFromAMeters,
                 yTerrain: sample.elevation + earthBulge,
                 yLOS: yLOS,
                 fresnelRadius: radius
