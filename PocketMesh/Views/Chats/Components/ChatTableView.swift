@@ -112,6 +112,11 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         // SwiftUI handles frame changes for keyboard, so we don't add content inset.
         // Just scroll to bottom after layout settles if we were at bottom.
         if wasAtBottom {
+            // Set guard flag now to prevent scroll delegate from reacting to contentOffset
+            // oscillations during keyboard animation. Critical when content is shorter
+            // than visible area - the bouncing would otherwise cause isAtBottom to flip.
+            isScrollingToBottom = true
+
             // Delay to let SwiftUI complete its layout pass
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .milliseconds(100))
@@ -242,19 +247,31 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
         logger.debug("scrollToBottom: animated=\(animated), alreadyAtBottom=\(alreadyAtBottom), contentOffset.y=\(self.tableView.contentOffset.y)")
 
-        // Set state BEFORE scroll to prevent scroll delegate from overriding
+        // Set state before scroll to prevent scroll delegate from overriding
         isAtBottom = true
         unreadCount = 0
         lastSeenItemID = items.last?.id
-        isScrollingToBottom = animated && !alreadyAtBottom  // Only set if animation will actually run
+
+        // Only update isScrollingToBottom if not already set (keyboardWillShow may have set it)
+        if !isScrollingToBottom {
+            isScrollingToBottom = animated && !alreadyAtBottom
+        }
 
         // In flipped table with reversed data: row 0 = newest message
         // Scroll row 0 to .top anchor (which is visual BOTTOM in flipped table)
         tableView.scrollToRow(at: IndexPath(row: 0, section: 0), at: .top, animated: animated)
 
-        // Clear flag immediately if not animated or already at bottom
-        if !animated || alreadyAtBottom {
+        // Clear flag if no animation will run (scrollViewDidEndScrollingAnimation won't fire).
+        // When already at bottom during keyboard animation, keep flag set - it will be cleared
+        // after a short delay to allow layout to settle.
+        if !animated {
             isScrollingToBottom = false
+        } else if alreadyAtBottom && isScrollingToBottom {
+            // Keyboard triggered scroll when already at bottom - clear after layout settles
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(250))
+                self?.isScrollingToBottom = false
+            }
         }
 
         onScrollStateChanged?(isAtBottom, unreadCount)
