@@ -52,7 +52,19 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
         // Visual setup
         tableView.separatorStyle = .none
-        tableView.backgroundColor = .systemBackground
+        if #available(iOS 26.0, *) {
+            // Clear and non-opaque allows Liquid Glass effects on nav/input bars
+            tableView.backgroundColor = .clear
+            tableView.isOpaque = false
+            tableView.contentInsetAdjustmentBehavior = .always
+
+            // Scroll edge effects don't work correctly with flipped table transform.
+            // Hide both - the nav bar and input bar provide their own Liquid Glass blur.
+            tableView.topEdgeEffect.isHidden = true
+            tableView.bottomEdgeEffect.isHidden = true
+        } else {
+            tableView.backgroundColor = .systemBackground
+        }
         tableView.allowsSelection = false
 
         // Register cell
@@ -138,10 +150,18 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
             // Embed SwiftUI content
             if let contentProvider = self.cellContentProvider {
-                cell.contentConfiguration = UIHostingConfiguration {
-                    contentProvider(item)
+                if #available(iOS 26.0, *) {
+                    cell.contentConfiguration = UIHostingConfiguration {
+                        contentProvider(item)
+                    }
+                    .margins(.all, 0)
+                    .background(.clear)
+                } else {
+                    cell.contentConfiguration = UIHostingConfiguration {
+                        contentProvider(item)
+                    }
+                    .margins(.all, 0)
                 }
-                .margins(.all, 0)
             }
 
             return cell
@@ -156,6 +176,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     func updateItems(_ newItems: [Item], animated: Bool = true) {
         let previousCount = items.count
         let wasAtBottom = isAtBottom
+        let oldItems = items
         items = newItems
 
         logger.debug("updateItems: previousCount=\(previousCount), newCount=\(newItems.count), wasAtBottom=\(wasAtBottom)")
@@ -165,6 +186,20 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         var snapshot = NSDiffableDataSourceSnapshot<Section, Item.ID>()
         snapshot.appendSections([.main])
         snapshot.appendItems(newItems.reversed().map(\.id))
+
+        // Find items that changed content (same ID, different hash) and reload them.
+        // Without this, diffable data source won't update cells for items with same ID.
+        // Using reloadItems instead of reconfigureItems to ensure fresh cell creation
+        // with updated closures (e.g., onRetry callback).
+        let oldItemsByID = Dictionary(uniqueKeysWithValues: oldItems.map { ($0.id, $0) })
+        let changedIDs = newItems.compactMap { newItem -> Item.ID? in
+            guard let oldItem = oldItemsByID[newItem.id] else { return nil }
+            return oldItem != newItem ? newItem.id : nil
+        }
+        if !changedIDs.isEmpty {
+            snapshot.reloadItems(changedIDs)
+        }
+
         dataSource?.apply(snapshot, animatingDifferences: animated && previousCount > 0)
 
         logger.debug("updateItems: snapshot applied, isAtBottom now=\(self.isAtBottom)")
@@ -312,6 +347,12 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     }
 
     func updateUIViewController(_ controller: ChatTableViewController<Item>, context: Context) {
+        // Update cell content provider each render cycle so reconfigured cells
+        // get fresh closures (e.g., onRetry callback when message status changes)
+        controller.configure { item in
+            AnyView(cellContent(item))
+        }
+
         // Store current binding setters in coordinator (updated each render cycle)
         // This ensures deferred callbacks always use fresh bindings
         context.coordinator.setIsAtBottom = { [self] in isAtBottom = $0 }

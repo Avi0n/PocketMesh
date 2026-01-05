@@ -185,7 +185,7 @@ struct ChatView: View {
             deviceName: appState.connectedDevice?.nodeName ?? "Me",
             configuration: .directMessage,
             showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
-            onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+            onRetry: { retryMessage(message) },
             onReply: { replyText in
                 setReplyText(replyText)
             },

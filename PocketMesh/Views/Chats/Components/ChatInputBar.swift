@@ -115,7 +115,6 @@ private extension View {
     @ViewBuilder
     func textFieldBackground() -> some View {
         if #available(iOS 26.0, *) {
-            // Liquid Glass with interactive touch response, rounded rect for multi-line support
             self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
         } else {
             self
@@ -127,7 +126,6 @@ private extension View {
     @ViewBuilder
     func inputBarBackground() -> some View {
         if #available(iOS 26.0, *) {
-            // No background on iOS 26 - let glass effect on text field show through
             self
         } else {
             self.background(.bar)

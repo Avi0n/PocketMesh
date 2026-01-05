@@ -220,10 +220,14 @@ struct UnifiedMessageBubble: View {
                 Button {
                     onRetry()
                 } label: {
-                    Label("Retry", systemImage: "arrow.clockwise")
-                        .font(.caption2)
+                    HStack(spacing: 2) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Retry")
+                    }
+                    .font(.caption2)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.plain)
+                .foregroundStyle(.blue)
             }
 
             // Show spinner for retrying status

@@ -159,7 +159,7 @@ struct ChannelChatView: View {
                 contacts: viewModel.conversations
             ),
             showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
-            onRetry: message.hasFailed ? { retryMessage(message) } : nil,
+            onRetry: { retryMessage(message) },
             onReply: { replyText in
                 setReplyText(replyText)
             },
