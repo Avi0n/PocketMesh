@@ -984,6 +984,96 @@ struct LoadRepeatersTests {
     }
 }
 
+// MARK: - Elevation Interpolation Tests
+
+@Suite("Elevation Interpolation")
+@MainActor
+struct ElevationInterpolationTests {
+
+    @Test("elevationAt returns nil when profile is empty")
+    func elevationAtEmptyProfile() {
+        let viewModel = LineOfSightViewModel(elevationService: MockElevationService())
+        #expect(viewModel.elevationAt(pathFraction: 0.5) == nil)
+    }
+
+    @Test("elevationAt interpolates between samples")
+    func elevationAtInterpolation() {
+        let mockService = MockElevationService()
+        let profile = [
+            ElevationSample(coordinate: sanFrancisco, elevation: 100, distanceFromAMeters: 0),
+            ElevationSample(coordinate: oakland, elevation: 200, distanceFromAMeters: 1000)
+        ]
+
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+        viewModel.setElevationProfileForTesting(profile)
+
+        // Midpoint should interpolate to 150
+        let midElevation = viewModel.elevationAt(pathFraction: 0.5)
+        #expect(midElevation != nil)
+        #expect(abs(midElevation! - 150) < 0.01)
+
+        // At start
+        let startElevation = viewModel.elevationAt(pathFraction: 0.0)
+        #expect(startElevation != nil)
+        #expect(abs(startElevation! - 100) < 0.01)
+
+        // At end
+        let endElevation = viewModel.elevationAt(pathFraction: 1.0)
+        #expect(endElevation != nil)
+        #expect(abs(endElevation! - 200) < 0.01)
+    }
+
+    @Test("coordinateAt interpolates between samples")
+    func coordinateAtInterpolation() {
+        let mockService = MockElevationService()
+        let profile = [
+            ElevationSample(coordinate: sanFrancisco, elevation: 100, distanceFromAMeters: 0),
+            ElevationSample(coordinate: oakland, elevation: 200, distanceFromAMeters: 1000)
+        ]
+
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+        viewModel.setElevationProfileForTesting(profile)
+
+        let midCoord = viewModel.coordinateAt(pathFraction: 0.5)
+        #expect(midCoord != nil)
+
+        // Should be roughly between SF and Oakland
+        let expectedLat = (sanFrancisco.latitude + oakland.latitude) / 2
+        let expectedLon = (sanFrancisco.longitude + oakland.longitude) / 2
+        #expect(abs(midCoord!.latitude - expectedLat) < 0.001)
+        #expect(abs(midCoord!.longitude - expectedLon) < 0.001)
+    }
+
+    @Test("elevationAt returns nil when profile has single sample")
+    func elevationAtSingleSample() {
+        let viewModel = LineOfSightViewModel(elevationService: MockElevationService())
+        viewModel.setElevationProfileForTesting([
+            ElevationSample(coordinate: sanFrancisco, elevation: 100, distanceFromAMeters: 0)
+        ])
+
+        #expect(viewModel.elevationAt(pathFraction: 0.5) == nil)
+    }
+
+    @Test("elevationAt clamps pathFraction outside valid range")
+    func elevationAtClampsOutOfRange() {
+        let viewModel = LineOfSightViewModel(elevationService: MockElevationService())
+        viewModel.setElevationProfileForTesting([
+            ElevationSample(coordinate: sanFrancisco, elevation: 100, distanceFromAMeters: 0),
+            ElevationSample(coordinate: oakland, elevation: 200, distanceFromAMeters: 1000)
+        ])
+
+        // Negative should clamp to start (100)
+        let belowStart = viewModel.elevationAt(pathFraction: -0.5)
+        #expect(belowStart != nil)
+        #expect(abs(belowStart! - 100) < 0.01)
+
+        // Above 1.0 should clamp to end (200)
+        let aboveEnd = viewModel.elevationAt(pathFraction: 1.5)
+        #expect(aboveEnd != nil)
+        #expect(abs(aboveEnd! - 200) < 0.01)
+    }
+}
+
 // MARK: - Contact Toggle Selection Tests
 
 @Suite("Contact Toggle Selection")
@@ -1079,5 +1169,322 @@ struct ContactToggleTests {
         viewModel.toggleContact(contact1)
 
         #expect(viewModel.isContactSelected(contact2) == nil)
+    }
+}
+
+// MARK: - Repeater Point Tests
+
+@Suite("Repeater Point Model")
+struct RepeaterPointTests {
+
+    @Test("RepeaterPoint clamps pathFraction to valid range")
+    func pathFractionClamping() {
+        var point = RepeaterPoint(pathFraction: 0.02)
+        #expect(point.pathFraction >= 0.05)
+
+        point = RepeaterPoint(pathFraction: 0.98)
+        #expect(point.pathFraction <= 0.95)
+
+        point = RepeaterPoint(pathFraction: 0.5)
+        #expect(point.pathFraction == 0.5)
+    }
+
+    @Test("RepeaterPoint has default height of 10m")
+    func defaultHeight() {
+        let point = RepeaterPoint(pathFraction: 0.5)
+        #expect(point.additionalHeight == 10)
+    }
+}
+
+// MARK: - Repeater ViewModel Properties Tests
+
+@Suite("Repeater ViewModel Properties")
+@MainActor
+struct RepeaterViewModelTests {
+
+    @Test("Initial repeaterPoint is nil")
+    func initialRepeaterNil() {
+        let viewModel = LineOfSightViewModel(elevationService: MockElevationService())
+        #expect(viewModel.repeaterPoint == nil)
+    }
+}
+
+// MARK: - Repeater Lifecycle Tests
+
+@Suite("Repeater Lifecycle")
+@MainActor
+struct RepeaterLifecycleTests {
+
+    @Test("addRepeater places at worst obstruction point")
+    func addRepeaterAtWorstObstruction() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        // Create profile spanning 10km
+        let profile = (0...100).map { i in
+            ElevationSample(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: 37.7749 + Double(i) * 0.001,
+                    longitude: -122.4194
+                ),
+                elevation: 100,
+                distanceFromAMeters: Double(i) * 100
+            )
+        }
+        viewModel.setElevationProfileForTesting(profile)
+
+        // Set obstructed result with worst point at 30% of path
+        let obstructedResult = PathAnalysisResult(
+            distanceMeters: 10000,
+            freeSpacePathLoss: 110,
+            peakDiffractionLoss: 15,
+            totalPathLoss: 125,
+            clearanceStatus: .partialObstruction,
+            worstClearancePercent: 45,
+            obstructionPoints: [
+                ObstructionPoint(distanceFromAMeters: 3000, obstructionHeightMeters: 20, fresnelClearancePercent: 45),
+                ObstructionPoint(distanceFromAMeters: 7000, obstructionHeightMeters: 10, fresnelClearancePercent: 55)
+            ],
+            frequencyMHz: 906,
+            refractionK: 1.0
+        )
+        viewModel.setAnalysisStatusForTesting(obstructedResult)
+
+        viewModel.addRepeater()
+
+        #expect(viewModel.repeaterPoint != nil)
+        // Worst obstruction is at 3000m out of 10000m = 0.3
+        #expect(abs(viewModel.repeaterPoint!.pathFraction - 0.3) < 0.01)
+    }
+
+    @Test("clearRepeater removes repeater")
+    func clearRepeaterReverts() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        #expect(viewModel.repeaterPoint != nil)
+
+        viewModel.clearRepeater()
+
+        #expect(viewModel.repeaterPoint == nil)
+    }
+
+    @Test("updateRepeaterPosition updates pathFraction")
+    func updateRepeaterPosition() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.updateRepeaterPosition(pathFraction: 0.7)
+
+        #expect(viewModel.repeaterPoint?.pathFraction == 0.7)
+    }
+
+    @Test("updateRepeaterPosition clamps to valid range")
+    func updateRepeaterPositionClamping() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+
+        viewModel.updateRepeaterPosition(pathFraction: 0.01)
+        #expect(viewModel.repeaterPoint!.pathFraction >= 0.05)
+
+        viewModel.updateRepeaterPosition(pathFraction: 0.99)
+        #expect(viewModel.repeaterPoint!.pathFraction <= 0.95)
+    }
+
+    @Test("updateRepeaterHeight updates additionalHeight")
+    func updateRepeaterHeight() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.updateRepeaterHeight(meters: 25)
+
+        #expect(viewModel.repeaterPoint?.additionalHeight == 25)
+    }
+
+    @Test("updateRepeaterHeight clamps negative to zero")
+    func updateRepeaterHeightClamping() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.updateRepeaterHeight(meters: -5)
+
+        #expect(viewModel.repeaterPoint?.additionalHeight == 0)
+    }
+
+    @Test("clearPointA removes repeater")
+    func clearPointARemovesRepeater() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.setPointA(coordinate: sanFrancisco)
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+
+        viewModel.clearPointA()
+
+        #expect(viewModel.repeaterPoint == nil)
+    }
+
+    @Test("clearPointB removes repeater")
+    func clearPointBRemovesRepeater() {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.setPointA(coordinate: sanFrancisco)
+        viewModel.setPointB(coordinate: oakland)
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+
+        viewModel.clearPointB()
+
+        #expect(viewModel.repeaterPoint == nil)
+    }
+}
+
+// MARK: - Relay Analysis Tests
+
+@Suite("Relay Analysis")
+@MainActor
+struct RelayAnalysisTests {
+
+    @Test("analyzeWithRepeater produces relay result")
+    func analyzeWithRepeaterProducesRelayResult() async throws {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        // Set points first (this clears profile via invalidateAnalysis)
+        viewModel.setPointA(coordinate: sanFrancisco)
+        viewModel.setPointB(coordinate: oakland)
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Create and set profile AFTER points are set
+        let profile = (0...100).map { i in
+            ElevationSample(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: 37.7749 + Double(i) * 0.001,
+                    longitude: -122.4194
+                ),
+                elevation: 100,
+                distanceFromAMeters: Double(i) * 100
+            )
+        }
+        viewModel.setElevationProfileForTesting(profile)
+
+        // Add repeater at midpoint
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+
+        viewModel.analyzeWithRepeater()
+
+        if case .relayResult(let result) = viewModel.analysisStatus {
+            #expect(result.segmentAR.startLabel == "A")
+            #expect(result.segmentAR.endLabel == "R")
+            #expect(result.segmentRB.startLabel == "R")
+            #expect(result.segmentRB.endLabel == "B")
+        } else {
+            Issue.record("Expected relayResult status, got: \(viewModel.analysisStatus)")
+        }
+    }
+
+    @Test("analyzeWithRepeater updates when repeater position changes")
+    func analyzeWithRepeaterUpdatesOnPositionChange() async throws {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        // Set points first (this clears profile via invalidateAnalysis)
+        viewModel.setPointA(coordinate: sanFrancisco)
+        viewModel.setPointB(coordinate: oakland)
+        try await Task.sleep(for: .milliseconds(200))
+
+        // Create and set profile AFTER points are set
+        let profile = (0...100).map { i in
+            ElevationSample(
+                coordinate: CLLocationCoordinate2D(
+                    latitude: 37.7749 + Double(i) * 0.001,
+                    longitude: -122.4194
+                ),
+                elevation: 100,
+                distanceFromAMeters: Double(i) * 100
+            )
+        }
+        viewModel.setElevationProfileForTesting(profile)
+
+        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.analyzeWithRepeater()
+
+        // Get initial segment distances
+        guard case .relayResult(let initialResult) = viewModel.analysisStatus else {
+            Issue.record("Expected initial relayResult")
+            return
+        }
+        let initialARDistance = initialResult.segmentAR.distanceMeters
+
+        // Move repeater to 30%
+        viewModel.updateRepeaterPosition(pathFraction: 0.3)
+        viewModel.analyzeWithRepeater()
+
+        guard case .relayResult(let updatedResult) = viewModel.analysisStatus else {
+            Issue.record("Expected updated relayResult")
+            return
+        }
+
+        // A→R segment should be shorter now
+        #expect(updatedResult.segmentAR.distanceMeters < initialARDistance)
+    }
+}
+
+// MARK: - AnalysisStatus Relay Extension Tests
+
+@Suite("AnalysisStatus Relay Extension")
+struct AnalysisStatusRelayTests {
+
+    @Test("relayResult case stores RelayPathAnalysisResult")
+    func relayResultCase() {
+        let segmentAR = SegmentAnalysisResult(
+            startLabel: "A", endLabel: "R",
+            clearanceStatus: .clear,
+            distanceMeters: 5000,
+            worstClearancePercent: 85
+        )
+        let segmentRB = SegmentAnalysisResult(
+            startLabel: "R", endLabel: "B",
+            clearanceStatus: .clear,
+            distanceMeters: 3000,
+            worstClearancePercent: 90
+        )
+        let relayResult = RelayPathAnalysisResult(segmentAR: segmentAR, segmentRB: segmentRB)
+
+        let status = AnalysisStatus.relayResult(relayResult)
+
+        if case .relayResult(let result) = status {
+            #expect(result.totalDistanceMeters == 8000)
+        } else {
+            Issue.record("Expected relayResult case")
+        }
+    }
+
+    @Test("relayResult equals relayResult with same data")
+    func relayResultEquatable() {
+        let segmentAR = SegmentAnalysisResult(
+            startLabel: "A", endLabel: "R",
+            clearanceStatus: .clear,
+            distanceMeters: 5000,
+            worstClearancePercent: 85
+        )
+        let segmentRB = SegmentAnalysisResult(
+            startLabel: "R", endLabel: "B",
+            clearanceStatus: .clear,
+            distanceMeters: 3000,
+            worstClearancePercent: 90
+        )
+        let relayResult = RelayPathAnalysisResult(segmentAR: segmentAR, segmentRB: segmentRB)
+
+        let status1 = AnalysisStatus.relayResult(relayResult)
+        let status2 = AnalysisStatus.relayResult(relayResult)
+
+        #expect(status1 == status2)
     }
 }

@@ -29,7 +29,8 @@ struct ObstructionPoint: Identifiable, Equatable {
 struct PathAnalysisResult: Equatable {
     let distanceMeters: Double
     let freeSpacePathLoss: Double
-    let additionalDiffractionLoss: Double
+    /// Peak diffraction loss from the single worst knife-edge obstruction (not cumulative)
+    let peakDiffractionLoss: Double
     let totalPathLoss: Double
     let clearanceStatus: ClearanceStatus
     let worstClearancePercent: Double
@@ -46,6 +47,37 @@ struct ElevationSample: Identifiable {
     let coordinate: CLLocationCoordinate2D
     let elevation: Double  // meters above sea level
     let distanceFromAMeters: Double
+}
+
+/// Result for a single path segment (A→R or R→B)
+struct SegmentAnalysisResult: Equatable {
+    let startLabel: String
+    let endLabel: String
+    let clearanceStatus: ClearanceStatus
+    let distanceMeters: Double
+    let worstClearancePercent: Double
+
+    var distanceKm: Double { distanceMeters / 1000 }
+}
+
+/// Combined result when analyzing a path via repeater
+struct RelayPathAnalysisResult: Equatable {
+    let segmentAR: SegmentAnalysisResult
+    let segmentRB: SegmentAnalysisResult
+
+    var totalDistanceMeters: Double {
+        segmentAR.distanceMeters + segmentRB.distanceMeters
+    }
+
+    var totalDistanceKm: Double { totalDistanceMeters / 1000 }
+
+    /// Overall status is the worst of the two segments
+    var overallStatus: ClearanceStatus {
+        let statusOrder: [ClearanceStatus] = [.clear, .marginal, .partialObstruction, .blocked]
+        let arIndex = statusOrder.firstIndex(of: segmentAR.clearanceStatus) ?? 0
+        let rbIndex = statusOrder.firstIndex(of: segmentRB.clearanceStatus) ?? 0
+        return statusOrder[max(arIndex, rbIndex)]
+    }
 }
 
 /// RF propagation calculator for line-of-sight analysis.
@@ -268,7 +300,7 @@ enum RFCalculator {
             return PathAnalysisResult(
                 distanceMeters: 0,
                 freeSpacePathLoss: 0,
-                additionalDiffractionLoss: 0,
+                peakDiffractionLoss: 0,
                 totalPathLoss: 0,
                 clearanceStatus: .blocked,
                 worstClearancePercent: 0,
@@ -287,7 +319,7 @@ enum RFCalculator {
             return PathAnalysisResult(
                 distanceMeters: 0,
                 freeSpacePathLoss: 0,
-                additionalDiffractionLoss: 0,
+                peakDiffractionLoss: 0,
                 totalPathLoss: 0,
                 clearanceStatus: .blocked,
                 worstClearancePercent: 0,
@@ -305,7 +337,7 @@ enum RFCalculator {
         let fspl = pathLoss(distanceMeters: totalDistanceMeters, frequencyMHz: frequencyMHz)
 
         var worstClearancePercent = Double.infinity
-        var maxDiffractionLoss = 0.0
+        var peakDiffractionLoss = 0.0
         var obstructionPoints: [ObstructionPoint] = []
 
         // Analyze each intermediate sample point (skip endpoints)
@@ -364,8 +396,8 @@ enum RFCalculator {
                     distanceToBMeters: distanceToB,
                     frequencyMHz: frequencyMHz
                 )
-                if diffLoss > maxDiffractionLoss {
-                    maxDiffractionLoss = diffLoss
+                if diffLoss > peakDiffractionLoss {
+                    peakDiffractionLoss = diffLoss
                 }
             }
 
@@ -397,13 +429,171 @@ enum RFCalculator {
             clearanceStatus = .blocked
         }
 
-        let totalPathLoss = fspl + maxDiffractionLoss
+        let totalPathLoss = fspl + peakDiffractionLoss
 
         return PathAnalysisResult(
             distanceMeters: totalDistanceMeters,
             freeSpacePathLoss: fspl,
-            additionalDiffractionLoss: maxDiffractionLoss,
+            peakDiffractionLoss: peakDiffractionLoss,
             totalPathLoss: totalPathLoss,
+            clearanceStatus: clearanceStatus,
+            worstClearancePercent: worstClearancePercent,
+            obstructionPoints: obstructionPoints,
+            frequencyMHz: frequencyMHz,
+            refractionK: k
+        )
+    }
+
+    // MARK: - Segment Analysis
+
+    /// Analyze a segment of the path for clearance and signal propagation.
+    /// Uses ArraySlice to avoid copying - critical for 60fps drag performance.
+    ///
+    /// - Parameters:
+    ///   - elevationProfile: Slice of elevation samples for this segment.
+    ///   - startHeightMeters: Antenna height at segment start in meters above ground.
+    ///   - endHeightMeters: Antenna height at segment end in meters above ground.
+    ///   - frequencyMHz: The operating frequency in megahertz.
+    ///   - k: The effective earth radius factor.
+    /// - Returns: A PathAnalysisResult for this segment.
+    static func analyzePathSegment(
+        elevationProfile: ArraySlice<ElevationSample>,
+        startHeightMeters: Double,
+        endHeightMeters: Double,
+        frequencyMHz: Double,
+        k: Double
+    ) -> PathAnalysisResult {
+        guard elevationProfile.count >= 2,
+              let firstSample = elevationProfile.first,
+              let lastSample = elevationProfile.last else {
+            return PathAnalysisResult(
+                distanceMeters: 0,
+                freeSpacePathLoss: 0,
+                peakDiffractionLoss: 0,
+                totalPathLoss: 0,
+                clearanceStatus: .blocked,
+                worstClearancePercent: 0,
+                obstructionPoints: [],
+                frequencyMHz: frequencyMHz,
+                refractionK: k
+            )
+        }
+
+        // Distance within this segment (relative to segment start)
+        let segmentStartDistance = firstSample.distanceFromAMeters
+        let segmentEndDistance = lastSample.distanceFromAMeters
+        let segmentLength = segmentEndDistance - segmentStartDistance
+
+        guard segmentLength > 0 else {
+            return PathAnalysisResult(
+                distanceMeters: 0,
+                freeSpacePathLoss: 0,
+                peakDiffractionLoss: 0,
+                totalPathLoss: 0,
+                clearanceStatus: .blocked,
+                worstClearancePercent: 0,
+                obstructionPoints: [],
+                frequencyMHz: frequencyMHz,
+                refractionK: k
+            )
+        }
+
+        // Antenna heights above sea level
+        let antennaStartHeight = firstSample.elevation + startHeightMeters
+        let antennaEndHeight = lastSample.elevation + endHeightMeters
+
+        // Calculate free-space path loss
+        let fspl = pathLoss(distanceMeters: segmentLength, frequencyMHz: frequencyMHz)
+
+        var worstClearancePercent = Double.infinity
+        var peakDiffractionLoss = 0.0
+        var obstructionPoints: [ObstructionPoint] = []
+
+        // Analyze each sample within the segment
+        for sample in elevationProfile {
+            let distanceFromSegmentStart = sample.distanceFromAMeters - segmentStartDistance
+            let distanceToSegmentEnd = segmentLength - distanceFromSegmentStart
+
+            // Skip points at or very near the endpoints
+            guard distanceFromSegmentStart > 1, distanceToSegmentEnd > 1 else { continue }
+
+            // Line of sight height at this point (linear interpolation within segment)
+            let fraction = distanceFromSegmentStart / segmentLength
+            let losHeight = antennaStartHeight + fraction * (antennaEndHeight - antennaStartHeight)
+
+            // Effective terrain height including earth bulge
+            let bulge = earthBulge(
+                distanceToAMeters: distanceFromSegmentStart,
+                distanceToBMeters: distanceToSegmentEnd,
+                k: k
+            )
+            let effectiveTerrainHeight = sample.elevation + bulge
+
+            // Calculate Fresnel zone radius at this point
+            let fresnelZoneRadius = fresnelRadius(
+                frequencyMHz: frequencyMHz,
+                distanceToAMeters: distanceFromSegmentStart,
+                distanceToBMeters: distanceToSegmentEnd
+            )
+
+            // Clearance
+            let clearance = losHeight - effectiveTerrainHeight
+            let clearancePercent: Double
+            if fresnelZoneRadius > 0 {
+                clearancePercent = (clearance / fresnelZoneRadius) * 100
+            } else {
+                clearancePercent = clearance > 0 ? 100 : 0
+            }
+
+            if clearancePercent < worstClearancePercent {
+                worstClearancePercent = clearancePercent
+            }
+
+            // Diffraction loss
+            let obstructionHeight = effectiveTerrainHeight - losHeight
+            if obstructionHeight > -fresnelZoneRadius {
+                let diffLoss = diffractionLoss(
+                    obstructionHeightMeters: obstructionHeight,
+                    distanceToAMeters: distanceFromSegmentStart,
+                    distanceToBMeters: distanceToSegmentEnd,
+                    frequencyMHz: frequencyMHz
+                )
+                if diffLoss > peakDiffractionLoss {
+                    peakDiffractionLoss = diffLoss
+                }
+            }
+
+            // Record obstruction points
+            if clearancePercent < 60 {
+                let obstruction = ObstructionPoint(
+                    distanceFromAMeters: sample.distanceFromAMeters, // Keep original distance
+                    obstructionHeightMeters: obstructionHeight,
+                    fresnelClearancePercent: clearancePercent
+                )
+                obstructionPoints.append(obstruction)
+            }
+        }
+
+        if worstClearancePercent == .infinity {
+            worstClearancePercent = 100
+        }
+
+        let clearanceStatus: ClearanceStatus
+        if worstClearancePercent >= 80 {
+            clearanceStatus = .clear
+        } else if worstClearancePercent >= 60 {
+            clearanceStatus = .marginal
+        } else if worstClearancePercent >= 0 {
+            clearanceStatus = .partialObstruction
+        } else {
+            clearanceStatus = .blocked
+        }
+
+        return PathAnalysisResult(
+            distanceMeters: segmentLength,
+            freeSpacePathLoss: fspl,
+            peakDiffractionLoss: peakDiffractionLoss,
+            totalPathLoss: fspl + peakDiffractionLoss,
             clearanceStatus: clearanceStatus,
             worstClearancePercent: worstClearancePercent,
             obstructionPoints: obstructionPoints,

@@ -3,10 +3,42 @@ import SwiftUI
 /// Canvas-based terrain profile visualization with Fresnel zone
 struct TerrainProfileCanvas: View {
     let elevationProfile: [ElevationSample]
-    let pointAHeight: Double
-    let pointBHeight: Double
-    let frequencyMHz: Double
-    let refractionK: Double
+
+    /// Profile samples for primary segment (A→B or A→R when repeater active)
+    let profileSamples: [ProfileSample]
+
+    /// Profile samples for R→B segment (empty when no repeater)
+    var profileSamplesRB: [ProfileSample] = []
+
+    // Optional repeater parameters
+    var repeaterPathFraction: Double?
+    var repeaterHeight: Double?
+
+    /// Callback to update repeater position during drag
+    var onRepeaterDrag: ((Double) -> Void)?
+
+    /// Callback to report repeater marker center position (for tooltip positioning)
+    var onRepeaterMarkerPosition: ((CGPoint) -> Void)?
+
+    /// Segment distances for off-path repeater visualization (nil when on-path or no repeater)
+    var segmentARDistanceMeters: Double?
+    var segmentRBDistanceMeters: Double?
+
+    /// Whether the repeater is off the direct A→B path
+    private var isOffPath: Bool {
+        segmentARDistanceMeters != nil && segmentRBDistanceMeters != nil
+    }
+
+    // Track drag state
+    @State private var isDragging = false
+    @State private var canvasSize: CGSize = .zero
+
+    // Nudge animation state (one-time affordance when repeater first added)
+    @State private var hasAnimatedNudge = false
+    @State private var nudgeOffset: CGFloat = 0
+
+    // Repeater marker center (for tooltip positioning)
+    @State private var repeaterMarkerCenter: CGPoint?
 
     // MARK: - Colors (Colorblind-Safe)
 
@@ -14,10 +46,11 @@ struct TerrainProfileCanvas: View {
     private let terrainStroke = Color(red: 0.55, green: 0.47, blue: 0.36)
     private let fresnelOuter = Color.teal.opacity(0.25)
     private let fresnelInner = Color.teal.opacity(0.50)
-    private let fresnelObstructed = Color.orange.opacity(0.9)
+    private let fresnelObstructed = Color.red.opacity(0.7)
     private let fresnelBoundary = Color.teal.opacity(0.6)
     private let losLineColor = Color.primary
     private let gridColor = Color.gray.opacity(0.3)
+    private let repeaterColor = Color.purple
 
     // MARK: - Layout Constants
 
@@ -26,28 +59,19 @@ struct TerrainProfileCanvas: View {
 
     // MARK: - Computed Properties
 
-    private var profileSamples: [ProfileSample] {
-        FresnelZoneRenderer.buildProfileSamples(
-            from: elevationProfile,
-            pointAHeight: pointAHeight,
-            pointBHeight: pointBHeight,
-            frequencyMHz: frequencyMHz,
-            refractionK: refractionK
-        )
-    }
-
     private var xRange: ClosedRange<Double> {
         guard let last = elevationProfile.last else { return 0...1 }
         return 0...max(1, last.distanceFromAMeters)
     }
 
     private var yRange: ClosedRange<Double> {
-        guard !profileSamples.isEmpty else { return 0...100 }
+        let allSamples = profileSamples + profileSamplesRB
+        guard !allSamples.isEmpty else { return 0...100 }
 
         var minY = Double.infinity
         var maxY = -Double.infinity
 
-        for sample in profileSamples {
+        for sample in allSamples {
             minY = min(minY, sample.yTerrain)
             maxY = max(maxY, sample.yTop)
         }
@@ -56,6 +80,23 @@ struct TerrainProfileCanvas: View {
 
         let range = maxY - minY
         return (minY - range * 0.1)...(maxY + range * 0.2)
+    }
+
+    /// Calculated repeater marker center position in canvas coordinates
+    private var calculatedMarkerCenter: CGPoint? {
+        guard canvasSize != .zero,
+              let junctionSample = profileSamples.last,
+              repeaterPathFraction != nil else { return nil }
+
+        let coords = ChartCoordinateSpace(
+            canvasSize: canvasSize,
+            padding: padding,
+            xRange: xRange,
+            yRange: yRange
+        )
+
+        let basePoint = coords.point(x: junctionSample.x, y: junctionSample.yLOS)
+        return CGPoint(x: basePoint.x + nudgeOffset, y: basePoint.y)
     }
 
     // MARK: - Body
@@ -67,6 +108,9 @@ struct TerrainProfileCanvas: View {
             } else {
                 chartCanvas
                 legendView
+                if isOffPath {
+                    indirectRouteLabel
+                }
                 attributionText
             }
         }
@@ -94,10 +138,91 @@ struct TerrainProfileCanvas: View {
             drawFresnelZone(context: context, coords: coords)
             drawFresnelBoundary(context: context, coords: coords)
             drawTerrain(context: context, coords: coords)
+            drawObstructions(context: context, coords: coords)
             drawLOSLine(context: context, coords: coords)
             drawEndpointMarkers(context: context, coords: coords)
+
+            // Draw vertical separator at R junction for off-path repeaters (behind R marker)
+            if let arDistance = segmentARDistanceMeters, isOffPath {
+                drawJunctionSeparator(context: context, coords: coords, atDistance: arDistance)
+            }
+
+            // Draw repeater marker if present
+            if let pathFraction = repeaterPathFraction,
+               let height = repeaterHeight,
+               elevationProfile.count >= 2 {
+                // Interpolate ground elevation at repeater position
+                let index = pathFraction * Double(elevationProfile.count - 1)
+                let lowerIndex = Int(index)
+                let upperIndex = min(lowerIndex + 1, elevationProfile.count - 1)
+                let t = index - Double(lowerIndex)
+                let groundElevation = elevationProfile[lowerIndex].elevation +
+                    t * (elevationProfile[upperIndex].elevation - elevationProfile[lowerIndex].elevation)
+
+                drawRepeaterMarker(
+                    context: context,
+                    coords: coords,
+                    pathFraction: pathFraction,
+                    repeaterElevation: groundElevation,
+                    height: height,
+                    nudgeOffset: nudgeOffset
+                )
+            }
         }
         .frame(height: chartHeight)
+        .onGeometryChange(for: CGSize.self) { proxy in
+            proxy.size
+        } action: { size in
+            canvasSize = size
+        }
+        .gesture(repeaterDragGesture, including: onRepeaterDrag != nil ? .all : .subviews)
+        .onChange(of: repeaterPathFraction, initial: true) { oldValue, newValue in
+            // Trigger one-time nudge animation when repeater is first added (on-path only)
+            if oldValue == nil, newValue != nil, !hasAnimatedNudge, !isOffPath {
+                hasAnimatedNudge = true
+                triggerNudgeAnimation()
+            }
+        }
+        .onChange(of: calculatedMarkerCenter) { _, newCenter in
+            if let center = newCenter {
+                onRepeaterMarkerPosition?(center)
+            }
+        }
+    }
+
+    private var repeaterDragGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard repeaterPathFraction != nil else { return }
+                handleDrag(at: value.location)
+            }
+            .onEnded { _ in
+                isDragging = false
+            }
+    }
+
+    private func handleDrag(at location: CGPoint) {
+        // Convert X position to path fraction
+        let chartWidth = canvasSize.width - padding.leading - padding.trailing
+        let relativeX = (location.x - padding.leading) / chartWidth
+        let pathFraction = max(0.05, min(0.95, relativeX))
+
+        if !isDragging {
+            isDragging = true
+        }
+
+        onRepeaterDrag?(pathFraction)
+    }
+
+    /// Performs a one-time horizontal nudge animation to hint at draggability
+    private func triggerNudgeAnimation() {
+        // Animate: shift right 4pt, then back to original position
+        withAnimation(.easeOut(duration: 0.15)) {
+            nudgeOffset = 4
+        }
+        withAnimation(.easeInOut(duration: 0.2).delay(0.15)) {
+            nudgeOffset = 0
+        }
     }
 
     private var legendView: some View {
@@ -106,6 +231,9 @@ struct TerrainProfileCanvas: View {
             legendItem(color: losLineColor, label: "LOS")
             legendItem(color: fresnelOuter, label: "Clear")
             legendItem(color: fresnelObstructed, label: "Obstructed")
+            if repeaterPathFraction != nil {
+                legendItem(color: repeaterColor, label: "Repeater")
+            }
         }
         .font(.caption2)
         .foregroundStyle(.secondary)
@@ -118,6 +246,12 @@ struct TerrainProfileCanvas: View {
                 .frame(width: 8, height: 8)
             Text(label)
         }
+    }
+
+    private var indirectRouteLabel: some View {
+        Text("Indirect route via R · Relocate on map to adjust")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
     }
 
     private var attributionText: some View {
@@ -237,26 +371,53 @@ extension TerrainProfileCanvas {
     }
 
     private func drawFresnelZone(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        guard profileSamples.count >= 2 else { return }
+        // Draw primary segment (A→B or A→R)
+        drawFresnelForSamples(context: context, coords: coords, samples: profileSamples)
 
-        drawOuterFresnelFill(context: context, coords: coords)
-        drawInnerFresnelFill(context: context, coords: coords)
-        drawObstructionOverlay(context: context, coords: coords)
+        // Draw secondary segment (R→B) if present
+        if !profileSamplesRB.isEmpty {
+            drawFresnelForSamples(context: context, coords: coords, samples: profileSamplesRB)
+        }
     }
 
-    private func drawOuterFresnelFill(context: GraphicsContext, coords: ChartCoordinateSpace) {
+    private func drawFresnelForSamples(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        samples: [ProfileSample]
+    ) {
+        guard samples.count >= 2 else { return }
+
+        drawOuterFresnelFill(context: context, coords: coords, samples: samples)
+        drawInnerFresnelFill(context: context, coords: coords, samples: samples)
+    }
+
+    private func drawObstructions(context: GraphicsContext, coords: ChartCoordinateSpace) {
+        // Draw obstructions for primary segment
+        drawObstructionOverlay(context: context, coords: coords, samples: profileSamples)
+
+        // Draw obstructions for secondary segment if present
+        if !profileSamplesRB.isEmpty {
+            drawObstructionOverlay(context: context, coords: coords, samples: profileSamplesRB)
+        }
+    }
+
+    private func drawOuterFresnelFill(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        samples: [ProfileSample]
+    ) {
         var path = Path()
 
         // Top edge: left to right
-        if let first = profileSamples.first {
+        if let first = samples.first {
             path.move(to: coords.point(x: first.x, y: first.yTop))
         }
-        for sample in profileSamples.dropFirst() {
+        for sample in samples.dropFirst() {
             path.addLine(to: coords.point(x: sample.x, y: sample.yTop))
         }
 
         // Bottom edge: right to left (clamped to terrain)
-        for sample in profileSamples.reversed() {
+        for sample in samples.reversed() {
             path.addLine(to: coords.point(x: sample.x, y: sample.yVisibleBottom))
         }
 
@@ -264,19 +425,23 @@ extension TerrainProfileCanvas {
         context.fill(path, with: .color(fresnelOuter))
     }
 
-    private func drawInnerFresnelFill(context: GraphicsContext, coords: ChartCoordinateSpace) {
+    private func drawInnerFresnelFill(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        samples: [ProfileSample]
+    ) {
         var path = Path()
 
         // Top edge: left to right
-        if let first = profileSamples.first {
+        if let first = samples.first {
             path.move(to: coords.point(x: first.x, y: first.yTop60))
         }
-        for sample in profileSamples.dropFirst() {
+        for sample in samples.dropFirst() {
             path.addLine(to: coords.point(x: sample.x, y: sample.yTop60))
         }
 
         // Bottom edge: right to left (clamped to terrain)
-        for sample in profileSamples.reversed() {
+        for sample in samples.reversed() {
             path.addLine(to: coords.point(x: sample.x, y: sample.yVisibleBottom60))
         }
 
@@ -284,12 +449,16 @@ extension TerrainProfileCanvas {
         context.fill(path, with: .color(fresnelInner))
     }
 
-    private func drawObstructionOverlay(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        // Find contiguous obstructed regions and draw orange overlay
+    private func drawObstructionOverlay(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        samples: [ProfileSample]
+    ) {
+        // Find contiguous obstructed regions and draw overlay
         var inObstructedRegion = false
         var regionStart = 0
 
-        for (index, sample) in profileSamples.enumerated() {
+        for (index, sample) in samples.enumerated() {
             if sample.isObstructed && !inObstructedRegion {
                 // Start of obstructed region
                 inObstructedRegion = true
@@ -299,6 +468,7 @@ extension TerrainProfileCanvas {
                 drawObstructedRegion(
                     context: context,
                     coords: coords,
+                    samples: samples,
                     startIndex: regionStart,
                     endIndex: index - 1
                 )
@@ -311,8 +481,9 @@ extension TerrainProfileCanvas {
             drawObstructedRegion(
                 context: context,
                 coords: coords,
+                samples: samples,
                 startIndex: regionStart,
-                endIndex: profileSamples.count - 1
+                endIndex: samples.count - 1
             )
         }
     }
@@ -320,49 +491,63 @@ extension TerrainProfileCanvas {
     private func drawObstructedRegion(
         context: GraphicsContext,
         coords: ChartCoordinateSpace,
+        samples: [ProfileSample],
         startIndex: Int,
         endIndex: Int
     ) {
         guard startIndex <= endIndex else { return }
 
-        let regionSamples = Array(profileSamples[startIndex...endIndex])
-        guard let first = regionSamples.first else { return }
+        let regionSamples = Array(samples[startIndex...endIndex])
+        guard let first = regionSamples.first, let last = regionSamples.last else { return }
+
+        // Draw a rectangle spanning the full vertical height of the chart
+        let topLeft = coords.point(x: first.x, y: yRange.upperBound)
+        let topRight = coords.point(x: last.x, y: yRange.upperBound)
+        let bottomRight = coords.point(x: last.x, y: yRange.lowerBound)
+        let bottomLeft = coords.point(x: first.x, y: yRange.lowerBound)
 
         var path = Path()
-
-        // Top edge: left to right
-        path.move(to: coords.point(x: first.x, y: first.yTop))
-        for sample in regionSamples.dropFirst() {
-            path.addLine(to: coords.point(x: sample.x, y: sample.yTop))
-        }
-
-        // Bottom edge: right to left (clamped to terrain)
-        for sample in regionSamples.reversed() {
-            path.addLine(to: coords.point(x: sample.x, y: sample.yVisibleBottom))
-        }
-
+        path.move(to: topLeft)
+        path.addLine(to: topRight)
+        path.addLine(to: bottomRight)
+        path.addLine(to: bottomLeft)
         path.closeSubpath()
+
         context.fill(path, with: .color(fresnelObstructed))
     }
 
     private func drawFresnelBoundary(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        guard profileSamples.count >= 2 else { return }
+        // Draw boundary for primary segment
+        drawFresnelBoundaryForSamples(context: context, coords: coords, samples: profileSamples)
+
+        // Draw boundary for secondary segment if present
+        if !profileSamplesRB.isEmpty {
+            drawFresnelBoundaryForSamples(context: context, coords: coords, samples: profileSamplesRB)
+        }
+    }
+
+    private func drawFresnelBoundaryForSamples(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        samples: [ProfileSample]
+    ) {
+        guard samples.count >= 2 else { return }
 
         // Top boundary (theoretical ellipse top)
         var topPath = Path()
-        if let first = profileSamples.first {
+        if let first = samples.first {
             topPath.move(to: coords.point(x: first.x, y: first.yTop))
         }
-        for sample in profileSamples.dropFirst() {
+        for sample in samples.dropFirst() {
             topPath.addLine(to: coords.point(x: sample.x, y: sample.yTop))
         }
 
         // Bottom boundary (theoretical ellipse bottom)
         var bottomPath = Path()
-        if let first = profileSamples.first {
+        if let first = samples.first {
             bottomPath.move(to: coords.point(x: first.x, y: first.yBottom))
         }
-        for sample in profileSamples.dropFirst() {
+        for sample in samples.dropFirst() {
             bottomPath.addLine(to: coords.point(x: sample.x, y: sample.yBottom))
         }
 
@@ -372,7 +557,15 @@ extension TerrainProfileCanvas {
     }
 
     private func drawTerrain(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        guard profileSamples.count >= 2 else { return }
+        // Combine samples for full terrain (avoid duplicate at junction)
+        let allSamples: [ProfileSample]
+        if profileSamplesRB.isEmpty {
+            allSamples = profileSamples
+        } else {
+            allSamples = profileSamples + profileSamplesRB.dropFirst()
+        }
+
+        guard allSamples.count >= 2 else { return }
 
         // Build terrain fill path
         var fillPath = Path()
@@ -382,7 +575,7 @@ extension TerrainProfileCanvas {
         fillPath.move(to: bottomLeft)
 
         // Trace terrain line
-        for sample in profileSamples {
+        for sample in allSamples {
             fillPath.addLine(to: coords.point(x: sample.x, y: sample.yTerrain))
         }
 
@@ -396,10 +589,10 @@ extension TerrainProfileCanvas {
 
         // Build terrain stroke path (just the top edge)
         var strokePath = Path()
-        if let first = profileSamples.first {
+        if let first = allSamples.first {
             strokePath.move(to: coords.point(x: first.x, y: first.yTerrain))
         }
-        for sample in profileSamples.dropFirst() {
+        for sample in allSamples.dropFirst() {
             strokePath.addLine(to: coords.point(x: sample.x, y: sample.yTerrain))
         }
 
@@ -412,56 +605,132 @@ extension TerrainProfileCanvas {
     }
 
     private func drawLOSLine(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        guard let first = profileSamples.first,
-              let last = profileSamples.last else { return }
+        // Draw primary segment LOS line (A→B or A→R)
+        if let first = profileSamples.first, let last = profileSamples.last {
+            var path = Path()
+            path.move(to: coords.point(x: first.x, y: first.yLOS))
+            path.addLine(to: coords.point(x: last.x, y: last.yLOS))
+            context.stroke(path, with: .color(losLineColor), style: StrokeStyle(lineWidth: 2))
+        }
 
-        var path = Path()
-        path.move(to: coords.point(x: first.x, y: first.yLOS))
-        path.addLine(to: coords.point(x: last.x, y: last.yLOS))
-
-        context.stroke(
-            path,
-            with: .color(losLineColor),
-            style: StrokeStyle(lineWidth: 2)
-        )
+        // Draw secondary segment LOS line (R→B) if present
+        if let first = profileSamplesRB.first, let last = profileSamplesRB.last {
+            var path = Path()
+            path.move(to: coords.point(x: first.x, y: first.yLOS))
+            path.addLine(to: coords.point(x: last.x, y: last.yLOS))
+            context.stroke(path, with: .color(losLineColor), style: StrokeStyle(lineWidth: 2))
+        }
     }
 
     private func drawEndpointMarkers(context: GraphicsContext, coords: ChartCoordinateSpace) {
-        guard let first = profileSamples.first,
-              let last = profileSamples.last else { return }
+        guard let sampleA = profileSamples.first else { return }
+
+        // B is from R→B segment if present, otherwise from primary segment
+        let sampleB = profileSamplesRB.last ?? profileSamples.last
+        guard let sampleB else { return }
 
         let markerRadius: CGFloat = 6
-        let markerColor = Color.orange
 
-        // Point A marker
-        let pointA = coords.point(x: first.x, y: first.yLOS)
+        // Point A marker (blue)
+        let pointA = coords.point(x: sampleA.x, y: sampleA.yLOS)
         let circleA = Path(ellipseIn: CGRect(
             x: pointA.x - markerRadius,
             y: pointA.y - markerRadius,
             width: markerRadius * 2,
             height: markerRadius * 2
         ))
-        context.fill(circleA, with: .color(markerColor))
+        context.fill(circleA, with: .color(.blue))
 
-        // Point B marker
-        let pointB = coords.point(x: last.x, y: last.yLOS)
+        // Point B marker (green)
+        let pointB = coords.point(x: sampleB.x, y: sampleB.yLOS)
         let circleB = Path(ellipseIn: CGRect(
             x: pointB.x - markerRadius,
             y: pointB.y - markerRadius,
             width: markerRadius * 2,
             height: markerRadius * 2
         ))
-        context.fill(circleB, with: .color(markerColor))
+        context.fill(circleB, with: .color(.green))
 
-        // Labels
-        context.draw(
-            Text("A").font(.caption2).bold(),
-            at: CGPoint(x: pointA.x + 12, y: pointA.y - 8)
+        // Labels inside markers (matching repeater style)
+        let labelA = Text("A")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundStyle(.white)
+        context.draw(labelA, at: pointA, anchor: .center)
+
+        let labelB = Text("B")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundStyle(.white)
+        context.draw(labelB, at: pointB, anchor: .center)
+    }
+
+    private func drawRepeaterMarker(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        pathFraction: Double,
+        repeaterElevation: Double,
+        height: Double,
+        nudgeOffset: CGFloat
+    ) {
+        // Get the LOS intersection point from profileSamples (junction of A→R and R→B)
+        // The repeater marker should be at the LOS line intersection, not ground level
+        guard let junctionSample = profileSamples.last else { return }
+
+        let x = junctionSample.x
+        let losY = junctionSample.yLOS
+        let groundY = junctionSample.yTerrain
+
+        // Draw vertical line from ground to LOS intersection (apply nudge offset)
+        let groundPoint = coords.point(x: x, y: groundY)
+        let losPoint = coords.point(x: x, y: losY)
+        let nudgedGroundPoint = CGPoint(x: groundPoint.x + nudgeOffset, y: groundPoint.y)
+        let nudgedLosPoint = CGPoint(x: losPoint.x + nudgeOffset, y: losPoint.y)
+
+        var linePath = Path()
+        linePath.move(to: nudgedGroundPoint)
+        linePath.addLine(to: nudgedLosPoint)
+        context.stroke(linePath, with: .color(repeaterColor), lineWidth: 2)
+
+        // Draw repeater marker circle at LOS intersection (16pt radius = 32pt diameter)
+        let markerRadius: CGFloat = 16
+        let markerRect = CGRect(
+            x: nudgedLosPoint.x - markerRadius,
+            y: nudgedLosPoint.y - markerRadius,
+            width: markerRadius * 2,
+            height: markerRadius * 2
         )
-        context.draw(
-            Text("B").font(.caption2).bold(),
-            at: CGPoint(x: pointB.x - 12, y: pointB.y - 8)
-        )
+        let markerPath = Circle().path(in: markerRect)
+
+        // Draw shadow first
+        context.drawLayer { shadowContext in
+            shadowContext.addFilter(.shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2))
+            shadowContext.fill(markerPath, with: .color(repeaterColor))
+        }
+
+        // Draw the actual marker on top
+        context.fill(markerPath, with: .color(repeaterColor))
+
+        // Draw "R" label (larger font to match increased marker size)
+        let text = Text("R")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+        context.draw(text, at: nudgedLosPoint, anchor: .center)
+    }
+
+    private func drawJunctionSeparator(
+        context: GraphicsContext,
+        coords: ChartCoordinateSpace,
+        atDistance distance: Double
+    ) {
+        // Draw vertical dashed line at the junction point
+        let topPoint = coords.point(x: distance, y: yRange.upperBound)
+        let bottomPoint = coords.point(x: distance, y: yRange.lowerBound)
+
+        var path = Path()
+        path.move(to: topPoint)
+        path.addLine(to: bottomPoint)
+
+        let style = StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+        context.stroke(path, with: .color(.primary.opacity(0.35)), style: style)
     }
 }
 
@@ -478,12 +747,17 @@ extension TerrainProfileCanvas {
         )
     }
 
-    return TerrainProfileCanvas(
-        elevationProfile: sampleProfile,
+    let samples = FresnelZoneRenderer.buildProfileSamples(
+        from: sampleProfile,
         pointAHeight: 10,
         pointBHeight: 15,
         frequencyMHz: 906,
         refractionK: 4.0 / 3.0
+    )
+
+    return TerrainProfileCanvas(
+        elevationProfile: sampleProfile,
+        profileSamples: samples
     )
     .padding()
 }
