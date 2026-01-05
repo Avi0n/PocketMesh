@@ -336,12 +336,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             guard let self else { return }
             await self.autoMessageFetchLoop()
         }
-        
-        do {
-            _ = try await getMessage()
-        } catch {
-            logger.debug("Initial message fetch: \(error.localizedDescription)")
-        }
+
+        // The auto-fetch loop polls messages in response to messagesWaiting events.
+        // For immediate polling, callers should use getMessage() or consume the events directly.
     }
 
     /// Stops automatic message fetching.
