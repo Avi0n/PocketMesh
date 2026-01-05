@@ -308,8 +308,8 @@ Represents any event received from the device. Events are organized into categor
 | Case | Payload | Description |
 |------|---------|-------------|
 | `.rawData` | `RawDataInfo` | Raw radio data received |
-| `.logData` | `LogDataInfo` | Log data from device |
-| `.rxLogData` | `LogDataInfo` | Raw RF log data |
+| `.rxLogData` | `ParsedRxLogData` | Emitted when low-level radio log data is successfully parsed into structured packet information |
+| `.logData` | `LogDataInfo` | Emitted for diagnostic logs and malformed RX payloads that failed parsing |
 | `.controlData` | `ControlDataInfo` | Control protocol data received |
 | `.discoverResponse` | `DiscoverResponse` | Node discovery response |
 
@@ -851,6 +851,27 @@ Log data received from the device.
 | `snr` | `Double?` | Optional signal-to-noise ratio |
 | `rssi` | `Int?` | Optional received signal strength indicator |
 | `payload` | `Data` | Raw log payload data |
+
+### ParsedRxLogData (public, struct)
+
+**File:** `MeshCore/Sources/MeshCore/Protocol/RxLogTypes.swift`
+
+Parsed RF packet data from `rxLogData` events.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `snr` | `Double?` | SNR in dB (0.25 dB resolution) |
+| `rssi` | `Int?` | RSSI in dBm |
+| `rawPayload` | `Data` | Original unparsed payload bytes |
+| `routeType` | `RouteType` | Routing method (flood, direct, tc_flood, tc_direct) |
+| `payloadType` | `PayloadType` | Message type (header bits 2-5; values 12-15 map to `.unknown`) |
+| `payloadVersion` | `UInt8` | Protocol version (0-3) |
+| `transportCode` | `Data?` | 4-byte transport code if route type requires it |
+| `pathLength` | `UInt8` | Number of path nodes |
+| `pathNodes` | `[UInt8]` | Path node identifiers (1 byte each) as emitted by firmware |
+| `packetPayload` | `Data` | Payload after header/path extraction |
+| `packetHash` | `String` | First 8 bytes of SHA-256 of `packetPayload`, as 16-char hex |
+| `senderPubkeyPrefix` | `Data?` | 6-byte sender pubkey for direct text messages |
 
 ### ControlDataInfo (public, struct)
 

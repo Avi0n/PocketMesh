@@ -16,6 +16,12 @@ struct ToolsView: View {
                 } label: {
                     Label("Line of Sight", systemImage: "eye")
                 }
+
+                NavigationLink {
+                    RxLogView()
+                } label: {
+                    Label("RX Log", systemImage: "waveform.badge.magnifyingglass")
+                }
             }
             .navigationTitle("Tools")
         }

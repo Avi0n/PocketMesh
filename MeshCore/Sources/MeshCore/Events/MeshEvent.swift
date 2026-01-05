@@ -285,10 +285,12 @@ public enum MeshEvent: Sendable {
     /// Emitted when the device sends diagnostic log data.
     case logData(LogDataInfo)
 
-    /// Indicates raw RF log data.
+    /// Indicates parsed RF log data.
     ///
-    /// Emitted when the device sends low-level radio log data.
-    case rxLogData(LogDataInfo)
+    /// Emitted when the device sends low-level radio log data that has been
+    /// parsed into structured packet information including route type, payload type,
+    /// path nodes, and packet payload.
+    case rxLogData(ParsedRxLogData)
 
     /// Indicates that control protocol data was received.
     ///

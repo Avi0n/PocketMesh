@@ -31,7 +31,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         RemoteNodeSession.self,
         RoomMessage.self,
         SavedTracePath.self,
-        TracePathRun.self
+        TracePathRun.self,
+        RxLogEntry.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -1361,6 +1362,90 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         run.savedPath = path
         path.runs.append(run)
         modelContext.insert(run)
+        try modelContext.save()
+    }
+
+    // MARK: - RxLogEntry
+
+    /// Save a new RX log entry.
+    public func saveRxLogEntry(_ dto: RxLogEntryDTO) throws {
+        let entry = RxLogEntry(
+            id: dto.id,
+            deviceID: dto.deviceID,
+            receivedAt: dto.receivedAt,
+            snr: dto.snr,
+            rssi: dto.rssi,
+            routeType: Int(dto.routeType.rawValue),
+            payloadType: Int(dto.payloadType.rawValue),
+            payloadVersion: Int(dto.payloadVersion),
+            transportCode: dto.transportCode,
+            pathLength: Int(dto.pathLength),
+            pathNodes: dto.pathNodes,
+            packetPayload: dto.packetPayload,
+            rawPayload: dto.rawPayload,
+            packetHash: dto.packetHash,
+            channelHash: dto.channelHash.map { Int($0) },
+            channelName: dto.channelName,
+            decryptStatus: dto.decryptStatus.rawValue,
+            fromContactName: dto.fromContactName,
+            toContactName: dto.toContactName
+        )
+        modelContext.insert(entry)
+        try modelContext.save()
+    }
+
+    /// Fetch RX log entries for a device, most recent first.
+    public func fetchRxLogEntries(deviceID: UUID, limit: Int = 500) throws -> [RxLogEntryDTO] {
+        let targetDeviceID = deviceID
+        var descriptor = FetchDescriptor<RxLogEntry>(
+            predicate: #Predicate { $0.deviceID == targetDeviceID },
+            sortBy: [SortDescriptor(\.receivedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        let entries = try modelContext.fetch(descriptor)
+        return entries.map { RxLogEntryDTO(from: $0) }
+    }
+
+    /// Count RX log entries for a device.
+    public func countRxLogEntries(deviceID: UUID) throws -> Int {
+        let targetDeviceID = deviceID
+        let descriptor = FetchDescriptor<RxLogEntry>(
+            predicate: #Predicate { $0.deviceID == targetDeviceID }
+        )
+        return try modelContext.fetchCount(descriptor)
+    }
+
+    /// Delete oldest entries if count exceeds limit.
+    public func pruneRxLogEntries(deviceID: UUID, keepCount: Int = 1000) throws {
+        let count = try countRxLogEntries(deviceID: deviceID)
+        guard count > keepCount else { return }
+
+        let deleteCount = count - keepCount
+        let targetDeviceID = deviceID
+
+        var descriptor = FetchDescriptor<RxLogEntry>(
+            predicate: #Predicate { $0.deviceID == targetDeviceID },
+            sortBy: [SortDescriptor(\.receivedAt, order: .forward)]  // Oldest first
+        )
+        descriptor.fetchLimit = deleteCount
+
+        let toDelete = try modelContext.fetch(descriptor)
+        for entry in toDelete {
+            modelContext.delete(entry)
+        }
+        try modelContext.save()
+    }
+
+    /// Clear all RX log entries for a device.
+    public func clearRxLogEntries(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let descriptor = FetchDescriptor<RxLogEntry>(
+            predicate: #Predicate { $0.deviceID == targetDeviceID }
+        )
+        let entries = try modelContext.fetch(descriptor)
+        for entry in entries {
+            modelContext.delete(entry)
+        }
         try modelContext.save()
     }
 }

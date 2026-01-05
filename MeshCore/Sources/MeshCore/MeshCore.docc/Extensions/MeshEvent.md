@@ -80,6 +80,17 @@
 - ``discoverResponse(_:)``
 - ``privateKey(_:)``
 
+#### rxLogData(_:)
+
+Indicates parsed RF log data.
+
+- Parameter parsed: A ``ParsedRxLogData`` containing structured packet information.
+
+Emitted when the device sends low-level radio log data that has been successfully
+parsed. Malformed payloads fall back to ``logData(_:)`` instead.
+
+> Note: Breaking change from prior versions which used `LogDataInfo`.
+
 ### Diagnostics
 
 - ``parseFailure(data:reason:)``
