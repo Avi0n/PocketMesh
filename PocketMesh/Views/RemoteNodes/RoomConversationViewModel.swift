@@ -63,6 +63,14 @@ final class RoomConversationViewModel {
         isLoading = false
     }
 
+    /// Optimistically append a message if not already present.
+    /// Called synchronously before async reload to ensure ChatTableView
+    /// sees the new count immediately for unread tracking.
+    func appendMessageIfNew(_ message: RoomMessageDTO) {
+        guard !messages.contains(where: { $0.id == message.id }) else { return }
+        messages.append(message)
+    }
+
     /// Send a message to the current room
     func sendMessage() async {
         guard let session,

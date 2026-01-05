@@ -190,6 +190,14 @@ final class ChatViewModel {
         isLoading = false
     }
 
+    /// Optimistically append a message if not already present.
+    /// Called synchronously before async reload to ensure ChatTableView
+    /// sees the new count immediately for unread tracking.
+    func appendMessageIfNew(_ message: MessageDTO) {
+        guard !messages.contains(where: { $0.id == message.id }) else { return }
+        messages.append(message)
+    }
+
     /// Load any saved draft for the current contact
     /// Drafts are consumed (removed) after loading to prevent re-display
     /// If no draft exists, this method does nothing

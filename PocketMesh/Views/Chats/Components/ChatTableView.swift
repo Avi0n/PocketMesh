@@ -1,5 +1,8 @@
 import UIKit
 import SwiftUI
+import os.log
+
+private let logger = Logger(subsystem: "PocketMesh", category: "ChatTableView")
 
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
@@ -30,6 +33,12 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     /// Callback when scroll state changes
     var onScrollStateChanged: ((Bool, Int) -> Void)?
 
+    /// Current keyboard height for inset calculation
+    private var keyboardHeight: CGFloat = 0
+
+    /// Flag to prevent scroll delegate from overriding isAtBottom during programmatic scroll
+    private(set) var isScrollingToBottom = false
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
@@ -51,6 +60,57 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
         // Configure data source
         configureDataSource()
+
+        // Manual keyboard observation (UIKit auto-adjustment doesn't work in SwiftUI embed)
+        setupKeyboardObservers()
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    // MARK: - Keyboard Handling
+
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow(_:)),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide(_:)),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return
+        }
+
+        let wasAtBottom = isAtBottom
+        keyboardHeight = keyboardFrame.height
+
+        logger.debug("keyboardWillShow: height=\(self.keyboardHeight), wasAtBottom=\(wasAtBottom)")
+
+        // SwiftUI handles frame changes for keyboard, so we don't add content inset.
+        // Just scroll to bottom after layout settles if we were at bottom.
+        if wasAtBottom {
+            // Delay to let SwiftUI complete its layout pass
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .milliseconds(100))
+                self?.scrollToBottom(animated: true)
+            }
+        }
+    }
+
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        logger.debug("keyboardWillHide")
+        keyboardHeight = 0
     }
 
     // MARK: - Configuration
@@ -70,8 +130,9 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
             let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
-            // Flip cell content back to normal orientation
-            cell.contentView.transform = CGAffineTransform(scaleX: 1, y: -1)
+            // Flip cell back to normal orientation (must be cell, not contentView,
+            // because UIHostingConfiguration replaces contentView hierarchy)
+            cell.transform = CGAffineTransform(scaleX: 1, y: -1)
             cell.backgroundColor = .clear
             cell.selectionStyle = .none
 
@@ -89,45 +150,78 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
     // MARK: - Update Items
 
+    /// When true, updateItems will skip auto-scroll (caller will scroll explicitly)
+    private var skipAutoScroll = false
+
     func updateItems(_ newItems: [Item], animated: Bool = true) {
         let previousCount = items.count
         let wasAtBottom = isAtBottom
         items = newItems
 
-        // Apply snapshot
+        logger.debug("updateItems: previousCount=\(previousCount), newCount=\(newItems.count), wasAtBottom=\(wasAtBottom)")
+
+        // Apply snapshot with REVERSED order: newest-first for flipped table
+        // Row 0 = newest message → appears at visual bottom after flip
         var snapshot = NSDiffableDataSourceSnapshot<Section, Item.ID>()
         snapshot.appendSections([.main])
-        snapshot.appendItems(newItems.map(\.id))
+        snapshot.appendItems(newItems.reversed().map(\.id))
         dataSource?.apply(snapshot, animatingDifferences: animated && previousCount > 0)
 
+        logger.debug("updateItems: snapshot applied, isAtBottom now=\(self.isAtBottom)")
+
         // Handle unread tracking
-        if !wasAtBottom && previousCount > 0 && newItems.count > previousCount {
+        let hasNewItems = newItems.count > previousCount
+
+        if !wasAtBottom && previousCount > 0 && hasNewItems {
             // New messages arrived while scrolled up
             let newMessageCount = newItems.count - previousCount
             unreadCount += newMessageCount
+            logger.debug("updateItems: scrolled up, incrementing unread to \(self.unreadCount)")
             onScrollStateChanged?(isAtBottom, unreadCount)
-        } else if wasAtBottom && !newItems.isEmpty {
-            // At bottom, auto-scroll to newest
+        } else if wasAtBottom && hasNewItems && !skipAutoScroll && !isScrollingToBottom {
+            // At bottom with NEW items, auto-scroll to newest
+            // Only scroll if there are actually new items (not just SwiftUI re-renders)
             lastSeenItemID = newItems.last?.id
+            logger.debug("updateItems: was at bottom with new items, calling scrollToBottom")
             scrollToBottom(animated: animated && previousCount > 0)
         }
     }
 
     // MARK: - Scroll Control
 
+    /// Called before updateItems when user sends a message.
+    /// Sets isAtBottom = true so updateItems won't increment unread.
+    func prepareForUserSend() {
+        isAtBottom = true
+        unreadCount = 0
+        skipAutoScroll = true  // Prevent updateItems from calling scrollToBottom (we'll do it explicitly)
+        logger.debug("prepareForUserSend: reset isAtBottom=true, unreadCount=0")
+    }
+
     func scrollToBottom(animated: Bool) {
         guard !items.isEmpty else { return }
 
-        // In flipped table: last item at .bottom anchor = visual bottom
-        let lastIndex = items.count - 1
-        let indexPath = IndexPath(row: lastIndex, section: 0)
-        tableView.scrollToRow(at: indexPath, at: .bottom, animated: animated)
+        logger.debug("scrollToBottom: animated=\(animated), contentOffset.y=\(self.tableView.contentOffset.y)")
 
-        // Clear unread when scrolling to bottom
+        // Set state BEFORE scroll to prevent scroll delegate from overriding
+        isAtBottom = true
         unreadCount = 0
         lastSeenItemID = items.last?.id
-        isAtBottom = true
+        isScrollingToBottom = animated  // Flag active during animated scroll
+
+        // In flipped table with reversed data: row 0 = newest message
+        // Scroll row 0 to .top anchor (which is visual BOTTOM in flipped table)
+        tableView.scrollToRow(at: IndexPath(row: 0, section: 0), at: .top, animated: animated)
+
+        // Clear flag immediately if not animated (no animation callback)
+        if !animated {
+            isScrollingToBottom = false
+        }
+
         onScrollStateChanged?(isAtBottom, unreadCount)
+
+        // Clear skipAutoScroll after explicit scroll (it was set by prepareForUserSend)
+        skipAutoScroll = false
     }
 
     // MARK: - Scroll Tracking
@@ -146,13 +240,41 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         finalizeScrollPosition()
     }
 
+    override func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        // Clear flag when programmatic scroll animation completes
+        let wasScrollingToBottom = isScrollingToBottom
+        isScrollingToBottom = false
+
+        if wasScrollingToBottom {
+            // We just finished a programmatic scroll-to-bottom
+            // Use larger threshold since animation might not land exactly at 0
+            let atBottom = scrollView.contentOffset.y <= 10
+            if atBottom {
+                // Confirm we're at bottom - this is authoritative
+                isAtBottom = true
+                unreadCount = 0
+                onScrollStateChanged?(isAtBottom, unreadCount)
+                return
+            }
+        }
+
+        // For user-initiated scrolls or if we didn't land at bottom, use normal check
+        updateIsAtBottom()
+    }
+
     private func updateIsAtBottom() {
-        // In flipped table: visual bottom = contentOffset near top edge
-        let offset = tableView.contentOffset.y
-        let inset = tableView.adjustedContentInset.top
-        let newIsAtBottom = offset <= inset + 10 // 10pt threshold
+        // Don't override isAtBottom during programmatic scroll-to-bottom animation
+        // This prevents the FAB from flickering when user sends a message
+        if isScrollingToBottom {
+            return
+        }
+
+        // In flipped table, visual bottom = contentOffset.y near 0
+        // Use small threshold to handle float imprecision
+        let newIsAtBottom = tableView.contentOffset.y <= 1
 
         if newIsAtBottom != isAtBottom {
+            logger.debug("updateIsAtBottom: changed \(self.isAtBottom) -> \(newIsAtBottom), contentOffset.y=\(self.tableView.contentOffset.y)")
             isAtBottom = newIsAtBottom
             onScrollStateChanged?(isAtBottom, unreadCount)
         }
@@ -184,23 +306,41 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         controller.configure { item in
             AnyView(cellContent(item))
         }
-        controller.onScrollStateChanged = { atBottom, unread in
-            Task { @MainActor in
-                isAtBottom = atBottom
-                unreadCount = unread
-            }
-        }
+        // Callback set up in updateUIViewController
         context.coordinator.lastScrollRequest = scrollToBottomRequest
         return controller
     }
 
     func updateUIViewController(_ controller: ChatTableViewController<Item>, context: Context) {
-        // Update items
+        // Store current binding setters in coordinator (updated each render cycle)
+        // This ensures deferred callbacks always use fresh bindings
+        context.coordinator.setIsAtBottom = { [self] in isAtBottom = $0 }
+        context.coordinator.setUnreadCount = { [self] in unreadCount = $0 }
+
+        // Controller callback defers to next run loop via coordinator.
+        // SwiftUI blocks binding updates during updateUIViewController, so we must
+        // defer the update to after the current update cycle completes.
+        controller.onScrollStateChanged = { [weak coordinator = context.coordinator] atBottom, unread in
+            DispatchQueue.main.async {
+                coordinator?.setIsAtBottom?(atBottom)
+                coordinator?.setUnreadCount?(unread)
+            }
+        }
+
+        // Check for scroll-to-bottom request BEFORE updating items
+        // This ensures user sends don't trigger unread badge
+        let shouldForceScroll = scrollToBottomRequest != context.coordinator.lastScrollRequest
+
+        if shouldForceScroll {
+            context.coordinator.lastScrollRequest = scrollToBottomRequest
+            // Mark as at bottom so updateItems won't increment unread
+            controller.prepareForUserSend()
+        }
+
         controller.updateItems(items)
 
-        // Handle scroll-to-bottom requests
-        if scrollToBottomRequest != context.coordinator.lastScrollRequest {
-            context.coordinator.lastScrollRequest = scrollToBottomRequest
+        // Perform the scroll after items are updated
+        if shouldForceScroll {
             controller.scrollToBottom(animated: true)
         }
     }
@@ -211,5 +351,7 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
 
     class Coordinator {
         var lastScrollRequest: Int = 0
+        var setIsAtBottom: ((Bool) -> Void)?
+        var setUnreadCount: ((Int) -> Void)?
     }
 }

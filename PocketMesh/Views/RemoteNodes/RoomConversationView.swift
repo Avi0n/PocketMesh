@@ -51,8 +51,10 @@ struct RoomConversationView: View {
             }
             .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
                 // Reload messages when a new room message arrives for this session
-                if case .roomMessageReceived(_, let sessionID) = appState.messageEventBroadcaster.latestEvent,
+                if case .roomMessageReceived(let message, let sessionID) = appState.messageEventBroadcaster.latestEvent,
                    sessionID == session.id {
+                    // Optimistic insert: add message immediately so ChatTableView sees new count
+                    viewModel.appendMessageIfNew(message)
                     Task {
                         await viewModel.loadMessages(for: session)
                     }
@@ -154,6 +156,8 @@ struct RoomConversationView: View {
             accentColor: .orange,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
+            // Force scroll to bottom on user send (before message is added)
+            scrollToBottomRequest += 1
             Task {
                 await viewModel.sendMessage()
             }

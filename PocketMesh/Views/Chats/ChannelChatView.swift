@@ -73,6 +73,8 @@ struct ChannelChatView: View {
             switch appState.messageEventBroadcaster.latestEvent {
             case .channelMessageReceived(let message, let channelIndex)
                 where channelIndex == channel.index && message.deviceID == channel.deviceID:
+                // Optimistic insert: add message immediately so ChatTableView sees new count
+                viewModel.appendMessageIfNew(message)
                 Task {
                     await viewModel.loadChannelMessages(for: channel)
                 }
@@ -219,6 +221,8 @@ struct ChannelChatView: View {
             accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
             maxCharacters: maxChannelMessageLength
         ) {
+            // Force scroll to bottom on user send (before message is added)
+            scrollToBottomRequest += 1
             Task {
                 await viewModel.sendChannelMessage()
             }

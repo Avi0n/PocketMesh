@@ -75,6 +75,8 @@ struct ChatView: View {
         .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
             switch appState.messageEventBroadcaster.latestEvent {
             case .directMessageReceived(let message, _) where message.contactID == contact.id:
+                // Optimistic insert: add message immediately so ChatTableView sees new count
+                viewModel.appendMessageIfNew(message)
                 Task {
                     await viewModel.loadMessages(for: contact)
                 }
@@ -242,6 +244,8 @@ struct ChatView: View {
             accentColor: .blue,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
+            // Force scroll to bottom on user send (before message is added)
+            scrollToBottomRequest += 1
             Task { await viewModel.sendMessage() }
         }
     }
