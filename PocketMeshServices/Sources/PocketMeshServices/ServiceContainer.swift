@@ -77,6 +77,9 @@ public final class ServiceContainer {
     /// Service for binary protocol operations (telemetry, status, etc.)
     public let binaryProtocolService: BinaryProtocolService
 
+    /// Service for RX log packet capture
+    public let rxLogService: RxLogService
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -125,6 +128,7 @@ public final class ServiceContainer {
         self.advertisementService = AdvertisementService(session: session, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(session: session, dataStore: dataStore)
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
+        self.rxLogService = RxLogService(session: session, persistenceStore: dataStore)
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
@@ -162,6 +166,18 @@ public final class ServiceContainer {
         // Wire contact service to sync coordinator for UI refresh notifications
         await contactService.setSyncCoordinator(syncCoordinator)
 
+        // Wire channel updates to RxLogService for decryption cache
+        await channelService.setChannelUpdateHandler { [weak self] channels in
+            guard let self else { return }
+            let secrets: [UInt8: Data] = Dictionary(
+                uniqueKeysWithValues: channels.map { ($0.index, $0.secret) }
+            )
+            let names: [UInt8: String] = Dictionary(
+                uniqueKeysWithValues: channels.map { ($0.index, $0.name) }
+            )
+            Task { await self.rxLogService.updateChannels(secrets: secrets, names: names) }
+        }
+
         isWired = true
     }
 
@@ -178,6 +194,7 @@ public final class ServiceContainer {
 
         // Start event monitoring for services that need it
         await advertisementService.startEventMonitoring(deviceID: deviceID)
+        await rxLogService.startEventMonitoring(deviceID: deviceID)
         await messageService.startEventListening()
         await remoteNodeService.startEventMonitoring()
         await messagePollingService.startAutoFetch(deviceID: deviceID)
@@ -192,6 +209,7 @@ public final class ServiceContainer {
         guard isMonitoringEvents else { return }
 
         await advertisementService.stopEventMonitoring()
+        await rxLogService.stopEventMonitoring()
         await messageService.stopEventListening()
         await messagePollingService.stopAutoFetch()
         // RemoteNodeService event monitoring is per-session, handled internally
@@ -234,8 +252,28 @@ public final class ServiceContainer {
             if result.channelsSynced > 0 {
                 logger.info("Initial sync: \(result.channelsSynced) channels synced")
             }
+
+            // Update RxLogService with channel data for decryption
+            await updateRxLogChannels(deviceID: deviceID)
         } catch {
             logger.warning("Initial sync: channel sync failed: \(error)")
+        }
+    }
+
+    /// Updates RxLogService with current channel data for message decryption.
+    private func updateRxLogChannels(deviceID: UUID) async {
+        do {
+            let channels = try await dataStore.fetchChannels(deviceID: deviceID)
+            let secrets: [UInt8: Data] = Dictionary(
+                uniqueKeysWithValues: channels.map { ($0.index, $0.secret) }
+            )
+            let names: [UInt8: String] = Dictionary(
+                uniqueKeysWithValues: channels.map { ($0.index, $0.name) }
+            )
+            await rxLogService.updateChannels(secrets: secrets, names: names)
+        } catch {
+            let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+            logger.warning("Failed to update RX log channels: \(error)")
         }
     }
 

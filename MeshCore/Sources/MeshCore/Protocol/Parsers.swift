@@ -1092,14 +1092,22 @@ enum Parsers {
     /// Parser for remote debug log entries.
     enum LogData {
         /// Parses log messages with optional signal metadata.
+        /// Returns rxLogData with parsed RF packet if parsing succeeds,
+        /// otherwise returns logData with raw payload.
         static func parse(_ data: Data) -> MeshEvent {
             if data.count >= 2 {
                 let snr = Double(Int8(bitPattern: data[0])) / 4.0
                 let rssi = Int(Int8(bitPattern: data[1]))
                 let payload = Data(data.dropFirst(2))
-                return .rxLogData(LogDataInfo(snr: snr, rssi: rssi, payload: payload))
+                if let parsed = RxLogParser.parse(snr: snr, rssi: rssi, payload: payload) {
+                    return .rxLogData(parsed)
+                }
+                return .logData(LogDataInfo(snr: snr, rssi: rssi, payload: payload))
             }
-            return .rxLogData(LogDataInfo(snr: nil, rssi: nil, payload: data))
+            if let parsed = RxLogParser.parse(snr: nil, rssi: nil, payload: data) {
+                return .rxLogData(parsed)
+            }
+            return .logData(LogDataInfo(snr: nil, rssi: nil, payload: data))
         }
     }
 

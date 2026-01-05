@@ -1,0 +1,175 @@
+import Testing
+import Foundation
+@testable import MeshCore
+
+@Suite("RxLogParser")
+struct RxLogParserTests {
+
+    @Test("Parse empty payload returns nil")
+    func parseEmptyPayload() {
+        let result = RxLogParser.parse(snr: 5.0, rssi: -80, payload: Data())
+        #expect(result == nil)
+    }
+
+    @Test("Parse FLOOD GROUP_TEXT packet")
+    func parseFloodGroupText() {
+        // Header: routeType=1 (FLOOD), payloadType=5 (GROUP_TEXT), version=0
+        // Header byte: 0b00_0101_01 = 0x15
+        // pathLen=0, packetPayload follows
+        let payload = Data([0x15, 0x00, 0xAA, 0xBB, 0xCC])
+
+        let result = RxLogParser.parse(snr: 8.0, rssi: -85, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.routeType == .flood)
+        #expect(result?.payloadType == .groupText)
+        #expect(result?.payloadVersion == 0)
+        #expect(result?.transportCode == nil)
+        #expect(result?.pathLength == 0)
+        #expect(result?.pathNodes == [])
+        #expect(result?.packetPayload == Data([0xAA, 0xBB, 0xCC]))
+    }
+
+    @Test("Parse TC_FLOOD with transport code and path")
+    func parseTcFloodWithPath() {
+        // Header: routeType=0 (TC_FLOOD), payloadType=5 (GROUP_TEXT), version=1
+        // Header byte: 0b01_0101_00 = 0x54
+        let payload = Data([
+            0x54,                           // header
+            0x01, 0x02, 0x03, 0x04,         // transport code
+            0x02,                           // pathLen
+            0x3A, 0x7F,                     // pathNodes
+            0xDE, 0xAD, 0xBE, 0xEF          // packetPayload
+        ])
+
+        let result = RxLogParser.parse(snr: nil, rssi: nil, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.routeType == .tcFlood)
+        #expect(result?.payloadType == .groupText)
+        #expect(result?.payloadVersion == 1)
+        #expect(result?.transportCode == Data([0x01, 0x02, 0x03, 0x04]))
+        #expect(result?.pathLength == 2)
+        #expect(result?.pathNodes == [0x3A, 0x7F])
+        #expect(result?.packetPayload == Data([0xDE, 0xAD, 0xBE, 0xEF]))
+    }
+
+    @Test("Parse DIRECT packet (no transport code)")
+    func parseDirectPacket() {
+        // Header: routeType=2 (DIRECT), payloadType=2 (TEXT_MSG), version=0
+        // Header byte: 0b00_0010_10 = 0x0A
+        let payload = Data([0x0A, 0x01, 0xFF, 0x48, 0x69])
+
+        let result = RxLogParser.parse(snr: 6.5, rssi: -70, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.routeType == .direct)
+        #expect(result?.payloadType == .textMessage)
+        #expect(result?.transportCode == nil)
+        #expect(result?.pathLength == 1)
+        #expect(result?.pathNodes == [0xFF])
+        #expect(result?.packetPayload == Data([0x48, 0x69]))
+    }
+
+    @Test("Parse TC_DIRECT with transport code")
+    func parseTcDirectWithTransportCode() {
+        // Header: routeType=3 (TC_DIRECT), payloadType=2 (TEXT_MSG), version=0
+        // Header byte: 0b00_0010_11 = 0x0B
+        let payload = Data([
+            0x0B,                           // header
+            0xAA, 0xBB, 0xCC, 0xDD,         // transport code
+            0x01,                           // pathLen
+            0x42,                           // pathNodes
+            0x48, 0x69                      // packetPayload ("Hi")
+        ])
+
+        let result = RxLogParser.parse(snr: 7.0, rssi: -75, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.routeType == .tcDirect)
+        #expect(result?.payloadType == .textMessage)
+        #expect(result?.transportCode == Data([0xAA, 0xBB, 0xCC, 0xDD]))
+        #expect(result?.pathLength == 1)
+        #expect(result?.pathNodes == [0x42])
+        #expect(result?.packetPayload == Data([0x48, 0x69]))
+    }
+
+    @Test("Parse packet with unknown payload type")
+    func parseUnknownPayloadType() {
+        // Header: routeType=1 (FLOOD), payloadType=14 (undefined), version=0
+        // Header byte: 0b00_1110_01 = 0x39
+        let payload = Data([0x39, 0x00, 0x01, 0x02])
+
+        let result = RxLogParser.parse(snr: nil, rssi: nil, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.payloadType == .unknown)
+    }
+
+    @Test("Parse DIRECT TEXT_MSG extracts sender and recipient pubkey hashes")
+    func parseDirectTextMsgExtractsSenderAndRecipient() {
+        // Header: routeType=2 (DIRECT), payloadType=2 (TEXT_MSG), version=0
+        // Header byte: 0b00_0010_10 = 0x0A
+        // pathLen=0, then payload: [dest: 1B] [src: 1B] [MAC + encrypted]
+        let destHash: UInt8 = 0x07  // recipient
+        let srcHash: UInt8 = 0x0A   // sender
+        let encryptedContent = Data([0x48, 0x69, 0xAB, 0xCD]) // MAC + content
+        let payload = Data([0x0A, 0x00, destHash, srcHash]) + encryptedContent
+
+        let result = RxLogParser.parse(snr: 5.0, rssi: -80, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.senderPubkeyPrefix == Data([srcHash]))
+        #expect(result?.recipientPubkeyPrefix == Data([destHash]))
+    }
+
+    @Test("Parse TC_DIRECT TEXT_MSG extracts sender and recipient pubkey hashes")
+    func parseTcDirectTextMsgExtractsSenderAndRecipient() {
+        // Header: routeType=3 (TC_DIRECT), payloadType=2 (TEXT_MSG), version=0
+        // Header byte: 0b00_0010_11 = 0x0B
+        let destHash: UInt8 = 0x12  // recipient
+        let srcHash: UInt8 = 0x34   // sender
+        let payload = Data([
+            0x0B,                       // header
+            0xAA, 0xBB, 0xCC, 0xDD,     // transport code
+            0x00,                       // pathLen
+            destHash, srcHash,          // dest, src hashes
+            0xDE, 0xAD, 0xBE, 0xEF      // MAC + content
+        ])
+
+        let result = RxLogParser.parse(snr: 5.0, rssi: -80, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.senderPubkeyPrefix == Data([srcHash]))
+        #expect(result?.recipientPubkeyPrefix == Data([destHash]))
+    }
+
+    @Test("Parse FLOOD GROUP_TEXT has nil sender pubkey prefix")
+    func parseFloodGroupTextNoSender() {
+        let payload = Data([0x15, 0x00, 0xAA, 0xBB, 0xCC])
+
+        let result = RxLogParser.parse(snr: 8.0, rssi: -85, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.senderPubkeyPrefix == nil)
+    }
+
+    @Test("MeshEvent.rxLogData holds ParsedRxLogData")
+    func meshEventRxLogData() {
+        let parsed = ParsedRxLogData(
+            snr: 5.0, rssi: -80, rawPayload: Data([0x15, 0x00, 0xAA]),
+            routeType: .flood, payloadType: .groupText, payloadVersion: 0,
+            transportCode: nil, pathLength: 0, pathNodes: [],
+            packetPayload: Data([0xAA])
+        )
+
+        let event = MeshEvent.rxLogData(parsed)
+
+        if case .rxLogData(let data) = event {
+            #expect(data.routeType == .flood)
+            #expect(data.packetHash.count == 16)
+        } else {
+            Issue.record("Expected rxLogData event")
+        }
+    }
+}
