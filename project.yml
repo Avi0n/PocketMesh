@@ -19,9 +19,6 @@ packages:
     path: MeshCore
   PocketMeshServices:
     path: PocketMeshServices
-  DataScoutCompanion:
-    url: https://github.com/alex566/DataScoutCompanion.git
-    from: "0.3.0"
 
 targets:
   PocketMesh:
@@ -34,8 +31,6 @@ targets:
       - path: AppIcon.icon
     dependencies:
       - package: PocketMeshServices
-      - package: DataScoutCompanion
-        condition: debug
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app

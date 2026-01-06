@@ -1,9 +1,6 @@
 import SwiftUI
 import PocketMeshServices
 import MapKit
-#if DEBUG
-import DataScoutCompanion
-#endif
 
 /// Main settings screen prioritizing new user experience
 struct SettingsView: View {
@@ -11,9 +8,6 @@ struct SettingsView: View {
     @State private var showingAdvancedSettings = false
     @State private var showingDeviceSelection = false
     @State private var showingLocationPicker = false
-    #if DEBUG
-    @State private var showingDatabaseBrowser = false
-    #endif
 
     var body: some View {
         NavigationStack {
@@ -68,12 +62,6 @@ struct SettingsView: View {
                 // Debug section
                 Section {
                     Button {
-                        showingDatabaseBrowser = true
-                    } label: {
-                        Label("Database Browser", systemImage: "tablecells")
-                    }
-
-                    Button {
                         appState.resetOnboarding()
                     } label: {
                         Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
@@ -95,11 +83,6 @@ struct SettingsView: View {
             .sheet(isPresented: $showingLocationPicker) {
                 LocationPickerView.forLocalDevice(appState: appState)
             }
-            #if DEBUG
-            .sheet(isPresented: $showingDatabaseBrowser) {
-                DatabaseBrowser()
-            }
-            #endif
         }
     }
 }
