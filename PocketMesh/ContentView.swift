@@ -100,6 +100,14 @@ struct MainTabView: View {
         } message: {
             Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
         }
+        .onChange(of: appState.selectedTab) { _, newTab in
+            // Donate pending flood advert tip when returning to a valid tab
+            if appState.pendingFloodAdvertTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
+                Task {
+                    await appState.donateFloodAdvertTipIfOnValidTab()
+                }
+            }
+        }
     }
 }
 

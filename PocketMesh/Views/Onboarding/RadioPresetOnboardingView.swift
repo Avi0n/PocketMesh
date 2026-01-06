@@ -1,6 +1,5 @@
 import SwiftUI
 import PocketMeshServices
-import TipKit
 
 /// Final onboarding step - radio preset selection
 struct RadioPresetOnboardingView: View {
@@ -155,10 +154,6 @@ struct RadioPresetOnboardingView: View {
 
     private func completeOnboarding() {
         appState.completeOnboarding()
-        Task {
-            try? await Task.sleep(for: .seconds(2.5))
-            await SendFloodAdvertTip.hasCompletedOnboarding.donate()
-        }
     }
 }
 

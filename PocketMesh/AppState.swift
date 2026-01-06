@@ -4,6 +4,7 @@ import UserNotifications
 import PocketMeshServices
 import MeshCore
 import OSLog
+import TipKit
 
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
@@ -91,6 +92,9 @@ public final class AppState {
 
     /// Contact to navigate to (for detail view on Contacts tab)
     var pendingContactDetail: ContactDTO?
+
+    /// Whether flood advert tip donation is pending (waiting for valid tab)
+    var pendingFloodAdvertTipDonation = false
 
     // MARK: - UI Coordination
 
@@ -409,6 +413,25 @@ public final class AppState {
 
     func completeOnboarding() {
         hasCompletedOnboarding = true
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            await donateFloodAdvertTipIfOnValidTab()
+        }
+    }
+
+    /// Tabs where BLEStatusIndicatorView exists and tip can anchor (Chats, Contacts, Map)
+    private var isOnValidTabForFloodAdvertTip: Bool {
+        selectedTab == 0 || selectedTab == 1 || selectedTab == 2
+    }
+
+    /// Donates the tip if on a valid tab, otherwise marks it pending
+    func donateFloodAdvertTipIfOnValidTab() async {
+        if isOnValidTabForFloodAdvertTip {
+            pendingFloodAdvertTipDonation = false
+            await SendFloodAdvertTip.hasCompletedOnboarding.donate()
+        } else {
+            pendingFloodAdvertTipDonation = true
+        }
     }
 
     func resetOnboarding() {
