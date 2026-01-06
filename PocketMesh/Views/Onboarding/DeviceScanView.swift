@@ -9,6 +9,7 @@ struct DeviceScanView: View {
     @State private var errorMessage: String?
     @State private var pairingSuccessTrigger = false
     @State private var demoModeUnlockTrigger = false
+    @State private var didInitiatePairing = false
     @State private var tapTimes: [Date] = []
     @State private var showDemoModeAlert = false
     private var demoModeManager = DemoModeManager.shared
@@ -44,14 +45,14 @@ struct DeviceScanView: View {
 
             Spacer()
 
-            if hasConnectedDevice {
+            if hasConnectedDevice && !didInitiatePairing {
                 VStack(spacing: 12) {
                     Text("Your device is already paired 🎉")
                         .font(.title2)
                         .multilineTextAlignment(.center)
                 }
                 .padding()
-            } else {
+            } else if !hasConnectedDevice {
                 // Instructions
                 VStack(alignment: .leading, spacing: 16) {
                     instructionRow(number: 1, text: "Power on your MeshCore device")
@@ -208,6 +209,7 @@ struct DeviceScanView: View {
     private func startPairing() {
         isPairing = true
         errorMessage = nil
+        didInitiatePairing = true
 
         Task {
             defer { isPairing = false }
@@ -239,6 +241,7 @@ struct DeviceScanView: View {
     private func connectSimulator() {
         isPairing = true
         errorMessage = nil
+        didInitiatePairing = true
 
         Task {
             defer { isPairing = false }
