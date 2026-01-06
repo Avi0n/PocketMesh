@@ -90,6 +90,21 @@ public final class Message {
     /// Deduplication key for preventing duplicate incoming messages
     public var deduplicationKey: String?
 
+    /// Link preview URL that was detected (nil if no URL in message)
+    public var linkPreviewURL: String?
+
+    /// Title from link metadata
+    public var linkPreviewTitle: String?
+
+    /// Preview image data (hero image)
+    public var linkPreviewImageData: Data?
+
+    /// Icon/favicon data
+    public var linkPreviewIconData: Data?
+
+    /// Whether fetch has been attempted (true = done, false = not yet tried)
+    public var linkPreviewFetched: Bool
+
     /// Heard repeats for this message (cascade delete)
     @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)
     public var repeats: [MessageRepeat]?
@@ -116,7 +131,12 @@ public final class Message {
         heardRepeats: Int = 0,
         retryAttempt: Int = 0,
         maxRetryAttempts: Int = 0,
-        deduplicationKey: String? = nil
+        deduplicationKey: String? = nil,
+        linkPreviewURL: String? = nil,
+        linkPreviewTitle: String? = nil,
+        linkPreviewImageData: Data? = nil,
+        linkPreviewIconData: Data? = nil,
+        linkPreviewFetched: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -140,6 +160,11 @@ public final class Message {
         self.retryAttempt = retryAttempt
         self.maxRetryAttempts = maxRetryAttempts
         self.deduplicationKey = deduplicationKey
+        self.linkPreviewURL = linkPreviewURL
+        self.linkPreviewTitle = linkPreviewTitle
+        self.linkPreviewImageData = linkPreviewImageData
+        self.linkPreviewIconData = linkPreviewIconData
+        self.linkPreviewFetched = linkPreviewFetched
     }
 }
 
@@ -214,6 +239,11 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let retryAttempt: Int
     public let maxRetryAttempts: Int
     public let deduplicationKey: String?
+    public let linkPreviewURL: String?
+    public let linkPreviewTitle: String?
+    public let linkPreviewImageData: Data?
+    public let linkPreviewIconData: Data?
+    public let linkPreviewFetched: Bool
 
     public init(from message: Message) {
         self.id = message.id
@@ -238,6 +268,11 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.retryAttempt = message.retryAttempt
         self.maxRetryAttempts = message.maxRetryAttempts
         self.deduplicationKey = message.deduplicationKey
+        self.linkPreviewURL = message.linkPreviewURL
+        self.linkPreviewTitle = message.linkPreviewTitle
+        self.linkPreviewImageData = message.linkPreviewImageData
+        self.linkPreviewIconData = message.linkPreviewIconData
+        self.linkPreviewFetched = message.linkPreviewFetched
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -263,7 +298,12 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         heardRepeats: Int,
         retryAttempt: Int,
         maxRetryAttempts: Int,
-        deduplicationKey: String? = nil
+        deduplicationKey: String? = nil,
+        linkPreviewURL: String? = nil,
+        linkPreviewTitle: String? = nil,
+        linkPreviewImageData: Data? = nil,
+        linkPreviewIconData: Data? = nil,
+        linkPreviewFetched: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -287,6 +327,11 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.retryAttempt = retryAttempt
         self.maxRetryAttempts = maxRetryAttempts
         self.deduplicationKey = deduplicationKey
+        self.linkPreviewURL = linkPreviewURL
+        self.linkPreviewTitle = linkPreviewTitle
+        self.linkPreviewImageData = linkPreviewImageData
+        self.linkPreviewIconData = linkPreviewIconData
+        self.linkPreviewFetched = linkPreviewFetched
     }
 
     public var isOutgoing: Bool {
