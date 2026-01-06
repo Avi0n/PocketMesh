@@ -1696,8 +1696,15 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - end: End of the time range.
     /// - Returns: MMA response containing aggregated statistics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
-    ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestMMA(from publicKey: Data, start: Date, end: Date) async throws -> MMAResponse {
+        try await binaryRequestSerializer.withSerialization { [self] in
+            try await performMMARequest(from: publicKey, start: start, end: end)
+        }
+    }
+
+    /// Internal implementation of MMA request, called within serialization.
+    private func performMMARequest(from publicKey: Data, start: Date, end: Date) async throws -> MMAResponse {
+        // Build payload
         var payload = Data()
         let startTimestamp = UInt32(start.timeIntervalSince1970)
         let endTimestamp = UInt32(end.timeIntervalSince1970)
@@ -1706,30 +1713,48 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         payload.append(contentsOf: [0, 0])
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .mma, payload: payload)
+        let publicKeyPrefix = Data(publicKey.prefix(6))
+        let effectiveTimeout = configuration.defaultTimeout
 
-        // Send and wait for MSG_SENT to get expected_ack
-        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        // Subscribe BEFORE sending to avoid race condition
+        let events = await dispatcher.subscribe()
+        try await transport.send(data)
 
-        // Register with expected_ack as the tag for routing
-        let result = await pendingRequests.register(
-            tag: sentInfo.expectedAck,
-            requestType: .mma,
-            publicKeyPrefix: Data(publicKey.prefix(6)),
-            timeout: configuration.defaultTimeout
-        )
+        return try await withThrowingTaskGroup(of: MMAResponse?.self) { group in
+            group.addTask {
+                var expectedAck: Data?
 
-        guard let event = result else {
+                for await event in events {
+                    if Task.isCancelled { return nil }
+
+                    switch event {
+                    case .messageSent(let info):
+                        expectedAck = info.expectedAck
+
+                    case .binaryResponse(let tag, let responseData):
+                        guard let expected = expectedAck, tag == expected else { continue }
+                        let entries = MMAParser.parse(responseData)
+                        return MMAResponse(publicKeyPrefix: publicKeyPrefix, tag: tag, data: entries)
+
+                    default:
+                        continue
+                    }
+                }
+                return nil
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(effectiveTimeout))
+                return nil
+            }
+
+            if let result = try await group.next() ?? nil {
+                group.cancelAll()
+                return result
+            }
+            group.cancelAll()
             throw MeshCoreError.timeout
         }
-
-        if case .mmaResponse(let response) = event {
-            return response
-        }
-
-        throw MeshCoreError.invalidResponse(expected: "mmaResponse", got: String(describing: event))
     }
 
     /// Requests the Access Control List (ACL) from a remote node.
@@ -1739,34 +1764,58 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the remote node.
     /// - Returns: ACL response containing authorized public keys.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
-    ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestACL(from publicKey: Data) async throws -> ACLResponse {
+        try await binaryRequestSerializer.withSerialization { [self] in
+            try await performACLRequest(from: publicKey)
+        }
+    }
+
+    /// Internal implementation of ACL request, called within serialization.
+    private func performACLRequest(from publicKey: Data) async throws -> ACLResponse {
         let payload = Data([0, 0])
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .acl, payload: payload)
+        let publicKeyPrefix = Data(publicKey.prefix(6))
+        let effectiveTimeout = configuration.defaultTimeout
 
-        // Send and wait for MSG_SENT to get expected_ack
-        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        // Subscribe BEFORE sending to avoid race condition
+        let events = await dispatcher.subscribe()
+        try await transport.send(data)
 
-        // Register with expected_ack as the tag for routing
-        let result = await pendingRequests.register(
-            tag: sentInfo.expectedAck,
-            requestType: .acl,
-            publicKeyPrefix: Data(publicKey.prefix(6)),
-            timeout: configuration.defaultTimeout
-        )
+        return try await withThrowingTaskGroup(of: ACLResponse?.self) { group in
+            group.addTask {
+                var expectedAck: Data?
 
-        guard let event = result else {
+                for await event in events {
+                    if Task.isCancelled { return nil }
+
+                    switch event {
+                    case .messageSent(let info):
+                        expectedAck = info.expectedAck
+
+                    case .binaryResponse(let tag, let responseData):
+                        guard let expected = expectedAck, tag == expected else { continue }
+                        let entries = ACLParser.parse(responseData)
+                        return ACLResponse(publicKeyPrefix: publicKeyPrefix, tag: tag, entries: entries)
+
+                    default:
+                        continue
+                    }
+                }
+                return nil
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(effectiveTimeout))
+                return nil
+            }
+
+            if let result = try await group.next() ?? nil {
+                group.cancelAll()
+                return result
+            }
+            group.cancelAll()
             throw MeshCoreError.timeout
         }
-
-        if case .aclResponse(let response) = event {
-            return response
-        }
-
-        throw MeshCoreError.invalidResponse(expected: "aclResponse", got: String(describing: event))
     }
 
     /// Requests the neighbor list from a remote node.
@@ -1781,13 +1830,31 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - pubkeyPrefixLength: Length of public key prefix to include (default 4).
     /// - Returns: Neighbors response containing list of adjacent nodes.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
-    ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestNeighbours(
         from publicKey: Data,
         count: UInt8 = 255,
         offset: UInt16 = 0,
         orderBy: UInt8 = 0,
         pubkeyPrefixLength: UInt8 = 4
+    ) async throws -> NeighboursResponse {
+        try await binaryRequestSerializer.withSerialization { [self] in
+            try await performNeighboursRequest(
+                from: publicKey,
+                count: count,
+                offset: offset,
+                orderBy: orderBy,
+                pubkeyPrefixLength: pubkeyPrefixLength
+            )
+        }
+    }
+
+    /// Internal implementation of neighbours request, called within serialization.
+    private func performNeighboursRequest(
+        from publicKey: Data,
+        count: UInt8,
+        offset: UInt16,
+        orderBy: UInt8,
+        pubkeyPrefixLength: UInt8
     ) async throws -> NeighboursResponse {
         var payload = Data()
         payload.append(0) // version
@@ -1799,31 +1866,53 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         payload.append(contentsOf: withUnsafeBytes(of: randomTag.littleEndian) { Array($0) })
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .neighbours, payload: payload)
+        let publicKeyPrefix = Data(publicKey.prefix(6))
+        let effectiveTimeout = configuration.defaultTimeout
+        let prefixLength = Int(pubkeyPrefixLength)
 
-        // Send and wait for MSG_SENT to get expected_ack
-        let sentInfo: MessageSentInfo = try await sendAndWait(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        // Subscribe BEFORE sending to avoid race condition
+        let events = await dispatcher.subscribe()
+        try await transport.send(data)
 
-        // Register with expected_ack as the tag for routing, store prefixLength in context
-        let result = await pendingRequests.register(
-            tag: sentInfo.expectedAck,
-            requestType: .neighbours,
-            publicKeyPrefix: Data(publicKey.prefix(6)),
-            timeout: configuration.defaultTimeout,
-            context: ["prefixLength": Int(pubkeyPrefixLength)]
-        )
+        return try await withThrowingTaskGroup(of: NeighboursResponse?.self) { group in
+            group.addTask {
+                var expectedAck: Data?
 
-        guard let event = result else {
+                for await event in events {
+                    if Task.isCancelled { return nil }
+
+                    switch event {
+                    case .messageSent(let info):
+                        expectedAck = info.expectedAck
+
+                    case .binaryResponse(let tag, let responseData):
+                        guard let expected = expectedAck, tag == expected else { continue }
+                        return NeighboursParser.parse(
+                            responseData,
+                            publicKeyPrefix: publicKeyPrefix,
+                            tag: tag,
+                            prefixLength: prefixLength
+                        )
+
+                    default:
+                        continue
+                    }
+                }
+                return nil
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(effectiveTimeout))
+                return nil
+            }
+
+            if let result = try await group.next() ?? nil {
+                group.cancelAll()
+                return result
+            }
+            group.cancelAll()
             throw MeshCoreError.timeout
         }
-
-        if case .neighboursResponse(let response) = event {
-            return response
-        }
-
-        throw MeshCoreError.invalidResponse(expected: "neighboursResponse", got: String(describing: event))
     }
 
     /// Fetches all neighbors from a remote node with automatic pagination.
