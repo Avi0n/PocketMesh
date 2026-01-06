@@ -133,8 +133,8 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal)
-        .padding(.top, showDirectionGap ? 12 : 0)
-        .padding(.bottom, message.isOutgoing ? 4 : 0)
+        .padding(.top, showDirectionGap ? 12 : 2)
+        .padding(.bottom, message.isOutgoing ? 4 : 2)
     }
 
     // MARK: - Computed Properties

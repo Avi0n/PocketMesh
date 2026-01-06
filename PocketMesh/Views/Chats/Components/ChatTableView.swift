@@ -154,12 +154,14 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
                         contentProvider(item)
                     }
                     .margins(.all, 0)
+                    .minSize(width: 0, height: 0)
                     .background(.clear)
                 } else {
                     cell.contentConfiguration = UIHostingConfiguration {
                         contentProvider(item)
                     }
                     .margins(.all, 0)
+                    .minSize(width: 0, height: 0)
                 }
             }
 
