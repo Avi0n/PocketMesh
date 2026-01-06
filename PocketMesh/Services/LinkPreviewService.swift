@@ -15,16 +15,16 @@ struct LinkPreviewMetadata: Sendable {
 @MainActor @Observable
 final class LinkPreviewService {
     private let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
-    private let urlDetector: NSDataDetector?
 
-    init() {
-        urlDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-    }
+    /// Shared URL detector instance to avoid creating NSDataDetector on every call
+    private static let urlDetector: NSDataDetector? = {
+        try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
+    }()
 
     /// Extracts the first HTTP/HTTPS URL from text
     /// - Parameter text: Message text to scan
     /// - Returns: First HTTP(S) URL found, or nil
-    func extractFirstURL(from text: String) -> URL? {
+    static func extractFirstURL(from text: String) -> URL? {
         guard !text.isEmpty, let detector = urlDetector else { return nil }
 
         let range = NSRange(text.startIndex..., in: text)

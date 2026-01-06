@@ -63,6 +63,10 @@ struct UnifiedMessageBubble: View {
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+    let onManualPreviewFetch: (() -> Void)?
+
+    @State private var preferences = LinkPreviewPreferences()
+    @Environment(\.openURL) private var openURL
 
     init(
         message: MessageDTO,
@@ -75,7 +79,8 @@ struct UnifiedMessageBubble: View {
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
-        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil
+        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
+        onManualPreviewFetch: (() -> Void)? = nil
     ) {
         self.message = message
         self.contactName = contactName
@@ -88,6 +93,7 @@ struct UnifiedMessageBubble: View {
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onManualPreviewFetch = onManualPreviewFetch
     }
 
     var body: some View {
@@ -121,6 +127,31 @@ struct UnifiedMessageBubble: View {
                             contextMenuContent
                         }
 
+                    // Link preview (if applicable)
+                    if preferences.shouldShowPreview, let urlString = message.linkPreviewURL,
+                       let url = URL(string: urlString) {
+                        LinkPreviewCard(
+                            url: url,
+                            title: message.linkPreviewTitle,
+                            imageData: message.linkPreviewImageData,
+                            iconData: message.linkPreviewIconData,
+                            onTap: { openURL(url) }
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    } else if preferences.shouldShowPreview,
+                              !message.linkPreviewFetched,
+                              detectedURL != nil {
+                        // URL detected but not fetched - show based on auto-resolve setting
+                        if preferences.shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
+                            // Will be fetched by parent view, show nothing for now
+                            EmptyView()
+                        } else {
+                            TapToLoadPreview {
+                                onManualPreviewFetch?()
+                            }
+                        }
+                    }
+
                     // Status row for outgoing messages
                     if message.isOutgoing {
                         statusRow
@@ -141,6 +172,10 @@ struct UnifiedMessageBubble: View {
 
     private var senderName: String {
         configuration.senderNameResolver?(message) ?? "Unknown"
+    }
+
+    private var detectedURL: URL? {
+        LinkPreviewService.extractFirstURL(from: message.text)
     }
 
     private var bubbleColor: Color {
