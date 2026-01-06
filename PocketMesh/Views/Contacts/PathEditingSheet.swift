@@ -32,12 +32,10 @@ struct PathEditingSheet: View {
                 }
             }
             .environment(\.editMode, $editMode)
-            .onChange(of: editMode) { oldValue, newValue in
-                // Auto-save when exiting edit mode
-                if oldValue == .active, newValue == .inactive {
-                    Task {
-                        await viewModel.saveEditedPath(for: contact)
-                    }
+            .onDisappear {
+                // Save path when sheet is dismissed
+                Task {
+                    await viewModel.saveEditedPath(for: contact)
                 }
             }
             .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
