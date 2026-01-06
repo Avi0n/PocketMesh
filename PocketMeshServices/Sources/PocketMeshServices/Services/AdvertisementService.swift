@@ -39,10 +39,6 @@ public actor AdvertisementService {
     /// Handler for routing change events (set by AppState)
     private var routingChangedHandler: (@Sendable (UUID, Bool) async -> Void)?
 
-    /// Handler for path refresh requests (deviceID, publicKey, contactID, wasFlood)
-    /// Called when path updated push received - AppState should fetch updated contact from device
-    private var pathRefreshHandler: (@Sendable (UUID, Data, UUID, Bool) async -> Void)?
-
     /// Handler for contact update events (for UI refresh)
     private var contactUpdatedHandler: (@Sendable () async -> Void)?
 
@@ -86,11 +82,6 @@ public actor AdvertisementService {
     /// Set handler for routing change events
     public func setRoutingChangedHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
         routingChangedHandler = handler
-    }
-
-    /// Set handler for path refresh requests (called when contact path may have changed)
-    public func setPathRefreshHandler(_ handler: @escaping @Sendable (UUID, Data, UUID, Bool) async -> Void) {
-        pathRefreshHandler = handler
     }
 
     /// Set handler for contact update events (called when contacts change)
@@ -271,20 +262,23 @@ public actor AdvertisementService {
         logger.debug("Path updated event for \(pubKeyHex)")
 
         do {
-            // Look up contact by full public key to get old routing status
-            if let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) {
-                let wasFlood = contact.isFloodRouted
-                logger.debug("Contact found: \(contact.name ?? "unnamed") - wasFlood: \(wasFlood)")
-
-                // Notify AppState to fetch updated contact from device
-                await pathRefreshHandler?(deviceID, publicKey, contact.id, wasFlood)
-
-                pathUpdateHandler?(publicKey, contact.outPathLength)
-            } else {
-                logger.warning("Contact not found for public key \(pubKeyHex)")
+            // Fetch fresh contact from device (includes updated path)
+            guard let meshContact = try await session.getContact(publicKey: publicKey) else {
+                logger.warning("Contact not found on device for public key \(pubKeyHex)")
+                return
             }
+
+            // Persist updated routing info
+            let frame = meshContact.toContactFrame()
+            _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+            logger.debug("Refreshed contact path: \(meshContact.advertisedName ?? "unnamed")")
+
+            // Notify UI of contact update
+            await contactUpdatedHandler?()
+
         } catch {
-            logger.error("Error handling path updated event: \(error.localizedDescription)")
+            logger.error("Error refreshing contact path: \(error.localizedDescription)")
         }
     }
 
