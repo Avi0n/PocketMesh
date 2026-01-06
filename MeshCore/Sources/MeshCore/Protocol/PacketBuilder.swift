@@ -295,7 +295,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x11` (getMessage)
+    /// - Offset 0 (1 byte): Command code `0x0A` (getMessage)
     public static func getMessage() -> Data {
         Data([CommandCode.getMessage.rawValue])
     }
@@ -310,7 +310,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x10` (sendMessage)
+    /// - Offset 0 (1 byte): Command code `0x02` (sendMessage)
     /// - Offset 1 (1 byte): Message type `0x00` (text)
     /// - Offset 2 (1 byte): Retry attempt counter
     /// - Offset 3 (4 bytes): Unix timestamp (seconds), Little-endian UInt32
@@ -339,7 +339,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x10` (sendMessage)
+    /// - Offset 0 (1 byte): Command code `0x02` (sendMessage)
     /// - Offset 1 (1 byte): Message type `0x01` (structured command)
     /// - Offset 2 (1 byte): Reserved `0x00`
     /// - Offset 3 (4 bytes): Unix timestamp, Little-endian UInt32
@@ -367,7 +367,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x12` (sendChannelMessage)
+    /// - Offset 0 (1 byte): Command code `0x03` (sendChannelMessage)
     /// - Offset 1 (1 byte): Message type `0x00`
     /// - Offset 2 (1 byte): Channel index
     /// - Offset 3 (4 bytes): Unix timestamp, Little-endian UInt32
@@ -437,7 +437,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x1F` (binaryRequest)
+    /// - Offset 0 (1 byte): Command code `0x32` (binaryRequest)
     /// - Offset 1 (32 bytes): Full public key
     /// - Offset 33 (1 byte): Request type code
     /// - Offset 34 (N bytes, optional): Payload
