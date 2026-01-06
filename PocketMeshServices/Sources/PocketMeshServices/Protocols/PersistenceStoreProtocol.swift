@@ -52,6 +52,16 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Update heard repeats count
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws
 
+    /// Update link preview data for a message
+    func updateMessageLinkPreview(
+        id: UUID,
+        url: String?,
+        title: String?,
+        imageData: Data?,
+        iconData: Data?,
+        fetched: Bool
+    ) async throws
+
     // MARK: - Contact Operations
 
     /// Fetch all confirmed contacts for a device

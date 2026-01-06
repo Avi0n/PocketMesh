@@ -697,6 +697,32 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    /// Update link preview data for a message
+    public func updateMessageLinkPreview(
+        id: UUID,
+        url: String?,
+        title: String?,
+        imageData: Data?,
+        iconData: Data?,
+        fetched: Bool
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.linkPreviewURL = url
+            message.linkPreviewTitle = title
+            message.linkPreviewImageData = imageData
+            message.linkPreviewIconData = iconData
+            message.linkPreviewFetched = fetched
+            try modelContext.save()
+        }
+    }
+
     /// Delete a message
     public func deleteMessage(id: UUID) throws {
         let targetID = id

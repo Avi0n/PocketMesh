@@ -19,6 +19,9 @@ struct ChatView: View {
     @State private var scrollToBottomRequest = 0
     @FocusState private var isInputFocused: Bool
 
+    private let linkPreviewService = LinkPreviewService()
+    private let linkPreviewPreferences = LinkPreviewPreferences()
+
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
         self._contact = State(initialValue: contact)
         self.parentViewModel = parentViewModel
@@ -194,6 +197,21 @@ struct ChatView: View {
                 deleteMessage(message)
             }
         )
+        .onAppear {
+            fetchLinkPreviewIfNeeded(for: message)
+        }
+    }
+
+    private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
+        guard linkPreviewPreferences.shouldAutoResolve(isChannelMessage: false),
+              !message.linkPreviewFetched,
+              let dataStore = appState.services?.dataStore else {
+            return
+        }
+
+        Task {
+            await linkPreviewService.fetchAndPersist(for: message, using: dataStore)
+        }
     }
 
     private var emptyMessagesView: some View {

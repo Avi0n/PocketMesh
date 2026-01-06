@@ -1,6 +1,7 @@
 import Foundation
 import LinkPresentation
 import os
+import PocketMeshServices
 import UniformTypeIdentifiers
 
 /// Metadata extracted from a URL for link previews
@@ -86,5 +87,51 @@ final class LinkPreviewService {
                 continuation.resume(returning: data)
             }
         }
+    }
+
+    /// Fetches link preview for a message and persists to SwiftData
+    /// - Parameters:
+    ///   - message: The message to fetch preview for
+    ///   - dataStore: Persistence store for saving preview data
+    func fetchAndPersist(for message: MessageDTO, using dataStore: PersistenceStore) async {
+        // Skip if already fetched
+        guard !message.linkPreviewFetched else { return }
+
+        // Extract URL from message text
+        guard let url = Self.extractFirstURL(from: message.text) else {
+            // No URL found, mark as fetched
+            try? await dataStore.updateMessageLinkPreview(
+                id: message.id,
+                url: nil,
+                title: nil,
+                imageData: nil,
+                iconData: nil,
+                fetched: true
+            )
+            return
+        }
+
+        // Fetch metadata
+        var previewURL: String? = url.absoluteString
+        var previewTitle: String?
+        var previewImageData: Data?
+        var previewIconData: Data?
+
+        if let metadata = await fetchMetadata(for: url) {
+            previewURL = metadata.url.absoluteString
+            previewTitle = metadata.title
+            previewImageData = metadata.imageData
+            previewIconData = metadata.iconData
+        }
+
+        // Persist to database
+        try? await dataStore.updateMessageLinkPreview(
+            id: message.id,
+            url: previewURL,
+            title: previewTitle,
+            imageData: previewImageData,
+            iconData: previewIconData,
+            fetched: true
+        )
     }
 }

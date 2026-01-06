@@ -17,6 +17,9 @@ struct ChannelChatView: View {
     @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
+    private let linkPreviewService = LinkPreviewService()
+    private let linkPreviewPreferences = LinkPreviewPreferences()
+
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
         self.channel = channel
         self.parentViewModel = parentViewModel
@@ -184,6 +187,21 @@ struct ChannelChatView: View {
                 showRepeatDetails(for: message)
             }
         )
+        .onAppear {
+            fetchLinkPreviewIfNeeded(for: message)
+        }
+    }
+
+    private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
+        guard linkPreviewPreferences.shouldAutoResolve(isChannelMessage: true),
+              !message.linkPreviewFetched,
+              let dataStore = appState.services?.dataStore else {
+            return
+        }
+
+        Task {
+            await linkPreviewService.fetchAndPersist(for: message, using: dataStore)
+        }
     }
 
     private var emptyMessagesView: some View {

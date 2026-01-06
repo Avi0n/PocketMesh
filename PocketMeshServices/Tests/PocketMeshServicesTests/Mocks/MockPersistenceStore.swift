@@ -212,6 +212,46 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    public func updateMessageLinkPreview(
+        id: UUID,
+        url: String?,
+        title: String?,
+        imageData: Data?,
+        iconData: Data?,
+        fetched: Bool
+    ) async throws {
+        if let message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
+                linkPreviewURL: url,
+                linkPreviewTitle: title,
+                linkPreviewImageData: imageData,
+                linkPreviewIconData: iconData,
+                linkPreviewFetched: fetched
+            )
+        }
+    }
+
     // MARK: - Contact Operations
 
     public func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] {
