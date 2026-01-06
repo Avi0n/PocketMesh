@@ -683,10 +683,7 @@ public actor MessageService {
     ) async {
         do {
             // Fetch fresh contact state from device
-            let contacts = try await session.getContacts()
-
-            // Find the specific contact by public key
-            guard let updatedContact = contacts.first(where: { $0.publicKey == publicKey }) else {
+            guard let updatedContact = try await session.getContact(publicKey: publicKey) else {
                 logger.debug("Contact not found in device contacts after retry")
                 return
             }

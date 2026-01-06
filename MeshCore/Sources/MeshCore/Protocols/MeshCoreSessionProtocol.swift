@@ -62,6 +62,13 @@ public protocol MeshCoreSessionProtocol: Actor {
     /// - Throws: `MeshCoreError` if the contact query fails.
     func getContacts(since lastModified: Date?) async throws -> [MeshContact]
 
+    /// Fetches a single contact from the device by public key.
+    ///
+    /// - Parameter publicKey: The full 32-byte public key of the contact.
+    /// - Returns: The contact if found, or `nil` if no contact exists with that key.
+    /// - Throws: `MeshCoreError` if the query fails.
+    func getContact(publicKey: Data) async throws -> MeshContact?
+
     /// Adds a contact to the device.
     ///
     /// - Parameter contact: The contact to add to the device's storage.

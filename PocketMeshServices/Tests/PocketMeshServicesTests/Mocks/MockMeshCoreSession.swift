@@ -35,6 +35,12 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
     /// Error to throw from getContacts
     public var stubbedGetContactsError: Error?
 
+    /// Contact to return from getContact (by public key)
+    public var stubbedContact: MeshContact?
+
+    /// Error to throw from getContact
+    public var stubbedGetContactError: Error?
+
     /// Error to throw from addContact
     public var stubbedAddContactError: Error?
 
@@ -85,6 +91,7 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
     public private(set) var sendMessageInvocations: [SendMessageInvocation] = []
     public private(set) var sendChannelMessageInvocations: [SendChannelMessageInvocation] = []
     public private(set) var getContactsInvocations: [Date?] = []
+    public private(set) var getContactPublicKeys: [Data] = []
     public private(set) var addContactInvocations: [AddContactInvocation] = []
     public private(set) var removeContactPublicKeys: [Data] = []
     public private(set) var resetPathPublicKeys: [Data] = []
@@ -121,6 +128,14 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
             throw error
         }
         return stubbedContacts
+    }
+
+    public func getContact(publicKey: Data) async throws -> MeshContact? {
+        getContactPublicKeys.append(publicKey)
+        if let error = stubbedGetContactError {
+            throw error
+        }
+        return stubbedContact
     }
 
     public func addContact(_ contact: MeshContact) async throws {
@@ -180,6 +195,7 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
         sendMessageInvocations = []
         sendChannelMessageInvocations = []
         getContactsInvocations = []
+        getContactPublicKeys = []
         addContactInvocations = []
         removeContactPublicKeys = []
         resetPathPublicKeys = []

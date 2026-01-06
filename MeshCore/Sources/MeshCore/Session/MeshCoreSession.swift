@@ -635,6 +635,27 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         throw MeshCoreError.timeout
     }
 
+    /// Fetches a single contact from the device by public key.
+    ///
+    /// - Parameter publicKey: The full 32-byte public key of the contact.
+    /// - Returns: The contact if found, or `nil` if no contact exists with that key.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    public func getContact(publicKey: Data) async throws -> MeshContact? {
+        let data = PacketBuilder.getContactByKey(publicKey: publicKey)
+        return try await sendAndWait(data) { event in
+            switch event {
+            case .contact(let contact):
+                return contact
+            case .error:
+                // Contact not found returns error, treat as nil
+                return nil as MeshContact?
+            default:
+                return nil
+            }
+        }
+    }
+
     /// Sends a text message to a contact.
     ///
     /// - Parameters:
