@@ -1,5 +1,7 @@
 import Foundation
+import LinkPresentation
 import os
+import UniformTypeIdentifiers
 
 /// Metadata extracted from a URL for link previews
 struct LinkPreviewMetadata: Sendable {
@@ -38,5 +40,51 @@ final class LinkPreviewService {
         }
 
         return nil
+    }
+
+    /// Fetches metadata for a URL using LinkPresentation framework
+    /// - Parameter url: The URL to fetch metadata for
+    /// - Returns: Metadata if successful, nil on failure
+    func fetchMetadata(for url: URL) async -> LinkPreviewMetadata? {
+        let provider = LPMetadataProvider()
+        provider.timeout = 10
+
+        do {
+            let metadata = try await provider.startFetchingMetadata(for: url)
+
+            // Extract image data
+            var imageData: Data?
+            if let imageProvider = metadata.imageProvider {
+                imageData = await loadData(from: imageProvider)
+            }
+
+            // Extract icon data
+            var iconData: Data?
+            if let iconProvider = metadata.iconProvider {
+                iconData = await loadData(from: iconProvider)
+            }
+
+            return LinkPreviewMetadata(
+                url: url,
+                title: metadata.title,
+                imageData: imageData,
+                iconData: iconData
+            )
+        } catch {
+            logger.warning("Failed to fetch metadata for \(url): \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// Loads image data from an NSItemProvider
+    private func loadData(from provider: NSItemProvider) async -> Data? {
+        await withCheckedContinuation { continuation in
+            provider.loadDataRepresentation(for: .image) { data, error in
+                if let error {
+                    self.logger.debug("Failed to load image data: \(error.localizedDescription)")
+                }
+                continuation.resume(returning: data)
+            }
+        }
     }
 }
