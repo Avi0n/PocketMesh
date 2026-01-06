@@ -1,8 +1,5 @@
 import UIKit
 import SwiftUI
-import os.log
-
-private let logger = Logger(subsystem: "PocketMesh", category: "ChatTableView")
 
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
@@ -107,8 +104,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         let wasAtBottom = isAtBottom
         keyboardHeight = keyboardFrame.height
 
-        logger.debug("keyboardWillShow: height=\(self.keyboardHeight), wasAtBottom=\(wasAtBottom)")
-
         // SwiftUI handles frame changes for keyboard, so we don't add content inset.
         // Just scroll to bottom after layout settles if we were at bottom.
         if wasAtBottom {
@@ -126,7 +121,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     }
 
     @objc private func keyboardWillHide(_ notification: Notification) {
-        logger.debug("keyboardWillHide")
         keyboardHeight = 0
     }
 
@@ -184,8 +178,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         let oldItems = items
         items = newItems
 
-        logger.debug("updateItems: previousCount=\(previousCount), newCount=\(newItems.count), wasAtBottom=\(wasAtBottom)")
-
         // Apply snapshot with REVERSED order: newest-first for flipped table
         // Row 0 = newest message → appears at visual bottom after flip
         var snapshot = NSDiffableDataSourceSnapshot<Section, Item.ID>()
@@ -225,8 +217,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             dataSource?.apply(snapshot, animatingDifferences: false)
         }
 
-        logger.debug("updateItems: snapshot applied, isAtBottom now=\(self.isAtBottom)")
-
         // Handle unread tracking
         let hasNewItems = newItems.count > previousCount
 
@@ -234,13 +224,11 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             // New messages arrived while scrolled up
             let newMessageCount = newItems.count - previousCount
             unreadCount += newMessageCount
-            logger.debug("updateItems: scrolled up, incrementing unread to \(self.unreadCount)")
             onScrollStateChanged?(isAtBottom, unreadCount)
         } else if wasAtBottom && hasNewItems && !skipAutoScroll && !isScrollingToBottom {
             // At bottom with NEW items, auto-scroll to newest
             // Only scroll if there are actually new items (not just SwiftUI re-renders)
             lastSeenItemID = newItems.last?.id
-            logger.debug("updateItems: was at bottom with new items, calling scrollToBottom")
             scrollToBottom(animated: animated && previousCount > 0)
         }
     }
@@ -253,15 +241,12 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         isAtBottom = true
         unreadCount = 0
         skipAutoScroll = true  // Prevent updateItems from calling scrollToBottom (we'll do it explicitly)
-        logger.debug("prepareForUserSend: reset isAtBottom=true, unreadCount=0")
     }
 
     func scrollToBottom(animated: Bool) {
         guard !items.isEmpty else { return }
 
         let alreadyAtBottom = tableView.contentOffset.y <= 1
-
-        logger.debug("scrollToBottom: animated=\(animated), alreadyAtBottom=\(alreadyAtBottom), contentOffset.y=\(self.tableView.contentOffset.y)")
 
         // Set state before scroll to prevent scroll delegate from overriding
         isAtBottom = true
@@ -347,7 +332,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         let newIsAtBottom = tableView.contentOffset.y <= 1
 
         if newIsAtBottom != isAtBottom {
-            logger.debug("updateIsAtBottom: changed \(self.isAtBottom) -> \(newIsAtBottom), contentOffset.y=\(self.tableView.contentOffset.y)")
             isAtBottom = newIsAtBottom
             onScrollStateChanged?(isAtBottom, unreadCount)
         }
