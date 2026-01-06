@@ -96,6 +96,7 @@ struct DeviceScanView: View {
                     .liquidGlassProminentButtonStyle()
                 } else {
                     #if targetEnvironment(simulator)
+                    // Simulator build - always show Connect Simulator
                     Button {
                         connectSimulator()
                     } label: {
@@ -116,25 +117,48 @@ struct DeviceScanView: View {
                     .liquidGlassProminentButtonStyle()
                     .disabled(isPairing)
                     #else
-                    Button {
-                        startPairing()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if isPairing {
-                                ProgressView()
-                                    .controlSize(.small)
-                                Text("Connecting...")
-                            } else {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Add Device")
+                    // Device build - show demo mode button if enabled, otherwise Add Device
+                    if demoModeManager.isEnabled {
+                        Button {
+                            connectSimulator()
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isPairing {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Connecting...")
+                                } else {
+                                    Image(systemName: "play.circle.fill")
+                                    Text("Continue in Demo Mode")
+                                }
                             }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
                         }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding()
+                        .liquidGlassProminentButtonStyle()
+                        .disabled(isPairing)
+                    } else {
+                        Button {
+                            startPairing()
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isPairing {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Connecting...")
+                                } else {
+                                    Image(systemName: "plus.circle.fill")
+                                    Text("Add Device")
+                                }
+                            }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                        }
+                        .liquidGlassProminentButtonStyle()
+                        .disabled(isPairing)
                     }
-                    .liquidGlassProminentButtonStyle()
-                    .disabled(isPairing)
                     #endif
 
                     Button("Device not appearing?") {
@@ -212,7 +236,6 @@ struct DeviceScanView: View {
         }
     }
 
-    #if targetEnvironment(simulator)
     private func connectSimulator() {
         isPairing = true
         errorMessage = nil
@@ -230,7 +253,6 @@ struct DeviceScanView: View {
             }
         }
     }
-    #endif
 
     private func handleTitleTap() {
         let now = Date()
