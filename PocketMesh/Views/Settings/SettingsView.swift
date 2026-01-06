@@ -29,6 +29,9 @@ struct SettingsView: View {
                     // Notifications
                     NotificationSettingsSection()
 
+                    // Link Previews
+                    LinkPreviewSettingsSection()
+
                     // Advanced Settings Link
                     Section {
                         Button {
