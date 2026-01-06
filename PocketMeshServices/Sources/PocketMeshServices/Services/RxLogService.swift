@@ -22,9 +22,17 @@ public actor RxLogService {
     // Event monitoring
     private var eventMonitorTask: Task<Void, Never>?
 
+    // Heard repeats processing
+    private var heardRepeatsService: HeardRepeatsService?
+
     public init(session: MeshCoreSession, persistenceStore: PersistenceStore) {
         self.session = session
         self.persistenceStore = persistenceStore
+    }
+
+    /// Sets the HeardRepeatsService for processing channel message repeats.
+    public func setHeardRepeatsService(_ service: HeardRepeatsService) {
+        self.heardRepeatsService = service
     }
 
     deinit {
@@ -162,6 +170,13 @@ public actor RxLogService {
 
         // Emit to stream
         streamContinuation?.yield(dto)
+
+        // Process for heard repeats (fire and forget - don't block stream)
+        if let heardRepeatsService = self.heardRepeatsService {
+            Task {
+                await heardRepeatsService.processForRepeats(dto)
+            }
+        }
     }
 
     /// Load existing entries from database, re-decrypting payloads with current secrets.

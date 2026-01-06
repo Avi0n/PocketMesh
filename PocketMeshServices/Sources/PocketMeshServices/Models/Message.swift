@@ -22,6 +22,8 @@ public enum MessageDirection: Int, Sendable, Codable {
 /// Messages are stored per-device and associated with a contact or channel.
 @Model
 public final class Message {
+    #Index<Message>([\.deviceID, \.channelIndex, \.timestamp])
+
     /// Unique message identifier
     @Attribute(.unique)
     public var id: UUID
@@ -88,6 +90,10 @@ public final class Message {
 
     /// Deduplication key for preventing duplicate incoming messages
     public var deduplicationKey: String?
+
+    /// Heard repeats for this message (cascade delete)
+    @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)
+    public var repeats: [MessageRepeat]?
 
     public init(
         id: UUID = UUID(),

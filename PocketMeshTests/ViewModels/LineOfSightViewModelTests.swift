@@ -117,6 +117,14 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func updateSavedTracePathName(id: UUID, name: String) async throws {}
     func deleteSavedTracePath(id: UUID) async throws {}
     func appendTracePathRun(pathID: UUID, run: TracePathRunDTO) async throws {}
+
+    // MARK: - Heard Repeats (stubs)
+
+    func findSentChannelMessage(deviceID: UUID, channelIndex: UInt8, timestamp: UInt32, text: String, withinSeconds: Int) async throws -> MessageDTO? { nil }
+    func saveMessageRepeat(_ dto: MessageRepeatDTO) async throws {}
+    func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
+    func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
+    func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
 }
 
 // MARK: - Test Helpers
@@ -1174,24 +1182,26 @@ struct ContactToggleTests {
 
 // MARK: - Repeater Point Tests
 
+private let testRepeaterCoordinate = CLLocationCoordinate2D(latitude: 37.8, longitude: -122.35)
+
 @Suite("Repeater Point Model")
 struct RepeaterPointTests {
 
     @Test("RepeaterPoint clamps pathFraction to valid range")
     func pathFractionClamping() {
-        var point = RepeaterPoint(pathFraction: 0.02)
+        var point = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.02)
         #expect(point.pathFraction >= 0.05)
 
-        point = RepeaterPoint(pathFraction: 0.98)
+        point = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.98)
         #expect(point.pathFraction <= 0.95)
 
-        point = RepeaterPoint(pathFraction: 0.5)
+        point = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
         #expect(point.pathFraction == 0.5)
     }
 
     @Test("RepeaterPoint has default height of 10m")
     func defaultHeight() {
-        let point = RepeaterPoint(pathFraction: 0.5)
+        let point = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
         #expect(point.additionalHeight == 10)
     }
 }
@@ -1262,7 +1272,7 @@ struct RepeaterLifecycleTests {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
         #expect(viewModel.repeaterPoint != nil)
 
         viewModel.clearRepeater()
@@ -1275,7 +1285,7 @@ struct RepeaterLifecycleTests {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
         viewModel.updateRepeaterPosition(pathFraction: 0.7)
 
         #expect(viewModel.repeaterPoint?.pathFraction == 0.7)
@@ -1286,7 +1296,7 @@ struct RepeaterLifecycleTests {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
 
         viewModel.updateRepeaterPosition(pathFraction: 0.01)
         #expect(viewModel.repeaterPoint!.pathFraction >= 0.05)
@@ -1300,7 +1310,7 @@ struct RepeaterLifecycleTests {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, additionalHeight: 10, pathFraction: 0.5)
         viewModel.updateRepeaterHeight(meters: 25)
 
         #expect(viewModel.repeaterPoint?.additionalHeight == 25)
@@ -1311,7 +1321,7 @@ struct RepeaterLifecycleTests {
         let mockService = MockElevationService()
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, additionalHeight: 10, pathFraction: 0.5)
         viewModel.updateRepeaterHeight(meters: -5)
 
         #expect(viewModel.repeaterPoint?.additionalHeight == 0)
@@ -1323,7 +1333,7 @@ struct RepeaterLifecycleTests {
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
         viewModel.setPointA(coordinate: sanFrancisco)
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
 
         viewModel.clearPointA()
 
@@ -1337,7 +1347,7 @@ struct RepeaterLifecycleTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, pathFraction: 0.5)
 
         viewModel.clearPointB()
 
@@ -1375,7 +1385,7 @@ struct RelayAnalysisTests {
         viewModel.setElevationProfileForTesting(profile)
 
         // Add repeater at midpoint
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, additionalHeight: 10, pathFraction: 0.5)
 
         viewModel.analyzeWithRepeater()
 
@@ -1412,7 +1422,7 @@ struct RelayAnalysisTests {
         }
         viewModel.setElevationProfileForTesting(profile)
 
-        viewModel.repeaterPoint = RepeaterPoint(pathFraction: 0.5, additionalHeight: 10)
+        viewModel.repeaterPoint = RepeaterPoint(coordinate: testRepeaterCoordinate, additionalHeight: 10, pathFraction: 0.5)
         viewModel.analyzeWithRepeater()
 
         // Get initial segment distances

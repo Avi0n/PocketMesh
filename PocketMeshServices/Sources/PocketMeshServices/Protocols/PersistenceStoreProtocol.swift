@@ -146,4 +146,21 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Append a run to a saved trace path
     func appendTracePathRun(pathID: UUID, run: TracePathRunDTO) async throws
+
+    // MARK: - Heard Repeats
+
+    /// Find a sent channel message matching criteria within a time window
+    func findSentChannelMessage(deviceID: UUID, channelIndex: UInt8, timestamp: UInt32, text: String, withinSeconds: Int) async throws -> MessageDTO?
+
+    /// Save a message repeat entry
+    func saveMessageRepeat(_ dto: MessageRepeatDTO) async throws
+
+    /// Fetch all repeats for a message
+    func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO]
+
+    /// Check if a repeat exists for the given RX log entry
+    func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool
+
+    /// Increment heard repeats count and return new count
+    func incrementMessageHeardRepeats(id: UUID) async throws -> Int
 }
