@@ -273,7 +273,7 @@ public final class NotificationService: NSObject {
         guard preferences.channelMessagesEnabled else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "#\(channelName)"
+        content.title = channelName
         if let sender = senderName {
             content.body = "\(sender): \(messageText)"
         } else {
