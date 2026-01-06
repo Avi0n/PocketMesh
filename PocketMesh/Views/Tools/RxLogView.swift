@@ -262,10 +262,10 @@ struct RxLogRowView: View {
 
                 Spacer()
 
-                if entry.rssi != nil {
-                    Image(systemName: "cellularbars", variableValue: entry.rssiLevel)
+                if entry.snr != nil {
+                    Image(systemName: "cellularbars", variableValue: entry.snrLevel)
                         .foregroundStyle(signalColor)
-                        .accessibilityLabel("Signal strength: \(entry.rssiQualityLabel)")
+                        .accessibilityLabel("Signal strength: \(entry.snrQualityLabel)")
                 }
             }
 
@@ -355,9 +355,9 @@ struct RxLogRowView: View {
     }
 
     private var signalColor: Color {
-        guard let rssi = entry.rssi else { return .secondary }
-        if rssi > -70 { return .green }
-        if rssi > -90 { return .yellow }
+        guard let snr = entry.snr else { return .secondary }
+        if snr > 5 { return .green }
+        if snr > 0 { return .yellow }
         return .red
     }
 

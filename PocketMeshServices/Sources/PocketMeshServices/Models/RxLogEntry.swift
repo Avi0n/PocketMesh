@@ -203,24 +203,24 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
 
     // MARK: - Signal Quality
 
-    /// RSSI mapped to 0-1 for SF Symbol cellularbars variableValue.
-    /// Based on standard LoRa ranges: excellent > -70, good > -90, fair > -110, weak > -120.
-    public var rssiLevel: Double {
-        guard let rssi else { return 0 }
-        if rssi > -70 { return 1.0 }
-        if rssi > -90 { return 0.75 }
-        if rssi > -110 { return 0.5 }
-        if rssi > -120 { return 0.25 }
+    /// SNR mapped to 0-1 for SF Symbol cellularbars variableValue.
+    /// Based on LoRa SNR ranges: excellent > 10, good > 5, fair > 0, weak > -10.
+    public var snrLevel: Double {
+        guard let snr else { return 0 }
+        if snr > 10 { return 1.0 }
+        if snr > 5 { return 0.75 }
+        if snr > 0 { return 0.5 }
+        if snr > -10 { return 0.25 }
         return 0.1
     }
 
-    /// Human-readable RSSI quality label for accessibility.
-    public var rssiQualityLabel: String {
-        guard let rssi else { return "Unknown" }
-        if rssi > -70 { return "Excellent" }
-        if rssi > -90 { return "Good" }
-        if rssi > -110 { return "Fair" }
-        if rssi > -120 { return "Weak" }
+    /// Human-readable SNR quality label for accessibility.
+    public var snrQualityLabel: String {
+        guard let snr else { return "Unknown" }
+        if snr > 10 { return "Excellent" }
+        if snr > 5 { return "Good" }
+        if snr > 0 { return "Fair" }
+        if snr > -10 { return "Weak" }
         return "Marginal"
     }
 
