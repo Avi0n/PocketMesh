@@ -30,7 +30,7 @@ struct SyncCoordinatorTests {
             longitude: 0,
             blePin: 0,
             manualAddContacts: false,
-            multiAcks: false,
+            multiAcks: 0,
             telemetryModeBase: 0,
             telemetryModeLoc: 0,
             telemetryModeEnv: 0,

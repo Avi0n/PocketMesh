@@ -49,7 +49,7 @@ public enum MockDataProvider {
             longitude: -122.4194,
             blePin: 0,               // Disabled
             manualAddContacts: false,
-            multiAcks: true,
+            multiAcks: 2,
             telemetryModeBase: 2,
             telemetryModeLoc: 0,
             telemetryModeEnv: 0,

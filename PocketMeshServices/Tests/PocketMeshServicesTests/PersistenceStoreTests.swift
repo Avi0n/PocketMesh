@@ -35,7 +35,7 @@ struct PersistenceStoreTests {
             longitude: -122.4194,
             blePin: 0,
             manualAddContacts: false,
-            multiAcks: false,
+            multiAcks: 0,
             telemetryModeBase: 2,
             telemetryModeLoc: 0,
             telemetryModeEnv: 0,

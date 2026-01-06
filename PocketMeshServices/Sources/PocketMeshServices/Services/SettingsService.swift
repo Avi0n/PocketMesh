@@ -315,7 +315,7 @@ public actor SettingsService {
         autoAddContacts: Bool,
         telemetryModes: TelemetryModes,
         shareLocationPublicly: Bool,
-        multiAcks: Bool
+        multiAcks: UInt8
     ) async throws {
         do {
             try await session.setOtherParams(
@@ -324,7 +324,7 @@ public actor SettingsService {
                 telemetryModeLocation: telemetryModes.location,
                 telemetryModeBase: telemetryModes.base,
                 advertisementLocationPolicy: shareLocationPublicly ? 1 : 0,
-                multiAcks: multiAcks ? 1 : 0
+                multiAcks: multiAcks
             )
         } catch let error as MeshCoreError {
             throw SettingsServiceError.sessionError(error)
@@ -488,7 +488,7 @@ public actor SettingsService {
         autoAddContacts: Bool,
         telemetryModes: TelemetryModes,
         shareLocationPublicly: Bool,
-        multiAcks: Bool
+        multiAcks: UInt8
     ) async throws -> MeshCore.SelfInfo {
         try await setOtherParams(
             autoAddContacts: autoAddContacts,

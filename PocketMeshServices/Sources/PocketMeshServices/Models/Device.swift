@@ -63,8 +63,8 @@ public final class Device {
     /// Manual add contacts mode
     public var manualAddContacts: Bool
 
-    /// Multi-ACK mode enabled
-    public var multiAcks: Bool
+    /// Number of acknowledgments to send for direct messages (0=disabled, 1-2 typical)
+    public var multiAcks: UInt8
 
     /// Telemetry mode for base data
     public var telemetryModeBase: UInt8
@@ -113,7 +113,7 @@ public final class Device {
         longitude: Double = 0,
         blePin: UInt32 = 0,
         manualAddContacts: Bool = false,
-        multiAcks: Bool = false,
+        multiAcks: UInt8 = 2,
         telemetryModeBase: UInt8 = 2,
         telemetryModeLoc: UInt8 = 0,
         telemetryModeEnv: UInt8 = 0,
@@ -179,7 +179,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let longitude: Double
     public let blePin: UInt32
     public let manualAddContacts: Bool
-    public let multiAcks: Bool
+    public let multiAcks: UInt8
     public let telemetryModeBase: UInt8
     public let telemetryModeLoc: UInt8
     public let telemetryModeEnv: UInt8
@@ -210,7 +210,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         longitude: Double,
         blePin: UInt32,
         manualAddContacts: Bool,
-        multiAcks: Bool,
+        multiAcks: UInt8,
         telemetryModeBase: UInt8,
         telemetryModeLoc: UInt8,
         telemetryModeEnv: UInt8,
@@ -372,7 +372,7 @@ public extension Device {
         self.bandwidth = UInt32(info.radioBandwidth * 1000)  // Convert MHz to kHz
         self.spreadingFactor = info.radioSpreadingFactor
         self.codingRate = info.radioCodingRate
-        self.multiAcks = info.multiAcks > 0
+        self.multiAcks = info.multiAcks
         self.advertLocationPolicy = info.advertisementLocationPolicy
         self.manualAddContacts = info.manualAddContacts
         self.telemetryModeBase = info.telemetryModeBase

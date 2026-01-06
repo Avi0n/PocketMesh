@@ -730,7 +730,7 @@ public final class ConnectionManager {
             longitude: selfInfo.longitude,
             blePin: capabilities.blePin,
             manualAddContacts: selfInfo.manualAddContacts,
-            multiAcks: selfInfo.multiAcks > 0,
+            multiAcks: selfInfo.multiAcks,
             telemetryModeBase: selfInfo.telemetryModeBase,
             telemetryModeLoc: selfInfo.telemetryModeLocation,
             telemetryModeEnv: selfInfo.telemetryModeEnvironment,
