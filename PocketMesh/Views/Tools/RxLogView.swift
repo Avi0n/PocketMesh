@@ -295,7 +295,8 @@ struct RxLogRowView: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } else {
-                    Text("\(entry.payloadType.displayName) v\(entry.payloadVersion) · \(entry.rawPayload.count) bytes")
+                    let versionSuffix = entry.payloadVersion > 0 ? " v\(entry.payloadVersion)" : ""
+                    Text("\(entry.payloadType.displayName)\(versionSuffix) · \(entry.rawPayload.count) bytes")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
