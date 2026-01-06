@@ -85,7 +85,7 @@ struct TracePathView: View {
     private var headerSection: some View {
         Section {
             Label {
-                Text("Build a path through repeaters. Return path is added automatically.")
+                Text("Tap repeaters below to build your path.")
             } icon: {
                 Image(systemName: "info.circle")
                     .foregroundStyle(.blue)
@@ -99,6 +99,26 @@ struct TracePathView: View {
 
     private var outboundPathSection: some View {
         Section {
+            Toggle(isOn: $viewModel.autoReturnPath) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Auto Return Path")
+                    Text("Mirror outbound path for the return journey")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !viewModel.autoReturnPath {
+                Label {
+                    Text("You must be within range of the last repeater to receive a response.")
+                } icon: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.blue)
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+
             if viewModel.outboundPath.isEmpty {
                 Text("Tap a repeater above to start building your path")
                     .foregroundStyle(.secondary)

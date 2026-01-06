@@ -67,6 +67,7 @@ final class TracePathViewModel {
 
     var outboundPath: [PathHop] = []
     var availableRepeaters: [ContactDTO] = []
+    var autoReturnPath = true
     private var allContacts: [ContactDTO] = []
 
     // MARK: - Execution State
@@ -132,12 +133,17 @@ final class TracePathViewModel {
 
     // MARK: - Computed Properties
 
-    /// Full path: outbound + mirrored return (minus last hop to avoid duplicate)
+    /// Full path: outbound + optional mirrored return (minus last hop to avoid duplicate)
     var fullPathBytes: [UInt8] {
         let outbound = outboundPath.map { $0.hashByte }
         guard !outbound.isEmpty else { return [] }
-        let returnPath = outbound.reversed().dropFirst()
-        return outbound + returnPath
+
+        if autoReturnPath {
+            let returnPath = outbound.reversed().dropFirst()
+            return outbound + returnPath
+        } else {
+            return outbound
+        }
     }
 
     /// Comma-separated path string for display/copy
