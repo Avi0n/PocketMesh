@@ -14,6 +14,7 @@ struct ChannelChatView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
+    @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
@@ -48,6 +49,11 @@ struct ChannelChatView: View {
             }
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $selectedMessageForRepeats) { message in
+            RepeatDetailsSheet(message: message)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .task {
             viewModel.configure(appState: appState)
@@ -86,6 +92,13 @@ struct ChannelChatView: View {
             case .messageFailed(let messageID):
                 // Only reload if this message belongs to the current channel
                 // This prevents multiple reloads when several messages fail at once
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadChannelMessages(for: channel)
+                    }
+                }
+            case .heardRepeatRecorded(let messageID, _):
+                // Reload to update the heard repeats count for the message
                 if viewModel.messages.contains(where: { $0.id == messageID }) {
                     Task {
                         await viewModel.loadChannelMessages(for: channel)
@@ -166,6 +179,9 @@ struct ChannelChatView: View {
             },
             onDelete: {
                 deleteMessage(message)
+            },
+            onShowRepeatDetails: { message in
+                showRepeatDetails(for: message)
             }
         )
     }
@@ -198,6 +214,10 @@ struct ChannelChatView: View {
         Task {
             await viewModel.deleteMessage(message)
         }
+    }
+
+    private func showRepeatDetails(for message: MessageDTO) {
+        selectedMessageForRepeats = message
     }
 
     private func retryMessage(_ message: MessageDTO) {

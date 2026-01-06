@@ -10,6 +10,7 @@ public enum MessageEvent: Sendable, Equatable {
     case messageStatusUpdated(ackCode: UInt32)
     case messageFailed(messageID: UUID)
     case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
+    case heardRepeatRecorded(messageID: UUID, count: Int)
     case routingChanged(contactID: UUID, isFlood: Bool)
     case unknownSender(keyPrefix: Data)
     case error(String)
@@ -105,6 +106,12 @@ public final class MessageEventBroadcaster {
     func handleRoutingChanged(contactID: UUID, isFlood: Bool) {
         logger.info("handleRoutingChanged called - contactID: \(contactID), isFlood: \(isFlood)")
         self.latestEvent = .routingChanged(contactID: contactID, isFlood: isFlood)
+        self.newMessageCount += 1
+    }
+
+    /// Called when a heard repeat is recorded for a sent channel message
+    func handleHeardRepeatRecorded(messageID: UUID, count: Int) {
+        self.latestEvent = .heardRepeatRecorded(messageID: messageID, count: count)
         self.newMessageCount += 1
     }
 

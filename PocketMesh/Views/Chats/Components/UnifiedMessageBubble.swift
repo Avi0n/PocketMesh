@@ -62,6 +62,7 @@ struct UnifiedMessageBubble: View {
     let onRetry: (() -> Void)?
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
+    let onShowRepeatDetails: ((MessageDTO) -> Void)?
 
     init(
         message: MessageDTO,
@@ -73,7 +74,8 @@ struct UnifiedMessageBubble: View {
         showDirectionGap: Bool = false,
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
-        onDelete: (() -> Void)? = nil
+        onDelete: (() -> Void)? = nil,
+        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil
     ) {
         self.message = message
         self.contactName = contactName
@@ -85,6 +87,7 @@ struct UnifiedMessageBubble: View {
         self.onRetry = onRetry
         self.onReply = onReply
         self.onDelete = onDelete
+        self.onShowRepeatDetails = onShowRepeatDetails
     }
 
     var body: some View {
@@ -175,13 +178,22 @@ struct UnifiedMessageBubble: View {
             Label("Copy", systemImage: "doc.on.doc")
         }
 
-        // Outgoing message details shown directly (no submenu)
-        if message.isOutgoing {
-            Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
+        // Repeat Details button (only for outgoing channel messages with repeats)
+        if message.isOutgoing, message.channelIndex != nil, message.heardRepeats > 0, let onShowRepeatDetails {
+            Button {
+                onShowRepeatDetails(message)
+            } label: {
+                Label("Repeat Details", systemImage: "arrow.triangle.branch")
+            }
+        }
 
-            if message.status == .delivered && message.heardRepeats > 0 {
+        // Outgoing message details
+        if message.isOutgoing {
+            if (message.status == .sent || message.status == .delivered) && message.heardRepeats > 0 {
                 Text("Heard: \(message.heardRepeats) repeat\(message.heardRepeats == 1 ? "" : "s")")
             }
+
+            Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
 
             if let rtt = message.roundTripTime {
                 Text("Round trip: \(rtt)ms")
@@ -262,8 +274,17 @@ struct UnifiedMessageBubble: View {
         case .sending:
             return "Sending..."
         case .sent:
+            // Channel messages stay at .sent (no ACK), so show repeat count if available
+            if message.heardRepeats > 0 {
+                let repeatText = message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats"
+                return "\(repeatText) • Sent"
+            }
             return "Sent"
         case .delivered:
+            if message.heardRepeats > 0 {
+                let repeatText = message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats"
+                return "\(repeatText) • Delivered"
+            }
             return "Delivered"
         case .failed:
             return "Failed"

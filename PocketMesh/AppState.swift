@@ -203,6 +203,13 @@ public final class AppState {
             }
         )
 
+        // Wire heard repeat callback for UI updates when repeats are recorded
+        await services.heardRepeatsService.setRepeatRecordedHandler { [weak self] messageID, count in
+            await MainActor.run {
+                self?.messageEventBroadcaster.handleHeardRepeatRecorded(messageID: messageID, count: count)
+            }
+        }
+
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
 

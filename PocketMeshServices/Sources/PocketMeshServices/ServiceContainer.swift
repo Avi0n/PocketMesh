@@ -80,6 +80,9 @@ public final class ServiceContainer {
     /// Service for RX log packet capture
     public let rxLogService: RxLogService
 
+    /// Service for tracking heard repeats of sent messages
+    public let heardRepeatsService: HeardRepeatsService
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -129,6 +132,7 @@ public final class ServiceContainer {
         self.messagePollingService = MessagePollingService(session: session, dataStore: dataStore)
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
         self.rxLogService = RxLogService(session: session, persistenceStore: dataStore)
+        self.heardRepeatsService = HeardRepeatsService(persistenceStore: dataStore)
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
@@ -178,6 +182,9 @@ public final class ServiceContainer {
             Task { await self.rxLogService.updateChannels(secrets: secrets, names: names) }
         }
 
+        // Wire HeardRepeatsService to RxLogService for repeat detection
+        await rxLogService.setHeardRepeatsService(heardRepeatsService)
+
         isWired = true
     }
 
@@ -191,6 +198,22 @@ public final class ServiceContainer {
     /// - Parameter deviceID: The connected device's UUID
     public func startEventMonitoring(deviceID: UUID) async {
         guard !isMonitoringEvents else { return }
+
+        let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+
+        // Configure HeardRepeatsService with device info
+        do {
+            if let device = try await dataStore.fetchDevice(id: deviceID) {
+                await heardRepeatsService.configure(
+                    deviceID: deviceID,
+                    localNodeName: device.nodeName
+                )
+            } else {
+                logger.warning("Device not found for HeardRepeatsService configuration")
+            }
+        } catch {
+            logger.warning("Failed to fetch device for HeardRepeatsService: \(error)")
+        }
 
         // Start event monitoring for services that need it
         await advertisementService.startEventMonitoring(deviceID: deviceID)

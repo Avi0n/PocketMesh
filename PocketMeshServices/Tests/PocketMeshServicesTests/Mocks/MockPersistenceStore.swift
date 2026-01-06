@@ -591,6 +591,28 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    // MARK: - Heard Repeats
+
+    public func findSentChannelMessage(deviceID: UUID, channelIndex: UInt8, timestamp: UInt32, text: String, withinSeconds: Int) async throws -> MessageDTO? {
+        return nil // Stub
+    }
+
+    public func saveMessageRepeat(_ dto: MessageRepeatDTO) async throws {
+        // Stub - no-op
+    }
+
+    public func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] {
+        return [] // Stub
+    }
+
+    public func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool {
+        return false // Stub
+    }
+
+    public func incrementMessageHeardRepeats(id: UUID) async throws -> Int {
+        return 0 // Stub
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations

@@ -27,6 +27,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         Device.self,
         Contact.self,
         Message.self,
+        MessageRepeat.self,
         Channel.self,
         RemoteNodeSession.self,
         RoomMessage.self,
@@ -1448,5 +1449,128 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             modelContext.delete(entry)
         }
         try modelContext.save()
+    }
+
+    // MARK: - Heard Repeats
+
+    /// Finds a sent channel message matching the given criteria within a time window.
+    /// Used for correlating RX log entries to sent messages.
+    ///
+    /// - Parameters:
+    ///   - deviceID: The device that sent the message
+    ///   - channelIndex: Channel the message was sent on
+    ///   - timestamp: Sender timestamp from the message
+    ///   - text: Message text to match
+    ///   - withinSeconds: Time window to search (default 10 seconds)
+    /// - Returns: MessageDTO if found, nil otherwise
+    public func findSentChannelMessage(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        timestamp: UInt32,
+        text: String,
+        withinSeconds: Int = 10
+    ) throws -> MessageDTO? {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        let targetTimestamp = timestamp
+        let outgoingDirection = MessageDirection.outgoing.rawValue
+
+        // Calculate time window
+        let now = Date()
+        let windowStart = now.addingTimeInterval(-TimeInterval(withinSeconds))
+        let windowStartTimestamp = UInt32(windowStart.timeIntervalSince1970)
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.channelIndex == targetChannelIndex &&
+            message.timestamp == targetTimestamp &&
+            message.directionRawValue == outgoingDirection &&
+            message.timestamp >= windowStartTimestamp
+        }
+
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return nil
+        }
+
+        // Verify text matches (outgoing channel messages store just the text)
+        guard message.text == text else {
+            return nil
+        }
+
+        return MessageDTO(from: message)
+    }
+
+    /// Saves a new MessageRepeat entry and links it to the parent message.
+    public func saveMessageRepeat(_ dto: MessageRepeatDTO) throws {
+        // Fetch the parent message for relationship
+        let targetMessageID = dto.messageID
+        let messagePredicate = #Predicate<Message> { message in
+            message.id == targetMessageID
+        }
+        var messageDescriptor = FetchDescriptor(predicate: messagePredicate)
+        messageDescriptor.fetchLimit = 1
+
+        guard let parentMessage = try modelContext.fetch(messageDescriptor).first else {
+            throw PersistenceStoreError.messageNotFound
+        }
+
+        let repeat_ = MessageRepeat(
+            id: dto.id,
+            message: parentMessage,
+            messageID: dto.messageID,
+            receivedAt: dto.receivedAt,
+            pathNodes: dto.pathNodes,
+            snr: dto.snr,
+            rssi: dto.rssi,
+            rxLogEntryID: dto.rxLogEntryID
+        )
+        modelContext.insert(repeat_)
+        try modelContext.save()
+    }
+
+    /// Fetches all repeats for a given message, sorted by receivedAt ascending.
+    public func fetchMessageRepeats(messageID: UUID) throws -> [MessageRepeatDTO] {
+        let targetMessageID = messageID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.messageID == targetMessageID
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\MessageRepeat.receivedAt, order: .forward)]
+        )
+
+        let results = try modelContext.fetch(descriptor)
+        return results.map { MessageRepeatDTO(from: $0) }
+    }
+
+    /// Checks if a repeat already exists for the given RX log entry.
+    public func messageRepeatExists(rxLogEntryID: UUID) throws -> Bool {
+        let targetID: UUID? = rxLogEntryID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.rxLogEntryID == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// Increments the heardRepeats count for a message and returns the new count.
+    public func incrementMessageHeardRepeats(id: UUID) throws -> Int {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in message.id == targetID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return 0
+        }
+
+        message.heardRepeats += 1
+        try modelContext.save()
+        return message.heardRepeats
     }
 }
