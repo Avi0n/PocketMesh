@@ -8,13 +8,12 @@ struct WelcomeView: View {
         VStack(spacing: 40) {
             Spacer()
 
-            // App icon and title
-            VStack(spacing: 16) {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 80))
-                    .foregroundStyle(.tint)
-                    .symbolEffect(.pulse.wholeSymbol, options: .repeating)
+            // Animated mesh visualization
+            MeshAnimationView()
+                .padding(.horizontal)
 
+            // App title
+            VStack(spacing: 16) {
                 Text("PocketMesh")
                     .font(.largeTitle)
                     .bold()
@@ -29,15 +28,15 @@ struct WelcomeView: View {
             // Features list
             VStack(alignment: .leading, spacing: 20) {
                 FeatureRow(
-                    icon: "message.fill",
-                    title: "Mesh Messaging",
-                    description: "Send messages without cellular or WiFi"
+                    icon: "arrow.trianglehead.branch",
+                    title: "Multi-Hop Routing",
+                    description: "Your message finds a path across the mesh"
                 )
 
                 FeatureRow(
-                    icon: "person.2.fill",
-                    title: "Contact Discovery",
-                    description: "Find other mesh users nearby"
+                    icon: "person.3.fill",
+                    title: "Community Network",
+                    description: "Network built by users like you"
                 )
             }
             .padding(.horizontal)
