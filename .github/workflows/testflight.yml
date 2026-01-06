@@ -70,9 +70,3 @@ jobs:
         run: |
           cd fastlane
           fastlane build_only
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PocketMesh-TestFlight
-          path: build/PocketMesh.ipa
