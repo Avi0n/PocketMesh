@@ -79,7 +79,8 @@ struct MessageText: View {
                   let attrRange = Range(matchRange, in: attributedString) else { continue }
 
             attributedString[attrRange].link = url
-            attributedString[attrRange].foregroundColor = .blue
+            attributedString[attrRange].foregroundColor = baseColor
+            attributedString[attrRange].underlineStyle = .single
         }
     }
 }
