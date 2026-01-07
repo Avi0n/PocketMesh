@@ -42,8 +42,7 @@ struct MessageText: View {
         for match in matches.reversed() {
             guard let matchRange = Range(match.range, in: text),
                   let nameRange = Range(match.range(at: 1), in: text),
-                  let attrMatchRange = Range(matchRange, in: attributedString),
-                  let attrNameRange = Range(nameRange, in: attributedString) else { continue }
+                  let attrMatchRange = Range(matchRange, in: attributedString) else { continue }
 
             // Get the name without brackets
             let name = String(text[nameRange])

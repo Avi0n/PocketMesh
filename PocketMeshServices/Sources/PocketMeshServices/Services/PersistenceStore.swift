@@ -705,7 +705,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) throws {
+    ) async throws {
         let targetID = id
         let predicate = #Predicate<Message> { message in
             message.id == targetID
