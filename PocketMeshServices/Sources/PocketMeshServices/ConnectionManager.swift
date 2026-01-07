@@ -463,7 +463,7 @@ public final class ConnectionManager {
         logger.info("Device switch complete - device ready")
     }
 
-    /// Forgets the device, removing it from paired accessories.
+    /// Forgets the device, removing it from paired accessories and local storage.
     /// - Throws: `ConnectionError.deviceNotFound` if no device is connected
     public func forgetDevice() async throws {
         guard let deviceID = connectedDevice?.id else {
@@ -476,11 +476,20 @@ public final class ConnectionManager {
 
         logger.info("Forgetting device: \(deviceID)")
 
-        // Remove from paired accessories
+        // Remove from paired accessories first (most important operation)
         try await accessorySetupKit.removeAccessory(accessory)
 
         // Disconnect
         await disconnect()
+
+        // Delete from SwiftData (cascades to contacts, messages, channels, trace paths)
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        do {
+            try await dataStore.deleteDevice(id: deviceID)
+        } catch {
+            // Log but don't fail - ASK removal succeeded, data cleanup is best-effort
+            logger.warning("Failed to delete device data from SwiftData: \(error.localizedDescription)")
+        }
 
         logger.info("Device forgotten")
     }
@@ -913,9 +922,18 @@ extension ConnectionManager: AccessorySetupKitServiceDelegate {
         // Handle device removed from Settings > Accessories
         logger.info("Device removed from ASK: \(bluetoothID)")
 
-        if connectedDevice?.id == bluetoothID {
-            Task {
+        Task {
+            // Disconnect if this was the connected device
+            if connectedDevice?.id == bluetoothID {
                 await disconnect()
+            }
+
+            // Delete from SwiftData (cascades to contacts, messages, channels, trace paths)
+            let dataStore = PersistenceStore(modelContainer: modelContainer)
+            do {
+                try await dataStore.deleteDevice(id: bluetoothID)
+            } catch {
+                logger.warning("Failed to delete device data from SwiftData: \(error.localizedDescription)")
             }
         }
 
