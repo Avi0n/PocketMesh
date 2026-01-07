@@ -186,7 +186,12 @@ struct BluetoothSection: View {
                 try await settingsService.setBlePin(pinValue)
 
                 // Reboot device to apply PIN change - iOS auto-reconnects
-                try await settingsService.reboot()
+                // Timeout is expected since device disconnects before write callback
+                do {
+                    try await settingsService.reboot()
+                } catch BLEError.operationTimeout {
+                    // Expected - device reboots before BLE write callback arrives
+                }
             } catch {
                 showError = error.localizedDescription
                 // Revert
@@ -224,7 +229,12 @@ struct BluetoothSection: View {
                 try await settingsService.setBlePin(pin)
 
                 // Reboot device to apply PIN change - iOS auto-reconnects
-                try await settingsService.reboot()
+                // Timeout is expected since device disconnects before write callback
+                do {
+                    try await settingsService.reboot()
+                } catch BLEError.operationTimeout {
+                    // Expected - device reboots before BLE write callback arrives
+                }
             } catch {
                 showError = error.localizedDescription
                 // Revert
