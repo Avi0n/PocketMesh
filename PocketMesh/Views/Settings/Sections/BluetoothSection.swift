@@ -106,6 +106,7 @@ struct BluetoothSection: View {
             }
         }
         .onAppear {
+            isPinVisible = false
             pinType = currentPinType
             Task { @MainActor in
                 hasInitialized = true
