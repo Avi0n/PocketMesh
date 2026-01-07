@@ -431,10 +431,10 @@ struct ContactServiceTests {
 
     /// Actor to track cleanup handler invocations in a thread-safe manner
     private actor CleanupTracker {
-        var invocations: [(contactID: UUID, wasDeleted: Bool)] = []
+        var invocations: [(contactID: UUID, reason: ContactCleanupReason)] = []
 
-        func record(contactID: UUID, wasDeleted: Bool) {
-            invocations.append((contactID: contactID, wasDeleted: wasDeleted))
+        func record(contactID: UUID, reason: ContactCleanupReason) {
+            invocations.append((contactID: contactID, reason: reason))
         }
     }
 
@@ -473,8 +473,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, wasDeleted in
-            await tracker.record(contactID: contactID, wasDeleted: wasDeleted)
+        await service.setCleanupHandler { contactID, reason in
+            await tracker.record(contactID: contactID, reason: reason)
         }
 
         // Remove the contact
@@ -484,11 +484,11 @@ struct ContactServiceTests {
         let deletedForContacts = await mockStore.deletedMessagesForContactIDs
         #expect(deletedForContacts == [contactID])
 
-        // Verify cleanup handler was called with wasDeleted=true
+        // Verify cleanup handler was called with reason=.deleted
         let invocations = await tracker.invocations
         #expect(invocations.count == 1)
         #expect(invocations[0].contactID == contactID)
-        #expect(invocations[0].wasDeleted == true)
+        #expect(invocations[0].reason == .deleted)
     }
 
     @Test("updateContactPreferences clears unread when blocking")
@@ -526,8 +526,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, wasDeleted in
-            await tracker.record(contactID: contactID, wasDeleted: wasDeleted)
+        await service.setCleanupHandler { contactID, reason in
+            await tracker.record(contactID: contactID, reason: reason)
         }
 
         // Block the contact
@@ -538,11 +538,11 @@ struct ContactServiceTests {
         #expect(updatedContact?.unreadCount == 0)
         #expect(updatedContact?.isBlocked == true)
 
-        // Verify cleanup handler was called with wasDeleted=false
+        // Verify cleanup handler was called with reason=.blocked
         let invocations = await tracker.invocations
         #expect(invocations.count == 1)
         #expect(invocations[0].contactID == contactID)
-        #expect(invocations[0].wasDeleted == false)
+        #expect(invocations[0].reason == .blocked)
     }
 
     @Test("updateContactPreferences does not trigger cleanup when not blocking")
@@ -580,8 +580,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, wasDeleted in
-            await tracker.record(contactID: contactID, wasDeleted: wasDeleted)
+        await service.setCleanupHandler { contactID, reason in
+            await tracker.record(contactID: contactID, reason: reason)
         }
 
         // Update nickname (not blocking)
@@ -681,8 +681,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, wasDeleted in
-            await tracker.record(contactID: contactID, wasDeleted: wasDeleted)
+        await service.setCleanupHandler { contactID, reason in
+            await tracker.record(contactID: contactID, reason: reason)
         }
 
         // Unblock the contact

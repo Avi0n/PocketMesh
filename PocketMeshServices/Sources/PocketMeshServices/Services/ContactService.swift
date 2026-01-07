@@ -14,6 +14,12 @@ public enum ContactServiceError: Error, Sendable {
     case sessionError(MeshCoreError)
 }
 
+/// Reason for contact cleanup (deletion or blocking)
+public enum ContactCleanupReason: Sendable {
+    case deleted
+    case blocked
+}
+
 // MARK: - Sync Result
 
 /// Result of a contact sync operation
@@ -48,8 +54,7 @@ public actor ContactService {
     private var syncProgressHandler: (@Sendable (Int, Int) -> Void)?
 
     /// Cleanup handler called when a contact is deleted or blocked
-    /// Parameters: (contactID, wasDeleted) - wasDeleted is true for deletion, false for blocking
-    private var cleanupHandler: (@Sendable (UUID, Bool) async -> Void)?
+    private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason) async -> Void)?
 
     // MARK: - Initialization
 
@@ -71,7 +76,7 @@ public actor ContactService {
     }
 
     /// Set handler for contact cleanup operations (deletion/blocking)
-    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
+    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason) async -> Void) {
         cleanupHandler = handler
     }
 
@@ -170,7 +175,7 @@ public actor ContactService {
                 try await dataStore.deleteContact(id: contactID)
 
                 // Trigger cleanup (notifications, badge)
-                await cleanupHandler?(contactID, true)
+                await cleanupHandler?(contactID, .deleted)
             }
 
             // Notify UI to refresh contacts list
@@ -378,7 +383,7 @@ public actor ContactService {
 
         // If blocking, trigger cleanup for notifications and badge
         if isBeingBlocked {
-            await cleanupHandler?(contactID, false)
+            await cleanupHandler?(contactID, .blocked)
         }
     }
 

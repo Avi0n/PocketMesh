@@ -171,7 +171,7 @@ public final class ServiceContainer {
         await contactService.setSyncCoordinator(syncCoordinator)
 
         // Wire contact service cleanup handler for notification/badge updates
-        await contactService.setCleanupHandler { [weak self] contactID, wasDeleted in
+        await contactService.setCleanupHandler { [weak self] contactID, _ in
             guard let self else { return }
 
             // Remove delivered notifications for this contact

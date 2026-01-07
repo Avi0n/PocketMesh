@@ -493,19 +493,12 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Delete all messages for a contact in a single operation
+    /// Delete all messages for a contact using batch delete
     public func deleteMessagesForContact(contactID: UUID) throws {
         let targetContactID: UUID? = contactID
-        let predicate = #Predicate<Message> { message in
-            message.contactID == targetContactID
-        }
-        let descriptor = FetchDescriptor(predicate: predicate)
-        let messages = try modelContext.fetch(descriptor)
-
-        for message in messages {
-            modelContext.delete(message)
-        }
-
+        try modelContext.delete(model: Message.self, where: #Predicate {
+            $0.contactID == targetContactID
+        })
         try modelContext.save()
     }
 

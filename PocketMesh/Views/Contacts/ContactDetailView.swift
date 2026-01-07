@@ -86,7 +86,7 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("You won't receive messages from \(currentContact.displayName). You can unblock them later.")
+            Text("You won't receive messages from \(currentContact.displayName). Unread notifications will be cleared. You can unblock them later.")
         }
         .alert("Delete Contact", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -96,7 +96,7 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("This will remove \(currentContact.displayName) from your contacts. This action cannot be undone.")
+            Text("This will remove \(currentContact.displayName) and delete all messages. This action cannot be undone.")
         }
         .onAppear {
             nickname = currentContact.nickname ?? ""
