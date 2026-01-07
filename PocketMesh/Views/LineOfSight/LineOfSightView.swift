@@ -52,6 +52,7 @@ private enum MapStyleSelection: String, CaseIterable, Hashable {
 /// Full-screen map view for analyzing line-of-sight between two points
 struct LineOfSightView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: LineOfSightViewModel
     @State private var sheetDetent: PresentationDetent = analysisSheetDetentCollapsed
     @State private var screenHeight: CGFloat = 0
@@ -71,6 +72,7 @@ struct LineOfSightView: View {
     @AppStorage("hasSeenRepeaterDragHint") private var hasSeenDragHint = false
     @State private var showDragHint = false
     @State private var repeaterMarkerCenter: CGPoint?
+    @State private var isNavigatingBack = false
 
     private var isRelocating: Bool { relocatingPoint != nil }
 
@@ -108,6 +110,18 @@ struct LineOfSightView: View {
             .padding(.bottom, sheetBottomInset)
         }
         .mapScope(mapScope)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismissLineOfSight()
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
+                        .labelStyle(.titleAndIcon)
+                }
+                .accessibilityLabel("Back")
+            }
+        }
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.height
         } action: { height in
@@ -127,6 +141,9 @@ struct LineOfSightView: View {
                 .presentationBackgroundInteraction(.enabled)
                 .presentationBackground(.regularMaterial)
                 .interactiveDismissDisabled()
+        }
+        .onDisappear {
+            showAnalysisSheet = false
         }
         .onChange(of: viewModel.pointA) { oldValue, newValue in
             // Zoom when both points become set (A was just added while B exists)
@@ -197,6 +214,20 @@ struct LineOfSightView: View {
             viewModel.configure(appState: appState)
             await viewModel.loadRepeaters()
             centerOnAllRepeaters()
+        }
+    }
+
+    @MainActor
+    private func dismissLineOfSight() {
+        guard !isNavigatingBack else { return }
+        isNavigatingBack = true
+
+        showAnalysisSheet = false
+        relocatingPoint = nil
+
+        Task { @MainActor in
+            await Task.yield()
+            dismiss()
         }
     }
 
