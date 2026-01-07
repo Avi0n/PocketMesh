@@ -127,7 +127,7 @@ struct BluetoothSection: View {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a 6-digit PIN. You will need to remove and re-pair the device after this change.")
+            Text("Enter a 6-digit PIN. The device will reboot to apply the change.")
         }
         .alert("Change Custom PIN", isPresented: $showingChangePinEntry) {
             TextField("6-digit PIN", text: $customPin)
@@ -137,7 +137,7 @@ struct BluetoothSection: View {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a new 6-digit PIN. You will need to remove and re-pair the device after this change.")
+            Text("Enter a new 6-digit PIN. The device will reboot to apply the change.")
         }
         .alert("Change PIN Type?", isPresented: $showingRemoveConfirmation) {
             Button("Cancel", role: .cancel) {
@@ -148,11 +148,11 @@ struct BluetoothSection: View {
                     hasInitialized = true
                 }
             }
-            Button("Change", role: .destructive) {
+            Button("Change") {
                 applyPendingPinType()
             }
         } message: {
-            Text("You'll need to remove and re-pair the device after this change.")
+            Text("The device will reboot to apply the change.")
         }
         .errorAlert($showError)
     }
@@ -198,14 +198,8 @@ struct BluetoothSection: View {
                 // Send PIN change command (written to RAM until reboot)
                 try await settingsService.setBlePin(pinValue)
 
-                // Reboot device to apply PIN change
+                // Reboot device to apply PIN change - iOS auto-reconnects
                 try await settingsService.reboot()
-
-                // Wait for device to start rebooting
-                try await Task.sleep(for: .milliseconds(500))
-
-                // Trigger re-pairing flow
-                await triggerRepairingFlow()
             } catch {
                 showError = error.localizedDescription
                 // Revert
@@ -242,14 +236,8 @@ struct BluetoothSection: View {
                 // Send PIN change command (written to RAM until reboot)
                 try await settingsService.setBlePin(pin)
 
-                // Reboot device to apply PIN change
+                // Reboot device to apply PIN change - iOS auto-reconnects
                 try await settingsService.reboot()
-
-                // Wait for device to start rebooting
-                try await Task.sleep(for: .milliseconds(500))
-
-                // Trigger re-pairing flow
-                await triggerRepairingFlow()
             } catch {
                 showError = error.localizedDescription
                 // Revert
@@ -261,21 +249,6 @@ struct BluetoothSection: View {
             }
             isChangingPin = false
             customPin = ""
-        }
-    }
-
-    private func triggerRepairingFlow() async {
-        do {
-            try await appState.connectionManager.forgetDevice()
-            try await Task.sleep(for: .milliseconds(500))
-            try await appState.connectionManager.pairNewDevice()
-        } catch let pairingError as PairingError {
-            // Wrong PIN during re-pairing - use AppState's recovery flow
-            appState.failedPairingDeviceID = pairingError.deviceID
-            appState.connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
-            appState.showingConnectionFailedAlert = true
-        } catch {
-            showError = "Re-pairing failed: \(error.localizedDescription)"
         }
     }
 
