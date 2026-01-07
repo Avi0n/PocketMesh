@@ -1,6 +1,11 @@
 import SwiftUI
 import PocketMeshServices
 
+/// Layout constants for message bubbles
+private enum MessageLayout {
+    static let maxBubbleWidth: CGFloat = 280
+}
+
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {
     let accentColor: Color
@@ -64,9 +69,12 @@ struct UnifiedMessageBubble: View {
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
     let onManualPreviewFetch: (() -> Void)?
+    let onOpenLinkPreviewSettings: (() -> Void)?
+    let isLoadingPreview: Bool
 
     @State private var preferences = LinkPreviewPreferences()
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(
         message: MessageDTO,
@@ -80,7 +88,9 @@ struct UnifiedMessageBubble: View {
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
-        onManualPreviewFetch: (() -> Void)? = nil
+        onManualPreviewFetch: (() -> Void)? = nil,
+        onOpenLinkPreviewSettings: (() -> Void)? = nil,
+        isLoadingPreview: Bool = false
     ) {
         self.message = message
         self.contactName = contactName
@@ -94,6 +104,8 @@ struct UnifiedMessageBubble: View {
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
         self.onManualPreviewFetch = onManualPreviewFetch
+        self.onOpenLinkPreviewSettings = onOpenLinkPreviewSettings
+        self.isLoadingPreview = isLoadingPreview
     }
 
     var body: some View {
@@ -118,36 +130,47 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Message text with context menu
-                    MentionText(message.text, baseColor: textColor)
+                    MessageText(message.text, baseColor: textColor)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(bubbleColor)
                         .clipShape(.rect(cornerRadius: 16))
+                        .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
                         .contextMenu {
                             contextMenuContent
                         }
 
                     // Link preview (if applicable)
-                    if preferences.shouldShowPreview, let urlString = message.linkPreviewURL,
-                       let url = URL(string: urlString) {
-                        LinkPreviewCard(
-                            url: url,
-                            title: message.linkPreviewTitle,
-                            imageData: message.linkPreviewImageData,
-                            iconData: message.linkPreviewIconData,
-                            onTap: { openURL(url) }
-                        )
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                    } else if preferences.shouldShowPreview,
-                              !message.linkPreviewFetched,
-                              detectedURL != nil {
-                        // URL detected but not fetched - show based on auto-resolve setting
-                        if preferences.shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
-                            // Will be fetched by parent view, show nothing for now
-                            EmptyView()
-                        } else {
-                            TapToLoadPreview {
-                                onManualPreviewFetch?()
+                    if preferences.shouldShowPreview {
+                        if let urlString = message.linkPreviewURL,
+                           let url = URL(string: urlString) {
+                            // Fetched preview - show with metadata
+                            LinkPreviewCard(
+                                url: url,
+                                title: message.linkPreviewTitle,
+                                imageData: message.linkPreviewImageData,
+                                iconData: message.linkPreviewIconData,
+                                onTap: { openURL(url) },
+                                onOpenSettings: onOpenLinkPreviewSettings
+                            )
+                            .frame(maxWidth: MessageLayout.maxBubbleWidth)
+                        } else if let url = detectedURL {
+                            // URL detected - show minimal preview immediately
+                            if preferences.shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
+                                LinkPreviewCard(
+                                    url: url,
+                                    title: nil,
+                                    imageData: nil,
+                                    iconData: nil,
+                                    onTap: { openURL(url) },
+                                    onOpenSettings: onOpenLinkPreviewSettings
+                                )
+                                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+                            } else {
+                                TapToLoadPreview(url: url, isLoading: isLoadingPreview) {
+                                    onManualPreviewFetch?()
+                                }
+                                .frame(maxWidth: MessageLayout.maxBubbleWidth)
                             }
                         }
                     }

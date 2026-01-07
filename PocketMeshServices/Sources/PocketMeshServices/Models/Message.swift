@@ -103,7 +103,7 @@ public final class Message {
     public var linkPreviewIconData: Data?
 
     /// Whether fetch has been attempted (true = done, false = not yet tried)
-    public var linkPreviewFetched: Bool
+    public var linkPreviewFetched: Bool = false
 
     /// Heard repeats for this message (cascade delete)
     @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)

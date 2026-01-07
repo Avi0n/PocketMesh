@@ -12,6 +12,7 @@ public enum MessageEvent: Sendable, Equatable {
     case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
     case heardRepeatRecorded(messageID: UUID, count: Int)
     case routingChanged(contactID: UUID, isFlood: Bool)
+    case linkPreviewUpdated(messageID: UUID)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -112,6 +113,12 @@ public final class MessageEventBroadcaster {
     /// Called when a heard repeat is recorded for a sent channel message
     func handleHeardRepeatRecorded(messageID: UUID, count: Int) {
         self.latestEvent = .heardRepeatRecorded(messageID: messageID, count: count)
+        self.newMessageCount += 1
+    }
+
+    /// Called when a link preview is fetched and persisted for a message
+    func handleLinkPreviewUpdated(messageID: UUID) {
+        self.latestEvent = .linkPreviewUpdated(messageID: messageID)
         self.newMessageCount += 1
     }
 

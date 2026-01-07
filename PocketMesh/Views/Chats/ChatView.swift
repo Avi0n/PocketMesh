@@ -19,8 +19,7 @@ struct ChatView: View {
     @State private var scrollToBottomRequest = 0
     @FocusState private var isInputFocused: Bool
 
-    private let linkPreviewService = LinkPreviewService()
-    private let linkPreviewPreferences = LinkPreviewPreferences()
+    @State private var linkPreviewFetcher = LinkPreviewFetcher()
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
         self._contact = State(initialValue: contact)
@@ -80,6 +79,8 @@ struct ChatView: View {
             case .directMessageReceived(let message, _) where message.contactID == contact.id:
                 // Optimistic insert: add message immediately so ChatTableView sees new count
                 viewModel.appendMessageIfNew(message)
+                // Prefetch link preview immediately
+                fetchLinkPreviewIfNeeded(for: message)
                 Task {
                     await viewModel.loadMessages(for: contact)
                 }
@@ -105,6 +106,13 @@ struct ChatView: View {
                 // Reload to pick up retry status changes
                 Task {
                     await viewModel.loadMessages(for: contact)
+                }
+            case .linkPreviewUpdated(let messageID):
+                // Reload if this message belongs to the current conversation
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadMessages(for: contact)
+                    }
                 }
             default:
                 break
@@ -195,7 +203,11 @@ struct ChatView: View {
             },
             onDelete: {
                 deleteMessage(message)
-            }
+            },
+            onManualPreviewFetch: {
+                manualFetchLinkPreview(for: message)
+            },
+            isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
         )
         .onAppear {
             fetchLinkPreviewIfNeeded(for: message)
@@ -203,15 +215,22 @@ struct ChatView: View {
     }
 
     private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
-        guard linkPreviewPreferences.shouldAutoResolve(isChannelMessage: false),
-              !message.linkPreviewFetched,
-              let dataStore = appState.services?.dataStore else {
-            return
-        }
+        guard let dataStore = appState.services?.dataStore else { return }
+        linkPreviewFetcher.fetchIfNeeded(
+            for: message,
+            isChannelMessage: false,
+            using: dataStore,
+            eventBroadcaster: appState.messageEventBroadcaster
+        )
+    }
 
-        Task {
-            await linkPreviewService.fetchAndPersist(for: message, using: dataStore)
-        }
+    private func manualFetchLinkPreview(for message: MessageDTO) {
+        guard let dataStore = appState.services?.dataStore else { return }
+        linkPreviewFetcher.manualFetch(
+            for: message,
+            using: dataStore,
+            eventBroadcaster: appState.messageEventBroadcaster
+        )
     }
 
     private var emptyMessagesView: some View {
@@ -265,7 +284,13 @@ struct ChatView: View {
         ) {
             // Force scroll to bottom on user send (before message is added)
             scrollToBottomRequest += 1
-            Task { await viewModel.sendMessage() }
+            Task {
+                await viewModel.sendMessage()
+                // Prefetch link preview for newly sent message
+                if let message = viewModel.messages.last, message.isOutgoing {
+                    fetchLinkPreviewIfNeeded(for: message)
+                }
+            }
         }
     }
 }

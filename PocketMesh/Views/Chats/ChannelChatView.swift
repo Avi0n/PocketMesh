@@ -17,8 +17,7 @@ struct ChannelChatView: View {
     @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
-    private let linkPreviewService = LinkPreviewService()
-    private let linkPreviewPreferences = LinkPreviewPreferences()
+    @State private var linkPreviewFetcher = LinkPreviewFetcher()
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
         self.channel = channel
@@ -84,6 +83,8 @@ struct ChannelChatView: View {
                 where channelIndex == channel.index && message.deviceID == channel.deviceID:
                 // Optimistic insert: add message immediately so ChatTableView sees new count
                 viewModel.appendMessageIfNew(message)
+                // Prefetch link preview immediately
+                fetchLinkPreviewIfNeeded(for: message)
                 Task {
                     await viewModel.loadChannelMessages(for: channel)
                 }
@@ -102,6 +103,13 @@ struct ChannelChatView: View {
                 }
             case .heardRepeatRecorded(let messageID, _):
                 // Reload to update the heard repeats count for the message
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    Task {
+                        await viewModel.loadChannelMessages(for: channel)
+                    }
+                }
+            case .linkPreviewUpdated(let messageID):
+                // Reload if this message belongs to the current channel
                 if viewModel.messages.contains(where: { $0.id == messageID }) {
                     Task {
                         await viewModel.loadChannelMessages(for: channel)
@@ -185,7 +193,11 @@ struct ChannelChatView: View {
             },
             onShowRepeatDetails: { message in
                 showRepeatDetails(for: message)
-            }
+            },
+            onManualPreviewFetch: {
+                manualFetchLinkPreview(for: message)
+            },
+            isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
         )
         .onAppear {
             fetchLinkPreviewIfNeeded(for: message)
@@ -193,15 +205,22 @@ struct ChannelChatView: View {
     }
 
     private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
-        guard linkPreviewPreferences.shouldAutoResolve(isChannelMessage: true),
-              !message.linkPreviewFetched,
-              let dataStore = appState.services?.dataStore else {
-            return
-        }
+        guard let dataStore = appState.services?.dataStore else { return }
+        linkPreviewFetcher.fetchIfNeeded(
+            for: message,
+            isChannelMessage: true,
+            using: dataStore,
+            eventBroadcaster: appState.messageEventBroadcaster
+        )
+    }
 
-        Task {
-            await linkPreviewService.fetchAndPersist(for: message, using: dataStore)
-        }
+    private func manualFetchLinkPreview(for message: MessageDTO) {
+        guard let dataStore = appState.services?.dataStore else { return }
+        linkPreviewFetcher.manualFetch(
+            for: message,
+            using: dataStore,
+            eventBroadcaster: appState.messageEventBroadcaster
+        )
     }
 
     private var emptyMessagesView: some View {
@@ -264,6 +283,10 @@ struct ChannelChatView: View {
             scrollToBottomRequest += 1
             Task {
                 await viewModel.sendChannelMessage()
+                // Prefetch link preview for newly sent message
+                if let message = viewModel.messages.last, message.isOutgoing {
+                    fetchLinkPreviewIfNeeded(for: message)
+                }
             }
         }
     }

@@ -13,8 +13,8 @@ struct LinkPreviewSettingsSection: View {
             if preferences.previewsEnabled {
                 Toggle(isOn: $preferences.autoResolveDM) {
                     VStack(alignment: .leading) {
-                        Text("Auto-resolve Direct Messages")
-                        Text("Fetch previews automatically")
+                        Text("Load Automatically in Direct Messages")
+                        Text("Fetches previews when messages appear")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -22,8 +22,8 @@ struct LinkPreviewSettingsSection: View {
 
                 Toggle(isOn: $preferences.autoResolveChannels) {
                     VStack(alignment: .leading) {
-                        Text("Auto-resolve Channels & Rooms")
-                        Text("Fetch previews automatically")
+                        Text("Load Automatically in Channels")
+                        Text("Fetches previews when messages appear")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

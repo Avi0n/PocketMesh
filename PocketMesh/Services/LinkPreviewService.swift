@@ -2,6 +2,7 @@ import Foundation
 import LinkPresentation
 import os
 import PocketMeshServices
+import UIKit
 import UniformTypeIdentifiers
 
 /// Metadata extracted from a URL for link previews
@@ -13,9 +14,8 @@ struct LinkPreviewMetadata: Sendable {
 }
 
 /// Service for extracting URLs from text and fetching link metadata
-@MainActor @Observable
-final class LinkPreviewService {
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
+final class LinkPreviewService: Sendable {
+    private nonisolated(unsafe) let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
 
     /// Shared URL detector instance to avoid creating NSDataDetector on every call
     private static let urlDetector: NSDataDetector? = {
@@ -77,9 +77,12 @@ final class LinkPreviewService {
         }
     }
 
-    /// Loads image data from an NSItemProvider
+    /// Maximum image size in bytes (500KB)
+    private static let maxImageSize = 500 * 1024
+
+    /// Loads image data from an NSItemProvider, compressing if necessary
     private func loadData(from provider: NSItemProvider) async -> Data? {
-        await withCheckedContinuation { continuation in
+        let rawData = await withCheckedContinuation { continuation in
             provider.loadDataRepresentation(for: .image) { data, error in
                 if let error {
                     self.logger.debug("Failed to load image data: \(error.localizedDescription)")
@@ -87,6 +90,48 @@ final class LinkPreviewService {
                 continuation.resume(returning: data)
             }
         }
+
+        guard let data = rawData else { return nil }
+
+        // If within size limit, return as-is
+        if data.count <= Self.maxImageSize {
+            return data
+        }
+
+        // Compress the image
+        return compressImage(data: data, maxSize: Self.maxImageSize)
+    }
+
+    /// Compresses image data to fit within a maximum size
+    private func compressImage(data: Data, maxSize: Int) -> Data? {
+        guard let image = UIImage(data: data) else { return data }
+
+        // Start with high quality and reduce until within size
+        var quality: CGFloat = 0.8
+        var compressed = image.jpegData(compressionQuality: quality)
+
+        while let compressedData = compressed, compressedData.count > maxSize, quality > 0.1 {
+            quality -= 0.1
+            compressed = image.jpegData(compressionQuality: quality)
+        }
+
+        // If still too large, scale down the image
+        if let compressedData = compressed, compressedData.count > maxSize {
+            let scale = sqrt(Double(maxSize) / Double(compressedData.count))
+            let newSize = CGSize(
+                width: image.size.width * scale,
+                height: image.size.height * scale
+            )
+
+            let renderer = UIGraphicsImageRenderer(size: newSize)
+            let resized = renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+            }
+            compressed = resized.jpegData(compressionQuality: 0.7)
+        }
+
+        logger.debug("Compressed image from \(data.count) to \(compressed?.count ?? 0) bytes")
+        return compressed
     }
 
     /// Fetches link preview for a message and persists to SwiftData
@@ -100,14 +145,18 @@ final class LinkPreviewService {
         // Extract URL from message text
         guard let url = Self.extractFirstURL(from: message.text) else {
             // No URL found, mark as fetched
-            try? await dataStore.updateMessageLinkPreview(
-                id: message.id,
-                url: nil,
-                title: nil,
-                imageData: nil,
-                iconData: nil,
-                fetched: true
-            )
+            do {
+                try await dataStore.updateMessageLinkPreview(
+                    id: message.id,
+                    url: nil,
+                    title: nil,
+                    imageData: nil,
+                    iconData: nil,
+                    fetched: true
+                )
+            } catch {
+                logger.error("Failed to mark message \(message.id) as fetched: \(error.localizedDescription)")
+            }
             return
         }
 
@@ -125,13 +174,17 @@ final class LinkPreviewService {
         }
 
         // Persist to database
-        try? await dataStore.updateMessageLinkPreview(
-            id: message.id,
-            url: previewURL,
-            title: previewTitle,
-            imageData: previewImageData,
-            iconData: previewIconData,
-            fetched: true
-        )
+        do {
+            try await dataStore.updateMessageLinkPreview(
+                id: message.id,
+                url: previewURL,
+                title: previewTitle,
+                imageData: previewImageData,
+                iconData: previewIconData,
+                fetched: true
+            )
+        } catch {
+            logger.error("Failed to persist link preview for message \(message.id): \(error.localizedDescription)")
+        }
     }
 }

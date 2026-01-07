@@ -9,9 +9,23 @@ struct LinkPreviewCard: View {
     let imageData: Data?
     let iconData: Data?
     let onTap: () -> Void
+    var onOpenSettings: (() -> Void)?
+
+    private let privacyTip = LinkPreviewPrivacyTip()
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var domain: String {
         url.host ?? url.absoluteString
+    }
+
+    /// Allow more lines for larger accessibility text sizes
+    private var titleLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 4 : 2
+    }
+
+    private var domainLineLimit: Int {
+        dynamicTypeSize.isAccessibilitySize ? 2 : 1
     }
 
     var body: some View {
@@ -23,7 +37,7 @@ struct LinkPreviewCard: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(maxHeight: 150)
-                        .clipped()
+                        .clipShape(.rect(topLeadingRadius: 12, topTrailingRadius: 12))
                 }
 
                 // Title and domain
@@ -45,26 +59,30 @@ struct LinkPreviewCard: View {
                             Text(title)
                                 .font(.subheadline)
                                 .bold()
-                                .lineLimit(2)
+                                .lineLimit(titleLineLimit)
                                 .foregroundStyle(.primary)
                         }
 
                         Text(domain)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(domainLineLimit)
                     }
 
                     Spacer()
                 }
                 .padding(10)
             }
-            .background(Color(.systemGray6))
-            .clipShape(.rect(cornerRadius: 12))
+            .background(.regularMaterial, in: .rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
         .task {
             await LinkPreviewPrivacyTip.previewLoaded.donate()
+        }
+        .popoverTip(privacyTip) { action in
+            if action.id == "settings" {
+                onOpenSettings?()
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title ?? domain), from \(domain), link")
