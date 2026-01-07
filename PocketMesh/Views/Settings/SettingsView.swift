@@ -5,99 +5,126 @@ import MapKit
 /// Main settings screen prioritizing new user experience
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @State private var showingAdvancedSettings = false
     @State private var showingDeviceSelection = false
     @State private var showingLocationPicker = false
     private var demoModeManager = DemoModeManager.shared
 
+    private var shouldUseSplitView: Bool {
+        horizontalSizeClass == .regular
+    }
+
     var body: some View {
-        NavigationStack {
-            List {
-                if let device = appState.connectedDevice {
-                    // Device Info Header (read-only)
-                    DeviceInfoSection(device: device)
-
-                    // Radio Preset
-                    RadioPresetSection()
-
-                    // Node Settings
-                    NodeSettingsSection(showingLocationPicker: $showingLocationPicker)
-
-                    // Bluetooth
-                    BluetoothSection()
-
-                    // Notifications
-                    NotificationSettingsSection()
-
-                    // Advanced Settings Link
-                    Section {
-                        Button {
-                            showingAdvancedSettings = true
-                        } label: {
-                            HStack {
-                                Label {
-                                    Text("Advanced Settings")
-                                } icon: {
-                                    Image(systemName: "gearshape.2")
-                                        .foregroundStyle(.tint)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        .foregroundStyle(.primary)
-                    } footer: {
-                        Text("Radio tuning, telemetry, contact settings, and device management")
-                    }
-
-                    // About
-                    AboutSection()
-
-                } else {
-                    NoDeviceSection(showingDeviceSelection: $showingDeviceSelection)
-                }
-
-                // Demo Mode (only visible once unlocked, regardless of device state)
-                if demoModeManager.isUnlocked {
-                    Section {
-                        Toggle("Enabled", isOn: Binding(
-                            get: { demoModeManager.isEnabled },
-                            set: { demoModeManager.isEnabled = $0 }
-                        ))
-                    } header: {
-                        Text("Demo Mode")
-                    } footer: {
-                        Text("Demo mode allows testing without hardware using mock data.")
-                    }
-                }
-
-                #if DEBUG
-                // Debug section
-                Section {
-                    Button {
-                        appState.resetOnboarding()
-                    } label: {
-                        Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
-                    }
-                } header: {
-                    Text("Debug")
-                }
-                #endif
+        if shouldUseSplitView {
+            NavigationSplitView {
+                settingsListContent
+            } detail: {
+                ContentUnavailableView("Select a setting", systemImage: "gear")
             }
-            .navigationTitle("Settings")
+        } else {
+            NavigationStack {
+                settingsListContent
+            }
             .sheet(isPresented: $showingAdvancedSettings) {
                 AdvancedSettingsView()
             }
-            .sheet(isPresented: $showingDeviceSelection) {
-                DeviceSelectionSheet()
-                    .presentationDetents([.medium])
-                    .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var settingsListContent: some View {
+        List {
+            if let device = appState.connectedDevice {
+                DeviceInfoSection(device: device)
+
+                RadioPresetSection()
+
+                NodeSettingsSection(showingLocationPicker: $showingLocationPicker)
+
+                BluetoothSection()
+
+                NotificationSettingsSection()
+
+                Section {
+                    if shouldUseSplitView {
+                        NavigationLink {
+                            AdvancedSettingsView()
+                        } label: {
+                            advancedSettingsRowLabel
+                        }
+                        .foregroundStyle(.primary)
+                    } else {
+                        Button {
+                            showingAdvancedSettings = true
+                        } label: {
+                            advancedSettingsRowLabel
+                        }
+                        .foregroundStyle(.primary)
+                    }
+                } footer: {
+                    Text("Radio tuning, telemetry, contact settings, and device management")
+                }
+
+                AboutSection()
+
+            } else {
+                NoDeviceSection(showingDeviceSelection: $showingDeviceSelection)
             }
-            .sheet(isPresented: $showingLocationPicker) {
-                LocationPickerView.forLocalDevice(appState: appState)
+
+            if demoModeManager.isUnlocked {
+                Section {
+                    Toggle("Enabled", isOn: Binding(
+                        get: { demoModeManager.isEnabled },
+                        set: { demoModeManager.isEnabled = $0 }
+                    ))
+                } header: {
+                    Text("Demo Mode")
+                } footer: {
+                    Text("Demo mode allows testing without hardware using mock data.")
+                }
             }
+
+            #if DEBUG
+            Section {
+                Button {
+                    appState.resetOnboarding()
+                } label: {
+                    Label("Reset Onboarding", systemImage: "arrow.counterclockwise")
+                }
+            } header: {
+                Text("Debug")
+            }
+            #endif
+        }
+        .navigationTitle("Settings")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                BLEStatusIndicatorView()
+            }
+        }
+        .sheet(isPresented: $showingDeviceSelection) {
+            DeviceSelectionSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showingLocationPicker) {
+            LocationPickerView.forLocalDevice(appState: appState)
+        }
+    }
+
+    private var advancedSettingsRowLabel: some View {
+        HStack {
+            Label {
+                Text("Advanced Settings")
+            } icon: {
+                Image(systemName: "gearshape.2")
+                    .foregroundStyle(.tint)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
     }
 }
