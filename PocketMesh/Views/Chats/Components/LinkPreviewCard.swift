@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 import PocketMeshServices
 
 /// Displays a link preview with image, title, and domain
@@ -62,6 +63,9 @@ struct LinkPreviewCard: View {
             .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+        .task {
+            await LinkPreviewPrivacyTip.previewLoaded.donate()
+        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title ?? domain), from \(domain), link")
         .accessibilityHint("Opens in browser")
