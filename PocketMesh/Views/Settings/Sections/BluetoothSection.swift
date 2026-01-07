@@ -4,7 +4,7 @@ import PocketMeshServices
 /// Bluetooth PIN configuration
 struct BluetoothSection: View {
     @Environment(AppState.self) private var appState
-    @State private var pinType: BluetoothPinType = .random
+    @State private var pinType: BluetoothPinType = .default
     @State private var customPin: String = ""
     @State private var showingPinEntry = false
     @State private var showingChangePinEntry = false
@@ -19,16 +19,13 @@ struct BluetoothSection: View {
     @State private var isRenaming = false
 
     enum BluetoothPinType: String, CaseIterable {
-        case `default` = "Default (123456)"
-        case random = "Random (Screen Required)"
+        case `default` = "Default"
         case custom = "Custom PIN"
     }
 
     private var currentPinType: BluetoothPinType {
-        guard let device = appState.connectedDevice else { return .random }
-        if device.blePin == 0 {
-            return .random
-        } else if device.blePin == 123456 {
+        guard let device = appState.connectedDevice else { return .default }
+        if device.blePin == 0 || device.blePin == 123456 {
             return .default
         } else {
             return .custom
@@ -86,7 +83,7 @@ struct BluetoothSection: View {
                     renameDevice()
                 } label: {
                     HStack {
-                        Text("Rename Device")
+                        Text("Change Display Name")
                         Spacer()
                         if isRenaming {
                             ProgressView()
@@ -99,10 +96,8 @@ struct BluetoothSection: View {
         } header: {
             Text("Bluetooth")
         } footer: {
-            if appState.connectionState == .ready,
-               let deviceID = appState.connectedDevice?.id,
-               appState.connectionManager.hasAccessory(for: deviceID) {
-                Text("Renaming only changes how iOS displays this device.")
+            if pinType == .default {
+                Text("Default PIN is 123456. Devices with screens show their own PIN.")
             }
         }
         .onAppear {
@@ -167,18 +162,10 @@ struct BluetoothSection: View {
             return
         }
 
-        // If changing FROM custom to something else, show confirmation
-        if oldValue == .custom && newValue != .custom {
+        // If changing FROM custom to default, show confirmation
+        if oldValue == .custom && newValue == .default {
             pendingPinType = newValue
             showingRemoveConfirmation = true
-            return
-        }
-
-        // If changing between random and default, show confirmation
-        if (oldValue == .random && newValue == .default) || (oldValue == .default && newValue == .random) {
-            pendingPinType = newValue
-            showingRemoveConfirmation = true
-            return
         }
     }
 
