@@ -88,6 +88,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Clear unread count for a contact
     func clearUnreadCount(contactID: UUID) async throws
 
+    /// Delete all messages for a contact
+    func deleteMessagesForContact(contactID: UUID) async throws
+
     /// Fetch discovered (pending) contacts
     func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO]
 

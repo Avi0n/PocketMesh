@@ -218,6 +218,57 @@ struct PersistenceStoreTests {
         #expect(contact?.unreadCount == 0)
     }
 
+    @Test("deleteMessagesForContact removes all messages for a contact")
+    func deleteMessagesForContactRemovesAll() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create first contact
+        let frame1 = createTestContactFrame(name: "Contact1")
+        let contact1ID = try await store.saveContact(deviceID: device.id, from: frame1)
+
+        // Create multiple messages for this contact
+        for i in 0..<5 {
+            let message = MessageDTO(from: Message(
+                deviceID: device.id,
+                contactID: contact1ID,
+                text: "Message \(i)",
+                timestamp: UInt32(Date().timeIntervalSince1970) + UInt32(i)
+            ))
+            try await store.saveMessage(message)
+        }
+
+        // Create a second contact with a message (should not be deleted)
+        let frame2 = createTestContactFrame(name: "Contact2")
+        let contact2ID = try await store.saveContact(deviceID: device.id, from: frame2)
+        let otherMessage = MessageDTO(from: Message(
+            deviceID: device.id,
+            contactID: contact2ID,
+            text: "Other message",
+            timestamp: UInt32(Date().timeIntervalSince1970) + 100
+        ))
+        try await store.saveMessage(otherMessage)
+
+        // Verify messages exist before deletion
+        var contact1Messages = try await store.fetchMessages(contactID: contact1ID)
+        #expect(contact1Messages.count == 5)
+
+        var contact2Messages = try await store.fetchMessages(contactID: contact2ID)
+        #expect(contact2Messages.count == 1)
+
+        // Delete messages for the first contact
+        try await store.deleteMessagesForContact(contactID: contact1ID)
+
+        // Verify messages for deleted contact are gone
+        contact1Messages = try await store.fetchMessages(contactID: contact1ID)
+        #expect(contact1Messages.isEmpty)
+
+        // Verify messages for other contact still exist
+        contact2Messages = try await store.fetchMessages(contactID: contact2ID)
+        #expect(contact2Messages.count == 1)
+    }
+
     // MARK: - Message Tests
 
     @Test("Save and fetch messages for contact")

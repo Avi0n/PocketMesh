@@ -98,6 +98,25 @@ public protocol MeshCoreSessionProtocol: Actor {
     /// - Throws: `MeshCoreError` if the discovery request fails.
     func sendPathDiscovery(to destination: Data) async throws -> MessageSentInfo
 
+    /// Shares a contact via zero-hop broadcast.
+    ///
+    /// - Parameter publicKey: The contact's 32-byte public key.
+    /// - Throws: `MeshCoreError` if the share fails.
+    func shareContact(publicKey: Data) async throws
+
+    /// Exports a contact to a shareable URI.
+    ///
+    /// - Parameter publicKey: The contact's public key (nil for self).
+    /// - Returns: The contact URI string.
+    /// - Throws: `MeshCoreError` if the export fails.
+    func exportContact(publicKey: Data?) async throws -> String
+
+    /// Imports a contact from card data.
+    ///
+    /// - Parameter cardData: The contact card data.
+    /// - Throws: `MeshCoreError` if the import fails.
+    func importContact(cardData: Data) async throws
+
     // MARK: - Channel Operations (used by ChannelService)
 
     /// Retrieves information about a channel.

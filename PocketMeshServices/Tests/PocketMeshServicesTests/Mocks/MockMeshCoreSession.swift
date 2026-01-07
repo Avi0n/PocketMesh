@@ -189,6 +189,19 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    public func shareContact(publicKey: Data) async throws {
+        // Stub - not used in current tests
+    }
+
+    public func exportContact(publicKey: Data?) async throws -> String {
+        // Stub - not used in current tests
+        return ""
+    }
+
+    public func importContact(cardData: Data) async throws {
+        // Stub - not used in current tests
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all recorded invocations

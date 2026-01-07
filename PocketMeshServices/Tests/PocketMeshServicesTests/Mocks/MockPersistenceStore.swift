@@ -33,6 +33,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public private(set) var savedChannels: [ChannelDTO] = []
     public private(set) var deletedContactIDs: [UUID] = []
     public private(set) var deletedChannelIDs: [UUID] = []
+    public private(set) var deletedMessagesForContactIDs: [UUID] = []
     public private(set) var updatedMessageStatuses: [(id: UUID, status: MessageStatus)] = []
     public private(set) var updatedMessageAcks: [(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?)] = []
 
@@ -376,6 +377,11 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    public func deleteMessagesForContact(contactID: UUID) async throws {
+        deletedMessagesForContactIDs.append(contactID)
+        messages = messages.filter { $0.value.contactID != contactID }
+    }
+
     public func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] {
         if let error = stubbedFetchContactError {
             throw error
@@ -621,6 +627,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         savedChannels = []
         deletedContactIDs = []
         deletedChannelIDs = []
+        deletedMessagesForContactIDs = []
         updatedMessageStatuses = []
         updatedMessageAcks = []
     }

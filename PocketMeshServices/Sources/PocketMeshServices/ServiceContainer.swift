@@ -170,6 +170,17 @@ public final class ServiceContainer {
         // Wire contact service to sync coordinator for UI refresh notifications
         await contactService.setSyncCoordinator(syncCoordinator)
 
+        // Wire contact service cleanup handler for notification/badge updates
+        await contactService.setCleanupHandler { [weak self] contactID, wasDeleted in
+            guard let self else { return }
+
+            // Remove delivered notifications for this contact
+            await self.notificationService.removeDeliveredNotifications(forContactID: contactID)
+
+            // Update badge count
+            await self.notificationService.updateBadgeCount()
+        }
+
         // Wire channel updates to RxLogService for decryption cache
         await channelService.setChannelUpdateHandler { [weak self] channels in
             guard let self else { return }
