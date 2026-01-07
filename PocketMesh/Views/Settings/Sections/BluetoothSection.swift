@@ -268,6 +268,11 @@ struct BluetoothSection: View {
             try await appState.connectionManager.forgetDevice()
             try await Task.sleep(for: .milliseconds(500))
             try await appState.connectionManager.pairNewDevice()
+        } catch let pairingError as PairingError {
+            // Wrong PIN during re-pairing - use AppState's recovery flow
+            appState.failedPairingDeviceID = pairingError.deviceID
+            appState.connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
+            appState.showingConnectionFailedAlert = true
         } catch {
             showError = "Re-pairing failed: \(error.localizedDescription)"
         }

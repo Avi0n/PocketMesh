@@ -55,6 +55,12 @@ public final class AppState {
     /// Device ID pending retry
     var pendingReconnectDeviceID: UUID?
 
+    /// Device ID that failed pairing (wrong PIN) - for recovery UI
+    var failedPairingDeviceID: UUID?
+
+    /// Whether device pairing is in progress (ASK picker or connecting after selection)
+    var isPairing = false
+
     /// Current device battery info (nil if not fetched)
     var deviceBattery: BatteryInfo?
 
@@ -287,18 +293,59 @@ public final class AppState {
 
     /// Start device scan/pairing
     func startDeviceScan() {
+        // Clear any previous pairing failure state
+        failedPairingDeviceID = nil
+        isPairing = true
+
         Task {
+            defer { isPairing = false }
+
             do {
                 // pairNewDevice() triggers onConnectionReady callback on success
                 try await connectionManager.pairNewDevice()
-                hasCompletedOnboarding = true
+                await wireServicesIfConnected()
+
+                // If still in onboarding, navigate to radio preset; otherwise mark complete
+                if !hasCompletedOnboarding {
+                    onboardingPath.append(.radioPreset)
+                }
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error
+            } catch AccessorySetupKitError.pickerAlreadyActive {
+                // Picker is already showing - ignore
+            } catch let pairingError as PairingError {
+                // ASK pairing succeeded but BLE connection failed (e.g., wrong PIN)
+                // Store device ID for recovery UI instead of showing generic alert
+                failedPairingDeviceID = pairingError.deviceID
+                connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
+                showingConnectionFailedAlert = true
             } catch {
                 connectionFailedMessage = error.localizedDescription
                 showingConnectionFailedAlert = true
             }
         }
+    }
+
+    /// Flag indicating ASK picker should be shown when app returns to foreground
+    var shouldShowPickerOnForeground = false
+
+    /// Remove a device that failed pairing (wrong PIN) and automatically retry
+    func removeFailedPairingAndRetry() {
+        guard let deviceID = failedPairingDeviceID else { return }
+
+        Task {
+            await connectionManager.removeFailedPairing(deviceID: deviceID)
+            failedPairingDeviceID = nil
+            // Set flag - View observing scenePhase will trigger startDeviceScan when active
+            shouldShowPickerOnForeground = true
+        }
+    }
+
+    /// Called by View when scenePhase becomes active and shouldShowPickerOnForeground is true
+    func handleBecameActive() {
+        guard shouldShowPickerOnForeground else { return }
+        shouldShowPickerOnForeground = false
+        startDeviceScan()
     }
 
     /// Disconnect from device

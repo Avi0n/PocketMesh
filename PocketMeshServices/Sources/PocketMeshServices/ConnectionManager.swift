@@ -32,6 +32,27 @@ public enum ConnectionError: LocalizedError {
     }
 }
 
+/// Errors that can occur during device pairing
+public enum PairingError: LocalizedError {
+    /// ASK pairing succeeded but BLE connection failed (e.g., wrong PIN)
+    case connectionFailed(deviceID: UUID, underlying: Error)
+
+    public var errorDescription: String? {
+        switch self {
+        case .connectionFailed(_, let underlying):
+            return "Connection failed: \(underlying.localizedDescription)"
+        }
+    }
+
+    /// The device ID that failed to connect (for recovery UI)
+    public var deviceID: UUID? {
+        switch self {
+        case .connectionFailed(let deviceID, _):
+            return deviceID
+        }
+    }
+}
+
 /// Manages the connection lifecycle for mesh devices.
 ///
 /// `ConnectionManager` owns the transport, session, and services. It handles:
@@ -240,7 +261,8 @@ public final class ConnectionManager {
     }
 
     /// Pairs a new device using AccessorySetupKit picker.
-    /// - Throws: AccessorySetupKitError if pairing fails
+    /// - Returns: The device ID if pairing succeeds but connection fails (for recovery UI)
+    /// - Throws: `PairingError` with device ID if connection fails after ASK pairing succeeds
     public func pairNewDevice() async throws {
         logger.info("Starting device pairing")
 
@@ -251,7 +273,40 @@ public final class ConnectionManager {
         let deviceID = try await accessorySetupKit.showPicker()
 
         // Connect to the newly paired device
-        try await connectAfterPairing(deviceID: deviceID)
+        do {
+            try await connectAfterPairing(deviceID: deviceID)
+        } catch {
+            // Connection failed (e.g., wrong PIN causes "Authentication is insufficient")
+            // Don't auto-remove - throw error with device ID so UI can offer recovery
+            logger.error("Connection after pairing failed: \(error.localizedDescription)")
+            throw PairingError.connectionFailed(deviceID: deviceID, underlying: error)
+        }
+    }
+
+    /// Removes a device that failed to connect after pairing.
+    /// Call this when user explicitly chooses to remove and retry.
+    /// - Parameter deviceID: The device ID from `PairingError.connectionFailed`
+    public func removeFailedPairing(deviceID: UUID) async {
+        logger.info("Removing failed pairing for device: \(deviceID)")
+
+        // Remove from ASK
+        if let accessory = accessorySetupKit.accessory(for: deviceID) {
+            do {
+                try await accessorySetupKit.removeAccessory(accessory)
+                logger.info("Removed device from ASK")
+            } catch {
+                logger.warning("Failed to remove from ASK: \(error.localizedDescription)")
+            }
+        }
+
+        // Clean up SwiftData (may not exist for fresh pairing)
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        try? await dataStore.deleteDevice(id: deviceID)
+
+        // Clear persisted connection if needed
+        if lastConnectedDeviceID == deviceID {
+            clearPersistedConnection()
+        }
     }
 
     /// Connects to a previously paired device.
@@ -934,6 +989,37 @@ extension ConnectionManager: AccessorySetupKitServiceDelegate {
                 try await dataStore.deleteDevice(id: bluetoothID)
             } catch {
                 logger.warning("Failed to delete device data from SwiftData: \(error.localizedDescription)")
+            }
+        }
+
+        // Clear persisted connection if it was this device
+        if lastConnectedDeviceID == bluetoothID {
+            clearPersistedConnection()
+        }
+    }
+
+    public func accessorySetupKitService(
+        _ service: AccessorySetupKitService,
+        didFailPairingForAccessoryWithID bluetoothID: UUID
+    ) {
+        // Handle pairing failure (e.g., wrong PIN)
+        // Clean up any existing device data so the device can appear in picker again
+        logger.info("Pairing failed for device: \(bluetoothID)")
+
+        Task {
+            // Disconnect if this was somehow the connected device
+            if connectedDevice?.id == bluetoothID {
+                await disconnect()
+            }
+
+            // Delete from SwiftData (may not exist if this was a fresh pairing attempt)
+            let dataStore = PersistenceStore(modelContainer: modelContainer)
+            do {
+                try await dataStore.deleteDevice(id: bluetoothID)
+                logger.info("Deleted device data after failed pairing")
+            } catch {
+                // Expected if device wasn't previously saved
+                logger.debug("No device data to delete: \(error.localizedDescription)")
             }
         }
 

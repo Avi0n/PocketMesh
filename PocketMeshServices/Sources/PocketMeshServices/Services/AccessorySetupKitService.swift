@@ -10,6 +10,9 @@ import os
 public protocol AccessorySetupKitServiceDelegate: AnyObject {
     /// Called when an accessory is removed from Settings > Accessories
     func accessorySetupKitService(_ service: AccessorySetupKitService, didRemoveAccessoryWithID bluetoothID: UUID)
+
+    /// Called when pairing fails (e.g., wrong PIN). The device should be cleaned up from local storage.
+    func accessorySetupKitService(_ service: AccessorySetupKitService, didFailPairingForAccessoryWithID bluetoothID: UUID)
 }
 
 /// Manages AccessorySetupKit session for device discovery and pairing.
@@ -171,6 +174,28 @@ public final class AccessorySetupKitService {
         case .pickerSetupFailed:
             if let error = event.error {
                 logger.error("Pairing failed: \(error.localizedDescription)")
+
+                // Clean up failed accessory so it can appear in picker again
+                if let accessory = event.accessory,
+                   let bluetoothID = accessory.bluetoothIdentifier {
+                    logger.info("Cleaning up failed pairing for \(accessory.displayName)")
+
+                    // Remove from ASK if it's in pairedAccessories
+                    if pairedAccessories.contains(where: { $0.bluetoothIdentifier == bluetoothID }) {
+                        Task {
+                            do {
+                                try await self.removeAccessory(accessory)
+                                self.logger.info("Removed failed accessory from ASK")
+                            } catch {
+                                self.logger.warning("Failed to remove accessory from ASK: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+
+                    // Notify delegate to clean up SwiftData
+                    delegate?.accessorySetupKitService(self, didFailPairingForAccessoryWithID: bluetoothID)
+                }
+
                 resumePickerContinuation(with: .failure(AccessorySetupKitError.pairingFailed(error.localizedDescription)))
             }
 
@@ -397,6 +422,7 @@ public struct ASAccessory {
 @MainActor
 public protocol AccessorySetupKitServiceDelegate: AnyObject {
     func accessorySetupKitService(_ service: AccessorySetupKitService, didRemoveAccessoryWithID bluetoothID: UUID)
+    func accessorySetupKitService(_ service: AccessorySetupKitService, didFailPairingForAccessoryWithID bluetoothID: UUID)
 }
 
 @MainActor @Observable

@@ -3,8 +3,11 @@ import PocketMeshServices
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        @Bindable var appState = appState
+
         Group {
             if appState.hasCompletedOnboarding {
                 MainTabView()
@@ -13,6 +16,37 @@ struct ContentView: View {
             }
         }
         .animation(.default, value: appState.hasCompletedOnboarding)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                appState.handleBecameActive()
+            }
+        }
+        .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
+            if appState.failedPairingDeviceID != nil {
+                // Wrong PIN scenario - offer to remove and retry
+                Button("Remove & Try Again") {
+                    appState.removeFailedPairingAndRetry()
+                }
+                Button("Cancel", role: .cancel) {
+                    appState.failedPairingDeviceID = nil
+                }
+            } else if appState.pendingReconnectDeviceID != nil {
+                Button("Try Again") {
+                    Task {
+                        if let deviceID = appState.pendingReconnectDeviceID {
+                            try? await appState.connectionManager.connect(to: deviceID)
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    appState.pendingReconnectDeviceID = nil
+                }
+            } else {
+                Button("OK", role: .cancel) { }
+            }
+        } message: {
+            Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
+        }
     }
 }
 
@@ -81,24 +115,6 @@ struct MainTabView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .animation(.spring(duration: 0.3), value: appState.shouldShowSyncingPill)
             }
-        }
-        .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
-            if appState.pendingReconnectDeviceID != nil {
-                Button("Try Again") {
-                    Task {
-                        if let deviceID = appState.pendingReconnectDeviceID {
-                            try? await appState.connectionManager.connect(to: deviceID)
-                        }
-                    }
-                }
-                Button("Cancel", role: .cancel) {
-                    appState.pendingReconnectDeviceID = nil
-                }
-            } else {
-                Button("OK", role: .cancel) { }
-            }
-        } message: {
-            Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
         }
         .onChange(of: appState.selectedTab) { _, newTab in
             // Donate pending flood advert tip when returning to a valid tab

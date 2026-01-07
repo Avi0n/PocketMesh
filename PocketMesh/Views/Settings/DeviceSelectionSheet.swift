@@ -107,12 +107,19 @@ struct DeviceSelectionSheet: View {
         ContentUnavailableView {
             Label("No Paired Devices", systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
-            Text("You haven't paired any devices yet.")
-        } actions: {
-            Button("Scan for Devices") {
-                scanForNewDevice()
+            VStack(spacing: 20) {
+                Text("You haven't paired any devices yet.")
+
+                Button {
+                    scanForNewDevice()
+                } label: {
+                    Text("Scan for Devices")
+                        .font(.headline)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                }
+                .liquidGlassProminentButtonStyle()
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 
