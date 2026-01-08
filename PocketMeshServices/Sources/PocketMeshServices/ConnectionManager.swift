@@ -645,7 +645,7 @@ public final class ConnectionManager {
             // Create services
             let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
             await newServices.wireServices()
-            self.services = newServices
+                self.services = newServices
 
             // Seed mock data
             try await simulatorMode.seedDataStore(newServices.dataStore)
@@ -735,7 +735,7 @@ public final class ConnectionManager {
             // Create services
             let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
             await newServices.wireServices()
-            self.services = newServices
+                self.services = newServices
 
             // Fetch existing device to preserve local settings
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
@@ -915,9 +915,16 @@ public final class ConnectionManager {
 
     /// Updates the connected device with new settings from SelfInfo.
     /// Called by SettingsService after device settings are successfully changed.
+    /// Also persists to SwiftData so changes appear in Connect Device sheet.
     public func updateDevice(from selfInfo: MeshCore.SelfInfo) {
         guard let device = connectedDevice else { return }
-        connectedDevice = device.updating(from: selfInfo)
+        let updated = device.updating(from: selfInfo)
+        connectedDevice = updated
+
+        // Persist to SwiftData
+        Task {
+            try? await services?.dataStore.saveDevice(updated)
+        }
     }
 
     /// Updates the connected device with a new DeviceDTO.
@@ -1282,7 +1289,7 @@ public final class ConnectionManager {
 
             let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
             await newServices.wireServices()
-
+    
             // Check after await
             guard shouldBeConnected else {
                 logger.info("User disconnected during service wiring")
