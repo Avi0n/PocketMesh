@@ -209,78 +209,12 @@ struct ContactsListView: View {
         NavigationLink(value: contact) {
             ContactRowView(contact: contact)
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                Task {
-                    await viewModel.deleteContact(contact)
-                }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-
-            Button {
-                Task {
-                    await viewModel.toggleBlocked(contact: contact)
-                }
-            } label: {
-                Label(
-                    contact.isBlocked ? "Unblock" : "Block",
-                    systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
-                )
-            }
-            .tint(.orange)
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-            Button {
-                Task {
-                    await viewModel.toggleFavorite(contact: contact)
-                }
-            } label: {
-                Label(
-                    contact.isFavorite ? "Unfavorite" : "Favorite",
-                    systemImage: contact.isFavorite ? "star.slash" : "star.fill"
-                )
-            }
-            .tint(.yellow)
-        }
+        .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     private func contactSplitRow(_ contact: ContactDTO) -> some View {
         ContactRowView(contact: contact)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) {
-                    Task {
-                        await viewModel.deleteContact(contact)
-                    }
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-
-                Button {
-                    Task {
-                        await viewModel.toggleBlocked(contact: contact)
-                    }
-                } label: {
-                    Label(
-                        contact.isBlocked ? "Unblock" : "Block",
-                        systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
-                    )
-                }
-                .tint(.orange)
-            }
-            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                Button {
-                    Task {
-                        await viewModel.toggleFavorite(contact: contact)
-                    }
-                } label: {
-                    Label(
-                        contact.isFavorite ? "Unfavorite" : "Favorite",
-                        systemImage: contact.isFavorite ? "star.slash" : "star.fill"
-                    )
-                }
-                .tint(.yellow)
-            }
+            .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     // MARK: - Actions
@@ -374,6 +308,57 @@ struct ContactRowView: View {
             return "\(contact.outPathLength) hops"
         }
         return ""
+    }
+}
+
+// MARK: - Contact Swipe Actions
+
+private struct ContactSwipeActionsModifier: ViewModifier {
+    let contact: ContactDTO
+    let viewModel: ContactsViewModel
+
+    func body(content: Content) -> some View {
+        content
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    Task {
+                        await viewModel.deleteContact(contact)
+                    }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+
+                Button {
+                    Task {
+                        await viewModel.toggleBlocked(contact: contact)
+                    }
+                } label: {
+                    Label(
+                        contact.isBlocked ? "Unblock" : "Block",
+                        systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                    )
+                }
+                .tint(.orange)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    Task {
+                        await viewModel.toggleFavorite(contact: contact)
+                    }
+                } label: {
+                    Label(
+                        contact.isFavorite ? "Unfavorite" : "Favorite",
+                        systemImage: contact.isFavorite ? "star.slash" : "star.fill"
+                    )
+                }
+                .tint(.yellow)
+            }
+    }
+}
+
+private extension View {
+    func contactSwipeActions(contact: ContactDTO, viewModel: ContactsViewModel) -> some View {
+        modifier(ContactSwipeActionsModifier(contact: contact, viewModel: viewModel))
     }
 }
 
