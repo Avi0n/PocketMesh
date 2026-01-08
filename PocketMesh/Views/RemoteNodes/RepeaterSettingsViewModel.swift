@@ -695,7 +695,7 @@ final class RepeaterSettingsViewModel {
             case .error(let message):
                 // Extract message after "ERR: " prefix if present
                 if message.contains("clock cannot go backwards") {
-                    errorMessage = "Repeater clock is ahead of phone time"
+                    errorMessage = "Repeater clock is ahead of phone time. If it's too far forward, reboot the repeater then sync time again."
                 } else {
                     let cleanMessage = message.replacing("ERR: ", with: "")
                     errorMessage = cleanMessage.isEmpty ? "Failed to sync time" : cleanMessage
