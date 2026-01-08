@@ -58,4 +58,38 @@ struct WiFiTransportTests {
         let isConnected = await transport.isConnected
         #expect(!isConnected)
     }
+
+    @Test("Disconnection handler can be set and cleared")
+    func disconnectionHandlerCanBeSetAndCleared() async {
+        let transport = WiFiTransport()
+        let callTracker = CallTracker()
+
+        await transport.setDisconnectionHandler { _ in
+            callTracker.markCalled()
+        }
+
+        // Handler is set but not called yet (no disconnection)
+        #expect(!callTracker.wasCalled)
+
+        // Clear handler should work without crash
+        await transport.clearDisconnectionHandler()
+    }
+}
+
+// Thread-safe call tracker for testing async callbacks
+private final class CallTracker: @unchecked Sendable {
+    private var _wasCalled = false
+    private let lock = NSLock()
+
+    var wasCalled: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _wasCalled
+    }
+
+    func markCalled() {
+        lock.lock()
+        defer { lock.unlock() }
+        _wasCalled = true
+    }
 }

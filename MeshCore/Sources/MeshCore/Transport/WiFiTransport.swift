@@ -41,6 +41,9 @@ public actor WiFiTransport: MeshTransport {
     // Thread-safe continuation state (protects against multiple resumes)
     private var connectContinuation: CheckedContinuation<Void, Error>?
 
+    // Disconnection notification
+    private var disconnectionHandler: (@Sendable (Error?) -> Void)?
+
     // MARK: - Configuration
 
     /// Connection timeout duration
@@ -70,6 +73,16 @@ public actor WiFiTransport: MeshTransport {
     public func setConnectionInfo(host: String, port: UInt16) {
         self.configuredHost = host
         self.configuredPort = port
+    }
+
+    /// Sets a handler to be called when the connection is unexpectedly lost.
+    public func setDisconnectionHandler(_ handler: @escaping @Sendable (Error?) -> Void) {
+        self.disconnectionHandler = handler
+    }
+
+    /// Clears the disconnection handler (call before user-initiated disconnect)
+    public func clearDisconnectionHandler() {
+        self.disconnectionHandler = nil
     }
 
     /// Establishes a TCP connection to the configured host and port.
