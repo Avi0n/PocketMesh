@@ -111,6 +111,8 @@ final class LineOfSightViewModel {
 
     var pointA: SelectedPoint?
     var pointB: SelectedPoint?
+    var relocatingPoint: PointID?
+    var shouldAutoZoomOnNextResult = false
 
     // MARK: - RF Parameters
 
@@ -757,6 +759,7 @@ final class LineOfSightViewModel {
     /// Clears analysis results without clearing points
     func clearAnalysisResults() {
         analysisStatus = .idle
+        shouldAutoZoomOnNextResult = false
     }
 
     func analyze() {
@@ -842,6 +845,7 @@ final class LineOfSightViewModel {
         analysisTask?.cancel()
         analysisTask = nil
         analysisStatus = .idle
+        shouldAutoZoomOnNextResult = false
     }
 
     /// Invalidates analysis and clears cached elevation profile

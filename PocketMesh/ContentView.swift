@@ -87,7 +87,7 @@ struct MainTabView: View {
         ZStack(alignment: .top) {
             TabView(selection: $appState.selectedTab) {
             Tab("Chats", systemImage: "message.fill", value: 0) {
-                ChatsListView()
+                ChatsView()
             }
             .badge(appState.services?.notificationService.badgeCount ?? 0)
 

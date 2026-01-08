@@ -8,6 +8,12 @@ private let analysisSheetDetentHalf: PresentationDetent = .fraction(0.5)
 private let analysisSheetDetentExpanded: PresentationDetent = .large
 private let analysisSheetBottomInsetPadding: CGFloat = 16
 
+enum LineOfSightLayoutMode {
+    case map
+    case panel
+    case mapWithSheet
+}
+
 // MARK: - PointID Identifiable Conformance
 
 extension PointID: Identifiable {
@@ -53,10 +59,11 @@ private enum MapStyleSelection: String, CaseIterable, Hashable {
 struct LineOfSightView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+
     @State private var viewModel: LineOfSightViewModel
     @State private var sheetDetent: PresentationDetent = analysisSheetDetentCollapsed
     @State private var screenHeight: CGFloat = 0
-    @State private var showAnalysisSheet = true
+    @State private var showAnalysisSheet: Bool
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var editingPoint: PointID?
     @State private var isDropPinMode = false
@@ -64,9 +71,10 @@ struct LineOfSightView: View {
     @State private var sheetBottomInset: CGFloat = 220
     @State private var isResultsExpanded = false
     @State private var isInitialPointBZoom = false
-    @State private var relocatingPoint: PointID?
     @State private var isRFSettingsExpanded = false
     @Namespace private var mapScope
+
+    private let layoutMode: LineOfSightLayoutMode
 
     // One-time drag hint tooltip for repeater marker
     @AppStorage("hasSeenRepeaterDragHint") private var hasSeenDragHint = false
@@ -74,146 +82,163 @@ struct LineOfSightView: View {
     @State private var repeaterMarkerCenter: CGPoint?
     @State private var isNavigatingBack = false
 
-    private var isRelocating: Bool { relocatingPoint != nil }
+    private var isRelocating: Bool { viewModel.relocatingPoint != nil }
+
+    private var shouldShowExpandedAnalysis: Bool {
+        sheetDetent != analysisSheetDetentCollapsed
+    }
+
+    private var mapOverlayBottomPadding: CGFloat {
+        showAnalysisSheet ? sheetBottomInset : 0
+    }
 
     // MARK: - Initialization
 
     init(preselectedContact: ContactDTO? = nil) {
         _viewModel = State(initialValue: LineOfSightViewModel(preselectedContact: preselectedContact))
+        layoutMode = .mapWithSheet
+        _showAnalysisSheet = State(initialValue: true)
+    }
+
+    init(viewModel: LineOfSightViewModel, layoutMode: LineOfSightLayoutMode) {
+        _viewModel = State(initialValue: viewModel)
+        self.layoutMode = layoutMode
+        _showAnalysisSheet = State(initialValue: layoutMode == .mapWithSheet)
     }
 
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-            mapLayer
+        switch layoutMode {
+        case .panel:
+            ScrollView {
+                analysisSheetContent
+            }
+            .scrollDismissesKeyboard(.immediately)
 
-            // Scale view (bottom-left, above sheet)
-            VStack {
-                Spacer()
-                HStack {
-                    MapScaleView(scope: mapScope)
-                        .padding()
-                    Spacer()
-                }
-            }
-            .padding(.bottom, sheetBottomInset)
+        case .map:
+            mapCanvasWithBehaviors(showSheet: false)
 
-            // Map controls (bottom-right, above sheet)
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    mapControlsStack
-                }
-            }
-            .padding(.bottom, sheetBottomInset)
+        case .mapWithSheet:
+            mapCanvasWithBehaviors(showSheet: true)
         }
-        .mapScope(mapScope)
-        .navigationBarBackButtonHidden(true)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismissLineOfSight()
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .labelStyle(.titleAndIcon)
-                }
-                .accessibilityLabel("Back")
-            }
-        }
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.height
-        } action: { height in
-            screenHeight = height
-            updateSheetBottomInset()
-        }
-        .onChange(of: sheetDetent) { _, _ in
-            updateSheetBottomInset()
-        }
-        .sheet(isPresented: $showAnalysisSheet) {
-            analysisSheet
-                .presentationDetents(
-                    [analysisSheetDetentCollapsed, analysisSheetDetentHalf, analysisSheetDetentExpanded],
-                    selection: $sheetDetent
-                )
-                .presentationDragIndicator(.visible)
-                .presentationBackgroundInteraction(.enabled)
-                .presentationBackground(.regularMaterial)
-                .interactiveDismissDisabled()
-        }
-        .onDisappear {
-            showAnalysisSheet = false
-        }
-        .onChange(of: viewModel.pointA) { oldValue, newValue in
-            // Zoom when both points become set (A was just added while B exists)
-            if oldValue == nil, newValue != nil, viewModel.pointB != nil {
-                isInitialPointBZoom = true
-                withAnimation {
-                    sheetDetent = analysisSheetDetentHalf
-                }
-                zoomToShowBothPoints()
-            }
-            // Collapse sheet when both points cleared
-            if newValue == nil, viewModel.pointB == nil {
-                withAnimation {
-                    sheetDetent = analysisSheetDetentCollapsed
-                }
-            }
-        }
-        .onChange(of: viewModel.pointB) { oldValue, newValue in
-            // Zoom when both points become set (B was just added while A exists)
-            if oldValue == nil, newValue != nil, viewModel.pointA != nil {
-                isInitialPointBZoom = true
-                withAnimation {
-                    sheetDetent = analysisSheetDetentHalf
-                }
-                zoomToShowBothPoints()
-            }
-            // Collapse sheet when both points cleared
-            if newValue == nil, viewModel.pointA == nil {
-                withAnimation {
-                    sheetDetent = analysisSheetDetentCollapsed
-                }
-            }
-        }
-        .onChange(of: sheetDetent) { oldValue, newValue in
-            // Clear zoom padding when user changes sheet after initial zoom
-            if isInitialPointBZoom, oldValue == analysisSheetDetentHalf, newValue != analysisSheetDetentHalf {
-                isInitialPointBZoom = false
-            }
+    }
 
-            // Cancel relocation if sheet expands beyond collapsed
-            if isRelocating, newValue != analysisSheetDetentCollapsed {
-                relocatingPoint = nil
-            }
-        }
-        .onChange(of: viewModel.repeaterPoint) { oldValue, newValue in
-            // Trigger one-time drag hint tooltip when repeater first added (on-path only)
-            if oldValue == nil,
-               newValue != nil,
-               newValue?.isOnPath == true,
-               !hasSeenDragHint {
-                withAnimation(.easeIn(duration: 0.3)) {
-                    showDragHint = true
+    @ViewBuilder
+    private func mapCanvasWithBehaviors(showSheet: Bool) -> some View {
+        let base = mapCanvas
+            .mapScope(mapScope)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.height
+            } action: { height in
+                screenHeight = height
+                if showSheet, showAnalysisSheet {
+                    updateSheetBottomInset()
                 }
-                hasSeenDragHint = true
-                Task {
-                    try? await Task.sleep(for: .seconds(5))
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showDragHint = false
+            }
+            .onChange(of: sheetDetent) { _, _ in
+                if showSheet, showAnalysisSheet {
+                    updateSheetBottomInset()
+                }
+            }
+            .onChange(of: viewModel.pointA) { oldValue, newValue in
+                if oldValue == nil, newValue != nil, viewModel.pointB != nil {
+                    if showSheet {
+                        withAnimation {
+                            sheetDetent = analysisSheetDetentHalf
+                        }
+                    }
+                }
+
+                if showSheet, newValue == nil, viewModel.pointB == nil {
+                    withAnimation {
+                        sheetDetent = analysisSheetDetentCollapsed
                     }
                 }
             }
-        }
-        .onChange(of: viewModel.analysisStatus) { _, newStatus in
-            handleAnalysisStatusChange(newStatus)
-        }
-        .task {
-            appState.locationService.requestPermissionIfNeeded()
-            viewModel.configure(appState: appState)
-            await viewModel.loadRepeaters()
-            centerOnAllRepeaters()
+            .onChange(of: viewModel.pointB) { oldValue, newValue in
+                if oldValue == nil, newValue != nil, viewModel.pointA != nil {
+                    if showSheet {
+                        withAnimation {
+                            sheetDetent = analysisSheetDetentHalf
+                        }
+                    }
+                }
+
+                if showSheet, newValue == nil, viewModel.pointA == nil {
+                    withAnimation {
+                        sheetDetent = analysisSheetDetentCollapsed
+                    }
+                }
+            }
+            .onChange(of: sheetDetent) { oldValue, newValue in
+                guard showSheet else { return }
+
+                if isInitialPointBZoom, oldValue == analysisSheetDetentHalf, newValue != analysisSheetDetentHalf {
+                    isInitialPointBZoom = false
+                }
+
+                if isRelocating, newValue != analysisSheetDetentCollapsed {
+                    viewModel.relocatingPoint = nil
+                }
+            }
+            .onChange(of: viewModel.repeaterPoint) { oldValue, newValue in
+                if oldValue == nil,
+                   newValue != nil,
+                   newValue?.isOnPath == true,
+                   !hasSeenDragHint {
+                    withAnimation(.easeIn(duration: 0.3)) {
+                        showDragHint = true
+                    }
+                    hasSeenDragHint = true
+                    Task {
+                        try? await Task.sleep(for: .seconds(5))
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            showDragHint = false
+                        }
+                    }
+                }
+            }
+            .onChange(of: viewModel.analysisStatus) { _, newStatus in
+                handleAnalysisStatusChange(newStatus, showSheet: showSheet)
+            }
+            .task {
+                appState.locationService.requestPermissionIfNeeded()
+                viewModel.configure(appState: appState)
+                await viewModel.loadRepeaters()
+                centerOnAllRepeaters()
+            }
+
+        if showSheet {
+            base
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            dismissLineOfSight()
+                        } label: {
+                            Label("Back", systemImage: "chevron.left")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .accessibilityLabel("Back")
+                    }
+                }
+                .onDisappear {
+                    showAnalysisSheet = false
+                }
+                .sheet(isPresented: $showAnalysisSheet) {
+                    analysisSheet
+                        .presentationDetents(
+                            [analysisSheetDetentCollapsed, analysisSheetDetentHalf, analysisSheetDetentExpanded],
+                            selection: $sheetDetent
+                        )
+                        .presentationDragIndicator(.visible)
+                        .presentationBackgroundInteraction(.enabled)
+                        .presentationBackground(.regularMaterial)
+                        .interactiveDismissDisabled()
+                }
+        } else {
+            base
         }
     }
 
@@ -223,11 +248,36 @@ struct LineOfSightView: View {
         isNavigatingBack = true
 
         showAnalysisSheet = false
-        relocatingPoint = nil
+        viewModel.relocatingPoint = nil
 
         Task { @MainActor in
             await Task.yield()
             dismiss()
+        }
+    }
+
+    private var mapCanvas: some View {
+        ZStack {
+            mapLayer
+
+            VStack {
+                Spacer()
+                HStack {
+                    MapScaleView(scope: mapScope)
+                        .padding()
+                    Spacer()
+                }
+            }
+            .padding(.bottom, mapOverlayBottomPadding)
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    mapControlsStack
+                }
+            }
+            .padding(.bottom, mapOverlayBottomPadding)
         }
     }
 
@@ -236,12 +286,12 @@ struct LineOfSightView: View {
     @State private var mapProxy: MapProxy?
 
     private func markerOpacity(for pointID: PointID) -> Double {
-        guard let relocating = relocatingPoint else { return 1.0 }
+        guard let relocating = viewModel.relocatingPoint else { return 1.0 }
         return relocating == pointID ? 0.4 : 1.0
     }
 
     private func lineOpacity(connectsTo pointID: PointID) -> Double {
-        guard let relocating = relocatingPoint else { return 0.7 }
+        guard let relocating = viewModel.relocatingPoint else { return 0.7 }
 
         // When relocating repeater, both lines dim
         if relocating == .repeater { return 0.3 }
@@ -319,7 +369,7 @@ struct LineOfSightView: View {
                             .stroke(.blue.opacity(lineOpacity(connectsTo: .pointB)), style: StrokeStyle(lineWidth: 3, dash: [8, 4]))
                     } else {
                         // Single segment: A→B - dims if either A or B is relocating
-                        let opacity = (relocatingPoint == .pointA || relocatingPoint == .pointB) ? 0.3 : 0.7
+                        let opacity = (viewModel.relocatingPoint == .pointA || viewModel.relocatingPoint == .pointB) ? 0.3 : 0.7
                         MapPolyline(coordinates: [pointA.coordinate, pointB.coordinate])
                             .stroke(.blue.opacity(opacity), style: StrokeStyle(lineWidth: 3, dash: [8, 4]))
                     }
@@ -431,7 +481,7 @@ struct LineOfSightView: View {
 
                 resultSummarySection(result)
 
-                if sheetDetent != analysisSheetDetentCollapsed {
+                if shouldShowExpandedAnalysis {
                     terrainProfileSection
                     rfSettingsSection
                 }
@@ -443,7 +493,7 @@ struct LineOfSightView: View {
 
                 RelayResultsCardView(result: result, isExpanded: $isResultsExpanded)
 
-                if sheetDetent != analysisSheetDetentCollapsed {
+                if shouldShowExpandedAnalysis {
                     terrainProfileSection
                     rfSettingsSection
                 }
@@ -472,7 +522,7 @@ struct LineOfSightView: View {
 
                 if isRelocating {
                     Button("Cancel") {
-                        relocatingPoint = nil
+                        viewModel.relocatingPoint = nil
                     }
                     .glassButtonStyle()
                     .controlSize(.small)
@@ -480,7 +530,7 @@ struct LineOfSightView: View {
             }
 
             // Show relocating message OR point rows
-            if let relocatingPoint {
+            if let relocatingPoint = viewModel.relocatingPoint {
                 relocatingMessageView(for: relocatingPoint)
             } else {
                 // Point A row
@@ -672,10 +722,10 @@ struct LineOfSightView: View {
 
         // Relocate button (toggles on/off)
         Button("Relocate", systemImage: "mappin") {
-            if relocatingPoint == pointID {
-                relocatingPoint = nil
+            if viewModel.relocatingPoint == pointID {
+                viewModel.relocatingPoint = nil
             } else {
-                relocatingPoint = pointID
+                viewModel.relocatingPoint = pointID
                 withAnimation {
                     sheetDetent = analysisSheetDetentCollapsed
                 }
@@ -684,7 +734,7 @@ struct LineOfSightView: View {
         .labelStyle(.iconOnly)
         .glassButtonStyle()
         .controlSize(.small)
-        .disabled(relocatingPoint != nil && relocatingPoint != pointID)
+        .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != pointID)
 
         // Edit/Done toggle
         Button(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil") {
@@ -842,10 +892,10 @@ struct LineOfSightView: View {
 
                 // Relocate button (toggles on/off)
                 Button("Relocate", systemImage: "mappin") {
-                    if relocatingPoint == .repeater {
-                        relocatingPoint = nil
+                    if viewModel.relocatingPoint == .repeater {
+                        viewModel.relocatingPoint = nil
                     } else {
-                        relocatingPoint = .repeater
+                        viewModel.relocatingPoint = .repeater
                         withAnimation {
                             sheetDetent = analysisSheetDetentCollapsed
                         }
@@ -854,7 +904,7 @@ struct LineOfSightView: View {
                 .labelStyle(.iconOnly)
                 .glassButtonStyle()
                 .controlSize(.small)
-                .disabled(relocatingPoint != nil && relocatingPoint != .repeater)
+                .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != .repeater)
 
                 // Edit/Done toggle
                 Button(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil") {
@@ -977,6 +1027,8 @@ struct LineOfSightView: View {
 
     private var analyzeButtonSection: some View {
         Button {
+            viewModel.shouldAutoZoomOnNextResult = true
+
             withAnimation {
                 sheetDetent = analysisSheetDetentExpanded
             }
@@ -1163,7 +1215,7 @@ struct LineOfSightView: View {
               let coordinate = proxy.convert(position, from: .local) else { return }
 
         // Handle relocation mode
-        if let relocating = relocatingPoint {
+        if let relocating = viewModel.relocatingPoint {
             handleRelocation(to: coordinate, for: relocating)
             return
         }
@@ -1185,7 +1237,7 @@ struct LineOfSightView: View {
 
         // Clear results and show Analyze button
         viewModel.clearAnalysisResults()
-        relocatingPoint = nil
+        viewModel.relocatingPoint = nil
         withAnimation {
             sheetDetent = analysisSheetDetentHalf
         }
@@ -1225,43 +1277,59 @@ struct LineOfSightView: View {
         cameraPosition = .region(region)
     }
 
-    private func handleAnalysisStatusChange(_ status: AnalysisStatus) {
+    private func handleAnalysisStatusChange(_ status: AnalysisStatus, showSheet: Bool) {
         switch status {
         case .result:
-            withAnimation {
-                sheetDetent = analysisSheetDetentExpanded
+            if showSheet {
+                withAnimation {
+                    sheetDetent = analysisSheetDetentExpanded
+                }
             }
-            zoomToShowBothPoints()
+            if viewModel.shouldAutoZoomOnNextResult {
+                viewModel.shouldAutoZoomOnNextResult = false
+                zoomToShowBothPoints()
+            }
         case .relayResult:
-            // Don't re-zoom during relay analysis (prevents jank during drag)
-            break
+            if viewModel.shouldAutoZoomOnNextResult {
+                viewModel.shouldAutoZoomOnNextResult = false
+                zoomToShowBothPoints()
+            }
         default:
             break
         }
     }
 
     private func zoomToShowBothPoints() {
-        guard let pointA = viewModel.pointA, let pointB = viewModel.pointB else { return }
+        Task { @MainActor in
+            await Task.yield()
+            if Task.isCancelled { return }
 
-        let minLat = min(pointA.coordinate.latitude, pointB.coordinate.latitude)
-        let maxLat = max(pointA.coordinate.latitude, pointB.coordinate.latitude)
-        let minLon = min(pointA.coordinate.longitude, pointB.coordinate.longitude)
-        let maxLon = max(pointA.coordinate.longitude, pointB.coordinate.longitude)
+            guard let pointA = viewModel.pointA, let pointB = viewModel.pointB else { return }
 
-        let centerLat = (minLat + maxLat) / 2
-        let centerLon = (minLon + maxLon) / 2
+            let minLat = min(pointA.coordinate.latitude, pointB.coordinate.latitude)
+            let maxLat = max(pointA.coordinate.latitude, pointB.coordinate.latitude)
+            let minLon = min(pointA.coordinate.longitude, pointB.coordinate.longitude)
+            let maxLon = max(pointA.coordinate.longitude, pointB.coordinate.longitude)
 
-        // Add padding for comfortable viewing (1.5x the span)
-        let paddingMultiplier = 1.5
-        let latDelta = max(0.01, (maxLat - minLat) * paddingMultiplier)
-        let lonDelta = max(0.01, (maxLon - minLon) * paddingMultiplier)
+            let centerLat = (minLat + maxLat) / 2
+            let centerLon = (minLon + maxLon) / 2
 
-        // safeAreaPadding on the Map handles the sheet offset automatically
-        let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
-        let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
-        let region = MKCoordinateRegion(center: center, span: span)
+            // Add padding for comfortable viewing (1.5x the span)
+            let paddingMultiplier = 1.5
+            let latDelta = max(0.01, (maxLat - minLat) * paddingMultiplier)
+            let lonDelta = max(0.01, (maxLon - minLon) * paddingMultiplier)
 
-        cameraPosition = .region(region)
+            // safeAreaPadding on the Map handles the sheet offset automatically
+            let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+            let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+            let region = MKCoordinateRegion(center: center, span: span)
+
+            var transaction = Transaction(animation: .easeInOut(duration: 1.0))
+            transaction.disablesAnimations = false
+            withTransaction(transaction) {
+                cameraPosition = .region(region)
+            }
+        }
     }
 
     private func handleRepeaterTap(_ contact: ContactDTO) {

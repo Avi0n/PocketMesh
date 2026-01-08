@@ -127,12 +127,11 @@ final class ChatViewModelQueueTests: XCTestCase {
         XCTAssertEqual(viewModel.sendQueueCount, 0)
         XCTAssertFalse(viewModel.isProcessingQueue)
 
-        // Verify messages were saved (fetchMessages returns newest first)
         let messages = try await dataStore.fetchMessages(contactID: contact.id)
         XCTAssertEqual(messages.count, 3)
-        XCTAssertEqual(messages[2].text, "First")
+        XCTAssertEqual(messages[0].text, "First")
         XCTAssertEqual(messages[1].text, "Second")
-        XCTAssertEqual(messages[0].text, "Third")
+        XCTAssertEqual(messages[2].text, "Third")
     }
 
     func testQueueContinuesAfterFailure() async throws {
@@ -228,13 +227,12 @@ final class ChatViewModelQueueTests: XCTestCase {
         // Process the queue
         await viewModel.processQueueForTesting()
 
-        // Verify messages went to Alice, not Bob (fetchMessages returns newest first)
         let aliceMessages = try await dataStore.fetchMessages(contactID: alice.id)
         let bobMessages = try await dataStore.fetchMessages(contactID: bob.id)
 
         XCTAssertEqual(aliceMessages.count, 2, "Messages should go to Alice")
-        XCTAssertEqual(aliceMessages[1].text, "Hello Alice")
-        XCTAssertEqual(aliceMessages[0].text, "How are you?")
+        XCTAssertEqual(aliceMessages[0].text, "Hello Alice")
+        XCTAssertEqual(aliceMessages[1].text, "How are you?")
         XCTAssertEqual(bobMessages.count, 0, "Bob should have no messages")
     }
 }

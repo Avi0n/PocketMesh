@@ -4,8 +4,11 @@ import PocketMeshServices
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     @State private var viewModel = ContactsViewModel()
     @State private var navigationPath = NavigationPath()
+    @State private var selectedContact: ContactDTO?
     @State private var searchText = ""
     @State private var showFavoritesOnly = false
     @State private var showDiscovery = false
@@ -17,121 +20,159 @@ struct ContactsListView: View {
         viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
     }
 
+    private var shouldUseSplitView: Bool {
+        horizontalSizeClass == .regular
+    }
+
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            Group {
-                if viewModel.isLoading && viewModel.contacts.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if viewModel.contacts.isEmpty {
-                    emptyView
+        if shouldUseSplitView {
+            NavigationSplitView {
+                NavigationStack {
+                    contactsSidebarContent
+                        .navigationDestination(isPresented: $showDiscovery) {
+                            DiscoveryView()
+                        }
+                }
+            } detail: {
+                NavigationStack {
+                    if let selectedContact {
+                        ContactDetailView(contact: selectedContact)
+                            .id(selectedContact.id)
+                    } else {
+                        ContentUnavailableView("Select a contact", systemImage: "person.2")
+                    }
+                }
+            }
+        } else {
+            NavigationStack(path: $navigationPath) {
+                contactsSidebarContent
+                    .navigationDestination(isPresented: $showDiscovery) {
+                        DiscoveryView()
+                    }
+                    .navigationDestination(for: ContactDTO.self) { contact in
+                        ContactDetailView(contact: contact)
+                    }
+            }
+        }
+    }
+
+    private var contactsSidebarContent: some View {
+        Group {
+            if viewModel.isLoading && viewModel.contacts.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.contacts.isEmpty {
+                emptyView
+            } else {
+                if shouldUseSplitView {
+                    contactsSplitList
                 } else {
                     contactsList
                 }
             }
-            .navigationTitle("Contacts")
-            .searchable(text: $searchText, prompt: "Search contacts")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    BLEStatusIndicatorView()
-                }
-                ToolbarItem(placement: .automatic) {
-                    Menu {
-                        Button {
-                            showFavoritesOnly.toggle()
-                        } label: {
-                            Label(
-                                showFavoritesOnly ? "Show All" : "Show Favorites",
-                                systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
-                            )
-                        }
-
-                        Divider()
-
-                        Button {
-                            showShareMyContact = true
-                        } label: {
-                            Label("Share My Contact", systemImage: "square.and.arrow.up")
-                        }
-
-                        Button {
-                            showAddContact = true
-                        } label: {
-                            Label("Add Contact", systemImage: "plus")
-                        }
-
-                        Divider()
-
-                        NavigationLink {
-                            DiscoveryView()
-                        } label: {
-                            Label("Discovery", systemImage: "antenna.radiowaves.left.and.right")
-                        }
-
-                        Divider()
-
-                        Button {
-                            Task {
-                                await syncContacts()
-                            }
-                        } label: {
-                            Label("Sync Contacts", systemImage: "arrow.triangle.2.circlepath")
-                        }
-                        .disabled(viewModel.isSyncing)
+        }
+        .navigationTitle("Contacts")
+        .searchable(text: $searchText, prompt: "Search contacts")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                BLEStatusIndicatorView()
+            }
+            ToolbarItem(placement: .automatic) {
+                Menu {
+                    Button {
+                        showFavoritesOnly.toggle()
                     } label: {
-                        Label("Options", systemImage: "ellipsis.circle")
+                        Label(
+                            showFavoritesOnly ? "Show All" : "Show Favorites",
+                            systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
+                        )
                     }
+
+                    Divider()
+
+                    Button {
+                        showShareMyContact = true
+                    } label: {
+                        Label("Share My Contact", systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showAddContact = true
+                    } label: {
+                        Label("Add Contact", systemImage: "plus")
+                    }
+
+                    Divider()
+
+                    NavigationLink {
+                        DiscoveryView()
+                    } label: {
+                        Label("Discovery", systemImage: "antenna.radiowaves.left.and.right")
+                    }
+
+                    Divider()
+
+                    Button {
+                        Task {
+                            await syncContacts()
+                        }
+                    } label: {
+                        Label("Sync Contacts", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    .disabled(viewModel.isSyncing)
+                } label: {
+                    Label("Options", systemImage: "ellipsis.circle")
                 }
             }
-            .refreshable {
-                await syncContacts()
-            }
-            .sensoryFeedback(.success, trigger: syncSuccessTrigger)
-            .task {
-                viewModel.configure(appState: appState)
+        }
+        .refreshable {
+            await syncContacts()
+        }
+        .sensoryFeedback(.success, trigger: syncSuccessTrigger)
+        .task {
+            viewModel.configure(appState: appState)
+            await loadContacts()
+        }
+        .onChange(of: appState.servicesVersion) { _, _ in
+            // Services changed (device switch, reconnect) - reload contacts
+            Task {
                 await loadContacts()
             }
-            .onChange(of: appState.servicesVersion) { _, _ in
-                // Services changed (device switch, reconnect) - reload contacts
-                Task {
-                    await loadContacts()
-                }
+        }
+        .onChange(of: appState.contactsVersion) { _, _ in
+            Task {
+                await loadContacts()
             }
-            .onChange(of: appState.contactsVersion) { _, _ in
-                Task {
-                    await loadContacts()
-                }
+        }
+        .onChange(of: appState.pendingDiscoveryNavigation) { _, shouldNavigate in
+            if shouldNavigate {
+                showDiscovery = true
+                appState.clearPendingDiscoveryNavigation()
             }
-            .onChange(of: appState.pendingDiscoveryNavigation) { _, shouldNavigate in
-                if shouldNavigate {
-                    showDiscovery = true
-                    appState.clearPendingDiscoveryNavigation()
-                }
-            }
-            .navigationDestination(isPresented: $showDiscovery) {
-                DiscoveryView()
-            }
-            .navigationDestination(for: ContactDTO.self) { contact in
-                ContactDetailView(contact: contact)
-            }
-            .onChange(of: appState.pendingContactDetail) { _, contact in
-                guard let contact else { return }
+        }
+        .onChange(of: appState.pendingContactDetail) { _, contact in
+            guard let contact else { return }
+
+            if shouldUseSplitView {
+                selectedContact = contact
+            } else {
                 navigationPath.removeLast(navigationPath.count)
                 navigationPath.append(contact)
-                appState.clearPendingContactDetailNavigation()
             }
-            .sheet(isPresented: $showShareMyContact) {
-                if let device = appState.connectedDevice {
-                    ContactQRShareSheet(
-                        contactName: device.nodeName,
-                        publicKey: device.publicKey,
-                        contactType: .chat
-                    )
-                }
+
+            appState.clearPendingContactDetailNavigation()
+        }
+        .sheet(isPresented: $showShareMyContact) {
+            if let device = appState.connectedDevice {
+                ContactQRShareSheet(
+                    contactName: device.nodeName,
+                    publicKey: device.publicKey,
+                    contactType: .chat
+                )
             }
-            .sheet(isPresented: $showAddContact) {
-                AddContactSheet()
-            }
+        }
+        .sheet(isPresented: $showAddContact) {
+            AddContactSheet()
         }
     }
 
@@ -149,6 +190,16 @@ struct ContactsListView: View {
         List {
             ForEach(filteredContacts) { contact in
                 contactRow(contact)
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    private var contactsSplitList: some View {
+        List(selection: $selectedContact) {
+            ForEach(filteredContacts) { contact in
+                contactSplitRow(contact)
+                    .tag(contact)
             }
         }
         .listStyle(.plain)
@@ -192,6 +243,44 @@ struct ContactsListView: View {
             }
             .tint(.yellow)
         }
+    }
+
+    private func contactSplitRow(_ contact: ContactDTO) -> some View {
+        ContactRowView(contact: contact)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    Task {
+                        await viewModel.deleteContact(contact)
+                    }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+
+                Button {
+                    Task {
+                        await viewModel.toggleBlocked(contact: contact)
+                    }
+                } label: {
+                    Label(
+                        contact.isBlocked ? "Unblock" : "Block",
+                        systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                    )
+                }
+                .tint(.orange)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    Task {
+                        await viewModel.toggleFavorite(contact: contact)
+                    }
+                } label: {
+                    Label(
+                        contact.isFavorite ? "Unfavorite" : "Favorite",
+                        systemImage: contact.isFavorite ? "star.slash" : "star.fill"
+                    )
+                }
+                .tint(.yellow)
+            }
     }
 
     // MARK: - Actions
