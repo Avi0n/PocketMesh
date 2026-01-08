@@ -118,6 +118,23 @@ public final class ConnectionManager {
     /// iOS auto-reconnect continues in background even after this fires.
     private var autoReconnectTimeoutTask: Task<Void, Never>?
 
+    // MARK: - WiFi Reconnection
+
+    /// Task handling WiFi reconnection attempts
+    private var wifiReconnectTask: Task<Void, Never>?
+
+    /// Current reconnection attempt number
+    private var wifiReconnectAttempt = 0
+
+    /// Maximum duration for WiFi reconnection attempts (30 seconds)
+    private static let wifiMaxReconnectDuration: Duration = .seconds(30)
+
+    /// Last reconnection start time (for rate limiting rapid disconnects)
+    private var lastWiFiReconnectStartTime: Date?
+
+    /// Minimum interval between reconnection attempts (prevents flapping)
+    private static let wifiReconnectCooldown: TimeInterval = 35
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -161,6 +178,13 @@ public final class ConnectionManager {
     private func cancelAutoReconnectTimeout() {
         autoReconnectTimeoutTask?.cancel()
         autoReconnectTimeoutTask = nil
+    }
+
+    /// Cancels any in-progress WiFi reconnection attempts
+    private func cancelWiFiReconnection() {
+        wifiReconnectTask?.cancel()
+        wifiReconnectTask = nil
+        wifiReconnectAttempt = 0
     }
 
     // MARK: - Initialization
@@ -380,6 +404,9 @@ public final class ConnectionManager {
 
         // Cancel any pending auto-reconnect timeout
         cancelAutoReconnectTimeout()
+
+        // Cancel any WiFi reconnection in progress
+        cancelWiFiReconnection()
 
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
