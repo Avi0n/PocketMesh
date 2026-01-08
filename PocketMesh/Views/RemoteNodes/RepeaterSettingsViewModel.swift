@@ -655,11 +655,20 @@ final class RepeaterSettingsViewModel {
 
         do {
             let response = try await sendAndWait("clock sync")
-            if case .ok = CLIResponse.parse(response) {
+            switch CLIResponse.parse(response) {
+            case .ok:
                 successMessage = "Time synced"
                 showSuccessAlert = true
-            } else {
-                errorMessage = "Failed to sync time"
+            case .error(let message):
+                // Extract message after "ERR: " prefix if present
+                if message.contains("clock cannot go backwards") {
+                    errorMessage = "Repeater clock is ahead of phone time"
+                } else {
+                    let cleanMessage = message.replacing("ERR: ", with: "")
+                    errorMessage = cleanMessage.isEmpty ? "Failed to sync time" : cleanMessage
+                }
+            default:
+                errorMessage = "Unexpected response: \(response)"
             }
         } catch {
             errorMessage = error.localizedDescription
