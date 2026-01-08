@@ -11,6 +11,12 @@ public enum ConnectionState: Sendable {
     case ready
 }
 
+/// Transport type for the mesh connection
+public enum TransportType: Sendable {
+    case bluetooth
+    case wifi
+}
+
 /// Errors that can occur during connection operations
 public enum ConnectionError: LocalizedError {
     case connectionFailed(String)
@@ -79,6 +85,9 @@ public final class ConnectionManager {
     /// Services container (nil when disconnected)
     public private(set) var services: ServiceContainer?
 
+    /// Current transport type (bluetooth or wifi)
+    public private(set) var currentTransportType: TransportType?
+
     /// Whether user wants to be connected. Only changed by explicit user actions.
     private var shouldBeConnected = false
 
@@ -97,6 +106,7 @@ public final class ConnectionManager {
 
     private let modelContainer: ModelContainer
     private let transport: iOSBLETransport
+    private var wifiTransport: WiFiTransport?
     private var session: MeshCoreSession?
     private let accessorySetupKit = AccessorySetupKitService()
 
@@ -380,8 +390,16 @@ public final class ConnectionManager {
         // Stop session
         await session?.stop()
 
-        // Disconnect transport
-        await transport.disconnect()
+        // Disconnect appropriate transport based on current type
+        if let wifiTransport {
+            await wifiTransport.disconnect()
+            self.wifiTransport = nil
+        } else {
+            await transport.disconnect()
+        }
+
+        // Clear transport type
+        currentTransportType = nil
 
         // Clear state
         await cleanupConnection()
@@ -443,6 +461,109 @@ public final class ConnectionManager {
     /// Whether the last connection was a simulator connection
     public var wasSimulatorConnection: Bool {
         lastConnectedDeviceID == MockDataProvider.simulatorDeviceID
+    }
+
+    /// Connects to a device via WiFi/TCP.
+    ///
+    /// - Parameters:
+    ///   - host: The hostname or IP address of the device
+    ///   - port: The TCP port to connect to
+    /// - Throws: Connection or session errors
+    public func connectViaWiFi(host: String, port: UInt16) async throws {
+        logger.info("Connecting via WiFi to \(host):\(port)")
+
+        // Disconnect existing connection if any
+        if connectionState != .disconnected {
+            await disconnect()
+        }
+
+        connectionState = .connecting
+        shouldBeConnected = true
+
+        do {
+            // Create and configure WiFi transport
+            let newWiFiTransport = WiFiTransport()
+            await newWiFiTransport.setConnectionInfo(host: host, port: port)
+            wifiTransport = newWiFiTransport
+
+            // Connect the transport
+            try await newWiFiTransport.connect()
+
+            connectionState = .connected
+
+            // Create session (same as BLE)
+            let newSession = MeshCoreSession(transport: newWiFiTransport)
+            self.session = newSession
+
+            // Start session (this calls sendAppStart internally)
+            try await newSession.start()
+
+            // Get device info from session
+            guard let meshCoreSelfInfo = await newSession.currentSelfInfo else {
+                throw ConnectionError.initializationFailed("Failed to get device self info")
+            }
+            let deviceCapabilities = try await newSession.queryDevice()
+
+            // Derive device ID from public key (WiFi devices don't have Bluetooth UUIDs)
+            let deviceID = DeviceIdentity.deriveUUID(from: meshCoreSelfInfo.publicKey)
+
+            // Sync device time (best effort)
+            do {
+                let deviceTime = try await newSession.getTime()
+                let timeDifference = abs(deviceTime.timeIntervalSinceNow)
+                if timeDifference > 60 {
+                    try await newSession.setTime(Date())
+                    logger.info("Synced device time (was off by \(Int(timeDifference))s)")
+                }
+            } catch {
+                logger.warning("Failed to sync device time: \(error.localizedDescription)")
+            }
+
+            // Create services
+            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            await newServices.wireServices()
+            self.services = newServices
+
+            // Fetch existing device to preserve local settings
+            let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+
+            // Create and save device
+            let device = createDevice(
+                deviceID: deviceID,
+                selfInfo: meshCoreSelfInfo,
+                capabilities: deviceCapabilities,
+                existingDevice: existingDevice
+            )
+
+            try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
+            self.connectedDevice = DeviceDTO(from: device)
+
+            // Persist connection for potential future use
+            persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
+
+            // Notify observers before sync starts
+            await onConnectionReady?()
+
+            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+
+            currentTransportType = .wifi
+            connectionState = .ready
+            logger.info("WiFi connection complete - device ready")
+
+        } catch {
+            // Cleanup on failure
+            if let wifiTransport {
+                await wifiTransport.disconnect()
+                self.wifiTransport = nil
+            }
+            currentTransportType = nil
+            await cleanupConnection()
+            throw error
+        }
     }
 
     /// Switches to a different device.
@@ -514,6 +635,7 @@ public final class ConnectionManager {
             services: newServices
         )
 
+        currentTransportType = .bluetooth
         connectionState = .ready
         logger.info("Device switch complete - device ready")
     }
@@ -757,6 +879,7 @@ public final class ConnectionManager {
             services: newServices
         )
 
+        currentTransportType = .bluetooth
         connectionState = .ready
         logger.info("Connection complete - device ready")
     }
@@ -945,6 +1068,7 @@ public final class ConnectionManager {
                 services: newServices
             )
 
+            currentTransportType = .bluetooth
             connectionState = .ready
             logger.info("iOS auto-reconnect: session ready")
 
