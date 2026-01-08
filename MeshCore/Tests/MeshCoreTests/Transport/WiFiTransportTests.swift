@@ -89,6 +89,48 @@ struct WiFiTransportTests {
         #expect(info?.host == "192.168.1.50")
         #expect(info?.port == 5000)
     }
+
+    @Test("Disconnection handler not called on user-initiated disconnect")
+    func disconnectionHandlerNotCalledOnUserDisconnect() async {
+        let transport = WiFiTransport()
+        let callTracker = CallTracker()
+
+        await transport.setDisconnectionHandler { _ in
+            callTracker.markCalled()
+        }
+
+        // User-initiated disconnect should NOT trigger handler
+        await transport.disconnect()
+
+        // Give any async callbacks time to fire
+        try? await Task.sleep(for: .milliseconds(100))
+
+        #expect(!callTracker.wasCalled, "Handler should not be called on user disconnect")
+    }
+
+    @Test("Disconnection handler not called on initial connect failure")
+    func disconnectionHandlerNotCalledOnInitialConnectFailure() async {
+        let transport = WiFiTransport()
+        let callTracker = CallTracker()
+
+        await transport.setDisconnectionHandler { _ in
+            callTracker.markCalled()
+        }
+
+        // Configure to invalid host
+        await transport.setConnectionInfo(host: "999.999.999.999", port: 5000)
+
+        // Initial connect failure should NOT trigger disconnection handler
+        do {
+            try await transport.connect()
+        } catch {
+            // Expected to fail
+        }
+
+        try? await Task.sleep(for: .milliseconds(100))
+
+        #expect(!callTracker.wasCalled, "Handler should not be called on initial connect failure")
+    }
 }
 
 // Thread-safe call tracker for testing async callbacks
