@@ -187,6 +187,163 @@ public final class ConnectionManager {
         wifiReconnectAttempt = 0
     }
 
+    /// Handles unexpected WiFi connection loss
+    private func handleWiFiDisconnection(error: Error?) async {
+        // User-initiated disconnect - don't reconnect
+        guard shouldBeConnected else { return }
+
+        // Only handle WiFi disconnections
+        guard currentTransportType == .wifi else { return }
+
+        logger.warning("WiFi connection lost: \(error?.localizedDescription ?? "unknown")")
+
+        // Tear down session (invalid now)
+        await services?.stopEventMonitoring()
+        services = nil
+        session = nil
+
+        // Show connecting state (pulsing indicator)
+        connectionState = .connecting
+
+        // Start reconnection attempts
+        startWiFiReconnection()
+    }
+
+    /// Starts the WiFi reconnection retry loop
+    private func startWiFiReconnection() {
+        // Rate limiting: prevent rapid reconnection attempts
+        if let lastStart = lastWiFiReconnectStartTime,
+           Date().timeIntervalSince(lastStart) < Self.wifiReconnectCooldown {
+            logger.warning("Suppressing WiFi reconnection: too soon after last attempt")
+            Task { await cleanupConnection() }
+            return
+        }
+        lastWiFiReconnectStartTime = Date()
+
+        wifiReconnectAttempt = 0
+        wifiReconnectTask?.cancel()
+
+        wifiReconnectTask = Task {
+            defer {
+                wifiReconnectTask = nil
+                wifiReconnectAttempt = 0
+            }
+
+            let startTime = ContinuousClock.now
+
+            while !Task.isCancelled && shouldBeConnected {
+                // Check if we've exceeded 30 second window
+                let elapsed = ContinuousClock.now - startTime
+                if elapsed > Self.wifiMaxReconnectDuration {
+                    logger.info("WiFi reconnection timeout after 30s")
+                    await cleanupConnection()
+                    return
+                }
+
+                wifiReconnectAttempt += 1
+                logger.info("WiFi reconnect attempt \(self.wifiReconnectAttempt)")
+
+                do {
+                    try await reconnectWiFi()
+                    logger.info("WiFi reconnection succeeded")
+                    return
+                } catch {
+                    logger.warning("WiFi reconnect failed: \(error.localizedDescription)")
+                }
+
+                // Exponential backoff: 0.5s, 1s, 2s, 4s (capped)
+                let delay = min(0.5 * pow(2.0, Double(wifiReconnectAttempt - 1)), 4.0)
+                try? await Task.sleep(for: .seconds(delay))
+            }
+        }
+    }
+
+    /// Attempts to reconnect to the WiFi device using stored connection info
+    private func reconnectWiFi() async throws {
+        guard let wifiTransport,
+              let (host, port) = await wifiTransport.connectionInfo else {
+            throw ConnectionError.connectionFailed("No WiFi connection info")
+        }
+
+        // Disconnect old transport cleanly
+        await wifiTransport.disconnect()
+
+        // Create fresh transport with same connection info
+        let newTransport = WiFiTransport()
+        await newTransport.setConnectionInfo(host: host, port: port)
+        self.wifiTransport = newTransport
+
+        // Connect
+        try await newTransport.connect()
+        connectionState = .connected
+
+        // Re-establish session
+        let newSession = MeshCoreSession(transport: newTransport)
+        self.session = newSession
+        try await newSession.start()
+
+        guard let selfInfo = await newSession.currentSelfInfo else {
+            throw ConnectionError.initializationFailed("No self info")
+        }
+
+        // Time sync (best effort)
+        if let deviceTime = try? await newSession.getTime(),
+           abs(deviceTime.timeIntervalSinceNow) > 60 {
+            try? await newSession.setTime(Date())
+            logger.info("Synced device time after reconnection")
+        }
+
+        let deviceID = DeviceIdentity.deriveUUID(from: selfInfo.publicKey)
+        try await completeWiFiReconnection(
+            session: newSession,
+            transport: newTransport,
+            deviceID: deviceID
+        )
+    }
+
+    /// Completes WiFi reconnection by re-establishing services
+    private func completeWiFiReconnection(
+        session: MeshCoreSession,
+        transport: WiFiTransport,
+        deviceID: UUID
+    ) async throws {
+        let capabilities = try await session.queryDevice()
+        guard let selfInfo = await session.currentSelfInfo else {
+            throw ConnectionError.initializationFailed("No self info")
+        }
+
+        let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+        await newServices.wireServices()
+        self.services = newServices
+
+        let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+        let device = createDevice(
+            deviceID: deviceID,
+            selfInfo: selfInfo,
+            capabilities: capabilities,
+            existingDevice: existingDevice
+        )
+
+        try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
+        self.connectedDevice = DeviceDTO(from: device)
+
+        // Wire disconnection handler on new transport
+        await transport.setDisconnectionHandler { [weak self] error in
+            Task { @MainActor in
+                await self?.handleWiFiDisconnection(error: error)
+            }
+        }
+
+        await onConnectionReady?()
+        try await newServices.syncCoordinator.onConnectionEstablished(
+            deviceID: deviceID,
+            services: newServices
+        )
+
+        currentTransportType = .wifi
+        connectionState = .ready
+    }
+
     // MARK: - Initialization
 
     /// Creates a new connection manager.
