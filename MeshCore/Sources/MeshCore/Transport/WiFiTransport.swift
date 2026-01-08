@@ -129,6 +129,7 @@ public actor WiFiTransport: MeshTransport {
 
     public func disconnect() async {
         logger.info("Disconnecting")
+        disconnectionHandler = nil  // Clear BEFORE cancel to prevent spurious callback
         connection?.stateUpdateHandler = nil
         connection?.cancel()
         connection = nil
@@ -182,11 +183,19 @@ public actor WiFiTransport: MeshTransport {
             if let continuation = connectContinuation {
                 connectContinuation = nil
                 continuation.resume(throwing: WiFiTransportError.connectionFailed(error.localizedDescription))
+            } else {
+                // Connection was established then lost - notify handler
+                disconnectionHandler?(error)
             }
 
         case .cancelled:
             logger.info("Connection cancelled")
+            let wasConnected = _isConnected
             _isConnected = false
+            // Only report if this wasn't during initial connection and wasn't user-initiated
+            if wasConnected && connectContinuation == nil {
+                disconnectionHandler?(nil)
+            }
 
         case .waiting(let error):
             logger.warning("Connection waiting: \(error.localizedDescription)")
