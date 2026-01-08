@@ -111,8 +111,37 @@ public actor WiFiTransport: MeshTransport {
         let newConnection = NWConnection(to: endpoint, using: parameters)
         connection = newConnection
 
+        // Race connection against timeout
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await self.performConnection(newConnection)
+            }
+
+            group.addTask {
+                try await Task.sleep(for: Self.connectionTimeout)
+                throw WiFiTransportError.connectionTimeout
+            }
+
+            // Wait for first task to complete or throw
+            do {
+                try await group.next()
+                group.cancelAll()
+            } catch {
+                group.cancelAll()
+                // On timeout, cancel the pending connection
+                if let err = error as? WiFiTransportError, err == .connectionTimeout {
+                    await self.cancelPendingConnection()
+                }
+                throw error
+            }
+        }
+
+        startReceiving()
+    }
+
+    /// Performs the actual connection wait via continuation.
+    private func performConnection(_ newConnection: NWConnection) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            // Store continuation for safe one-time resume
             self.connectContinuation = continuation
 
             newConnection.stateUpdateHandler = { [weak self] state in
@@ -123,8 +152,19 @@ public actor WiFiTransport: MeshTransport {
 
             newConnection.start(queue: .global(qos: .userInitiated))
         }
+    }
 
-        startReceiving()
+    /// Cancels a pending connection attempt.
+    private func cancelPendingConnection() {
+        connection?.stateUpdateHandler = nil
+        connection?.cancel()
+        connection = nil
+        _isConnected = false
+
+        if let continuation = connectContinuation {
+            connectContinuation = nil
+            continuation.resume(throwing: WiFiTransportError.connectionTimeout)
+        }
     }
 
     public func disconnect() async {
