@@ -437,7 +437,7 @@ public final class ConnectionManager {
             try await accessorySetupKit.activateSession()
         } catch {
             logger.error("Failed to activate AccessorySetupKit: \(error.localizedDescription)")
-            return
+            // Don't return - WiFi doesn't need ASK
         }
 
         // Auto-reconnect to last device if available
@@ -446,6 +446,22 @@ public final class ConnectionManager {
 
             // Set intent before checking state
             shouldBeConnected = true
+
+            // Check if last device was WiFi - try WiFi first
+            let dataStore = PersistenceStore(modelContainer: modelContainer)
+            if let device = try? await dataStore.fetchDevice(id: lastDeviceID),
+               let wifiMethod = device.connectionMethods.first(where: { $0.isWiFi }) {
+                if case .wifi(let host, let port, _) = wifiMethod {
+                    logger.info("Auto-reconnecting via WiFi to \(host):\(port)")
+                    do {
+                        try await connectViaWiFi(host: host, port: port)
+                        return
+                    } catch {
+                        logger.warning("WiFi auto-reconnect failed: \(error.localizedDescription)")
+                        // Fall through to try BLE
+                    }
+                }
+            }
 
             // If state machine is already auto-reconnecting (from state restoration),
             // let it complete rather than fighting with it
