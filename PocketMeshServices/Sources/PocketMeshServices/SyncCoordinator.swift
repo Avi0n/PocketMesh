@@ -70,6 +70,9 @@ public actor SyncCoordinator {
 
     private let logger = Logger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
 
+    /// In-memory cache for message deduplication
+    private let deduplicationCache = MessageDeduplicationCache()
+
     // MARK: - Observable State (@MainActor for SwiftUI)
 
     /// Current sync state
@@ -269,6 +272,7 @@ public actor SyncCoordinator {
     /// Note: Don't call onSyncActivityEnded here - performFullSync handles its own cleanup.
     /// The AppState.wireServicesIfConnected reset of syncActivityCount handles stuck pill.
     public func onDisconnected() async {
+        await deduplicationCache.clear()
         await setState(.idle)
         logger.info("Disconnected, sync state reset to idle")
     }
@@ -306,6 +310,16 @@ public actor SyncCoordinator {
                 retryAttempt: 0,
                 maxRetryAttempts: 0
             )
+
+            // Check for duplicate before saving
+            if await self.deduplicationCache.isDuplicateDirectMessage(
+                contactID: contact?.id ?? MessageDeduplicationCache.unknownContactID,
+                timestamp: timestamp,
+                content: message.text
+            ) {
+                self.logger.debug("Skipping duplicate direct message")
+                return
+            }
 
             do {
                 try await services.dataStore.saveMessage(messageDTO)
@@ -370,6 +384,17 @@ public actor SyncCoordinator {
                 retryAttempt: 0,
                 maxRetryAttempts: 0
             )
+
+            // Check for duplicate before saving
+            if await self.deduplicationCache.isDuplicateChannelMessage(
+                channelIndex: message.channelIndex,
+                timestamp: timestamp,
+                username: senderNodeName ?? "",
+                content: messageText
+            ) {
+                self.logger.debug("Skipping duplicate channel message")
+                return
+            }
 
             do {
                 try await services.dataStore.saveMessage(messageDTO)

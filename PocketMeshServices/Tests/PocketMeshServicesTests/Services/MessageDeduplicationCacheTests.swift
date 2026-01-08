@@ -106,8 +106,8 @@ struct MessageDeduplicationCacheTests {
         #expect(!isDuplicate)
     }
 
-    @Test("Direct message LRU eviction at limit of 5")
-    func directMessageLRUEviction() async {
+    @Test("Direct message FIFO eviction at limit of 5")
+    func directMessageFIFOEviction() async {
         let cache = MessageDeduplicationCache()
         let contactID = UUID()
 
@@ -223,8 +223,8 @@ struct MessageDeduplicationCacheTests {
         #expect(!isDuplicate)
     }
 
-    @Test("Channel message LRU eviction at limit of 10")
-    func channelMessageLRUEviction() async {
+    @Test("Channel message FIFO eviction at limit of 10")
+    func channelMessageFIFOEviction() async {
         let cache = MessageDeduplicationCache()
         let channelIndex: UInt8 = 0
 

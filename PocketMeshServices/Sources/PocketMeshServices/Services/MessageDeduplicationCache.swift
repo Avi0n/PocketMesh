@@ -6,6 +6,9 @@ import Foundation
 /// Uses per-conversation FIFO caches to filter retried messages from firmware.
 public actor MessageDeduplicationCache {
 
+    /// Sentinel UUID for unknown contacts (all unknowns share same dedup bucket)
+    public static let unknownContactID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+
     /// Cache of recent message keys per contact (direct messages)
     private var directMessageKeys: [UUID: [String]] = [:]
 
