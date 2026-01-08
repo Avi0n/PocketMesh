@@ -527,12 +527,16 @@ public final class ConnectionManager {
             // Fetch existing device to preserve local settings
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
 
+            // Create WiFi connection method
+            let wifiMethod = ConnectionMethod.wifi(host: host, port: port, displayName: nil)
+
             // Create and save device
             let device = createDevice(
                 deviceID: deviceID,
                 selfInfo: meshCoreSelfInfo,
                 capabilities: deviceCapabilities,
-                existingDevice: existingDevice
+                existingDevice: existingDevice,
+                connectionMethods: [wifiMethod]
             )
 
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
@@ -898,9 +902,16 @@ public final class ConnectionManager {
         deviceID: UUID,
         selfInfo: MeshCore.SelfInfo,
         capabilities: MeshCore.DeviceCapabilities,
-        existingDevice: DeviceDTO? = nil
+        existingDevice: DeviceDTO? = nil,
+        connectionMethods: [ConnectionMethod] = []
     ) -> Device {
-        Device(
+        // Merge new connection methods with existing ones, avoiding duplicates
+        var mergedMethods = existingDevice?.connectionMethods ?? []
+        for method in connectionMethods where !mergedMethods.contains(method) {
+            mergedMethods.append(method)
+        }
+
+        return Device(
             id: deviceID,
             publicKey: selfInfo.publicKey,
             nodeName: selfInfo.name,
@@ -929,7 +940,8 @@ public final class ConnectionManager {
             lastContactSync: existingDevice?.lastContactSync ?? 0,
             isActive: true,
             ocvPreset: existingDevice?.ocvPreset,
-            customOCVArrayString: existingDevice?.customOCVArrayString
+            customOCVArrayString: existingDevice?.customOCVArrayString,
+            connectionMethods: mergedMethods
         )
     }
 
