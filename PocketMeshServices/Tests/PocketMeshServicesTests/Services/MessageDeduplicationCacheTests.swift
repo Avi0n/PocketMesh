@@ -265,6 +265,51 @@ struct MessageDeduplicationCacheTests {
         #expect(!isDuplicate)
     }
 
+    // MARK: - Unknown Contact Tests
+
+    @Test("Unknown contacts share the same deduplication bucket")
+    func unknownContactsShareBucket() async {
+        let cache = MessageDeduplicationCache()
+
+        // Register a message from unknown contact
+        _ = await cache.isDuplicateDirectMessage(
+            contactID: MessageDeduplicationCache.unknownContactID,
+            timestamp: 1704067200,
+            content: "Hello from unknown"
+        )
+
+        // Same message with same sentinel ID should be duplicate
+        let isDuplicate = await cache.isDuplicateDirectMessage(
+            contactID: MessageDeduplicationCache.unknownContactID,
+            timestamp: 1704067200,
+            content: "Hello from unknown"
+        )
+
+        #expect(isDuplicate)
+    }
+
+    @Test("Unknown contact bucket is separate from known contacts")
+    func unknownContactSeparateFromKnown() async {
+        let cache = MessageDeduplicationCache()
+        let knownContact = UUID()
+
+        // Register from unknown contact
+        _ = await cache.isDuplicateDirectMessage(
+            contactID: MessageDeduplicationCache.unknownContactID,
+            timestamp: 1704067200,
+            content: "Hello"
+        )
+
+        // Same message from known contact should NOT be duplicate
+        let isDuplicate = await cache.isDuplicateDirectMessage(
+            contactID: knownContact,
+            timestamp: 1704067200,
+            content: "Hello"
+        )
+
+        #expect(!isDuplicate)
+    }
+
     // MARK: - Clear Tests
 
     @Test("Clear removes all cached entries")
