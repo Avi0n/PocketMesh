@@ -417,6 +417,9 @@ public final class AppState {
         if connectionState == .ready {
             try? await services?.messageService.checkExpiredAcks()
         }
+
+        // Check WiFi connection health (may have died while backgrounded)
+        await connectionManager.checkWiFiConnectionHealth()
     }
 
     // MARK: - Navigation
