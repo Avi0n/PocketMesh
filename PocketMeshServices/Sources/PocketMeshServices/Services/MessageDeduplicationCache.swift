@@ -16,10 +16,10 @@ public actor MessageDeduplicationCache {
     private var channelMessageKeys: [UInt8: [String]] = [:]
 
     /// Maximum entries per contact for direct messages
-    private let directLimit = 5
+    private let directLimit = 50
 
     /// Maximum entries per channel
-    private let channelLimit = 10
+    private let channelLimit = 100
 
     public init() {}
 
