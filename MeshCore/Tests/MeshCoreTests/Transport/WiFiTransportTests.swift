@@ -74,6 +74,21 @@ struct WiFiTransportTests {
         // Clear handler should work without crash
         await transport.clearDisconnectionHandler()
     }
+
+    @Test("connectionInfo returns configured host and port")
+    func connectionInfoReturnsConfiguredValues() async {
+        let transport = WiFiTransport()
+
+        // Initially nil
+        let initialInfo = await transport.connectionInfo
+        #expect(initialInfo == nil)
+
+        // After configuration
+        await transport.setConnectionInfo(host: "192.168.1.50", port: 5000)
+        let info = await transport.connectionInfo
+        #expect(info?.host == "192.168.1.50")
+        #expect(info?.port == 5000)
+    }
 }
 
 // Thread-safe call tracker for testing async callbacks

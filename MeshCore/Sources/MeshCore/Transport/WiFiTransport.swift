@@ -85,6 +85,12 @@ public actor WiFiTransport: MeshTransport {
         self.disconnectionHandler = nil
     }
 
+    /// Returns the configured connection info, if set.
+    public var connectionInfo: (host: String, port: UInt16)? {
+        guard let host = configuredHost, let port = configuredPort else { return nil }
+        return (host, port)
+    }
+
     /// Establishes a TCP connection to the configured host and port.
     /// Call `setConnectionInfo(host:port:)` first.
     public func connect() async throws {
