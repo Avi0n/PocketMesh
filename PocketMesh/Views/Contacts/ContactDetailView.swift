@@ -512,11 +512,14 @@ struct ContactDetailView: View {
 
             // Hops away (only when path is known)
             if !currentContact.isFloodRouted {
-                HStack {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Hops Away")
-                    Spacer()
-                    Text(currentContact.outPathLength, format: .number)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    Text(currentContact.outPathLength, format: .number)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.primary)
                 }
             }
 
