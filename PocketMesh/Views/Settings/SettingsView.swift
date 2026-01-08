@@ -42,7 +42,13 @@ struct SettingsView: View {
 
                 NodeSettingsSection(showingLocationPicker: $showingLocationPicker)
 
-                BluetoothSection()
+                // Show WiFi or Bluetooth section based on current transport type
+                // TODO: Replace with appState.currentTransportType == .wifi when Task 8 is complete
+                if appState.connectedDevice?.connectionMethods.contains(where: { $0.isWiFi }) == true {
+                    WiFiSection()
+                } else {
+                    BluetoothSection()
+                }
 
                 NotificationSettingsSection()
 
