@@ -738,6 +738,13 @@ public final class ConnectionManager {
                 services: newServices
             )
 
+            // Wire disconnection handler for auto-reconnect
+            await newWiFiTransport.setDisconnectionHandler { [weak self] error in
+                Task { @MainActor in
+                    await self?.handleWiFiDisconnection(error: error)
+                }
+            }
+
             currentTransportType = .wifi
             connectionState = .ready
             logger.info("WiFi connection complete - device ready")
