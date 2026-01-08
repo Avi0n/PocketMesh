@@ -3,7 +3,11 @@
 An unofficial MeshCore client built for iOS in Swift.   
 Disclaimer: Built entirely with AI.
 
-This app is not published on the App Store, sideloading is required. Unsigned IPA files are available under [Releases](https://github.com/Avi0n/PocketMesh/releases).
+Join the beta on TestFlight or sideload using unsigned IPA files under [Releases](https://github.com/Avi0n/PocketMesh/releases).
+
+<a href="https://testflight.apple.com/join/YjGNDTaE">
+  <img src="https://img.shields.io/badge/Download_on-TestFlight-0D96F6?style=for-the-badge&logo=apple&logoColor=white" alt="Download on TestFlight">
+</a>
 
 ## Screenshots
 
