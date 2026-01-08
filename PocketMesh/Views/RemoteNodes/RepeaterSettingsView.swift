@@ -57,6 +57,11 @@ struct RepeaterSettingsView: View {
         } message: {
             Text(viewModel.successMessage ?? "Settings applied")
         }
+        .alert("Error", isPresented: $viewModel.showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
         .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
             Button("Reboot", role: .destructive) {
                 Task { await viewModel.reboot() }
@@ -507,12 +512,6 @@ struct RepeaterSettingsView: View {
                 showRebootConfirmation = true
             }
             .disabled(viewModel.isRebooting)
-
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .foregroundStyle(.red)
-                    .font(.caption)
-            }
         }
     }
 }
