@@ -75,7 +75,11 @@ struct DeviceSelectionSheet: View {
                         guard let device = selectedDevice else { return }
                         dismiss()
                         Task {
-                            try? await appState.connectionManager.connect(to: device.id)
+                            if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
+                                try? await appState.connectViaWiFi(host: host, port: port)
+                            } else {
+                                try? await appState.connectionManager.connect(to: device.id)
+                            }
                         }
                     }
                     .fontWeight(.semibold)
