@@ -2,6 +2,72 @@ import Network
 import SwiftUI
 import PocketMeshServices
 
+// MARK: - Local Network Permission Trigger
+
+/// Attempts to trigger the local network privacy alert.
+///
+/// This builds a list of link-local IPv6 addresses and then creates a connected
+/// UDP socket to each in turn. Connecting a UDP socket triggers the local
+/// network alert without actually sending any traffic.
+///
+/// Based on Apple's TN3179: Understanding local network privacy.
+private func triggerLocalNetworkPrivacyAlert() {
+    let addresses = selectedLinkLocalIPv6Addresses()
+    for address in addresses {
+        let sock6 = socket(AF_INET6, SOCK_DGRAM, 0)
+        guard sock6 >= 0 else { return }
+        defer { close(sock6) }
+
+        withUnsafePointer(to: address) { sa6 in
+            sa6.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                _ = connect(sock6, sa, socklen_t(sa.pointee.sa_len)) >= 0
+            }
+        }
+    }
+}
+
+/// Returns a selection of IPv6 addresses to connect to.
+private func selectedLinkLocalIPv6Addresses() -> [sockaddr_in6] {
+    let r1 = (0..<8).map { _ in UInt8.random(in: 0...255) }
+    let r2 = (0..<8).map { _ in UInt8.random(in: 0...255) }
+    return Array(ipv6AddressesOfBroadcastCapableInterfaces()
+        .filter { isIPv6AddressLinkLocal($0) }
+        .map { var addr = $0; addr.sin6_port = UInt16(9).bigEndian; return addr }
+        .map { [setIPv6LinkLocalAddressHostPart(of: $0, to: r1), setIPv6LinkLocalAddressHostPart(of: $0, to: r2)] }
+        .joined())
+}
+
+private func setIPv6LinkLocalAddressHostPart(of address: sockaddr_in6, to hostPart: [UInt8]) -> sockaddr_in6 {
+    precondition(hostPart.count == 8)
+    var result = address
+    withUnsafeMutableBytes(of: &result.sin6_addr) { buf in
+        buf[8...].copyBytes(from: hostPart)
+    }
+    return result
+}
+
+private func isIPv6AddressLinkLocal(_ address: sockaddr_in6) -> Bool {
+    address.sin6_addr.__u6_addr.__u6_addr8.0 == 0xfe
+        && (address.sin6_addr.__u6_addr.__u6_addr8.1 & 0xc0) == 0x80
+}
+
+private func ipv6AddressesOfBroadcastCapableInterfaces() -> [sockaddr_in6] {
+    var addrList: UnsafeMutablePointer<ifaddrs>?
+    let err = getifaddrs(&addrList)
+    guard err == 0, let start = addrList else { return [] }
+    defer { freeifaddrs(start) }
+    return sequence(first: start, next: { $0.pointee.ifa_next })
+        .compactMap { i -> sockaddr_in6? in
+            guard
+                (i.pointee.ifa_flags & UInt32(bitPattern: IFF_BROADCAST)) != 0,
+                let sa = i.pointee.ifa_addr,
+                sa.pointee.sa_family == AF_INET6,
+                sa.pointee.sa_len >= MemoryLayout<sockaddr_in6>.size
+            else { return nil }
+            return UnsafeRawPointer(sa).load(as: sockaddr_in6.self)
+        }
+}
+
 /// Sheet for entering WiFi connection details (IP address and port).
 struct WiFiConnectionSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -26,15 +92,39 @@ struct WiFiConnectionSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("IP Address", text: $ipAddress)
-                        .keyboardType(.decimalPad)
-                        .textContentType(.none)
-                        .autocorrectionDisabled()
-                        .focused($focusedField, equals: .ip)
+                    HStack {
+                        TextField("IP Address", text: $ipAddress)
+                            .keyboardType(.decimalPad)
+                            .textContentType(.none)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .ip)
 
-                    TextField("Port", text: $port)
-                        .keyboardType(.numberPad)
-                        .focused($focusedField, equals: .port)
+                        if !ipAddress.isEmpty {
+                            Button {
+                                ipAddress = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack {
+                        TextField("Port", text: $port)
+                            .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .port)
+
+                        if !port.isEmpty {
+                            Button {
+                                port = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 } header: {
                     Text("Connection Details")
                 } footer: {
@@ -86,7 +176,7 @@ struct WiFiConnectionSheet: View {
             .interactiveDismissDisabled(isConnecting)
             .onAppear {
                 focusedField = .ip
-                triggerLocalNetworkPermission()
+                triggerLocalNetworkPrivacyAlert()
             }
         }
     }
@@ -103,7 +193,10 @@ struct WiFiConnectionSheet: View {
         Task {
             do {
                 try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
+                await appState.wireServicesIfConnected()
                 dismiss()
+                // Navigate directly to radio settings
+                appState.onboardingPath.append(.radioPreset)
             } catch {
                 errorMessage = error.localizedDescription
                 isConnecting = false
@@ -123,13 +216,6 @@ struct WiFiConnectionSheet: View {
     private func isValidPort(_ port: String) -> Bool {
         guard let num = UInt16(port) else { return false }
         return num > 0
-    }
-
-    /// Triggers the local network permission dialog by creating a dummy connection.
-    private func triggerLocalNetworkPermission() {
-        let connection = NWConnection(host: "0.0.0.0", port: 1, using: .tcp)
-        connection.start(queue: .main)
-        connection.cancel()
     }
 }
 

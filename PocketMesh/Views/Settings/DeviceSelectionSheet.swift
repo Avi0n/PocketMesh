@@ -23,13 +23,6 @@ private enum SelectableDevice: Identifiable, Equatable {
         }
     }
 
-    var lastConnected: Date? {
-        switch self {
-        case .saved(let device): device.lastConnected
-        case .accessory: nil
-        }
-    }
-
     /// The primary connection method for display purposes.
     /// WiFi methods are preferred over Bluetooth when available.
     var primaryConnectionMethod: ConnectionMethod? {
@@ -51,6 +44,7 @@ struct DeviceSelectionSheet: View {
     @State private var devices: [SelectableDevice] = []
     @State private var selectedDevice: SelectableDevice?
     @State private var showingWiFiConnection = false
+    @State private var editingWiFiDevice: SelectableDevice?
 
     var body: some View {
         NavigationStack {
@@ -109,6 +103,15 @@ struct DeviceSelectionSheet: View {
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
+
+                            if device.primaryConnectionMethod?.isWiFi == true {
+                                Button {
+                                    editingWiFiDevice = device
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.orange)
+                            }
                         }
                 }
             } header: {
@@ -127,12 +130,17 @@ struct DeviceSelectionSheet: View {
                 Button {
                     scanForNewDevice()
                 } label: {
-                    Label("Scan for New Device", systemImage: "antenna.radiowaves.left.and.right")
+                    Label("Scan for Bluetooth Device", systemImage: "antenna.radiowaves.left.and.right")
                 }
             }
         }
         .sheet(isPresented: $showingWiFiConnection) {
             WiFiConnectionSheet()
+        }
+        .sheet(item: $editingWiFiDevice) { device in
+            if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
+                WiFiEditSheet(initialHost: host, initialPort: port)
+            }
         }
     }
 
@@ -248,15 +256,9 @@ private struct DeviceRow: View {
                 Text(device.name)
                     .font(.headline)
 
-                HStack(spacing: 4) {
-                    Text(connectionDescription)
-                    if let lastConnected = device.lastConnected {
-                        Text("·")
-                        Text(lastConnected, format: .relative(presentation: .named))
-                    }
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                Text(connectionDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

@@ -7,6 +7,10 @@ struct WiFiEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
 
+    /// Optional initial values for editing a saved (non-connected) device
+    var initialHost: String?
+    var initialPort: UInt16?
+
     @State private var ipAddress = ""
     @State private var port = "5000"
     @State private var isReconnecting = false
@@ -22,12 +26,24 @@ struct WiFiEditSheet: View {
         appState.connectedDevice?.connectionMethods.first { $0.isWiFi }
     }
 
+    private var originalHost: String? {
+        if let initialHost { return initialHost }
+        if case .wifi(let host, _, _) = currentConnection { return host }
+        return nil
+    }
+
+    private var originalPort: UInt16? {
+        if let initialPort { return initialPort }
+        if case .wifi(_, let port, _) = currentConnection { return port }
+        return nil
+    }
+
     private var isValidInput: Bool {
         isValidIPAddress(ipAddress) && isValidPort(port)
     }
 
     private var hasChanges: Bool {
-        guard case .wifi(let host, let currentPort, _) = currentConnection else { return true }
+        guard let host = originalHost, let currentPort = originalPort else { return true }
         return ipAddress != host || port != String(currentPort)
     }
 
@@ -35,15 +51,39 @@ struct WiFiEditSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("IP Address", text: $ipAddress)
-                        .keyboardType(.decimalPad)
-                        .textContentType(.none)
-                        .autocorrectionDisabled()
-                        .focused($focusedField, equals: .ip)
+                    HStack {
+                        TextField("IP Address", text: $ipAddress)
+                            .keyboardType(.decimalPad)
+                            .textContentType(.none)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .ip)
 
-                    TextField("Port", text: $port)
-                        .keyboardType(.numberPad)
-                        .focused($focusedField, equals: .port)
+                        if !ipAddress.isEmpty {
+                            Button {
+                                ipAddress = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack {
+                        TextField("Port", text: $port)
+                            .keyboardType(.numberPad)
+                            .focused($focusedField, equals: .port)
+
+                        if !port.isEmpty {
+                            Button {
+                                port = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 } header: {
                     Text("Connection Details")
                 } footer: {
@@ -100,8 +140,10 @@ struct WiFiEditSheet: View {
     }
 
     private func populateCurrentValues() {
-        if case .wifi(let host, let currentPort, _) = currentConnection {
+        if let host = originalHost {
             ipAddress = host
+        }
+        if let currentPort = originalPort {
             port = String(currentPort)
         }
     }
