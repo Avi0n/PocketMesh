@@ -5,6 +5,7 @@ import PocketMeshServices
 import MeshCore
 import OSLog
 import TipKit
+import UIKit
 
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
@@ -156,6 +157,10 @@ public final class AppState {
     /// Wire services to message event broadcaster
     func wireServicesIfConnected() async {
         guard let services else {
+            // Announce disconnection for VoiceOver users
+            if UIAccessibility.isVoiceOverRunning {
+                announceConnectionState("Device connection lost")
+            }
             // Clear syncCoordinator when services are nil
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
@@ -163,6 +168,11 @@ public final class AppState {
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
             return
+        }
+
+        // Announce reconnection for VoiceOver users
+        if UIAccessibility.isVoiceOverRunning {
+            announceConnectionState("Device reconnected")
         }
 
         // Store syncCoordinator reference
@@ -420,6 +430,13 @@ public final class AppState {
 
         // Check WiFi connection health (may have died while backgrounded)
         await connectionManager.checkWiFiConnectionHealth()
+    }
+
+    // MARK: - Accessibility
+
+    /// Posts a VoiceOver announcement for connection state changes
+    private func announceConnectionState(_ message: String) {
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 
     // MARK: - Navigation
