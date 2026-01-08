@@ -4,7 +4,7 @@ import PocketMeshServices
 /// WiFi connection settings - shown when connected via WiFi instead of Bluetooth.
 struct WiFiSection: View {
     @Environment(AppState.self) private var appState
-    @State private var showingEditSheet = false
+    @Binding var showingEditSheet: Bool
 
     private var currentConnection: ConnectionMethod? {
         appState.connectedDevice?.connectionMethods.first { $0.isWiFi }
@@ -25,15 +25,13 @@ struct WiFiSection: View {
         } footer: {
             Text("Your device's local network address")
         }
-        .sheet(isPresented: $showingEditSheet) {
-            WiFiEditSheet()
-        }
     }
 }
 
 #Preview {
+    @Previewable @State var showingEditSheet = false
     List {
-        WiFiSection()
+        WiFiSection(showingEditSheet: $showingEditSheet)
     }
     .environment(AppState())
 }
