@@ -719,6 +719,15 @@ public final class ConnectionManager {
         return devices
     }
 
+    /// Deletes a previously paired device and all its associated data.
+    /// - Parameter id: The device UUID to delete
+    public func deleteDevice(id: UUID) async throws {
+        logger.info("deleteDevice called for device: \(id)")
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        try await dataStore.deleteDevice(id: id)
+        logger.info("deleteDevice completed for device: \(id)")
+    }
+
     /// Returns paired accessories from AccessorySetupKit.
     /// Use as fallback when SwiftData has no device records.
     public var pairedAccessoryInfos: [(id: UUID, name: String)] {
