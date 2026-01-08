@@ -344,6 +344,19 @@ public final class ConnectionManager {
         connectionState = .ready
     }
 
+    /// Checks if the WiFi connection is still alive (call on app foreground)
+    public func checkWiFiConnectionHealth() async {
+        guard currentTransportType == .wifi,
+              connectionState == .ready,
+              let wifiTransport else { return }
+
+        let isConnected = await wifiTransport.isConnected
+        if !isConnected {
+            logger.info("WiFi connection died while backgrounded")
+            await handleWiFiDisconnection(error: nil)
+        }
+    }
+
     // MARK: - Initialization
 
     /// Creates a new connection manager.
