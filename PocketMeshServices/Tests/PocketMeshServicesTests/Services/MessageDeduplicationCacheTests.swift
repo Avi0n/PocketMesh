@@ -44,6 +44,36 @@ struct MessageDeduplicationCacheTests {
         #expect(isDuplicate)
     }
 
+    @Test("Message remains duplicate on subsequent checks")
+    func tripleCheckRemainsDuplicate() async {
+        let cache = MessageDeduplicationCache()
+        let contactID = UUID()
+
+        // First call registers it
+        let first = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: "Hello world"
+        )
+        #expect(!first)
+
+        // Second call detects duplicate
+        let second = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: "Hello world"
+        )
+        #expect(second)
+
+        // Third call should still detect duplicate (not re-registered)
+        let third = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: "Hello world"
+        )
+        #expect(third)
+    }
+
     @Test("Different content is not a duplicate")
     func differentContentNotDuplicate() async {
         let cache = MessageDeduplicationCache()
@@ -106,13 +136,13 @@ struct MessageDeduplicationCacheTests {
         #expect(!isDuplicate)
     }
 
-    @Test("Direct message FIFO eviction at limit of 5")
+    @Test("Direct message FIFO eviction at limit of 50")
     func directMessageFIFOEviction() async {
         let cache = MessageDeduplicationCache()
         let contactID = UUID()
 
-        // Add 5 messages (fills cache)
-        for i in 0..<5 {
+        // Add 50 messages (fills cache)
+        for i in 0..<50 {
             _ = await cache.isDuplicateDirectMessage(
                 contactID: contactID,
                 timestamp: UInt32(i),
@@ -128,11 +158,11 @@ struct MessageDeduplicationCacheTests {
         )
         #expect(isDuplicate)
 
-        // Add 6th message (should evict oldest)
+        // Add 51st message (should evict oldest)
         _ = await cache.isDuplicateDirectMessage(
             contactID: contactID,
-            timestamp: 5,
-            content: "Message 5"
+            timestamp: 50,
+            content: "Message 50"
         )
 
         // First message should be evicted now
@@ -223,13 +253,13 @@ struct MessageDeduplicationCacheTests {
         #expect(!isDuplicate)
     }
 
-    @Test("Channel message FIFO eviction at limit of 10")
+    @Test("Channel message FIFO eviction at limit of 100")
     func channelMessageFIFOEviction() async {
         let cache = MessageDeduplicationCache()
         let channelIndex: UInt8 = 0
 
-        // Add 10 messages (fills cache)
-        for i in 0..<10 {
+        // Add 100 messages (fills cache)
+        for i in 0..<100 {
             _ = await cache.isDuplicateChannelMessage(
                 channelIndex: channelIndex,
                 timestamp: UInt32(i),
@@ -247,12 +277,12 @@ struct MessageDeduplicationCacheTests {
         )
         #expect(isDuplicate)
 
-        // Add 11th message (should evict oldest)
+        // Add 101st message (should evict oldest)
         _ = await cache.isDuplicateChannelMessage(
             channelIndex: channelIndex,
-            timestamp: 10,
+            timestamp: 100,
             username: "User",
-            content: "Message 10"
+            content: "Message 100"
         )
 
         // First message should be evicted now

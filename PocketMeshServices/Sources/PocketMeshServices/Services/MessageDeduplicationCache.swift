@@ -56,6 +56,9 @@ public actor MessageDeduplicationCache {
 
     // MARK: - Private Helpers
 
+    /// Creates a dedup key from timestamp and content hash.
+    /// Uses first 4 bytes (32 bits) of SHA256 for compactness - collision probability
+    /// is ~1 in 4 billion per message pair, acceptable for small per-conversation caches.
     private func makeKey(timestamp: UInt32, content: String) -> String {
         let contentHash = SHA256.hash(data: Data(content.utf8))
         let hashPrefix = contentHash.prefix(4).map { String(format: "%02X", $0) }.joined()
