@@ -63,6 +63,7 @@ struct LineOfSightView: View {
     @State private var viewModel: LineOfSightViewModel
     @State private var sheetDetent: PresentationDetent = analysisSheetDetentCollapsed
     @State private var screenHeight: CGFloat = 0
+    @State private var baseScreenHeight: CGFloat = 0
     @State private var showAnalysisSheet: Bool
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var editingPoint: PointID?
@@ -72,6 +73,7 @@ struct LineOfSightView: View {
     @State private var isResultsExpanded = false
     @State private var isInitialPointBZoom = false
     @State private var isRFSettingsExpanded = false
+    @State private var showingMapStyleMenu = false
     @Namespace private var mapScope
 
     private let layoutMode: LineOfSightLayoutMode
@@ -131,7 +133,14 @@ struct LineOfSightView: View {
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height
             } action: { height in
-                screenHeight = height
+                if height > 0 {
+                    screenHeight = height
+
+                    if baseScreenHeight == 0 || height > baseScreenHeight || height < baseScreenHeight * 0.7 {
+                        baseScreenHeight = height
+                    }
+                }
+
                 if showSheet, showAnalysisSheet {
                     updateSheetBottomInset()
                 }
@@ -278,6 +287,54 @@ struct LineOfSightView: View {
                 }
             }
             .padding(.bottom, mapOverlayBottomPadding)
+
+            if showingMapStyleMenu {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation {
+                            showingMapStyleMenu = false
+                        }
+                    }
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 0) {
+                            ForEach(MapStyleSelection.allCases, id: \.self) { style in
+                                Button {
+                                    mapStyleSelection = style
+                                    withAnimation {
+                                        showingMapStyleMenu = false
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(style.label)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        if mapStyleSelection == style {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.blue)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                }
+
+                                if style != MapStyleSelection.allCases.last {
+                                    Divider()
+                                }
+                            }
+                        }
+                        .frame(width: 140)
+                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+                        .shadow(radius: 8)
+                        .padding(.trailing)
+                    }
+                }
+                .padding(.bottom, mapOverlayBottomPadding)
+            }
         }
     }
 
@@ -401,6 +458,8 @@ struct LineOfSightView: View {
         VStack(spacing: 0) {
             // User location button
             MapUserLocationButton(scope: mapScope)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
 
             Divider()
                 .frame(width: 36)
@@ -414,18 +473,15 @@ struct LineOfSightView: View {
             // Drop pin toggle
             dropPinButton
         }
-        .buttonStyle(.plain)
         .background(.regularMaterial, in: .rect(cornerRadius: 8))
         .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
         .padding()
     }
 
     private var mapStyleButton: some View {
-        Menu {
-            Picker("Map Style", selection: $mapStyleSelection) {
-                ForEach(MapStyleSelection.allCases, id: \.self) { style in
-                    Label(style.label, systemImage: style.icon).tag(style)
-                }
+        Button {
+            withAnimation(.spring(response: 0.3)) {
+                showingMapStyleMenu.toggle()
             }
         } label: {
             Image(systemName: "square.3.layers.3d.down.right")
@@ -433,6 +489,7 @@ struct LineOfSightView: View {
                 .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("Map style")
     }
 
@@ -445,6 +502,7 @@ struct LineOfSightView: View {
                 .foregroundStyle(isDropPinMode ? .blue : .primary)
                 .frame(width: 44, height: 44)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(isDropPinMode ? "Cancel drop pin" : "Drop pin")
     }
 
@@ -1207,7 +1265,10 @@ struct LineOfSightView: View {
             fraction = 0.25
         }
 
-        sheetBottomInset = screenHeight * fraction + analysisSheetBottomInsetPadding
+        let referenceHeight = baseScreenHeight > 0 ? baseScreenHeight : screenHeight
+        guard referenceHeight > 0 else { return }
+
+        sheetBottomInset = referenceHeight * fraction + analysisSheetBottomInsetPadding
     }
 
     private func handleMapTap(at position: CGPoint) {
