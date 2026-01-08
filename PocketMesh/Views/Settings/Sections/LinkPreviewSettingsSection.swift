@@ -2,32 +2,19 @@ import SwiftUI
 
 /// Settings section for link preview preferences
 struct LinkPreviewSettingsSection: View {
-    @State private var preferences = LinkPreviewPreferences()
+    @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
+    @AppStorage("linkPreviewsAutoResolveDM") private var autoResolveDM = true
+    @AppStorage("linkPreviewsAutoResolveChannels") private var autoResolveChannels = true
 
     var body: some View {
         Section {
-            Toggle(isOn: $preferences.previewsEnabled) {
+            Toggle(isOn: $previewsEnabled) {
                 Label("Link Previews", systemImage: "link")
             }
 
-            if preferences.previewsEnabled {
-                Toggle(isOn: $preferences.autoResolveDM) {
-                    VStack(alignment: .leading) {
-                        Text("Load Automatically in Direct Messages")
-                        Text("Fetches previews when messages appear")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Toggle(isOn: $preferences.autoResolveChannels) {
-                    VStack(alignment: .leading) {
-                        Text("Load Automatically in Channels")
-                        Text("Fetches previews when messages appear")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+            if previewsEnabled {
+                Toggle("Show in Direct Messages", isOn: $autoResolveDM)
+                Toggle("Show in Channels", isOn: $autoResolveChannels)
             }
         } header: {
             Text("Privacy")

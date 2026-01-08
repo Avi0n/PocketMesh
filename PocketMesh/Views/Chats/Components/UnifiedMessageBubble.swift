@@ -69,12 +69,17 @@ struct UnifiedMessageBubble: View {
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
     let onManualPreviewFetch: (() -> Void)?
-    let onOpenLinkPreviewSettings: (() -> Void)?
     let isLoadingPreview: Bool
 
-    @State private var preferences = LinkPreviewPreferences()
+    @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
+    @AppStorage("linkPreviewsAutoResolveDM") private var autoResolveDM = true
+    @AppStorage("linkPreviewsAutoResolveChannels") private var autoResolveChannels = true
     @Environment(\.openURL) private var openURL
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private func shouldAutoResolve(isChannelMessage: Bool) -> Bool {
+        guard previewsEnabled else { return false }
+        return isChannelMessage ? autoResolveChannels : autoResolveDM
+    }
 
     init(
         message: MessageDTO,
@@ -89,7 +94,6 @@ struct UnifiedMessageBubble: View {
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil,
-        onOpenLinkPreviewSettings: (() -> Void)? = nil,
         isLoadingPreview: Bool = false
     ) {
         self.message = message
@@ -104,7 +108,6 @@ struct UnifiedMessageBubble: View {
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
         self.onManualPreviewFetch = onManualPreviewFetch
-        self.onOpenLinkPreviewSettings = onOpenLinkPreviewSettings
         self.isLoadingPreview = isLoadingPreview
     }
 
@@ -141,7 +144,7 @@ struct UnifiedMessageBubble: View {
                         }
 
                     // Link preview (if applicable)
-                    if preferences.shouldShowPreview {
+                    if previewsEnabled {
                         if let urlString = message.linkPreviewURL,
                            let url = URL(string: urlString) {
                             // Fetched preview - show with metadata
@@ -150,27 +153,28 @@ struct UnifiedMessageBubble: View {
                                 title: message.linkPreviewTitle,
                                 imageData: message.linkPreviewImageData,
                                 iconData: message.linkPreviewIconData,
-                                onTap: { openURL(url) },
-                                onOpenSettings: onOpenLinkPreviewSettings
+                                onTap: { openURL(url) }
                             )
                             .frame(maxWidth: MessageLayout.maxBubbleWidth)
                         } else if let url = detectedURL {
                             // URL detected - show minimal preview immediately
-                            if preferences.shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
+                            if shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
                                 LinkPreviewCard(
                                     url: url,
                                     title: nil,
                                     imageData: nil,
                                     iconData: nil,
-                                    onTap: { openURL(url) },
-                                    onOpenSettings: onOpenLinkPreviewSettings
+                                    onTap: { openURL(url) }
                                 )
                                 .frame(maxWidth: MessageLayout.maxBubbleWidth)
                             } else {
                                 TapToLoadPreview(url: url, isLoading: isLoadingPreview) {
                                     onManualPreviewFetch?()
                                 }
-                                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+                                .frame(
+                                    maxWidth: MessageLayout.maxBubbleWidth,
+                                    alignment: message.isOutgoing ? .trailing : .leading
+                                )
                             }
                         }
                     }
