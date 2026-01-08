@@ -1,3 +1,4 @@
+import Network
 import SwiftUI
 import PocketMeshServices
 
@@ -85,6 +86,7 @@ struct WiFiConnectionSheet: View {
             .interactiveDismissDisabled(isConnecting)
             .onAppear {
                 focusedField = .ip
+                triggerLocalNetworkPermission()
             }
         }
     }
@@ -121,6 +123,13 @@ struct WiFiConnectionSheet: View {
     private func isValidPort(_ port: String) -> Bool {
         guard let num = UInt16(port) else { return false }
         return num > 0
+    }
+
+    /// Triggers the local network permission dialog by creating a dummy connection.
+    private func triggerLocalNetworkPermission() {
+        let connection = NWConnection(host: "0.0.0.0", port: 1, using: .tcp)
+        connection.start(queue: .main)
+        connection.cancel()
     }
 }
 
