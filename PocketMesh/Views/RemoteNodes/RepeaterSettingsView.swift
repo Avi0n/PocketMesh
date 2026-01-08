@@ -498,6 +498,11 @@ struct RepeaterSettingsView: View {
                 Task { await viewModel.forceAdvert() }
             }
 
+            Button("Sync Time") {
+                Task { await viewModel.syncTime() }
+            }
+            .disabled(viewModel.isApplying)
+
             Button("Reboot Device", role: .destructive) {
                 showRebootConfirmation = true
             }

@@ -647,6 +647,26 @@ final class RepeaterSettingsViewModel {
             errorMessage = error.localizedDescription
         }
     }
+
+    /// Sync repeater time with phone time
+    func syncTime() async {
+        isApplying = true
+        errorMessage = nil
+
+        do {
+            let response = try await sendAndWait("clock sync")
+            if case .ok = CLIResponse.parse(response) {
+                successMessage = "Time synced"
+                showSuccessAlert = true
+            } else {
+                errorMessage = "Failed to sync time"
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        isApplying = false
+    }
 }
 
 // MARK: - Error Types
