@@ -117,14 +117,14 @@ struct WiFiEditSheet: View {
 
         Task {
             do {
-                // TODO: Implement reconnect when AppState.reconnectViaWiFi is available (Task 10)
-                // This should: disconnect, then connect to the new host:port
-                _ = (ipAddress, portNumber) // Suppress unused variable warning
-                throw NSError(domain: "WiFi", code: 0, userInfo: [NSLocalizedDescriptionKey: "WiFi reconnection not yet implemented"])
+                // Disconnect from current connection, then connect to new address
+                await appState.disconnect()
+                try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
+                dismiss()
             } catch {
                 errorMessage = error.localizedDescription
+                isReconnecting = false
             }
-            isReconnecting = false
         }
     }
 

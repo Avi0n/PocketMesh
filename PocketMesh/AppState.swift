@@ -31,6 +31,7 @@ public final class AppState {
     public var connectionState: PocketMeshServices.ConnectionState { connectionManager.connectionState }
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
+    public var currentTransportType: TransportType? { connectionManager.currentTransportType }
 
     /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
@@ -351,6 +352,12 @@ public final class AppState {
     /// Disconnect from device
     func disconnect() async {
         await connectionManager.disconnect()
+    }
+
+    /// Connect to a device via WiFi/TCP
+    func connectViaWiFi(host: String, port: UInt16) async throws {
+        try await connectionManager.connectViaWiFi(host: host, port: port)
+        await wireServicesIfConnected()
     }
 
     /// Fetch device battery level

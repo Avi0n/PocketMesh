@@ -100,14 +100,12 @@ struct WiFiConnectionSheet: View {
 
         Task {
             do {
-                // TODO: Uncomment when AppState.connectViaWiFi is implemented (Task 10)
-                // try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
-                _ = (ipAddress, portNumber) // Suppress unused variable warning
-                throw NSError(domain: "WiFi", code: 0, userInfo: [NSLocalizedDescriptionKey: "WiFi connection not yet implemented"])
+                try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
+                dismiss()
             } catch {
                 errorMessage = error.localizedDescription
+                isConnecting = false
             }
-            isConnecting = false
         }
     }
 
