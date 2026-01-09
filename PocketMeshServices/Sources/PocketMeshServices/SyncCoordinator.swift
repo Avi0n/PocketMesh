@@ -362,8 +362,8 @@ public actor SyncCoordinator {
                     try await services.dataStore.incrementUnreadCount(contactID: contactID)
                 }
 
-                // Post notification (only for known contacts)
-                if let contactID = contact?.id {
+                // Post notification (only for known, non-blocked contacts)
+                if let contactID = contact?.id, contact?.isBlocked != true {
                     await services.notificationService.postDirectMessageNotification(
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
