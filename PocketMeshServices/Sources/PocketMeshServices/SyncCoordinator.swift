@@ -73,6 +73,9 @@ public actor SyncCoordinator {
     /// In-memory cache for message deduplication
     private let deduplicationCache = MessageDeduplicationCache()
 
+    /// Cached blocked contact names for O(1) lookup in message handlers
+    private var blockedContactNames: Set<String> = []
+
     // MARK: - Observable State (@MainActor for SwiftUI)
 
     /// Current sync state
@@ -165,6 +168,32 @@ public actor SyncCoordinator {
     public func notifyConversationsChanged() {
         conversationsVersion += 1
         onConversationsChanged?()
+    }
+
+    // MARK: - Blocked Contacts Cache
+
+    /// Refresh the blocked contacts cache from the data store
+    public func refreshBlockedContactsCache(deviceID: UUID, dataStore: any PersistenceStoreProtocol) async {
+        do {
+            let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
+            blockedContactNames = Set(blockedContacts.map(\.name))
+            logger.debug("Refreshed blocked contacts cache: \(self.blockedContactNames.count) entries")
+        } catch {
+            logger.error("Failed to refresh blocked contacts cache: \(error)")
+            blockedContactNames = []
+        }
+    }
+
+    /// Invalidate the blocked contacts cache (call when block status changes)
+    public func invalidateBlockedContactsCache() {
+        blockedContactNames = []
+        logger.debug("Invalidated blocked contacts cache")
+    }
+
+    /// Check if a sender name is blocked (O(1) lookup)
+    public func isBlockedSender(_ name: String?) -> Bool {
+        guard let name else { return false }
+        return blockedContactNames.contains(name)
     }
 
     // MARK: - Full Sync
