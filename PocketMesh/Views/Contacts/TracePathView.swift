@@ -22,37 +22,29 @@ struct TracePathView: View {
 
     @State private var showJumpToPath = false
 
+    @State private var scrollPosition: String?
+
+    private let jumpButtonVisibilityThreshold = 5
+
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                Form {
-                    headerSection
-                    availableRepeatersSection
-                    outboundPathSection
-                }
-                .scrollDisabled(true)
-                .containerRelativeFrame(.vertical) { height, _ in
-                    max(height * 0.5, 300)
-                }
-
-                runTraceButton
+            List {
+                headerSection
+                availableRepeatersSection
+                outboundPathSection
+                runTraceSection
                     .id("runTraceButton")
-                    .padding(.horizontal)
-                    .padding(.bottom)
-                    .safeAreaPadding(.bottom)
             }
             .scrollDismissesKeyboard(.interactively)
+            .scrollPosition(id: $scrollPosition, anchor: .bottom)
             .overlay(alignment: .bottom) {
                 jumpToPathButton(proxy: proxy)
             }
-            .onScrollGeometryChange(for: Bool.self) { geometry in
-                // Button is off-screen when visible bottom edge is above content height minus button area
-                let visibleBottom = geometry.contentOffset.y + geometry.containerSize.height
-                let buttonTop = geometry.contentSize.height - 120
-                return visibleBottom < buttonTop
-            } action: { _, isButtonOffScreen in
+            .onChange(of: scrollPosition) { _, newPosition in
+                let isButtonVisible = newPosition == "runTraceButton"
+                let hasEnoughHops = viewModel.outboundPath.count >= jumpButtonVisibilityThreshold
                 withAnimation(.easeInOut(duration: 0.2)) {
-                    showJumpToPath = isButtonOffScreen && !viewModel.outboundPath.isEmpty
+                    showJumpToPath = !isButtonVisible && hasEnoughHops
                 }
             }
         }
@@ -252,15 +244,16 @@ struct TracePathView: View {
         }
     }
 
-    // MARK: - Run Trace Button
+    // MARK: - Run Trace Section
 
-    private var runTraceButton: some View {
-        VStack(spacing: 8) {
+    private var runTraceSection: some View {
+        Section {
             if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.subheadline)
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
+                    .listRowBackground(Color.clear)
             }
 
             Button {
@@ -280,10 +273,25 @@ struct TracePathView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .modifier(GlassButtonStyle(isRunning: viewModel.isRunning))
+            .liquidGlassProminentButtonStyle()
+            .tint(viewModel.isRunning ? .gray : nil)
             .disabled(!viewModel.canRunTrace)
-            .accessibilityLabel(viewModel.isRunning ? "Running trace, please wait" : "Run trace")
-            .accessibilityHint(viewModel.isRunning ? "Trace is in progress" : "Double tap to trace the path")
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+            .accessibilityLabel(
+                viewModel.isRunning ? "Running trace, please wait" :
+                viewModel.errorMessage != nil ? "Retry trace" : "Run trace"
+            )
+            .accessibilityHint(
+                viewModel.isRunning ? "Trace is in progress" :
+                viewModel.errorMessage != nil ? "Double tap to retry the failed trace" :
+                "Double tap to trace the path"
+            )
+        }
+        .onChange(of: viewModel.errorMessage) { _, newError in
+            if let error = newError {
+                UIAccessibility.post(notification: .announcement, argument: error)
+            }
         }
     }
 
@@ -299,25 +307,6 @@ struct TracePathView: View {
         }
         .padding(.bottom)
         .sensoryFeedback(.selection, trigger: jumpHapticTrigger)
-    }
-}
-
-// MARK: - iOS 26 Liquid Glass Support
-
-/// Applies `.glassProminent` on iOS 26+, falls back to `.borderedProminent` on earlier versions
-private struct GlassButtonStyle: ViewModifier {
-    var isRunning: Bool = false
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .buttonStyle(.glassProminent)
-                .tint(isRunning ? .gray : nil)
-        } else {
-            content
-                .buttonStyle(.borderedProminent)
-                .tint(isRunning ? .gray : nil)
-        }
     }
 }
 
@@ -354,12 +343,12 @@ private struct JumpToPathButton: View {
         Button(action: onTap) {
             Image(systemName: "chevron.down.circle.fill")
                 .font(.title2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
                 .background(.regularMaterial, in: .circle)
                 .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : 0.5)
         .animation(.snappy(duration: 0.2), value: isVisible)
