@@ -88,6 +88,12 @@ struct ContactsListView: View {
                         )
                     }
 
+                    NavigationLink {
+                        BlockedContactsView()
+                    } label: {
+                        Label("Blocked Contacts", systemImage: "hand.raised.fill")
+                    }
+
                     Divider()
 
                     Button {
