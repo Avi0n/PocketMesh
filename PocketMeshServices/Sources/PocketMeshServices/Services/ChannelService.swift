@@ -113,36 +113,64 @@ public actor ChannelService {
         return ChannelSyncResult(channelsSynced: syncedCount, errors: errorIndices)
     }
 
-    /// Fetches a single channel from the device.
-    /// - Parameter index: The channel index (0-7)
+    /// Fetches a single channel from the device with retry logic for transient BLE failures.
+    /// - Parameter index: The channel index 
     /// - Returns: Channel info if found, nil if not configured
     public func fetchChannel(index: UInt8) async throws -> ChannelInfo? {
-        do {
-            let meshChannelInfo = try await session.getChannel(index: index)
+        // BLE operations can fail transiently due to RF interference or timing.
+        // Retry with exponential backoff per industry best practices (BLE spec recommends 30s timeout,
+        // but shorter retries with backoff are more responsive).
+        let maxAttempts = 3
+        var lastError: MeshCoreError = .timeout
 
-            // Treat empty channels (cleared slots) as not configured
-            if meshChannelInfo.name.isEmpty {
-                return nil
-            }
+        for attempt in 1...maxAttempts {
+            do {
+                let meshChannelInfo = try await session.getChannel(index: index)
 
-            // Convert MeshCore.ChannelInfo to PocketMeshServices.ChannelInfo
-            return ChannelInfo(
-                index: meshChannelInfo.index,
-                name: meshChannelInfo.name,
-                secret: meshChannelInfo.secret
-            )
-        } catch let error as MeshCoreError {
-            if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
-                return nil
+                // Treat empty channels (cleared slots) as not configured
+                if meshChannelInfo.name.isEmpty {
+                    return nil
+                }
+
+                // Convert MeshCore.ChannelInfo to PocketMeshServices.ChannelInfo
+                return ChannelInfo(
+                    index: meshChannelInfo.index,
+                    name: meshChannelInfo.name,
+                    secret: meshChannelInfo.secret
+                )
+            } catch let error as MeshCoreError {
+                // Non-retryable: channel not found on device (permanent error)
+                if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
+                    return nil
+                }
+
+                // Retryable: timeout errors are transient BLE issues
+                if case .timeout = error {
+                    lastError = error
+                    if attempt < maxAttempts {
+                        // Exponential backoff: 500ms, 1000ms, 2000ms with jitter
+                        let baseDelayMs = 500 * (1 << (attempt - 1))
+                        let jitterMs = Int.random(in: -100...100)
+                        let delayMs = baseDelayMs + jitterMs
+                        logger.info("Channel \(index) fetch timeout, retry \(attempt)/\(maxAttempts) in \(delayMs)ms")
+                        try await Task.sleep(for: .milliseconds(delayMs))
+                        continue
+                    }
+                }
+
+                // Non-retryable: other MeshCore errors (device errors, parse errors, etc.)
+                throw ChannelServiceError.sessionError(error)
             }
-            throw ChannelServiceError.sessionError(error)
         }
+
+        // All retries exhausted
+        throw ChannelServiceError.sessionError(lastError)
     }
 
     /// Sets (creates or updates) a channel on the device.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7)
+    ///   - index: The channel index 
     ///   - name: The channel name
     ///   - passphrase: The passphrase to hash into a secret
     public func setChannel(
@@ -171,7 +199,7 @@ public actor ChannelService {
     /// Sets a channel with a pre-computed secret (for advanced use cases).
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7)
+    ///   - index: The channel index 
     ///   - name: The channel name
     ///   - secret: The 16-byte secret (must be exactly 16 bytes)
     public func setChannelWithSecret(
@@ -202,7 +230,7 @@ public actor ChannelService {
     /// Clears a channel by setting it to empty name and zero secret.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7, but 0 is public and shouldn't be cleared)
+    ///   - index: The channel index
     public func clearChannel(deviceID: UUID, index: UInt8) async throws {
         // Set empty name and zero secret to clear
         try await setChannelWithSecret(
