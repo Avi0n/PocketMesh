@@ -18,6 +18,7 @@ public enum ContactServiceError: Error, Sendable {
 public enum ContactCleanupReason: Sendable {
     case deleted
     case blocked
+    case unblocked
 }
 
 // MARK: - Sync Result
@@ -350,8 +351,9 @@ public actor ContactService {
             throw ContactServiceError.contactNotFound
         }
 
-        // Check if we're blocking the contact (transition from unblocked to blocked)
+        // Check blocking state transitions
         let isBeingBlocked = isBlocked == true && !existing.isBlocked
+        let isBeingUnblocked = isBlocked == false && existing.isBlocked
 
         // Create updated DTO preserving existing values
         let updated = ContactDTO(
@@ -381,9 +383,11 @@ public actor ContactService {
 
         try await dataStore.saveContact(updated)
 
-        // If blocking, trigger cleanup for notifications and badge
+        // Trigger cleanup for blocking state changes
         if isBeingBlocked {
             await cleanupHandler?(contactID, .blocked)
+        } else if isBeingUnblocked {
+            await cleanupHandler?(contactID, .unblocked)
         }
     }
 
