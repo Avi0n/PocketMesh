@@ -49,6 +49,9 @@ public actor BLEStateMachine {
     /// Queue of tasks waiting to write (serializes concurrent sends)
     private var writeWaiters: [CheckedContinuation<Void, Never>] = []
 
+    /// Tracks the current write timeout task so it can be cancelled when write completes
+    private var writeTimeoutTask: Task<Void, Never>?
+
     // MARK: - Callbacks
 
     private var onDisconnection: (@Sendable (UUID, Error?) -> Void)?
@@ -245,13 +248,15 @@ public actor BLEStateMachine {
             pendingWriteContinuation = continuation
             peripheral.writeValue(data, for: tx, type: .withResponse)
 
-            // Timeout for write
-            Task {
+            // Cancel any previous timeout task and create a new one
+            writeTimeoutTask?.cancel()
+            writeTimeoutTask = Task {
                 try? await Task.sleep(for: .seconds(writeTimeout))
+                guard !Task.isCancelled else { return }
                 if let pending = self.pendingWriteContinuation {
                     self.pendingWriteContinuation = nil
                     pending.resume(throwing: BLEError.operationTimeout)
-                    // Resume next waiter
+                    self.writeTimeoutTask = nil
                     resumeNextWriteWaiter()
                 }
             }
@@ -269,6 +274,10 @@ public actor BLEStateMachine {
     /// Disconnects from the current device.
     public func disconnect() async {
         logger.info("Disconnect requested")
+
+        // Cancel write timeout task
+        writeTimeoutTask?.cancel()
+        writeTimeoutTask = nil
 
         // Cancel pending write
         if let pending = pendingWriteContinuation {
@@ -434,7 +443,7 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
 extension BLEStateMachine {
 
     func handleCentralManagerDidUpdateState(_ state: CBManagerState) {
-        logger.debug("Central manager state: \(String(describing: state))")
+        logger.info("Central manager state: \(String(describing: state))")
         onBluetoothStateChange?(state)
 
         switch state {
@@ -591,7 +600,7 @@ extension BLEStateMachine {
     }
 
     func handleDidDiscoverServices(_ peripheral: CBPeripheral, error: Error?) {
-        logger.debug("Did discover services for \(peripheral.identifier)")
+        logger.info("Did discover services for \(peripheral.identifier)")
 
         // Handle auto-reconnect
         if case .autoReconnecting(let expected, _, _) = phase,
@@ -643,7 +652,7 @@ extension BLEStateMachine {
     }
 
     func handleDidDiscoverCharacteristics(_ peripheral: CBPeripheral, service: CBService, error: Error?) {
-        logger.debug("Did discover characteristics for \(peripheral.identifier)")
+        logger.info("Did discover characteristics for \(peripheral.identifier)")
 
         // Handle auto-reconnect
         if case .autoReconnecting(let expected, _, _) = phase,
@@ -705,7 +714,7 @@ extension BLEStateMachine {
     }
 
     func handleDidUpdateNotificationState(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
-        logger.debug("Did update notification state for \(peripheral.identifier)")
+        logger.info("Did update notification state for \(peripheral.identifier)")
 
         guard case .subscribingToNotifications(let expected, _, _, let continuation) = phase,
               expected.identifier == peripheral.identifier,
@@ -777,7 +786,11 @@ extension BLEStateMachine {
     }
 
     func handleDidWriteValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
-        logger.debug("Did write value for \(peripheral.identifier)")
+        logger.info("Did write value for \(peripheral.identifier)")
+
+        // Cancel the timeout task since write completed
+        writeTimeoutTask?.cancel()
+        writeTimeoutTask = nil
 
         guard let continuation = pendingWriteContinuation else {
             return  // No pending write
@@ -807,7 +820,7 @@ extension BLEStateMachine {
     @discardableResult
     private func transition(to newPhase: BLEPhase) -> BLEPhase {
         let oldPhase = phase
-        logger.debug("Transition: \(oldPhase.name) → \(newPhase.name)")
+        logger.info("Transition: \(oldPhase.name) → \(newPhase.name)")
 
         // Clean up old phase resources (except continuations - caller handles those)
         cleanupPhaseResources(oldPhase)

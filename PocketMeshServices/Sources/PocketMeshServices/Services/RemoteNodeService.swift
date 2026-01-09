@@ -475,7 +475,7 @@ public actor RemoteNodeService {
             throw RemoteNodeError.sessionError(error)
         }
 
-        logger.debug("Requested history sync for room \(remoteSession.name) since \(since)")
+        logger.info("Requested history sync for room \(remoteSession.name) since \(since)")
     }
 
     // MARK: - Logout
@@ -492,7 +492,7 @@ public actor RemoteNodeService {
             try await session.sendLogout(to: remoteSession.publicKey)
         } catch {
             // Ignore errors - we're disconnecting anyway
-            logger.debug("Logout send failed (ignoring): \(error)")
+            logger.info("Logout send failed (ignoring): \(error)")
         }
 
         try await dataStore.updateRemoteNodeSessionConnection(
@@ -572,7 +572,7 @@ public actor RemoteNodeService {
     /// Re-authenticates all previously connected sessions in parallel.
     public func handleBLEReconnection() async {
         guard !isReauthenticating else {
-            logger.debug("Skipping re-auth: already in progress")
+            logger.info("Skipping re-auth: already in progress")
             return
         }
 

@@ -150,7 +150,7 @@ public final class AccessorySetupKitService {
 
         case .accessoryChanged:
             pairedAccessories = session?.accessories ?? []
-            logger.debug("Accessory changed")
+            logger.info("Accessory changed")
             // Resume rename continuation if pending (rename triggers accessoryChanged)
             if let continuation = renameContinuation {
                 renameContinuation = nil
@@ -158,15 +158,15 @@ public final class AccessorySetupKitService {
             }
 
         case .pickerDidPresent:
-            logger.debug("Picker presented")
+            logger.info("Picker presented")
 
         case .pickerDidDismiss:
-            logger.debug("Picker dismissed")
+            logger.info("Picker dismissed")
             // If we still have a pending continuation, user cancelled
             resumePickerContinuation(with: .failure(AccessorySetupKitError.pickerDismissed))
 
         case .pickerSetupBridging:
-            logger.debug("Picker bridging...")
+            logger.info("Picker bridging...")
 
         case .pickerSetupPairing:
             logger.info("User entering PIN...")
@@ -200,14 +200,14 @@ public final class AccessorySetupKitService {
             }
 
         case .pickerSetupRename:
-            logger.debug("Picker rename step")
+            logger.info("Picker rename step")
 
         case .migrationComplete:
             logger.info("Migration complete")
 
         case .unknown:
             // Explicit handling per Apple sample code
-            logger.debug("Received unknown event type")
+            logger.info("Received unknown event type")
 
         @unknown default:
             // Reserve for future event types

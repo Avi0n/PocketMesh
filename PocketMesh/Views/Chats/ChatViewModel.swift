@@ -248,7 +248,12 @@ final class ChatViewModel {
 
     /// Load messages for a channel
     func loadChannelMessages(for channel: ChannelDTO) async {
-        guard let dataStore else { return }
+        logger.info("loadChannelMessages: start channel=\(channel.index) deviceID=\(channel.deviceID)")
+
+        guard let dataStore else {
+            logger.info("loadChannelMessages: dataStore is nil, returning early")
+            return
+        }
 
         currentChannel = channel
         currentContact = nil
@@ -258,11 +263,14 @@ final class ChatViewModel {
         notificationService?.activeChannelIndex = channel.index
         notificationService?.activeChannelDeviceID = channel.deviceID
 
+        logger.info("loadChannelMessages: setting isLoading=true, current messages.count=\(self.messages.count)")
         isLoading = true
         errorMessage = nil
 
         do {
-            messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            let fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+            messages = fetchedMessages
 
             // Clear unread count
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
@@ -270,9 +278,11 @@ final class ChatViewModel {
             // Update app badge
             await notificationService?.updateBadgeCount()
         } catch {
+            logger.info("loadChannelMessages: error - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
 
+        logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         isLoading = false
     }
 
@@ -355,7 +365,7 @@ final class ChatViewModel {
 
     /// Retry sending a failed message with flood routing enabled
     func retryMessage(_ message: MessageDTO) async {
-        logger.debug("retryMessage called for message: \(message.id)")
+        logger.info("retryMessage called for message: \(message.id)")
 
         guard let messageService else {
             logger.warning("retryMessage: messageService is nil")
@@ -367,13 +377,13 @@ final class ChatViewModel {
             return
         }
 
-        logger.debug("retryMessage: starting retry for contact \(contact.displayName)")
+        logger.info("retryMessage: starting retry for contact \(contact.displayName)")
 
         errorMessage = nil
 
         do {
             // Retry the existing message (preserves message identity)
-            logger.debug("retryMessage: calling retryDirectMessage with messageID")
+            logger.info("retryMessage: calling retryDirectMessage with messageID")
             let result = try await messageService.retryDirectMessage(messageID: message.id, to: contact)
             logger.info("retryMessage: completed with status \(String(describing: result.status))")
 
@@ -526,7 +536,7 @@ final class ChatViewModel {
             // Fetch the target contact by ID - it may differ from currentContact
             guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
                 // Contact was deleted, skip this message
-                logger.debug("Skipping queued message - contact \(queued.contactID) was deleted")
+                logger.info("Skipping queued message - contact \(queued.contactID) was deleted")
                 continue
             }
 

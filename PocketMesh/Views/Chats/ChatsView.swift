@@ -198,8 +198,10 @@ struct ChatsView: View {
             await refreshConversations()
         }
         .task {
+            chatsViewLogger.info("ChatsView: task started, services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await loadConversations()
+            chatsViewLogger.info("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
             handlePendingNavigation()
             handlePendingRoomNavigation()
         }

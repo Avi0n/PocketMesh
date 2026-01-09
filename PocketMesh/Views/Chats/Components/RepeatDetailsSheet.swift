@@ -55,7 +55,7 @@ struct RepeatDetailsSheet: View {
     }
 
     private func loadRepeats() async {
-        logger.debug("Loading repeats for message \(message.id), heardRepeats=\(message.heardRepeats)")
+        logger.info("Loading repeats for message \(message.id), heardRepeats=\(message.heardRepeats)")
 
         guard let services = appState.services else {
             logger.warning("services not available")
@@ -71,7 +71,7 @@ struct RepeatDetailsSheet: View {
         }
 
         let fetched = await services.heardRepeatsService.refreshRepeats(for: message.id)
-        logger.debug("Fetched \(fetched.count) repeats for message \(message.id)")
+        logger.info("Fetched \(fetched.count) repeats for message \(message.id)")
 
         repeats = fetched
         isLoading = false

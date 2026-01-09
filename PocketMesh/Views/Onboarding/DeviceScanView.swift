@@ -6,6 +6,7 @@ import os
 struct DeviceScanView: View {
     @Environment(AppState.self) private var appState
     @State private var showTroubleshooting = false
+    @State private var showingWiFiConnection = false
     @State private var pairingSuccessTrigger = false
     @State private var demoModeUnlockTrigger = false
     @State private var didInitiatePairing = false
@@ -150,16 +151,13 @@ struct DeviceScanView: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                }
 
-                Button {
-                    appState.onboardingPath.removeLast()
-                } label: {
-                    Text("Back")
-                        .font(.subheadline)
+                    Button("Connect via WiFi") {
+                        showingWiFiConnection = true
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
             }
             .padding(.horizontal)
             .padding(.bottom)
@@ -168,6 +166,9 @@ struct DeviceScanView: View {
         .sensoryFeedback(.success, trigger: demoModeUnlockTrigger)
         .sheet(isPresented: $showTroubleshooting) {
             TroubleshootingSheet()
+        }
+        .sheet(isPresented: $showingWiFiConnection) {
+            WiFiConnectionSheet()
         }
         .alert("Demo Mode Unlocked", isPresented: $showDemoModeAlert) {
             Button("OK") { }

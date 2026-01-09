@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var showingAdvancedSettings = false
     @State private var showingDeviceSelection = false
     @State private var showingLocationPicker = false
+    @State private var showingWiFiEditSheet = false
     private var demoModeManager = DemoModeManager.shared
 
     private var shouldUseSplitView: Bool {
@@ -42,7 +43,11 @@ struct SettingsView: View {
 
                 NodeSettingsSection(showingLocationPicker: $showingLocationPicker)
 
-                BluetoothSection()
+                if appState.currentTransportType == .wifi {
+                    WiFiSection(showingEditSheet: $showingWiFiEditSheet)
+                } else {
+                    BluetoothSection()
+                }
 
                 NotificationSettingsSection()
 
@@ -112,6 +117,9 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView.forLocalDevice(appState: appState)
+        }
+        .sheet(isPresented: $showingWiFiEditSheet) {
+            WiFiEditSheet()
         }
     }
 

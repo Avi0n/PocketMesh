@@ -122,6 +122,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isActive = dto.isActive
             existing.ocvPreset = dto.ocvPreset
             existing.customOCVArrayString = dto.customOCVArrayString
+            existing.connectionMethods = dto.connectionMethods
         } else {
             // Create new
             let device = Device(
@@ -153,7 +154,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 lastContactSync: dto.lastContactSync,
                 isActive: dto.isActive,
                 ocvPreset: dto.ocvPreset,
-                customOCVArrayString: dto.customOCVArrayString
+                customOCVArrayString: dto.customOCVArrayString,
+                connectionMethods: dto.connectionMethods
             )
             modelContext.insert(device)
         }

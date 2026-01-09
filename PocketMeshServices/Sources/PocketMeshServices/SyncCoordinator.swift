@@ -156,6 +156,7 @@ public actor SyncCoordinator {
     /// Notify that contacts data changed (triggers UI refresh)
     @MainActor
     public func notifyContactsChanged() {
+        logger.info("notifyContactsChanged: version \(self.contactsVersion) → \(self.contactsVersion + 1)")
         contactsVersion += 1
         onContactsChanged?()
     }
@@ -163,6 +164,7 @@ public actor SyncCoordinator {
     /// Notify that conversations data changed (triggers UI refresh)
     @MainActor
     public func notifyConversationsChanged() {
+        logger.info("notifyConversationsChanged: version \(self.conversationsVersion) → \(self.conversationsVersion + 1)")
         conversationsVersion += 1
         onConversationsChanged?()
     }
@@ -188,22 +190,41 @@ public actor SyncCoordinator {
     ) async throws {
         logger.info("Starting full sync for device \(deviceID)")
 
-        // Notify UI that sync activity started (for pill display)
+        // Set phase before triggering pill visibility
+        await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
         await onSyncActivityStarted?()
 
         // Perform contacts and channels sync (activity should show pill)
         do {
             // Phase 1: Contacts
-            await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
             let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
             logger.info("Synced \(contactResult.contactsReceived) contacts")
 
-            // Phase 2: Channels
+            // Phase 2: Channels (progress shown as phase-level "Syncing channels", not per-channel)
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
             let device = try await dataStore.fetchDevice(id: deviceID)
             let maxChannels = device?.maxChannels ?? 0
+
             let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
             logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+
+            // Retry failed channels once if there are retryable errors
+            if !channelResult.isComplete {
+                let retryableIndices = channelResult.retryableIndices
+                if !retryableIndices.isEmpty {
+                    logger.info("Retrying \(retryableIndices.count) failed channels")
+                    let retryResult = try await channelService.retryFailedChannels(
+                        deviceID: deviceID,
+                        indices: retryableIndices
+                    )
+
+                    if retryResult.isComplete {
+                        logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                    } else {
+                        logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                    }
+                }
+            }
         } catch {
             // End sync activity on error during contacts/channels phase
             await onSyncActivityEnded?()
@@ -280,7 +301,7 @@ public actor SyncCoordinator {
     // MARK: - Message Handler Wiring
 
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
-        logger.debug("Wiring message handlers for device \(deviceID)")
+        logger.info("Wiring message handlers for device \(deviceID)")
 
         // Contact message handler (direct messages)
         await services.messagePollingService.setContactMessageHandler { [weak self] message, contact in
@@ -317,7 +338,7 @@ public actor SyncCoordinator {
                 timestamp: timestamp,
                 content: message.text
             ) {
-                self.logger.debug("Skipping duplicate direct message")
+                self.logger.info("Skipping duplicate direct message")
                 return
             }
 
@@ -392,7 +413,7 @@ public actor SyncCoordinator {
                 username: senderNodeName ?? "",
                 content: messageText
             ) {
-                self.logger.debug("Skipping duplicate channel message")
+                self.logger.info("Skipping duplicate channel message")
                 return
             }
 
@@ -467,7 +488,7 @@ public actor SyncCoordinator {
     // MARK: - Discovery Handler Wiring
 
     private func wireDiscoveryHandlers(services: ServiceContainer, deviceID: UUID) async {
-        logger.debug("Wiring discovery handlers for device \(deviceID)")
+        logger.info("Wiring discovery handlers for device \(deviceID)")
 
         // New contact discovered handler (manual-add mode)
         // Posts notification when a new contact is discovered via advertisement

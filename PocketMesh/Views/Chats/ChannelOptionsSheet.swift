@@ -114,7 +114,7 @@ struct ChannelOptionsSheet: View {
                 } label: {
                     ChannelOptionRow(
                         title: "Join the Public Channel",
-                        description: "Re-add the default public broadcast channel",
+                        description: "The default public channel",
                         icon: "globe",
                         iconColor: .green
                     )

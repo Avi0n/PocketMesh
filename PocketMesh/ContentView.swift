@@ -109,7 +109,7 @@ struct MainTabView: View {
         }
 
             if appState.shouldShowSyncingPill {
-                SyncingPillView()
+                SyncingPillView(phase: appState.currentSyncPhase)
                     .padding(.top, 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.move(edge: .top).combined(with: .opacity))

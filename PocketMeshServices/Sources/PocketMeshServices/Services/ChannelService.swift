@@ -13,15 +13,57 @@ public enum ChannelServiceError: Error, Sendable {
     case saveFailed(String)
     case sendFailed(String)
     case sessionError(MeshCoreError)
+    case syncAlreadyInProgress
+    case circuitBreakerOpen(consecutiveFailures: Int)
+}
+
+// MARK: - Channel Sync Error Details
+
+/// Detailed error information for a failed channel sync
+public struct ChannelSyncError: Sendable, Equatable {
+    public let index: UInt8
+    public let errorType: ErrorType
+    public let description: String
+
+    public enum ErrorType: Sendable, Equatable {
+        case timeout
+        case deviceError(code: UInt8)
+        case databaseError
+        case unknown
+    }
+
+    public init(index: UInt8, errorType: ErrorType, description: String) {
+        self.index = index
+        self.errorType = errorType
+        self.description = description
+    }
+
+    /// Whether this error type is potentially recoverable with retry
+    public var isRetryable: Bool {
+        switch errorType {
+        case .timeout:
+            return true
+        case .deviceError, .databaseError, .unknown:
+            return false
+        }
+    }
 }
 
 // MARK: - Channel Sync Result
 
 public struct ChannelSyncResult: Sendable, Equatable {
     public let channelsSynced: Int
-    public let errors: [UInt8]  // Channel indices that failed to sync
+    public let errors: [ChannelSyncError]
 
-    public init(channelsSynced: Int, errors: [UInt8] = []) {
+    /// Whether sync completed without errors
+    public var isComplete: Bool { errors.isEmpty }
+
+    /// Indices of channels that failed with retryable errors
+    public var retryableIndices: [UInt8] {
+        errors.filter { $0.isRetryable }.map { $0.index }
+    }
+
+    public init(channelsSynced: Int, errors: [ChannelSyncError] = []) {
         self.channelsSynced = channelsSynced
         self.errors = errors
     }
@@ -41,6 +83,9 @@ public actor ChannelService {
 
     /// Callback for channel updates
     private var channelUpdateHandler: (@Sendable ([ChannelDTO]) -> Void)?
+
+    /// Tracks whether a sync operation is in progress
+    private var isSyncing = false
 
     // MARK: - Initialization
 
@@ -80,16 +125,46 @@ public actor ChannelService {
     ///   - deviceID: The device UUID
     ///   - maxChannels: Maximum number of channels to fetch (from device capacity)
     /// - Returns: Sync result with number of channels synced
+    /// - Throws: `syncAlreadyInProgress` if another sync is running,
+    ///           `circuitBreakerOpen` if too many consecutive timeouts
     public func syncChannels(deviceID: UUID, maxChannels: UInt8) async throws -> ChannelSyncResult {
+        // Concurrency guard
+        guard !isSyncing else {
+            logger.warning("Channel sync already in progress, rejecting concurrent request")
+            throw ChannelServiceError.syncAlreadyInProgress
+        }
+
+        isSyncing = true
+        defer { isSyncing = false }
+
         var syncedCount = 0
-        var errorIndices: [UInt8] = []
+        var syncErrors: [ChannelSyncError] = []
         var channels: [ChannelDTO] = []
 
+        // Circuit breaker state
+        var consecutiveTimeouts = 0
+        let circuitBreakerThreshold = 3
+
         for index: UInt8 in 0..<maxChannels {
+            // Circuit breaker: fail fast if connection is clearly broken
+            if consecutiveTimeouts >= circuitBreakerThreshold {
+                logger.error("Circuit breaker open: \(consecutiveTimeouts) consecutive timeouts, aborting sync")
+                // Mark remaining channels as failed
+                for remaining in index..<maxChannels {
+                    syncErrors.append(ChannelSyncError(
+                        index: remaining,
+                        errorType: .timeout,
+                        description: "Skipped due to circuit breaker"
+                    ))
+                }
+                throw ChannelServiceError.circuitBreakerOpen(consecutiveFailures: consecutiveTimeouts)
+            }
+
             do {
                 if let channelInfo = try await fetchChannel(index: index) {
                     _ = try await dataStore.saveChannel(deviceID: deviceID, from: channelInfo)
                     syncedCount += 1
+                    consecutiveTimeouts = 0  // Reset on success
 
                     // Fetch the saved channel DTO
                     if let dto = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
@@ -97,52 +172,193 @@ public actor ChannelService {
                     }
                 } else {
                     // Channel not configured on device - delete any stale local entry
+                    consecutiveTimeouts = 0  // Not-found is not a timeout
                     if let staleChannel = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
                         try await dataStore.deleteChannel(id: staleChannel.id)
                     }
                 }
+            } catch let error as ChannelServiceError {
+                // Track consecutive timeouts for circuit breaker
+                if case .sessionError(let meshError) = error, case .timeout = meshError {
+                    consecutiveTimeouts += 1
+                } else {
+                    consecutiveTimeouts = 0
+                }
+                let syncError = classifyError(error, forIndex: index)
+                logger.warning("Failed to sync channel \(index): \(syncError.description)")
+                syncErrors.append(syncError)
             } catch {
-                logger.warning("Failed to sync channel \(index): \(error.localizedDescription)")
-                errorIndices.append(index)
+                consecutiveTimeouts = 0
+                let syncError = classifyError(error, forIndex: index)
+                logger.warning("Failed to sync channel \(index): \(syncError.description)")
+                syncErrors.append(syncError)
             }
+        }
+
+        // Clean up orphaned channels (index >= maxChannels)
+        // This handles the case where device capacity decreased
+        do {
+            let allLocalChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+            for channel in allLocalChannels where channel.index >= maxChannels {
+                logger.info("Removing orphaned channel \(channel.index) (maxChannels=\(maxChannels))")
+                try await dataStore.deleteChannel(id: channel.id)
+            }
+        } catch {
+            logger.warning("Failed to cleanup orphaned channels: \(error.localizedDescription)")
+            // Non-fatal: continue with sync result
         }
 
         // Notify handler of updated channels
         channelUpdateHandler?(channels)
 
-        return ChannelSyncResult(channelsSynced: syncedCount, errors: errorIndices)
+        return ChannelSyncResult(channelsSynced: syncedCount, errors: syncErrors)
     }
 
-    /// Fetches a single channel from the device.
-    /// - Parameter index: The channel index (0-7)
+    /// Retries syncing only the channels that previously failed.
+    /// - Parameters:
+    ///   - deviceID: The device UUID
+    ///   - indices: Channel indices to retry
+    /// - Returns: Sync result for the retried channels
+    public func retryFailedChannels(deviceID: UUID, indices: [UInt8]) async throws -> ChannelSyncResult {
+        guard !isSyncing else {
+            throw ChannelServiceError.syncAlreadyInProgress
+        }
+
+        guard !indices.isEmpty else {
+            return ChannelSyncResult(channelsSynced: 0, errors: [])
+        }
+
+        isSyncing = true
+        defer { isSyncing = false }
+
+        logger.info("Retrying \(indices.count) failed channels: \(indices)")
+
+        // Brief delay before retry to allow transient issues to resolve
+        try await Task.sleep(for: .milliseconds(500))
+
+        var syncedCount = 0
+        var syncErrors: [ChannelSyncError] = []
+        var channels: [ChannelDTO] = []
+
+        // Circuit breaker for retry (stricter threshold than initial sync)
+        var consecutiveTimeouts = 0
+        let circuitBreakerThreshold = 2
+
+        for index in indices {
+            // Circuit breaker: stop retrying if connection is clearly broken
+            if consecutiveTimeouts >= circuitBreakerThreshold {
+                logger.warning("Retry circuit breaker open: \(consecutiveTimeouts) consecutive timeouts, stopping retry")
+                // Mark remaining channels as failed
+                let remainingIndices = indices.drop(while: { $0 != index })
+                for remaining in remainingIndices {
+                    syncErrors.append(ChannelSyncError(
+                        index: remaining,
+                        errorType: .timeout,
+                        description: "Skipped due to retry circuit breaker"
+                    ))
+                }
+                break
+            }
+
+            do {
+                if let channelInfo = try await fetchChannel(index: index) {
+                    _ = try await dataStore.saveChannel(deviceID: deviceID, from: channelInfo)
+                    syncedCount += 1
+                    consecutiveTimeouts = 0  // Reset on success
+
+                    if let dto = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
+                        channels.append(dto)
+                    }
+                    logger.info("Retry succeeded for channel \(index)")
+                } else {
+                    consecutiveTimeouts = 0  // Not-found is not a timeout
+                }
+            } catch {
+                let syncError = classifyError(error, forIndex: index)
+                // Track consecutive timeouts for circuit breaker
+                if case .timeout = syncError.errorType {
+                    consecutiveTimeouts += 1
+                } else {
+                    consecutiveTimeouts = 0
+                }
+                logger.warning("Retry failed for channel \(index): \(syncError.description)")
+                syncErrors.append(syncError)
+            }
+        }
+
+        // Notify handler if we recovered any channels
+        if !channels.isEmpty {
+            let allChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+            channelUpdateHandler?(allChannels)
+        }
+
+        return ChannelSyncResult(channelsSynced: syncedCount, errors: syncErrors)
+    }
+
+    /// Fetches a single channel from the device with retry logic for transient BLE failures.
+    /// - Parameter index: The channel index 
     /// - Returns: Channel info if found, nil if not configured
     public func fetchChannel(index: UInt8) async throws -> ChannelInfo? {
-        do {
-            let meshChannelInfo = try await session.getChannel(index: index)
+        // BLE operations can fail transiently due to RF interference or timing.
+        // Retry with exponential backoff per industry best practices (BLE spec recommends 30s timeout,
+        // but shorter retries with backoff are more responsive).
+        let maxAttempts = 3
+        var lastError: MeshCoreError = .timeout
 
-            // Treat empty channels (cleared slots) as not configured
-            if meshChannelInfo.name.isEmpty {
-                return nil
-            }
+        for attempt in 1...maxAttempts {
+            do {
+                let meshChannelInfo = try await session.getChannel(index: index)
 
-            // Convert MeshCore.ChannelInfo to PocketMeshServices.ChannelInfo
-            return ChannelInfo(
-                index: meshChannelInfo.index,
-                name: meshChannelInfo.name,
-                secret: meshChannelInfo.secret
-            )
-        } catch let error as MeshCoreError {
-            if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
-                return nil
+                // Treat empty channels (cleared slots) as not configured
+                if meshChannelInfo.name.isEmpty {
+                    return nil
+                }
+
+                // Validate returned index matches requested
+                guard meshChannelInfo.index == index else {
+                    logger.error("Channel index mismatch: requested \(index), received \(meshChannelInfo.index)")
+                    throw ChannelServiceError.invalidChannelIndex
+                }
+
+                // Convert MeshCore.ChannelInfo to PocketMeshServices.ChannelInfo
+                return ChannelInfo(
+                    index: meshChannelInfo.index,
+                    name: meshChannelInfo.name,
+                    secret: meshChannelInfo.secret
+                )
+            } catch let error as MeshCoreError {
+                // Non-retryable: channel not found on device (permanent error)
+                if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
+                    return nil
+                }
+
+                // Retryable: timeout errors are transient BLE issues
+                if case .timeout = error {
+                    lastError = error
+                    if attempt < maxAttempts {
+                        // Exponential backoff: 500ms, 1000ms, 2000ms with jitter
+                        let baseDelayMs = 500 * (1 << (attempt - 1))
+                        let jitterMs = Int.random(in: -100...100)
+                        let delayMs = baseDelayMs + jitterMs
+                        logger.info("Channel \(index) fetch timeout, retry \(attempt)/\(maxAttempts) in \(delayMs)ms")
+                        try await Task.sleep(for: .milliseconds(delayMs))
+                        continue
+                    }
+                }
+
+                // Non-retryable: other MeshCore errors (device errors, parse errors, etc.)
+                throw ChannelServiceError.sessionError(error)
             }
-            throw ChannelServiceError.sessionError(error)
         }
+
+        // All retries exhausted
+        throw ChannelServiceError.sessionError(lastError)
     }
 
     /// Sets (creates or updates) a channel on the device.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7)
+    ///   - index: The channel index 
     ///   - name: The channel name
     ///   - passphrase: The passphrase to hash into a secret
     public func setChannel(
@@ -171,7 +387,7 @@ public actor ChannelService {
     /// Sets a channel with a pre-computed secret (for advanced use cases).
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7)
+    ///   - index: The channel index 
     ///   - name: The channel name
     ///   - secret: The 16-byte secret (must be exactly 16 bytes)
     public func setChannelWithSecret(
@@ -202,7 +418,7 @@ public actor ChannelService {
     /// Clears a channel by setting it to empty name and zero secret.
     /// - Parameters:
     ///   - deviceID: The device UUID
-    ///   - index: The channel index (0-7, but 0 is public and shouldn't be cleared)
+    ///   - index: The channel index
     public func clearChannel(deviceID: UUID, index: UInt8) async throws {
         // Set empty name and zero secret to clear
         try await setChannelWithSecret(
@@ -291,15 +507,19 @@ public actor ChannelService {
 
     // MARK: - Public Channel (Slot 0)
 
+    private static let publicChannelSecret = Data([
+        0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a,
+        0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72
+    ])
+
     /// Creates or resets the public channel (slot 0).
-    /// The public channel has a zero secret and is used for broadcast discovery.
     /// - Parameter deviceID: The device UUID
     public func setupPublicChannel(deviceID: UUID) async throws {
         try await setChannelWithSecret(
             deviceID: deviceID,
             index: 0,
             name: "Public",
-            secret: Data(repeating: 0, count: ProtocolLimits.channelSecretSize)
+            secret: Self.publicChannelSecret
         )
     }
 
@@ -319,6 +539,53 @@ public actor ChannelService {
     }
 
     // MARK: - Private Helpers
+
+    /// Classifies an error into a ChannelSyncError for the given index
+    private func classifyError(_ error: Error, forIndex index: UInt8) -> ChannelSyncError {
+        if let channelError = error as? ChannelServiceError {
+            switch channelError {
+            case .sessionError(let meshError):
+                switch meshError {
+                case .timeout:
+                    return ChannelSyncError(
+                        index: index,
+                        errorType: .timeout,
+                        description: "Request timed out"
+                    )
+                case .deviceError(let code):
+                    return ChannelSyncError(
+                        index: index,
+                        errorType: .deviceError(code: code),
+                        description: "Device error: \(code)"
+                    )
+                default:
+                    return ChannelSyncError(
+                        index: index,
+                        errorType: .unknown,
+                        description: meshError.localizedDescription
+                    )
+                }
+            case .saveFailed(let reason):
+                return ChannelSyncError(
+                    index: index,
+                    errorType: .databaseError,
+                    description: "Save failed: \(reason)"
+                )
+            default:
+                return ChannelSyncError(
+                    index: index,
+                    errorType: .unknown,
+                    description: channelError.localizedDescription
+                )
+            }
+        }
+
+        return ChannelSyncError(
+            index: index,
+            errorType: .unknown,
+            description: error.localizedDescription
+        )
+    }
 
     private func fetchChannelDTO(id: UUID) async throws -> ChannelDTO? {
         try await dataStore.fetchChannel(id: id)
