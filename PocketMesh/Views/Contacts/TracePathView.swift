@@ -11,6 +11,7 @@ struct TracePathView: View {
     @State private var addHapticTrigger = 0
     @State private var dragHapticTrigger = 0
     @State private var copyHapticTrigger = 0
+    @State private var jumpHapticTrigger = 0
 
     // Row feedback
     @State private var recentlyAddedRepeaterID: UUID?
@@ -285,10 +286,16 @@ struct TracePathView: View {
 
     // MARK: - Jump to Path Button
 
-    /// Floating button to scroll to the Run Trace button (implemented in Task 3)
     @ViewBuilder
     private func jumpToPathButton(proxy: ScrollViewProxy) -> some View {
-        EmptyView()
+        JumpToPathButton(isVisible: showJumpToPath) {
+            jumpHapticTrigger += 1
+            withAnimation {
+                proxy.scrollTo("runTraceButton", anchor: .bottom)
+            }
+        }
+        .padding(.bottom)
+        .sensoryFeedback(.selection, trigger: jumpHapticTrigger)
     }
 }
 
@@ -330,5 +337,31 @@ private struct TracePathHopRow: View {
             }
         }
         .frame(minHeight: 44)
+    }
+}
+
+// MARK: - Jump to Path Button
+
+/// Floating button to scroll to the Run Trace button
+private struct JumpToPathButton: View {
+    let isVisible: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "chevron.down.circle.fill")
+                .font(.title2)
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(.regularMaterial, in: .circle)
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+        .opacity(isVisible ? 1 : 0)
+        .scaleEffect(isVisible ? 1 : 0.5)
+        .animation(.snappy(duration: 0.2), value: isVisible)
+        .accessibilityLabel("Jump to Run Trace button")
+        .accessibilityHint("Double tap to scroll to the bottom of the path")
+        .accessibilityHidden(!isVisible)
     }
 }
