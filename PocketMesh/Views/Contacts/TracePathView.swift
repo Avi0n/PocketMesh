@@ -19,11 +19,38 @@ struct TracePathView: View {
     @State private var presentedResult: TraceResult?
     @State private var showingClearConfirmation = false
 
+    // Jump to path button visibility (implemented in Task 3)
+    @State private var showJumpToPath = false
+
     var body: some View {
-        List {
-            headerSection
-            availableRepeatersSection
-            outboundPathSection
+        ScrollViewReader { proxy in
+            ScrollView {
+                Form {
+                    headerSection
+                    availableRepeatersSection
+                    outboundPathSection
+                }
+                .scrollDisabled(true)
+
+                runTraceButton
+                    .id("runTraceButton")
+                    .padding(.horizontal)
+                    .padding(.bottom)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .overlay(alignment: .bottom) {
+                jumpToPathButton(proxy: proxy)
+            }
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                // Button is off-screen when visible bottom edge is above content height minus button area
+                let visibleBottom = geometry.contentOffset.y + geometry.containerSize.height
+                let buttonTop = geometry.contentSize.height - 120
+                return visibleBottom < buttonTop
+            } action: { _, isButtonOffScreen in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showJumpToPath = isButtonOffScreen && !viewModel.outboundPath.isEmpty
+                }
+            }
         }
         .navigationTitle("Trace Path")
         .navigationBarTitleDisplayMode(.inline)
@@ -38,9 +65,6 @@ struct TracePathView: View {
             }
         }
         .environment(\.editMode, $editMode)
-        .safeAreaInset(edge: .bottom) {
-            runTraceButton
-        }
         .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
@@ -256,6 +280,14 @@ struct TracePathView: View {
             .disabled(!viewModel.canRunTrace)
         }
         .padding()
+    }
+
+    // MARK: - Jump to Path Button
+
+    /// Floating button to scroll to the Run Trace button (implemented in Task 3)
+    @ViewBuilder
+    private func jumpToPathButton(proxy: ScrollViewProxy) -> some View {
+        EmptyView()
     }
 }
 
