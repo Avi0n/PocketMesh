@@ -20,7 +20,6 @@ struct TracePathView: View {
     @State private var presentedResult: TraceResult?
     @State private var showingClearConfirmation = false
 
-    // Jump to path button visibility (implemented in Task 3)
     @State private var showJumpToPath = false
 
     var body: some View {
