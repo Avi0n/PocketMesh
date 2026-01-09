@@ -167,7 +167,7 @@ public enum CLIResponse: Sendable, Equatable {
             return .ok
         }
 
-        if trimmed.lowercased().hasPrefix("error") {
+        if trimmed.lowercased().hasPrefix("error") || trimmed.hasPrefix("ERR:") {
             // Check for "unknown command" specifically for defensive handling
             if trimmed.lowercased().contains("unknown command") {
                 return .unknownCommand(trimmed)
