@@ -170,12 +170,19 @@ public final class ServiceContainer {
         // Wire contact service to sync coordinator for UI refresh notifications
         await contactService.setSyncCoordinator(syncCoordinator)
 
-        // Wire contact service cleanup handler for notification/badge updates
-        await contactService.setCleanupHandler { [weak self] contactID, _ in
+        // Wire contact service cleanup handler for notification/badge/cache updates
+        await contactService.setCleanupHandler { [weak self] contactID, reason in
             guard let self else { return }
 
-            // Remove delivered notifications for this contact
-            await self.notificationService.removeDeliveredNotifications(forContactID: contactID)
+            // Invalidate blocked contacts cache (for both block and unblock)
+            if reason == .blocked || reason == .unblocked {
+                await self.syncCoordinator.invalidateBlockedContactsCache()
+            }
+
+            // Remove delivered notifications for this contact (only on block/delete)
+            if reason == .blocked || reason == .deleted {
+                await self.notificationService.removeDeliveredNotifications(forContactID: contactID)
+            }
 
             // Update badge count
             await self.notificationService.updateBadgeCount()

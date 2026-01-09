@@ -311,6 +311,9 @@ public actor SyncCoordinator {
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
         logger.debug("Wiring message handlers for device \(deviceID)")
 
+        // Populate blocked contacts cache
+        await refreshBlockedContactsCache(deviceID: deviceID, dataStore: services.dataStore)
+
         // Contact message handler (direct messages)
         await services.messagePollingService.setContactMessageHandler { [weak self] message, contact in
             guard let self else { return }
