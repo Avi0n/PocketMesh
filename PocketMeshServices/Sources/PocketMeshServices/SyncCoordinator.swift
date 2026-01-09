@@ -200,12 +200,31 @@ public actor SyncCoordinator {
             let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
             logger.info("Synced \(contactResult.contactsReceived) contacts")
 
-            // Phase 2: Channels
+            // Phase 2: Channels (progress shown as phase-level "Syncing channels", not per-channel)
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
             let device = try await dataStore.fetchDevice(id: deviceID)
             let maxChannels = device?.maxChannels ?? 0
+
             let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
             logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+
+            // Retry failed channels once if there are retryable errors
+            if !channelResult.isComplete {
+                let retryableIndices = channelResult.retryableIndices
+                if !retryableIndices.isEmpty {
+                    logger.info("Retrying \(retryableIndices.count) failed channels")
+                    let retryResult = try await channelService.retryFailedChannels(
+                        deviceID: deviceID,
+                        indices: retryableIndices
+                    )
+
+                    if retryResult.isComplete {
+                        logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                    } else {
+                        logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                    }
+                }
+            }
         } catch {
             // End sync activity on error during contacts/channels phase
             await onSyncActivityEnded?()
