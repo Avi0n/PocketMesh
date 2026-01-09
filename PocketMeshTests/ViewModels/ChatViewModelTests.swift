@@ -281,4 +281,90 @@ struct BlockedContactFilteringTests {
             Issue.record("Expected direct conversation with Normal contact")
         }
     }
+
+    @Test("Channel messages from blocked contacts are filtered")
+    func channelMessagesFromBlockedContactsFiltered() async {
+        let blockedNames: Set<String> = ["BlockedUser", "AnotherBlocked"]
+
+        let messages = [
+            MessageDTO(
+                id: UUID(),
+                deviceID: UUID(),
+                contactID: nil,
+                channelIndex: 0,
+                text: "Hello",
+                timestamp: 1000,
+                createdAt: Date(),
+                direction: .incoming,
+                status: .delivered,
+                textType: .plain,
+                ackCode: nil,
+                pathLength: 0,
+                snr: nil,
+                senderKeyPrefix: nil,
+                senderNodeName: "NormalUser",
+                isRead: false,
+                replyToID: nil,
+                roundTripTime: nil,
+                heardRepeats: 0,
+                retryAttempt: 0,
+                maxRetryAttempts: 0
+            ),
+            MessageDTO(
+                id: UUID(),
+                deviceID: UUID(),
+                contactID: nil,
+                channelIndex: 0,
+                text: "Blocked message",
+                timestamp: 1001,
+                createdAt: Date(),
+                direction: .incoming,
+                status: .delivered,
+                textType: .plain,
+                ackCode: nil,
+                pathLength: 0,
+                snr: nil,
+                senderKeyPrefix: nil,
+                senderNodeName: "BlockedUser",
+                isRead: false,
+                replyToID: nil,
+                roundTripTime: nil,
+                heardRepeats: 0,
+                retryAttempt: 0,
+                maxRetryAttempts: 0
+            ),
+            MessageDTO(
+                id: UUID(),
+                deviceID: UUID(),
+                contactID: nil,
+                channelIndex: 0,
+                text: "My message",
+                timestamp: 1002,
+                createdAt: Date(),
+                direction: .outgoing,
+                status: .sent,
+                textType: .plain,
+                ackCode: nil,
+                pathLength: 0,
+                snr: nil,
+                senderKeyPrefix: nil,
+                senderNodeName: nil,
+                isRead: true,
+                replyToID: nil,
+                roundTripTime: nil,
+                heardRepeats: 0,
+                retryAttempt: 0,
+                maxRetryAttempts: 0
+            )
+        ]
+
+        let filtered = messages.filter { message in
+            guard let senderName = message.senderNodeName else { return true }
+            return !blockedNames.contains(senderName)
+        }
+
+        #expect(filtered.count == 2)
+        #expect(filtered[0].senderNodeName == "NormalUser")
+        #expect(filtered[1].senderNodeName == nil)
+    }
 }

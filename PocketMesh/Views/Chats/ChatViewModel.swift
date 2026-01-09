@@ -262,7 +262,26 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+
+            // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
+            let blockedNames: Set<String>
+            do {
+                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: channel.deviceID)
+                blockedNames = Set(blockedContacts.map(\.name))
+            } catch {
+                logger.error("Failed to fetch blocked contacts for filtering: \(error)")
+                blockedNames = []
+            }
+
+            if !blockedNames.isEmpty {
+                fetchedMessages = fetchedMessages.filter { message in
+                    guard let senderName = message.senderNodeName else { return true }
+                    return !blockedNames.contains(senderName)
+                }
+            }
+
+            messages = fetchedMessages
 
             // Clear unread count
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
