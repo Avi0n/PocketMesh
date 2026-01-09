@@ -31,7 +31,9 @@ struct TracePathView: View {
             List {
                 headerSection
                 availableRepeatersSection
-                outboundPathSection
+                pathSettingsSection
+                pathHopsSection
+                pathActionsSection
                 runTraceSection
                     .id("runTraceButton")
             }
@@ -115,9 +117,9 @@ struct TracePathView: View {
         }
     }
 
-    // MARK: - Outbound Path Section
+    // MARK: - Outbound Path Sections
 
-    private var outboundPathSection: some View {
+    private var pathSettingsSection: some View {
         Section {
             Toggle(isOn: $viewModel.autoReturnPath) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -138,7 +140,13 @@ struct TracePathView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             }
+        } header: {
+            Text("Outbound Path")
+        }
+    }
 
+    private var pathHopsSection: some View {
+        Section {
             if viewModel.outboundPath.isEmpty {
                 Text("Tap a repeater above to start building your path")
                     .foregroundStyle(.secondary)
@@ -156,8 +164,21 @@ struct TracePathView: View {
                         viewModel.removeRepeater(at: index)
                     }
                 }
+            }
+        } footer: {
+            if !viewModel.outboundPath.isEmpty {
+                if editMode == .active {
+                    Text("Drag to reorder. Swipe to remove.")
+                } else {
+                    Text("Tap Edit to reorder or remove hops.")
+                }
+            }
+        }
+    }
 
-                // Full path display with copy button
+    private var pathActionsSection: some View {
+        Section {
+            if !viewModel.outboundPath.isEmpty {
                 HStack {
                     Text(viewModel.fullPathString)
                         .font(.caption.monospaced())
@@ -187,16 +208,6 @@ struct TracePathView: View {
                     }
                 } message: {
                     Text("Remove all repeaters from the path?")
-                }
-            }
-        } header: {
-            Text("Outbound Path")
-        } footer: {
-            if !viewModel.outboundPath.isEmpty {
-                if editMode == .active {
-                    Text("Drag to reorder. Swipe to remove.")
-                } else {
-                    Text("Tap Edit to reorder or remove hops.")
                 }
             }
         }
