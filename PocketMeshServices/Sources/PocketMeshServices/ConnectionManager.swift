@@ -135,6 +135,14 @@ public final class ConnectionManager {
     /// Minimum interval between reconnection attempts (prevents flapping)
     private static let wifiReconnectCooldown: TimeInterval = 35
 
+    // MARK: - WiFi Heartbeat
+
+    /// Task for periodic WiFi connection health checks
+    private var wifiHeartbeatTask: Task<Void, Never>?
+
+    /// Interval between WiFi heartbeat probes (seconds)
+    private static let wifiHeartbeatInterval: Duration = .seconds(30)
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -187,6 +195,42 @@ public final class ConnectionManager {
         wifiReconnectAttempt = 0
     }
 
+    /// Starts periodic heartbeat to detect dead WiFi connections.
+    /// ESP32's TCP stack doesn't respond to TCP keepalives, so we use application-level probes.
+    private func startWiFiHeartbeat() {
+        stopWiFiHeartbeat()
+
+        wifiHeartbeatTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: Self.wifiHeartbeatInterval)
+                } catch {
+                    break
+                }
+
+                guard let self,
+                      self.currentTransportType == .wifi,
+                      self.connectionState == .ready,
+                      let session = self.session else { break }
+
+                // Probe connection with lightweight command
+                do {
+                    _ = try await session.getTime()
+                } catch {
+                    self.logger.warning("WiFi heartbeat failed: \(error.localizedDescription)")
+                    await self.handleWiFiDisconnection(error: error)
+                    break
+                }
+            }
+        }
+    }
+
+    /// Stops the WiFi heartbeat loop
+    private func stopWiFiHeartbeat() {
+        wifiHeartbeatTask?.cancel()
+        wifiHeartbeatTask = nil
+    }
+
     /// Handles unexpected WiFi connection loss
     private func handleWiFiDisconnection(error: Error?) async {
         // User-initiated disconnect - don't reconnect
@@ -196,6 +240,9 @@ public final class ConnectionManager {
         guard currentTransportType == .wifi else { return }
 
         logger.warning("WiFi connection lost: \(error?.localizedDescription ?? "unknown")")
+
+        // Stop heartbeat before teardown
+        stopWiFiHeartbeat()
 
         // Tear down session (invalid now)
         await services?.stopEventMonitoring()
@@ -342,6 +389,7 @@ public final class ConnectionManager {
 
         currentTransportType = .wifi
         connectionState = .ready
+        startWiFiHeartbeat()
     }
 
     /// Checks if the WiFi connection is still alive (call on app foreground)
@@ -594,6 +642,9 @@ public final class ConnectionManager {
         // Cancel any WiFi reconnection in progress
         cancelWiFiReconnection()
 
+        // Stop WiFi heartbeat
+        stopWiFiHeartbeat()
+
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
 
@@ -776,6 +827,7 @@ public final class ConnectionManager {
 
             currentTransportType = .wifi
             connectionState = .ready
+            startWiFiHeartbeat()
             logger.info("WiFi connection complete - device ready")
 
         } catch {
