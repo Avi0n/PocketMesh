@@ -32,11 +32,15 @@ struct TracePathView: View {
                     outboundPathSection
                 }
                 .scrollDisabled(true)
+                .containerRelativeFrame(.vertical) { height, _ in
+                    max(height * 0.5, 300)
+                }
 
                 runTraceButton
                     .id("runTraceButton")
                     .padding(.horizontal)
                     .padding(.bottom)
+                    .safeAreaPadding(.bottom)
             }
             .scrollDismissesKeyboard(.interactively)
             .overlay(alignment: .bottom) {
