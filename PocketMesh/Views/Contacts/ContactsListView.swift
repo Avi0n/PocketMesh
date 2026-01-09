@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshServices
+import OSLog
+
+private let contactsListLogger = Logger(subsystem: "com.pocketmesh", category: "ContactsListView")
 
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {
@@ -130,8 +133,10 @@ struct ContactsListView: View {
         }
         .sensoryFeedback(.success, trigger: syncSuccessTrigger)
         .task {
+            contactsListLogger.info("ContactsListView: task started, services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await loadContacts()
+            contactsListLogger.info("ContactsListView: loaded, contacts=\(viewModel.contacts.count)")
         }
         .onChange(of: appState.servicesVersion) { _, _ in
             // Services changed (device switch, reconnect) - reload contacts

@@ -260,7 +260,7 @@ public actor RoomServerService {
         // Defensive check: room servers shouldn't push our own messages back
         let isFromSelf = selfPublicKeyPrefix?.prefix(4) == authorPrefix.prefix(4)
         if isFromSelf {
-            logger.debug("Received self message from room server (unexpected)")
+            logger.info("Received self message from room server (unexpected)")
         }
 
         let authorName = try await resolveAuthorName(keyPrefix: authorPrefix)
@@ -352,10 +352,10 @@ public actor RoomServerService {
 
             if contact.outPathLength >= 0 {
                 // Contact has a path from advertisement - try it directly
-                logger.debug("Trying advert path for room \(remoteSession.name)")
+                logger.info("Trying advert path for room \(remoteSession.name)")
                 do {
                     try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
-                    logger.debug("History sync succeeded using advert path")
+                    logger.info("History sync succeeded using advert path")
                     return
                 } catch {
                     // Advert path didn't work - fall through to path discovery
@@ -374,7 +374,7 @@ public actor RoomServerService {
 
             // Retry with newly discovered path
             try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
-            logger.debug("History sync succeeded after path discovery")
+            logger.info("History sync succeeded after path discovery")
         } catch {
             logger.warning("Failed to sync history for session \(sessionID): \(error)")
             // Don't fail the join - messages will arrive via normal flow

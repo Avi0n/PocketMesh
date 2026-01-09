@@ -114,7 +114,7 @@ public actor iOSBLETransport: MeshTransport {
         // Already connected - check if it's the same device
         if await stateMachine.isConnected {
             if connectedID == deviceID {
-                logger.debug("Already connected to device: \(deviceID)")
+                logger.info("Already connected to device: \(deviceID)")
                 return
             } else {
                 throw BLEError.connectionFailed("Already connected to different device: \(connectedID?.uuidString ?? "unknown"). Use switchDevice() instead.")

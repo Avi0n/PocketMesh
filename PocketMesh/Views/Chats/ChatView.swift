@@ -266,7 +266,7 @@ struct ChatView: View {
     }
 
     private func retryMessage(_ message: MessageDTO) {
-        logger.debug("retryMessage called for message: \(message.id)")
+        logger.info("retryMessage called for message: \(message.id)")
         Task {
             await viewModel.retryMessage(message)
         }

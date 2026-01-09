@@ -680,7 +680,7 @@ public actor MessageService {
         do {
             // Fetch fresh contact state from device
             guard let updatedContact = try await session.getContact(publicKey: publicKey) else {
-                logger.debug("Contact not found in device contacts after retry")
+                logger.info("Contact not found in device contacts after retry")
                 return
             }
 

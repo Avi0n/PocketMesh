@@ -62,6 +62,7 @@ public final class MessageEventBroadcaster {
 
     /// Handle incoming direct message (called from SyncCoordinator callback)
     func handleDirectMessage(_ message: MessageDTO, from contact: ContactDTO) {
+        logger.info("dispatch: directMessageReceived from \(contact.displayName)")
         self.latestMessage = message
         self.latestEvent = .directMessageReceived(message: message, contact: contact)
         self.newMessageCount += 1
@@ -71,6 +72,7 @@ public final class MessageEventBroadcaster {
 
     /// Handle incoming channel message (called from SyncCoordinator callback)
     func handleChannelMessage(_ message: MessageDTO, channelIndex: UInt8) {
+        logger.info("dispatch: channelMessageReceived on channel \(channelIndex)")
         self.latestEvent = .channelMessageReceived(message: message, channelIndex: channelIndex)
         self.newMessageCount += 1
     }
@@ -79,6 +81,7 @@ public final class MessageEventBroadcaster {
 
     /// Handle incoming room message (called from SyncCoordinator callback)
     func handleRoomMessage(_ message: RoomMessageDTO, contact: ContactDTO) {
+        logger.info("dispatch: roomMessageReceived for session \(message.sessionID)")
         self.latestEvent = .roomMessageReceived(message: message, sessionID: message.sessionID)
         self.newMessageCount += 1
     }
@@ -93,6 +96,7 @@ public final class MessageEventBroadcaster {
 
     /// Called when a message fails due to ACK timeout
     func handleMessageFailed(messageID: UUID) {
+        logger.info("dispatch: messageFailed for \(messageID)")
         self.latestEvent = .messageFailed(messageID: messageID)
         self.newMessageCount += 1
     }

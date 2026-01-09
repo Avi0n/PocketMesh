@@ -590,7 +590,7 @@ public final class ConnectionManager {
         // Handle already-connected cases
         if connectionState != .disconnected {
             if connectedDevice?.id == deviceID {
-                logger.debug("Already connected to device: \(deviceID)")
+                logger.info("Already connected to device: \(deviceID)")
                 return
             }
             // Connected to different device - switch to new one
@@ -995,10 +995,10 @@ public final class ConnectionManager {
     /// Fetches all previously paired devices from storage.
     /// Available even when disconnected, for device selection UI.
     public func fetchSavedDevices() async throws -> [DeviceDTO] {
-        logger.debug("fetchSavedDevices called, connectionState: \(String(describing: self.connectionState))")
+        logger.info("fetchSavedDevices called, connectionState: \(String(describing: self.connectionState))")
         let dataStore = PersistenceStore(modelContainer: modelContainer)
         let devices = try await dataStore.fetchDevices()
-        logger.debug("fetchSavedDevices returning \(devices.count) devices")
+        logger.info("fetchSavedDevices returning \(devices.count) devices")
         return devices
     }
 
@@ -1298,7 +1298,7 @@ public final class ConnectionManager {
 
         // Accept both disconnected (normal) and connecting (auto-reconnect in progress)
         guard self.connectionState == .disconnected || self.connectionState == .connecting else {
-            logger.debug("Ignoring: already \(String(describing: self.connectionState))")
+            logger.info("Ignoring: already \(String(describing: self.connectionState))")
             return
         }
 
@@ -1443,7 +1443,7 @@ extension ConnectionManager: AccessorySetupKitServiceDelegate {
                 logger.info("Deleted device data after failed pairing")
             } catch {
                 // Expected if device wasn't previously saved
-                logger.debug("No device data to delete: \(error.localizedDescription)")
+                logger.info("No device data to delete: \(error.localizedDescription)")
             }
         }
 
