@@ -4,7 +4,6 @@ import SwiftUI
 struct AboutSection: View {
     @Environment(AppState.self) private var appState
     @State private var isExporting = false
-    @State private var exportFileURL: URL?
 
     var body: some View {
         Section {
@@ -65,31 +64,34 @@ struct AboutSection: View {
         } header: {
             Text("Support")
         }
-        .sheet(item: $exportFileURL) { url in
-            ShareSheet(activityItems: [url])
-        }
     }
 
     private func exportLogs() {
         isExporting = true
         Task {
-            exportFileURL = await LogExportService.createExportFile(appState: appState)
-            isExporting = false
+            guard let fileURL = await LogExportService.createExportFile(appState: appState) else {
+                isExporting = false
+                return
+            }
+
+            await MainActor.run {
+                let activityVC = UIActivityViewController(
+                    activityItems: [fileURL],
+                    applicationActivities: nil
+                )
+
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootVC = windowScene.windows.first?.rootViewController {
+                    // Find the topmost presented controller
+                    var topVC = rootVC
+                    while let presented = topVC.presentedViewController {
+                        topVC = presented
+                    }
+                    topVC.present(activityVC, animated: true)
+                }
+
+                isExporting = false
+            }
         }
     }
-}
-
-extension URL: @retroactive Identifiable {
-    public var id: String { absoluteString }
-}
-
-/// UIKit ShareSheet wrapper for SwiftUI
-private struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
