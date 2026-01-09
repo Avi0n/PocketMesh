@@ -8,7 +8,8 @@ import Foundation
 private func createTestContact(
     deviceID: UUID = UUID(),
     name: String = "TestContact",
-    type: ContactType = .chat
+    type: ContactType = .chat,
+    isBlocked: Bool = false
 ) -> ContactDTO {
     let contact = Contact(
         id: UUID(),
@@ -22,7 +23,8 @@ private func createTestContact(
         lastAdvertTimestamp: UInt32(Date().timeIntervalSince1970),
         latitude: 0,
         longitude: 0,
-        lastModified: UInt32(Date().timeIntervalSince1970)
+        lastModified: UInt32(Date().timeIntervalSince1970),
+        isBlocked: isBlocked
     )
     return ContactDTO(from: contact)
 }
@@ -206,4 +208,77 @@ struct ChatViewModelTests {
         #expect(conversations.isEmpty)
     }
 
+}
+
+// MARK: - Blocked Contact Filtering Tests
+
+@Suite("Blocked Contact Filtering")
+@MainActor
+struct BlockedContactFilteringTests {
+
+    @Test("Blocked contacts are excluded from allConversations")
+    func blockedContactsExcludedFromConversations() {
+        let deviceID = UUID()
+        let viewModel = ChatViewModel()
+
+        // Create contacts - one blocked, one not
+        let normalContact = createTestContact(
+            deviceID: deviceID,
+            name: "Normal",
+            type: .chat,
+            isBlocked: false
+        )
+        let blockedContact = createTestContact(
+            deviceID: deviceID,
+            name: "Blocked",
+            type: .chat,
+            isBlocked: true
+        )
+
+        viewModel.conversations = [normalContact, blockedContact]
+
+        let conversations = viewModel.allConversations
+        #expect(conversations.count == 1)
+        if case .direct(let contact) = conversations.first {
+            #expect(contact.name == "Normal")
+        } else {
+            Issue.record("Expected direct conversation")
+        }
+    }
+
+    @Test("allConversations returns empty when all contacts are blocked")
+    func allConversationsEmptyWhenAllBlocked() {
+        let deviceID = UUID()
+        let viewModel = ChatViewModel()
+
+        viewModel.conversations = [
+            createTestContact(deviceID: deviceID, name: "Blocked1", type: .chat, isBlocked: true),
+            createTestContact(deviceID: deviceID, name: "Blocked2", type: .chat, isBlocked: true)
+        ]
+
+        let conversations = viewModel.allConversations
+        #expect(conversations.isEmpty)
+    }
+
+    @Test("Blocked repeaters are also excluded")
+    func blockedRepeatersAlsoExcluded() {
+        let deviceID = UUID()
+        let viewModel = ChatViewModel()
+
+        // Mix of blocked chat, normal chat, and repeater (blocked or not)
+        viewModel.conversations = [
+            createTestContact(deviceID: deviceID, name: "Normal", type: .chat, isBlocked: false),
+            createTestContact(deviceID: deviceID, name: "BlockedChat", type: .chat, isBlocked: true),
+            createTestContact(deviceID: deviceID, name: "Repeater", type: .repeater, isBlocked: false),
+            createTestContact(deviceID: deviceID, name: "BlockedRepeater", type: .repeater, isBlocked: true)
+        ]
+
+        let conversations = viewModel.allConversations
+        #expect(conversations.count == 1)
+        if case .direct(let contact) = conversations.first {
+            #expect(contact.name == "Normal")
+        } else {
+            Issue.record("Expected direct conversation with Normal contact")
+        }
+    }
 }
