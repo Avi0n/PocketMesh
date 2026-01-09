@@ -80,12 +80,6 @@ struct DeviceScanView: View {
                     }
                     .liquidGlassProminentButtonStyle()
                 } else {
-                    Button("Using WiFi instead?") {
-                        showingWiFiConnection = true
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
                     #if targetEnvironment(simulator)
                     // Simulator build - always show Connect Simulator
                     Button {
@@ -154,6 +148,12 @@ struct DeviceScanView: View {
 
                     Button("Device not appearing?") {
                         showTroubleshooting = true
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                    Button("Connect via WiFi") {
+                        showingWiFiConnection = true
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

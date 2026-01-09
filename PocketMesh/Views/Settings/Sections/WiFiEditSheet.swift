@@ -66,6 +66,7 @@ struct WiFiEditSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Clear IP address")
                         }
                     }
 
@@ -82,6 +83,7 @@ struct WiFiEditSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Clear port")
                         }
                     }
                 } header: {
