@@ -104,6 +104,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Fetch discovered (pending) contacts
     func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO]
 
+    /// Fetch blocked contacts for a device
+    func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO]
+
     /// Mark a discovered contact as confirmed
     func confirmContact(id: UUID) async throws
 

@@ -429,6 +429,13 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return contacts.values.filter { $0.deviceID == deviceID && $0.isDiscovered }
     }
 
+    public func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked }
+    }
+
     public func confirmContact(id: UUID) async throws {
         if var contact = contacts[id] {
             contacts[id] = ContactDTO(

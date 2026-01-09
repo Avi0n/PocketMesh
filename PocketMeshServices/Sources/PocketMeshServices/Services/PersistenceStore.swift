@@ -433,6 +433,20 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return contacts.map { ContactDTO(from: $0) }
     }
 
+    /// Fetch all blocked contacts for a device
+    public func fetchBlockedContacts(deviceID: UUID) throws -> [ContactDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID && contact.isBlocked == true
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.name)]
+        )
+        let contacts = try modelContext.fetch(descriptor)
+        return contacts.map { ContactDTO(from: $0) }
+    }
+
     /// Mark a discovered contact as confirmed (after adding to device)
     public func confirmContact(id: UUID) throws {
         let targetID = id
