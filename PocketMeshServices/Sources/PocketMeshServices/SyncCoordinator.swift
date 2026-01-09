@@ -437,15 +437,17 @@ public actor SyncCoordinator {
                     try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
                 }
 
-                // Post notification
-                await services.notificationService.postChannelMessageNotification(
-                    channelName: channel?.name ?? "Channel \(message.channelIndex)",
-                    channelIndex: message.channelIndex,
-                    deviceID: deviceID,
-                    senderName: senderNodeName,
-                    messageText: messageText,
-                    messageID: messageDTO.id
-                )
+                // Post notification (suppress if sender is blocked - O(1) cache lookup)
+                if await !self.isBlockedSender(senderNodeName) {
+                    await services.notificationService.postChannelMessageNotification(
+                        channelName: channel?.name ?? "Channel \(message.channelIndex)",
+                        channelIndex: message.channelIndex,
+                        deviceID: deviceID,
+                        senderName: senderNodeName,
+                        messageText: messageText,
+                        messageID: messageDTO.id
+                    )
+                }
                 await services.notificationService.updateBadgeCount()
 
                 // Notify UI via SyncCoordinator
