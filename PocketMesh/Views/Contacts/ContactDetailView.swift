@@ -86,7 +86,7 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("You won't receive messages from \(currentContact.displayName). Unread notifications will be cleared. You can unblock them later.")
+            Text("You won't receive messages from \(currentContact.displayName). This conversation will be hidden from your Chats list, and their channel messages will not appear. You can unblock them later in Contacts.")
         }
         .alert("Delete Contact", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }

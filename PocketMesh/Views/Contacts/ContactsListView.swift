@@ -251,6 +251,7 @@ struct ContactRowView: View {
                         Image(systemName: "hand.raised.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
+                            .accessibilityLabel("Blocked")
                     }
                 }
 
