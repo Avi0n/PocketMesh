@@ -252,7 +252,6 @@ struct TracePathView: View {
 
     private var runTraceButton: some View {
         VStack(spacing: 8) {
-            // Error message (if present)
             if let error = viewModel.errorMessage {
                 Text(error)
                     .font(.subheadline)
@@ -261,25 +260,27 @@ struct TracePathView: View {
             }
 
             Button {
-                viewModel.clearError()  // Clear error before retry
+                viewModel.clearError()
                 Task {
                     await viewModel.runTrace()
                 }
             } label: {
-                HStack {
+                HStack(spacing: 8) {
                     if viewModel.isRunning {
                         ProgressView()
-                            .tint(.white)
+                            .controlSize(.small)
+                        Text("Running Trace...")
                     } else {
-                        // Show "Retry" if there's an error, otherwise "Run Trace"
                         Text(viewModel.errorMessage != nil ? "Retry" : "Run Trace")
                     }
                 }
+                .frame(maxWidth: .infinity)
             }
-            .modifier(GlassProminentButtonStyle())
+            .modifier(GlassButtonStyle(isRunning: viewModel.isRunning))
             .disabled(!viewModel.canRunTrace)
+            .accessibilityLabel(viewModel.isRunning ? "Running trace, please wait" : "Run trace")
+            .accessibilityHint(viewModel.isRunning ? "Trace is in progress" : "Double tap to trace the path")
         }
-        .padding()
     }
 
     // MARK: - Jump to Path Button
@@ -294,12 +295,18 @@ struct TracePathView: View {
 // MARK: - iOS 26 Liquid Glass Support
 
 /// Applies `.glassProminent` on iOS 26+, falls back to `.borderedProminent` on earlier versions
-private struct GlassProminentButtonStyle: ViewModifier {
+private struct GlassButtonStyle: ViewModifier {
+    var isRunning: Bool = false
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
+            content
+                .buttonStyle(.glassProminent)
+                .tint(isRunning ? .gray : nil)
         } else {
-            content.buttonStyle(.borderedProminent)
+            content
+                .buttonStyle(.borderedProminent)
+                .tint(isRunning ? .gray : nil)
         }
     }
 }
