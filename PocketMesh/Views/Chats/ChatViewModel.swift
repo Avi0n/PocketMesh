@@ -80,6 +80,7 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
+    private var syncCoordinator: SyncCoordinator?
 
     // MARK: - Initialization
 
@@ -92,6 +93,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.syncCoordinator = appState.syncCoordinator
     }
 
     /// Configure with services (for testing)
@@ -178,8 +180,9 @@ final class ChatViewModel {
         do {
             messages = try await dataStore.fetchMessages(contactID: contact.id)
 
-            // Clear unread count
+            // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
+            await syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
@@ -272,8 +275,9 @@ final class ChatViewModel {
             logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
             messages = fetchedMessages
 
-            // Clear unread count
+            // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+            await syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
