@@ -5,6 +5,7 @@ import PocketMeshServices
 import MeshCore
 import OSLog
 import TipKit
+import UIKit
 
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
@@ -31,6 +32,7 @@ public final class AppState {
     public var connectionState: PocketMeshServices.ConnectionState { connectionManager.connectionState }
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
+    public var currentTransportType: TransportType? { connectionManager.currentTransportType }
 
     /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
@@ -155,6 +157,10 @@ public final class AppState {
     /// Wire services to message event broadcaster
     func wireServicesIfConnected() async {
         guard let services else {
+            // Announce disconnection for VoiceOver users
+            if UIAccessibility.isVoiceOverRunning {
+                announceConnectionState("Device connection lost")
+            }
             // Clear syncCoordinator when services are nil
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
@@ -162,6 +168,11 @@ public final class AppState {
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
             return
+        }
+
+        // Announce reconnection for VoiceOver users
+        if UIAccessibility.isVoiceOverRunning {
+            announceConnectionState("Device reconnected")
         }
 
         // Store syncCoordinator reference
@@ -353,6 +364,12 @@ public final class AppState {
         await connectionManager.disconnect()
     }
 
+    /// Connect to a device via WiFi/TCP
+    func connectViaWiFi(host: String, port: UInt16) async throws {
+        try await connectionManager.connectViaWiFi(host: host, port: port)
+        await wireServicesIfConnected()
+    }
+
     /// Fetch device battery level
     func fetchDeviceBattery() async {
         guard let settingsService = services?.settingsService else { return }
@@ -410,6 +427,16 @@ public final class AppState {
         if connectionState == .ready {
             try? await services?.messageService.checkExpiredAcks()
         }
+
+        // Check WiFi connection health (may have died while backgrounded)
+        await connectionManager.checkWiFiConnectionHealth()
+    }
+
+    // MARK: - Accessibility
+
+    /// Posts a VoiceOver announcement for connection state changes
+    private func announceConnectionState(_ message: String) {
+        UIAccessibility.post(notification: .announcement, argument: message)
     }
 
     // MARK: - Navigation

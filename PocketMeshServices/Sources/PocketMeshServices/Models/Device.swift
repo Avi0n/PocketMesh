@@ -93,6 +93,9 @@ public final class Device {
     /// Custom OCV array as comma-separated string (e.g., "4240,4112,4029,...")
     public var customOCVArrayString: String?
 
+    /// Connection methods available for this device (BLE, WiFi, etc.)
+    public var connectionMethods: [ConnectionMethod] = []
+
     public init(
         id: UUID = UUID(),
         publicKey: Data,
@@ -122,7 +125,8 @@ public final class Device {
         lastContactSync: UInt32 = 0,
         isActive: Bool = false,
         ocvPreset: String? = nil,
-        customOCVArrayString: String? = nil
+        customOCVArrayString: String? = nil,
+        connectionMethods: [ConnectionMethod] = []
     ) {
         self.id = id
         self.publicKey = publicKey
@@ -153,6 +157,7 @@ public final class Device {
         self.isActive = isActive
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
+        self.connectionMethods = connectionMethods
     }
 }
 
@@ -189,6 +194,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let isActive: Bool
     public let ocvPreset: String?
     public let customOCVArrayString: String?
+    public let connectionMethods: [ConnectionMethod]
 
     public init(
         id: UUID,
@@ -219,7 +225,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         lastContactSync: UInt32,
         isActive: Bool,
         ocvPreset: String?,
-        customOCVArrayString: String?
+        customOCVArrayString: String?,
+        connectionMethods: [ConnectionMethod] = []
     ) {
         self.id = id
         self.publicKey = publicKey
@@ -250,6 +257,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.isActive = isActive
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
+        self.connectionMethods = connectionMethods
     }
 
     public init(from device: Device) {
@@ -282,6 +290,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.isActive = device.isActive
         self.ocvPreset = device.ocvPreset
         self.customOCVArrayString = device.customOCVArrayString
+        self.connectionMethods = device.connectionMethods
     }
 
     /// The 6-byte public key prefix used for identifying messages
@@ -341,7 +350,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             lastContactSync: lastContactSync,
             isActive: isActive,
             ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
         )
     }
 }
