@@ -51,6 +51,17 @@ enum Conversation: Identifiable, Hashable {
         }
     }
 
+    var isMuted: Bool {
+        switch self {
+        case .direct(let contact):
+            return contact.isMuted
+        case .channel(let channel):
+            return channel.isMuted
+        case .room(let session):
+            return session.isMuted
+        }
+    }
+
     var isChannel: Bool {
         if case .channel = self { return true }
         return false
