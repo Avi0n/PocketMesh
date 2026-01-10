@@ -371,7 +371,8 @@ public actor SyncCoordinator {
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
                         messageText: message.text,
-                        messageID: messageDTO.id
+                        messageID: messageDTO.id,
+                        isMuted: contact?.isMuted ?? false
                     )
                 }
                 await services.notificationService.updateBadgeCount()
@@ -447,7 +448,8 @@ public actor SyncCoordinator {
                     deviceID: deviceID,
                     senderName: senderNodeName,
                     messageText: messageText,
-                    messageID: messageDTO.id
+                    messageID: messageDTO.id,
+                    isMuted: channel?.isMuted ?? false
                 )
                 await services.notificationService.updateBadgeCount()
 
@@ -481,8 +483,21 @@ public actor SyncCoordinator {
                     text: message.text
                 )
 
-                // If message was saved (not a duplicate), notify UI
+                // If message was saved (not a duplicate), notify UI and post notification
                 if let savedMessage {
+                    // Fetch session for room name and mute status
+                    let session = try? await services.dataStore.fetchRemoteNodeSession(id: savedMessage.sessionID)
+
+                    // Post notification for room message
+                    await services.notificationService.postRoomMessageNotification(
+                        roomName: session?.name ?? "Room",
+                        senderName: savedMessage.authorName,
+                        messageText: savedMessage.text,
+                        messageID: savedMessage.id,
+                        isMuted: session?.isMuted ?? false
+                    )
+                    await services.notificationService.updateBadgeCount()
+
                     await self.notifyConversationsChanged()
                     await self.onRoomMessageReceived?(savedMessage)
                 }
