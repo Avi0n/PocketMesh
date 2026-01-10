@@ -400,8 +400,16 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    if let date = contact.lastMessageDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if contact.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = contact.lastMessageDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -422,7 +430,7 @@ struct ConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
@@ -590,8 +598,16 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    if let date = channel.lastMessageDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if channel.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = channel.lastMessageDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -612,7 +628,7 @@ struct ChannelConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
@@ -671,8 +687,16 @@ struct RoomConversationRow: View {
 
                     Spacer()
 
-                    if let date = session.lastConnectedDate {
-                        ConversationTimestamp(date: date)
+                    HStack(spacing: 4) {
+                        if session.isMuted {
+                            Image(systemName: "bell.slash")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Muted")
+                        }
+                        if let date = session.lastConnectedDate {
+                            ConversationTimestamp(date: date)
+                        }
                     }
                 }
 
@@ -698,7 +722,7 @@ struct RoomConversationRow: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(.blue, in: .capsule)
+                            .background(session.isMuted ? Color.secondary : Color.blue, in: .capsule)
                     }
                 }
             }
