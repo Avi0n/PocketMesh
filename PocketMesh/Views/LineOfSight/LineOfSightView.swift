@@ -1646,12 +1646,13 @@ extension View {
         lastModified: 0,
         nickname: nil,
         isBlocked: false,
+        isMuted: false,
         isFavorite: false,
         isDiscovered: false,
         lastMessageDate: nil,
         unreadCount: 0
     )
 
-    return LineOfSightView(preselectedContact: contact)
+    LineOfSightView(preselectedContact: contact)
         .environment(AppState())
 }

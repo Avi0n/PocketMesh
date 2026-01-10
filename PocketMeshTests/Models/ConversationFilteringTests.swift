@@ -26,6 +26,7 @@ final class ConversationFilteringTests: XCTestCase {
             lastModified: 0,
             nickname: nil,
             isBlocked: false,
+            isMuted: false,
             isFavorite: isFavorite,
             isDiscovered: false,
             lastMessageDate: Date(),
@@ -45,7 +46,8 @@ final class ConversationFilteringTests: XCTestCase {
             secret: Data(repeating: 0, count: 16),
             isEnabled: true,
             lastMessageDate: Date(),
-            unreadCount: unreadCount
+            unreadCount: unreadCount,
+            isMuted: false
         )
     }
 

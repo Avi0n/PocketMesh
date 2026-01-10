@@ -84,6 +84,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-1800),  // 30 min ago
@@ -106,6 +107,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: true,
                 isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-900),  // 15 min ago
@@ -128,6 +130,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: nil,
@@ -150,6 +153,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: nil,
@@ -172,6 +176,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: true,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: nil,
@@ -194,6 +199,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: "Dad",
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-7200),  // 2 hours ago
@@ -216,6 +222,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970) - 86400,
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: false,
                 lastMessageDate: nil,
@@ -238,6 +245,7 @@ public enum MockDataProvider {
                 lastModified: UInt32(now.timeIntervalSince1970),
                 nickname: nil,
                 isBlocked: false,
+                isMuted: false,
                 isFavorite: false,
                 isDiscovered: true,  // Just discovered
                 lastMessageDate: nil,
