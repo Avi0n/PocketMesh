@@ -30,6 +30,9 @@ public final class Channel {
     /// Unread message count
     public var unreadCount: Int
 
+    /// Whether this channel's notifications are muted
+    public var isMuted: Bool
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -38,7 +41,8 @@ public final class Channel {
         secret: Data = Data(repeating: 0, count: 16),
         isEnabled: Bool = true,
         lastMessageDate: Date? = nil,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isMuted: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -48,6 +52,7 @@ public final class Channel {
         self.isEnabled = isEnabled
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.isMuted = isMuted
     }
 
     /// Creates a Channel from a protocol ChannelInfo
@@ -98,6 +103,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
     public let isEnabled: Bool
     public let lastMessageDate: Date?
     public let unreadCount: Int
+    public let isMuted: Bool
 
     public init(from channel: Channel) {
         self.id = channel.id
@@ -108,6 +114,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isEnabled = channel.isEnabled
         self.lastMessageDate = channel.lastMessageDate
         self.unreadCount = channel.unreadCount
+        self.isMuted = channel.isMuted
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -119,7 +126,8 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         secret: Data,
         isEnabled: Bool,
         lastMessageDate: Date?,
-        unreadCount: Int
+        unreadCount: Int,
+        isMuted: Bool
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -129,6 +137,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isEnabled = isEnabled
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.isMuted = isMuted
     }
 
     public var isPublicChannel: Bool {
