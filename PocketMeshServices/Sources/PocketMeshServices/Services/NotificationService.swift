@@ -215,8 +215,10 @@ public final class NotificationService: NSObject {
         from contactName: String,
         contactID: UUID,
         messageText: String,
-        messageID: UUID
+        messageID: UUID,
+        isMuted: Bool = false
     ) async {
+        guard !isMuted else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference (uses cached preferences)
@@ -265,8 +267,10 @@ public final class NotificationService: NSObject {
         deviceID: UUID,
         senderName: String?,
         messageText: String,
-        messageID: UUID
+        messageID: UUID,
+        isMuted: Bool = false
     ) async {
+        guard !isMuted else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference (uses cached preferences)
@@ -318,8 +322,10 @@ public final class NotificationService: NSObject {
         roomName: String,
         senderName: String?,
         messageText: String,
-        messageID: UUID
+        messageID: UUID,
+        isMuted: Bool = false
     ) async {
+        guard !isMuted else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference

@@ -957,13 +957,13 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Optimization: Only fetches entities with unread > 0 to minimize memory usage
     public func getTotalUnreadCounts() throws -> (contacts: Int, channels: Int) {
         // Only fetch contacts with unread messages (reduces memory pressure)
-        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 }
+        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 && !$0.isMuted }
         let contactDescriptor = FetchDescriptor<Contact>(predicate: contactPredicate)
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
 
         // Only fetch channels with unread messages
-        let channelPredicate = #Predicate<Channel> { $0.unreadCount > 0 }
+        let channelPredicate = #Predicate<Channel> { $0.unreadCount > 0 && !$0.isMuted }
         let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
         let channelsWithUnread = try modelContext.fetch(channelDescriptor)
         let channelTotal = channelsWithUnread.reduce(0) { $0 + $1.unreadCount }

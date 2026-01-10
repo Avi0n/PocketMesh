@@ -662,4 +662,28 @@ struct PersistenceStoreTests {
         contact = try await store.fetchContact(id: contactID)
         #expect(contact?.isMuted == false)
     }
+
+    @Test("Muted contacts excluded from badge count")
+    func mutedContactsExcludedFromBadgeCount() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create contact with unreads
+        let frame1 = createTestContactFrame(name: "Alice")
+        let contact1ID = try await store.saveContact(deviceID: device.id, from: frame1)
+        try await store.incrementUnreadCount(contactID: contact1ID)
+        try await store.incrementUnreadCount(contactID: contact1ID)
+
+        // Create muted contact with unreads
+        let frame2 = createTestContactFrame(name: "Bob")
+        let contact2ID = try await store.saveContact(deviceID: device.id, from: frame2)
+        try await store.incrementUnreadCount(contactID: contact2ID)
+        try await store.setContactMuted(contact2ID, isMuted: true)
+
+        let (contacts, _) = try await store.getTotalUnreadCounts()
+
+        // Only Alice's 2 unreads should count, Bob is muted
+        #expect(contacts == 2)
+    }
 }
