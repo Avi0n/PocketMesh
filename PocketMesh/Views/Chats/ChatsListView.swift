@@ -229,9 +229,15 @@ struct ChatsListView: View {
                     NavigationLink(value: contact) {
                         ConversationRow(contact: contact, viewModel: viewModel)
                     }
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        deleteDirectConversation(contact)
+                    }
                 case .channel(let channel):
                     NavigationLink(value: channel) {
                         ChannelConversationRow(channel: channel, viewModel: viewModel)
+                    }
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        deleteChannelConversation(channel)
                     }
                 case .room(let session):
                     Button {
@@ -244,9 +250,12 @@ struct ChatsListView: View {
                         RoomConversationRow(session: session)
                     }
                     .buttonStyle(.plain)
+                    .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                        roomToDelete = session
+                        showRoomDeleteAlert = true
+                    }
                 }
             }
-            .onDelete(perform: deleteConversations)
         }
         .listStyle(.plain)
     }
@@ -270,30 +279,17 @@ struct ChatsListView: View {
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
-    private func deleteConversations(at offsets: IndexSet) {
-        let conversationsToDelete = offsets.map { filteredConversations[$0] }
+    private func deleteDirectConversation(_ contact: ContactDTO) {
+        viewModel.removeConversation(.direct(contact))
+        Task {
+            try? await viewModel.deleteConversation(for: contact)
+        }
+    }
 
-        for conversation in conversationsToDelete {
-            switch conversation {
-            case .room(let session):
-                // Room needs confirmation - don't remove yet
-                roomToDelete = session
-                showRoomDeleteAlert = true
-
-            case .direct(let contact):
-                // Optimistic removal, then async cleanup
-                viewModel.removeConversation(conversation)
-                Task {
-                    try? await viewModel.deleteConversation(for: contact)
-                }
-
-            case .channel(let channel):
-                // Optimistic removal, then async cleanup
-                viewModel.removeConversation(conversation)
-                Task {
-                    await deleteChannel(channel)
-                }
-            }
+    private func deleteChannelConversation(_ channel: ChannelDTO) {
+        viewModel.removeConversation(.channel(channel))
+        Task {
+            await deleteChannel(channel)
         }
     }
 
