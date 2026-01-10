@@ -9,7 +9,8 @@ final class ConversationFilteringTests: XCTestCase {
     private func makeContact(
         name: String,
         isFavorite: Bool = false,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isMuted: Bool = false
     ) -> ContactDTO {
         ContactDTO(
             id: UUID(),
@@ -26,7 +27,7 @@ final class ConversationFilteringTests: XCTestCase {
             lastModified: 0,
             nickname: nil,
             isBlocked: false,
-            isMuted: false,
+            isMuted: isMuted,
             isFavorite: isFavorite,
             isDiscovered: false,
             lastMessageDate: Date(),
@@ -36,7 +37,8 @@ final class ConversationFilteringTests: XCTestCase {
 
     private func makeChannel(
         name: String,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isMuted: Bool = false
     ) -> ChannelDTO {
         ChannelDTO(
             id: UUID(),
@@ -47,13 +49,14 @@ final class ConversationFilteringTests: XCTestCase {
             isEnabled: true,
             lastMessageDate: Date(),
             unreadCount: unreadCount,
-            isMuted: false
+            isMuted: isMuted
         )
     }
 
     private func makeRoom(
         name: String,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isMuted: Bool = false
     ) -> RemoteNodeSessionDTO {
         RemoteNodeSessionDTO(
             id: UUID(),
@@ -63,7 +66,8 @@ final class ConversationFilteringTests: XCTestCase {
             role: .roomServer,
             isConnected: true,
             lastConnectedDate: Date(),
-            unreadCount: unreadCount
+            unreadCount: unreadCount,
+            isMuted: isMuted
         )
     }
 
@@ -180,5 +184,19 @@ final class ConversationFilteringTests: XCTestCase {
         let result = conversations.filtered(by: nil, searchText: "Zzzz")
 
         XCTAssertTrue(result.isEmpty)
+    }
+
+    func testUnreadFilterExcludesMuted() {
+        let conversations: [Conversation] = [
+            .direct(makeContact(name: "Alice", unreadCount: 5, isMuted: false)),
+            .direct(makeContact(name: "Bob", unreadCount: 3, isMuted: true)),
+            .channel(makeChannel(name: "General", unreadCount: 2, isMuted: false))
+        ]
+
+        let result = conversations.filtered(by: .unread, searchText: "")
+
+        // Bob is muted, so should be excluded even with unreads
+        XCTAssertEqual(result.count, 2)
+        XCTAssertFalse(result.contains { $0.displayName == "Bob" })
     }
 }

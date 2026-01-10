@@ -12,7 +12,7 @@ extension Array where Element == Conversation {
         case .none:
             categoryFiltered = self
         case .unread:
-            categoryFiltered = self.filter { $0.unreadCount > 0 }
+            categoryFiltered = self.filter { $0.unreadCount > 0 && !$0.isMuted }
         case .directMessages:
             categoryFiltered = self.filter {
                 if case .direct = $0 { return true }
