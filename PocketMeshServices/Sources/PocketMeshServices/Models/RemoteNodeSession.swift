@@ -48,6 +48,9 @@ public final class RemoteNodeSession {
     /// Unread message count (room-specific)
     public var unreadCount: Int
 
+    /// Whether this room's notifications are muted
+    public var isMuted: Bool
+
     /// Last RX airtime in seconds (repeater-specific)
     public var lastRxAirtimeSeconds: UInt32?
 
@@ -74,6 +77,7 @@ public final class RemoteNodeSession {
         lastUptimeSeconds: UInt32? = nil,
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
+        isMuted: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
         lastSyncTimestamp: UInt32 = 0
@@ -92,6 +96,7 @@ public final class RemoteNodeSession {
         self.lastUptimeSeconds = lastUptimeSeconds
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
+        self.isMuted = isMuted
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
@@ -151,6 +156,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public let lastUptimeSeconds: UInt32?
     public let lastNoiseFloor: Int16?
     public let unreadCount: Int
+    public let isMuted: Bool
     public let lastRxAirtimeSeconds: UInt32?
     public let neighborCount: Int
     public let lastSyncTimestamp: UInt32
@@ -170,6 +176,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastUptimeSeconds = model.lastUptimeSeconds
         self.lastNoiseFloor = model.lastNoiseFloor
         self.unreadCount = model.unreadCount
+        self.isMuted = model.isMuted
         self.lastRxAirtimeSeconds = model.lastRxAirtimeSeconds
         self.neighborCount = model.neighborCount
         self.lastSyncTimestamp = model.lastSyncTimestamp
@@ -191,6 +198,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         lastUptimeSeconds: UInt32? = nil,
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
+        isMuted: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
         lastSyncTimestamp: UInt32 = 0
@@ -209,6 +217,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastUptimeSeconds = lastUptimeSeconds
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
+        self.isMuted = isMuted
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
