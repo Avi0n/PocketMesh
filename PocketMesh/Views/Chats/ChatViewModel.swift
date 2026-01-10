@@ -102,6 +102,106 @@ final class ChatViewModel {
         self.messageService = messageService
     }
 
+    // MARK: - Mute
+
+    /// Toggles mute state for a conversation with optimistic UI update
+    func toggleMute(_ conversation: Conversation) async {
+        let originalState = conversation.isMuted
+        let newState = !originalState
+
+        // Optimistic UI update
+        updateConversationMuteState(conversation, isMuted: newState)
+
+        do {
+            switch conversation {
+            case .direct(let contact):
+                try await dataStore?.setContactMuted(contact.id, isMuted: newState)
+            case .channel(let channel):
+                try await dataStore?.setChannelMuted(channel.id, isMuted: newState)
+            case .room(let session):
+                try await dataStore?.setSessionMuted(session.id, isMuted: newState)
+            }
+            // Update badge on success
+            await notificationService?.updateBadgeCount()
+        } catch {
+            // Rollback on failure
+            updateConversationMuteState(conversation, isMuted: originalState)
+            logger.error("Failed to toggle mute: \(error)")
+        }
+    }
+
+    /// Updates the mute state in the local conversations array
+    private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+        switch conversation {
+        case .direct(let contact):
+            if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
+                let updated = conversations[index]
+                conversations[index] = ContactDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    typeRawValue: updated.typeRawValue,
+                    flags: updated.flags,
+                    outPathLength: updated.outPathLength,
+                    outPath: updated.outPath,
+                    lastAdvertTimestamp: updated.lastAdvertTimestamp,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    lastModified: updated.lastModified,
+                    nickname: updated.nickname,
+                    isBlocked: updated.isBlocked,
+                    isMuted: isMuted,
+                    isFavorite: updated.isFavorite,
+                    isDiscovered: updated.isDiscovered,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    ocvPreset: updated.ocvPreset,
+                    customOCVArrayString: updated.customOCVArrayString
+                )
+            }
+        case .channel(let channel):
+            if let index = channels.firstIndex(where: { $0.id == channel.id }) {
+                let updated = channels[index]
+                channels[index] = ChannelDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    index: updated.index,
+                    name: updated.name,
+                    secret: updated.secret,
+                    isEnabled: updated.isEnabled,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    isMuted: isMuted
+                )
+            }
+        case .room(let session):
+            if let index = roomSessions.firstIndex(where: { $0.id == session.id }) {
+                let updated = roomSessions[index]
+                roomSessions[index] = RemoteNodeSessionDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    role: updated.role,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    isConnected: updated.isConnected,
+                    permissionLevel: updated.permissionLevel,
+                    lastConnectedDate: updated.lastConnectedDate,
+                    lastBatteryMillivolts: updated.lastBatteryMillivolts,
+                    lastUptimeSeconds: updated.lastUptimeSeconds,
+                    lastNoiseFloor: updated.lastNoiseFloor,
+                    unreadCount: updated.unreadCount,
+                    isMuted: isMuted,
+                    lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
+                    neighborCount: updated.neighborCount,
+                    lastSyncTimestamp: updated.lastSyncTimestamp
+                )
+            }
+        }
+    }
+
     // MARK: - Conversation List
 
     /// Removes a conversation from local arrays (optimistic UI update).
