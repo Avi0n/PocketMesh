@@ -48,6 +48,9 @@ public final class Contact {
     /// Whether this contact is blocked
     public var isBlocked: Bool
 
+    /// Whether this contact's notifications are muted
+    public var isMuted: Bool
+
     /// Whether this contact is a favorite/pinned
     public var isFavorite: Bool
 
@@ -82,6 +85,7 @@ public final class Contact {
         lastModified: UInt32 = 0,
         nickname: String? = nil,
         isBlocked: Bool = false,
+        isMuted: Bool = false,
         isFavorite: Bool = false,
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
@@ -103,6 +107,7 @@ public final class Contact {
         self.lastModified = lastModified
         self.nickname = nickname
         self.isBlocked = isBlocked
+        self.isMuted = isMuted
         self.isFavorite = isFavorite
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
@@ -215,6 +220,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let lastModified: UInt32
     public let nickname: String?
     public let isBlocked: Bool
+    public let isMuted: Bool
     public let isFavorite: Bool
     public let lastMessageDate: Date?
     public let unreadCount: Int
@@ -237,6 +243,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastModified = contact.lastModified
         self.nickname = contact.nickname
         self.isBlocked = contact.isBlocked
+        self.isMuted = contact.isMuted
         self.isFavorite = contact.isFavorite
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
@@ -261,6 +268,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         lastModified: UInt32,
         nickname: String?,
         isBlocked: Bool,
+        isMuted: Bool,
         isFavorite: Bool,
         isDiscovered: Bool,
         lastMessageDate: Date?,
@@ -282,6 +290,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastModified = lastModified
         self.nickname = nickname
         self.isBlocked = isBlocked
+        self.isMuted = isMuted
         self.isFavorite = isFavorite
         self.isDiscovered = isDiscovered
         self.lastMessageDate = lastMessageDate
