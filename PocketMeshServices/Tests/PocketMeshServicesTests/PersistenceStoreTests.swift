@@ -636,4 +636,30 @@ struct PersistenceStoreTests {
         // The model stores Int, DTO uses UInt32
         #expect(entries.first?.senderTimestamp == 1703123456)
     }
+
+    // MARK: - Mute Tests
+
+    @Test("Set contact muted")
+    func setContactMuted() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let frame = createTestContactFrame(name: "Alice")
+        let contactID = try await store.saveContact(deviceID: device.id, from: frame)
+
+        // Initially not muted
+        var contact = try await store.fetchContact(id: contactID)
+        #expect(contact?.isMuted == false)
+
+        // Mute
+        try await store.setContactMuted(contactID, isMuted: true)
+        contact = try await store.fetchContact(id: contactID)
+        #expect(contact?.isMuted == true)
+
+        // Unmute
+        try await store.setContactMuted(contactID, isMuted: false)
+        contact = try await store.fetchContact(id: contactID)
+        #expect(contact?.isMuted == false)
+    }
 }

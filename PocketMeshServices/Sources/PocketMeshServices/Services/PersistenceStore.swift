@@ -496,6 +496,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    /// Sets the muted state for a contact
+    public func setContactMuted(_ contactID: UUID, isMuted: Bool) throws {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Contact>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let contact = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.contactNotFound
+        }
+
+        contact.isMuted = isMuted
+        try modelContext.save()
+    }
+
     /// Delete all messages for a contact using batch delete
     public func deleteMessagesForContact(contactID: UUID) throws {
         let targetContactID: UUID? = contactID
@@ -920,6 +935,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    /// Sets the muted state for a channel
+    public func setChannelMuted(_ channelID: UUID, isMuted: Bool) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.channelNotFound
+        }
+
+        channel.isMuted = isMuted
+        try modelContext.save()
+    }
+
     // MARK: - Badge Count Support
 
     /// Efficiently calculate total unread counts for badge display
@@ -1261,6 +1291,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             session.unreadCount = 0
             try modelContext.save()
         }
+    }
+
+    /// Sets the muted state for a remote node session
+    public func setSessionMuted(_ sessionID: UUID, isMuted: Bool) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { $0.id == targetID }
+        var descriptor = FetchDescriptor<RemoteNodeSession>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.remoteNodeSessionNotFound
+        }
+
+        session.isMuted = isMuted
+        try modelContext.save()
     }
 
     /// Fetch room messages for a session, ordered by timestamp
