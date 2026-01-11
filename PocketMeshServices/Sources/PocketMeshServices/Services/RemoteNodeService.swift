@@ -109,7 +109,7 @@ public actor RemoteNodeService {
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
     private let keychainService: KeychainService
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "RemoteNode")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RemoteNode")
 
     /// Pending login continuations keyed by 6-byte public key prefix.
     /// Using 6-byte prefix matches MeshCore protocol format for login results.

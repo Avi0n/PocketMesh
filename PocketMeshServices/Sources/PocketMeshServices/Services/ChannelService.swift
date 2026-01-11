@@ -79,7 +79,7 @@ public actor ChannelService {
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelService")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "ChannelService")
 
     /// Callback for channel updates
     private var channelUpdateHandler: (@Sendable ([ChannelDTO]) -> Void)?

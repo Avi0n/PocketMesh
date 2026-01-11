@@ -24,4 +24,8 @@ public protocol MessagePollingServiceProtocol: Actor {
     /// Poll all waiting messages from the device.
     /// - Returns: Count of messages retrieved
     func pollAllMessages() async throws -> Int
+
+    /// Wait for all pending message handlers to complete.
+    /// Call this after pollAllMessages() to ensure all messages are fully processed.
+    func waitForPendingHandlers() async
 }

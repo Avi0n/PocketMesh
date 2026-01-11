@@ -181,6 +181,7 @@ struct WiFiConnectionSheet: View {
                 triggerLocalNetworkPrivacyAlert()
             }
         }
+        .presentationSizing(.page)
     }
 
     private func connect() {

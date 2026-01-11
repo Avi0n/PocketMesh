@@ -220,7 +220,7 @@ public struct TelemetryModes: Sendable, Equatable {
 /// Handles radio configuration, node settings, Bluetooth settings, and device info.
 public actor SettingsService {
     private let session: MeshCoreSession
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "SettingsService")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "SettingsService")
 
     /// Callback invoked when device settings are successfully changed.
     /// Used to update ConnectionManager.connectedDevice for UI refresh.

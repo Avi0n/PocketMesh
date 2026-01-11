@@ -650,8 +650,8 @@ struct ContactServiceTests {
         #expect(updatedContact?.isBlocked == true)
     }
 
-    @Test("unblocking contact does not trigger cleanup")
-    func unblockingContactDoesNotTriggerCleanup() async throws {
+    @Test("unblocking contact triggers cleanup with unblocked reason")
+    func unblockingContactTriggersCleanupWithUnblockedReason() async throws {
         let mockSession = MockMeshCoreSession()
         let mockStore = MockPersistenceStore()
 
@@ -697,9 +697,11 @@ struct ContactServiceTests {
         let updatedContact = await mockStore.contacts[contactID]
         #expect(updatedContact?.isBlocked == false)
 
-        // Verify cleanup handler was NOT called
+        // Verify cleanup handler was called with reason=.unblocked
         let invocations = await tracker.invocations
-        #expect(invocations.isEmpty)
+        #expect(invocations.count == 1)
+        #expect(invocations[0].contactID == contactID)
+        #expect(invocations[0].reason == .unblocked)
     }
 
 }

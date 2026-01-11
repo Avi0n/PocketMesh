@@ -68,10 +68,13 @@ public actor SyncCoordinator {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
 
     /// In-memory cache for message deduplication
     private let deduplicationCache = MessageDeduplicationCache()
+
+    /// Cached blocked contact names for O(1) lookup in message handlers
+    private var blockedContactNames: Set<String> = []
 
     // MARK: - Observable State (@MainActor for SwiftUI)
 
@@ -185,6 +188,32 @@ public actor SyncCoordinator {
         onConversationsChanged?()
     }
 
+    // MARK: - Blocked Contacts Cache
+
+    /// Refresh the blocked contacts cache from the data store
+    public func refreshBlockedContactsCache(deviceID: UUID, dataStore: any PersistenceStoreProtocol) async {
+        do {
+            let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
+            blockedContactNames = Set(blockedContacts.map(\.name))
+            logger.debug("Refreshed blocked contacts cache: \(self.blockedContactNames.count) entries")
+        } catch {
+            logger.error("Failed to refresh blocked contacts cache: \(error)")
+            blockedContactNames = []
+        }
+    }
+
+    /// Invalidate the blocked contacts cache (call when block status changes)
+    public func invalidateBlockedContactsCache() {
+        blockedContactNames = []
+        logger.debug("Invalidated blocked contacts cache")
+    }
+
+    /// Check if a sender name is blocked (O(1) lookup)
+    public func isBlockedSender(_ name: String?) -> Bool {
+        guard let name else { return false }
+        return blockedContactNames.contains(name)
+    }
+
     // MARK: - Full Sync
 
     /// Performs full sync of contacts, channels, and messages from device.
@@ -281,34 +310,72 @@ public actor SyncCoordinator {
     public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer) async throws {
         logger.info("Connection established for device \(deviceID)")
 
-        // 1. Wire message handlers FIRST (before events can arrive)
-        await wireMessageHandlers(services: services, deviceID: deviceID)
+        // Suppress message notifications during sync to avoid flooding user on reconnect
+        // Unread counts and badges still update - only system notifications are suppressed
+        await MainActor.run {
+            logger.info("Suppressing message notifications during sync")
+            services.notificationService.isSuppressingNotifications = true
+        }
 
-        // 2. NOW start event monitoring (handlers are ready)
-        await services.startEventMonitoring(deviceID: deviceID)
+        do {
+            // 1. Wire message handlers FIRST (before events can arrive)
+            await wireMessageHandlers(services: services, deviceID: deviceID)
 
-        // 3. Perform full sync
-        try await performFullSync(
-            deviceID: deviceID,
-            dataStore: services.dataStore,
-            contactService: services.contactService,
-            channelService: services.channelService,
-            messagePollingService: services.messagePollingService
-        )
+            // 2. NOW start event monitoring (handlers are ready)
+            await services.startEventMonitoring(deviceID: deviceID)
 
-        // 4. Wire discovery handlers (for ongoing contact discovery)
-        await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+            // 3. Perform full sync
+            try await performFullSync(
+                deviceID: deviceID,
+                dataStore: services.dataStore,
+                contactService: services.contactService,
+                channelService: services.channelService,
+                messagePollingService: services.messagePollingService
+            )
 
-        logger.info("Connection setup complete for device \(deviceID)")
+            // 4. Wire discovery handlers (for ongoing contact discovery)
+            await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+
+            // 5. Wait for any pending message handlers to complete
+            // Message events are processed asynchronously by the event monitor - we need to ensure
+            // all handlers finish before resuming notifications, otherwise sync-time messages
+            // may trigger notifications after suppression is lifted
+            await services.messagePollingService.waitForPendingHandlers()
+
+            // Resume notifications on success - synchronously before return
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync complete)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+
+            logger.info("Connection setup complete for device \(deviceID)")
+        } catch {
+            // Wait for any pending handlers even on error
+            await services.messagePollingService.waitForPendingHandlers()
+
+            // Resume notifications on error - synchronously before throw
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync failed)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+            throw error
+        }
     }
 
     /// Called when disconnecting from device
     ///
     /// Note: Don't call onSyncActivityEnded here - performFullSync handles its own cleanup.
     /// The AppState.wireServicesIfConnected reset of syncActivityCount handles stuck pill.
-    public func onDisconnected() async {
+    public func onDisconnected(services: ServiceContainer) async {
         await deduplicationCache.clear()
         await setState(.idle)
+
+        // Safety net: ensure suppression is cleared on disconnect
+        // Handles edge cases like connection dropping mid-sync or force-quit
+        await MainActor.run {
+            services.notificationService.isSuppressingNotifications = false
+        }
+
         logger.info("Disconnected, sync state reset to idle")
     }
 
@@ -316,6 +383,9 @@ public actor SyncCoordinator {
 
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
         logger.info("Wiring message handlers for device \(deviceID)")
+
+        // Populate blocked contacts cache
+        await refreshBlockedContactsCache(deviceID: deviceID, dataStore: services.dataStore)
 
         // Contact message handler (direct messages)
         await services.messagePollingService.setContactMessageHandler { [weak self] message, contact in
@@ -359,14 +429,14 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update contact's last message date and unread count
+                // Update contact's last message date
                 if let contactID = contact?.id {
                     try await services.dataStore.updateContactLastMessage(contactID: contactID, date: Date())
-                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                 }
 
-                // Post notification (only for known contacts)
-                if let contactID = contact?.id {
+                // Only increment unread count, post notification, and update badge for non-blocked contacts
+                if let contactID = contact?.id, contact?.isBlocked != true {
+                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                     await services.notificationService.postDirectMessageNotification(
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
@@ -374,8 +444,8 @@ public actor SyncCoordinator {
                         messageID: messageDTO.id,
                         isMuted: contact?.isMuted ?? false
                     )
+                    await services.notificationService.updateBadgeCount()
                 }
-                await services.notificationService.updateBadgeCount()
 
                 // Notify UI via SyncCoordinator
                 await self.notifyConversationsChanged()
@@ -435,29 +505,34 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update channel's last message date and unread count
+                // Update channel's last message date
                 if let channelID = channel?.id {
                     try await services.dataStore.updateChannelLastMessage(channelID: channelID, date: Date())
-                    try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
                 }
 
-                // Post notification
-                await services.notificationService.postChannelMessageNotification(
-                    channelName: channel?.name ?? "Channel \(message.channelIndex)",
-                    channelIndex: message.channelIndex,
-                    deviceID: deviceID,
-                    senderName: senderNodeName,
-                    messageText: messageText,
-                    messageID: messageDTO.id,
-                    isMuted: channel?.isMuted ?? false
-                )
-                await services.notificationService.updateBadgeCount()
+                // Only update unread count, badges, and notify UI for non-blocked senders
+                if await !self.isBlockedSender(senderNodeName) {
+                    if let channelID = channel?.id {
+                        try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
+                    }
 
-                // Notify UI via SyncCoordinator
+                    await services.notificationService.postChannelMessageNotification(
+                        channelName: channel?.name ?? "Channel \(message.channelIndex)",
+                        channelIndex: message.channelIndex,
+                        deviceID: deviceID,
+                        senderName: senderNodeName,
+                        messageText: messageText,
+                        messageID: messageDTO.id,
+                        isMuted: channel?.isMuted ?? false
+                    )
+                    await services.notificationService.updateBadgeCount()
+
+                    // Notify MessageEventBroadcaster for real-time chat updates
+                    await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
+                }
+
+                // Notify conversation list of changes
                 await self.notifyConversationsChanged()
-
-                // Notify MessageEventBroadcaster for real-time chat updates
-                await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
             } catch {
                 self.logger.error("Failed to save channel message: \(error)")
             }

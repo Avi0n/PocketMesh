@@ -13,6 +13,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public var messages: [UUID: MessageDTO] = [:]
     public var contacts: [UUID: ContactDTO] = [:]
     public var channels: [UUID: ChannelDTO] = [:]
+    public var debugLogEntries: [DebugLogEntryDTO] = []
 
     // MARK: - Stubbed Errors
 
@@ -25,6 +26,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public var stubbedSaveChannelError: Error?
     public var stubbedFetchChannelError: Error?
     public var stubbedDeleteChannelError: Error?
+    public var stubbedDebugLogError: Error?
 
     // MARK: - Recorded Invocations
 
@@ -433,6 +435,13 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return contacts.values.filter { $0.deviceID == deviceID && $0.isDiscovered }
     }
 
+    public func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked }
+    }
+
     public func confirmContact(id: UUID) async throws {
         if var contact = contacts[id] {
             contacts[id] = ContactDTO(
@@ -665,6 +674,49 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return 0 // Stub
     }
 
+    // MARK: - Debug Log Operations
+
+    public func saveDebugLogEntries(_ entries: [DebugLogEntryDTO]) async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        debugLogEntries.append(contentsOf: entries)
+    }
+
+    public func fetchDebugLogEntries(since: Date, limit: Int) async throws -> [DebugLogEntryDTO] {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        return debugLogEntries
+            .filter { $0.timestamp >= since }
+            .sorted { $0.timestamp < $1.timestamp }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    public func countDebugLogEntries() async throws -> Int {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        return debugLogEntries.count
+    }
+
+    public func pruneDebugLogEntries(keepCount: Int) async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        let sorted = debugLogEntries.sorted { $0.timestamp > $1.timestamp }
+        let toKeep = Set(sorted.prefix(keepCount).map { $0.id })
+        debugLogEntries.removeAll { !toKeep.contains($0.id) }
+    }
+
+    public func clearDebugLogEntries() async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        debugLogEntries.removeAll()
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -672,6 +724,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         messages = [:]
         contacts = [:]
         channels = [:]
+        debugLogEntries = []
         savedMessages = []
         savedContacts = []
         savedChannels = []

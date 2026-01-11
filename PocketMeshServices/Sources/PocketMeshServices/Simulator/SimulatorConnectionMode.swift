@@ -7,7 +7,7 @@ import OSLog
 @MainActor
 public final class SimulatorConnectionMode {
 
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "SimulatorConnectionMode")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "SimulatorConnectionMode")
 
     /// Whether simulator is "connected"
     public private(set) var isConnected = false

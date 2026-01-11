@@ -91,6 +91,12 @@ struct ContactsListView: View {
                         )
                     }
 
+                    NavigationLink {
+                        BlockedContactsView()
+                    } label: {
+                        Label("Blocked Contacts", systemImage: "hand.raised.fill")
+                    }
+
                     Divider()
 
                     Button {
@@ -256,6 +262,7 @@ struct ContactRowView: View {
                         Image(systemName: "hand.raised.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
+                            .accessibilityLabel("Blocked")
                     }
                 }
 

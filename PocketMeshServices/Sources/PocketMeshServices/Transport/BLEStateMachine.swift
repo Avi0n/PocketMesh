@@ -12,7 +12,7 @@ public actor BLEStateMachine {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStateMachine")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "BLEStateMachine")
 
     /// Converts CBPeripheralState to readable string for diagnostics
     private nonisolated func peripheralStateString(_ state: CBPeripheralState) -> String {

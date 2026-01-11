@@ -72,7 +72,7 @@ public final class ConnectionManager {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "ConnectionManager")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "ConnectionManager")
 
     // MARK: - Observable State
 
@@ -691,6 +691,11 @@ public final class ConnectionManager {
         // Stop event monitoring
         await services?.stopEventMonitoring()
 
+        // Reset sync state and clear notification suppression (safety net)
+        if let services {
+            await services.syncCoordinator.onDisconnected(services: services)
+        }
+
         // Stop session
         await session?.stop()
 
@@ -1281,7 +1286,8 @@ public final class ConnectionManager {
             lastConnected: Date(),
             lastContactSync: existingDevice?.lastContactSync ?? 0,
             isActive: true,
-            ocvPreset: existingDevice?.ocvPreset,
+            ocvPreset: existingDevice?.ocvPreset
+                ?? OCVPreset.preset(forManufacturer: capabilities.model)?.rawValue,
             customOCVArrayString: existingDevice?.customOCVArrayString,
             connectionMethods: mergedMethods
         )

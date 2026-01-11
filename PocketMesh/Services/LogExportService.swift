@@ -7,11 +7,10 @@ import UIKit
 /// Service for exporting debug logs and app state for troubleshooting
 enum LogExportService {
     private static let logger = Logger(subsystem: "com.pocketmesh", category: "LogExportService")
-    private static let subsystem = "com.pocketmesh"
 
     /// Generates a debug export containing app logs and current state
     @MainActor
-    static func generateExport(appState: AppState) async -> String {
+    static func generateExport(appState: AppState, persistenceStore: PersistenceStore) async -> String {
         var sections: [String] = []
 
         // Header
@@ -31,15 +30,15 @@ enum LogExportService {
         }
 
         // Logs
-        sections.append(await generateLogsSection())
+        sections.append(await generateLogsSection(persistenceStore: persistenceStore))
 
         return sections.joined(separator: "\n\n")
     }
 
     /// Creates a temporary file with the export content and returns its URL
     @MainActor
-    static func createExportFile(appState: AppState) async -> URL? {
-        let content = await generateExport(appState: appState)
+    static func createExportFile(appState: AppState, persistenceStore: PersistenceStore) async -> URL? {
+        let content = await generateExport(appState: appState, persistenceStore: persistenceStore)
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd-HHmmss"
@@ -132,18 +131,15 @@ enum LogExportService {
             """
     }
 
-    private static func generateLogsSection() async -> String {
+    private static func generateLogsSection(persistenceStore: PersistenceStore) async -> String {
         var lines = ["=== Logs (Last Hour) ==="]
 
         do {
-            let store = try OSLogStore(scope: .currentProcessIdentifier)
             let oneHourAgo = Date().addingTimeInterval(-3600)
-            let position = store.position(date: oneHourAgo)
-
-            let entries = try store.getEntries(at: position)
-                .compactMap { $0 as? OSLogEntryLog }
-                .filter { $0.subsystem == subsystem }
-                .sorted { $0.date > $1.date }
+            let entries = try await persistenceStore.fetchDebugLogEntries(
+                since: oneHourAgo,
+                limit: 1000
+            )
 
             if entries.isEmpty {
                 lines.append("(No logs found)")
@@ -152,10 +148,8 @@ enum LogExportService {
                 formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
 
                 for entry in entries {
-                    let timestamp = formatter.string(from: entry.date)
-                    let level = levelLabel(for: entry.level)
-                    let message = entry.composedMessage
-                    lines.append("\(timestamp) [\(level)] \(entry.category): \(message)")
+                    let timestamp = formatter.string(from: entry.timestamp)
+                    lines.append("\(timestamp) [\(entry.level.label)] \(entry.category): \(entry.message)")
                 }
 
                 lines.append("")
@@ -163,20 +157,9 @@ enum LogExportService {
             }
         } catch {
             lines.append("(Failed to fetch logs: \(error.localizedDescription))")
-            logger.error("OSLogStore query failed: \(error.localizedDescription)")
+            logger.error("Debug log fetch failed: \(error.localizedDescription)")
         }
 
         return lines.joined(separator: "\n")
-    }
-
-    private static func levelLabel(for level: OSLogEntryLog.Level) -> String {
-        switch level {
-        case .debug: return "DEBUG"
-        case .info: return "INFO"
-        case .notice: return "NOTICE"
-        case .error: return "ERROR"
-        case .fault: return "FAULT"
-        @unknown default: return "LOG"
-        }
     }
 }

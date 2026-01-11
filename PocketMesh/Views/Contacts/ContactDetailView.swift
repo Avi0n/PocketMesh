@@ -86,7 +86,7 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("You won't receive messages from \(currentContact.displayName). Unread notifications will be cleared. You can unblock them later.")
+            Text("You won't receive messages from \(currentContact.displayName). This conversation will be hidden from your Chats list, and their channel messages will not appear. You can unblock them later in Contacts.")
         }
         .alert("Delete Contact", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
@@ -358,6 +358,22 @@ struct ContactDetailView: View {
                 Label(
                     currentContact.isFavorite ? "Remove from Favorites" : "Add to Favorites",
                     systemImage: currentContact.isFavorite ? "star.slash" : "star"
+                )
+            }
+
+            // Block/unblock contact
+            Button {
+                if currentContact.isBlocked {
+                    Task {
+                        await toggleBlocked()
+                    }
+                } else {
+                    showingBlockAlert = true
+                }
+            } label: {
+                Label(
+                    currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
+                    systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
                 )
             }
 
@@ -656,22 +672,6 @@ struct ContactDetailView: View {
 
     private var dangerSection: some View {
         Section {
-            Button(role: currentContact.isBlocked ? nil : .destructive) {
-                if currentContact.isBlocked {
-                    // Unblock directly
-                    Task {
-                        await toggleBlocked()
-                    }
-                } else {
-                    showingBlockAlert = true
-                }
-            } label: {
-                Label(
-                    currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
-                    systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
-                )
-            }
-
             Button(role: .destructive) {
                 showingDeleteAlert = true
             } label: {

@@ -545,6 +545,48 @@ struct PersistenceStoreTests {
         #expect(channels == 3)
     }
 
+    @Test("Get total unread counts excludes blocked contacts")
+    func getTotalUnreadCountsExcludesBlockedContacts() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create a regular contact with unread messages
+        let frame1 = createTestContactFrame(name: "RegularContact")
+        let regularContactID = try await store.saveContact(deviceID: device.id, from: frame1)
+        try await store.incrementUnreadCount(contactID: regularContactID)
+        try await store.incrementUnreadCount(contactID: regularContactID)
+
+        // Create a blocked contact with unread messages
+        let blockedContact = ContactDTO(
+            id: UUID(),
+            deviceID: device.id,
+            publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+            name: "BlockedContact",
+            typeRawValue: 0,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: true,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 5
+        )
+        try await store.saveContact(blockedContact)
+
+        // Get total unread counts - should exclude blocked contact
+        let (contacts, _) = try await store.getTotalUnreadCounts()
+
+        // Should only include the 2 unread from the regular contact, not the 5 from blocked
+        #expect(contacts == 2, "Blocked contacts should not contribute to unread count total")
+    }
+
     // MARK: - Warm-up Test
 
     @Test("Database warm-up")

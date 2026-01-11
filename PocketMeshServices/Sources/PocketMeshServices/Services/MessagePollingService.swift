@@ -20,7 +20,7 @@ public actor MessagePollingService {
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessagePolling")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "MessagePolling")
 
     /// Handler for incoming contact messages
     private var contactMessageHandler: (@Sendable (ContactMessage, ContactDTO?) async -> Void)?
@@ -45,6 +45,10 @@ public actor MessagePollingService {
 
     /// Device ID for contact lookups
     private var currentDeviceID: UUID?
+
+    /// Count of message handlers currently executing
+    /// Used to wait for sync-time handlers to complete before resuming notifications
+    private var pendingHandlerCount: Int = 0
 
     // MARK: - Initialization
 
@@ -149,6 +153,17 @@ public actor MessagePollingService {
         }
     }
 
+    /// Wait for all pending message handlers to complete.
+    /// Call this after pollAllMessages() to ensure all messages are fully processed
+    /// before performing actions that depend on completion (like resuming notifications).
+    public func waitForPendingHandlers() async {
+        // Poll until no handlers are executing
+        // The event monitor processes handlers sequentially, so we're waiting for the queue to drain
+        while pendingHandlerCount > 0 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
     // MARK: - Event Monitoring
 
     /// Start monitoring MeshCore events for messages
@@ -176,9 +191,13 @@ public actor MessagePollingService {
     private func handleEvent(_ event: MeshEvent) async {
         switch event {
         case .contactMessageReceived(let message):
+            pendingHandlerCount += 1
+            defer { pendingHandlerCount -= 1 }
             await handleContactMessage(message)
 
         case .channelMessageReceived(let message):
+            pendingHandlerCount += 1
+            defer { pendingHandlerCount -= 1 }
             await handleChannelMessage(message)
 
         case .acknowledgement(let code, _):

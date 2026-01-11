@@ -113,8 +113,12 @@ struct NodeAuthenticationSheet: View {
         } header: {
             Text("Authentication")
         } footer: {
-            if !(hasSavedPassword && password.isEmpty) {
-                Text("Max \(maxPasswordLength) characters")
+            if password.count > maxPasswordLength {
+                if role == .repeater {
+                    Text("MeshCore repeaters only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
+                } else {
+                    Text("MeshCore rooms only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
+                }
             }
         }
     }
@@ -151,13 +155,6 @@ struct NodeAuthenticationSheet: View {
     private func authenticate() {
         // Clear any previous error
         errorMessage = nil
-
-        // Validate password length on submit
-        guard password.count <= maxPasswordLength else {
-            errorMessage = "Password must be \(maxPasswordLength) characters or less"
-            return
-        }
-
         isAuthenticating = true
 
         Task {
@@ -176,7 +173,12 @@ struct NodeAuthenticationSheet: View {
                 let session: RemoteNodeSessionDTO
                 // Only use keychain lookup (nil) when user has saved password and hasn't entered new one.
                 // Empty string is valid for rooms with empty guest password.
-                let passwordToUse = (hasSavedPassword && password.isEmpty) ? nil : password
+                var passwordToUse = (hasSavedPassword && password.isEmpty) ? nil : password
+
+                // MeshCore repeaters and rooms only support 15-character passwords, truncate if needed
+                if let pw = passwordToUse, pw.count > maxPasswordLength {
+                    passwordToUse = String(pw.prefix(maxPasswordLength))
+                }
 
                 if role == .roomServer {
                     session = try await services.roomServerService.joinRoom(

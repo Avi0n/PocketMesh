@@ -24,7 +24,7 @@ public actor RoomServerService {
     private let session: MeshCoreSession
     private let remoteNodeService: RemoteNodeService
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "RoomServer")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RoomServer")
 
     /// Self public key prefix for author comparison.
     /// Set from SelfInfo when device connects.

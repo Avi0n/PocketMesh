@@ -139,6 +139,7 @@ struct WiFiEditSheet: View {
                 populateCurrentValues()
             }
         }
+        .presentationSizing(.page)
     }
 
     private func populateCurrentValues() {

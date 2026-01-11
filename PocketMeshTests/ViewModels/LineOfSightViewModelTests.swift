@@ -100,6 +100,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func incrementUnreadCount(contactID: UUID) async throws {}
     func clearUnreadCount(contactID: UUID) async throws {}
     func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
+    func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func confirmContact(id: UUID) async throws {}
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
@@ -126,6 +127,14 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
+
+    // MARK: - Debug Log (stubs)
+
+    func saveDebugLogEntries(_ dtos: [DebugLogEntryDTO]) async throws {}
+    func fetchDebugLogEntries(since date: Date, limit: Int) async throws -> [DebugLogEntryDTO] { [] }
+    func countDebugLogEntries() async throws -> Int { 0 }
+    func pruneDebugLogEntries(keepCount: Int) async throws {}
+    func clearDebugLogEntries() async throws {}
 }
 
 // MARK: - Test Helpers

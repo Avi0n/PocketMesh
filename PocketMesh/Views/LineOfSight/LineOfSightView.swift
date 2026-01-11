@@ -754,21 +754,9 @@ struct LineOfSightView: View {
                     UIPasteboard.general.string = coordText
                 }
 
-                Button("Share...", systemImage: "square.and.arrow.up") {
-                    let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                    let activityVC = UIActivityViewController(
-                        activityItems: [coordText],
-                        applicationActivities: nil
-                    )
-
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let rootVC = windowScene.windows.first?.rootViewController {
-                        var topVC = rootVC
-                        while let presented = topVC.presentedViewController {
-                            topVC = presented
-                        }
-                        topVC.present(activityVC, animated: true)
-                    }
+                let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
+                ShareLink(item: coordText) {
+                    Label("Share...", systemImage: "square.and.arrow.up")
                 }
             }
         } label: {
@@ -924,21 +912,9 @@ struct LineOfSightView: View {
                             UIPasteboard.general.string = coordText
                         }
 
-                        Button("Share...", systemImage: "square.and.arrow.up") {
-                            let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                            let activityVC = UIActivityViewController(
-                                activityItems: [coordText],
-                                applicationActivities: nil
-                            )
-
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                               let rootVC = windowScene.windows.first?.rootViewController {
-                                var topVC = rootVC
-                                while let presented = topVC.presentedViewController {
-                                    topVC = presented
-                                }
-                                topVC.present(activityVC, animated: true)
-                            }
+                        let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
+                        ShareLink(item: coordText) {
+                            Label("Share...", systemImage: "square.and.arrow.up")
                         }
                     }
                 } label: {

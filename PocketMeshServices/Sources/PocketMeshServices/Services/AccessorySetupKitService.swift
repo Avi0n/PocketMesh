@@ -30,7 +30,7 @@ public protocol AccessorySetupKitServiceDelegate: AnyObject {
 /// ```
 @MainActor @Observable
 public final class AccessorySetupKitService {
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "AccessorySetupKit")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "AccessorySetupKit")
 
     private var session: ASAccessorySession?
 
