@@ -27,6 +27,7 @@ If applicable, add screenshots to help explain your problem.
  - Device: [e.g. iPhone 14 Pro]
  - OS: [e.g. iOS 26.2]
  - Version [e.g. 0.1.0]
+ - Build [e.g. 18]
 
 **Additional context**
 Add any other context about the problem here.
