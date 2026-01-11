@@ -19,6 +19,30 @@ struct MapView: View {
                     Spacer()
                     mapControls
                 }
+
+                // Layers menu overlay
+                if viewModel.showingLayersMenu {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation {
+                                viewModel.showingLayersMenu = false
+                            }
+                        }
+
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            LayersMenu(
+                                selection: $viewModel.mapStyleSelection,
+                                isPresented: $viewModel.showingLayersMenu
+                            )
+                            .padding(.trailing, 72)
+                            .padding(.bottom)
+                        }
+                    }
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -65,9 +89,16 @@ struct MapView: View {
                                 ContactAnnotationCallout(
                                     contact: contact,
                                     onMessageTap: { navigateToChat(with: contact) },
-                                    onDetailTap: { showContactDetail(contact) }
+                                    onDetailTap: { showContactDetail(contact) },
+                                    onDismiss: { viewModel.clearSelection() }
                                 )
                                 .transition(.scale.combined(with: .opacity))
+                            }
+
+                            // Name label when zoomed in and labels enabled
+                            if viewModel.shouldShowLabels && viewModel.selectedContact?.id != contact.id {
+                                ContactNameLabel(name: contact.displayName)
+                                    .padding(.bottom, 4)
                             }
 
                             // Pin is always visible
@@ -84,11 +115,13 @@ struct MapView: View {
                     .annotationTitles(.hidden)
                 }
             }
-            .mapStyle(.standard(elevation: .realistic))
+            .mapStyle(viewModel.mapStyleSelection.mapStyle)
+            .onMapCameraChange(frequency: .continuous) { context in
+                viewModel.cameraDistance = context.camera.distance
+            }
             .mapScope(mapScope)
             .mapControls {
                 MapCompass(scope: mapScope)
-                MapUserLocationButton(scope: mapScope)
                 MapScaleView(scope: mapScope)
             }
             .overlay {
@@ -132,22 +165,18 @@ struct MapView: View {
     private var mapControls: some View {
         HStack {
             Spacer()
-
-            VStack(spacing: 12) {
-                // Center on all button
-                Button {
+            MapControlsStack(
+                showingLayersMenu: $viewModel.showingLayersMenu,
+                showLabels: $viewModel.showLabels,
+                mapScope: mapScope,
+                onCenterAll: {
                     withAnimation {
                         viewModel.clearSelection()
                         viewModel.centerOnAllContacts()
                     }
-                } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 16, weight: .medium))
-                        .frame(width: 44, height: 44)
-                        .background(.regularMaterial, in: .circle)
-                }
-                .disabled(viewModel.contactsWithLocation.isEmpty)
-            }
+                },
+                centerAllDisabled: viewModel.contactsWithLocation.isEmpty
+            )
             .padding()
         }
     }
