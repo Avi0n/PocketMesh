@@ -429,22 +429,22 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update contact's last message date and unread count
+                // Update contact's last message date
                 if let contactID = contact?.id {
                     try await services.dataStore.updateContactLastMessage(contactID: contactID, date: Date())
-                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                 }
 
-                // Post notification (only for known, non-blocked contacts)
+                // Only increment unread count, post notification, and update badge for non-blocked contacts
                 if let contactID = contact?.id, contact?.isBlocked != true {
+                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
                     await services.notificationService.postDirectMessageNotification(
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
                         messageText: message.text,
                         messageID: messageDTO.id
                     )
+                    await services.notificationService.updateBadgeCount()
                 }
-                await services.notificationService.updateBadgeCount()
 
                 // Notify UI via SyncCoordinator
                 await self.notifyConversationsChanged()

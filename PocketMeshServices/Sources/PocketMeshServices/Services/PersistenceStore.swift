@@ -941,8 +941,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Returns tuple of (contactUnread, channelUnread) for preference-aware calculation
     /// Optimization: Only fetches entities with unread > 0 to minimize memory usage
     public func getTotalUnreadCounts() throws -> (contacts: Int, channels: Int) {
-        // Only fetch contacts with unread messages (reduces memory pressure)
-        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 }
+        // Only fetch non-blocked contacts with unread messages (reduces memory pressure)
+        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 && !$0.isBlocked }
         let contactDescriptor = FetchDescriptor<Contact>(predicate: contactPredicate)
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
