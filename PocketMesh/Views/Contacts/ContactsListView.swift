@@ -3,7 +3,7 @@ import PocketMeshServices
 import CoreLocation
 import OSLog
 
-private let contactsListLogger = Logger(subsystem: "com.pocketmesh", category: "ContactsListView")
+private let nodesListLogger = Logger(subsystem: "com.pocketmesh", category: "NodesListView")
 
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {
@@ -21,6 +21,8 @@ struct ContactsListView: View {
     @State private var showShareMyContact = false
     @State private var showAddContact = false
     @State private var userLocation: CLLocation?
+
+    private let locationManager = CLLocationManager()
 
     private var filteredContacts: [ContactDTO] {
         viewModel.filteredContacts(
@@ -163,10 +165,19 @@ struct ContactsListView: View {
         }
         .sensoryFeedback(.success, trigger: syncSuccessTrigger)
         .task {
-            contactsListLogger.info("ContactsListView: task started, services=\(appState.services != nil)")
+            nodesListLogger.info("NodesListView: task started, services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await loadContacts()
-            contactsListLogger.info("ContactsListView: loaded, contacts=\(viewModel.contacts.count)")
+            nodesListLogger.info("NodesListView: loaded, contacts=\(viewModel.contacts.count)")
+        }
+        .task(id: sortOrder) {
+            if sortOrder == .distance {
+                if let location = locationManager.location {
+                    userLocation = location
+                } else {
+                    nodesListLogger.debug("Distance sorting requested but device location unavailable")
+                }
+            }
         }
         .onChange(of: appState.servicesVersion) { _, _ in
             // Services changed (device switch, reconnect) - reload contacts
