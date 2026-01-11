@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshServices
+import CoreLocation
 import OSLog
 
 private let contactsListLogger = Logger(subsystem: "com.pocketmesh", category: "ContactsListView")
@@ -13,19 +14,25 @@ struct ContactsListView: View {
     @State private var navigationPath = NavigationPath()
     @State private var selectedContact: ContactDTO?
     @State private var searchText = ""
-    @State private var showFavoritesOnly = false
+    @State private var selectedSegment: NodeSegment = .contacts
+    @AppStorage("nodesSortOrder") private var sortOrder: NodeSortOrder = .lastHeard
     @State private var showDiscovery = false
     @State private var syncSuccessTrigger = false
     @State private var showShareMyContact = false
     @State private var showAddContact = false
+    @State private var userLocation: CLLocation?
 
     private var filteredContacts: [ContactDTO] {
         viewModel.filteredContacts(
             searchText: searchText,
-            segment: showFavoritesOnly ? .favorites : .contacts,
-            sortOrder: .name,
-            userLocation: nil
+            segment: selectedSegment,
+            sortOrder: sortOrder,
+            userLocation: userLocation
         )
+    }
+
+    private var isSearching: Bool {
+        !searchText.isEmpty
     }
 
     private var shouldUseSplitView: Bool {
@@ -85,17 +92,27 @@ struct ContactsListView: View {
             ToolbarItem(placement: .topBarLeading) {
                 BLEStatusIndicatorView()
             }
+
             ToolbarItem(placement: .automatic) {
                 Menu {
-                    Button {
-                        showFavoritesOnly.toggle()
-                    } label: {
-                        Label(
-                            showFavoritesOnly ? "Show All" : "Show Favorites",
-                            systemImage: showFavoritesOnly ? "star.slash" : "star.fill"
-                        )
+                    ForEach(NodeSortOrder.allCases, id: \.self) { order in
+                        Button {
+                            sortOrder = order
+                        } label: {
+                            if sortOrder == order {
+                                Label(order.rawValue, systemImage: "checkmark")
+                            } else {
+                                Text(order.rawValue)
+                            }
+                        }
                     }
+                } label: {
+                    Label("Sort", systemImage: "line.3.horizontal.decrease")
+                }
+            }
 
+            ToolbarItem(placement: .automatic) {
+                Menu {
                     NavigationLink {
                         BlockedContactsView()
                     } label: {
@@ -131,7 +148,7 @@ struct ContactsListView: View {
                             await syncContacts()
                         }
                     } label: {
-                        Label("Sync Contacts", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Sync Nodes", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(viewModel.isSyncing)
                 } label: {
@@ -204,6 +221,12 @@ struct ContactsListView: View {
 
     private var contactsList: some View {
         List {
+            Section {
+                NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+
             ForEach(filteredContacts) { contact in
                 contactRow(contact)
             }
@@ -213,6 +236,12 @@ struct ContactsListView: View {
 
     private var contactsSplitList: some View {
         List(selection: $selectedContact) {
+            Section {
+                NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+
             ForEach(filteredContacts) { contact in
                 contactSplitRow(contact)
                     .tag(contact)
@@ -223,13 +252,13 @@ struct ContactsListView: View {
 
     private func contactRow(_ contact: ContactDTO) -> some View {
         NavigationLink(value: contact) {
-            ContactRowView(contact: contact)
+            ContactRowView(contact: contact, showTypeLabel: isSearching)
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     private func contactSplitRow(_ contact: ContactDTO) -> some View {
-        ContactRowView(contact: contact)
+        ContactRowView(contact: contact, showTypeLabel: isSearching)
             .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
@@ -245,6 +274,26 @@ struct ContactsListView: View {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.syncContacts(deviceID: deviceID)
         syncSuccessTrigger.toggle()
+    }
+}
+
+// MARK: - Node Segment Picker
+
+struct NodeSegmentPicker: View {
+    @Binding var selection: NodeSegment
+    let isSearching: Bool
+
+    var body: some View {
+        Picker("Segment", selection: $selection) {
+            ForEach(NodeSegment.allCases, id: \.self) { segment in
+                Text(segment.rawValue).tag(segment)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .opacity(isSearching ? 0.5 : 1.0)
+        .disabled(isSearching)
     }
 }
 
