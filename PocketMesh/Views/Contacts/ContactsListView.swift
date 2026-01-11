@@ -252,6 +252,12 @@ struct ContactsListView: View {
 
 struct ContactRowView: View {
     let contact: ContactDTO
+    let showTypeLabel: Bool
+
+    init(contact: ContactDTO, showTypeLabel: Bool = false) {
+        self.contact = contact
+        self.showTypeLabel = showTypeLabel
+    }
 
     var body: some View {
         HStack(spacing: 12) {
@@ -272,8 +278,19 @@ struct ContactRowView: View {
                 }
 
                 HStack(spacing: 8) {
-                    // Contact type
-                    Text(contactTypeLabel)
+                    // Show type label only in search results
+                    if showTypeLabel {
+                        Text(contactTypeLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("·")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Route indicator
+                    Text(routeLabel)
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -292,7 +309,6 @@ struct ContactRowView: View {
 
             Spacer()
 
-            // Route indicator
             VStack(alignment: .trailing, spacing: 2) {
                 if contact.isFavorite {
                     Image(systemName: "star.fill")
@@ -300,9 +316,7 @@ struct ContactRowView: View {
                         .foregroundStyle(.yellow)
                 }
 
-                Text(routeLabel)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
             }
         }
         .padding(.vertical, 4)
@@ -310,7 +324,7 @@ struct ContactRowView: View {
 
     private var contactTypeLabel: String {
         switch contact.type {
-        case .chat: return "Chat"
+        case .chat: return "Contact"
         case .repeater: return "Repeater"
         case .room: return "Room"
         }
