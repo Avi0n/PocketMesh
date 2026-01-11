@@ -20,6 +20,16 @@ struct CLIResponseTests {
         #expect(result == .ok)
     }
 
+    @Test func parse_okWithMessage_clockSet() {
+        let result = CLIResponse.parse("OK - clock set: 16:13 - 9/1/2026 UTC")
+        #expect(result == .ok)
+    }
+
+    @Test func parse_okWithMessage_withPromptPrefix() {
+        let result = CLIResponse.parse("> OK - clock set: 16:13 - 9/1/2026 UTC")
+        #expect(result == .ok)
+    }
+
     // MARK: - Radio with Prompt
 
     @Test func parse_radio_withPromptPrefix() {

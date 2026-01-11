@@ -12,6 +12,7 @@ struct RepeaterSettingsView: View {
         case txPower
         case advertInterval
         case floodAdvertInterval
+        case floodMaxHops
     }
 
     let session: RemoteNodeSessionDTO
@@ -56,14 +57,6 @@ struct RepeaterSettingsView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.successMessage ?? "Settings applied")
-        }
-        .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
-            Button("Reboot", role: .destructive) {
-                Task { await viewModel.reboot() }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("The repeater will restart and be temporarily unavailable.")
         }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(
@@ -362,7 +355,7 @@ struct RepeaterSettingsView: View {
     private var behaviorSection: some View {
         ExpandableSettingsSection(
             title: "Behavior",
-            icon: "arrow.triangle.2.circlepath",
+            icon: "slider.horizontal.3",
             isExpanded: $viewModel.isBehaviorExpanded,
             isLoaded: { viewModel.behaviorLoaded },
             isLoading: $viewModel.isLoadingBehavior,
@@ -436,14 +429,32 @@ struct RepeaterSettingsView: View {
                     .foregroundStyle(.red)
             }
 
-            Stepper(
-                "Max Flood Hops: \(viewModel.floodMaxHops.map { "\($0)" } ?? "...")",
-                value: Binding(
-                    get: { viewModel.floodMaxHops ?? 4 },
-                    set: { viewModel.floodMaxHops = $0 }
-                ),
-                in: 0...10
-            )
+            HStack {
+                Text("Max Flood Hops")
+                Spacer()
+                if let hops = viewModel.floodMaxHops {
+                    TextField("hops", value: Binding(
+                        get: { hops },
+                        set: { viewModel.floodMaxHops = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused($focusedField, equals: .floodMaxHops)
+                    Text("hops")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = viewModel.floodMaxHopsError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
 
             Button {
                 Task { await viewModel.applyBehaviorSettings() }
@@ -494,14 +505,27 @@ struct RepeaterSettingsView: View {
 
     private var actionsSection: some View {
         Section("Device Actions") {
-            Button("Force Advertisement") {
+            Button("Send Advert") {
                 Task { await viewModel.forceAdvert() }
             }
+
+            Button("Sync Time") {
+                Task { await viewModel.syncTime() }
+            }
+            .disabled(viewModel.isApplying)
 
             Button("Reboot Device", role: .destructive) {
                 showRebootConfirmation = true
             }
             .disabled(viewModel.isRebooting)
+            .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
+                Button("Reboot", role: .destructive) {
+                    Task { await viewModel.reboot() }
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("The repeater will restart and be temporarily unavailable.")
+            }
 
             if let error = viewModel.errorMessage {
                 Text(error)

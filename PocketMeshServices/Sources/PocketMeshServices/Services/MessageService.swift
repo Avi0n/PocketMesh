@@ -133,7 +133,7 @@ public actor MessageService {
 
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessageService")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "MessageService")
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
@@ -680,7 +680,7 @@ public actor MessageService {
         do {
             // Fetch fresh contact state from device
             guard let updatedContact = try await session.getContact(publicKey: publicKey) else {
-                logger.debug("Contact not found in device contacts after retry")
+                logger.info("Contact not found in device contacts after retry")
                 return
             }
 

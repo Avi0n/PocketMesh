@@ -1446,11 +1446,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameters:
     ///   - destination: The node's public key (6+ bytes).
     ///   - password: The authentication password.
-    ///   - syncSince: Timestamp for history sync (0 = no sync hint).
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    public func sendLogin(to destination: Data, password: String, syncSince: UInt32 = 0) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.sendLogin(to: destination, password: password, syncSince: syncSince)) { event in
+    public func sendLogin(to destination: Data, password: String) async throws -> MessageSentInfo {
+        try await sendAndWait(PacketBuilder.sendLogin(to: destination, password: password)) { event in
             if case .messageSent(let info) = event { return info }
             return nil
         }
@@ -1461,12 +1460,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameters:
     ///   - destination: The destination (contact or public key).
     ///   - password: The authentication password.
-    ///   - syncSince: Timestamp for history sync (0 = no sync hint).
     /// - Returns: Information about the sent message.
     /// - Throws: ``MeshCoreError`` on failure.
-    public func sendLogin(to destination: Destination, password: String, syncSince: UInt32 = 0) async throws -> MessageSentInfo {
+    public func sendLogin(to destination: Destination, password: String) async throws -> MessageSentInfo {
         let publicKey = try destination.fullPublicKey()
-        return try await sendLogin(to: publicKey, password: password, syncSince: syncSince)
+        return try await sendLogin(to: publicKey, password: password)
     }
 
     /// Sends a logout request to a remote node.

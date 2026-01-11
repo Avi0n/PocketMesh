@@ -63,7 +63,7 @@ extension TelemetryResponse {
 
 import OSLog
 
-private let radioLogger = Logger(subsystem: "com.pocketmesh.services", category: "radio")
+private let radioLogger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "radio")
 
 /// Standard LoRa radio parameter options for configuration UI
 public enum RadioOptions {
@@ -163,11 +163,12 @@ public enum CLIResponse: Sendable, Equatable {
             trimmed = String(trimmed.dropFirst(2))
         }
 
-        if trimmed == "OK" {
+        // Success responses: "OK" or "OK - clock set: ..." etc.
+        if trimmed == "OK" || trimmed.hasPrefix("OK - ") {
             return .ok
         }
 
-        if trimmed.lowercased().hasPrefix("error") {
+        if trimmed.lowercased().hasPrefix("error") || trimmed.hasPrefix("ERR:") {
             // Check for "unknown command" specifically for defensive handling
             if trimmed.lowercased().contains("unknown command") {
                 return .unknownCommand(trimmed)

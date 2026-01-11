@@ -138,24 +138,12 @@ final class PythonReferenceTests: XCTestCase {
             "sendChannelMessage mismatch - Swift: \(packet.hexString), Python: \(PythonReferenceBytes.sendChannelMessage_0_Hi.hexString)")
     }
 
-    func test_sendLogin_divergesFromPython() {
-        // INTENTIONAL DIVERGENCE: PocketMesh extends the Python format with syncSince.
-        // Python format: [0x1A] + dst(32) + password (39 bytes for "secret")
-        // PocketMesh format: [0x1A] + dst(32) + password + syncSince(4LE) (43 bytes)
-        //
-        // This test documents the divergence. The Python reference is preserved for
-        // documentation; see test_sendLogin_withSyncSince for the actual format we use.
+    func test_sendLogin_matchesPython() {
+        // Python: b"\x1A" + dst(32) + password
         let dst = Data([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]) + Data(repeating: 0, count: 26)
         let packet = PacketBuilder.sendLogin(to: dst, password: "secret")
-
-        // Verify we produce MORE bytes than Python (syncSince appended)
-        XCTAssertEqual(packet.count, PythonReferenceBytes.sendLogin.count + 4,
-            "sendLogin should be 4 bytes longer than Python (syncSince)")
-
-        // Verify the prefix matches Python exactly
-        XCTAssertEqual(packet.prefix(PythonReferenceBytes.sendLogin.count),
-                       PythonReferenceBytes.sendLogin,
-            "sendLogin prefix should match Python format")
+        XCTAssertEqual(packet, PythonReferenceBytes.sendLogin,
+            "sendLogin mismatch - Swift: \(packet.hexString), Python: \(PythonReferenceBytes.sendLogin.hexString)")
     }
 
     func test_sendLogout_matchesPython() {
@@ -236,44 +224,5 @@ final class PythonReferenceTests: XCTestCase {
         )
         XCTAssertEqual(packet, PythonReferenceBytes.sendTrace,
             "sendTrace mismatch - Swift: \(packet.hexString), Python: \(PythonReferenceBytes.sendTrace.hexString)")
-    }
-}
-
-// MARK: - PocketMesh Protocol Extensions
-
-/// Tests for PocketMesh protocol extensions beyond meshcore_py.
-///
-/// These packets implement firmware features not present in the Python library.
-/// Each test references the firmware source for the extension.
-final class PocketMeshExtensionTests: XCTestCase {
-
-    // MARK: - Login with syncSince
-
-    func test_sendLogin_withSyncSince_zero() {
-        // Firmware: simple_room_server login handler expects sender_sync_since for room history sync.
-        let dst = Data([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]) + Data(repeating: 0, count: 26)
-        let packet = PacketBuilder.sendLogin(to: dst, password: "secret", syncSince: 0)
-
-        XCTAssertEqual(packet, PocketMeshExtendedBytes.sendLogin_syncSince0,
-            "sendLogin with syncSince=0 mismatch")
-    }
-
-    func test_sendLogin_withSyncSince_timestamp() {
-        // Verify syncSince is encoded as little-endian UInt32
-        let dst = Data([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]) + Data(repeating: 0, count: 26)
-        let packet = PacketBuilder.sendLogin(to: dst, password: "secret", syncSince: 1704067200)
-
-        XCTAssertEqual(packet, PocketMeshExtendedBytes.sendLogin_syncSince1704067200,
-            "sendLogin with syncSince=1704067200 mismatch")
-    }
-
-    func test_sendLogin_defaultSyncSince_isZero() {
-        // Verify the default parameter produces syncSince=0
-        let dst = Data([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]) + Data(repeating: 0, count: 26)
-        let packetDefault = PacketBuilder.sendLogin(to: dst, password: "secret")
-        let packetExplicit = PacketBuilder.sendLogin(to: dst, password: "secret", syncSince: 0)
-
-        XCTAssertEqual(packetDefault, packetExplicit,
-            "Default syncSince should be 0")
     }
 }

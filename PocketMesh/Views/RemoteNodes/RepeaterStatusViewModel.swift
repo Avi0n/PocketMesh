@@ -37,8 +37,14 @@ final class RepeaterStatusViewModel {
     /// Whether the telemetry disclosure group is expanded
     var telemetryExpanded = false
 
-    /// Clock time from the repeater
-    var clockTime: String?
+    /// Clock time from the repeater (stored as UTC)
+    private var clockTimeUTC: String?
+
+    /// Clock time converted to user's local timezone and locale
+    var clockTime: String? {
+        guard let utcString = clockTimeUTC else { return nil }
+        return Self.convertUTCToLocal(utcString)
+    }
 
     /// Error message if any
     var errorMessage: String?
@@ -278,10 +284,36 @@ final class RepeaterStatusViewModel {
         let response = CLIResponse.parse(frame.text)
         switch response {
         case .deviceTime(let time):
-            self.clockTime = time
+            self.clockTimeUTC = time
         default:
             break
         }
+    }
+
+    /// Convert UTC time string (e.g., "06:40 - 18/4/2025 UTC") to local time using user's locale
+    private static func convertUTCToLocal(_ utcString: String) -> String {
+        // Format: "HH:mm - d/M/yyyy UTC"
+        let pattern = #"(\d{1,2}:\d{2}) - (\d{1,2}/\d{1,2}/\d{4}) UTC"#
+        guard let regex = try? Regex(pattern),
+              let match = utcString.firstMatch(of: regex),
+              match.count >= 3 else {
+            return utcString
+        }
+
+        let timeStr = String(match[1].substring ?? "")
+        let dateStr = String(match[2].substring ?? "")
+
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "HH:mm d/M/yyyy"
+        inputFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        guard let date = inputFormatter.date(from: "\(timeStr) \(dateStr)") else {
+            return utcString
+        }
+
+        let timeString = date.formatted(date: .omitted, time: .shortened)
+        let dateString = date.formatted(.dateTime.year(.twoDigits).month(.twoDigits).day(.twoDigits))
+        return "\(timeString) - \(dateString)"
     }
 
     // MARK: - Computed Properties

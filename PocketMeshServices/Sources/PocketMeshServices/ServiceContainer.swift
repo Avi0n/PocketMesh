@@ -83,6 +83,9 @@ public final class ServiceContainer {
     /// Service for tracking heard repeats of sent messages
     public let heardRepeatsService: HeardRepeatsService
 
+    /// Buffer for batching debug log entries to persistence
+    public let debugLogBuffer: DebugLogBuffer
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -133,6 +136,8 @@ public final class ServiceContainer {
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
         self.rxLogService = RxLogService(session: session, persistenceStore: dataStore)
         self.heardRepeatsService = HeardRepeatsService(persistenceStore: dataStore)
+        self.debugLogBuffer = DebugLogBuffer(persistenceStore: dataStore)
+        DebugLogBuffer.shared = debugLogBuffer
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
@@ -240,6 +245,11 @@ public final class ServiceContainer {
         await remoteNodeService.startEventMonitoring()
         await messagePollingService.startAutoFetch(deviceID: deviceID)
 
+        // Prune debug logs on connection
+        Task {
+            try? await dataStore.pruneDebugLogEntries(keepCount: 1000)
+        }
+
         isMonitoringEvents = true
     }
 
@@ -254,6 +264,9 @@ public final class ServiceContainer {
         await messageService.stopEventListening()
         await messagePollingService.stopAutoFetch()
         // RemoteNodeService event monitoring is per-session, handled internally
+
+        // Flush debug log buffer
+        await debugLogBuffer.shutdown()
 
         isMonitoringEvents = false
     }

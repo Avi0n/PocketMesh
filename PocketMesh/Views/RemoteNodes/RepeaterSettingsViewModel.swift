@@ -12,10 +12,42 @@ final class RepeaterSettingsViewModel {
 
     // Device info (read-only from ver/clock)
     var firmwareVersion: String?
-    var deviceTime: String?
+    private var deviceTimeUTC: String?
     var isLoadingDeviceInfo = false
     var deviceInfoError: String?
-    var deviceInfoLoaded: Bool { firmwareVersion != nil || deviceTime != nil }
+    var deviceInfoLoaded: Bool { firmwareVersion != nil || deviceTimeUTC != nil }
+
+    /// Device time converted to user's local timezone and locale
+    var deviceTime: String? {
+        guard let utcString = deviceTimeUTC else { return nil }
+        return Self.convertUTCToLocal(utcString)
+    }
+
+    /// Convert UTC time string (e.g., "06:40 - 18/4/2025 UTC") to local time using user's locale
+    private static func convertUTCToLocal(_ utcString: String) -> String {
+        // Format: "HH:mm - d/M/yyyy UTC"
+        let pattern = #"(\d{1,2}:\d{2}) - (\d{1,2}/\d{1,2}/\d{4}) UTC"#
+        guard let regex = try? Regex(pattern),
+              let match = utcString.firstMatch(of: regex),
+              match.count >= 3 else {
+            return utcString
+        }
+
+        let timeStr = String(match[1].substring ?? "")
+        let dateStr = String(match[2].substring ?? "")
+
+        let inputFormatter = DateFormatter()
+        inputFormatter.dateFormat = "HH:mm d/M/yyyy"
+        inputFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        guard let date = inputFormatter.date(from: "\(timeStr) \(dateStr)") else {
+            return utcString
+        }
+
+        let timeString = date.formatted(date: .omitted, time: .shortened)
+        let dateString = date.formatted(.dateTime.year(.twoDigits).month(.twoDigits).day(.twoDigits))
+        return "\(timeString) - \(dateString)"
+    }
 
     // Identity settings (from get name, get lat, get lon)
     var name: String?
@@ -54,6 +86,7 @@ final class RepeaterSettingsViewModel {
     // Validation errors for behavior fields
     var advertIntervalError: String?
     var floodAdvertIntervalError: String?
+    var floodMaxHopsError: String?
 
     // Password change (no query available)
     var newPassword: String = ""
@@ -72,6 +105,7 @@ final class RepeaterSettingsViewModel {
     var errorMessage: String?
     var successMessage: String?
     var showSuccessAlert = false
+    var showErrorAlert = false
     var identityApplySuccess = false
     var behaviorApplySuccess = false
 
@@ -201,7 +235,7 @@ final class RepeaterSettingsViewModel {
         do {
             let response = try await sendAndWait("clock")
             if case .deviceTime(let time) = CLIResponse.parse(response, forQuery: "clock") {
-                self.deviceTime = time
+                self.deviceTimeUTC = time
                 logger.debug("Received device time: \(time)")
             }
         } catch {
@@ -496,6 +530,7 @@ final class RepeaterSettingsViewModel {
         // Clear previous validation errors
         advertIntervalError = nil
         floodAdvertIntervalError = nil
+        floodMaxHopsError = nil
 
         // Validate 0-hop interval: accepts 0 (disabled) or 60-240
         if let interval = advertIntervalMinutes {
@@ -511,8 +546,15 @@ final class RepeaterSettingsViewModel {
             }
         }
 
+        // Validate flood max hops: accepts 0-64
+        if let hops = floodMaxHops {
+            if hops < 0 || hops > 64 {
+                floodMaxHopsError = "Accepts 0-64 hops"
+            }
+        }
+
         // Don't proceed if validation failed
-        if advertIntervalError != nil || floodAdvertIntervalError != nil {
+        if advertIntervalError != nil || floodAdvertIntervalError != nil || floodMaxHopsError != nil {
             return
         }
 
@@ -646,6 +688,38 @@ final class RepeaterSettingsViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// Sync repeater time with phone time
+    func syncTime() async {
+        isApplying = true
+        errorMessage = nil
+
+        do {
+            let response = try await sendAndWait("clock sync")
+            switch CLIResponse.parse(response) {
+            case .ok:
+                successMessage = "Time synced"
+                showSuccessAlert = true
+            case .error(let message):
+                // Extract message after "ERR: " prefix if present
+                if message.contains("clock cannot go backwards") {
+                    errorMessage = "Repeater clock is ahead of phone time. If it's too far forward, reboot the repeater then sync time again."
+                } else {
+                    let cleanMessage = message.replacing("ERR: ", with: "")
+                    errorMessage = cleanMessage.isEmpty ? "Failed to sync time" : cleanMessage
+                }
+                showErrorAlert = true
+            default:
+                errorMessage = "Unexpected response: \(response)"
+                showErrorAlert = true
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            showErrorAlert = true
+        }
+
+        isApplying = false
     }
 }
 

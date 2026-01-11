@@ -80,6 +80,7 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
+    private var syncCoordinator: SyncCoordinator?
 
     // MARK: - Initialization
 
@@ -92,6 +93,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.syncCoordinator = appState.syncCoordinator
     }
 
     /// Configure with services (for testing)
@@ -178,8 +180,9 @@ final class ChatViewModel {
         do {
             messages = try await dataStore.fetchMessages(contactID: contact.id)
 
-            // Clear unread count
+            // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
+            await syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
@@ -248,7 +251,12 @@ final class ChatViewModel {
 
     /// Load messages for a channel
     func loadChannelMessages(for channel: ChannelDTO) async {
-        guard let dataStore else { return }
+        logger.info("loadChannelMessages: start channel=\(channel.index) deviceID=\(channel.deviceID)")
+
+        guard let dataStore else {
+            logger.info("loadChannelMessages: dataStore is nil, returning early")
+            return
+        }
 
         currentChannel = channel
         currentContact = nil
@@ -258,11 +266,13 @@ final class ChatViewModel {
         notificationService?.activeChannelIndex = channel.index
         notificationService?.activeChannelDeviceID = channel.deviceID
 
+        logger.info("loadChannelMessages: setting isLoading=true, current messages.count=\(self.messages.count)")
         isLoading = true
         errorMessage = nil
 
         do {
             var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
+            logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
 
             // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
             let blockedNames: Set<String>
@@ -283,15 +293,18 @@ final class ChatViewModel {
 
             messages = fetchedMessages
 
-            // Clear unread count
+            // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+            await syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
         } catch {
+            logger.info("loadChannelMessages: error - \(error.localizedDescription)")
             errorMessage = error.localizedDescription
         }
 
+        logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         isLoading = false
     }
 
@@ -374,7 +387,7 @@ final class ChatViewModel {
 
     /// Retry sending a failed message with flood routing enabled
     func retryMessage(_ message: MessageDTO) async {
-        logger.debug("retryMessage called for message: \(message.id)")
+        logger.info("retryMessage called for message: \(message.id)")
 
         guard let messageService else {
             logger.warning("retryMessage: messageService is nil")
@@ -386,13 +399,13 @@ final class ChatViewModel {
             return
         }
 
-        logger.debug("retryMessage: starting retry for contact \(contact.displayName)")
+        logger.info("retryMessage: starting retry for contact \(contact.displayName)")
 
         errorMessage = nil
 
         do {
             // Retry the existing message (preserves message identity)
-            logger.debug("retryMessage: calling retryDirectMessage with messageID")
+            logger.info("retryMessage: calling retryDirectMessage with messageID")
             let result = try await messageService.retryDirectMessage(messageID: message.id, to: contact)
             logger.info("retryMessage: completed with status \(String(describing: result.status))")
 
@@ -536,39 +549,41 @@ final class ChatViewModel {
               let dataStore else { return }
 
         isProcessingQueue = true
+        defer { isProcessingQueue = false }
 
         var lastDeviceID: UUID?
 
-        while !sendQueue.isEmpty {
-            let queued = sendQueue.removeFirst()
+        // Process messages with re-check after reload to catch any that arrived during reload
+        repeat {
+            while !sendQueue.isEmpty {
+                let queued = sendQueue.removeFirst()
 
-            // Fetch the target contact by ID - it may differ from currentContact
-            guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
-                // Contact was deleted, skip this message
-                logger.debug("Skipping queued message - contact \(queued.contactID) was deleted")
-                continue
+                // Fetch the target contact by ID - it may differ from currentContact
+                guard let contact = try? await dataStore.fetchContact(id: queued.contactID) else {
+                    // Contact was deleted, skip this message
+                    logger.info("Skipping queued message - contact \(queued.contactID) was deleted")
+                    continue
+                }
+
+                lastDeviceID = contact.deviceID
+
+                do {
+                    _ = try await messageService.sendExistingMessage(
+                        messageID: queued.messageID,
+                        to: contact
+                    )
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
             }
 
-            lastDeviceID = contact.deviceID
-
-            do {
-                _ = try await messageService.sendExistingMessage(
-                    messageID: queued.messageID,
-                    to: contact
-                )
-            } catch {
-                errorMessage = error.localizedDescription
+            // Reload after queue drains - syncs statuses and conversation list
+            if let contact = currentContact {
+                await loadMessages(for: contact)
             }
-        }
-
-        // Single reload after queue drains - syncs statuses and conversation list
-        if let contact = currentContact {
-            await loadMessages(for: contact)
-        }
-        if let deviceID = lastDeviceID {
-            await loadConversations(deviceID: deviceID)
-        }
-
-        isProcessingQueue = false
+            if let deviceID = lastDeviceID {
+                await loadConversations(deviceID: deviceID)
+            }
+        } while !sendQueue.isEmpty
     }
 }

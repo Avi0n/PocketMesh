@@ -10,7 +10,7 @@ public typealias HeardRepeatHandler = @Sendable (UUID, Int) async -> Void
 /// and tracking "heard repeats" - evidence of message propagation through the mesh.
 public actor HeardRepeatsService {
     private let persistenceStore: PersistenceStore
-    private let logger = Logger(subsystem: "PocketMesh", category: "HeardRepeatsService")
+    private let logger = PersistentLogger(subsystem: "PocketMesh", category: "HeardRepeatsService")
 
     /// Device ID for the current session
     private var deviceID: UUID?
@@ -36,7 +36,7 @@ public actor HeardRepeatsService {
     public func configure(deviceID: UUID, localNodeName: String) {
         self.deviceID = deviceID
         self.localNodeName = localNodeName
-        logger.debug("Configured with deviceID: \(deviceID), nodeName: \(localNodeName)")
+        logger.info("Configured with deviceID: \(deviceID), nodeName: \(localNodeName)")
     }
 
     /// Checks if a repeat has already been recorded for this RX log entry.
@@ -71,7 +71,7 @@ public actor HeardRepeatsService {
 
         // Parse "NodeName: MessageText" format using shared utility
         guard let (senderName, messageText) = ChannelMessageFormat.parse(decodedText) else {
-            logger.debug("Failed to parse channel message text: \(decodedText.prefix(50))")
+            logger.info("Failed to parse channel message text: \(decodedText.prefix(50))")
             return nil
         }
 
@@ -82,7 +82,7 @@ public actor HeardRepeatsService {
 
         // Check for duplicate (already processed this RX entry)
         if await isDuplicateRepeat(entry.id) {
-            logger.debug("Repeat already recorded for RX entry: \(entry.id)")
+            logger.info("Repeat already recorded for RX entry: \(entry.id)")
             return nil
         }
 
@@ -135,10 +135,10 @@ public actor HeardRepeatsService {
     /// - Returns: Array of repeat DTOs sorted by receivedAt
     public func refreshRepeats(for messageID: UUID) async -> [MessageRepeatDTO] {
         // Return existing repeats from database
-        logger.debug("refreshRepeats called for messageID: \(messageID)")
+        logger.info("refreshRepeats called for messageID: \(messageID)")
         do {
             let results = try await persistenceStore.fetchMessageRepeats(messageID: messageID)
-            logger.debug("refreshRepeats returning \(results.count) repeats")
+            logger.info("refreshRepeats returning \(results.count) repeats")
             return results
         } catch {
             logger.error("Failed to fetch repeats: \(error.localizedDescription)")

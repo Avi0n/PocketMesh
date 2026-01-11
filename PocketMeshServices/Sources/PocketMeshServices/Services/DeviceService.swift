@@ -24,7 +24,7 @@ public enum DeviceServiceError: Error, LocalizedError, Sendable {
 /// Handles local device configuration that doesn't require MeshCore communication.
 public actor DeviceService {
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "DeviceService")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "DeviceService")
 
     /// Callback invoked when device data is successfully updated.
     /// Used to refresh ConnectionManager.connectedDevice for UI updates.

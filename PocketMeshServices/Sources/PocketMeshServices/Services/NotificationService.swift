@@ -70,6 +70,9 @@ public final class NotificationService: NSObject {
     /// Badge count
     public private(set) var badgeCount: Int = 0
 
+    /// Whether message notifications are temporarily suppressed (during sync window)
+    public var isSuppressingNotifications: Bool = false
+
     // MARK: - Active Conversation Tracking
 
     /// Currently active contact ID (user is viewing this chat)
@@ -222,6 +225,10 @@ public final class NotificationService: NSObject {
         // Check granular preference (uses cached preferences)
         guard preferences.contactMessagesEnabled else { return }
 
+        // Skip system notification if suppressed (during sync window)
+        // Unread counts and badges are updated separately by the caller
+        guard !isSuppressingNotifications else { return }
+
         let content = UNMutableNotificationContent()
         content.title = contactName
         content.body = messageText
@@ -271,6 +278,9 @@ public final class NotificationService: NSObject {
 
         // Check granular preference (uses cached preferences)
         guard preferences.channelMessagesEnabled else { return }
+
+        // Skip system notification if suppressed (during sync window)
+        guard !isSuppressingNotifications else { return }
 
         let content = UNMutableNotificationContent()
         content.title = channelName

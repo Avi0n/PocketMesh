@@ -15,6 +15,11 @@ public actor MockChannelService: ChannelServiceProtocol {
         ChannelSyncResult(channelsSynced: 0, errors: [])
     )
 
+    /// Result to return from retryFailedChannels
+    public var stubbedRetryResult: Result<ChannelSyncResult, Error> = .success(
+        ChannelSyncResult(channelsSynced: 0, errors: [])
+    )
+
     // MARK: - Recorded Invocations
 
     public struct SyncChannelsInvocation: Sendable, Equatable {
@@ -22,7 +27,13 @@ public actor MockChannelService: ChannelServiceProtocol {
         public let maxChannels: UInt8
     }
 
+    public struct RetryInvocation: Sendable, Equatable {
+        public let deviceID: UUID
+        public let indices: [UInt8]
+    }
+
     public private(set) var syncChannelsInvocations: [SyncChannelsInvocation] = []
+    public private(set) var retryInvocations: [RetryInvocation] = []
 
     // MARK: - Initialization
 
@@ -40,10 +51,21 @@ public actor MockChannelService: ChannelServiceProtocol {
         }
     }
 
+    public func retryFailedChannels(deviceID: UUID, indices: [UInt8]) async throws -> ChannelSyncResult {
+        retryInvocations.append(RetryInvocation(deviceID: deviceID, indices: indices))
+        switch stubbedRetryResult {
+        case .success(let result):
+            return result
+        case .failure(let error):
+            throw error
+        }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all recorded invocations
     public func reset() {
         syncChannelsInvocations = []
+        retryInvocations = []
     }
 }

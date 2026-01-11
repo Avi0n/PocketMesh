@@ -1,6 +1,7 @@
 // SyncCoordinatorTests.swift
 import Testing
 import Foundation
+import MeshCore
 @testable import PocketMeshServices
 
 @Suite("SyncCoordinator Tests")
@@ -129,7 +130,8 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { await tracker.markStarted() },
-            onEnded: { await tracker.markEnded() }
+            onEnded: { await tracker.markEnded() },
+            onPhaseChanged: { _ in }
         )
 
         try await coordinator.performFullSync(
@@ -160,7 +162,8 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: { await tracker.incrementEndedCount() }
+            onEnded: { await tracker.incrementEndedCount() },
+            onPhaseChanged: { _ in }
         )
 
         // Configure mock to throw error during contacts sync
@@ -198,7 +201,8 @@ struct SyncCoordinatorTests {
             onEnded: {
                 // Record when activity ended
                 await orderTracker.recordActivityEnded()
-            }
+            },
+            onPhaseChanged: { _ in }
         )
 
         try await coordinator.performFullSync(
@@ -212,6 +216,44 @@ struct SyncCoordinatorTests {
         // Verify that activity ended BEFORE message polling started
         let activityEndedBeforeMessages = await orderTracker.activityEndedBeforeMessagePoll
         #expect(activityEndedBeforeMessages, "Activity should end before message polling starts")
+    }
+
+    @Test("onDisconnected clears notification suppression flag")
+    @MainActor
+    func onDisconnectedClearsSuppressionFlag() async throws {
+        let coordinator = SyncCoordinator()
+
+        // Create a test ServiceContainer
+        let mockTransport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: mockTransport)
+        let services = try ServiceContainer.forTesting(session: session)
+
+        // Manually set suppression flag to true (simulating mid-sync state)
+        services.notificationService.isSuppressingNotifications = true
+        #expect(services.notificationService.isSuppressingNotifications == true)
+
+        // Call onDisconnected
+        await coordinator.onDisconnected(services: services)
+
+        // Verify flag is cleared
+        #expect(services.notificationService.isSuppressingNotifications == false)
+    }
+
+    @Test("onDisconnected resets sync state to idle")
+    @MainActor
+    func onDisconnectedResetsSyncState() async throws {
+        let coordinator = SyncCoordinator()
+
+        // Create a test ServiceContainer
+        let mockTransport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: mockTransport)
+        let services = try ServiceContainer.forTesting(session: session)
+
+        // Call onDisconnected
+        await coordinator.onDisconnected(services: services)
+
+        // Verify state is idle
+        #expect(coordinator.state == .idle)
     }
 }
 
@@ -259,5 +301,9 @@ actor OrderTrackingMessagePollingService: MessagePollingServiceProtocol {
     func pollAllMessages() async throws -> Int {
         messagePollTime = Date()
         return 0
+    }
+
+    func waitForPendingHandlers() async {
+        // No-op for tests
     }
 }

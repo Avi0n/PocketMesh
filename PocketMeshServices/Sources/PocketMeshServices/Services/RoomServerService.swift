@@ -24,7 +24,7 @@ public actor RoomServerService {
     private let session: MeshCoreSession
     private let remoteNodeService: RemoteNodeService
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "RoomServer")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RoomServer")
 
     /// Self public key prefix for author comparison.
     /// Set from SelfInfo when device connects.
@@ -80,8 +80,8 @@ public actor RoomServerService {
         let existingSession = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
         let isNewSession = existingSession == nil
 
-        // Determine sync start point before login (included in login packet)
-        let needsFullSync = isNewSession || existingSession?.lastSyncTimestamp == 0
+        // Determine sync start point (used after login for history sync)
+        let needsFullSync = existingSession == nil || existingSession?.lastSyncTimestamp == 0
         let syncSince: UInt32 = needsFullSync ? 1 : (existingSession?.lastSyncTimestamp ?? 1)
 
         let remoteSession = try await remoteNodeService.createSession(
@@ -91,12 +91,11 @@ public actor RoomServerService {
             rememberPassword: rememberPassword
         )
 
-        // Login to the room with sync timestamp
+        // Login to the room
         _ = try await remoteNodeService.login(
             sessionID: remoteSession.id,
             password: password,
-            pathLength: pathLength,
-            syncSince: syncSince
+            pathLength: pathLength
         )
 
         // Store password only after successful login
@@ -132,14 +131,13 @@ public actor RoomServerService {
             throw RemoteNodeError.invalidResponse
         }
 
-        // Compute sync timestamp before login (included in login packet)
+        // Compute sync timestamp (used after login for history sync)
         let syncSince: UInt32 = remoteSession.lastSyncTimestamp > 0 ? remoteSession.lastSyncTimestamp : 1
 
-        // Re-authenticate to the room with sync timestamp
+        // Re-authenticate to the room
         _ = try await remoteNodeService.login(
             sessionID: sessionID,
-            pathLength: pathLength,
-            syncSince: syncSince
+            pathLength: pathLength
         )
 
         // Attempt additional history sync if needed (non-blocking)
@@ -260,7 +258,7 @@ public actor RoomServerService {
         // Defensive check: room servers shouldn't push our own messages back
         let isFromSelf = selfPublicKeyPrefix?.prefix(4) == authorPrefix.prefix(4)
         if isFromSelf {
-            logger.debug("Received self message from room server (unexpected)")
+            logger.info("Received self message from room server (unexpected)")
         }
 
         let authorName = try await resolveAuthorName(keyPrefix: authorPrefix)
@@ -352,10 +350,10 @@ public actor RoomServerService {
 
             if contact.outPathLength >= 0 {
                 // Contact has a path from advertisement - try it directly
-                logger.debug("Trying advert path for room \(remoteSession.name)")
+                logger.info("Trying advert path for room \(remoteSession.name)")
                 do {
                     try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
-                    logger.debug("History sync succeeded using advert path")
+                    logger.info("History sync succeeded using advert path")
                     return
                 } catch {
                     // Advert path didn't work - fall through to path discovery
@@ -374,7 +372,7 @@ public actor RoomServerService {
 
             // Retry with newly discovered path
             try await remoteNodeService.requestHistorySync(sessionID: sessionID, since: since)
-            logger.debug("History sync succeeded after path discovery")
+            logger.info("History sync succeeded after path discovery")
         } catch {
             logger.warning("Failed to sync history for session \(sessionID): \(error)")
             // Don't fail the join - messages will arrive via normal flow

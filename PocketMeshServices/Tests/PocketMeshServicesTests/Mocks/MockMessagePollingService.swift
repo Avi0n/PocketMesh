@@ -16,6 +16,7 @@ public actor MockMessagePollingService: MessagePollingServiceProtocol {
     // MARK: - Recorded Invocations
 
     public private(set) var pollAllMessagesInvocations: Int = 0
+    public private(set) var waitForPendingHandlersInvocations: Int = 0
 
     // MARK: - Initialization
 
@@ -33,10 +34,16 @@ public actor MockMessagePollingService: MessagePollingServiceProtocol {
         }
     }
 
+    public func waitForPendingHandlers() async {
+        waitForPendingHandlersInvocations += 1
+        // In tests, handlers complete immediately
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all recorded invocations
     public func reset() {
         pollAllMessagesInvocations = 0
+        waitForPendingHandlersInvocations = 0
     }
 }

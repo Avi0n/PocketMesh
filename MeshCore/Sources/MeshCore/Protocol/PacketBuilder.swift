@@ -389,20 +389,16 @@ public enum PacketBuilder: Sendable {
     /// - Parameters:
     ///   - destination: The 32-byte public key of the node to login to.
     ///   - password: The password for authentication.
-    ///   - syncSince: Timestamp for history sync (0 = no sync hint).
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
     /// - Offset 0 (1 byte): Command code `0x1A` (sendLogin)
     /// - Offset 1 (32 bytes): Full public key of target
     /// - Offset 33 (N bytes): Password (UTF-8)
-    /// - Offset 33+N (4 bytes): Sync-since timestamp (little-endian UInt32)
-    public static func sendLogin(to destination: Data, password: String, syncSince: UInt32 = 0) -> Data {
+    public static func sendLogin(to destination: Data, password: String) -> Data {
         var data = Data([CommandCode.sendLogin.rawValue])
         data.append(destination.prefix(32))
         data.append(password.data(using: .utf8) ?? Data())
-        var syncSinceLE = syncSince.littleEndian
-        data.append(Data(bytes: &syncSinceLE, count: 4))
         return data
     }
 

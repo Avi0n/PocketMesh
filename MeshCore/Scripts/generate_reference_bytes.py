@@ -89,7 +89,6 @@ def generate_packet_builder_references():
 
     # sendLogin - messaging.py:27-31
     # Format: [0x1A] + dst(32) + password
-    # Note: PocketMesh extends this with syncSince(4LE) - see PocketMeshExtendedBytes
     dst32 = bytes.fromhex("0123456789AB".ljust(64, '0'))  # 32 bytes zero-padded
     references['sendLogin'] = bytes([0x1A]) + dst32 + "secret".encode("utf-8")
 

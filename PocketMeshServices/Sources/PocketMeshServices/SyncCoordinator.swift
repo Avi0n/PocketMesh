@@ -68,7 +68,7 @@ public actor SyncCoordinator {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
 
     /// In-memory cache for message deduplication
     private let deduplicationCache = MessageDeduplicationCache()
@@ -96,6 +96,10 @@ public actor SyncCoordinator {
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
 
+    /// Callback when sync phase changes (for SwiftUI observation)
+    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
+
     /// Callback when contacts data changes (for SwiftUI observation)
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onContactsChanged: (@Sendable @MainActor () -> Void)?
@@ -110,6 +114,9 @@ public actor SyncCoordinator {
     /// Callback when a channel message is received (for MessageEventBroadcaster)
     private var onChannelMessageReceived: (@Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void)?
 
+    /// Callback when a room message is received (for MessageEventBroadcaster)
+    private var onRoomMessageReceived: (@Sendable (_ message: RoomMessageDTO) async -> Void)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -119,6 +126,11 @@ public actor SyncCoordinator {
     @MainActor
     private func setState(_ newState: SyncState) {
         state = newState
+        if case .syncing(let progress) = newState {
+            onPhaseChanged?(progress.phase)
+        } else {
+            onPhaseChanged?(nil)
+        }
     }
 
     @MainActor
@@ -130,10 +142,12 @@ public actor SyncCoordinator {
     /// Only called for contacts and channels phases, NOT for messages.
     public func setSyncActivityCallbacks(
         onStarted: @escaping @Sendable () async -> Void,
-        onEnded: @escaping @Sendable () async -> Void
+        onEnded: @escaping @Sendable () async -> Void,
+        onPhaseChanged: @escaping @Sendable @MainActor (_ phase: SyncPhase?) -> Void
     ) {
         onSyncActivityStarted = onStarted
         onSyncActivityEnded = onEnded
+        self.onPhaseChanged = onPhaseChanged
     }
 
     /// Sets callbacks for data change notifications (used by AppState for SwiftUI observation)
@@ -148,10 +162,12 @@ public actor SyncCoordinator {
     /// Sets callbacks for message events (used by AppState for MessageEventBroadcaster)
     public func setMessageEventCallbacks(
         onDirectMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ contact: ContactDTO) async -> Void,
-        onChannelMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void
+        onChannelMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void,
+        onRoomMessageReceived: @escaping @Sendable (_ message: RoomMessageDTO) async -> Void
     ) {
         self.onDirectMessageReceived = onDirectMessageReceived
         self.onChannelMessageReceived = onChannelMessageReceived
+        self.onRoomMessageReceived = onRoomMessageReceived
     }
 
     // MARK: - Notifications
@@ -159,6 +175,7 @@ public actor SyncCoordinator {
     /// Notify that contacts data changed (triggers UI refresh)
     @MainActor
     public func notifyContactsChanged() {
+        logger.info("notifyContactsChanged: version \(self.contactsVersion) → \(self.contactsVersion + 1)")
         contactsVersion += 1
         onContactsChanged?()
     }
@@ -166,6 +183,7 @@ public actor SyncCoordinator {
     /// Notify that conversations data changed (triggers UI refresh)
     @MainActor
     public func notifyConversationsChanged() {
+        logger.info("notifyConversationsChanged: version \(self.conversationsVersion) → \(self.conversationsVersion + 1)")
         conversationsVersion += 1
         onConversationsChanged?()
     }
@@ -217,22 +235,42 @@ public actor SyncCoordinator {
     ) async throws {
         logger.info("Starting full sync for device \(deviceID)")
 
-        // Notify UI that sync activity started (for pill display)
+        // Set phase before triggering pill visibility
+        await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
         await onSyncActivityStarted?()
 
         // Perform contacts and channels sync (activity should show pill)
         do {
             // Phase 1: Contacts
-            await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
             let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
             logger.info("Synced \(contactResult.contactsReceived) contacts")
+            await notifyContactsChanged()
 
             // Phase 2: Channels
             await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
             let device = try await dataStore.fetchDevice(id: deviceID)
             let maxChannels = device?.maxChannels ?? 0
+
             let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
             logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+
+            // Retry failed channels once if there are retryable errors
+            if !channelResult.isComplete {
+                let retryableIndices = channelResult.retryableIndices
+                if !retryableIndices.isEmpty {
+                    logger.info("Retrying \(retryableIndices.count) failed channels")
+                    let retryResult = try await channelService.retryFailedChannels(
+                        deviceID: deviceID,
+                        indices: retryableIndices
+                    )
+
+                    if retryResult.isComplete {
+                        logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                    } else {
+                        logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                    }
+                }
+            }
         } catch {
             // End sync activity on error during contacts/channels phase
             await onSyncActivityEnded?()
@@ -246,14 +284,11 @@ public actor SyncCoordinator {
         await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
         let messageCount = try await messagePollingService.pollAllMessages()
         logger.info("Polled \(messageCount) messages")
+        await notifyConversationsChanged()
 
         // Complete
         await setState(.synced)
         await setLastSyncDate(Date())
-
-        // Notify UI
-        await notifyContactsChanged()
-        await notifyConversationsChanged()
 
         logger.info("Full sync complete")
     }
@@ -275,41 +310,79 @@ public actor SyncCoordinator {
     public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer) async throws {
         logger.info("Connection established for device \(deviceID)")
 
-        // 1. Wire message handlers FIRST (before events can arrive)
-        await wireMessageHandlers(services: services, deviceID: deviceID)
+        // Suppress message notifications during sync to avoid flooding user on reconnect
+        // Unread counts and badges still update - only system notifications are suppressed
+        await MainActor.run {
+            logger.info("Suppressing message notifications during sync")
+            services.notificationService.isSuppressingNotifications = true
+        }
 
-        // 2. NOW start event monitoring (handlers are ready)
-        await services.startEventMonitoring(deviceID: deviceID)
+        do {
+            // 1. Wire message handlers FIRST (before events can arrive)
+            await wireMessageHandlers(services: services, deviceID: deviceID)
 
-        // 3. Perform full sync
-        try await performFullSync(
-            deviceID: deviceID,
-            dataStore: services.dataStore,
-            contactService: services.contactService,
-            channelService: services.channelService,
-            messagePollingService: services.messagePollingService
-        )
+            // 2. NOW start event monitoring (handlers are ready)
+            await services.startEventMonitoring(deviceID: deviceID)
 
-        // 4. Wire discovery handlers (for ongoing contact discovery)
-        await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+            // 3. Perform full sync
+            try await performFullSync(
+                deviceID: deviceID,
+                dataStore: services.dataStore,
+                contactService: services.contactService,
+                channelService: services.channelService,
+                messagePollingService: services.messagePollingService
+            )
 
-        logger.info("Connection setup complete for device \(deviceID)")
+            // 4. Wire discovery handlers (for ongoing contact discovery)
+            await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+
+            // 5. Wait for any pending message handlers to complete
+            // Message events are processed asynchronously by the event monitor - we need to ensure
+            // all handlers finish before resuming notifications, otherwise sync-time messages
+            // may trigger notifications after suppression is lifted
+            await services.messagePollingService.waitForPendingHandlers()
+
+            // Resume notifications on success - synchronously before return
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync complete)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+
+            logger.info("Connection setup complete for device \(deviceID)")
+        } catch {
+            // Wait for any pending handlers even on error
+            await services.messagePollingService.waitForPendingHandlers()
+
+            // Resume notifications on error - synchronously before throw
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync failed)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+            throw error
+        }
     }
 
     /// Called when disconnecting from device
     ///
     /// Note: Don't call onSyncActivityEnded here - performFullSync handles its own cleanup.
     /// The AppState.wireServicesIfConnected reset of syncActivityCount handles stuck pill.
-    public func onDisconnected() async {
+    public func onDisconnected(services: ServiceContainer) async {
         await deduplicationCache.clear()
         await setState(.idle)
+
+        // Safety net: ensure suppression is cleared on disconnect
+        // Handles edge cases like connection dropping mid-sync or force-quit
+        await MainActor.run {
+            services.notificationService.isSuppressingNotifications = false
+        }
+
         logger.info("Disconnected, sync state reset to idle")
     }
 
     // MARK: - Message Handler Wiring
 
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
-        logger.debug("Wiring message handlers for device \(deviceID)")
+        logger.info("Wiring message handlers for device \(deviceID)")
 
         // Populate blocked contacts cache
         await refreshBlockedContactsCache(deviceID: deviceID, dataStore: services.dataStore)
@@ -349,7 +422,7 @@ public actor SyncCoordinator {
                 timestamp: timestamp,
                 content: message.text
             ) {
-                self.logger.debug("Skipping duplicate direct message")
+                self.logger.info("Skipping duplicate direct message")
                 return
             }
 
@@ -424,7 +497,7 @@ public actor SyncCoordinator {
                 username: senderNodeName ?? "",
                 content: messageText
             ) {
-                self.logger.debug("Skipping duplicate channel message")
+                self.logger.info("Skipping duplicate channel message")
                 return
             }
 
@@ -473,12 +546,18 @@ public actor SyncCoordinator {
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
             do {
-                try await services.roomServerService.handleIncomingMessage(
+                let savedMessage = try await services.roomServerService.handleIncomingMessage(
                     senderPublicKeyPrefix: message.senderPublicKeyPrefix,
                     timestamp: timestamp,
                     authorPrefix: Data(authorPrefix),
                     text: message.text
                 )
+
+                // If message was saved (not a duplicate), notify UI
+                if let savedMessage {
+                    await self.notifyConversationsChanged()
+                    await self.onRoomMessageReceived?(savedMessage)
+                }
             } catch {
                 self.logger.error("Failed to handle room message: \(error)")
             }
@@ -501,7 +580,7 @@ public actor SyncCoordinator {
     // MARK: - Discovery Handler Wiring
 
     private func wireDiscoveryHandlers(services: ServiceContainer, deviceID: UUID) async {
-        logger.debug("Wiring discovery handlers for device \(deviceID)")
+        logger.info("Wiring discovery handlers for device \(deviceID)")
 
         // New contact discovered handler (manual-add mode)
         // Posts notification when a new contact is discovered via advertisement

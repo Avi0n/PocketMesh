@@ -109,7 +109,7 @@ public actor RemoteNodeService {
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
     private let keychainService: KeychainService
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "RemoteNode")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RemoteNode")
 
     /// Pending login continuations keyed by 6-byte public key prefix.
     /// Using 6-byte prefix matches MeshCore protocol format for login results.
@@ -178,6 +178,8 @@ public actor RemoteNodeService {
     private func handleEvent(_ event: MeshEvent) async {
         switch event {
         case .loginSuccess(let info):
+            let prefixHex = info.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
+            logger.info("loginSuccess received for prefix \(prefixHex)")
             let result = LoginResult(
                 success: true,
                 isAdmin: info.isAdmin,
@@ -246,14 +248,30 @@ public actor RemoteNodeService {
             throw RemoteNodeError.loginFailed("Invalid public key length: expected 32 bytes, got \(contact.publicKey.count)")
         }
 
+        let pubKeyHex = contact.publicKey.prefix(6).map { String(format: "%02x", $0) }.joined()
+
         // Check for existing session - reuse to avoid duplicates
         let existing = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
+
+        if let existing {
+            logger.info("createSession: reusing existing session \(existing.id) for \(pubKeyHex), isConnected=\(existing.isConnected)")
+        } else {
+            logger.info("createSession: creating new session for \(pubKeyHex)")
+        }
+
         let dto = makeSessionDTO(deviceID: deviceID, contact: contact, role: role, preserving: existing)
 
         try await dataStore.saveRemoteNodeSessionDTO(dto)
+
+        // Clean up any duplicate sessions with the same public key but different IDs
+        try await dataStore.cleanupDuplicateRemoteNodeSessions(publicKey: contact.publicKey, keepID: dto.id)
+
         guard let saved = try await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey) else {
+            logger.error("createSession: failed to fetch saved session for \(pubKeyHex)")
             throw RemoteNodeError.sessionNotFound
         }
+
+        logger.info("createSession: saved session \(saved.id) for \(pubKeyHex)")
         return saved
     }
 
@@ -283,12 +301,10 @@ public actor RemoteNodeService {
     ///   - sessionID: The remote session ID.
     ///   - password: Optional password (uses stored password if nil).
     ///   - pathLength: Path length hint for timeout calculation.
-    ///   - syncSince: Timestamp for history sync (0 = no sync hint, rooms only).
     public func login(
         sessionID: UUID,
         password: String? = nil,
-        pathLength: UInt8 = 0,
-        syncSince: UInt32 = 0
+        pathLength: UInt8 = 0
     ) async throws -> LoginResult {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
@@ -316,13 +332,15 @@ public actor RemoteNodeService {
         }
 
         // Register continuation BEFORE sending to avoid race condition with loginSuccess event
+        let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
+        logger.info("login: registering pending login for prefix \(prefixHex)")
         return try await withCheckedThrowingContinuation { continuation in
             pendingLogins[prefix] = continuation
 
             Task { [self] in
                 // Send login via MeshCore session
                 do {
-                    _ = try await session.sendLogin(to: remoteSession.publicKey, password: pwd, syncSince: syncSince)
+                    _ = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
                 } catch {
                     // Send failed - remove pending and resume with error
                     if let pending = pendingLogins.removeValue(forKey: prefix) {
@@ -333,10 +351,13 @@ public actor RemoteNodeService {
                 }
 
                 // Send succeeded - start timeout countdown
+                logger.info("login: send succeeded, starting \(timeout) timeout for prefix \(prefixHex)")
                 try? await Task.sleep(for: timeout)
                 if let pending = pendingLogins.removeValue(forKey: prefix) {
-                    logger.warning("Login timeout after \(timeout) for session \(sessionID)")
+                    logger.warning("Login timeout after \(timeout) for session \(sessionID), prefix \(prefixHex)")
                     pending.resume(throwing: RemoteNodeError.timeout)
+                } else {
+                    logger.info("login: timeout elapsed but continuation already consumed for prefix \(prefixHex)")
                 }
             }
         }
@@ -350,22 +371,43 @@ public actor RemoteNodeService {
         }
 
         let prefix = Data(fromPublicKeyPrefix.prefix(6))
+        let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
+        let pendingKeys = pendingLogins.keys.map { $0.map { String(format: "%02x", $0) }.joined() }
+        logger.info("handleLoginResult: looking for prefix \(prefixHex), pending keys: \(pendingKeys)")
         guard let continuation = pendingLogins.removeValue(forKey: prefix) else {
-            let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
             logger.warning("Login result with no pending request. Prefix: \(prefixHex)")
             return
         }
+        logger.info("handleLoginResult: found continuation for prefix \(prefixHex)")
 
         if result.success {
             // Update session state
-            if let remoteSession = try? await dataStore.fetchRemoteNodeSessionByPrefix(prefix) {
+            do {
+                guard let remoteSession = try await dataStore.fetchRemoteNodeSessionByPrefix(prefix) else {
+                    logger.error("handleLoginResult: no session found for prefix \(prefixHex) - database may be corrupted")
+                    continuation.resume(returning: result)
+                    return
+                }
+
                 let permission: RoomPermissionLevel = result.isAdmin ? .admin :
                     (RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest)
-                try? await dataStore.updateRemoteNodeSessionConnection(
+
+                logger.info("handleLoginResult: updating session \(remoteSession.id) isConnected=true, permission=\(permission.rawValue)")
+
+                try await dataStore.updateRemoteNodeSessionConnection(
                     id: remoteSession.id,
                     isConnected: true,
                     permissionLevel: permission
                 )
+
+                // Verify the update succeeded
+                if let verifySession = try await dataStore.fetchRemoteNodeSession(id: remoteSession.id) {
+                    if verifySession.isConnected {
+                        logger.info("handleLoginResult: verified session \(remoteSession.id) isConnected=true")
+                    } else {
+                        logger.error("handleLoginResult: session \(remoteSession.id) still shows isConnected=false after update!")
+                    }
+                }
 
                 keepAliveIntervals[remoteSession.id] = Self.defaultKeepAliveInterval
 
@@ -373,6 +415,8 @@ public actor RemoteNodeService {
                 if remoteSession.isRoom {
                     startKeepAlive(sessionID: remoteSession.id, publicKey: remoteSession.publicKey)
                 }
+            } catch {
+                logger.error("handleLoginResult: failed to update session state: \(error)")
             }
         }
 
@@ -475,7 +519,7 @@ public actor RemoteNodeService {
             throw RemoteNodeError.sessionError(error)
         }
 
-        logger.debug("Requested history sync for room \(remoteSession.name) since \(since)")
+        logger.info("Requested history sync for room \(remoteSession.name) since \(since)")
     }
 
     // MARK: - Logout
@@ -492,7 +536,7 @@ public actor RemoteNodeService {
             try await session.sendLogout(to: remoteSession.publicKey)
         } catch {
             // Ignore errors - we're disconnecting anyway
-            logger.debug("Logout send failed (ignoring): \(error)")
+            logger.info("Logout send failed (ignoring): \(error)")
         }
 
         try await dataStore.updateRemoteNodeSessionConnection(
@@ -572,7 +616,7 @@ public actor RemoteNodeService {
     /// Re-authenticates all previously connected sessions in parallel.
     public func handleBLEReconnection() async {
         guard !isReauthenticating else {
-            logger.debug("Skipping re-auth: already in progress")
+            logger.info("Skipping re-auth: already in progress")
             return
         }
 

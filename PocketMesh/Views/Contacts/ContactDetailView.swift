@@ -549,9 +549,9 @@ struct ContactDetailView: View {
             Button {
                 Task {
                     await pathViewModel.loadContacts(deviceID: currentContact.deviceID)
+                    pathViewModel.initializeEditablePath(from: currentContact)
+                    pathViewModel.showingPathEditor = true
                 }
-                pathViewModel.initializeEditablePath(from: currentContact)
-                pathViewModel.showingPathEditor = true
             } label: {
                 Label("Edit Path", systemImage: "pencil")
             }

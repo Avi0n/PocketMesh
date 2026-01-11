@@ -1,5 +1,8 @@
 import SwiftUI
 import PocketMeshServices
+import OSLog
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelChatView")
 
 /// Channel conversation view with broadcast messaging
 struct ChannelChatView: View {
@@ -57,9 +60,11 @@ struct ChannelChatView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .task {
+        .task(id: appState.servicesVersion) {
+            logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
             viewModel.configure(appState: appState)
             await viewModel.loadChannelMessages(for: channel)
+            logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
         .onDisappear {
             // Clear active channel for notification suppression
@@ -240,6 +245,9 @@ struct ChannelChatView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .onAppear {
+            logger.info("emptyMessagesView: appeared for channel \(channel.index), isLoading=\(viewModel.isLoading)")
+        }
     }
 
     private func setReplyText(_ text: String) {

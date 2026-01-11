@@ -98,9 +98,16 @@ final class PathManagementViewModel {
     }
 
     /// Load all contacts for name resolution and filter repeaters for adding
-    func loadContacts(deviceID: UUID) async {
+    /// Skips fetch if contacts are already loaded for the same device
+    func loadContacts(deviceID: UUID, forceReload: Bool = false) async {
         guard let appState,
               let dataStore = appState.services?.dataStore else { return }
+
+        // Skip if already loaded
+        if !forceReload && !allContacts.isEmpty {
+            return
+        }
+
         do {
             let contacts = try await dataStore.fetchContacts(deviceID: deviceID)
             allContacts = contacts

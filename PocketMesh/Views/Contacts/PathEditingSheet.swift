@@ -10,7 +10,6 @@ struct PathEditingSheet: View {
     // Haptic feedback triggers (SwiftUI native approach)
     @State private var dragHapticTrigger = 0
     @State private var addHapticTrigger = 0
-    @State private var editMode: EditMode = .inactive
 
     var body: some View {
         NavigationStack {
@@ -23,21 +22,20 @@ struct PathEditingSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    EditButton()
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
-            }
-            .environment(\.editMode, $editMode)
-            .onDisappear {
-                // Save path when sheet is dismissed
-                Task {
-                    await viewModel.saveEditedPath(for: contact)
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task {
+                            await viewModel.saveEditedPath(for: contact)
+                            dismiss()
+                        }
+                    }
                 }
             }
+            .environment(\.editMode, .constant(.active))
             .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
             .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         }
@@ -55,39 +53,33 @@ struct PathEditingSheet: View {
 
     private var currentPathSection: some View {
         Section {
-            if viewModel.editablePath.isEmpty {
-                Text("No path set (direct or flood routing)")
-                    .foregroundStyle(.secondary)
-                    .frame(minHeight: 44) // Minimum touch target
-            } else {
-                ForEach(viewModel.editablePath) { hop in
-                    let index = viewModel.editablePath.firstIndex { $0.id == hop.id } ?? 0
-                    PathHopRow(
-                        hop: hop,
-                        index: index,
-                        totalCount: viewModel.editablePath.count
-                    )
-                }
-                .onMove { source, destination in
-                    dragHapticTrigger += 1
-                    viewModel.moveRepeater(from: source, to: destination)
-                }
-                .onDelete { indexSet in
+            // ForEach always present (renders nothing when empty, preserving view identity)
+            ForEach(viewModel.editablePath) { hop in
+                let index = viewModel.editablePath.firstIndex { $0.id == hop.id } ?? 0
+                PathHopRow(
+                    hop: hop,
+                    index: index,
+                    totalCount: viewModel.editablePath.count
+                )
+            }
+            .onMove { source, destination in
+                dragHapticTrigger += 1
+                viewModel.moveRepeater(from: source, to: destination)
+            }
+            .onDelete { indexSet in
+                withAnimation {
                     for index in indexSet.sorted().reversed() {
                         viewModel.removeRepeater(at: index)
                     }
                 }
-                .animation(.default, value: viewModel.editablePath.map(\.id))
             }
         } header: {
             Text("Current Path")
         } footer: {
-            if !viewModel.editablePath.isEmpty {
-                if editMode == .active {
-                    Text("Drag to reorder. Tap delete to remove.")
-                } else {
-                    Text("Tap Edit to reorder or remove hops.")
-                }
+            if viewModel.editablePath.isEmpty {
+                Text("No path set (direct or flood routing)")
+            } else {
+                Text("Drag to reorder. Tap to remove.")
             }
         }
     }

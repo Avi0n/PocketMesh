@@ -92,9 +92,14 @@ public struct MessageRepeatDTO: Sendable, Identifiable, Equatable, Hashable {
 
     // MARK: - Computed Properties
 
-    /// First repeater's public key prefix byte, or nil if direct
+    /// Last repeater's public key prefix byte (the node we heard from), or nil if direct
     public var repeaterByte: UInt8? {
-        pathNodes.first
+        pathNodes.last
+    }
+
+    /// Number of hops in the path (1 = direct from repeater, 2+ = multi-hop)
+    public var hopCount: Int {
+        pathNodes.count
     }
 
     /// Repeater hash formatted as hex (e.g., "31")

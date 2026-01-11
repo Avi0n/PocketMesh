@@ -1,6 +1,9 @@
 import SwiftUI
 import PocketMeshServices
 import MeshCore
+import OSLog
+
+private let deviceInfoLogger = Logger(subsystem: "com.pocketmesh", category: "DeviceInfoView")
 
 /// Detailed device information screen
 struct DeviceInfoView: View {
@@ -190,6 +193,7 @@ struct DeviceInfoView: View {
             await appState.fetchDeviceBattery()
         }
         .onAppear {
+            deviceInfoLogger.info("DeviceInfoView: appeared, connectedDevice=\(appState.connectedDevice != nil)")
             Task { await appState.fetchDeviceBattery() }
         }
         .sheet(isPresented: $showShareSheet) {

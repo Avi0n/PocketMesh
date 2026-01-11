@@ -30,6 +30,7 @@ final class RoomConversationViewModel {
 
     private var roomServerService: RoomServerService?
     private var dataStore: DataStore?
+    private var syncCoordinator: SyncCoordinator?
 
     // MARK: - Initialization
 
@@ -39,6 +40,7 @@ final class RoomConversationViewModel {
     func configure(appState: AppState) {
         self.roomServerService = appState.services?.roomServerService
         self.dataStore = appState.services?.dataStore
+        self.syncCoordinator = appState.syncCoordinator
     }
 
     // MARK: - Messages
@@ -54,8 +56,12 @@ final class RoomConversationViewModel {
         do {
             messages = try await roomServerService.fetchMessages(sessionID: session.id)
 
-            // Clear unread count
+            // Clear unread count and notify UI to refresh chat list.
+            // TODO: This notification pattern is fragile - iPad split view holds DTO snapshots
+            // in @State which don't update when the database changes. A better approach would be
+            // to store selection by ID only and derive the session from fresh viewModel data.
             try await roomServerService.markAsRead(sessionID: session.id)
+            await syncCoordinator?.notifyConversationsChanged()
         } catch {
             errorMessage = error.localizedDescription
         }

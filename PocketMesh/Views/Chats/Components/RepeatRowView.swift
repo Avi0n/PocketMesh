@@ -9,7 +9,7 @@ struct RepeatRowView: View {
 
     var body: some View {
         HStack(alignment: .top) {
-            // Left side: Repeater name and hash
+            // Left side: Repeater name, hash, and hop count
             VStack(alignment: .leading, spacing: 2) {
                 Text(repeaterName)
                     .font(.body)
@@ -18,6 +18,10 @@ struct RepeatRowView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospaced()
+
+                Text(hopCountText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -58,6 +62,12 @@ struct RepeatRowView: View {
         if snr > 10 { return "Excellent" }
         if snr > 5 { return "Good" }
         return "Poor"
+    }
+
+    /// Hop count text with proper pluralization
+    private var hopCountText: String {
+        let count = repeatEntry.hopCount
+        return count == 1 ? "1 Hop" : "\(count) Hops"
     }
 
     /// Resolve repeater name from contacts or show placeholder

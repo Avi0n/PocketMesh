@@ -5,12 +5,12 @@ import PocketMeshServices
 struct TracePathView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = TracePathViewModel()
-    @State private var editMode: EditMode = .inactive
 
     // Haptic feedback triggers
     @State private var addHapticTrigger = 0
     @State private var dragHapticTrigger = 0
     @State private var copyHapticTrigger = 0
+    @State private var jumpHapticTrigger = 0
 
     // Row feedback
     @State private var recentlyAddedRepeaterID: UUID?
@@ -19,28 +19,53 @@ struct TracePathView: View {
     @State private var presentedResult: TraceResult?
     @State private var showingClearConfirmation = false
 
+    @State private var showJumpToPath = false
+    @State private var isBottomVisible = true
+
     var body: some View {
-        List {
-            headerSection
-            availableRepeatersSection
-            outboundPathSection
+        ScrollViewReader { proxy in
+            List {
+                headerSection
+                availableRepeatersSection
+                outboundPathSection
+                pathActionsSection
+                runTraceSection
+
+                // Invisible sentinel at the bottom to detect scroll position
+                Color.clear
+                    .frame(height: 1)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .id("bottom")
+                    .onAppear {
+                        isBottomVisible = true
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showJumpToPath = false
+                        }
+                    }
+                    .onDisappear {
+                        isBottomVisible = false
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showJumpToPath = true
+                        }
+                    }
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .overlay(alignment: .bottom) {
+                jumpToPathButton(proxy: proxy)
+            }
         }
         .navigationTitle("Trace Path")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 16) {
-                    Button("Saved", systemImage: "bookmark") {
-                        showingSavedPaths = true
-                    }
-                    EditButton()
+                Button("Saved", systemImage: "bookmark") {
+                    showingSavedPaths = true
                 }
             }
         }
-        .environment(\.editMode, $editMode)
-        .safeAreaInset(edge: .bottom) {
-            runTraceButton
-        }
+        .environment(\.editMode, .constant(.active))
         .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
@@ -99,26 +124,6 @@ struct TracePathView: View {
 
     private var outboundPathSection: some View {
         Section {
-            Toggle(isOn: $viewModel.autoReturnPath) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Auto Return Path")
-                    Text("Mirror outbound path for the return journey")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if !viewModel.autoReturnPath {
-                Label {
-                    Text("You must be within range of the last repeater to receive a response.")
-                } icon: {
-                    Image(systemName: "info.circle")
-                        .foregroundStyle(.blue)
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            }
-
             if viewModel.outboundPath.isEmpty {
                 Text("Tap a repeater above to start building your path")
                     .foregroundStyle(.secondary)
@@ -136,8 +141,24 @@ struct TracePathView: View {
                         viewModel.removeRepeater(at: index)
                     }
                 }
+            }
+        } header: {
+            Text("Outbound Path")
+        }
+    }
 
-                // Full path display with copy button
+    private var pathActionsSection: some View {
+        Section {
+            if !viewModel.outboundPath.isEmpty {
+                Toggle(isOn: $viewModel.autoReturnPath) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto Return Path")
+                        Text("Mirror outbound path for the return journey")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 HStack {
                     Text(viewModel.fullPathString)
                         .font(.caption.monospaced())
@@ -169,15 +190,9 @@ struct TracePathView: View {
                     Text("Remove all repeaters from the path?")
                 }
             }
-        } header: {
-            Text("Outbound Path")
         } footer: {
             if !viewModel.outboundPath.isEmpty {
-                if editMode == .active {
-                    Text("Drag to reorder. Swipe to remove.")
-                } else {
-                    Text("Tap Edit to reorder or remove hops.")
-                }
+                Text("You must be within range of the last repeater to receive a response.")
             }
         }
     }
@@ -224,51 +239,76 @@ struct TracePathView: View {
         }
     }
 
-    // MARK: - Run Trace Button
+    // MARK: - Run Trace Section
 
-    private var runTraceButton: some View {
-        VStack(spacing: 8) {
-            // Error message (if present)
+    private var runTraceSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                if viewModel.isRunning {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Running Trace...")
+                    }
+                    .frame(minWidth: 160)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                    .background(.regularMaterial, in: .capsule)
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
+                    }
+                    .accessibilityLabel("Running trace, please wait")
+                    .accessibilityHint("Trace is in progress")
+                } else {
+                    Button {
+                        Task {
+                            await viewModel.runTrace()
+                        }
+                    } label: {
+                        Text("Run Trace")
+                            .frame(minWidth: 160)
+                            .padding(.vertical, 4)
+                    }
+                    .liquidGlassProminentButtonStyle()
+                    .disabled(!viewModel.canRunTrace)
+                    .accessibilityLabel("Run trace")
+                    .accessibilityHint("Double tap to trace the path")
+                }
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .id("runTrace")
+        }
+        .listSectionSeparator(.hidden)
+        .alert("Trace Failed", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.clearError() } }
+        )) {
+            Button("OK") {
+                viewModel.clearError()
+            }
+        } message: {
             if let error = viewModel.errorMessage {
                 Text(error)
-                    .font(.subheadline)
-                    .foregroundStyle(.orange)
-                    .multilineTextAlignment(.center)
             }
-
-            Button {
-                viewModel.clearError()  // Clear error before retry
-                Task {
-                    await viewModel.runTrace()
-                }
-            } label: {
-                HStack {
-                    if viewModel.isRunning {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        // Show "Retry" if there's an error, otherwise "Run Trace"
-                        Text(viewModel.errorMessage != nil ? "Retry" : "Run Trace")
-                    }
-                }
-            }
-            .modifier(GlassProminentButtonStyle())
-            .disabled(!viewModel.canRunTrace)
         }
-        .padding()
     }
-}
 
-// MARK: - iOS 26 Liquid Glass Support
+    // MARK: - Jump to Path Button
 
-/// Applies `.glassProminent` on iOS 26+, falls back to `.borderedProminent` on earlier versions
-private struct GlassProminentButtonStyle: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
-        } else {
-            content.buttonStyle(.borderedProminent)
+    @ViewBuilder
+    private func jumpToPathButton(proxy: ScrollViewProxy) -> some View {
+        JumpToPathButton(isVisible: showJumpToPath) {
+            jumpHapticTrigger += 1
+            withAnimation {
+                proxy.scrollTo("runTrace", anchor: .bottom)
+            }
         }
+        .padding(.bottom)
+        .sensoryFeedback(.selection, trigger: jumpHapticTrigger)
     }
 }
 
@@ -291,5 +331,34 @@ private struct TracePathHopRow: View {
             }
         }
         .frame(minHeight: 44)
+    }
+}
+
+// MARK: - Jump to Path Button
+
+/// Floating pill button to scroll to the Run Trace button
+private struct JumpToPathButton: View {
+    let isVisible: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Label("Jump to Path", systemImage: "arrow.down")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.accentColor, in: .capsule)
+                .liquidGlass(in: .capsule)
+                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
+        .opacity(isVisible ? 1 : 0)
+        .scaleEffect(isVisible ? 1 : 0.8)
+        .allowsHitTesting(isVisible)
+        .animation(.snappy(duration: 0.2), value: isVisible)
+        .accessibilityLabel("Jump to Run Trace button")
+        .accessibilityHint("Double tap to scroll to the bottom of the path")
+        .accessibilityHidden(!isVisible)
     }
 }
