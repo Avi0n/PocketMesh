@@ -259,37 +259,4 @@ final class ContactsViewModel {
         }
     }
 
-    /// Group contacts by type
-    func groupedContacts(searchText: String) -> [(type: ContactType, contacts: [ContactDTO])] {
-        // Filter by search text (without segment filtering)
-        var filtered = contacts
-        if !searchText.isEmpty {
-            filtered = contacts.filter { contact in
-                contact.displayName.localizedStandardContains(searchText)
-            }
-        }
-
-        // Sort alphabetically
-        filtered = filtered.sorted {
-            $0.displayName.localizedCompare($1.displayName) == .orderedAscending
-        }
-
-        var groups: [(type: ContactType, contacts: [ContactDTO])] = []
-
-        // Favorites section
-        let favorites = filtered.filter(\.isFavorite)
-        if !favorites.isEmpty {
-            groups.append((.chat, favorites)) // Using chat as "favorites" type
-        }
-
-        // Group by actual type
-        for type in [ContactType.chat, .repeater, .room] {
-            let typeContacts = filtered.filter { $0.type == type && !$0.isFavorite }
-            if !typeContacts.isEmpty {
-                groups.append((type, typeContacts))
-            }
-        }
-
-        return groups
-    }
 }
