@@ -103,15 +103,24 @@ public enum OCVPreset: String, CaseIterable, Codable, Sendable {
         allCases.filter { $0.category == .batteryChemistry }
     }
 
+    private static let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "OCVPreset")
+
     /// Returns the OCV preset for a known manufacturer name, or nil if no match.
-    /// Manufacturer names come from MeshCore firmware's getManufacturerName().
+    ///
+    /// Manufacturer names must exactly match the strings returned by `getManufacturerName()`
+    /// in the MeshCore firmware's device variant headers (`{device_variant}.h`).
+    /// See: https://github.com/meshcore-dev/MeshCore
     public static func preset(forManufacturer name: String) -> OCVPreset? {
-        switch name {
+        let preset: OCVPreset? = switch name {
         case "Seeed Tracker T1000-e": .trackerT1000E
         case "Seeed Wio Tracker L1": .seeedWioTracker
         case "Seeed SenseCap Solar": .seeedSolarNode
         case "RAK WisMesh Tag": .wisMeshTag
         default: nil
         }
+        if preset == nil && !name.isEmpty {
+            logger.debug("No OCV preset for manufacturer: \(name)")
+        }
+        return preset
     }
 }
