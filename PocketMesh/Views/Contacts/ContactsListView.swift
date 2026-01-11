@@ -111,7 +111,7 @@ struct ContactsListView: View {
                         }
                     }
                 } label: {
-                    Label("Sort", systemImage: "line.3.horizontal.decrease")
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
                 }
             }
 
