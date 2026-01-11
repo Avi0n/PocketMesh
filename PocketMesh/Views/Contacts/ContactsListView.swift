@@ -20,7 +20,12 @@ struct ContactsListView: View {
     @State private var showAddContact = false
 
     private var filteredContacts: [ContactDTO] {
-        viewModel.filteredContacts(searchText: searchText, showFavoritesOnly: showFavoritesOnly)
+        viewModel.filteredContacts(
+            searchText: searchText,
+            segment: showFavoritesOnly ? .favorites : .contacts,
+            sortOrder: .name,
+            userLocation: nil
+        )
     }
 
     private var shouldUseSplitView: Bool {
