@@ -435,6 +435,30 @@ public final class AppState {
         )
     }
 
+    /// Check battery level against thresholds and send notifications
+    private func checkBatteryThresholds() async {
+        guard let battery = deviceBattery,
+              let device = connectedDevice,
+              let notificationService = services?.notificationService else { return }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        for threshold in batteryWarningThresholds {
+            if percentage <= threshold && !notifiedBatteryThresholds.contains(threshold) {
+                // First time crossing below this threshold
+                notifiedBatteryThresholds.insert(threshold)
+                await notificationService.postLowBatteryNotification(
+                    deviceName: device.nodeName,
+                    batteryPercentage: percentage
+                )
+                break  // Only one notification per check
+            } else if percentage > threshold && notifiedBatteryThresholds.contains(threshold) {
+                // Charged back above threshold — reset it
+                notifiedBatteryThresholds.remove(threshold)
+            }
+        }
+    }
+
     // MARK: - App Lifecycle
 
     /// Called when app enters background
