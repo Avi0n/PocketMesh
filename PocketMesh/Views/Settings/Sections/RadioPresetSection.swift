@@ -79,7 +79,7 @@ struct RadioPresetSection: View {
         } header: {
             Text("Radio")
         } footer: {
-            Text("Choose a preset matching your region. All mesh devices must use the same radio settings in order to communicate.")
+            Text("Choose a preset matching your region. MeshCore devices must use the same radio settings in order to communicate.")
         }
         .onAppear {
             selectedPresetID = currentPreset?.id

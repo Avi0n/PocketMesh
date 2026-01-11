@@ -361,20 +361,22 @@ struct ContactDetailView: View {
                 )
             }
 
-            // Block/unblock contact
-            Button {
-                if currentContact.isBlocked {
-                    Task {
-                        await toggleBlocked()
+            // Block/unblock contact (only for chat contacts)
+            if currentContact.type == .chat {
+                Button {
+                    if currentContact.isBlocked {
+                        Task {
+                            await toggleBlocked()
+                        }
+                    } else {
+                        showingBlockAlert = true
                     }
-                } else {
-                    showingBlockAlert = true
+                } label: {
+                    Label(
+                        currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
+                        systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                    )
                 }
-            } label: {
-                Label(
-                    currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
-                    systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
-                )
             }
 
             // Share Contact via QR

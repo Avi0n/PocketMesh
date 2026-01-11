@@ -52,8 +52,6 @@ struct ChannelChatView: View {
                 // Dismiss the chat view when channel is deleted
                 dismiss()
             }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedMessageForRepeats) { message in
             RepeatDetailsSheet(message: message)

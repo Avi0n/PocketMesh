@@ -12,10 +12,10 @@ struct LinkPreviewPreferencesTests {
         UserDefaults.standard.removeObject(forKey: "linkPreviewsAutoResolveChannels")
     }
 
-    @Test("Defaults to enabled for all settings")
+    @Test("Has expected defaults: previews off, auto-resolve on")
     func defaultsToEnabled() {
         let prefs = LinkPreviewPreferences()
-        #expect(prefs.previewsEnabled == true)
+        #expect(prefs.previewsEnabled == false)
         #expect(prefs.autoResolveDM == true)
         #expect(prefs.autoResolveChannels == true)
     }
