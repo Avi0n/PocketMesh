@@ -54,7 +54,7 @@ struct ContactsListView: View {
                         ContactDetailView(contact: selectedContact)
                             .id(selectedContact.id)
                     } else {
-                        ContentUnavailableView("Select a contact", systemImage: "person.2")
+                        ContentUnavailableView("Select a node", systemImage: "flipphone")
                     }
                 }
             }
@@ -88,7 +88,7 @@ struct ContactsListView: View {
                 }
             }
         }
-        .navigationTitle("Contacts")
+        .navigationTitle("Nodes")
         .searchable(text: $searchText, prompt: "Search contacts")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {

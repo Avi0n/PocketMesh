@@ -91,7 +91,7 @@ struct MainTabView: View {
             }
             .badge(appState.services?.notificationService.badgeCount ?? 0)
 
-            Tab("Contacts", systemImage: "person.2.fill", value: 1) {
+            Tab("Nodes", systemImage: "flipphone", value: 1) {
                 ContactsListView()
             }
 
