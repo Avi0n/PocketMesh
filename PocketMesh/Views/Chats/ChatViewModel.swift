@@ -364,15 +364,41 @@ final class ChatViewModel {
             }
         }
 
-        // Load channel message previews
-        for channel in channels {
+        // Load channel message previews (filter out blocked senders)
+        // Group channels by deviceID to minimize blocked contacts fetches
+        let channelsByDevice = Dictionary(grouping: channels, by: \.deviceID)
+        for (deviceID, deviceChannels) in channelsByDevice {
+            // Fetch blocked contacts once per device
+            let blockedNames: Set<String>
             do {
-                let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 1)
-                if let lastMessage = messages.last {
-                    lastMessageCache[channel.id] = lastMessage
-                }
+                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
+                blockedNames = Set(blockedContacts.map(\.name))
             } catch {
-                // Silently ignore errors for preview loading
+                blockedNames = []
+            }
+
+            for channel in deviceChannels {
+                do {
+                    // Fetch extra messages in case recent ones are from blocked senders
+                    let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
+
+                    // Filter out messages from blocked senders and get the last valid one
+                    let lastMessage: MessageDTO?
+                    if blockedNames.isEmpty {
+                        lastMessage = messages.last
+                    } else {
+                        lastMessage = messages.last { message in
+                            guard let senderName = message.senderNodeName else { return true }
+                            return !blockedNames.contains(senderName)
+                        }
+                    }
+
+                    if let lastMessage {
+                        lastMessageCache[channel.id] = lastMessage
+                    }
+                } catch {
+                    // Silently ignore errors for preview loading
+                }
             }
         }
     }

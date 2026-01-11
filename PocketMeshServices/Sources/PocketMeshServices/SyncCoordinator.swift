@@ -504,14 +504,17 @@ public actor SyncCoordinator {
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Update channel's last message date and unread count
+                // Update channel's last message date
                 if let channelID = channel?.id {
                     try await services.dataStore.updateChannelLastMessage(channelID: channelID, date: Date())
-                    try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
                 }
 
-                // Post notification (suppress if sender is blocked - O(1) cache lookup)
+                // Only update unread count, badges, and notify UI for non-blocked senders
                 if await !self.isBlockedSender(senderNodeName) {
+                    if let channelID = channel?.id {
+                        try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
+                    }
+
                     await services.notificationService.postChannelMessageNotification(
                         channelName: channel?.name ?? "Channel \(message.channelIndex)",
                         channelIndex: message.channelIndex,
@@ -520,14 +523,14 @@ public actor SyncCoordinator {
                         messageText: messageText,
                         messageID: messageDTO.id
                     )
+                    await services.notificationService.updateBadgeCount()
+
+                    // Notify MessageEventBroadcaster for real-time chat updates
+                    await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
                 }
-                await services.notificationService.updateBadgeCount()
 
-                // Notify UI via SyncCoordinator
+                // Notify conversation list of changes
                 await self.notifyConversationsChanged()
-
-                // Notify MessageEventBroadcaster for real-time chat updates
-                await self.onChannelMessageReceived?(messageDTO, message.channelIndex)
             } catch {
                 self.logger.error("Failed to save channel message: \(error)")
             }
