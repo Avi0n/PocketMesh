@@ -1,6 +1,20 @@
 import SwiftUI
 import PocketMeshServices
 
+/// Segment for the nodes picker
+enum NodeSegment: String, CaseIterable {
+    case favorites = "Favorites"
+    case contacts = "Contacts"
+    case network = "Network"
+}
+
+/// Sort order for nodes list
+enum NodeSortOrder: String, CaseIterable {
+    case lastHeard = "Last Heard"
+    case name = "Name"
+    case distance = "Distance"
+}
+
 /// ViewModel for contact management
 @Observable
 @MainActor
