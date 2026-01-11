@@ -1286,7 +1286,8 @@ public final class ConnectionManager {
             lastConnected: Date(),
             lastContactSync: existingDevice?.lastContactSync ?? 0,
             isActive: true,
-            ocvPreset: existingDevice?.ocvPreset,
+            ocvPreset: existingDevice?.ocvPreset
+                ?? OCVPreset.preset(forManufacturer: capabilities.model)?.rawValue,
             customOCVArrayString: existingDevice?.customOCVArrayString,
             connectionMethods: mergedMethods
         )

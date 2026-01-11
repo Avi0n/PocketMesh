@@ -102,4 +102,16 @@ public enum OCVPreset: String, CaseIterable, Codable, Sendable {
     public static var batteryChemistryPresets: [OCVPreset] {
         allCases.filter { $0.category == .batteryChemistry }
     }
+
+    /// Returns the OCV preset for a known manufacturer name, or nil if no match.
+    /// Manufacturer names come from MeshCore firmware's getManufacturerName().
+    public static func preset(forManufacturer name: String) -> OCVPreset? {
+        switch name {
+        case "Seeed Tracker T1000-e": .trackerT1000E
+        case "Seeed Wio Tracker L1": .seeedWioTracker
+        case "Seeed SenseCap Solar": .seeedSolarNode
+        case "RAK WisMesh Tag": .wisMeshTag
+        default: nil
+        }
+    }
 }

@@ -84,4 +84,39 @@ struct OCVPresetTests {
     func customIsDeviceSpecific() {
         #expect(OCVPreset.custom.category == .deviceSpecific)
     }
+
+    // MARK: - Manufacturer Matching Tests
+
+    @Test("Seeed Tracker T1000-e maps to trackerT1000E preset")
+    func seeedTrackerMapsCorrectly() {
+        #expect(OCVPreset.preset(forManufacturer: "Seeed Tracker T1000-e") == .trackerT1000E)
+    }
+
+    @Test("Seeed Wio Tracker L1 maps to seeedWioTracker preset")
+    func seeedWioTrackerMapsCorrectly() {
+        #expect(OCVPreset.preset(forManufacturer: "Seeed Wio Tracker L1") == .seeedWioTracker)
+    }
+
+    @Test("Seeed SenseCap Solar maps to seeedSolarNode preset")
+    func seeedSenseCapMapsCorrectly() {
+        #expect(OCVPreset.preset(forManufacturer: "Seeed SenseCap Solar") == .seeedSolarNode)
+    }
+
+    @Test("RAK WisMesh Tag maps to wisMeshTag preset")
+    func rakWisMeshTagMapsCorrectly() {
+        #expect(OCVPreset.preset(forManufacturer: "RAK WisMesh Tag") == .wisMeshTag)
+    }
+
+    @Test("Unknown manufacturer returns nil")
+    func unknownManufacturerReturnsNil() {
+        #expect(OCVPreset.preset(forManufacturer: "Generic ESP32") == nil)
+        #expect(OCVPreset.preset(forManufacturer: "Heltec MeshPocket") == nil)
+        #expect(OCVPreset.preset(forManufacturer: "") == nil)
+    }
+
+    @Test("Manufacturer matching is case-sensitive")
+    func manufacturerMatchingIsCaseSensitive() {
+        #expect(OCVPreset.preset(forManufacturer: "seeed tracker t1000-e") == nil)
+        #expect(OCVPreset.preset(forManufacturer: "SEEED TRACKER T1000-E") == nil)
+    }
 }
