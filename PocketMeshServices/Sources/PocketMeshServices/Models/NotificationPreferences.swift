@@ -68,5 +68,13 @@ public final class NotificationPreferencesStore {
         set { defaults.set(newValue, forKey: "notificationBadgeEnabled") }
     }
 
+    // MARK: - Low Battery
+
+    /// Enable low battery warning notifications
+    public var lowBatteryEnabled: Bool {
+        get { defaults.object(forKey: "notifyLowBattery") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "notifyLowBattery") }
+    }
+
     public init() {}
 }
