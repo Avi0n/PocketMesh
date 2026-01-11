@@ -76,7 +76,7 @@ struct ContactDetailView: View {
             // Danger zone
             dangerSection
         }
-        .navigationTitle("Contact")
+        .navigationTitle(currentContact.type.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .alert("Block Contact", isPresented: $showingBlockAlert) {
             Button("Cancel", role: .cancel) { }

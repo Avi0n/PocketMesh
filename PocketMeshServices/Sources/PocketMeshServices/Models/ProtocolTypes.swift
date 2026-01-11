@@ -19,6 +19,15 @@ public enum ContactType: UInt8, Sendable, Codable {
     case chat = 0x01
     case repeater = 0x02
     case room = 0x03
+
+    /// Human-readable name for display in UI
+    public var displayName: String {
+        switch self {
+        case .chat: return "Contact"
+        case .repeater: return "Repeater"
+        case .room: return "Room"
+        }
+    }
 }
 
 // MARK: - Text Types
