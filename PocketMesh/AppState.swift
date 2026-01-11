@@ -69,6 +69,12 @@ public final class AppState {
     /// Task for periodic battery refresh (cancel on disconnect/background)
     private var batteryRefreshTask: Task<Void, Never>?
 
+    /// Thresholds that have already triggered a notification this session
+    private var notifiedBatteryThresholds: Set<Int> = []
+
+    /// Battery warning threshold levels (percentage)
+    private let batteryWarningThresholds = [20, 10, 5]
+
     // MARK: - Onboarding State
 
     /// Whether onboarding is complete
