@@ -72,7 +72,7 @@ public final class ConnectionManager {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "ConnectionManager")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "ConnectionManager")
 
     // MARK: - Observable State
 

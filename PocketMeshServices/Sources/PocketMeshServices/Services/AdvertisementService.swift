@@ -19,7 +19,7 @@ public actor AdvertisementService {
 
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "Advertisement")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "Advertisement")
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore

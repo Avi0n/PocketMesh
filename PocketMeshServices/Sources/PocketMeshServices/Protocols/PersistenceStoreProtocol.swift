@@ -173,4 +173,21 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Increment heard repeats count and return new count
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int
+
+    // MARK: - Debug Log Entries
+
+    /// Save a batch of debug log entries
+    func saveDebugLogEntries(_ dtos: [DebugLogEntryDTO]) async throws
+
+    /// Fetch debug log entries for a device since a given date
+    func fetchDebugLogEntries(deviceID: UUID, since date: Date, limit: Int) async throws -> [DebugLogEntryDTO]
+
+    /// Count debug log entries for a device
+    func countDebugLogEntries(deviceID: UUID) async throws -> Int
+
+    /// Prune debug log entries, keeping only the most recent
+    func pruneDebugLogEntries(deviceID: UUID, keepCount: Int) async throws
+
+    /// Clear all debug log entries for a device
+    func clearDebugLogEntries(deviceID: UUID) async throws
 }

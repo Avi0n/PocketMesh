@@ -78,6 +78,9 @@ struct PocketMeshApp: App {
             }
         case .background:
             appState.handleEnterBackground()
+            Task {
+                await appState.services?.debugLogBuffer.flush()
+            }
         case .inactive:
             break
         @unknown default:

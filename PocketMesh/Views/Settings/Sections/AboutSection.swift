@@ -2,9 +2,6 @@ import SwiftUI
 
 /// About and links section
 struct AboutSection: View {
-    @Environment(AppState.self) private var appState
-    @State private var isExporting = false
-
     var body: some View {
         Section {
             NavigationLink {
@@ -46,62 +43,6 @@ struct AboutSection: View {
             .foregroundStyle(.primary)
         } header: {
             Text("About")
-        }
-
-        Section {
-            Button {
-                exportLogs()
-            } label: {
-                HStack {
-                    Label("Export Debug Logs", systemImage: "arrow.up.doc")
-                    Spacer()
-                    if isExporting {
-                        ProgressView()
-                    }
-                }
-            }
-            .disabled(isExporting)
-        } header: {
-            Text("Support")
-        }
-    }
-
-    private func exportLogs() {
-        isExporting = true
-        Task {
-            guard let fileURL = await LogExportService.createExportFile(appState: appState) else {
-                isExporting = false
-                return
-            }
-
-            await MainActor.run {
-                let activityVC = UIActivityViewController(
-                    activityItems: [fileURL],
-                    applicationActivities: nil
-                )
-
-                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                   let rootVC = windowScene.windows.first?.rootViewController {
-                    // Find the topmost presented controller
-                    var topVC = rootVC
-                    while let presented = topVC.presentedViewController {
-                        topVC = presented
-                    }
-                    if let popover = activityVC.popoverPresentationController {
-                        popover.sourceView = topVC.view
-                        popover.sourceRect = CGRect(
-                            x: topVC.view.bounds.midX,
-                            y: topVC.view.bounds.midY,
-                            width: 0,
-                            height: 0
-                        )
-                        popover.permittedArrowDirections = []
-                    }
-                    topVC.present(activityVC, animated: true)
-                }
-
-                isExporting = false
-            }
         }
     }
 }

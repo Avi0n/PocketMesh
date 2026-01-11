@@ -23,7 +23,7 @@ public actor RepeaterAdminService {
     private let session: MeshCoreSession
     private let remoteNodeService: RemoteNodeService
     private let dataStore: PersistenceStore
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "RepeaterAdmin")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RepeaterAdmin")
 
     /// Handler for neighbor responses
     public var neighboursResponseHandler: (@Sendable (NeighboursResponse) async -> Void)?

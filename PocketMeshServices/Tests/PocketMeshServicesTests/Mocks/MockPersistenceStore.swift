@@ -13,6 +13,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public var messages: [UUID: MessageDTO] = [:]
     public var contacts: [UUID: ContactDTO] = [:]
     public var channels: [UUID: ChannelDTO] = [:]
+    public var debugLogEntries: [DebugLogEntryDTO] = []
 
     // MARK: - Stubbed Errors
 
@@ -25,6 +26,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public var stubbedSaveChannelError: Error?
     public var stubbedFetchChannelError: Error?
     public var stubbedDeleteChannelError: Error?
+    public var stubbedDebugLogError: Error?
 
     // MARK: - Recorded Invocations
 
@@ -655,6 +657,51 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return 0 // Stub
     }
 
+    // MARK: - Debug Log Operations
+
+    public func saveDebugLogEntries(_ entries: [DebugLogEntryDTO]) async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        debugLogEntries.append(contentsOf: entries)
+    }
+
+    public func fetchDebugLogEntries(deviceID: UUID, since: Date, limit: Int) async throws -> [DebugLogEntryDTO] {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        return debugLogEntries
+            .filter { $0.deviceID == deviceID && $0.timestamp >= since }
+            .sorted { $0.timestamp < $1.timestamp }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    public func countDebugLogEntries(deviceID: UUID) async throws -> Int {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        return debugLogEntries.filter { $0.deviceID == deviceID }.count
+    }
+
+    public func pruneDebugLogEntries(deviceID: UUID, keepCount: Int) async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        let forDevice = debugLogEntries
+            .filter { $0.deviceID == deviceID }
+            .sorted { $0.timestamp > $1.timestamp }
+        let toKeep = Set(forDevice.prefix(keepCount).map { $0.id })
+        debugLogEntries.removeAll { $0.deviceID == deviceID && !toKeep.contains($0.id) }
+    }
+
+    public func clearDebugLogEntries(deviceID: UUID) async throws {
+        if let error = stubbedDebugLogError {
+            throw error
+        }
+        debugLogEntries.removeAll { $0.deviceID == deviceID }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -662,6 +709,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         messages = [:]
         contacts = [:]
         channels = [:]
+        debugLogEntries = []
         savedMessages = []
         savedContacts = []
         savedChannels = []

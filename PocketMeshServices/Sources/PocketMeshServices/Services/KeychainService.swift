@@ -19,7 +19,7 @@ public actor KeychainService: KeychainServiceProtocol {
     public static let shared = KeychainService()
 
     private let service = "com.pocketmesh.nodepasswords"
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "Keychain")
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "Keychain")
     private let maxRetries = 3
     private let retryDelay: Duration = .milliseconds(100)
 
