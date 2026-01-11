@@ -30,8 +30,7 @@ enum LogExportService {
         }
 
         // Logs
-        let deviceID = appState.connectedDevice?.id
-        sections.append(await generateLogsSection(persistenceStore: persistenceStore, deviceID: deviceID))
+        sections.append(await generateLogsSection(persistenceStore: persistenceStore))
 
         return sections.joined(separator: "\n\n")
     }
@@ -132,18 +131,12 @@ enum LogExportService {
             """
     }
 
-    private static func generateLogsSection(persistenceStore: PersistenceStore, deviceID: UUID?) async -> String {
+    private static func generateLogsSection(persistenceStore: PersistenceStore) async -> String {
         var lines = ["=== Logs (Last Hour) ==="]
-
-        guard let deviceID else {
-            lines.append("(No device connected - cannot export logs)")
-            return lines.joined(separator: "\n")
-        }
 
         do {
             let oneHourAgo = Date().addingTimeInterval(-3600)
             let entries = try await persistenceStore.fetchDebugLogEntries(
-                deviceID: deviceID,
                 since: oneHourAgo,
                 limit: 1000
             )

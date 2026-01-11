@@ -666,40 +666,38 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         debugLogEntries.append(contentsOf: entries)
     }
 
-    public func fetchDebugLogEntries(deviceID: UUID, since: Date, limit: Int) async throws -> [DebugLogEntryDTO] {
+    public func fetchDebugLogEntries(since: Date, limit: Int) async throws -> [DebugLogEntryDTO] {
         if let error = stubbedDebugLogError {
             throw error
         }
         return debugLogEntries
-            .filter { $0.deviceID == deviceID && $0.timestamp >= since }
+            .filter { $0.timestamp >= since }
             .sorted { $0.timestamp < $1.timestamp }
             .prefix(limit)
             .map { $0 }
     }
 
-    public func countDebugLogEntries(deviceID: UUID) async throws -> Int {
+    public func countDebugLogEntries() async throws -> Int {
         if let error = stubbedDebugLogError {
             throw error
         }
-        return debugLogEntries.filter { $0.deviceID == deviceID }.count
+        return debugLogEntries.count
     }
 
-    public func pruneDebugLogEntries(deviceID: UUID, keepCount: Int) async throws {
+    public func pruneDebugLogEntries(keepCount: Int) async throws {
         if let error = stubbedDebugLogError {
             throw error
         }
-        let forDevice = debugLogEntries
-            .filter { $0.deviceID == deviceID }
-            .sorted { $0.timestamp > $1.timestamp }
-        let toKeep = Set(forDevice.prefix(keepCount).map { $0.id })
-        debugLogEntries.removeAll { $0.deviceID == deviceID && !toKeep.contains($0.id) }
+        let sorted = debugLogEntries.sorted { $0.timestamp > $1.timestamp }
+        let toKeep = Set(sorted.prefix(keepCount).map { $0.id })
+        debugLogEntries.removeAll { !toKeep.contains($0.id) }
     }
 
-    public func clearDebugLogEntries(deviceID: UUID) async throws {
+    public func clearDebugLogEntries() async throws {
         if let error = stubbedDebugLogError {
             throw error
         }
-        debugLogEntries.removeAll { $0.deviceID == deviceID }
+        debugLogEntries.removeAll()
     }
 
     // MARK: - Test Helpers

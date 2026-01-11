@@ -15,24 +15,10 @@ public actor DebugLogBuffer {
     private let flushInterval: Duration = .seconds(5)
     private let maxBufferSize = 50
 
-    /// Current device ID for log association.
-    /// Set when device connects, cleared on disconnect.
-    public private(set) var deviceID: UUID?
-
     private static let logger = Logger(subsystem: "com.pocketmesh", category: "DebugLogBuffer")
 
     public init(persistenceStore: any PersistenceStoreProtocol) {
         self.persistenceStore = persistenceStore
-    }
-
-    /// Configure with device ID when connection is established.
-    public func configure(deviceID: UUID) {
-        self.deviceID = deviceID
-    }
-
-    /// Clear device ID on disconnect.
-    public func clearDeviceID() {
-        self.deviceID = nil
     }
 
     public func append(_ entry: DebugLogEntryDTO) {

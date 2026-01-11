@@ -238,12 +238,9 @@ public final class ServiceContainer {
         await remoteNodeService.startEventMonitoring()
         await messagePollingService.startAutoFetch(deviceID: deviceID)
 
-        // Configure debug log buffer with device ID
-        await debugLogBuffer.configure(deviceID: deviceID)
-
-        // Prune debug logs on connection (device ID is now known)
+        // Prune debug logs on connection
         Task {
-            try? await dataStore.pruneDebugLogEntries(deviceID: deviceID, keepCount: 1000)
+            try? await dataStore.pruneDebugLogEntries(keepCount: 1000)
         }
 
         isMonitoringEvents = true
@@ -261,8 +258,7 @@ public final class ServiceContainer {
         await messagePollingService.stopAutoFetch()
         // RemoteNodeService event monitoring is per-session, handled internally
 
-        // Flush and shutdown debug log buffer
-        await debugLogBuffer.clearDeviceID()
+        // Flush debug log buffer
         await debugLogBuffer.shutdown()
 
         isMonitoringEvents = false

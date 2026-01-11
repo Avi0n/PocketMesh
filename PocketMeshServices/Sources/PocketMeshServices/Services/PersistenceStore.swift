@@ -1628,7 +1628,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         for dto in dtos {
             let entry = DebugLogEntry(
                 id: dto.id,
-                deviceID: dto.deviceID,
                 timestamp: dto.timestamp,
                 level: dto.level.rawValue,
                 subsystem: dto.subsystem,
@@ -1640,12 +1639,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
-    /// Fetches debug log entries for a device since a given date.
-    public func fetchDebugLogEntries(deviceID: UUID, since date: Date, limit: Int = 1000) throws -> [DebugLogEntryDTO] {
-        let targetDeviceID = deviceID
+    /// Fetches debug log entries since a given date.
+    public func fetchDebugLogEntries(since date: Date, limit: Int = 1000) throws -> [DebugLogEntryDTO] {
         let startDate = date
         var descriptor = FetchDescriptor<DebugLogEntry>(
-            predicate: #Predicate { $0.deviceID == targetDeviceID && $0.timestamp >= startDate },
+            predicate: #Predicate { $0.timestamp >= startDate },
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
         descriptor.fetchLimit = limit
@@ -1653,24 +1651,19 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return entries.map { DebugLogEntryDTO(from: $0) }
     }
 
-    /// Counts debug log entries for a device.
-    public func countDebugLogEntries(deviceID: UUID) throws -> Int {
-        let targetDeviceID = deviceID
-        let descriptor = FetchDescriptor<DebugLogEntry>(
-            predicate: #Predicate { $0.deviceID == targetDeviceID }
-        )
+    /// Counts all debug log entries.
+    public func countDebugLogEntries() throws -> Int {
+        let descriptor = FetchDescriptor<DebugLogEntry>()
         return try modelContext.fetchCount(descriptor)
     }
 
-    /// Prunes debug log entries for a device, keeping only the most recent entries.
-    public func pruneDebugLogEntries(deviceID: UUID, keepCount: Int = 1000) throws {
-        let count = try countDebugLogEntries(deviceID: deviceID)
+    /// Prunes debug log entries, keeping only the most recent entries.
+    public func pruneDebugLogEntries(keepCount: Int = 1000) throws {
+        let count = try countDebugLogEntries()
         guard count > keepCount else { return }
 
         let deleteCount = count - keepCount
-        let targetDeviceID = deviceID
         var descriptor = FetchDescriptor<DebugLogEntry>(
-            predicate: #Predicate { $0.deviceID == targetDeviceID },
             sortBy: [SortDescriptor(\.timestamp, order: .forward)]
         )
         descriptor.fetchLimit = deleteCount
@@ -1682,12 +1675,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
-    /// Clears all debug log entries for a device.
-    public func clearDebugLogEntries(deviceID: UUID) throws {
-        let targetDeviceID = deviceID
-        try modelContext.delete(model: DebugLogEntry.self, where: #Predicate {
-            $0.deviceID == targetDeviceID
-        })
+    /// Clears all debug log entries.
+    public func clearDebugLogEntries() throws {
+        try modelContext.delete(model: DebugLogEntry.self)
         try modelContext.save()
     }
 }

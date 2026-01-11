@@ -4,12 +4,11 @@ import SwiftData
 /// SwiftData model for persisted debug log entries.
 @Model
 public final class DebugLogEntry {
-    #Index<DebugLogEntry>([\.deviceID, \.timestamp])
+    #Index<DebugLogEntry>([\.timestamp])
 
     @Attribute(.unique)
     public var id: UUID
 
-    public var deviceID: UUID
     public var timestamp: Date
     public var level: Int
     public var subsystem: String
@@ -18,7 +17,6 @@ public final class DebugLogEntry {
 
     public init(
         id: UUID = UUID(),
-        deviceID: UUID,
         timestamp: Date = Date(),
         level: Int,
         subsystem: String,
@@ -26,7 +24,6 @@ public final class DebugLogEntry {
         message: String
     ) {
         self.id = id
-        self.deviceID = deviceID
         self.timestamp = timestamp
         self.level = level
         self.subsystem = subsystem
@@ -38,7 +35,6 @@ public final class DebugLogEntry {
 /// Sendable DTO for cross-actor transfer of DebugLogEntry data.
 public struct DebugLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
     public let id: UUID
-    public let deviceID: UUID
     public let timestamp: Date
     public let level: DebugLogLevel
     public let subsystem: String
@@ -47,7 +43,6 @@ public struct DebugLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
 
     public init(
         id: UUID = UUID(),
-        deviceID: UUID,
         timestamp: Date = Date(),
         level: DebugLogLevel,
         subsystem: String,
@@ -55,7 +50,6 @@ public struct DebugLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
         message: String
     ) {
         self.id = id
-        self.deviceID = deviceID
         self.timestamp = timestamp
         self.level = level
         self.subsystem = subsystem
@@ -67,7 +61,6 @@ public struct DebugLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
     /// Initialize from SwiftData model.
     public init(from model: DebugLogEntry) {
         self.id = model.id
-        self.deviceID = model.deviceID
         self.timestamp = model.timestamp
         self.level = DebugLogLevel(rawValue: model.level) ?? .info
         self.subsystem = model.subsystem
