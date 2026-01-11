@@ -392,6 +392,7 @@ public final class AppState {
 
         do {
             deviceBattery = try await settingsService.getBattery()
+            await checkBatteryThresholds()
         } catch {
             // Silently fail - battery info is optional
             deviceBattery = nil
