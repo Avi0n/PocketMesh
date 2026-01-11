@@ -77,5 +77,9 @@ struct NotificationSettingsSection: View {
         Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
             Label("New Contact Discovered", systemImage: "person.badge.plus")
         }
+
+        Toggle(isOn: $preferences.lowBatteryEnabled) {
+            Label("Low Battery Warnings", systemImage: "battery.25")
+        }
     }
 }
