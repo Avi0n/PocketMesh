@@ -33,13 +33,6 @@ struct DeviceInfoView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-
-                    HStack {
-                        Label("Last Connected", systemImage: "clock")
-                        Spacer()
-                        Text(device.lastConnected, format: .relative(presentation: .named))
-                            .foregroundStyle(.secondary)
-                    }
                 } header: {
                     Text("Connection")
                 }
@@ -87,13 +80,6 @@ struct DeviceInfoView: View {
                     }
 
                     HStack {
-                        Label("Protocol Version", systemImage: "number")
-                        Spacer()
-                        Text("\(device.firmwareVersion)")
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
                         Label("Build Date", systemImage: "calendar")
                         Spacer()
                         Text(device.buildDate.isEmpty ? "Unknown" : device.buildDate)
@@ -136,18 +122,6 @@ struct DeviceInfoView: View {
                     Text("Capabilities")
                 }
 
-                // Security
-                Section {
-                    HStack {
-                        Label("BLE PIN", systemImage: "lock")
-                        Spacer()
-                        Text(device.blePin == 0 ? "Disabled" : "Enabled")
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Security")
-                }
-
                 // Identity
                 Section {
                     NavigationLink {
@@ -165,21 +139,6 @@ struct DeviceInfoView: View {
                     Text("Identity")
                 }
 
-                // Identifier
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Device ID")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text(device.id.uuidString)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                    }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("Identifier")
-                }
             } else {
                 ContentUnavailableView(
                     "No Device Connected",
