@@ -49,7 +49,7 @@ public final class RemoteNodeSession {
     public var unreadCount: Int
 
     /// Whether this room's notifications are muted
-    public var isMuted: Bool
+    public var isMuted: Bool = false
 
     /// Last RX airtime in seconds (repeater-specific)
     public var lastRxAirtimeSeconds: UInt32?

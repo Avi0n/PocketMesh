@@ -237,19 +237,42 @@ struct ChatsView: View {
                 case .direct(let contact):
                     ConversationRow(contact: contact, viewModel: viewModel)
                         .tag(ChatDestination.direct(contact))
+                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                            deleteDirectConversation(contact)
+                        }
 
                 case .channel(let channel):
                     ChannelConversationRow(channel: channel, viewModel: viewModel)
                         .tag(ChatDestination.channel(channel))
+                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                            deleteChannelConversation(channel)
+                        }
 
                 case .room(let session):
                     RoomConversationRow(session: session)
                         .tag(ChatDestination.room(session))
+                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                            roomToDelete = session
+                            showRoomDeleteAlert = true
+                        }
                 }
             }
-            .onDelete(perform: deleteConversations)
         }
         .listStyle(.plain)
+    }
+
+    private func deleteDirectConversation(_ contact: ContactDTO) {
+        viewModel.removeConversation(.direct(contact))
+        Task {
+            try? await viewModel.deleteConversation(for: contact)
+        }
+    }
+
+    private func deleteChannelConversation(_ channel: ChannelDTO) {
+        viewModel.removeConversation(.channel(channel))
+        Task {
+            await deleteChannel(channel)
+        }
     }
 
     @ViewBuilder
@@ -290,30 +313,6 @@ struct ChatsView: View {
         guard let session = appState.pendingRoomSession else { return }
         selectedDestination = .room(session)
         appState.clearPendingRoomNavigation()
-    }
-
-    private func deleteConversations(at offsets: IndexSet) {
-        let conversationsToDelete = offsets.map { filteredConversations[$0] }
-
-        for conversation in conversationsToDelete {
-            switch conversation {
-            case .room(let session):
-                roomToDelete = session
-                showRoomDeleteAlert = true
-
-            case .direct(let contact):
-                viewModel.removeConversation(conversation)
-                Task {
-                    try? await viewModel.deleteConversation(for: contact)
-                }
-
-            case .channel(let channel):
-                viewModel.removeConversation(conversation)
-                Task {
-                    await deleteChannel(channel)
-                }
-            }
-        }
     }
 
     private func deleteRoom(_ session: RemoteNodeSessionDTO) async {

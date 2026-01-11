@@ -31,7 +31,7 @@ public final class Channel {
     public var unreadCount: Int
 
     /// Whether this channel's notifications are muted
-    public var isMuted: Bool
+    public var isMuted: Bool = false
 
     public init(
         id: UUID = UUID(),

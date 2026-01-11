@@ -49,7 +49,7 @@ public final class Contact {
     public var isBlocked: Bool
 
     /// Whether this contact's notifications are muted
-    public var isMuted: Bool
+    public var isMuted: Bool = false
 
     /// Whether this contact is a favorite/pinned
     public var isFavorite: Bool

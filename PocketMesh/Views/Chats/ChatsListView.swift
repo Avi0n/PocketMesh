@@ -337,7 +337,7 @@ struct ChatsListView: View {
 
 // MARK: - Swipe Actions
 
-private struct ConversationSwipeActionsModifier: ViewModifier {
+struct ConversationSwipeActionsModifier: ViewModifier {
     let conversation: Conversation
     let viewModel: ChatViewModel
     let onDelete: () -> Void
@@ -366,7 +366,7 @@ private struct ConversationSwipeActionsModifier: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func conversationSwipeActions(
         conversation: Conversation,
         viewModel: ChatViewModel,
