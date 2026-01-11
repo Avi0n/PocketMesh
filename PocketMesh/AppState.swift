@@ -177,6 +177,8 @@ public final class AppState {
             syncActivityCount = 0
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
+            // Clear battery notification thresholds for next connection
+            notifiedBatteryThresholds = []
             return
         }
 
