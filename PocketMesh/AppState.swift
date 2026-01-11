@@ -311,8 +311,11 @@ public final class AppState {
         // Configure notification interaction handlers
         configureNotificationHandlers()
 
-        // Fetch battery immediately and start periodic refresh loop
-        await fetchDeviceBattery()
+        // Fetch battery and initialize thresholds before starting periodic checks
+        // We fetch directly here (not via fetchDeviceBattery) to avoid calling
+        // checkBatteryThresholds before thresholds are initialized
+        deviceBattery = try? await services.settingsService.getBattery()
+        initializeBatteryThresholds()
         startBatteryRefreshLoop()
     }
 
