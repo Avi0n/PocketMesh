@@ -420,6 +420,21 @@ public final class AppState {
         batteryRefreshTask = nil
     }
 
+    /// Initialize battery thresholds based on current level to prevent false notifications on connect
+    private func initializeBatteryThresholds() {
+        guard let battery = deviceBattery, let device = connectedDevice else {
+            notifiedBatteryThresholds = []
+            return
+        }
+
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        // Mark all thresholds at or above current level as "already notified"
+        notifiedBatteryThresholds = Set(
+            batteryWarningThresholds.filter { percentage <= $0 }
+        )
+    }
+
     // MARK: - App Lifecycle
 
     /// Called when app enters background
