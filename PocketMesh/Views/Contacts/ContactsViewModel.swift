@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import PocketMeshServices
 
@@ -36,6 +37,9 @@ final class ContactsViewModel {
 
     /// Error message if any
     var errorMessage: String?
+
+    /// User's current location for distance sorting (optional)
+    var userLocation: CLLocation?
 
     // MARK: - Dependencies
 
