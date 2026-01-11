@@ -76,8 +76,10 @@ struct ContactsListView: View {
             if viewModel.isLoading && viewModel.contacts.isEmpty {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.contacts.isEmpty {
+            } else if filteredContacts.isEmpty && !isSearching {
                 emptyView
+            } else if filteredContacts.isEmpty && isSearching {
+                searchEmptyView
             } else {
                 if shouldUseSplitView {
                     contactsSplitList
@@ -212,11 +214,50 @@ struct ContactsListView: View {
     // MARK: - Views
 
     private var emptyView: some View {
-        ContentUnavailableView(
-            "No Contacts",
-            systemImage: "person.2",
-            description: Text("Contacts will appear when discovered on the mesh network. Pull to refresh or tap Sync.")
-        )
+        VStack {
+            NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            switch selectedSegment {
+            case .favorites:
+                ContentUnavailableView(
+                    "No Favorites Yet",
+                    systemImage: "star",
+                    description: Text("Swipe right on any node to add it to your favorites.")
+                )
+            case .contacts:
+                ContentUnavailableView(
+                    "No Contacts",
+                    systemImage: "person.2",
+                    description: Text("Contacts appear when discovered on the mesh network. If auto-add contacts is off, check Discovery in the top right menu.")
+                )
+            case .network:
+                ContentUnavailableView(
+                    "No Network Nodes",
+                    systemImage: "antenna.radiowaves.left.and.right",
+                    description: Text("Repeaters and room servers will appear when discovered on the mesh.")
+                )
+            }
+
+            Spacer()
+        }
+    }
+
+    private var searchEmptyView: some View {
+        VStack {
+            NodeSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            ContentUnavailableView(
+                "No Results",
+                systemImage: "magnifyingglass",
+                description: Text("No nodes match '\(searchText)'")
+            )
+
+            Spacer()
+        }
     }
 
     private var contactsList: some View {
