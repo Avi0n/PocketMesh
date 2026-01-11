@@ -24,6 +24,18 @@ final class MapViewModel {
     /// Camera position for map centering
     var cameraPosition: MapCameraPosition = .automatic
 
+    /// Current map style selection
+    var mapStyleSelection: MapStyleSelection = .standard
+
+    /// Whether to show contact name labels
+    var showLabels = true
+
+    /// Whether the layers menu is showing
+    var showingLayersMenu = false
+
+    /// Current camera distance for zoom-based label visibility (starts high so labels hidden until map loads)
+    var cameraDistance: Double = 100_000
+
     // MARK: - Dependencies
 
     private var dataStore: PersistenceStore?
@@ -118,6 +130,11 @@ final class MapViewModel {
     /// Clear selection
     func clearSelection() {
         selectedContact = nil
+    }
+
+    /// Labels should show when zoomed to city level (~50km) and toggle is on
+    var shouldShowLabels: Bool {
+        showLabels && cameraDistance < 50_000
     }
 }
 

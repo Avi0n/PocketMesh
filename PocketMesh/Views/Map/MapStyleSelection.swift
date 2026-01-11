@@ -1,4 +1,5 @@
 import MapKit
+import SwiftUI
 
 /// Map style options for the Map tab
 enum MapStyleSelection: String, CaseIterable, Hashable {

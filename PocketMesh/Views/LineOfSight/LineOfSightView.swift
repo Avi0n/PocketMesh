@@ -23,7 +23,7 @@ extension PointID: Identifiable {
 // MARK: - Map Style Selection
 
 /// Wrapper enum for MapStyle that conforms to Hashable for use with Picker
-private enum MapStyleSelection: String, CaseIterable, Hashable {
+private enum LOSMapStyleSelection: String, CaseIterable, Hashable {
     case standard
     case satellite
     case terrain
@@ -68,7 +68,7 @@ struct LineOfSightView: View {
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var editingPoint: PointID?
     @State private var isDropPinMode = false
-    @State private var mapStyleSelection: MapStyleSelection = .terrain
+    @State private var mapStyleSelection: LOSMapStyleSelection = .terrain
     @State private var sheetBottomInset: CGFloat = 220
     @State private var isResultsExpanded = false
     @State private var isInitialPointBZoom = false
@@ -302,7 +302,7 @@ struct LineOfSightView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 0) {
-                            ForEach(MapStyleSelection.allCases, id: \.self) { style in
+                            ForEach(LOSMapStyleSelection.allCases, id: \.self) { style in
                                 Button {
                                     mapStyleSelection = style
                                     withAnimation {
@@ -322,7 +322,7 @@ struct LineOfSightView: View {
                                     .padding(.vertical, 12)
                                 }
 
-                                if style != MapStyleSelection.allCases.last {
+                                if style != LOSMapStyleSelection.allCases.last {
                                     Divider()
                                 }
                             }
