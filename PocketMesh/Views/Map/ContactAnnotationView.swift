@@ -80,6 +80,7 @@ struct ContactAnnotationCallout: View {
     let contact: ContactDTO
     let onMessageTap: () -> Void
     let onDetailTap: () -> Void
+    let onDismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -102,6 +103,19 @@ struct ContactAnnotationCallout: View {
                 }
 
                 Spacer()
+
+                // Dismiss button
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .background(.quaternary, in: .circle)
+                }
+                .buttonStyle(.plain)
+                .frame(minWidth: 44, minHeight: 44)
+                .accessibilityLabel("Close contact details")
             }
 
             Divider()
@@ -231,7 +245,8 @@ extension View {
     return ContactAnnotationCallout(
         contact: contact,
         onMessageTap: {},
-        onDetailTap: {}
+        onDetailTap: {},
+        onDismiss: {}
     )
     .padding()
 }
