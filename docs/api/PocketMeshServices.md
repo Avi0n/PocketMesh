@@ -447,6 +447,7 @@ A sendable snapshot of Message for cross-actor transfers. Total: 19 properties.
 | `ackCode` | `UInt32?` | ACK code for tracking |
 | `pathLength` | `UInt8` | Hop count |
 | `snr` | `Double?` | Signal-to-noise ratio |
+| `heardRepeats` | `Int` | Number of times message was repeated (channel messages only) |
 | `senderKeyPrefix` | `Data?` | First 4 bytes of sender's public key |
 | `senderNodeName` | `String?` | Sender's node name |
 | `isRead` | `Bool` | Read status |
@@ -559,6 +560,23 @@ A sendable snapshot of Channel for cross-actor transfers. Total: 8 properties.
 |----------|------|-------------|
 | `isPublicChannel` | `Bool` | True if this is slot 0 (the public channel slot) |
 
+### ChatFilterDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ChatFilter.swift`
+
+User preferences for filtering chat/conversation lists.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `filterUnreadOnly` | `Bool` | Show only conversations with unread messages |
+| `filterDirectMessagesOnly` | `Bool` | Show only direct message conversations (hide channels) |
+| `filterMutedConversations` | `Bool` | Exclude muted conversations |
+| `filterBlockedContacts` | `Bool` | Exclude conversations with blocked contacts |
+
 ---
 
 ## Additional Services
@@ -573,7 +591,334 @@ A sendable snapshot of Channel for cross-actor transfers. Total: 8 properties.
 | `BinaryProtocolService` | public, actor | Binary protocol encoding/decoding |
 | `KeychainService` | public, actor | Secure credential storage |
 | `NotificationService` | public, @MainActor, @Observable class | Local notification scheduling |
+| `RxLogService` | public, actor | Captures RF packets for network diagnostics |
+| `PersistentLogger` | public, actor | Provides debug logging with SwiftData storage and in-memory buffering |
+| `DebugLogBuffer` | public, actor | In-memory circular buffer for recent debug logs |
+| `CommandAuditLogger` | public, actor | Audits CLI commands sent to devices for security and debugging |
+| `DeviceService` | public, actor | Provides device information and management operations |
+| `HeardRepeatsService` | public, actor | Tracks message repeat counts for channel message propagation |
+| `ElevationService` | public, actor | Fetches terrain elevation data from Open-Meteo API for Line of Sight analysis |
+| `LocationService` | public, class (NSObject) | Manages location permissions, current position, and location updates |
 | `ServiceContainer` | public, class | Holds all service instances |
+
+---
+
+## New Services
+
+### RxLogService (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/RxLogService.swift`
+
+Captures and stores RF packet log entries for network diagnostics.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `startCapture() async` | Starts capturing RF packets from transport |
+| `stopCapture() async` | Stops packet capture |
+| `getRecentLogs(limit:) async throws -> [RxLogEntryDTO]` | Gets recent log entries |
+| `clearLogs() async throws` | Clears all log entries |
+| `getFilteredLogs(type:source:destination:limit:) async throws -> [RxLogEntryDTO]` | Gets logs with optional filters |
+
+**Capture Features:**
+- Real-time packet monitoring
+- Automatic metadata extraction (RSSI, SNR, packet type)
+- SwiftData persistence
+- Configurable maximum log size (default: 10,000 entries)
+
+### PersistentLogger (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/PersistentLogger.swift`
+
+Provides persistent debug logging with SwiftData storage and in-memory buffering.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `log(level:category:message:metadata:) async` | Logs a message with severity level |
+| `getRecentLogs(limit:) async throws -> [DebugLogEntryDTO]` | Gets recent logs from buffer |
+| `getLogs(timeRange:) async throws -> [DebugLogEntryDTO]` | Gets logs within time range from SwiftData |
+| `exportLogs(timeRange:) async throws -> Data` | Exports logs to structured JSON format |
+| `clearOldLogs(olderThan:) async throws` | Deletes logs older than specified date |
+
+**Logging Features:**
+- Two-layer architecture (in-memory buffer + SwiftData persistence)
+- Configurable buffer size (default: 10,000 entries)
+- Configurable retention period (default: 24 hours)
+- Automatic old log cleanup
+- Sensitive data redaction (public keys truncated, passwords never logged)
+
+### DebugLogBuffer (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/DebugLogBuffer.swift`
+
+Efficient in-memory circular buffer for recent debug logs.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `log(level:category:message:metadata:) async` | Adds entry to circular buffer |
+| `getRecentLogs(limit:) async throws -> [DebugLogEntryDTO]` | Gets most recent entries |
+| `clear()` async | Clears all entries in buffer |
+| `getCapacity() -> Int` | Returns buffer capacity |
+| `getCount() -> Int` | Returns current entry count |
+
+**Buffer Features:**
+- Circular buffer with O(1) append
+- Automatic overflow handling (oldest entries evicted)
+- Thread-safe operations
+- Minimal memory footprint
+
+### CommandAuditLogger (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/CommandAuditLogger.swift`
+
+Audits CLI commands sent to devices for security and debugging.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `logCommand(deviceID:command:response:) async` | Logs a CLI command and its response |
+| `getAuditedCommands(deviceID:since:limit:) async throws -> [CommandAuditEntryDTO]` | Gets audited commands with filters |
+| `clearOldCommands(olderThan:) async throws` | Deletes commands older than specified date |
+
+**Audit Features:**
+- SwiftData persistence for command history
+- Command/response correlation tracking
+- Timestamp recording for troubleshooting
+- Configurable retention (default: 30 days)
+
+### DeviceService (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/DeviceService.swift`
+
+Provides device information and management operations.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `getDevice(deviceID:) async throws -> DeviceDTO?` | Gets device by ID |
+| `getActiveDevice() async throws -> DeviceDTO?` | Gets currently active device |
+| `getDevices() async throws -> [DeviceDTO]` | Gets all devices |
+| `updateDeviceLastSeen(deviceID:) async throws` | Updates device's last seen timestamp |
+| `getActiveDeviceTransportType() async throws -> TransportType?` | Gets transport type (BLE or WiFi) |
+
+### HeardRepeatsService (public, actor)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/HeardRepeatsService.swift`
+
+Tracks message repeat counts for channel message propagation analysis.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `incrementRepeats(messageID:) async throws` | Increments heard repeats count for a message |
+| `getRepeats(messageID:) async throws -> Int?` | Gets heard repeats count for a message |
+| `resetRepeats(messageID:) async throws` | Resets repeats count to zero |
+
+**Repeats Features:**
+- Real-time tracking of message propagation
+- Stored with Message model
+- Used for displaying "Heard by X" in channel messages
+
+### ElevationService (public, actor)
+
+**File:** `PocketMesh/Services/ElevationService.swift`
+
+Fetches terrain elevation data from Open-Meteo API for Line of Sight analysis.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `fetchElevation(latitude:longitude:) async throws -> ElevationSample` | Fetches elevation for single point |
+| `fetchElevationAlongPath(from:to:samples:) async throws -> [ElevationSample]` | Fetches elevation samples along a path |
+| `clearCache()` | Clears in-memory elevation cache |
+
+**Elevation Features:**
+- Open-Meteo API integration (90m resolution)
+- In-memory caching for performance
+- Path-based batch fetching
+- Automatic error handling and retries
+
+### LocationService (public, class)
+
+**File:** `PocketMesh/Services/LocationService.swift`
+
+Manages location permissions, current position, and location updates.
+
+**Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `requestAuthorization() async throws -> Bool` | Requests location authorization from user |
+| `getCurrentLocation() async throws -> CLLocation?` | Gets current device location |
+| `startLocationUpdates() async throws` | Starts continuous location updates |
+| `stopLocationUpdates() async throws` | Stops location updates |
+| `hasPermission() -> Bool` | Checks if location permission is granted |
+
+**Location Features:**
+- iOS location permission handling
+- Core Location integration
+- Background location support
+ - Deferred location updates (battery efficiency)
+
+---
+
+## New Models
+
+### RxLogEntryDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/RxLogEntry.swift`
+
+A sendable snapshot of RF packet log entry.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `timestamp` | `Date` | When packet was received |
+| `sourcePrefix` | `Data` | First 6 bytes of sender's public key |
+| `destinationPrefix` | `Data` | First 6 bytes of destination's public key |
+| `packetType` | `String` | Type of packet (message, control, telemetry, status, ACK, NACK) |
+| `rssi` | `Int?` | Received signal strength indicator in dBm |
+| `snr` | `Double?` | Signal-to-noise ratio in dB |
+| `payload` | `Data?` | Packet payload (if readable) |
+
+### DebugLogEntryDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/DebugLogEntry.swift`
+
+A sendable snapshot of debug log entry.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `timestamp` | `Date` | When log was created |
+| `level` | `LogLevel` | Severity: `.info`, `.warning`, `.error` |
+| `category` | `String` | Log category (connection, messaging, sync, transport, UI, diagnostics) |
+| `message` | `String` | Log message |
+| `metadata` | `[String: String]?` | Optional key-value metadata |
+
+### CommandAuditEntryDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/CommandAuditEntry.swift`
+
+A sendable snapshot of a CLI command audit entry.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `timestamp` | `Date` | When command was sent |
+| `command` | `String` | CLI command that was sent |
+| `response` | `String?` | Command response from device |
+| `targetNodePrefix` | `Data?` | First 6 bytes of target node's public key |
+| `success` | `Bool` | Whether command succeeded |
+
+### ElevationSample (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ElevationSample.swift`
+
+Represents a terrain elevation data point.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `coordinate` | `CLLocationCoordinate2D` | Geographic coordinates |
+| `elevation` | `Double` | Elevation in meters above sea level |
+| `distanceFromAMeters` | `Double` | Distance from point A in meters |
+
+### OCVPresetDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/OCVPreset.swift`
+
+Represents an Open Circuit Voltage (OCV) battery discharge curve preset.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `name` | `String` | Preset name (e.g., "LiFePO4", "Li-Ion NMC") |
+| `manufacturer` | `String` | Battery manufacturer |
+| `curveData` | `[Double]` | OCV curve points (voltage, percentage) |
+
+### NotificationPreferencesDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/NotificationPreferences.swift`
+
+User notification preferences.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `enabled` | `Bool` | Whether notifications are enabled |
+| `soundEnabled` | `Bool` | Whether sound is enabled |
+| `vibrateEnabled` | `Bool` | Whether vibration is enabled |
+
+### TrustedContactsDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/TrustedContacts.swift`
+
+List of trusted contacts for enhanced security features.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `trustedContactIDs` | `[UUID]` | List of trusted contact IDs |
+
+### LinkPreviewPreferencesDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/LinkPreviewPreferences.swift`
+
+User preferences for link preview behavior.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `enabled` | `Bool` | Whether link previews are enabled |
+| `alwaysFetchPreviews` | `Bool` | Fetch previews even when using WiFi/cellular (for testing) |
+
+### ChatFilterDTO (public, struct)
+
+**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ChatFilter.swift`
+
+User preferences for filtering chat/conversation lists.
+
+**Properties:**
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `UUID` | Unique identifier |
+| `deviceID` | `UUID` | Associated device |
+| `filterUnreadOnly` | `Bool` | Show only conversations with unread messages |
+| `filterDirectMessagesOnly` | `Bool` | Show only direct message conversations (hide channels) |
+| `filterMutedConversations` | `Bool` | Exclude muted conversations |
+| `filterBlockedContacts` | `Bool` | Exclude conversations with blocked contacts |
 
 ---
 

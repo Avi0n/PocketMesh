@@ -22,15 +22,70 @@ PocketMesh is a messaging app designed for off-grid communication using MeshCore
 
 ### Direct Messages
 
-- Go to the **Chats** tab.
-- Tap the **square.and.pencil** menu button and select **New Chat**, or select an existing contact.
+- Go to **Chats** tab.
+- Tap to **square.and.pencil** menu button and select **New Chat**, or select an existing contact.
 - Type your message and tap **Send**.
 - **Delivery Status** (shown as text labels below outgoing messages):
   - **"Sending..."**: Message is pending or being transmitted to your radio.
   - **"Sent"**: The message has been successfully transmitted by your radio.
-  - **"Delivered"**: The recipient's radio has confirmed receipt of the message.
+  - **"Delivered"**: The recipient's radio has confirmed receipt of message.
   - **"Retrying..."**: The app is attempting to resend using flood routing (with spinner indicator).
   - **"Failed"**: The message could not be delivered after multiple attempts (red bubble background with exclamation icon).
+
+### @Mentions
+
+Mention other contacts in group chats to get their attention:
+
+1. Type **@** in the message input field while composing.
+2. A dropdown will appear with matching contacts from your contacts list.
+3. Select a contact to insert their name as a mention.
+4. The mentioned contact will be notified of the message.
+5. Mentions are highlighted in the message for easy identification.
+
+**Tips**:
+- Mentions work in all message types: direct messages, channels, and rooms.
+- The dropdown shows contact names and node names.
+- Filter suggestions by typing after **@**.
+
+### Link Previews
+
+PocketMesh automatically generates rich previews for URLs shared in messages:
+
+1. Paste a URL into the message input (e.g., `https://example.com`).
+2. The app will fetch metadata (title, description, image) when the message is sent.
+3. Recipients see a preview card instead of just the raw URL.
+4. Tap the preview card to open the link in Safari.
+5. Toggle link previews on/off in **Settings** > **Link Preview Settings**.
+
+**Link Preview Settings**:
+- **Enable Link Previews**: Turn automatic preview generation on/off.
+- **Always Fetch Previews**: Fetch previews even when using WiFi or cellular data (for testing).
+- Preview cards are fetched on-demand when messages are loaded.
+
+### Muting Conversations
+
+Mute notifications for individual conversations to reduce distractions:
+
+1. In the **Chats** list, swipe left on the conversation you want to mute.
+2. Tap **Mute**.
+3. The conversation will show a **muted bell icon** to indicate it's muted.
+4. You'll still receive messages, but no notifications will appear.
+5. Swipe left again and tap **Unmute** to re-enable notifications.
+
+**Note**: Muted conversations still display unread message badges in the app, just not push notifications.
+
+### Blocking Contacts
+
+Block unwanted contacts to prevent receiving messages from them:
+
+1. In the **Contacts** list, swipe left on the contact you want to block.
+2. Tap **Block**.
+3. The contact will be moved to **Blocked Contacts** section.
+4. Blocked contacts cannot send you messages.
+5. You can view and manage blocked contacts from the **Contacts** tab.
+6. Swipe left on a blocked contact and tap **Unblock** to allow messages again.
+
+**Note**: Repeaters and room servers cannot be blocked (block option is hidden for these contact types).
 
 ### Retrying Failed Messages
 
@@ -224,7 +279,160 @@ Advanced settings include:
 
 ---
 
-## 7. Troubleshooting
+## 7. Network Diagnostics Tools
+
+PocketMesh includes powerful diagnostic tools for optimizing your mesh network performance and troubleshooting connectivity issues.
+
+### Line of Sight Analysis
+
+The Line of Sight (LoS) tool analyzes radio propagation between two points to help you determine if a reliable link is possible.
+
+#### Accessing Line of Sight
+
+1. Go to **Contacts** tab.
+2. Find the contact or repeater you want to analyze.
+3. Tap to open detail view.
+4. Tap **Line of Sight** button in the toolbar.
+
+#### Understanding the Analysis
+
+The tool provides:
+
+- **Terrain Profile**: Visual representation of terrain elevation between you and target
+- **Fresnel Zone**: Visualization of the RF signal's optimal path (shown as curved lines)
+- **Clearance Status**: Color-coded indicators:
+  - **Green**: Clear line of sight, good signal expected
+  - **Yellow**: Partial obstruction, signal may be degraded
+  - **Red**: Obstructed path, poor signal or no connection likely
+- **RF Parameters**: Calculated signal metrics:
+  - **Path Loss**: Expected signal attenuation (in dB)
+  - **Signal Strength**: Estimated received signal at target
+  - **First Fresnel Zone**: Percentage of clear Fresnel zone
+  - **Maximum Range**: Theoretical maximum communication distance
+
+#### Tips for Better Results
+
+- Elevation data is fetched from Open-Meteo API (may require internet for first use)
+- Move to higher ground if analysis shows obstruction
+- Consider using repeaters to bypass obstacles
+- Analysis assumes ideal conditions - real-world performance may vary
+
+### Trace Path
+
+Discover optimal routing paths through your mesh network with the Trace Path tool.
+
+#### Using Trace Path
+
+1. Go to **Contacts** tab.
+2. Tap **Trace Path** in the toolbar.
+3. The app will discover available routes through repeaters to your target.
+4. Review the suggested path with signal quality indicators.
+5. Tap **Save Path** to store the route for future use.
+
+#### Path Information
+
+Each path shows:
+
+- **Total Hops**: Number of repeaters in the path
+- **Signal Quality**: Average SNR across the path (green/yellow/red)
+- **Distance**: Total path length
+- **Repeater Details**: For each hop:
+  - Repeater name and public key prefix
+  - SNR (signal quality)
+  - Distance from previous hop
+
+#### Saved Paths
+
+1. Go to **Contacts** tab.
+2. Tap **Trace Path** > **Saved Paths**.
+3. View all saved routing paths with statistics.
+4. Tap a saved path to see details:
+  - Path visualization on map
+  - Signal quality per hop
+  - Total distance and hops
+5. Edit paths by selecting different repeaters or deleting entries.
+
+### RX Log Viewer
+
+Monitor live RF traffic and packet capture with the RX Log viewer.
+
+#### Accessing RX Log
+
+1. Go to **Tools** tab.
+2. Tap **RX Log**.
+3. The viewer starts capturing packets automatically.
+
+#### Understanding RX Log
+
+The log shows:
+
+- **Timestamp**: When packet was received
+- **Source**: Node ID that sent the packet
+- **Destination**: Target node ID
+- **Packet Type**: Message, control, telemetry, etc.
+- **RSSI**: Signal strength
+- **SNR**: Signal-to-noise ratio
+- **Payload**: Packet content (if readable)
+
+#### Features
+
+- **Live Capture**: Real-time packet stream
+- **Auto-Scroll**: Automatically scrolls to newest packets
+- **Filter**: Filter by packet type, source, or destination
+- **Export**: Save logs for analysis
+
+#### Tips
+
+- Useful for debugging connectivity issues
+- Identify which repeaters are active on your network
+- Detect interference or packet loss patterns
+- Close viewer when done to save battery
+
+---
+
+## 8. iPad Experience
+
+PocketMesh provides an optimized experience on iPad with split-view navigation and enhanced layouts.
+
+### Split-View Navigation
+
+On iPad, the app uses a split-view layout:
+
+- **Left Panel**: List view (chats, contacts, etc.)
+- **Right Panel**: Detail view (conversation, contact details, map, etc.)
+- **Independent Navigation**: Each panel has its own navigation stack
+- **Responsive**: Automatically adjusts when rotating device or resizing window
+
+#### Navigation Behavior
+
+- Tapping an item in left panel opens it in right panel
+- Right panel navigation doesn't affect left panel state
+- Close right panel by tapping back button or swiping
+- Both panels update independently when data changes
+
+#### Tab Navigation
+
+- All tabs (Chats, Contacts, Map, Tools, Settings) support split-view
+- Map shows full map in right panel when location is selected
+- Chat conversation opens in right panel while chat list remains visible
+- Settings open as full-screen modals on iPad (not split-view)
+
+### iPad-Specific Features
+
+- **Enhanced Map**: Larger map view with more visible markers
+- **Side-by-Side Chat**: View conversation list and chat simultaneously
+- **Expanded Settings**: More space for configuration options
+- **Keyboard Support**: Full keyboard shortcuts for common actions
+
+### Orientation Support
+
+- **Portrait**: Stacked panels (list on top, detail below)
+- **Landscape**: Side-by-side panels (list on left, detail on right)
+- **Resize**: Drag divider to adjust panel sizes (when supported by iOS)
+
+---
+
+## 9. Troubleshooting
 
 ### Connection Issues
 

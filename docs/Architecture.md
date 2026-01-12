@@ -20,50 +20,61 @@ The project is divided into three main layers:
 ```mermaid
 graph TD
     subgraph PocketMesh [UI Layer]
-        AppState[AppState @Observable]
+        AppState[AppState @Observable @MainActor]
         Views[SwiftUI Views]
         MEB[MessageEventBroadcaster]
     end
 
     subgraph PocketMeshServices [Business Logic Layer]
         ServiceContainer[ServiceContainer DI]
-        CM[ConnectionManager]
-        SC[SyncCoordinator]
+        CM[ConnectionManager @MainActor @Observable]
+        SC[SyncCoordinator actor]
 
         subgraph CoreServices [Core Services]
-            MS[MessageService]
-            CS[ContactService]
-            CH[ChannelService]
-            SS[SettingsService]
-            AS[AdvertisementService]
-            MPS[MessagePollingService]
-            BPS[BinaryProtocolService]
+            MS[MessageService actor]
+            CS[ContactService actor]
+            CH[ChannelService actor]
+            SS[SettingsService actor]
+            AS[AdvertisementService actor]
+            MPS[MessagePollingService actor]
+            BPS[BinaryProtocolService actor]
+            DS[DeviceService actor]
+            HRS[HeardRepeatsService actor]
         end
 
         subgraph RemoteServices [Remote Node Services]
-            RNS[RemoteNodeService]
-            RAS[RepeaterAdminService]
-            RSS[RoomServerService]
+            RNS[RemoteNodeService actor]
+            RAS[RepeaterAdminService actor]
+            RSS[RoomServerService actor]
         end
 
         subgraph IndependentServices [Independent Services]
-            KS[KeychainService]
-            NS[NotificationService]
+            KS[KeychainService actor]
+            NS[NotificationService @MainActor @Observable class]
+            LPS[LinkPreviewService final class]
+            RXS[RxLogService actor]
+            PL[PersistentLogger actor]
+            DLB[DebugLogBuffer actor]
+            CAL[CommandAuditLogger actor]
+            ES[ElevationService actor]
+            LS[LocationService final class NSObject]
         end
 
-        PS[PersistenceStore]
+        PS[PersistenceStore @ModelActor actor]
     end
 
     subgraph MeshCore [Protocol Layer]
-        MCS[MeshCoreSession]
+        MCS[MeshCoreSession actor]
         ED[EventDispatcher]
-        PB[PacketBuilder]
-        PP[PacketParser]
+        PB[PacketBuilder enum]
+        PP[PacketParser enum]
     end
 
     subgraph Transport [Transport Layer - in PocketMeshServices]
         BT[iOSBLETransport]
         BSM[BLEStateMachine]
+        WT[WiFiTransport]
+        WSM[WiFiStateMachine]
     end
 
     Views --> AppState
@@ -84,6 +95,15 @@ graph TD
     ServiceContainer --> RSS
     ServiceContainer --> KS
     ServiceContainer --> NS
+    ServiceContainer --> LPS
+    ServiceContainer --> RXS
+    ServiceContainer --> PL
+    ServiceContainer --> DLB
+    ServiceContainer --> CAL
+    ServiceContainer --> ES
+    ServiceContainer --> LS
+    ServiceContainer --> DS
+    ServiceContainer --> HRS
     SC --> MS
     SC --> CS
     SC --> CH
@@ -106,6 +126,9 @@ graph TD
     MCS --> PB
     MCS --> PP
     BT --> BSM
+    CM --> WT
+    WT --> MCS
+    WT --> WSM
     MS --> PS
     CS --> PS
     CH --> PS
@@ -115,6 +138,8 @@ graph TD
     RNS --> PS
     RAS --> PS
     RSS --> PS
+    DS --> PS
+    HRS --> PS
 ```
 
 ---
@@ -126,7 +151,9 @@ The foundation of the project, responsible for low-level communication with Mesh
 - **Actor-Based**: `MeshCoreSession` is an actor that serializes all device communication, ensuring thread safety.
 - **Event-Driven**: Uses an `EventDispatcher` to broadcast `MeshEvent`s via `AsyncStream`.
 - **Stateless Protocol Handlers**: `PacketBuilder` and `PacketParser` are stateless enums that handle the binary encoding/decoding of the Companion Radio Protocol.
-- **Transport Abstraction**: The `MeshTransport` protocol allows for different underlying transports. `MockTransport` (for unit testing) is in MeshCore, while `iOSBLETransport` (using CoreBluetooth with `BLEStateMachine`) is in PocketMeshServices.
+- **Transport Abstraction**: The `MeshTransport` protocol allows for different underlying transports. `MockTransport` (for unit testing) is in MeshCore, while `iOSBLETransport` (using CoreBluetooth with `BLEStateMachine`) and `WiFiTransport` (for MeshCore firmware devices) are in PocketMeshServices.
+- **Dual Transport Support**: Supports both Bluetooth Low Energy (BLE) and WiFi transports simultaneously. Each transport has its own state machine for managing connection lifecycle.
+- **Auto-Reconnection**: Both transports automatically reconnect when connection is lost, with configurable retry logic and backoff strategies.
 - **LPP Telemetry**: Includes a full implementation of the Cayenne Low Power Payload (LPP) for efficient sensor data transmission.
 
 See: [MeshCore API Reference](api/MeshCore.md) | [BLE Transport Guide](guides/BLE_Transport.md)
@@ -151,8 +178,14 @@ Bridges the protocol layer and the UI, handling complex business rules and data 
 The `ServiceContainer` is the central dependency injection container for PocketMeshServices. It creates and manages all services, handling the dependency graph and lifecycle:
 
 **Independent Services** (no service dependencies):
-- `KeychainService`: Secure credential storage using the system keychain
+- `KeychainService`: Secure credential storage using system keychain
 - `NotificationService`: Local notification management for message alerts
+- `LinkPreviewService`: URL metadata extraction for rich link previews in messages
+- `RxLogService`: RF packet capture and logging for network diagnostics
+- `PersistentLogger`: In-memory buffering and SwiftData-based persistent debug logging
+- `DebugLogBuffer`: Efficient in-memory circular buffer for recent debug logs
+- `CommandAuditLogger`: Auditing of CLI commands sent to devices for security and debugging
+- `ElevationService`: Terrain elevation data fetching from Open-Meteo API for Line of Sight analysis
 
 **Core Services** (depend on session/dataStore):
 - `ContactService`: Contact management and synchronization
@@ -162,6 +195,8 @@ The `ServiceContainer` is the central dependency injection container for PocketM
 - `AdvertisementService`: Advertisement broadcasting and path discovery
 - `MessagePollingService`: Automatic message fetching from device queue
 - `BinaryProtocolService`: Binary protocol operations (telemetry, status, etc.)
+- `DeviceService`: Device information and management
+- `HeardRepeatsService`: Tracking message repeat counts for channel propagation analysis
 
 **Remote Node Services** (depend on other services):
 - `RemoteNodeService`: Remote node session management and authentication
@@ -278,6 +313,177 @@ PocketMesh strictly adheres to the **Swift 6 concurrency model**:
 
 ---
 
+## Debug Logging Infrastructure
+
+PocketMesh includes a comprehensive debug logging system designed to help diagnose issues in the field without requiring a developer machine.
+
+### Architecture
+
+The debug logging system is implemented as a two-layer architecture:
+
+1. **In-Memory Buffer (`DebugLogBuffer`)**:
+   - Circular buffer with configurable maximum size (default: 10,000 entries)
+   - Efficient memory usage with automatic overflow handling
+   - Fast append and recent-entry queries for UI display
+
+2. **Persistent Storage (`PersistentLogger`)**:
+   - SwiftData-backed persistent storage for long-term log retention
+   - Background writes to prevent blocking main thread
+   - Configurable retention period (default: 24 hours)
+   - Automatic cleanup of old logs
+
+### Usage Pattern
+
+```swift
+// Log from any context (automatically includes timestamp, file, line, function)
+logger.info("Connected to device")
+logger.warning("High packet loss detected", metadata: ["loss_rate": "15%"])
+logger.error("Failed to parse packet", error: error)
+
+// Retrieve recent logs for display
+let recentLogs = await debugLogBuffer.getRecentLogs(limit: 100)
+
+// Export logs for analysis
+let logs = await persistentLogger.getLogs(timeRange: last24Hours)
+let exportData = logExportService.exportLogs(logs: logs)
+```
+
+### Log Categories
+
+Logs are categorized for easy filtering:
+
+- **Connection**: BLE/WiFi connection lifecycle, pairing, reconnection
+- **Messaging**: Message sending, delivery, retries, ACK tracking
+- **Sync**: Contact/channel synchronization, data updates
+- **Transport**: Protocol events, packet parsing, transport errors
+- **UI**: Navigation, user actions, state changes
+- **Diagnostics**: Line of Sight, Trace Path, RX Log operations
+
+### Redaction
+
+Sensitive data is automatically redacted from logs to protect privacy:
+
+- Full public keys are truncated (first 8 characters only)
+- Passwords are never logged
+- Personal identifying information is masked
+- User message content is sanitized
+
+### Export & Analysis
+
+Debug logs can be exported for analysis:
+
+- **Log Export Service**: Exports logs to structured format (JSON)
+- **Time Range**: Configurable export window (1-24 hours)
+- **Email Integration**: Share logs via email with app version and device info
+- **Command Audit**: Separate log of all CLI commands sent to devices for security auditing
+
+---
+
+## iPad Split-View Architecture
+
+On iPad, PocketMesh uses a split-view layout that provides a more efficient workflow and better use of available screen real estate.
+
+### Navigation Pattern
+
+The split-view implementation follows Apple's iPad interface guidelines:
+
+- **Two-Panel Layout**: List panel (left) and detail panel (right)
+- **Independent Navigation Stacks**: Each panel maintains its own navigation state
+- **Tab Coordination**: All tabs (Chats, Contacts, Map, Tools, Settings) support split-view
+- **Responsive Design**: Automatically adjusts layout based on orientation and window size
+
+### Implementation Details
+
+```swift
+// AppState manages split-view state
+@Observable class AppState {
+    var splitViewSelection: TabSelection? = nil
+    var selectedConversation: Conversation? = nil
+    var selectedContact: Contact? = nil
+
+    // Methods to update right panel based on left panel selection
+    func selectConversation(_ conversation: Conversation) {
+        selectedConversation = conversation
+        // Right panel updates independently
+    }
+}
+```
+
+### Panel Independence
+
+- **List Panel**: Shows master list (chats, contacts, map annotations)
+- **Detail Panel**: Shows selected item (conversation, contact details, map location)
+- **State Separation**: Changes in right panel don't affect left panel state
+- **Concurrent Updates**: Both panels can update independently as data changes
+
+### Adaptive Behavior
+
+- **Portrait**: Stacked panels (list on top, detail below)
+- **Landscape**: Side-by-side panels (list on left, detail on right)
+- **Regular Size Class**: Always shows both panels
+- **Compact Size Class**: Shows single panel with full-screen navigation
+
+---
+
+## Diagnostic Tools Architecture
+
+PocketMesh includes several diagnostic tools built on a shared infrastructure for RF analysis and network troubleshooting.
+
+### Shared Services
+
+- **Elevation Service**: Fetches terrain elevation data from Open-Meteo API
+- **RF Calculator**: Core calculations for signal propagation, Fresnel zones, and link budget
+- **Location Service**: Manages location permissions and current position for analysis
+
+### Line of Sight Tool
+
+**Components**:
+- `LineOfSightView`: Main SwiftUI view for analysis interface
+- `LineOfSightViewModel`: State management and business logic
+- `RFCalculator`: RF propagation calculations (path loss, Fresnel zone clearance)
+- `SegmentAnalysis`: Terrain segment analysis for obstruction detection
+- `FresnelZoneRenderer`: Canvas-based visualization of Fresnel zones
+- `TerrainProfileCanvas`: Custom canvas for terrain profile visualization
+
+**Workflow**:
+1. User selects target contact or enters coordinates
+2. Elevation data is fetched along path (Open-Meteo API)
+3. Terrain profile is generated from elevation samples
+4. Fresnel zones are calculated for given frequency
+5. Clearance analysis determines signal quality (green/yellow/red)
+6. Visual results are rendered with clearance status
+
+### Trace Path Tool
+
+**Components**:
+- `TracePathView`: Main view for path discovery
+- `TracePathViewModel`: Path discovery and management logic
+- `SavedPathsViewModel`: Management of saved routing paths
+- `PathEditingSheet`: Interactive path editor with repeater selection
+
+**Workflow**:
+1. User initiates trace path from contact detail
+2. App discovers available repeaters and routes to target
+3. Path results are displayed with signal quality per hop
+4. User can edit path by selecting different repeaters
+5. Saved paths are persisted for future use and can be visualized on map
+
+### RX Log Viewer
+
+**Components**:
+- `RxLogView`: Live packet capture viewer
+- `RxLogViewModel`: Packet capture and filtering logic
+- `RxLogService`: Service for packet capture and persistence
+
+**Workflow**:
+1. User opens RX Log viewer
+2. Service starts capturing RF packets from transport layer
+3. Packets are displayed in real-time with metadata
+4. User can filter by packet type, source, or destination
+5. Logs can be exported for offline analysis
+
+---
+
 ## Further Reading
 
 - [Development Guide](Development.md)
@@ -290,5 +496,8 @@ PocketMesh strictly adheres to the **Swift 6 concurrency model**:
 
 ### Topic Guides
 - [BLE Transport](guides/BLE_Transport.md)
+- [WiFi Transport](guides/WiFi_Transport.md)
 - [Messaging](guides/Messaging.md)
 - [Sync](guides/Sync.md)
+- [Diagnostics](guides/Diagnostics.md)
+- [iPad Layout](guides/iPad_Layout.md)
