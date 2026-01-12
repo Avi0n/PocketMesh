@@ -2,7 +2,7 @@ import CoreLocation
 import OSLog
 
 /// App-wide location service for managing location permissions and access.
-/// Used by MapView, LineOfSightView, and other location-dependent features.
+/// Used by MapView, LineOfSightView, ContactsListView, and other location-dependent features.
 @MainActor
 @Observable
 public final class LocationService: NSObject, CLLocationManagerDelegate {
@@ -15,6 +15,12 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
     /// Current authorization status
     public private(set) var authorizationStatus: CLAuthorizationStatus
 
+    /// Current device location (nil if unavailable or not yet determined)
+    public private(set) var currentLocation: CLLocation?
+
+    /// Whether a location request is in progress
+    public private(set) var isRequestingLocation = false
+
     /// Whether location services are authorized for use
     public var isAuthorized: Bool {
         authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
@@ -25,9 +31,9 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
         authorizationStatus != .notDetermined
     }
 
-    /// Current location from the location manager
-    public var currentLocation: CLLocation? {
-        locationManager.location
+    /// Whether location is denied or restricted
+    public var isLocationDenied: Bool {
+        authorizationStatus == .denied || authorizationStatus == .restricted
     }
 
     // MARK: - Initialization
@@ -37,6 +43,7 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
         authorizationStatus = locationManager.authorizationStatus
         super.init()
         locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
     // MARK: - Public Methods
@@ -53,6 +60,25 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
         locationManager.requestWhenInUseAuthorization()
     }
 
+    /// Request a one-shot location update.
+    /// Call this when you need the current location (e.g., for distance sorting).
+    public func requestLocation() {
+        guard isAuthorized else {
+            logger.debug("Cannot request location: not authorized")
+            requestPermissionIfNeeded()
+            return
+        }
+
+        guard !isRequestingLocation else {
+            logger.debug("Location request already in progress")
+            return
+        }
+
+        logger.info("Requesting one-shot location update")
+        isRequestingLocation = true
+        locationManager.requestLocation()
+    }
+
     // MARK: - CLLocationManagerDelegate
 
     nonisolated public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -60,6 +86,22 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
         Task { @MainActor in
             self.authorizationStatus = status
             self.logger.info("Location authorization changed: \(String(describing: status.rawValue))")
+        }
+    }
+
+    nonisolated public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        Task { @MainActor in
+            self.currentLocation = location
+            self.isRequestingLocation = false
+            self.logger.info("Location updated: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+        }
+    }
+
+    nonisolated public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor in
+            self.isRequestingLocation = false
+            self.logger.error("Location request failed: \(error.localizedDescription)")
         }
     }
 }

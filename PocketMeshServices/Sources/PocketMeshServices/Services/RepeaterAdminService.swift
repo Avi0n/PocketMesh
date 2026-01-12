@@ -24,6 +24,7 @@ public actor RepeaterAdminService {
     private let remoteNodeService: RemoteNodeService
     private let dataStore: PersistenceStore
     private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RepeaterAdmin")
+    private let auditLogger = CommandAuditLogger()
 
     /// Handler for neighbor responses
     public var neighboursResponseHandler: (@Sendable (NeighboursResponse) async -> Void)?
@@ -108,6 +109,9 @@ public actor RepeaterAdminService {
             throw RemoteNodeError.sessionNotFound
         }
 
+        // Log neighbors request
+        await auditLogger.logNeighborsRequest(publicKey: remoteSession.publicKey, count: count, offset: offset)
+
         do {
             return try await session.requestNeighbours(
                 from: remoteSession.publicKey,
@@ -185,6 +189,14 @@ public actor RepeaterAdminService {
 
     /// Invoke the status response handler safely from actor context
     public func invokeStatusHandler(_ status: StatusResponse) async {
+        // Log status response
+        await auditLogger.logStatusResponse(
+            target: .repeater,
+            publicKey: status.publicKeyPrefix,
+            batteryMv: status.batteryMillivolts,
+            uptimeSec: status.uptimeSeconds
+        )
+
         guard let handler = statusResponseHandler else {
             let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
             logger.debug("No status handler registered for response from \(prefixHex), ignoring")
@@ -195,6 +207,13 @@ public actor RepeaterAdminService {
 
     /// Invoke the neighbours response handler safely from actor context
     public func invokeNeighboursHandler(_ response: NeighboursResponse) async {
+        // Log neighbors response
+        await auditLogger.logNeighborsResponse(
+            publicKey: response.publicKeyPrefix,
+            totalCount: Int(response.totalCount),
+            returnedCount: response.neighbours.count
+        )
+
         guard let handler = neighboursResponseHandler else {
             logger.debug("No neighbours handler registered, ignoring response with \(response.neighbours.count) neighbours")
             return
@@ -204,6 +223,13 @@ public actor RepeaterAdminService {
 
     /// Invoke the telemetry response handler safely from actor context
     public func invokeTelemetryHandler(_ response: TelemetryResponse) async {
+        // Log telemetry response
+        await auditLogger.logTelemetryResponse(
+            target: .repeater,
+            publicKey: response.publicKeyPrefix,
+            pointCount: response.dataPoints.count
+        )
+
         guard let handler = telemetryResponseHandler else {
             logger.debug("No telemetry handler registered, ignoring response")
             return
@@ -213,6 +239,9 @@ public actor RepeaterAdminService {
 
     /// Invoke the CLI response handler safely from actor context
     public func invokeCLIHandler(_ message: ContactMessage, fromContact contact: ContactDTO) async {
+        // Log CLI response (full content)
+        await auditLogger.logCLIResponse(publicKey: contact.publicKey, response: message.text)
+
         guard let handler = cliResponseHandler else {
             logger.debug("No CLI handler registered, ignoring response from \(contact.displayName)")
             return

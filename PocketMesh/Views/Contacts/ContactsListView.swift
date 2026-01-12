@@ -20,16 +20,19 @@ struct ContactsListView: View {
     @State private var syncSuccessTrigger = false
     @State private var showShareMyContact = false
     @State private var showAddContact = false
-    @State private var userLocation: CLLocation?
-
-    private let locationManager = CLLocationManager()
+    @State private var showLocationDeniedAlert = false
 
     private var filteredContacts: [ContactDTO] {
-        viewModel.filteredContacts(
+        // Fall back to lastHeard sort when distance is selected but location unavailable
+        let effectiveSortOrder = (sortOrder == .distance && appState.locationService.currentLocation == nil)
+            ? .lastHeard
+            : sortOrder
+
+        return viewModel.filteredContacts(
             searchText: searchText,
             segment: selectedSegment,
-            sortOrder: sortOrder,
-            userLocation: userLocation
+            sortOrder: effectiveSortOrder,
+            userLocation: appState.locationService.currentLocation
         )
     }
 
@@ -91,7 +94,7 @@ struct ContactsListView: View {
             }
         }
         .navigationTitle("Nodes")
-        .searchable(text: $searchText, prompt: "Search contacts")
+        .searchable(text: $searchText, prompt: "Search nodes")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BLEStatusIndicatorView()
@@ -169,13 +172,20 @@ struct ContactsListView: View {
             viewModel.configure(appState: appState)
             await loadContacts()
             nodesListLogger.info("NodesListView: loaded, contacts=\(viewModel.contacts.count)")
+
+            // Request location for distance display (only if already authorized)
+            if appState.locationService.isAuthorized {
+                appState.locationService.requestLocation()
+            }
         }
         .task(id: sortOrder) {
             if sortOrder == .distance {
-                if let location = locationManager.location {
-                    userLocation = location
+                if appState.locationService.isAuthorized {
+                    appState.locationService.requestLocation()
+                } else if appState.locationService.isLocationDenied {
+                    showLocationDeniedAlert = true
                 } else {
-                    nodesListLogger.debug("Distance sorting requested but device location unavailable")
+                    appState.locationService.requestPermissionIfNeeded()
                 }
             }
         }
@@ -208,6 +218,18 @@ struct ContactsListView: View {
 
             appState.clearPendingContactDetailNavigation()
         }
+        .onChange(of: appState.locationService.authorizationStatus) { _, status in
+            if sortOrder == .distance {
+                switch status {
+                case .authorizedWhenInUse, .authorizedAlways:
+                    appState.locationService.requestLocation()
+                case .denied, .restricted:
+                    showLocationDeniedAlert = true
+                default:
+                    break
+                }
+            }
+        }
         .sheet(isPresented: $showShareMyContact) {
             if let device = appState.connectedDevice {
                 ContactQRShareSheet(
@@ -219,6 +241,16 @@ struct ContactsListView: View {
         }
         .sheet(isPresented: $showAddContact) {
             AddContactSheet()
+        }
+        .alert("Location Unavailable", isPresented: $showLocationDeniedAlert) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Distance sorting requires location access.")
         }
     }
 
@@ -304,14 +336,22 @@ struct ContactsListView: View {
 
     private func contactRow(_ contact: ContactDTO) -> some View {
         NavigationLink(value: contact) {
-            ContactRowView(contact: contact, showTypeLabel: isSearching)
+            ContactRowView(
+                contact: contact,
+                showTypeLabel: isSearching,
+                userLocation: appState.locationService.currentLocation
+            )
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     private func contactSplitRow(_ contact: ContactDTO) -> some View {
-        ContactRowView(contact: contact, showTypeLabel: isSearching)
-            .contactSwipeActions(contact: contact, viewModel: viewModel)
+        ContactRowView(
+            contact: contact,
+            showTypeLabel: isSearching,
+            userLocation: appState.locationService.currentLocation
+        )
+        .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
     // MARK: - Actions
@@ -354,10 +394,12 @@ struct NodeSegmentPicker: View {
 struct ContactRowView: View {
     let contact: ContactDTO
     let showTypeLabel: Bool
+    let userLocation: CLLocation?
 
-    init(contact: ContactDTO, showTypeLabel: Bool = false) {
+    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil) {
         self.contact = contact
         self.showTypeLabel = showTypeLabel
+        self.userLocation = userLocation
     }
 
     var body: some View {
@@ -395,12 +437,18 @@ struct ContactRowView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
-                    // Location indicator
+                    // Location indicator with optional distance
                     if contact.hasLocation {
                         Label("Location", systemImage: "location.fill")
                             .labelStyle(.iconOnly)
                             .font(.caption)
                             .foregroundStyle(.green)
+
+                        if let distance = distanceToContact {
+                            Text(distance)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -440,6 +488,22 @@ struct ContactRowView: View {
             return "\(contact.outPathLength) hops"
         }
         return ""
+    }
+
+    private var distanceToContact: String? {
+        guard let userLocation, contact.hasLocation else { return nil }
+
+        let contactLocation = CLLocation(
+            latitude: contact.latitude,
+            longitude: contact.longitude
+        )
+        let meters = userLocation.distance(from: contactLocation)
+        let measurement = Measurement(value: meters, unit: UnitLength.meters)
+
+        return measurement.formatted(.measurement(
+            width: .abbreviated,
+            usage: .road
+        )) + " away"
     }
 }
 

@@ -110,6 +110,7 @@ public actor RemoteNodeService {
     private let dataStore: PersistenceStore
     private let keychainService: KeychainService
     private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RemoteNode")
+    private let auditLogger = CommandAuditLogger()
 
     /// Pending login continuations keyed by 6-byte public key prefix.
     /// Using 6-byte prefix matches MeshCore protocol format for login results.
@@ -332,6 +333,10 @@ public actor RemoteNodeService {
             existing.resume(throwing: RemoteNodeError.cancelled)
         }
 
+        // Log login request
+        let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+        await auditLogger.logLoginRequest(target: targetType, publicKey: remoteSession.publicKey, pathLength: pathLength)
+
         // Register continuation BEFORE sending to avoid race condition with loginSuccess event
         let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
         logger.info("login: registering pending login for prefix \(prefixHex)")
@@ -390,6 +395,10 @@ public actor RemoteNodeService {
                     return
                 }
 
+                // Log successful login
+                let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+                await auditLogger.logLoginSuccess(target: targetType, publicKey: prefix, isAdmin: result.isAdmin)
+
                 let permission: RoomPermissionLevel = result.isAdmin ? .admin :
                     (RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest)
 
@@ -418,6 +427,15 @@ public actor RemoteNodeService {
                 }
             } catch {
                 logger.error("handleLoginResult: failed to update session state: \(error)")
+            }
+        } else {
+            // Log failed login
+            // Try to determine target type from existing session
+            if let remoteSession = try? await dataStore.fetchRemoteNodeSessionByPrefix(prefix) {
+                let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+                await auditLogger.logLoginFailed(target: targetType, publicKey: prefix, reason: "authentication failed")
+            } else {
+                await auditLogger.logLoginFailed(target: .repeater, publicKey: prefix, reason: "authentication failed")
             }
         }
 
@@ -476,6 +494,10 @@ public actor RemoteNodeService {
             throw RemoteNodeError.floodRouted
         }
 
+        // Log keep-alive
+        let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+        await auditLogger.logKeepAlive(target: targetType, publicKey: publicKey)
+
         // Send status request as keep-alive
         do {
             _ = try await session.requestStatus(from: publicKey)
@@ -531,6 +553,10 @@ public actor RemoteNodeService {
             throw RemoteNodeError.sessionNotFound
         }
 
+        // Log logout
+        let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+        await auditLogger.logLogout(target: targetType, publicKey: remoteSession.publicKey)
+
         stopKeepAlive(sessionID: sessionID)
 
         do {
@@ -555,6 +581,10 @@ public actor RemoteNodeService {
             throw RemoteNodeError.sessionNotFound
         }
 
+        // Log status request
+        let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+        await auditLogger.logStatusRequest(target: targetType, publicKey: remoteSession.publicKey)
+
         do {
             return try await session.requestStatus(from: remoteSession.publicKey)
         } catch let error as MeshCoreError {
@@ -569,6 +599,10 @@ public actor RemoteNodeService {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
         }
+
+        // Log telemetry request
+        let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
+        await auditLogger.logTelemetryRequest(target: targetType, publicKey: remoteSession.publicKey)
 
         do {
             return try await session.requestTelemetry(from: remoteSession.publicKey)
@@ -588,6 +622,9 @@ public actor RemoteNodeService {
         guard remoteSession.isAdmin else {
             throw RemoteNodeError.permissionDenied
         }
+
+        // Log CLI command (with password redaction)
+        await auditLogger.logCLICommand(publicKey: remoteSession.publicKey, command: command)
 
         do {
             _ = try await session.sendCommand(to: remoteSession.publicKey, command: command)

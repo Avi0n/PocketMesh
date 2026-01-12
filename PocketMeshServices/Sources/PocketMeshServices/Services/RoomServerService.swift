@@ -25,6 +25,7 @@ public actor RoomServerService {
     private let remoteNodeService: RemoteNodeService
     private let dataStore: PersistenceStore
     private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "RoomServer")
+    private let auditLogger = CommandAuditLogger()
 
     /// Self public key prefix for author comparison.
     /// Set from SelfInfo when device connects.
@@ -191,6 +192,9 @@ public actor RoomServerService {
             throw RoomServerError.sessionError(error)
         }
 
+        // Log room message posted (metadata only, no content)
+        await auditLogger.logRoomMessagePosted(publicKey: remoteSession.publicKey, messageLength: text.count)
+
         // Create local message record immediately
         // Room server won't push this message back to us
         let messageDTO = RoomMessageDTO(
@@ -254,6 +258,13 @@ public actor RoomServerService {
         ) {
             return nil
         }
+
+        // Log room message received (metadata only, no content)
+        await auditLogger.logRoomMessageReceived(
+            roomPublicKey: senderPublicKeyPrefix,
+            authorPrefix: authorPrefix,
+            messageLength: text.count
+        )
 
         // Defensive check: room servers shouldn't push our own messages back
         let isFromSelf = selfPublicKeyPrefix?.prefix(4) == authorPrefix.prefix(4)

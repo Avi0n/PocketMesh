@@ -180,7 +180,7 @@ struct RepeaterStatusView: View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.isBatteryCurveExpanded) {
                 BatteryCurveSection(
-                    availablePresets: OCVPreset.batteryChemistryPresets,
+                    availablePresets: OCVPreset.repeaterPresets,
                     headerText: "",
                     footerText: "",
                     selectedPreset: $viewModel.selectedOCVPreset,

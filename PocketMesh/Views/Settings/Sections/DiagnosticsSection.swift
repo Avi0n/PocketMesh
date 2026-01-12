@@ -32,7 +32,7 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Diagnostics")
         } footer: {
-            Text("Export includes debug logs from the last hour across app sessions. Logs are stored locally and automatically pruned.")
+            Text("Export includes debug logs from the last 24 hours across app sessions. Logs are stored locally and automatically pruned.")
         }
         .alert("Clear Debug Logs", isPresented: $showingClearLogsAlert) {
             Button("Cancel", role: .cancel) { }

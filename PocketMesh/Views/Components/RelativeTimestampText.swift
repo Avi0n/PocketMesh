@@ -4,36 +4,41 @@ import SwiftUI
 struct RelativeTimestampText: View {
     let timestamp: UInt32
 
+    private enum Constants {
+        static let minute: TimeInterval = 60
+        static let hour: TimeInterval = 3_600
+        static let day: TimeInterval = 86_400
+        static let twoDays: TimeInterval = 172_800
+        static let week: TimeInterval = 604_800
+    }
+
     var body: some View {
         TimelineView(.everyMinute) { context in
-            Text(formattedTimestamp(relativeTo: context.date))
+            Text(Self.format(timestamp: timestamp, relativeTo: context.date))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private var date: Date {
-        Date(timeIntervalSince1970: TimeInterval(timestamp))
-    }
-
-    private func formattedTimestamp(relativeTo now: Date) -> String {
+    /// Formats a timestamp relative to the given date. Exposed for testing.
+    static func format(timestamp: UInt32, relativeTo now: Date) -> String {
+        let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
         let interval = now.timeIntervalSince(date)
 
-        if interval < 60 {
+        if interval < Constants.minute {
             return "Now"
-        } else if interval < 3600 {
-            let minutes = Int(interval / 60)
+        } else if interval < Constants.hour {
+            let minutes = Int(interval / Constants.minute)
             return "\(minutes)m ago"
-        } else if interval < 86400 {
-            let hours = Int(interval / 3600)
+        } else if interval < Constants.day {
+            let hours = Int(interval / Constants.hour)
             return "\(hours)h ago"
-        } else if interval < 172800 {
+        } else if interval < Constants.twoDays {
             return "Yesterday"
-        } else if interval < 604800 {
-            let days = Int(interval / 86400)
+        } else if interval < Constants.week {
+            let days = Int(interval / Constants.day)
             return "\(days)d ago"
         } else {
-            // Older than a week, show date
             return date.formatted(.dateTime.month(.abbreviated).day())
         }
     }

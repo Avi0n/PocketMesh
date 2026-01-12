@@ -132,12 +132,12 @@ enum LogExportService {
     }
 
     private static func generateLogsSection(persistenceStore: PersistenceStore) async -> String {
-        var lines = ["=== Logs (Last Hour) ==="]
+        var lines = ["=== Logs (Last 24 Hours) ==="]
 
         do {
-            let oneHourAgo = Date().addingTimeInterval(-3600)
+            let twentyFourHoursAgo = Date().addingTimeInterval(-86400)
             let entries = try await persistenceStore.fetchDebugLogEntries(
-                since: oneHourAgo,
+                since: twentyFourHoursAgo,
                 limit: 1000
             )
 

@@ -103,6 +103,14 @@ public enum OCVPreset: String, CaseIterable, Codable, Sendable {
         allCases.filter { $0.category == .batteryChemistry }
     }
 
+    /// Presets available for repeater/remote node configuration.
+    /// Includes battery chemistry types plus select device-specific presets.
+    public static var repeaterPresets: [OCVPreset] {
+        var presets = batteryChemistryPresets
+        presets.append(.seeedSolarNode)
+        return presets
+    }
+
     private static let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "OCVPreset")
 
     /// Returns the OCV preset for a known manufacturer name, or nil if no match.
