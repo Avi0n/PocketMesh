@@ -269,7 +269,11 @@ struct TracePathView: View {
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Running Trace...")
+                        if viewModel.batchEnabled {
+                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                        } else {
+                            Text("Running Trace...")
+                        }
                     }
                     .frame(minWidth: 160)
                     .padding(.vertical, 12)
@@ -279,12 +283,18 @@ struct TracePathView: View {
                         Capsule()
                             .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
                     }
-                    .accessibilityLabel("Running trace, please wait")
+                    .accessibilityLabel(viewModel.batchEnabled
+                        ? "Running trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
+                        : "Running trace, please wait")
                     .accessibilityHint("Trace is in progress")
                 } else {
                     Button {
                         Task {
-                            await viewModel.runTrace()
+                            if viewModel.batchEnabled {
+                                await viewModel.runBatchTrace()
+                            } else {
+                                await viewModel.runTrace()
+                            }
                         }
                     } label: {
                         Text("Run Trace")
@@ -294,7 +304,9 @@ struct TracePathView: View {
                     .liquidGlassProminentButtonStyle()
                     .disabled(!viewModel.canRunTrace)
                     .accessibilityLabel("Run trace")
-                    .accessibilityHint("Double tap to trace the path")
+                    .accessibilityHint(viewModel.batchEnabled
+                        ? "Double tap to run \(viewModel.batchSize) traces"
+                        : "Double tap to trace the path")
                 }
                 Spacer()
             }
