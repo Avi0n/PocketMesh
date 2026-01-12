@@ -58,6 +58,7 @@ struct ChatView: View {
         .task(id: appState.servicesVersion) {
             viewModel.configure(appState: appState)
             await viewModel.loadMessages(for: contact)
+            await viewModel.loadConversations(deviceID: contact.deviceID)
             viewModel.loadDraftIfExists()
         }
         .onDisappear {
@@ -275,12 +276,13 @@ struct ChatView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        ChatInputBar(
+        MentionInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: "Private Message",
             accentColor: .blue,
-            maxCharacters: ProtocolLimits.maxDirectMessageLength
+            maxCharacters: ProtocolLimits.maxDirectMessageLength,
+            contacts: viewModel.conversations
         ) {
             // Force scroll to bottom on user send (before message is added)
             scrollToBottomRequest += 1
