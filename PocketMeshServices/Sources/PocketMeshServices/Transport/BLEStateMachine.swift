@@ -147,6 +147,17 @@ public actor BLEStateMachine {
         return peripheralStateString(peripheral.state)
     }
 
+    /// Checks if a device is connected to the system (possibly by another app).
+    /// Call this BEFORE attempting connection when in `.idle` phase.
+    /// - Parameter deviceID: The UUID of the device to check
+    /// - Returns: `true` if the device is connected to the system
+    public func isDeviceConnectedToSystem(_ deviceID: UUID) -> Bool {
+        let connectedPeripherals = centralManager.retrieveConnectedPeripherals(
+            withServices: [nordicUARTServiceUUID]
+        )
+        return connectedPeripherals.contains { $0.identifier == deviceID }
+    }
+
     // MARK: - Event Handler Registration
 
     /// Sets a handler for disconnection events
