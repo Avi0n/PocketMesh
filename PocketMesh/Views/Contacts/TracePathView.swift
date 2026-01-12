@@ -159,6 +159,26 @@ struct TracePathView: View {
                     }
                 }
 
+                Toggle(isOn: $viewModel.batchEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Batch Trace")
+                        Text("Run multiple traces and average the results")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if viewModel.batchEnabled {
+                    HStack(spacing: 12) {
+                        Text("Traces:")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        BatchSizeChip(size: 3, selectedSize: $viewModel.batchSize)
+                        BatchSizeChip(size: 5, selectedSize: $viewModel.batchSize)
+                        BatchSizeChip(size: 10, selectedSize: $viewModel.batchSize)
+                    }
+                }
+
                 HStack {
                     Text(viewModel.fullPathString)
                         .font(.caption.monospaced())
@@ -360,5 +380,31 @@ private struct JumpToPathButton: View {
         .accessibilityLabel("Jump to Run Trace button")
         .accessibilityHint("Double tap to scroll to the bottom of the path")
         .accessibilityHidden(!isVisible)
+    }
+}
+
+// MARK: - Batch Size Chip
+
+/// Chip button for selecting batch trace count
+private struct BatchSizeChip: View {
+    let size: Int
+    @Binding var selectedSize: Int
+
+    private var isSelected: Bool { selectedSize == size }
+
+    var body: some View {
+        Button {
+            selectedSize = size
+        } label: {
+            Text("\(size)×")
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), in: .capsule)
+                .foregroundStyle(isSelected ? .white : .primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(size) traces")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
