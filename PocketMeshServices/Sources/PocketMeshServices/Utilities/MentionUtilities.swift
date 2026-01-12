@@ -33,7 +33,7 @@ public enum MentionUtilities {
 
     /// Detects an active mention query from input text.
     /// Returns the search query (text after @) if user is typing a mention, nil otherwise.
-    /// Only triggers when @ is at start or after whitespace, and has at least one character after.
+    /// Triggers when @ is at start or after whitespace. Returns empty string for standalone @.
     public static func detectActiveMention(in text: String) -> String? {
         guard !text.isEmpty else { return nil }
 
@@ -54,8 +54,8 @@ public enum MentionUtilities {
             // Get text after @
             let afterAt = text[text.index(after: atIndex)...]
 
-            // Must have at least one character after @
-            guard !afterAt.isEmpty else { return nil }
+            // Standalone @ returns empty query to show all contacts
+            guard !afterAt.isEmpty else { return "" }
 
             // If first char after @ is whitespace or another @, not a mention
             guard let firstChar = afterAt.first, !firstChar.isWhitespace, firstChar != "@" else { return nil }

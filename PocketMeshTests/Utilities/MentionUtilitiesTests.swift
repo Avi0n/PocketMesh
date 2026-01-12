@@ -110,10 +110,10 @@ struct MentionUtilitiesTests {
         #expect(result == nil)
     }
 
-    @Test("detectActiveMention returns nil for @ alone")
+    @Test("detectActiveMention returns empty string for @ alone")
     func testDetectActiveMentionAtAlone() {
         let result = MentionUtilities.detectActiveMention(in: "@")
-        #expect(result == nil)
+        #expect(result == "")
     }
 
     @Test("detectActiveMention returns query after @")
