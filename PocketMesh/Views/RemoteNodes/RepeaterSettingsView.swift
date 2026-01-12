@@ -162,7 +162,7 @@ struct RepeaterSettingsView: View {
                     set: { viewModel.bandwidth = $0 }
                 )) {
                     ForEach(bandwidthOptionsKHz, id: \.self) { bwKHz in
-                        Text("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kHz")
+                        Text(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000)))
                             .tag(bwKHz)
                             .accessibilityLabel("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kilohertz")
                     }
@@ -189,7 +189,7 @@ struct RepeaterSettingsView: View {
                     set: { viewModel.spreadingFactor = $0 }
                 )) {
                     ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
-                        Text("SF\(sf)")
+                        Text(sf, format: .number)
                             .tag(sf)
                             .accessibilityLabel("Spreading factor \(sf)")
                     }
