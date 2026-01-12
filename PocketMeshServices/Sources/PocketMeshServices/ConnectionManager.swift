@@ -454,7 +454,7 @@ public final class ConnectionManager {
                           self.connectionState == .disconnected,
                           let deviceID = self.lastConnectedDeviceID else { return }
 
-                    self.logger.info("Bluetooth powered on: reconnecting to \(deviceID)")
+                    self.logger.info("[BLE] Bluetooth powered on: attempting reconnection to \(deviceID.uuidString.prefix(8))")
                     try? await self.connect(to: deviceID)
                 }
             }
@@ -1098,8 +1098,9 @@ public final class ConnectionManager {
                 // Diagnostic: Log BLE state on each failed attempt
                 let blePhase = await stateMachine.currentPhaseName
                 let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
+                let backoffDelay = attempt < maxAttempts ? 0.3 * pow(2.0, Double(attempt - 1)) : 0.0
                 logger.warning(
-                    "Reconnection attempt \(attempt)/\(maxAttempts) failed - error: \(error.localizedDescription), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
+                    "[BLE] Reconnection attempt \(attempt)/\(maxAttempts) failed - error: \(error.localizedDescription), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState), nextBackoff: \(String(format: "%.2f", backoffDelay))s"
                 )
 
                 // Clean up resources but keep state as .connecting
@@ -1120,7 +1121,7 @@ public final class ConnectionManager {
         let finalBlePhase = await stateMachine.currentPhaseName
         let finalBlePeripheralState = await stateMachine.currentPeripheralState ?? "none"
         logger.error(
-            "All \(maxAttempts) reconnection attempts failed - lastError: \(lastError.localizedDescription), blePhase: \(finalBlePhase), blePeripheralState: \(finalBlePeripheralState)"
+            "[BLE] All \(maxAttempts) reconnection attempts exhausted - lastError: \(lastError.localizedDescription), blePhase: \(finalBlePhase), blePeripheralState: \(finalBlePeripheralState)"
         )
 
         throw lastError
@@ -1297,7 +1298,11 @@ public final class ConnectionManager {
 
     /// Handles unexpected connection loss
     private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
-        logger.warning("Connection lost to device \(deviceID): \(error?.localizedDescription ?? "unknown")")
+        var errorInfo = "none"
+        if let error = error as NSError? {
+            errorInfo = "domain=\(error.domain), code=\(error.code), desc=\(error.localizedDescription)"
+        }
+        logger.warning("[BLE] Connection lost: \(deviceID.uuidString.prefix(8)), currentState: \(String(describing: connectionState)), error: \(errorInfo)")
 
         // Cancel any pending auto-reconnect timeout
         cancelAutoReconnectTimeout()
@@ -1316,7 +1321,7 @@ public final class ConnectionManager {
     /// Handles entering iOS auto-reconnect phase.
     /// Tears down services but keeps state as "connecting" to show pulsing icon.
     private func handleEnteringAutoReconnect(deviceID: UUID) async {
-        logger.info("Entering auto-reconnect phase for \(deviceID)")
+        logger.info("[BLE] Entering auto-reconnect phase: \(deviceID.uuidString.prefix(8)), currentState: \(String(describing: connectionState)), startingUITimeout: 10s")
 
         // User may have disconnected just before this
         guard shouldBeConnected else {
@@ -1345,7 +1350,7 @@ public final class ConnectionManager {
                 let blePhase = await stateMachine.currentPhaseName
                 let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
                 logger.warning(
-                    "Auto-reconnect UI timeout fired - blePhase: \(blePhase), blePeripheralState: \(blePeripheralState), transitioning UI to disconnected"
+                    "[BLE] Auto-reconnect UI timeout (10s) fired - blePhase: \(blePhase), blePeripheralState: \(blePeripheralState), transitioning UI to disconnected (iOS reconnect continues in background)"
                 )
                 connectionState = .disconnected
                 connectedDevice = nil
@@ -1358,7 +1363,7 @@ public final class ConnectionManager {
     /// When iOS auto-reconnects the BLE peripheral (via CBConnectPeripheralOptionEnableAutoReconnect),
     /// this method re-establishes the session layer without creating a new transport.
     private func handleIOSAutoReconnect(deviceID: UUID) async {
-        logger.info("iOS auto-reconnect complete for \(deviceID)")
+        logger.info("[BLE] iOS auto-reconnect complete: \(deviceID.uuidString.prefix(8)), currentState: \(String(describing: connectionState)), rebuilding session...")
 
         // Cancel UI timeout since reconnection succeeded
         cancelAutoReconnectTimeout()
@@ -1448,10 +1453,10 @@ public final class ConnectionManager {
 
             currentTransportType = .bluetooth
             connectionState = .ready
-            logger.info("iOS auto-reconnect: session ready")
+            logger.info("[BLE] iOS auto-reconnect: session ready, device: \(deviceID.uuidString.prefix(8))")
 
         } catch {
-            logger.error("Session setup failed: \(error.localizedDescription)")
+            logger.error("[BLE] iOS auto-reconnect session setup failed: \(error.localizedDescription)")
             await session?.stop()
             session = nil
             await transport.disconnect()

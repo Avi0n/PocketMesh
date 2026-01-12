@@ -29,6 +29,9 @@ public actor BLEStateMachine {
 
     private var phase: BLEPhase = .idle
 
+    /// Tracks when the current phase started (for timing diagnostics)
+    private var phaseStartTime: Date = Date()
+
     /// Expose current phase for testing
     public var currentPhase: BLEPhase { phase }
 
@@ -267,6 +270,8 @@ public actor BLEStateMachine {
 
         // Wait for any pending write to complete (serializes concurrent sends)
         if pendingWriteContinuation != nil {
+            let queueDepth = writeWaiters.count + 1
+            logger.debug("[BLE] Write queued, depth: \(queueDepth)")
             await withCheckedContinuation { (waiter: CheckedContinuation<Void, Never>) in
                 writeWaiters.append(waiter)
             }
@@ -355,6 +360,9 @@ public actor BLEStateMachine {
     }
 
     private func connectToPeripheral(_ peripheral: CBPeripheral) async throws {
+        let pState = peripheralStateString(peripheral.state)
+        logger.info("[BLE] Connecting to peripheral: \(peripheral.identifier.uuidString.prefix(8)), currentState: \(pState), timeout: \(self.connectionTimeout)s, autoReconnect: enabled")
+
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             // Create timeout task
             let timeoutTask = Task {
@@ -383,7 +391,9 @@ public actor BLEStateMachine {
             return  // No longer connecting to this peripheral
         }
 
-        logger.warning("Connection timeout for \(peripheral.identifier)")
+        let pState = peripheralStateString(peripheral.state)
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        logger.warning("[BLE] Connection timeout: \(peripheral.identifier.uuidString.prefix(8)), peripheralState: \(pState), elapsed: \(String(format: "%.2f", elapsed))s")
         centralManager.cancelPeripheralConnection(peripheral)
         transition(to: .idle)
         continuation.resume(throwing: BLEError.connectionTimeout)
@@ -481,7 +491,7 @@ extension BLEStateMachine {
         case .poweredOn: stateString = "poweredOn"
         @unknown default: stateString = "unknown(\(state.rawValue))"
         }
-        logger.info("Central manager state changed: \(stateString), currentPhase: \(self.phase.name)")
+        logger.info("[BLE] Central manager state changed: \(stateString), currentPhase: \(self.phase.name)")
         onBluetoothStateChange?(state)
 
         switch state {
@@ -527,7 +537,8 @@ extension BLEStateMachine {
     }
 
     private func handleRestoredPeripheral(_ peripheral: CBPeripheral) {
-        logger.info("Processing restored peripheral: \(peripheral.identifier), state: \(peripheral.state.rawValue)")
+        let pState = peripheralStateString(peripheral.state)
+        logger.info("[BLE] Processing restored peripheral: \(peripheral.identifier.uuidString.prefix(8)), state: \(pState)")
 
         peripheral.delegate = delegateHandler
 
@@ -550,19 +561,20 @@ extension BLEStateMachine {
     }
 
     func handleWillRestoreState(_ peripheral: CBPeripheral) {
-        logger.info("State restoration callback received")
-        logger.info("State restoration: found peripheral \(peripheral.identifier)")
+        let pState = peripheralStateString(peripheral.state)
+        logger.info("[BLE] State restoration callback: \(peripheral.identifier.uuidString.prefix(8)), state: \(pState)")
         pendingRestoredPeripheral = peripheral
     }
 
     func handleDidConnect(_ peripheral: CBPeripheral) {
         let pState = peripheralStateString(peripheral.state)
-        logger.info("Did connect: \(peripheral.identifier), peripheralState: \(pState), phase: \(self.phase.name)")
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        logger.info("[BLE] Did connect: \(peripheral.identifier.uuidString.prefix(8)), peripheralState: \(pState), phase: \(self.phase.name), elapsed: \(String(format: "%.2f", elapsed))s")
 
         // Handle auto-reconnect
         if case .autoReconnecting(let expected, _, _) = phase,
            peripheral.identifier == expected.identifier {
-            logger.info("Auto-reconnect: peripheral connected, discovering services")
+            logger.info("[BLE] Auto-reconnect: peripheral connected, discovering services")
             peripheral.delegate = delegateHandler
             peripheral.discoverServices([nordicUARTServiceUUID])
             return
@@ -589,8 +601,13 @@ extension BLEStateMachine {
 
     func handleDidFailToConnect(_ peripheral: CBPeripheral, error: Error?) {
         let pState = peripheralStateString(peripheral.state)
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        var errorInfo = "none"
+        if let error = error as NSError? {
+            errorInfo = "domain=\(error.domain), code=\(error.code), desc=\(error.localizedDescription)"
+        }
         logger.warning(
-            "Did fail to connect: \(peripheral.identifier), peripheralState: \(pState), phase: \(self.phase.name), error: \(error?.localizedDescription ?? "nil")"
+            "[BLE] Did fail to connect: \(peripheral.identifier.uuidString.prefix(8)), peripheralState: \(pState), phase: \(self.phase.name), elapsed: \(String(format: "%.2f", elapsed))s, error: \(errorInfo)"
         )
 
         // Handle failure during auto-reconnect (iOS auto-reconnect gave up)
@@ -615,15 +632,20 @@ extension BLEStateMachine {
 
     func handleDidDisconnect(_ peripheral: CBPeripheral, isReconnecting: Bool, error: Error?) {
         let pState = peripheralStateString(peripheral.state)
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        var errorInfo = "none"
+        if let error = error as NSError? {
+            errorInfo = "domain=\(error.domain), code=\(error.code), desc=\(error.localizedDescription)"
+        }
         logger.info(
-            "Did disconnect: \(peripheral.identifier), peripheralState: \(pState), isReconnecting: \(isReconnecting), phase: \(self.phase.name), error: \(error?.localizedDescription ?? "nil")"
+            "[BLE] Did disconnect: \(peripheral.identifier.uuidString.prefix(8)), peripheralState: \(pState), isReconnecting: \(isReconnecting), phase: \(self.phase.name), elapsed: \(String(format: "%.2f", elapsed))s, error: \(errorInfo)"
         )
 
         let deviceID = peripheral.identifier
 
         // If iOS is auto-reconnecting, track that
         if isReconnecting {
-            logger.info("iOS auto-reconnecting to \(deviceID)")
+            logger.info("[BLE] iOS auto-reconnect started: \(deviceID.uuidString.prefix(8)), will attempt automatic reconnection")
 
             // Clean up current state but preserve peripheral for reconnection
             if case .connected(_, _, _, let dataContinuation) = phase {
@@ -655,7 +677,9 @@ extension BLEStateMachine {
     }
 
     func handleDidDiscoverServices(_ peripheral: CBPeripheral, error: Error?) {
-        logger.info("Did discover services for \(peripheral.identifier)")
+        let serviceCount = peripheral.services?.count ?? 0
+        let hasNordicUART = peripheral.services?.contains { $0.uuid == nordicUARTServiceUUID } ?? false
+        logger.info("[BLE] Did discover services: \(peripheral.identifier.uuidString.prefix(8)), count: \(serviceCount), hasNordicUART: \(hasNordicUART), error: \(error?.localizedDescription ?? "none")")
 
         // Handle auto-reconnect
         if case .autoReconnecting(let expected, _, _) = phase,
@@ -707,7 +731,10 @@ extension BLEStateMachine {
     }
 
     func handleDidDiscoverCharacteristics(_ peripheral: CBPeripheral, service: CBService, error: Error?) {
-        logger.info("Did discover characteristics for \(peripheral.identifier)")
+        let characteristics = service.characteristics ?? []
+        let hasTX = characteristics.contains { $0.uuid == txCharacteristicUUID }
+        let hasRX = characteristics.contains { $0.uuid == rxCharacteristicUUID }
+        logger.info("[BLE] Did discover characteristics: \(peripheral.identifier.uuidString.prefix(8)), count: \(characteristics.count), hasTX: \(hasTX), hasRX: \(hasRX), error: \(error?.localizedDescription ?? "none")")
 
         // Handle auto-reconnect
         if case .autoReconnecting(let expected, _, _) = phase,
@@ -769,7 +796,7 @@ extension BLEStateMachine {
     }
 
     func handleDidUpdateNotificationState(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
-        logger.info("Did update notification state for \(peripheral.identifier)")
+        logger.info("[BLE] Did update notification state: \(peripheral.identifier.uuidString.prefix(8)), isNotifying: \(characteristic.isNotifying), charUUID: \(characteristic.uuid.uuidString.prefix(8)), error: \(error?.localizedDescription ?? "none")")
 
         guard case .subscribingToNotifications(let expected, _, _, let continuation) = phase,
               expected.identifier == peripheral.identifier,
@@ -810,7 +837,8 @@ extension BLEStateMachine {
             return
         }
 
-        logger.info("Auto-reconnect notification subscription complete")
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        logger.info("[BLE] Auto-reconnect notification subscription complete, elapsed: \(String(format: "%.2f", elapsed))s")
 
         // Create data stream and transition to connected
         let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
@@ -822,7 +850,7 @@ extension BLEStateMachine {
             dataContinuation: continuation
         ))
 
-        logger.info("iOS auto-reconnect complete for \(peripheral.identifier)")
+        logger.info("[BLE] iOS auto-reconnect complete: \(peripheral.identifier.uuidString.prefix(8))")
         onReconnection?(peripheral.identifier, stream)
     }
 
@@ -841,7 +869,7 @@ extension BLEStateMachine {
     }
 
     func handleDidWriteValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
-        logger.info("Did write value for \(peripheral.identifier)")
+        logger.info("[BLE] Did write value: \(peripheral.identifier.uuidString.prefix(8)), charUUID: \(characteristic.uuid.uuidString.prefix(8)), error: \(error?.localizedDescription ?? "none")")
 
         // Cancel the timeout task since write completed
         writeTimeoutTask?.cancel()
@@ -875,12 +903,15 @@ extension BLEStateMachine {
     @discardableResult
     private func transition(to newPhase: BLEPhase) -> BLEPhase {
         let oldPhase = phase
-        logger.info("Transition: \(oldPhase.name) → \(newPhase.name)")
+        let elapsed = Date().timeIntervalSince(phaseStartTime)
+        let deviceID = oldPhase.deviceID?.uuidString.prefix(8) ?? "none"
+        logger.info("[BLE] Transition: \(oldPhase.name) → \(newPhase.name), device: \(deviceID), elapsed: \(String(format: "%.2f", elapsed))s")
 
         // Clean up old phase resources (except continuations - caller handles those)
         cleanupPhaseResources(oldPhase)
 
         phase = newPhase
+        phaseStartTime = Date()
         return oldPhase
     }
 
@@ -971,7 +1002,9 @@ extension BLEStateMachine {
              .discoveringCharacteristics(let p, _, let c),
              .subscribingToNotifications(let p, _, _, let c):
             guard p.identifier == peripheral.identifier else { return }
-            logger.warning("Service discovery timeout for \(peripheral.identifier)")
+            let pState = peripheralStateString(peripheral.state)
+            let elapsed = Date().timeIntervalSince(phaseStartTime)
+            logger.warning("[BLE] Service discovery timeout: \(peripheral.identifier.uuidString.prefix(8)), phase: \(self.phase.name), peripheralState: \(pState), elapsed: \(String(format: "%.2f", elapsed))s")
             centralManager.cancelPeripheralConnection(peripheral)
             transition(to: .idle)
             c.resume(throwing: BLEError.connectionTimeout)
