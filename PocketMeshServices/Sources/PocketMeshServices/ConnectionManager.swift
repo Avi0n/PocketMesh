@@ -182,6 +182,21 @@ public final class ConnectionManager {
         UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
     }
 
+    /// Checks if a device is connected to the system by another app.
+    /// Returns false during auto-reconnect (our own connection restoring).
+    /// - Parameter deviceID: The UUID of the device to check
+    /// - Returns: `true` if device appears connected to another app
+    public func isDeviceConnectedToOtherApp(_ deviceID: UUID) async -> Bool {
+        // Don't check during auto-reconnect - that's our own connection
+        let isAutoReconnecting = await stateMachine.isAutoReconnecting
+        guard !isAutoReconnecting else { return false }
+
+        // Don't check if we're already connected (switching devices)
+        guard connectionState == .disconnected else { return false }
+
+        return await stateMachine.isDeviceConnectedToSystem(deviceID)
+    }
+
     /// Cancels the auto-reconnect UI timeout timer
     private func cancelAutoReconnectTimeout() {
         autoReconnectTimeoutTask?.cancel()
@@ -596,9 +611,11 @@ public final class ConnectionManager {
     /// - If already connected to this device: no-op
     /// - If connected to a different device: switches to the new device
     ///
-    /// - Parameter deviceID: The UUID of the device to connect to
+    /// - Parameters:
+    ///   - deviceID: The UUID of the device to connect to
+    ///   - skipOtherAppCheck: If true, skips the check for other app connections
     /// - Throws: Connection errors
-    public func connect(to deviceID: UUID) async throws {
+    public func connect(to deviceID: UUID, skipOtherAppCheck: Bool = false) async throws {
         // Prevent concurrent connection attempts
         if connectionState == .connecting {
             logger.info("Connection already in progress, ignoring request for \(deviceID)")
@@ -631,6 +648,13 @@ public final class ConnectionManager {
                 logger.warning(
                     "Attempting connect to device already in autoReconnecting - deviceID: \(deviceID), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
                 )
+            }
+        }
+
+        // Check for other app connection BEFORE changing state (skip for explicit bypass)
+        if !skipOtherAppCheck {
+            if await isDeviceConnectedToOtherApp(deviceID) {
+                throw BLEError.deviceConnectedToOtherApp
             }
         }
 
