@@ -45,6 +45,7 @@ struct DeviceSelectionSheet: View {
     @State private var selectedDevice: SelectableDevice?
     @State private var showingWiFiConnection = false
     @State private var editingWiFiDevice: SelectableDevice?
+    @State private var devicesConnectedElsewhere: Set<UUID> = []
 
     var body: some View {
         NavigationStack {
@@ -99,7 +100,11 @@ struct DeviceSelectionSheet: View {
         List {
             Section {
                 ForEach(devices) { device in
-                    DeviceRow(device: device, isSelected: selectedDevice?.id == device.id)
+                    DeviceRow(
+                        device: device,
+                        isSelected: selectedDevice?.id == device.id,
+                        isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id)
+                    )
                         .contentShape(.rect)
                         .onTapGesture {
                             selectedDevice = device
@@ -184,6 +189,20 @@ struct DeviceSelectionSheet: View {
             let savedDevices = try await appState.connectionManager.fetchSavedDevices()
             if !savedDevices.isEmpty {
                 devices = savedDevices.map { .saved($0) }
+
+                // Check which devices are connected elsewhere (BLE only)
+                var connectedElsewhere: Set<UUID> = []
+                for device in savedDevices {
+                    // Skip WiFi-only devices
+                    let hasBluetooth = device.connectionMethods.isEmpty ||
+                        device.connectionMethods.contains { !$0.isWiFi }
+                    if hasBluetooth {
+                        if await appState.connectionManager.isDeviceConnectedToOtherApp(device.id) {
+                            connectedElsewhere.insert(device.id)
+                        }
+                    }
+                }
+                devicesConnectedElsewhere = connectedElsewhere
                 return
             }
         } catch {
@@ -193,6 +212,15 @@ struct DeviceSelectionSheet: View {
         // Fall back to ASK accessories when database is empty
         let accessories = appState.connectionManager.pairedAccessoryInfos
         devices = accessories.map { .accessory(id: $0.id, name: $0.name) }
+
+        // Check which accessories are connected elsewhere
+        var connectedElsewhere: Set<UUID> = []
+        for accessory in accessories {
+            if await appState.connectionManager.isDeviceConnectedToOtherApp(accessory.id) {
+                connectedElsewhere.insert(accessory.id)
+            }
+        }
+        devicesConnectedElsewhere = connectedElsewhere
     }
 
     private func scanForNewDevice() {
@@ -228,6 +256,7 @@ struct DeviceSelectionSheet: View {
 private struct DeviceRow: View {
     let device: SelectableDevice
     let isSelected: Bool
+    let isConnectedElsewhere: Bool
 
     private var transportIcon: String {
         guard let method = device.primaryConnectionMethod else {
@@ -257,15 +286,20 @@ private struct DeviceRow: View {
                 .foregroundStyle(transportColor)
                 .frame(width: 40, height: 40)
                 .background(transportColor.opacity(0.1), in: .circle)
-                .accessibilityLabel(device.primaryConnectionMethod?.isWiFi == true ? "WiFi connection" : "Bluetooth connection")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(device.name)
                     .font(.headline)
 
-                Text(connectionDescription)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if isConnectedElsewhere {
+                    Label("Connected elsewhere", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                } else {
+                    Text(connectionDescription)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()
@@ -278,5 +312,13 @@ private struct DeviceRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
+        .opacity(isConnectedElsewhere ? 0.6 : 1.0)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(isConnectedElsewhere
+            ? "\(device.name), connected to another app"
+            : "\(device.name), \(connectionDescription)")
+        .accessibilityHint(isConnectedElsewhere
+            ? "This device is in use by another app. Connecting may cause communication issues."
+            : "Double tap to select")
     }
 }
