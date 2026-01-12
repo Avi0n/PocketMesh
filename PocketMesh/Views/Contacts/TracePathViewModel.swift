@@ -563,6 +563,181 @@ final class TracePathViewModel {
         }
     }
 
+    // MARK: - Batch Trace Execution
+
+    /// Execute multiple traces in batch mode
+    func runBatchTrace() async {
+        guard batchEnabled else {
+            await runTrace()
+            return
+        }
+
+        // Reset batch state before any early returns
+        clearBatchState()
+        resultID = nil
+        clearError()
+
+        guard let appState,
+              let session = appState.services?.session,
+              !outboundPath.isEmpty else { return }
+
+        // Match to saved path if not already running one
+        if activeSavedPath == nil {
+            if let matchedPath = await findMatchingSavedPath() {
+                activeSavedPath = matchedPath
+                logger.info("Matched path to saved path: \(matchedPath.name)")
+            }
+        }
+
+        isRunning = true
+        result = nil
+
+        // Execute traces sequentially
+        for traceIndex in 1...batchSize {
+            // Check cancellation BEFORE starting next trace
+            if Task.isCancelled { break }
+
+            currentTraceIndex = traceIndex
+
+            // Run single trace and wait for result
+            await executeSingleTrace(session: session, appState: appState)
+
+            // Check if we got a successful result to show the sheet
+            if let latestResult = completedResults.last, latestResult.success {
+                // First successful result triggers sheet presentation
+                if successCount == 1 {
+                    result = latestResult
+                    resultID = UUID()
+                } else {
+                    // Update result for subsequent successful traces
+                    result = latestResult
+                }
+            }
+
+            // Small buffer between traces (unless this is the last one)
+            if traceIndex < batchSize {
+                // Check cancellation BEFORE sleeping
+                if Task.isCancelled { break }
+                try? await Task.sleep(for: .milliseconds(500))
+                // Check cancellation AFTER sleeping
+                if Task.isCancelled { break }
+            }
+        }
+
+        isRunning = false
+        currentTraceIndex = 0
+    }
+
+    /// Execute a single trace within a batch, storing result in completedResults
+    private func executeSingleTrace(session: MeshCoreSession, appState: AppState) async {
+        pendingPathHash = fullPathBytes
+
+        // Generate random tag for correlation
+        let tag = UInt32.random(in: 0...UInt32.max)
+        pendingTag = tag
+        pendingDeviceID = appState.connectedDevice?.id
+        traceStartTime = Date()
+
+        let pathData = Data(fullPathBytes)
+
+        do {
+            _ = try await session.sendTrace(
+                tag: tag,
+                authCode: 0,
+                flags: 0,
+                path: pathData
+            )
+            logger.info("Sent batch trace \(self.currentTraceIndex)/\(self.batchSize) with tag \(tag)")
+        } catch {
+            logger.error("Failed to send trace: \(error.localizedDescription)")
+            let failedResult = TraceResult.sendFailed(
+                "Failed to send trace packet",
+                attemptedPath: pendingPathHash ?? []
+            )
+            completedResults.append(failedResult)
+            recordFailedRun(appState: appState)
+            pendingPathHash = nil
+            pendingTag = nil
+            return
+        }
+
+        // Wait for response with timeout using continuation
+        // Store continuation so handleTraceResponse can resume it immediately
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            traceContinuation = continuation
+
+            traceTask = Task { @MainActor in
+                do {
+                    try await Task.sleep(for: .seconds(15))
+
+                    // Timeout - resume continuation if still waiting
+                    if traceContinuation != nil && pendingTag == tag {
+                        logger.warning("Batch trace timeout for tag \(tag)")
+                        let timeoutResult = TraceResult.timeout(attemptedPath: pendingPathHash ?? [])
+                        completedResults.append(timeoutResult)
+                        recordFailedRun(appState: appState)
+                        pendingPathHash = nil
+                        pendingTag = nil
+
+                        // Resume continuation (only if not already resumed by handleTraceResponse)
+                        traceContinuation?.resume()
+                        traceContinuation = nil
+                    }
+                } catch {
+                    // Cancelled - handleTraceResponse already resumed continuation
+                }
+            }
+        }
+    }
+
+    /// Record a failed run for saved paths
+    private func recordFailedRun(appState: AppState) {
+        guard let savedPath = activeSavedPath,
+              let dataStore = appState.services?.dataStore else { return }
+
+        let failedRun = TracePathRunDTO(
+            id: UUID(),
+            date: Date(),
+            success: false,
+            roundTripMs: 0,
+            hopsSNR: []
+        )
+
+        Task { @MainActor in
+            do {
+                try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
+                if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                    activeSavedPath = updated
+                }
+            } catch {
+                logger.error("Failed to record run: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Cancel any running batch trace
+    func cancelBatchTrace() {
+        // Cancel batch loop Task
+        batchTask?.cancel()
+        batchTask = nil
+
+        // Cancel current trace timeout task
+        traceTask?.cancel()
+        traceTask = nil
+
+        // Clear continuation if waiting (prevent leaked continuation)
+        if let continuation = traceContinuation {
+            traceContinuation = nil
+            continuation.resume()
+        }
+
+        isRunning = false
+        currentTraceIndex = 0
+        pendingTag = nil
+        pendingDeviceID = nil
+        pendingPathHash = nil
+    }
+
     /// Handle trace response from event stream
     func handleTraceResponse(_ traceInfo: TraceInfo, deviceID: UUID?) {
         guard traceInfo.tag == pendingTag else {
@@ -639,9 +814,23 @@ final class TracePathViewModel {
             errorMessage: nil,
             tracedPathBytes: pendingPathHash ?? []
         )
-        resultID = UUID()
+
+        // In batch mode, store result and resume continuation
+        if batchEnabled {
+            completedResults.append(result!)
+        } else {
+            resultID = UUID()
+            isRunning = false
+        }
+
+        // Resume continuation if waiting (enables immediate batch progression)
+        if let continuation = traceContinuation {
+            traceContinuation = nil
+            traceTask?.cancel()
+            continuation.resume()
+        }
+
         pendingPathHash = nil
-        isRunning = false
         pendingTag = nil
         pendingDeviceID = nil
         traceStartTime = nil

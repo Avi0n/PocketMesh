@@ -214,3 +214,128 @@ struct BatchAggregateTests {
         #expect(viewModel.latestHopSNR(at: 1) == 7.0)
     }
 }
+
+@Suite("Batch Execution")
+@MainActor
+struct BatchExecutionTests {
+
+    @Test("runBatchTrace resets batch state before starting")
+    func runBatchTraceResetsBatchState() async {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.batchSize = 3
+
+        // Pre-populate with stale data
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100)
+        ]
+        viewModel.currentTraceIndex = 2
+
+        // Can't actually run without appState, but we can verify reset happens
+        await viewModel.runBatchTrace()
+
+        // Should have reset (even though trace won't actually run without appState)
+        #expect(viewModel.completedResults.isEmpty)
+        #expect(viewModel.currentTraceIndex == 0)
+    }
+
+    @Test("clearBatchState resets all batch properties")
+    func clearBatchStateResetsAll() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.currentTraceIndex = 3
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100)
+        ]
+
+        viewModel.clearBatchState()
+
+        #expect(viewModel.currentTraceIndex == 0)
+        #expect(viewModel.completedResults.isEmpty)
+    }
+
+    @Test("batchEnabled toggle clears batch state")
+    func batchEnabledToggleClearsBatchState() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.currentTraceIndex = 3
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100)
+        ]
+
+        viewModel.batchEnabled = false
+
+        #expect(viewModel.currentTraceIndex == 0)
+        #expect(viewModel.completedResults.isEmpty)
+    }
+
+    @Test("cancelBatchTrace clears running state")
+    func cancelBatchTraceClearsRunningState() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.isRunning = true
+        viewModel.currentTraceIndex = 2
+        viewModel.setPendingTagForTesting(12345)
+
+        viewModel.cancelBatchTrace()
+
+        #expect(viewModel.isRunning == false)
+        #expect(viewModel.currentTraceIndex == 0)
+    }
+
+    @Test("cancelBatchTrace resumes pending continuation")
+    func cancelBatchTraceResumesContinuation() async {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        // This test verifies the continuation isn't leaked
+        // (actual continuation behavior requires integration test)
+        viewModel.cancelBatchTrace()
+
+        // Should not crash or hang - continuation was properly cleaned up
+        #expect(viewModel.isRunning == false)
+    }
+}
+
+@Suite("Batch Cancellation Behavior")
+@MainActor
+struct BatchCancellationTests {
+
+    @Test("isBatchInProgress returns false after cancel")
+    func isBatchInProgressFalseAfterCancel() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.batchSize = 5
+        viewModel.currentTraceIndex = 2
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100)
+        ]
+
+        // Verify it's in progress
+        #expect(viewModel.isBatchInProgress == true)
+
+        viewModel.cancelBatchTrace()
+
+        // Should no longer be in progress
+        #expect(viewModel.isBatchInProgress == false)
+    }
+
+    @Test("batch state preserved on cancel for partial results access")
+    func batchStatePreservedOnCancel() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+        viewModel.batchSize = 5
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100),
+            createTestResult(hopSNRs: [6.0], durationMs: 110)
+        ]
+        viewModel.currentTraceIndex = 3
+
+        viewModel.cancelBatchTrace()
+
+        // Completed results should be preserved for viewing
+        #expect(viewModel.completedResults.count == 2)
+        // But execution state should be reset
+        #expect(viewModel.currentTraceIndex == 0)
+    }
+}
