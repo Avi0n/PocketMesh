@@ -176,6 +176,12 @@ struct MentionUtilitiesTests {
         #expect(result == nil)
     }
 
+    @Test("detectActiveMention returns nil for unclosed bracket")
+    func testDetectActiveMentionUnclosedBracket() {
+        let result = MentionUtilities.detectActiveMention(in: "@[Alice")
+        #expect(result == nil)
+    }
+
     // MARK: - filterContacts Tests
 
     private func makeContact(

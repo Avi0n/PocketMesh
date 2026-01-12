@@ -60,7 +60,7 @@ public enum MentionUtilities {
             // If first char after @ is whitespace or another @, not a mention
             guard let firstChar = afterAt.first, !firstChar.isWhitespace, firstChar != "@" else { return nil }
 
-            // Check if this is a completed mention @[...]
+            // Check if this is a bracketed mention @[...]
             if afterAt.hasPrefix("[") {
                 if let closeBracket = afterAt.firstIndex(of: "]") {
                     // Completed mention, check for more text after
@@ -71,6 +71,9 @@ public enum MentionUtilities {
                     // Continue searching for another @
                     searchStart = atIndex
                     continue
+                } else {
+                    // Unclosed bracket - user is typing a manual mention, don't show suggestions
+                    return nil
                 }
             }
 

@@ -243,7 +243,7 @@ final class ChatViewModel {
         do {
             allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
         } catch {
-            // Silently handle - mentions are optional
+            logger.warning("Failed to load contacts for mentions: \(error.localizedDescription)")
         }
     }
 
