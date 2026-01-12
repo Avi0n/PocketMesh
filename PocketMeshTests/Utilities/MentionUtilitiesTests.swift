@@ -95,4 +95,172 @@ struct MentionUtilitiesTests {
         let mentions = MentionUtilities.extractMentions(from: "@[日本語] hello")
         #expect(mentions == ["日本語"])
     }
+
+    // MARK: - detectActiveMention Tests
+
+    @Test("detectActiveMention returns nil for empty text")
+    func testDetectActiveMentionEmpty() {
+        let result = MentionUtilities.detectActiveMention(in: "")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention returns nil for text without @")
+    func testDetectActiveMentionNoAt() {
+        let result = MentionUtilities.detectActiveMention(in: "hello world")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention returns nil for @ alone")
+    func testDetectActiveMentionAtAlone() {
+        let result = MentionUtilities.detectActiveMention(in: "@")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention returns query after @")
+    func testDetectActiveMentionBasic() {
+        let result = MentionUtilities.detectActiveMention(in: "@jo")
+        #expect(result == "jo")
+    }
+
+    @Test("detectActiveMention works at start of message")
+    func testDetectActiveMentionAtStart() {
+        let result = MentionUtilities.detectActiveMention(in: "@alice")
+        #expect(result == "alice")
+    }
+
+    @Test("detectActiveMention works after space")
+    func testDetectActiveMentionAfterSpace() {
+        let result = MentionUtilities.detectActiveMention(in: "hey @bob")
+        #expect(result == "bob")
+    }
+
+    @Test("detectActiveMention returns nil for @ mid-word")
+    func testDetectActiveMentionMidWord() {
+        let result = MentionUtilities.detectActiveMention(in: "email@domain")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention returns nil when space follows @")
+    func testDetectActiveMentionSpaceAfter() {
+        let result = MentionUtilities.detectActiveMention(in: "@ hello")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention returns last active mention")
+    func testDetectActiveMentionMultiple() {
+        let result = MentionUtilities.detectActiveMention(in: "@[Alice] hey @bo")
+        #expect(result == "bo")
+    }
+
+    @Test("detectActiveMention returns nil for completed mention")
+    func testDetectActiveMentionCompleted() {
+        let result = MentionUtilities.detectActiveMention(in: "@[Alice] hello")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention handles Unicode")
+    func testDetectActiveMentionUnicode() {
+        let result = MentionUtilities.detectActiveMention(in: "@日本")
+        #expect(result == "日本")
+    }
+
+    @Test("detectActiveMention ignores email addresses")
+    func testDetectActiveMentionEmail() {
+        let result = MentionUtilities.detectActiveMention(in: "contact me at test@example.com")
+        #expect(result == nil)
+    }
+
+    @Test("detectActiveMention handles double @ symbols")
+    func testDetectActiveMentionDoubleAt() {
+        let result = MentionUtilities.detectActiveMention(in: "@@alice")
+        #expect(result == nil)
+    }
+
+    // MARK: - filterContacts Tests
+
+    private func makeContact(
+        name: String,
+        type: ContactType = .chat,
+        publicKey: Data = Data([0xAB])
+    ) -> ContactDTO {
+        ContactDTO(
+            id: UUID(),
+            deviceID: UUID(),
+            publicKey: publicKey,
+            name: name,
+            typeRawValue: type.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+    }
+
+    @Test("filterContacts matches using localizedStandardContains")
+    func testFilterContactsMatches() {
+        let contacts = [
+            makeContact(name: "Alice"),
+            makeContact(name: "Bob"),
+            makeContact(name: "Amanda")
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "a")
+        #expect(filtered.count == 2)
+        #expect(filtered.map(\.name).contains("Alice"))
+        #expect(filtered.map(\.name).contains("Amanda"))
+    }
+
+    @Test("filterContacts excludes repeaters")
+    func testFilterContactsExcludesRepeaters() {
+        let contacts = [
+            makeContact(name: "Alice", type: .chat),
+            makeContact(name: "Repeater1", type: .repeater)
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "")
+        #expect(filtered.count == 1)
+        #expect(filtered.first?.name == "Alice")
+    }
+
+    @Test("filterContacts excludes rooms")
+    func testFilterContactsExcludesRooms() {
+        let contacts = [
+            makeContact(name: "Alice", type: .chat),
+            makeContact(name: "Room1", type: .room)
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "")
+        #expect(filtered.count == 1)
+    }
+
+    @Test("filterContacts sorts alphabetically")
+    func testFilterContactsSortsAlphabetically() {
+        let contacts = [
+            makeContact(name: "Zoe"),
+            makeContact(name: "Alice"),
+            makeContact(name: "Bob")
+        ]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "")
+        #expect(filtered.map(\.name) == ["Alice", "Bob", "Zoe"])
+    }
+
+    @Test("filterContacts returns empty for no matches")
+    func testFilterContactsNoMatches() {
+        let contacts = [makeContact(name: "Alice")]
+        let filtered = MentionUtilities.filterContacts(contacts, query: "xyz")
+        #expect(filtered.isEmpty)
+    }
+
+    @Test("filterContacts handles empty input")
+    func testFilterContactsEmptyInput() {
+        let filtered = MentionUtilities.filterContacts([], query: "a")
+        #expect(filtered.isEmpty)
+    }
 }
