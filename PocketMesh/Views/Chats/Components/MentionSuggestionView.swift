@@ -24,6 +24,7 @@ struct MentionSuggestionView: View {
                 }
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
         .frame(maxHeight: 200)
         .background(.regularMaterial)
         .clipShape(.rect(cornerRadius: 12))
