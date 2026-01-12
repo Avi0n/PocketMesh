@@ -123,6 +123,50 @@ final class TracePathViewModel {
         completedResults = []
     }
 
+    // MARK: - Batch Aggregates
+
+    var averageRTT: Int? {
+        let rtts = successfulResults.map(\.durationMs)
+        guard !rtts.isEmpty else { return nil }
+        return rtts.reduce(0, +) / rtts.count
+    }
+
+    var minRTT: Int? {
+        successfulResults.map(\.durationMs).min()
+    }
+
+    var maxRTT: Int? {
+        successfulResults.map(\.durationMs).max()
+    }
+
+    /// Returns aggregate stats for a hop at the given index (0 = start node, 1+ = intermediate/end)
+    /// Returns nil for start node (index 0) as it has no received SNR
+    func hopStats(at index: Int) -> (avg: Double, min: Double, max: Double)? {
+        guard index > 0 else { return nil }  // Start node has no SNR
+
+        let snrValues = successfulResults.compactMap { result -> Double? in
+            guard index < result.hops.count else { return nil }
+            let hop = result.hops[index]
+            guard !hop.isStartNode else { return nil }
+            return hop.snr
+        }
+
+        guard !snrValues.isEmpty else { return nil }
+
+        let avg = snrValues.reduce(0, +) / Double(snrValues.count)
+        let min = snrValues.min() ?? 0
+        let max = snrValues.max() ?? 0
+
+        return (avg, min, max)
+    }
+
+    /// Returns the SNR for a hop from the most recent successful result
+    func latestHopSNR(at index: Int) -> Double? {
+        guard let latest = successfulResults.last,
+              index < latest.hops.count else { return nil }
+        return latest.hops[index].snr
+    }
+
     // MARK: - Saved Path State
 
     var activeSavedPath: SavedTracePathDTO?

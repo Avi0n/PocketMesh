@@ -4,6 +4,34 @@ import Foundation
 @testable import PocketMeshServices
 @testable import MeshCore
 
+// MARK: - Test Helpers
+
+private func createTestHop(snr: Double, isStartNode: Bool = false, isEndNode: Bool = false) -> TraceHop {
+    TraceHop(
+        hashBytes: isStartNode || isEndNode ? nil : Data([0xAA]),
+        resolvedName: nil,
+        snr: snr,
+        isStartNode: isStartNode,
+        isEndNode: isEndNode
+    )
+}
+
+private func createTestResult(hopSNRs: [Double], durationMs: Int, success: Bool = true) -> TraceResult {
+    var hops: [TraceHop] = [createTestHop(snr: 0, isStartNode: true)]
+    for snr in hopSNRs {
+        hops.append(createTestHop(snr: snr))
+    }
+    hops.append(createTestHop(snr: hopSNRs.last ?? 0, isEndNode: true))
+
+    return TraceResult(
+        hops: hops,
+        durationMs: durationMs,
+        success: success,
+        errorMessage: success ? nil : "Failed",
+        tracedPathBytes: [0xAA]
+    )
+}
+
 @Suite("Batch Trace State")
 @MainActor
 struct BatchTraceStateTests {
@@ -81,5 +109,108 @@ struct BatchTraceStateTests {
 
         #expect(viewModel.currentTraceIndex == 0)
         #expect(viewModel.completedResults.isEmpty)
+    }
+}
+
+@Suite("Batch Aggregate Computation")
+@MainActor
+struct BatchAggregateTests {
+
+    @Test("RTT aggregates compute correctly")
+    func rttAggregatesComputeCorrectly() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100),
+            createTestResult(hopSNRs: [5.0], durationMs: 200),
+            createTestResult(hopSNRs: [5.0], durationMs: 150)
+        ]
+
+        #expect(viewModel.averageRTT == 150)
+        #expect(viewModel.minRTT == 100)
+        #expect(viewModel.maxRTT == 200)
+    }
+
+    @Test("RTT aggregates exclude failed traces")
+    func rttAggregatesExcludeFailedTraces() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100),
+            createTestResult(hopSNRs: [], durationMs: 0, success: false),
+            createTestResult(hopSNRs: [5.0], durationMs: 200)
+        ]
+
+        #expect(viewModel.averageRTT == 150)
+        #expect(viewModel.minRTT == 100)
+        #expect(viewModel.maxRTT == 200)
+    }
+
+    @Test("RTT aggregates return nil when no successful traces")
+    func rttAggregatesReturnNilWhenNoSuccess() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [], durationMs: 0, success: false)
+        ]
+
+        #expect(viewModel.averageRTT == nil)
+        #expect(viewModel.minRTT == nil)
+        #expect(viewModel.maxRTT == nil)
+    }
+
+    @Test("hop stats compute correctly for intermediate hops")
+    func hopStatsComputeCorrectly() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        // 2 intermediate hops per result
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0, 3.0], durationMs: 100),
+            createTestResult(hopSNRs: [7.0, 1.0], durationMs: 100),
+            createTestResult(hopSNRs: [6.0, 2.0], durationMs: 100)
+        ]
+
+        // Hop index 1 is first intermediate hop (index 0 is start node)
+        let stats1 = viewModel.hopStats(at: 1)
+        #expect(stats1 != nil)
+        #expect(stats1?.avg == 6.0)  // (5+7+6)/3
+        #expect(stats1?.min == 5.0)
+        #expect(stats1?.max == 7.0)
+
+        // Hop index 2 is second intermediate hop
+        let stats2 = viewModel.hopStats(at: 2)
+        #expect(stats2 != nil)
+        #expect(stats2?.avg == 2.0)  // (3+1+2)/3
+        #expect(stats2?.min == 1.0)
+        #expect(stats2?.max == 3.0)
+    }
+
+    @Test("hop stats return nil for start node")
+    func hopStatsReturnNilForStartNode() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100)
+        ]
+
+        #expect(viewModel.hopStats(at: 0) == nil)
+    }
+
+    @Test("latestHopSNR returns SNR from most recent successful result")
+    func latestHopSNRReturnsCorrectValue() {
+        let viewModel = TracePathViewModel()
+        viewModel.batchEnabled = true
+
+        viewModel.completedResults = [
+            createTestResult(hopSNRs: [5.0], durationMs: 100),
+            createTestResult(hopSNRs: [7.0], durationMs: 100)
+        ]
+
+        #expect(viewModel.latestHopSNR(at: 1) == 7.0)
     }
 }
