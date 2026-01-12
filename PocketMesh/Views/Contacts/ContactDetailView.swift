@@ -541,15 +541,23 @@ struct ContactDetailView: View {
 
             // Path Discovery button (prominent)
             if pathViewModel.isDiscovering {
-                HStack {
-                    Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
-                    Spacer()
-                    ProgressView()
-                    Button("Cancel") {
-                        pathViewModel.cancelDiscovery()
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
+                        Spacer()
+                        ProgressView()
+                        Button("Cancel") {
+                            pathViewModel.cancelDiscovery()
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.subheadline)
                     }
-                    .buttonStyle(.borderless)
-                    .font(.subheadline)
+
+                    if let remaining = pathViewModel.discoverySecondsRemaining, remaining > 0 {
+                        Text("Up to \(remaining) seconds remaining")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 Button {
