@@ -98,6 +98,9 @@ final class TracePathViewModel {
     /// Task running the batch loop - stored so cancellation works
     private var batchTask: Task<Void, Never>?
 
+    /// Flag to signal batch loop should stop (since we await in the calling context)
+    private var batchCancelled = false
+
     /// Continuation for awaiting trace response in batch mode
     private var traceContinuation: CheckedContinuation<Void, Never>?
 
@@ -574,6 +577,7 @@ final class TracePathViewModel {
 
         // Reset batch state before any early returns
         clearBatchState()
+        batchCancelled = false
         resultID = nil
         clearError()
 
@@ -595,7 +599,7 @@ final class TracePathViewModel {
         // Execute traces sequentially
         for traceIndex in 1...batchSize {
             // Check cancellation BEFORE starting next trace
-            if Task.isCancelled { break }
+            if batchCancelled { break }
 
             currentTraceIndex = traceIndex
 
@@ -617,10 +621,10 @@ final class TracePathViewModel {
             // Small buffer between traces (unless this is the last one)
             if traceIndex < batchSize {
                 // Check cancellation BEFORE sleeping
-                if Task.isCancelled { break }
+                if batchCancelled { break }
                 try? await Task.sleep(for: .milliseconds(500))
                 // Check cancellation AFTER sleeping
-                if Task.isCancelled { break }
+                if batchCancelled { break }
             }
         }
 
@@ -717,6 +721,9 @@ final class TracePathViewModel {
 
     /// Cancel any running batch trace
     func cancelBatchTrace() {
+        // Set cancel flag for batch loop
+        batchCancelled = true
+
         // Cancel batch loop Task
         batchTask?.cancel()
         batchTask = nil
@@ -816,8 +823,8 @@ final class TracePathViewModel {
         )
 
         // In batch mode, store result and resume continuation
-        if batchEnabled {
-            completedResults.append(result!)
+        if batchEnabled, let result {
+            completedResults.append(result)
         } else {
             resultID = UUID()
             isRunning = false
