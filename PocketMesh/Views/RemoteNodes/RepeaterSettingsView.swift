@@ -149,62 +149,92 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 100, alignment: .trailing)
                 }
             }
 
-            Picker("Bandwidth (kHz)", selection: Binding(
-                get: { viewModel.bandwidth ?? 125.0 },
-                set: { viewModel.bandwidth = $0 }
-            )) {
-                ForEach(bandwidthOptionsKHz, id: \.self) { bwKHz in
-                    Text("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kHz")
-                        .tag(bwKHz)
-                        .accessibilityLabel("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kilohertz")
+            if let bandwidth = viewModel.bandwidth {
+                Picker("Bandwidth (kHz)", selection: Binding(
+                    get: { bandwidth },
+                    set: { viewModel.bandwidth = $0 }
+                )) {
+                    ForEach(bandwidthOptionsKHz, id: \.self) { bwKHz in
+                        Text("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kHz")
+                            .tag(bwKHz)
+                            .accessibilityLabel("\(RadioOptions.formatBandwidth(UInt32(bwKHz * 1000))) kilohertz")
+                    }
                 }
-            }
-            .pickerStyle(.menu)
-            .tint(.primary)
-            .accessibilityHint("Lower values increase range but decrease speed")
-            .onChange(of: viewModel.bandwidth) { _, _ in
-                viewModel.radioSettingsModified = true
+                .pickerStyle(.menu)
+                .tint(.primary)
+                .accessibilityHint("Lower values increase range but decrease speed")
+                .onChange(of: viewModel.bandwidth) { _, _ in
+                    viewModel.radioSettingsModified = true
+                }
+            } else {
+                HStack {
+                    Text("Bandwidth (kHz)")
+                    Spacer()
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
-            Picker("Spreading Factor", selection: Binding(
-                get: { viewModel.spreadingFactor ?? 10 },
-                set: { viewModel.spreadingFactor = $0 }
-            )) {
-                ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
-                    Text("SF\(sf)")
-                        .tag(sf)
-                        .accessibilityLabel("Spreading factor \(sf)")
+            if let spreadingFactor = viewModel.spreadingFactor {
+                Picker("Spreading Factor", selection: Binding(
+                    get: { spreadingFactor },
+                    set: { viewModel.spreadingFactor = $0 }
+                )) {
+                    ForEach(RadioOptions.spreadingFactors, id: \.self) { sf in
+                        Text("SF\(sf)")
+                            .tag(sf)
+                            .accessibilityLabel("Spreading factor \(sf)")
+                    }
                 }
-            }
-            .pickerStyle(.menu)
-            .tint(.primary)
-            .accessibilityHint("Higher values increase range but decrease speed")
-            .onChange(of: viewModel.spreadingFactor) { _, _ in
-                viewModel.radioSettingsModified = true
+                .pickerStyle(.menu)
+                .tint(.primary)
+                .accessibilityHint("Higher values increase range but decrease speed")
+                .onChange(of: viewModel.spreadingFactor) { _, _ in
+                    viewModel.radioSettingsModified = true
+                }
+            } else {
+                HStack {
+                    Text("Spreading Factor")
+                    Spacer()
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
-            Picker("Coding Rate", selection: Binding(
-                get: { viewModel.codingRate ?? 8 },
-                set: { viewModel.codingRate = $0 }
-            )) {
-                ForEach(RadioOptions.codingRates, id: \.self) { cr in
-                    Text("\(cr)")
-                        .tag(cr)
-                        .accessibilityLabel("Coding rate \(cr)")
+            if let codingRate = viewModel.codingRate {
+                Picker("Coding Rate", selection: Binding(
+                    get: { codingRate },
+                    set: { viewModel.codingRate = $0 }
+                )) {
+                    ForEach(RadioOptions.codingRates, id: \.self) { cr in
+                        Text("\(cr)")
+                            .tag(cr)
+                            .accessibilityLabel("Coding rate \(cr)")
+                    }
                 }
-            }
-            .pickerStyle(.menu)
-            .tint(.primary)
-            .accessibilityHint("Higher values add error correction but decrease speed")
-            .onChange(of: viewModel.codingRate) { _, _ in
-                viewModel.radioSettingsModified = true
+                .pickerStyle(.menu)
+                .tint(.primary)
+                .accessibilityHint("Higher values add error correction but decrease speed")
+                .onChange(of: viewModel.codingRate) { _, _ in
+                    viewModel.radioSettingsModified = true
+                }
+            } else {
+                HStack {
+                    Text("Coding Rate")
+                    Spacer()
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             HStack {
@@ -223,7 +253,7 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .trailing)
@@ -271,7 +301,7 @@ struct RepeaterSettingsView: View {
                     Text("Name")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -295,7 +325,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -314,7 +344,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -368,7 +398,7 @@ struct RepeaterSettingsView: View {
             ))
                 .overlay(alignment: .trailing) {
                     if viewModel.repeaterEnabled == nil && viewModel.isLoadingBehavior {
-                        Text("loading...")
+                        Text("Loading...")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.trailing, 60)
@@ -390,7 +420,7 @@ struct RepeaterSettingsView: View {
                     Text("min")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -417,7 +447,7 @@ struct RepeaterSettingsView: View {
                     Text("hrs")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -444,7 +474,7 @@ struct RepeaterSettingsView: View {
                     Text("hops")
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("loading...")
+                    Text("Loading...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
