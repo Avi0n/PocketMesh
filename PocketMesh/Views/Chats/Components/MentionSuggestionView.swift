@@ -6,6 +6,16 @@ struct MentionSuggestionView: View {
     let contacts: [ContactDTO]
     let onSelect: (ContactDTO) -> Void
 
+    private let maxHeight: CGFloat = 200
+    private let rowHeight: CGFloat = 48  // Avatar 32 + vertical padding 16
+
+    private var contentHeight: CGFloat {
+        let count = min(contacts.count, 20)
+        let dividerHeight: CGFloat = 1
+        let totalHeight = CGFloat(count) * rowHeight + CGFloat(max(0, count - 1)) * dividerHeight
+        return min(totalHeight, maxHeight)
+    }
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -24,8 +34,7 @@ struct MentionSuggestionView: View {
                 }
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxHeight: 200)
+        .frame(height: contentHeight)
         .background(.regularMaterial)
         .clipShape(.rect(cornerRadius: 12))
         .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
