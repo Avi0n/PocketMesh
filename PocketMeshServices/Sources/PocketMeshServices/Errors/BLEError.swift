@@ -19,6 +19,7 @@ public enum BLEError: Error, Sendable {
     case authenticationRequired
     case pairingCancelled
     case pairingFailed(String)
+    case deviceConnectedToOtherApp
 }
 
 // MARK: - BLEError LocalizedError Conformance
@@ -56,6 +57,8 @@ extension BLEError: LocalizedError {
             return "Bluetooth pairing was cancelled. Please try again."
         case .pairingFailed(let reason):
             return "Bluetooth pairing failed: \(reason)"
+        case .deviceConnectedToOtherApp:
+            return "This device is connected to another app. Only one app can use a mesh radio at a time to prevent communication issues."
         }
     }
 }
