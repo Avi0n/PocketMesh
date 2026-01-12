@@ -82,6 +82,47 @@ final class TracePathViewModel {
     /// Duration before error auto-clears. Injectable for testing.
     var errorAutoClearDelay: Duration = .seconds(4)
 
+    // MARK: - Batch Trace State
+
+    var batchEnabled = false {
+        didSet {
+            if !batchEnabled {
+                clearBatchState()
+            }
+        }
+    }
+    var batchSize = 5
+    var currentTraceIndex = 0
+    var completedResults: [TraceResult] = []
+
+    /// Task running the batch loop - stored so cancellation works
+    private var batchTask: Task<Void, Never>?
+
+    /// Continuation for awaiting trace response in batch mode
+    private var traceContinuation: CheckedContinuation<Void, Never>?
+
+    var isBatchInProgress: Bool {
+        batchEnabled && currentTraceIndex > 0 && currentTraceIndex <= batchSize
+    }
+
+    var isBatchComplete: Bool {
+        batchEnabled && completedResults.count == batchSize
+    }
+
+    var successfulResults: [TraceResult] {
+        completedResults.filter { $0.success }
+    }
+
+    var successCount: Int {
+        successfulResults.count
+    }
+
+    /// Clear batch execution state
+    func clearBatchState() {
+        currentTraceIndex = 0
+        completedResults = []
+    }
+
     // MARK: - Saved Path State
 
     var activeSavedPath: SavedTracePathDTO?
