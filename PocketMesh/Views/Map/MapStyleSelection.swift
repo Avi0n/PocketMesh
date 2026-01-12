@@ -22,4 +22,13 @@ enum MapStyleSelection: String, CaseIterable, Hashable {
         case .hybrid: "Hybrid"
         }
     }
+
+    /// MKMapType for UIKit MKMapView
+    var mkMapType: MKMapType {
+        switch self {
+        case .standard: .standard
+        case .satellite: .satellite
+        case .hybrid: .hybrid
+        }
+    }
 }

@@ -7,66 +7,72 @@ struct MapView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = MapViewModel()
     @State private var selectedContactForDetail: ContactDTO?
-    @Namespace private var mapScope
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                mapContent
+            mapCanvas
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        BLEStatusIndicatorView()
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        refreshButton
+                    }
+                }
+                .task {
+                    appState.locationService.requestPermissionIfNeeded()
+                    viewModel.configure(appState: appState)
+                    await viewModel.loadContactsWithLocation()
+                    viewModel.centerOnAllContacts()
+                }
+                .sheet(item: $selectedContactForDetail) { contact in
+                    ContactDetailSheet(
+                        contact: contact,
+                        onMessage: { navigateToChat(with: contact) }
+                    )
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                }
+        }
+    }
 
-                // Floating controls
+    // MARK: - Map Canvas
+
+    private var mapCanvas: some View {
+        ZStack {
+            mapContent
+
+            // Floating controls
+            VStack {
+                Spacer()
+                mapControls
+            }
+
+            // Layers menu overlay
+            if viewModel.showingLayersMenu {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation {
+                            viewModel.showingLayersMenu = false
+                        }
+                    }
+
                 VStack {
                     Spacer()
-                    mapControls
-                }
-
-                // Layers menu overlay
-                if viewModel.showingLayersMenu {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation {
-                                viewModel.showingLayersMenu = false
-                            }
-                        }
-
-                    VStack {
+                    HStack {
                         Spacer()
-                        HStack {
-                            Spacer()
-                            LayersMenu(
-                                selection: $viewModel.mapStyleSelection,
-                                isPresented: $viewModel.showingLayersMenu
-                            )
-                            .padding(.trailing, 72)
-                            .padding(.bottom)
-                        }
+                        LayersMenu(
+                            selection: $viewModel.mapStyleSelection,
+                            isPresented: $viewModel.showingLayersMenu
+                        )
+                        .padding(.trailing, 72)
+                        .padding(.bottom)
                     }
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    BLEStatusIndicatorView()
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    refreshButton
-                }
-            }
-            .task {
-                appState.locationService.requestPermissionIfNeeded()
-                viewModel.configure(appState: appState)
-                await viewModel.loadContactsWithLocation()
-                viewModel.centerOnAllContacts()
-            }
-            .sheet(item: $selectedContactForDetail) { contact in
-                ContactDetailSheet(
-                    contact: contact,
-                    onMessage: { navigateToChat(with: contact) }
-                )
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-            }
         }
+        .ignoresSafeArea()
     }
 
     // MARK: - Map Content
@@ -76,54 +82,20 @@ struct MapView: View {
         if viewModel.contactsWithLocation.isEmpty && !viewModel.isLoading {
             emptyState
         } else {
-            Map(position: $viewModel.cameraPosition, scope: mapScope) {
-                ForEach(viewModel.contactsWithLocation) { contact in
-                    Annotation(
-                        contact.displayName,
-                        coordinate: contact.coordinate,
-                        anchor: .bottom
-                    ) {
-                        VStack(spacing: 0) {
-                            // Callout appears above the pin when selected
-                            if viewModel.selectedContact?.id == contact.id {
-                                ContactAnnotationCallout(
-                                    contact: contact,
-                                    onMessageTap: { navigateToChat(with: contact) },
-                                    onDetailTap: { showContactDetail(contact) },
-                                    onDismiss: { viewModel.clearSelection() }
-                                )
-                                .transition(.scale.combined(with: .opacity))
-                            }
-
-                            // Name label when zoomed in and labels enabled
-                            if viewModel.shouldShowLabels && viewModel.selectedContact?.id != contact.id {
-                                ContactNameLabel(name: contact.displayName)
-                                    .padding(.bottom, 4)
-                            }
-
-                            // Pin is always visible
-                            ContactAnnotationView(
-                                contact: contact,
-                                isSelected: viewModel.selectedContact?.id == contact.id
-                            )
-                        }
-                        .animation(.spring(response: 0.3), value: viewModel.selectedContact?.id)
-                        .onTapGesture {
-                            handleAnnotationTap(contact)
-                        }
-                    }
-                    .annotationTitles(.hidden)
+            MKMapViewRepresentable(
+                contacts: viewModel.contactsWithLocation,
+                mapType: viewModel.mapStyleSelection.mkMapType,
+                showLabels: viewModel.shouldShowLabels,
+                showsUserLocation: true,
+                selectedContact: $viewModel.selectedContact,
+                cameraRegion: $viewModel.cameraRegion,
+                onDetailTap: { contact in
+                    showContactDetail(contact)
+                },
+                onMessageTap: { contact in
+                    navigateToChat(with: contact)
                 }
-            }
-            .mapStyle(viewModel.mapStyleSelection.mapStyle)
-            .onMapCameraChange(frequency: .continuous) { context in
-                viewModel.cameraDistance = context.camera.distance
-            }
-            .mapScope(mapScope)
-            .mapControls {
-                MapCompass(scope: mapScope)
-                MapScaleView(scope: mapScope)
-            }
+            )
             .overlay {
                 if viewModel.isLoading {
                     loadingOverlay
@@ -165,20 +137,82 @@ struct MapView: View {
     private var mapControls: some View {
         HStack {
             Spacer()
-            MapControlsStack(
-                showingLayersMenu: $viewModel.showingLayersMenu,
-                showLabels: $viewModel.showLabels,
-                mapScope: mapScope,
-                onCenterAll: {
-                    withAnimation {
-                        viewModel.clearSelection()
-                        viewModel.centerOnAllContacts()
-                    }
-                },
-                centerAllDisabled: viewModel.contactsWithLocation.isEmpty
-            )
-            .padding()
+            mapControlsStack
         }
+    }
+
+    private var mapControlsStack: some View {
+        VStack(spacing: 0) {
+            // User location button (custom since we can't use MapUserLocationButton without scope)
+            Button {
+                centerOnUserLocation()
+            } label: {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Center on my location")
+
+            Divider()
+                .frame(width: 36)
+
+            // Layers button
+            Button {
+                withAnimation(.spring(response: 0.3)) {
+                    viewModel.showingLayersMenu.toggle()
+                }
+            } label: {
+                Image(systemName: "square.3.layers.3d.down.right")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Map layers")
+
+            Divider()
+                .frame(width: 36)
+
+            // Labels toggle button
+            Button {
+                withAnimation {
+                    viewModel.showLabels.toggle()
+                }
+            } label: {
+                Image(systemName: "text.rectangle.fill")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(viewModel.showLabels ? .blue : .primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(viewModel.showLabels ? "Hide labels" : "Show labels")
+
+            Divider()
+                .frame(width: 36)
+
+            // Center on all button
+            Button {
+                clearSelection()
+                viewModel.centerOnAllContacts()
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.contactsWithLocation.isEmpty)
+            .accessibilityLabel("Center on all contacts")
+        }
+        .liquidGlass(in: .rect(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+        .padding()
     }
 
     // MARK: - Refresh Button
@@ -200,23 +234,27 @@ struct MapView: View {
 
     // MARK: - Actions
 
-    private func handleAnnotationTap(_ contact: ContactDTO) {
-        withAnimation {
-            if viewModel.selectedContact?.id == contact.id {
-                viewModel.clearSelection()
-            } else {
-                viewModel.centerOnContact(contact)
-            }
-        }
+    private func selectContact(_ contact: ContactDTO) {
+        viewModel.centerOnContact(contact)
+    }
+
+    private func clearSelection() {
+        viewModel.clearSelection()
     }
 
     private func navigateToChat(with contact: ContactDTO) {
-        viewModel.clearSelection()
+        clearSelection()
         appState.navigateToChat(with: contact)
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
         selectedContactForDetail = contact
+    }
+
+    private func centerOnUserLocation() {
+        guard let location = appState.locationService.currentLocation else { return }
+        let span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+        viewModel.cameraRegion = MKCoordinateRegion(center: location.coordinate, span: span)
     }
 }
 

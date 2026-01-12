@@ -25,6 +25,11 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
         authorizationStatus != .notDetermined
     }
 
+    /// Current location from the location manager
+    public var currentLocation: CLLocation? {
+        locationManager.location
+    }
+
     // MARK: - Initialization
 
     public override init() {
