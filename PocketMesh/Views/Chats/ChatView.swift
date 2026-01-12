@@ -59,6 +59,7 @@ struct ChatView: View {
             viewModel.configure(appState: appState)
             await viewModel.loadMessages(for: contact)
             await viewModel.loadConversations(deviceID: contact.deviceID)
+            await viewModel.loadAllContacts(deviceID: contact.deviceID)
             viewModel.loadDraftIfExists()
         }
         .onDisappear {
@@ -282,7 +283,7 @@ struct ChatView: View {
             placeholder: "Private Message",
             accentColor: .blue,
             maxCharacters: ProtocolLimits.maxDirectMessageLength,
-            contacts: viewModel.conversations
+            contacts: viewModel.allContacts
         ) {
             // Force scroll to bottom on user send (before message is added)
             scrollToBottomRequest += 1

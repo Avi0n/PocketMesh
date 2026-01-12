@@ -63,6 +63,7 @@ struct ChannelChatView: View {
             viewModel.configure(appState: appState)
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
+            await viewModel.loadAllContacts(deviceID: channel.deviceID)
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
         .onDisappear {
@@ -285,7 +286,7 @@ struct ChannelChatView: View {
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
             accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
             maxCharacters: maxChannelMessageLength,
-            contacts: viewModel.conversations
+            contacts: viewModel.allContacts
         ) {
             // Force scroll to bottom on user send (before message is added)
             scrollToBottomRequest += 1

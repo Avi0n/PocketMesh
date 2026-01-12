@@ -14,6 +14,9 @@ final class ChatViewModel {
     /// Current conversations (contacts with messages)
     var conversations: [ContactDTO] = []
 
+    /// All contacts for mention autocomplete (includes contacts without messages)
+    var allContacts: [ContactDTO] = []
+
     /// Current channels with messages
     var channels: [ChannelDTO] = []
 
@@ -231,6 +234,17 @@ final class ChatViewModel {
         }
 
         isLoading = false
+    }
+
+    /// Load all contacts for mention autocomplete
+    func loadAllContacts(deviceID: UUID) async {
+        guard let dataStore else { return }
+
+        do {
+            allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        } catch {
+            // Silently handle - mentions are optional
+        }
     }
 
     /// Load channels for a device
