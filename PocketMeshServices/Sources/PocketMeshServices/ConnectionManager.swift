@@ -1529,7 +1529,7 @@ public final class ConnectionManager {
             session = nil
             await transport.disconnect()
             connectionState = .disconnected
-            // User can manually retry if needed
+            connectedDevice = nil
         }
     }
 
