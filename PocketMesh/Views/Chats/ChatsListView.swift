@@ -189,13 +189,15 @@ struct ChatsListView: View {
                     appState.tabBarVisibility = .visible
                 }
             }
-            .onOpenURL { url in
+            .environment(\.openURL, OpenURLAction { url in
                 if url.scheme == "pocketmesh-hashtag",
                    let channelName = url.host,
                    let deviceID = appState.connectedDevice?.id {
                     handleHashtagTap(name: channelName, deviceID: deviceID)
+                    return .handled
                 }
-            }
+                return .systemAction
+            })
             .sheet(item: $roomToAuthenticate) { session in
                 RoomAuthenticationSheet(session: session) { authenticatedSession in
                     roomToAuthenticate = nil
