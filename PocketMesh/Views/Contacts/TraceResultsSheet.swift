@@ -61,12 +61,48 @@ struct TraceResultsSheet: View {
     private var resultsSection: some View {
         Section {
             if result.success {
-                ForEach(result.hops) { hop in
-                    TraceResultHopRow(hop: hop)
+                ForEach(Array(result.hops.enumerated()), id: \.element.id) { index, hop in
+                    TraceResultHopRow(
+                        hop: hop,
+                        hopIndex: index,
+                        batchStats: viewModel.batchEnabled ? viewModel.hopStats(at: index) : nil,
+                        latestSNR: viewModel.batchEnabled ? viewModel.latestHopSNR(at: index) : nil,
+                        isBatchInProgress: viewModel.isBatchInProgress
+                    )
                 }
 
-                // Duration row with optional comparison
-                if viewModel.isRunningSavedPath, let previous = viewModel.previousRun {
+                // Batch progress indicator
+                if viewModel.batchEnabled && viewModel.isBatchInProgress {
+                    HStack {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
+                }
+
+                // Batch completion status
+                if viewModel.batchEnabled && viewModel.isBatchComplete {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful")
+                }
+
+                // Duration row with batch or single display
+                if viewModel.batchEnabled && viewModel.successCount > 0 {
+                    batchRTTRow
+                } else if viewModel.isRunningSavedPath, let previous = viewModel.previousRun {
                     comparisonRow(currentMs: result.durationMs, previousRun: previous)
                 } else {
                     HStack {
@@ -189,6 +225,30 @@ struct TraceResultsSheet: View {
             }
         }
     }
+
+    // MARK: - Batch RTT Row
+
+    @ViewBuilder
+    private var batchRTTRow: some View {
+        if let avg = viewModel.averageRTT,
+           let min = viewModel.minRTT,
+           let max = viewModel.maxRTT {
+            HStack {
+                Text("Avg Round Trip")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                VStack(alignment: .trailing) {
+                    Text("\(avg) ms")
+                        .font(.body.monospacedDigit())
+                    Text("(\(min)–\(max))")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Average round trip: \(avg) milliseconds, range \(min) to \(max)")
+        }
+    }
 }
 
 // MARK: - Result Hop Row
@@ -196,6 +256,29 @@ struct TraceResultsSheet: View {
 /// Row for displaying a hop in the trace results
 struct TraceResultHopRow: View {
     let hop: TraceHop
+    let hopIndex: Int
+    var batchStats: (avg: Double, min: Double, max: Double)?
+    var latestSNR: Double?
+    var isBatchInProgress: Bool = false
+
+    /// SNR value to use for signal bars (latest during progress, average when complete)
+    private var displaySNR: Double {
+        if isBatchInProgress {
+            return latestSNR ?? hop.snr
+        } else if let stats = batchStats {
+            return stats.avg
+        } else {
+            return hop.snr
+        }
+    }
+
+    private var signalLevel: Double {
+        TraceHop.signalLevel(for: displaySNR)
+    }
+
+    private var signalColor: Color {
+        TraceHop.signalColor(for: displaySNR)
+    }
 
     var body: some View {
         HStack {
@@ -226,24 +309,27 @@ struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // SNR display using sender attribution:
-                // Shows how well the NEXT hop received this node's transmission.
-                // End node has no SNR (no next hop to measure).
-                if hop.isEndNode {
-                    // No SNR for end node - no next hop
-                } else {
-                    Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // SNR display - batch mode shows avg with range, single shows plain SNR
+                if !hop.isStartNode {
+                    if let stats = batchStats {
+                        Text("Avg SNR: \(stats.avg, format: .number.precision(.fractionLength(1))) dB (\(stats.min, format: .number.precision(.fractionLength(1)))–\(stats.max, format: .number.precision(.fractionLength(1))))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Average signal to noise ratio: \(stats.avg, format: .number.precision(.fractionLength(1))) decibels, range \(stats.min, format: .number.precision(.fractionLength(1))) to \(stats.max, format: .number.precision(.fractionLength(1)))")
+                    } else {
+                        Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
             Spacer()
 
-            // Signal strength indicator (not for end node - no next hop)
-            if !hop.isEndNode {
-                Image(systemName: "cellularbars", variableValue: hop.signalLevel)
-                    .foregroundStyle(hop.signalColor)
+            // Signal strength indicator (not for start node - it didn't receive)
+            if !hop.isStartNode {
+                Image(systemName: "cellularbars", variableValue: signalLevel)
+                    .foregroundStyle(signalColor)
                     .font(.title2)
             }
         }

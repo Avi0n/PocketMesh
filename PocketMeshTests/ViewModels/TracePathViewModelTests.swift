@@ -179,12 +179,12 @@ struct PreviousRunComparisonTests {
 @MainActor
 struct TraceResponseHopParsingTests {
 
-    @Test("handleTraceResponse creates correct hops with sender SNR attribution")
+    @Test("handleTraceResponse creates correct hops with receiver SNR attribution")
     func singleHopTraceProducesCorrectHops() {
         let viewModel = TracePathViewModel()
 
         // Create a TraceInfo with one repeater hop + final nil node
-        // SNR values: 5.0 = how repeater heard us, 3.0 = how we heard return
+        // SNR values: 5.0 = what repeater measured, 3.0 = what we measured on return
         let traceInfo = TraceInfo(
             tag: 12345,
             authCode: 0,
@@ -208,24 +208,24 @@ struct TraceResponseHopParsingTests {
         #expect(result.success == true)
         #expect(result.hops.count == 3)  // Start + 1 repeater + End
 
-        // Start node gets SNR from first hop (how repeater heard our transmission)
+        // Start node has no SNR (it transmitted first, didn't receive)
         #expect(result.hops[0].isStartNode == true)
         #expect(result.hops[0].hashBytes == nil)
-        #expect(result.hops[0].snr == 5.0)  // Sender attribution: how first hop heard us
+        #expect(result.hops[0].snr == 0)  // Receiver attribution: start didn't receive
 
-        // Intermediate hop gets SNR from next node (how we heard its return)
+        // Intermediate hop shows SNR it measured when receiving
         #expect(result.hops[1].isStartNode == false)
         #expect(result.hops[1].isEndNode == false)
         #expect(result.hops[1].hashBytes == Data([0xAB]))
-        #expect(result.hops[1].snr == 3.0)  // Sender attribution: how end node heard repeater
+        #expect(result.hops[1].snr == 5.0)  // Receiver attribution: what repeater measured
 
-        // End node has no SNR (no next hop to measure)
+        // End node shows SNR it measured when receiving
         #expect(result.hops[2].isEndNode == true)
         #expect(result.hops[2].hashBytes == nil)
-        #expect(result.hops[2].snr == 0)  // No next hop, so no SNR
+        #expect(result.hops[2].snr == 3.0)  // Receiver attribution: what we measured
     }
 
-    @Test("handleTraceResponse creates correct hops for multi-hop trace with sender SNR attribution")
+    @Test("handleTraceResponse creates correct hops for multi-hop trace with receiver SNR attribution")
     func multiHopTraceProducesCorrectHops() {
         let viewModel = TracePathViewModel()
 
@@ -254,12 +254,12 @@ struct TraceResponseHopParsingTests {
 
         #expect(result.hops.count == 5)  // Start + 3 repeaters + End
 
-        // Sender attribution: each node shows how the NEXT hop heard its transmission
-        #expect(result.hops[0].snr == 6.0)   // Start: how AA heard us
-        #expect(result.hops[1].snr == 4.0)   // AA: how BB heard AA
-        #expect(result.hops[2].snr == 2.0)   // BB: how CC heard BB
-        #expect(result.hops[3].snr == -1.0)  // CC: how End heard CC
-        #expect(result.hops[4].snr == 0)     // End: no next hop
+        // Receiver attribution: each node shows what it measured when receiving
+        #expect(result.hops[0].snr == 0)     // Start: didn't receive (transmitted first)
+        #expect(result.hops[1].snr == 6.0)   // AA: what AA measured
+        #expect(result.hops[2].snr == 4.0)   // BB: what BB measured
+        #expect(result.hops[3].snr == 2.0)   // CC: what CC measured
+        #expect(result.hops[4].snr == -1.0)  // End: what End measured
 
         // Verify all intermediate hops are present
         #expect(result.hops[1].hashBytes == Data([0xAA]))

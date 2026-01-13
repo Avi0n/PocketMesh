@@ -81,7 +81,11 @@ struct TracePathView: View {
                 presentedResult = result
             }
         }
-        .sheet(item: $presentedResult) { result in
+        .sheet(item: $presentedResult, onDismiss: {
+            if viewModel.isBatchInProgress {
+                viewModel.cancelBatchTrace()
+            }
+        }) { result in
             TraceResultsSheet(result: result, viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
@@ -156,6 +160,26 @@ struct TracePathView: View {
                         Text("Mirror outbound path for the return journey")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                Toggle(isOn: $viewModel.batchEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Batch Trace")
+                        Text("Run multiple traces and average the results")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if viewModel.batchEnabled {
+                    HStack(spacing: 12) {
+                        Text("Traces:")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        BatchSizeChip(size: 3, selectedSize: $viewModel.batchSize)
+                        BatchSizeChip(size: 5, selectedSize: $viewModel.batchSize)
+                        BatchSizeChip(size: 10, selectedSize: $viewModel.batchSize)
                     }
                 }
 
@@ -249,7 +273,11 @@ struct TracePathView: View {
                     HStack(spacing: 8) {
                         ProgressView()
                             .controlSize(.small)
-                        Text("Running Trace...")
+                        if viewModel.batchEnabled {
+                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                        } else {
+                            Text("Running Trace...")
+                        }
                     }
                     .frame(minWidth: 160)
                     .padding(.vertical, 12)
@@ -259,12 +287,18 @@ struct TracePathView: View {
                         Capsule()
                             .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
                     }
-                    .accessibilityLabel("Running trace, please wait")
+                    .accessibilityLabel(viewModel.batchEnabled
+                        ? "Running trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
+                        : "Running trace, please wait")
                     .accessibilityHint("Trace is in progress")
                 } else {
                     Button {
                         Task {
-                            await viewModel.runTrace()
+                            if viewModel.batchEnabled {
+                                await viewModel.runBatchTrace()
+                            } else {
+                                await viewModel.runTrace()
+                            }
                         }
                     } label: {
                         Text("Run Trace")
@@ -274,7 +308,9 @@ struct TracePathView: View {
                     .liquidGlassProminentButtonStyle()
                     .disabled(!viewModel.canRunTrace)
                     .accessibilityLabel("Run trace")
-                    .accessibilityHint("Double tap to trace the path")
+                    .accessibilityHint(viewModel.batchEnabled
+                        ? "Double tap to run \(viewModel.batchSize) traces"
+                        : "Double tap to trace the path")
                 }
                 Spacer()
             }
@@ -360,5 +396,31 @@ private struct JumpToPathButton: View {
         .accessibilityLabel("Jump to Run Trace button")
         .accessibilityHint("Double tap to scroll to the bottom of the path")
         .accessibilityHidden(!isVisible)
+    }
+}
+
+// MARK: - Batch Size Chip
+
+/// Chip button for selecting batch trace count
+private struct BatchSizeChip: View {
+    let size: Int
+    @Binding var selectedSize: Int
+
+    private var isSelected: Bool { selectedSize == size }
+
+    var body: some View {
+        Button {
+            selectedSize = size
+        } label: {
+            Text("\(size)×")
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), in: .capsule)
+                .foregroundStyle(isSelected ? .white : .primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(size) traces")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

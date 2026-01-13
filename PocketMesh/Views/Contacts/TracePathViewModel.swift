@@ -21,14 +21,24 @@ struct TraceHop: Identifiable {
         hashBytes?.map { $0.hexString }.joined()
     }
 
+    /// Map SNR to 0-1 range for cellularbars variableValue
     var signalLevel: Double {
-        // Map SNR to 0-1 range for cellularbars variableValue
+        Self.signalLevel(for: snr)
+    }
+
+    var signalColor: Color {
+        Self.signalColor(for: snr)
+    }
+
+    /// Shared signal level calculation for any SNR value
+    static func signalLevel(for snr: Double) -> Double {
         if snr >= 5 { return 1.0 }
         if snr >= -5 { return 0.66 }
         return 0.33
     }
 
-    var signalColor: Color {
+    /// Shared signal color calculation for any SNR value
+    static func signalColor(for snr: Double) -> Color {
         if snr >= 5 { return .green }
         if snr >= -5 { return .yellow }
         return .red
@@ -81,6 +91,97 @@ final class TracePathViewModel {
 
     /// Duration before error auto-clears. Injectable for testing.
     var errorAutoClearDelay: Duration = .seconds(4)
+
+    /// Buffer between consecutive batch traces to avoid network flooding.
+    private static let interTraceBufferMs = 500
+
+    // MARK: - Batch Trace State
+
+    var batchEnabled = false {
+        didSet {
+            if !batchEnabled {
+                clearBatchState()
+            }
+        }
+    }
+    var batchSize = 5
+    var currentTraceIndex = 0
+    var completedResults: [TraceResult] = []
+
+    /// Task running the batch loop - stored so cancellation works
+    private var batchTask: Task<Void, Never>?
+
+    /// Flag to signal batch loop should stop (since we await in the calling context)
+    private var batchCancelled = false
+
+    /// Continuation for awaiting trace response in batch mode
+    private var traceContinuation: CheckedContinuation<Void, Never>?
+
+    var isBatchInProgress: Bool {
+        batchEnabled && currentTraceIndex > 0 && currentTraceIndex <= batchSize
+    }
+
+    var isBatchComplete: Bool {
+        batchEnabled && completedResults.count == batchSize
+    }
+
+    var successfulResults: [TraceResult] {
+        completedResults.filter { $0.success }
+    }
+
+    var successCount: Int {
+        successfulResults.count
+    }
+
+    /// Clear batch execution state
+    func clearBatchState() {
+        currentTraceIndex = 0
+        completedResults = []
+    }
+
+    // MARK: - Batch Aggregates
+
+    var averageRTT: Int? {
+        let rtts = successfulResults.map(\.durationMs)
+        guard !rtts.isEmpty else { return nil }
+        return rtts.reduce(0, +) / rtts.count
+    }
+
+    var minRTT: Int? {
+        successfulResults.map(\.durationMs).min()
+    }
+
+    var maxRTT: Int? {
+        successfulResults.map(\.durationMs).max()
+    }
+
+    /// Returns aggregate stats for a hop at the given index (0 = start node, 1+ = intermediate/end)
+    /// Returns nil for start node (index 0) as it has no received SNR
+    func hopStats(at index: Int) -> (avg: Double, min: Double, max: Double)? {
+        guard index > 0 else { return nil }  // Start node has no SNR
+
+        let snrValues = successfulResults.compactMap { result -> Double? in
+            guard index < result.hops.count else { return nil }
+            let hop = result.hops[index]
+            guard !hop.isStartNode else { return nil }
+            return hop.snr
+        }
+
+        guard !snrValues.isEmpty else { return nil }
+
+        let avg = snrValues.reduce(0, +) / Double(snrValues.count)
+        let min = snrValues.min() ?? 0
+        let max = snrValues.max() ?? 0
+
+        return (avg, min, max)
+    }
+
+    /// Returns the SNR for a hop from the most recent successful result
+    func latestHopSNR(at index: Int) -> Double? {
+        guard let latest = successfulResults.last,
+              index < latest.hops.count else { return nil }
+        return latest.hops[index].snr
+    }
 
     // MARK: - Saved Path State
 
@@ -158,8 +259,14 @@ final class TracePathViewModel {
 
     /// Can save path if result is successful and path hasn't changed since trace ran
     var canSavePath: Bool {
-        guard let result, result.success else { return false }
-        return fullPathBytes == result.tracedPathBytes
+        if batchEnabled {
+            guard !completedResults.isEmpty else { return false }
+            guard let firstSuccess = successfulResults.first else { return false }
+            return fullPathBytes == firstSuccess.tracedPathBytes
+        } else {
+            guard let result, result.success else { return false }
+            return fullPathBytes == result.tracedPathBytes
+        }
     }
 
     // MARK: - Configuration
@@ -261,25 +368,78 @@ final class TracePathViewModel {
         }
     }
 
+    /// Extract SNR values from intermediate hops (excluding start and end nodes)
+    private func extractHopsSNR(from result: TraceResult) -> [Double] {
+        result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode }
+            .map { $0.snr }
+    }
+
     /// Save the current path with the given name
     /// - Returns: `true` if save succeeded, `false` otherwise
     @discardableResult
     func savePath(name: String) async -> Bool {
         guard let appState,
               let deviceID = appState.connectedDevice?.id,
-              let dataStore = appState.services?.dataStore,
-              let result = result, result.success else { return false }
+              let dataStore = appState.services?.dataStore else { return false }
 
-        // Create initial run DTO (filter to intermediate hops only)
-        let hopsSNR = result.hops
-            .filter { !$0.isStartNode && !$0.isEndNode }
-            .map { $0.snr }
+        // For batch mode, save all completed results
+        if batchEnabled && !completedResults.isEmpty {
+            guard let firstSuccess = successfulResults.first else { return false }
+
+            // Create initial run from first successful result
+            let initialRun = TracePathRunDTO(
+                id: UUID(),
+                date: Date(),
+                success: true,
+                roundTripMs: firstSuccess.durationMs,
+                hopsSNR: extractHopsSNR(from: firstSuccess)
+            )
+
+            do {
+                let savedPath = try await dataStore.createSavedTracePath(
+                    deviceID: deviceID,
+                    name: name,
+                    pathBytes: Data(firstSuccess.tracedPathBytes),
+                    initialRun: initialRun
+                )
+
+                // Append remaining results as additional runs
+                for (index, batchResult) in completedResults.enumerated() {
+                    // Skip the first successful result (already saved as initial)
+                    if batchResult.id == firstSuccess.id { continue }
+
+                    let run = TracePathRunDTO(
+                        id: UUID(),
+                        date: Date().addingTimeInterval(Double(index)),
+                        success: batchResult.success,
+                        roundTripMs: batchResult.durationMs,
+                        hopsSNR: extractHopsSNR(from: batchResult)
+                    )
+                    try await dataStore.appendTracePathRun(pathID: savedPath.id, run: run)
+                }
+
+                // Refresh to get all runs
+                if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                    activeSavedPath = updated
+                }
+                logger.info("Saved batch path: \(name) with \(self.completedResults.count) runs")
+                return true
+            } catch {
+                logger.error("Failed to save batch path: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        // Single trace mode (original behavior)
+        guard let result, result.success else { return false }
+
         let initialRun = TracePathRunDTO(
             id: UUID(),
             date: Date(),
             success: true,
             roundTripMs: result.durationMs,
-            hopsSNR: hopsSNR
+            hopsSNR: extractHopsSNR(from: result)
         )
 
         do {
@@ -478,6 +638,185 @@ final class TracePathViewModel {
         }
     }
 
+    // MARK: - Batch Trace Execution
+
+    /// Execute multiple traces in batch mode
+    func runBatchTrace() async {
+        guard batchEnabled else {
+            await runTrace()
+            return
+        }
+
+        // Reset batch state before any early returns
+        clearBatchState()
+        batchCancelled = false
+        resultID = nil
+        clearError()
+
+        guard let appState,
+              let session = appState.services?.session,
+              !outboundPath.isEmpty else { return }
+
+        // Match to saved path if not already running one
+        if activeSavedPath == nil {
+            if let matchedPath = await findMatchingSavedPath() {
+                activeSavedPath = matchedPath
+                logger.info("Matched path to saved path: \(matchedPath.name)")
+            }
+        }
+
+        isRunning = true
+        result = nil
+
+        // Execute traces sequentially
+        for traceIndex in 1...batchSize {
+            // Check cancellation BEFORE starting next trace
+            if batchCancelled { break }
+
+            currentTraceIndex = traceIndex
+
+            // Run single trace and wait for result
+            await executeSingleTrace(session: session, appState: appState)
+
+            // Check if we got a successful result to show the sheet
+            if let latestResult = completedResults.last, latestResult.success {
+                // First successful result triggers sheet presentation
+                if successCount == 1 {
+                    result = latestResult
+                    resultID = UUID()
+                } else {
+                    // Update result for subsequent successful traces
+                    result = latestResult
+                }
+            }
+
+            // Small buffer between traces (unless this is the last one)
+            if traceIndex < batchSize {
+                // Check cancellation BEFORE sleeping
+                if batchCancelled { break }
+                try? await Task.sleep(for: .milliseconds(Self.interTraceBufferMs))
+                // Check cancellation AFTER sleeping
+                if batchCancelled { break }
+            }
+        }
+
+        isRunning = false
+        currentTraceIndex = 0
+    }
+
+    /// Execute a single trace within a batch, storing result in completedResults
+    private func executeSingleTrace(session: MeshCoreSession, appState: AppState) async {
+        pendingPathHash = fullPathBytes
+
+        // Generate random tag for correlation
+        let tag = UInt32.random(in: 0...UInt32.max)
+        pendingTag = tag
+        pendingDeviceID = appState.connectedDevice?.id
+        traceStartTime = Date()
+
+        let pathData = Data(fullPathBytes)
+
+        do {
+            _ = try await session.sendTrace(
+                tag: tag,
+                authCode: 0,
+                flags: 0,
+                path: pathData
+            )
+            logger.info("Sent batch trace \(self.currentTraceIndex)/\(self.batchSize) with tag \(tag)")
+        } catch {
+            logger.error("Failed to send trace: \(error.localizedDescription)")
+            let failedResult = TraceResult.sendFailed(
+                "Failed to send trace packet",
+                attemptedPath: pendingPathHash ?? []
+            )
+            completedResults.append(failedResult)
+            recordFailedRun(appState: appState)
+            pendingPathHash = nil
+            pendingTag = nil
+            return
+        }
+
+        // Wait for response with timeout using continuation
+        // Store continuation so handleTraceResponse can resume it immediately
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            traceContinuation = continuation
+
+            traceTask = Task { @MainActor in
+                do {
+                    try await Task.sleep(for: .seconds(15))
+
+                    // Timeout - resume continuation if still waiting
+                    if traceContinuation != nil && pendingTag == tag {
+                        logger.warning("Batch trace timeout for tag \(tag)")
+                        let timeoutResult = TraceResult.timeout(attemptedPath: pendingPathHash ?? [])
+                        completedResults.append(timeoutResult)
+                        recordFailedRun(appState: appState)
+                        pendingPathHash = nil
+                        pendingTag = nil
+
+                        // Resume continuation (only if not already resumed by handleTraceResponse)
+                        traceContinuation?.resume()
+                        traceContinuation = nil
+                    }
+                } catch {
+                    // Cancelled - handleTraceResponse already resumed continuation
+                }
+            }
+        }
+    }
+
+    /// Record a failed run for saved paths
+    private func recordFailedRun(appState: AppState) {
+        guard let savedPath = activeSavedPath,
+              let dataStore = appState.services?.dataStore else { return }
+
+        let failedRun = TracePathRunDTO(
+            id: UUID(),
+            date: Date(),
+            success: false,
+            roundTripMs: 0,
+            hopsSNR: []
+        )
+
+        Task { @MainActor in
+            do {
+                try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
+                if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                    activeSavedPath = updated
+                }
+            } catch {
+                logger.error("Failed to record run: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Cancel any running batch trace
+    func cancelBatchTrace() {
+        // Set cancel flag for batch loop
+        batchCancelled = true
+
+        // Cancel batch loop Task
+        batchTask?.cancel()
+        batchTask = nil
+
+        // Cancel current trace timeout task
+        traceTask?.cancel()
+        traceTask = nil
+
+        // Clear continuation if waiting (prevent leaked continuation)
+        if let continuation = traceContinuation {
+            traceContinuation = nil
+            continuation.resume()
+        }
+
+        isRunning = false
+        currentTraceIndex = 0
+        pendingTag = nil
+        pendingDeviceID = nil
+        pendingPathHash = nil
+    }
+
     /// Handle trace response from event stream
     func handleTraceResponse(_ traceInfo: TraceInfo, deviceID: UUID?) {
         guard traceInfo.tag == pendingTag else {
@@ -503,25 +842,24 @@ final class TracePathViewModel {
             durationMs = 0
         }
 
-        // Build hops from response using sender attribution model:
-        // Each node's SNR shows how well the NEXT hop received its transmission.
-        // This answers "how good was this node's outgoing signal?"
+        // Build hops from response using receiver attribution model:
+        // Each node's SNR shows what it measured when receiving.
+        // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
         let path = traceInfo.path
 
-        // Start node gets SNR from first path node (how first repeater heard our transmission)
-        let startSnr = path.first?.snr ?? 0
+        // Start node has no SNR (it transmitted first, didn't receive anything)
         hops.append(TraceHop(
             hashBytes: nil,
             resolvedName: deviceName,
-            snr: startSnr,
+            snr: 0,
             isStartNode: true,
             isEndNode: false
         ))
 
-        // Intermediate hops - each gets SNR from the NEXT node's measurement
-        for (index, node) in path.enumerated() where node.hashBytes != nil {
+        // Intermediate hops - each shows SNR it measured when receiving
+        for node in path where node.hashBytes != nil {
             let resolvedName: String?
             if let bytes = node.hashBytes, bytes.count == 1 {
                 resolvedName = resolveHashToName(bytes[0])
@@ -529,23 +867,21 @@ final class TracePathViewModel {
                 resolvedName = nil  // Multi-byte: no resolution possible
             }
 
-            // Get SNR from next position in path (sender attribution)
-            let nextSnr = index + 1 < path.count ? path[index + 1].snr : 0
-
             hops.append(TraceHop(
                 hashBytes: node.hashBytes,
                 resolvedName: resolvedName,
-                snr: nextSnr,
+                snr: node.snr,
                 isStartNode: false,
                 isEndNode: false
             ))
         }
 
-        // End node - no SNR (no next hop to measure our transmission)
+        // End node shows SNR it measured when receiving
+        let endSnr = path.last?.snr ?? 0
         hops.append(TraceHop(
             hashBytes: nil,
             resolvedName: deviceName,
-            snr: 0,
+            snr: endSnr,
             isStartNode: false,
             isEndNode: true
         ))
@@ -557,9 +893,23 @@ final class TracePathViewModel {
             errorMessage: nil,
             tracedPathBytes: pendingPathHash ?? []
         )
-        resultID = UUID()
+
+        // In batch mode, store result and resume continuation
+        if batchEnabled, let result {
+            completedResults.append(result)
+        } else {
+            resultID = UUID()
+            isRunning = false
+        }
+
+        // Resume continuation if waiting (enables immediate batch progression)
+        if let continuation = traceContinuation {
+            traceContinuation = nil
+            traceTask?.cancel()
+            continuation.resume()
+        }
+
         pendingPathHash = nil
-        isRunning = false
         pendingTag = nil
         pendingDeviceID = nil
         traceStartTime = nil
