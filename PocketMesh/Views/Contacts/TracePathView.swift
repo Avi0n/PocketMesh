@@ -81,7 +81,11 @@ struct TracePathView: View {
                 presentedResult = result
             }
         }
-        .sheet(item: $presentedResult) { result in
+        .sheet(item: $presentedResult, onDismiss: {
+            if viewModel.isBatchInProgress {
+                viewModel.cancelBatchTrace()
+            }
+        }) { result in
             TraceResultsSheet(result: result, viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
