@@ -747,7 +747,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             heardRepeats: dto.heardRepeats,
             retryAttempt: dto.retryAttempt,
             maxRetryAttempts: dto.maxRetryAttempts,
-            deduplicationKey: nil
+            deduplicationKey: nil,
+            containsSelfMention: dto.containsSelfMention,
+            mentionSeen: dto.mentionSeen
         )
         modelContext.insert(message)
         try modelContext.save()
