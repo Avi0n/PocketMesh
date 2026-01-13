@@ -205,7 +205,15 @@ struct ChatsView: View {
             handlePendingNavigation()
             handlePendingRoomNavigation()
         }
-        .onChange(of: selectedDestination) { _, newValue in
+        .onChange(of: selectedDestination) { oldValue, newValue in
+            // Refresh conversations when selection changes to pick up any updates
+            // (e.g., mention counts, unread counts, last message previews)
+            if oldValue != nil {
+                Task {
+                    await loadConversations()
+                }
+            }
+
             guard let newValue else { return }
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session

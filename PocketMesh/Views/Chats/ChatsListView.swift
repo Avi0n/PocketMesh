@@ -186,6 +186,11 @@ struct ChatsListView: View {
                 // Restore tab bar when navigating back to the list
                 if newPath.isEmpty {
                     appState.tabBarVisibility = .visible
+                    // Refresh conversations to pick up any changes made in chat views
+                    // (e.g., mention counts, unread counts, last message previews)
+                    Task {
+                        await loadConversations()
+                    }
                 }
             }
             .sheet(item: $roomToAuthenticate) { session in
