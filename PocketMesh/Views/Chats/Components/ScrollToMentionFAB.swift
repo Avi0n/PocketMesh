@@ -11,9 +11,9 @@ struct ScrollToMentionFAB: View {
             Image(systemName: "at")
                 .font(.body.bold())
                 .frame(width: 44, height: 44)
-                .liquidGlass(in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glass)
+        .clipShape(.circle)
         .overlay(alignment: .topTrailing) {
             unreadBadge
         }
