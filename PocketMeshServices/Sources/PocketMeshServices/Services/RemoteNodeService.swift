@@ -322,8 +322,6 @@ public actor RemoteNodeService {
             throw RemoteNodeError.passwordNotFound
         }
 
-        // Calculate timeout based on path length
-        let timeout = LoginTimeoutConfig.timeout(forPathLength: pathLength)
         let prefix = Data(remoteSession.publicKey.prefix(6))
 
         // Cancel any existing pending login for this prefix
@@ -345,8 +343,9 @@ public actor RemoteNodeService {
 
             Task { [self] in
                 // Send login via MeshCore session
+                let sentInfo: MessageSentInfo
                 do {
-                    _ = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
+                    sentInfo = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
                 } catch {
                     // Send failed - remove pending and resume with error
                     if let pending = pendingLogins.removeValue(forKey: prefix) {
@@ -356,7 +355,8 @@ public actor RemoteNodeService {
                     return
                 }
 
-                // Send succeeded - start timeout countdown
+                // Send succeeded - use firmware's suggested timeout
+                let timeout = Duration.milliseconds(Int(sentInfo.suggestedTimeoutMs))
                 logger.info("login: send succeeded, starting \(timeout) timeout for prefix \(prefixHex)")
                 try? await Task.sleep(for: timeout)
                 if let pending = pendingLogins.removeValue(forKey: prefix) {
