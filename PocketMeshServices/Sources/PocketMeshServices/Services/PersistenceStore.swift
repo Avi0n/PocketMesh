@@ -511,6 +511,129 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    // MARK: - Mention Tracking
+
+    public func markMentionSeen(messageID: UUID) throws {
+        let targetID = messageID
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else { return }
+        message.mentionSeen = true
+        try modelContext.save()
+    }
+
+    public func incrementUnreadMentionCount(contactID: UUID) throws {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { contact in
+            contact.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let contact = try modelContext.fetch(descriptor).first else { return }
+        contact.unreadMentionCount += 1
+        try modelContext.save()
+    }
+
+    public func decrementUnreadMentionCount(contactID: UUID) throws {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { contact in
+            contact.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let contact = try modelContext.fetch(descriptor).first else { return }
+        contact.unreadMentionCount = max(0, contact.unreadMentionCount - 1)
+        try modelContext.save()
+    }
+
+    public func clearUnreadMentionCount(contactID: UUID) throws {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { contact in
+            contact.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let contact = try modelContext.fetch(descriptor).first else { return }
+        contact.unreadMentionCount = 0
+        try modelContext.save()
+    }
+
+    public func incrementChannelUnreadMentionCount(channelID: UUID) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else { return }
+        channel.unreadMentionCount += 1
+        try modelContext.save()
+    }
+
+    public func decrementChannelUnreadMentionCount(channelID: UUID) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else { return }
+        channel.unreadMentionCount = max(0, channel.unreadMentionCount - 1)
+        try modelContext.save()
+    }
+
+    public func clearChannelUnreadMentionCount(channelID: UUID) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { channel in
+            channel.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else { return }
+        channel.unreadMentionCount = 0
+        try modelContext.save()
+    }
+
+    public func fetchUnseenMentionIDs(contactID: UUID) throws -> [UUID] {
+        let targetID = contactID
+        let predicate = #Predicate<Message> { message in
+            message.contactID == targetID &&
+            message.containsSelfMention == true &&
+            message.mentionSeen == false
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.sortBy = [SortDescriptor(\.timestamp, order: .forward)]
+
+        let messages = try modelContext.fetch(descriptor)
+        return messages.map(\.id)
+    }
+
+    public func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) throws -> [UUID] {
+        let targetDeviceID = deviceID
+        let targetIndex = channelIndex
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.channelIndex == targetIndex &&
+            message.containsSelfMention == true &&
+            message.mentionSeen == false
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.sortBy = [SortDescriptor(\.timestamp, order: .forward)]
+
+        let messages = try modelContext.fetch(descriptor)
+        return messages.map(\.id)
+    }
+
     /// Sets the muted state for a contact
     public func setContactMuted(_ contactID: UUID, isMuted: Bool) throws {
         let targetID = contactID
