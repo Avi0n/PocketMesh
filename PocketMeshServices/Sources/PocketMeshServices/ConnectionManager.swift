@@ -1337,6 +1337,10 @@ public final class ConnectionManager {
 
         // Tear down session layer (it's invalid now)
         await services?.stopEventMonitoring()
+        // Reset sync state before destroying services to prevent stuck "Syncing" pill
+        if let services {
+            await services.syncCoordinator.onDisconnected(services: services)
+        }
         services = nil
         session = nil
 
