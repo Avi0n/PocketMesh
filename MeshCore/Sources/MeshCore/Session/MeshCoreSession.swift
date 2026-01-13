@@ -805,7 +805,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private func performStatusRequest(from publicKey: Data) async throws -> StatusResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .status)
         let publicKeyPrefix = Data(publicKey.prefix(6))
-        let effectiveTimeout = configuration.defaultTimeout
 
         // Subscribe BEFORE sending to avoid race condition where binaryResponse
         // arrives before we can register the pending request
@@ -816,6 +815,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
         // Wait for messageSent (to get expectedAck) then binaryResponse (the actual response)
         return try await withThrowingTaskGroup(of: StatusResponse?.self) { group in
+            let (timeoutStream, timeoutContinuation) = AsyncStream<TimeInterval>.makeStream()
+
             group.addTask {
                 var expectedAck: Data?
 
@@ -826,6 +827,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                     case .messageSent(let info):
                         // Capture the expectedAck from firmware's MSG_SENT response
                         expectedAck = info.expectedAck
+                        // Signal dynamic timeout to timeout task
+                        let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
+                        timeoutContinuation.yield(timeout)
+                        timeoutContinuation.finish()
 
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
@@ -847,11 +852,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         continue
                     }
                 }
+                timeoutContinuation.finish()
                 return nil
             }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
+            group.addTask { [clock = self.clock, defaultTimeout = configuration.defaultTimeout] in
+                // Wait for dynamic timeout from event task, or use default
+                var timeout = defaultTimeout
+                for await t in timeoutStream {
+                    timeout = t
+                    break
+                }
+                try await clock.sleep(for: .seconds(timeout))
                 return nil
             }
 
@@ -1617,7 +1629,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private func performTelemetryRequest(from publicKey: Data) async throws -> TelemetryResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .telemetry)
         let publicKeyPrefix = Data(publicKey.prefix(6))
-        let effectiveTimeout = configuration.defaultTimeout
 
         // Subscribe BEFORE sending to avoid race condition where binaryResponse
         // arrives before we can register the pending request
@@ -1628,6 +1639,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
         // Wait for messageSent (to get expectedAck) then binaryResponse (the actual response)
         return try await withThrowingTaskGroup(of: TelemetryResponse?.self) { group in
+            let (timeoutStream, timeoutContinuation) = AsyncStream<TimeInterval>.makeStream()
+
             group.addTask {
                 var expectedAck: Data?
 
@@ -1638,6 +1651,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                     case .messageSent(let info):
                         // Capture the expectedAck from firmware's MSG_SENT response
                         expectedAck = info.expectedAck
+                        // Signal dynamic timeout to timeout task
+                        let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
+                        timeoutContinuation.yield(timeout)
+                        timeoutContinuation.finish()
 
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
@@ -1657,11 +1674,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         continue
                     }
                 }
+                timeoutContinuation.finish()
                 return nil
             }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
+            group.addTask { [clock = self.clock, defaultTimeout = configuration.defaultTimeout] in
+                // Wait for dynamic timeout from event task, or use default
+                var timeout = defaultTimeout
+                for await t in timeoutStream {
+                    timeout = t
+                    break
+                }
+                try await clock.sleep(for: .seconds(timeout))
                 return nil
             }
 
@@ -1712,13 +1736,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .mma, payload: payload)
         let publicKeyPrefix = Data(publicKey.prefix(6))
-        let effectiveTimeout = configuration.defaultTimeout
 
         // Subscribe BEFORE sending to avoid race condition
         let events = await dispatcher.subscribe()
         try await transport.send(data)
 
         return try await withThrowingTaskGroup(of: MMAResponse?.self) { group in
+            let (timeoutStream, timeoutContinuation) = AsyncStream<TimeInterval>.makeStream()
+
             group.addTask {
                 var expectedAck: Data?
 
@@ -1728,6 +1753,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                     switch event {
                     case .messageSent(let info):
                         expectedAck = info.expectedAck
+                        // Signal dynamic timeout to timeout task
+                        let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
+                        timeoutContinuation.yield(timeout)
+                        timeoutContinuation.finish()
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1738,11 +1767,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         continue
                     }
                 }
+                timeoutContinuation.finish()
                 return nil
             }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
+            group.addTask { [clock = self.clock, defaultTimeout = configuration.defaultTimeout] in
+                // Wait for dynamic timeout from event task, or use default
+                var timeout = defaultTimeout
+                for await t in timeoutStream {
+                    timeout = t
+                    break
+                }
+                try await clock.sleep(for: .seconds(timeout))
                 return nil
             }
 
@@ -1773,13 +1809,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         let payload = Data([0, 0])
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .acl, payload: payload)
         let publicKeyPrefix = Data(publicKey.prefix(6))
-        let effectiveTimeout = configuration.defaultTimeout
 
         // Subscribe BEFORE sending to avoid race condition
         let events = await dispatcher.subscribe()
         try await transport.send(data)
 
         return try await withThrowingTaskGroup(of: ACLResponse?.self) { group in
+            let (timeoutStream, timeoutContinuation) = AsyncStream<TimeInterval>.makeStream()
+
             group.addTask {
                 var expectedAck: Data?
 
@@ -1789,6 +1826,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                     switch event {
                     case .messageSent(let info):
                         expectedAck = info.expectedAck
+                        // Signal dynamic timeout to timeout task
+                        let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
+                        timeoutContinuation.yield(timeout)
+                        timeoutContinuation.finish()
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1799,11 +1840,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         continue
                     }
                 }
+                timeoutContinuation.finish()
                 return nil
             }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
+            group.addTask { [clock = self.clock, defaultTimeout = configuration.defaultTimeout] in
+                // Wait for dynamic timeout from event task, or use default
+                var timeout = defaultTimeout
+                for await t in timeoutStream {
+                    timeout = t
+                    break
+                }
+                try await clock.sleep(for: .seconds(timeout))
                 return nil
             }
 
@@ -1865,7 +1913,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .neighbours, payload: payload)
         let publicKeyPrefix = Data(publicKey.prefix(6))
-        let effectiveTimeout = configuration.defaultTimeout
         let prefixLength = Int(pubkeyPrefixLength)
 
         // Subscribe BEFORE sending to avoid race condition
@@ -1873,6 +1920,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await transport.send(data)
 
         return try await withThrowingTaskGroup(of: NeighboursResponse?.self) { group in
+            let (timeoutStream, timeoutContinuation) = AsyncStream<TimeInterval>.makeStream()
+
             group.addTask {
                 var expectedAck: Data?
 
@@ -1882,6 +1931,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                     switch event {
                     case .messageSent(let info):
                         expectedAck = info.expectedAck
+                        // Signal dynamic timeout to timeout task
+                        let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
+                        timeoutContinuation.yield(timeout)
+                        timeoutContinuation.finish()
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1896,11 +1949,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         continue
                     }
                 }
+                timeoutContinuation.finish()
                 return nil
             }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
+            group.addTask { [clock = self.clock, defaultTimeout = configuration.defaultTimeout] in
+                // Wait for dynamic timeout from event task, or use default
+                var timeout = defaultTimeout
+                for await t in timeoutStream {
+                    timeout = t
+                    break
+                }
+                try await clock.sleep(for: .seconds(timeout))
                 return nil
             }
 
