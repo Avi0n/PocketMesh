@@ -58,9 +58,10 @@ public enum HashtagUtilities {
 
     /// Validates that a channel name contains only valid characters
     /// - Parameter name: Channel name without # prefix
-    /// - Returns: True if valid (lowercase letters, numbers, hyphens only)
+    /// - Returns: True if valid (starts with alphanumeric, then lowercase letters, numbers, hyphens only)
     public static func isValidHashtagName(_ name: String) -> Bool {
         guard !name.isEmpty else { return false }
+        guard let first = name.first, first.isLowercase || first.isNumber else { return false }
         return name.allSatisfy { char in
             char.isLowercase || char.isNumber || char == "-"
         }

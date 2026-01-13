@@ -22,8 +22,9 @@ struct HashtagUtilitiesTests {
 
     @Test("hashtag pattern rejects invalid hashtags")
     func testPatternRejectsInvalid() {
-        let pattern = HashtagUtilities.hashtagPattern
-        let regex = try! NSRegularExpression(pattern: pattern)
+        // Use anchored pattern for full-string validation (extraction pattern finds partial matches)
+        let anchoredPattern = "^" + HashtagUtilities.hashtagPattern + "$"
+        let regex = try! NSRegularExpression(pattern: anchoredPattern)
 
         let invalidCases = ["#Test", "#UPPER", "#test_underscore", "#test.dot", "#"]
         for text in invalidCases {
