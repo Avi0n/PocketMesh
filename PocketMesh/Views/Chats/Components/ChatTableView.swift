@@ -30,6 +30,15 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     /// Callback when scroll state changes
     var onScrollStateChanged: ((Bool, Int) -> Void)?
 
+    /// Callback when a mention becomes visible
+    var onMentionBecameVisible: ((Item.ID) -> Void)?
+
+    /// Closure to check if an item contains an unseen self-mention
+    var isUnseenMention: ((Item) -> Bool)?
+
+    /// Tracks mention IDs that have already been reported as visible (prevents duplicate callbacks)
+    private var markedMentionIDs: Set<Item.ID> = []
+
     /// Current keyboard height for inset calculation
     private var keyboardHeight: CGFloat = 0
 
@@ -284,10 +293,43 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         skipAutoScroll = false
     }
 
+    func scrollToItem(id: Item.ID, animated: Bool) {
+        // Items are reversed in table: row 0 = newest (items.last)
+        guard let itemIndex = items.firstIndex(where: { $0.id == id }) else { return }
+        let rowIndex = items.count - 1 - itemIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        tableView.scrollToRow(at: indexPath, at: .middle, animated: animated)
+    }
+
     // MARK: - Scroll Tracking
 
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         updateIsAtBottom()
+        checkVisibleMentions()
+    }
+
+    private func checkVisibleMentions() {
+        guard let visibleIndexPaths = tableView.indexPathsForVisibleRows,
+              let isUnseenMention,
+              let onMentionBecameVisible else { return }
+
+        for indexPath in visibleIndexPaths {
+            guard indexPath.row < items.count else { continue }
+            // Items are reversed in table: row 0 = newest (items.last)
+            let reversedIndex = items.count - 1 - indexPath.row
+            guard reversedIndex >= 0 else { continue }
+            let item = items[reversedIndex]
+            // Only report each mention once per session
+            if !markedMentionIDs.contains(item.id) && isUnseenMention(item) {
+                markedMentionIDs.insert(item.id)
+                onMentionBecameVisible(item.id)
+            }
+        }
+    }
+
+    /// Resets the debouncing state (call when conversation changes)
+    func resetMarkedMentions() {
+        markedMentionIDs.removeAll()
     }
 
     override func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
