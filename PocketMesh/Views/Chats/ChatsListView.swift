@@ -630,15 +630,25 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    // Unread badge
-                    if channel.unreadCount > 0 {
-                        Text(channel.unreadCount, format: .number)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                    // Mention and unread badges
+                    HStack(spacing: 4) {
+                        if channel.unreadMentionCount > 0 {
+                            Text("@")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 18, height: 18)
+                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .circle)
+                        }
+
+                        if channel.unreadCount > 0 {
+                            Text(channel.unreadCount, format: .number)
+                                .font(.caption2)
+                                .bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                        }
                     }
                 }
             }
