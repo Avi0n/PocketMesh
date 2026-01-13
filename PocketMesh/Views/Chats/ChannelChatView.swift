@@ -102,7 +102,7 @@ struct ChannelChatView: View {
                     Task {
                         if isAtBottom {
                             // User will see the message immediately, mark it seen
-                            await markMentionSeen(messageID: message.id)
+                            await markNewArrivalMentionSeen(messageID: message.id)
                         } else {
                             await loadUnseenMentions()
                         }
@@ -194,6 +194,23 @@ struct ChannelChatView: View {
             }
         } catch {
             logger.error("Failed to mark channel mention seen: \(error)")
+        }
+    }
+
+    /// Mark a newly arrived mention as seen (for messages not yet in unseenMentionIDs)
+    private func markNewArrivalMentionSeen(messageID: UUID) async {
+        guard let dataStore = appState.services?.dataStore else { return }
+
+        do {
+            try await dataStore.markMentionSeen(messageID: messageID)
+            try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
+
+            // Refresh parent's channel list to update badge in sidebar
+            if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
+                await parent.loadChannels(deviceID: deviceID)
+            }
+        } catch {
+            logger.error("Failed to mark new channel mention seen: \(error)")
         }
     }
 
