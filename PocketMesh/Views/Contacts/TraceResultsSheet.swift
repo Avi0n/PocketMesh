@@ -65,8 +65,38 @@ struct TraceResultsSheet: View {
                     TraceResultHopRow(hop: hop)
                 }
 
-                // Duration row with optional comparison
-                if viewModel.isRunningSavedPath, let previous = viewModel.previousRun {
+                // Batch progress indicator
+                if viewModel.batchEnabled && viewModel.isBatchInProgress {
+                    HStack {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
+                }
+
+                // Batch completion status
+                if viewModel.batchEnabled && viewModel.isBatchComplete {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful")
+                }
+
+                // Duration row with batch or single display
+                if viewModel.batchEnabled && viewModel.successCount > 0 {
+                    batchRTTRow
+                } else if viewModel.isRunningSavedPath, let previous = viewModel.previousRun {
                     comparisonRow(currentMs: result.durationMs, previousRun: previous)
                 } else {
                     HStack {
@@ -187,6 +217,30 @@ struct TraceResultsSheet: View {
                         .font(.caption)
                 }
             }
+        }
+    }
+
+    // MARK: - Batch RTT Row
+
+    @ViewBuilder
+    private var batchRTTRow: some View {
+        if let avg = viewModel.averageRTT,
+           let min = viewModel.minRTT,
+           let max = viewModel.maxRTT {
+            HStack {
+                Text("Avg Round Trip")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                VStack(alignment: .trailing) {
+                    Text("\(avg) ms")
+                        .font(.body.monospacedDigit())
+                    Text("(\(min)–\(max))")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Average round trip: \(avg) milliseconds, range \(min) to \(max)")
         }
     }
 }
