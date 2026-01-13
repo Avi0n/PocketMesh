@@ -12,8 +12,9 @@ struct ScrollToBottomFAB: View {
                 .font(.body.bold())
                 .frame(width: 44, height: 44)
         }
-        .buttonStyle(.glass(.regular.tint(.blue)))
-        .clipShape(.circle)
+        .buttonStyle(.plain)
+        .contentShape(.circle)
+        .glassEffect(.regular.interactive(), in: .circle)
         .overlay(alignment: .topTrailing) {
             unreadBadge
         }
