@@ -242,6 +242,12 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             lastSeenItemID = newItems.last?.id
             scrollToBottom(animated: animated && previousCount > 0)
         }
+
+        // Check for visible mentions after layout settles (handles mentions visible on load)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            self?.checkVisibleMentions()
+        }
     }
 
     // MARK: - Scroll Control
