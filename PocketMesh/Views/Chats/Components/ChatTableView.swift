@@ -401,6 +401,10 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     @Binding var isAtBottom: Bool
     @Binding var unreadCount: Int
     @Binding var scrollToBottomRequest: Int
+    @Binding var scrollToMentionRequest: Int
+    var isUnseenMention: ((Item) -> Bool)?
+    var onMentionBecameVisible: ((Item.ID) -> Void)?
+    var mentionTargetID: Item.ID?
 
     func makeUIViewController(context: Context) -> ChatTableViewController<Item> {
         let controller = ChatTableViewController<Item>()
@@ -409,6 +413,8 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         }
         // Callback set up in updateUIViewController
         context.coordinator.lastScrollRequest = scrollToBottomRequest
+        controller.isUnseenMention = isUnseenMention
+        context.coordinator.lastMentionRequest = scrollToMentionRequest
         return controller
     }
 
@@ -431,6 +437,19 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
             DispatchQueue.main.async {
                 coordinator?.setIsAtBottom?(atBottom)
                 coordinator?.setUnreadCount?(unread)
+            }
+        }
+
+        // Update mention detection closures
+        controller.isUnseenMention = isUnseenMention
+        controller.onMentionBecameVisible = onMentionBecameVisible
+
+        // Check for scroll-to-mention request
+        let shouldScrollToMention = scrollToMentionRequest != context.coordinator.lastMentionRequest
+        if shouldScrollToMention {
+            context.coordinator.lastMentionRequest = scrollToMentionRequest
+            if let targetID = mentionTargetID {
+                controller.scrollToItem(id: targetID, animated: true)
             }
         }
 
@@ -458,6 +477,7 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
 
     class Coordinator {
         var lastScrollRequest: Int = 0
+        var lastMentionRequest: Int = 0
         var setIsAtBottom: ((Bool) -> Void)?
         var setUnreadCount: ((Int) -> Void)?
     }
