@@ -17,6 +17,7 @@ struct ChatsListView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
+    @State private var hashtagToJoin: String?
 
     private var filteredConversations: [Conversation] {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
@@ -188,6 +189,13 @@ struct ChatsListView: View {
                     appState.tabBarVisibility = .visible
                 }
             }
+            .onOpenURL { url in
+                if url.scheme == "pocketmesh-hashtag",
+                   let channelName = url.host,
+                   let deviceID = appState.connectedDevice?.id {
+                    handleHashtagTap(name: channelName, deviceID: deviceID)
+                }
+            }
             .sheet(item: $roomToAuthenticate) { session in
                 RoomAuthenticationSheet(session: session) { authenticatedSession in
                     roomToAuthenticate = nil
@@ -209,6 +217,15 @@ struct ChatsListView: View {
                 }
             } message: {
                 Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
+            }
+            .sheet(item: $hashtagToJoin) { name in
+                JoinHashtagFromMessageView(channelName: name) { channel in
+                    hashtagToJoin = nil
+                    if let channel {
+                        navigationPath.append(channel)
+                    }
+                }
+                .presentationDetents([.medium, .large])
             }
             .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
         }
@@ -331,6 +348,37 @@ struct ChatsListView: View {
             // On failure, reload to restore the channel
             logger.error("Failed to delete channel: \(error)")
             await loadConversations()
+        }
+    }
+
+    // MARK: - Hashtag Channel Handling
+
+    private func handleHashtagTap(name: String, deviceID: UUID) {
+        Task {
+            // Normalize the hashtag name (lowercase, no prefix)
+            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            let fullName = "#\(normalizedName)"
+
+            // Look up existing channel by name (case-insensitive)
+            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
+                // Channel exists - navigate to it (append to path for natural back navigation)
+                navigationPath.append(channel)
+            } else {
+                // Channel doesn't exist - show join sheet
+                hashtagToJoin = fullName
+            }
+        }
+    }
+
+    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
+        do {
+            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+            return channels.first { channel in
+                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }
+        } catch {
+            logger.error("Failed to fetch channels for hashtag lookup: \(error)")
+            return nil
         }
     }
 }
@@ -819,4 +867,10 @@ struct RoomAuthenticationSheet: View {
 #Preview {
     ChatsListView()
         .environment(AppState())
+}
+
+// MARK: - String Identifiable Conformance
+
+extension String: @retroactive Identifiable {
+    public var id: String { self }
 }
