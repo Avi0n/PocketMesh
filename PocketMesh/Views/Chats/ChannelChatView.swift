@@ -164,7 +164,8 @@ struct ChannelChatView: View {
                     },
                     isAtBottom: $isAtBottom,
                     unreadCount: $unreadCount,
-                    scrollToBottomRequest: $scrollToBottomRequest
+                    scrollToBottomRequest: $scrollToBottomRequest,
+                    scrollToMentionRequest: .constant(0)
                 )
                 .overlay(alignment: .bottomTrailing) {
                     ScrollToBottomFAB(
