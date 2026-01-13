@@ -97,10 +97,15 @@ struct ChannelChatView: View {
                 viewModel.appendMessageIfNew(message)
                 // Prefetch link preview immediately
                 fetchLinkPreviewIfNeeded(for: message)
-                // Reload unseen mentions if new message has self-mention
+                // Handle self-mention: if at bottom, mark seen immediately; otherwise reload unseen
                 if message.containsSelfMention {
                     Task {
-                        await loadUnseenMentions()
+                        if isAtBottom {
+                            // User will see the message immediately, mark it seen
+                            await markMentionSeen(messageID: message.id)
+                        } else {
+                            await loadUnseenMentions()
+                        }
                     }
                 }
                 Task {
