@@ -404,13 +404,13 @@ public final class AppState {
         }
     }
 
-    /// Start periodic battery refresh loop (5-minute interval)
+    /// Start periodic battery refresh loop (2-minute interval)
     private func startBatteryRefreshLoop() {
         batteryRefreshTask?.cancel()
         batteryRefreshTask = Task { [weak self] in
             while true {
                 do {
-                    try await Task.sleep(for: .seconds(300))
+                    try await Task.sleep(for: .seconds(120))
                 } catch {
                     break  // Cancelled, exit cleanly
                 }
