@@ -61,8 +61,14 @@ struct TraceResultsSheet: View {
     private var resultsSection: some View {
         Section {
             if result.success {
-                ForEach(result.hops) { hop in
-                    TraceResultHopRow(hop: hop)
+                ForEach(Array(result.hops.enumerated()), id: \.element.id) { index, hop in
+                    TraceResultHopRow(
+                        hop: hop,
+                        hopIndex: index,
+                        batchStats: viewModel.batchEnabled ? viewModel.hopStats(at: index) : nil,
+                        latestSNR: viewModel.batchEnabled ? viewModel.latestHopSNR(at: index) : nil,
+                        isBatchInProgress: viewModel.isBatchInProgress
+                    )
                 }
 
                 // Batch progress indicator
@@ -250,6 +256,33 @@ struct TraceResultsSheet: View {
 /// Row for displaying a hop in the trace results
 struct TraceResultHopRow: View {
     let hop: TraceHop
+    let hopIndex: Int
+    var batchStats: (avg: Double, min: Double, max: Double)?
+    var latestSNR: Double?
+    var isBatchInProgress: Bool = false
+
+    /// SNR value to use for signal bars (latest during progress, average when complete)
+    private var displaySNR: Double {
+        if isBatchInProgress {
+            return latestSNR ?? hop.snr
+        } else if let stats = batchStats {
+            return stats.avg
+        } else {
+            return hop.snr
+        }
+    }
+
+    private var signalLevel: Double {
+        if displaySNR >= 5 { return 1.0 }
+        if displaySNR >= -5 { return 0.66 }
+        return 0.33
+    }
+
+    private var signalColor: Color {
+        if displaySNR >= 5 { return .green }
+        if displaySNR >= -5 { return .yellow }
+        return .red
+    }
 
     var body: some View {
         HStack {
@@ -280,13 +313,18 @@ struct TraceResultHopRow: View {
                         .foregroundStyle(.secondary)
                 }
 
-                // SNR display using receiver attribution:
-                // Shows what this node measured when receiving.
-                // Start node has no SNR (it transmitted first).
+                // SNR display - batch mode shows avg with range, single shows plain SNR
                 if !hop.isStartNode {
-                    Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if let stats = batchStats {
+                        Text("Avg SNR: \(stats.avg, format: .number.precision(.fractionLength(1))) dB (\(stats.min, format: .number.precision(.fractionLength(1)))–\(stats.max, format: .number.precision(.fractionLength(1))))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Average signal to noise ratio: \(stats.avg, format: .number.precision(.fractionLength(1))) decibels, range \(stats.min, format: .number.precision(.fractionLength(1))) to \(stats.max, format: .number.precision(.fractionLength(1)))")
+                    } else {
+                        Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -294,8 +332,8 @@ struct TraceResultHopRow: View {
 
             // Signal strength indicator (not for start node - it didn't receive)
             if !hop.isStartNode {
-                Image(systemName: "cellularbars", variableValue: hop.signalLevel)
-                    .foregroundStyle(hop.signalColor)
+                Image(systemName: "cellularbars", variableValue: signalLevel)
+                    .foregroundStyle(signalColor)
                     .font(.title2)
             }
         }
