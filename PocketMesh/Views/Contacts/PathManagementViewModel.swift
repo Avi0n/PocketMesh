@@ -64,12 +64,6 @@ final class PathManagementViewModel {
     // Discovery cancellation
     private var discoveryTask: Task<Void, Never>?
 
-    // Discovery countdown state
-    var discoverySecondsRemaining: Int?
-    private var countdownTask: Task<Void, Never>?
-    private var discoveryStartTime: Date?
-    private var discoveryTimeoutSeconds: Double?
-
     // MARK: - Dependencies
 
     private var appState: AppState?
@@ -202,14 +196,8 @@ final class PathManagementViewModel {
                 // Calculate timeout from firmware's suggested value
                 // MeshCore uses suggested_timeout/600 which gives ~1.67× the raw ms-to-seconds conversion
                 // This accounts for network variability in mesh routing
-                let timeoutSeconds = Double(sentResponse.suggestedTimeoutMs) / 600.0
+                let timeoutSeconds = max(30.0, Double(sentResponse.suggestedTimeoutMs) / 600.0)
                 logger.info("Path discovery timeout: \(Int(timeoutSeconds))s (firmware suggested: \(sentResponse.suggestedTimeoutMs)ms)")
-
-                // Start countdown timer
-                self.discoveryTimeoutSeconds = timeoutSeconds
-                self.discoveryStartTime = Date.now
-                self.discoverySecondsRemaining = Int(timeoutSeconds)
-                self.startCountdownTask()
 
                 // Wait for push notification with firmware-suggested timeout
                 // The AdvertisementService handler will call handleDiscoveryResponse()
@@ -229,7 +217,6 @@ final class PathManagementViewModel {
             }
 
             isDiscovering = false
-            cleanupCountdownState()
         }
     }
 
@@ -240,45 +227,17 @@ final class PathManagementViewModel {
         showDiscoveryResult = true
     }
 
-    /// Start the countdown task that updates remaining seconds every 5 seconds
-    private func startCountdownTask() {
-        countdownTask = Task {
-            while !Task.isCancelled, let timeout = discoveryTimeoutSeconds, let startTime = discoveryStartTime {
-                do {
-                    try await Task.sleep(for: .seconds(5))
-                } catch {
-                    break
-                }
-
-                let elapsed = Date.now.timeIntervalSince(startTime)
-                let remaining = max(0, Int(timeout - elapsed))
-                discoverySecondsRemaining = remaining
-            }
-        }
-    }
-
-    /// Clean up countdown state when discovery ends
-    private func cleanupCountdownState() {
-        countdownTask?.cancel()
-        countdownTask = nil
-        discoverySecondsRemaining = nil
-        discoveryStartTime = nil
-        discoveryTimeoutSeconds = nil
-    }
-
     /// Cancel an in-progress path discovery
     func cancelDiscovery() {
         discoveryTask?.cancel()
         discoveryTask = nil
         isDiscovering = false
-        cleanupCountdownState()
     }
 
     /// Called when a path discovery response is received via push notification
     func handleDiscoveryResponse(hopCount: Int) {
         discoveryTask?.cancel()
         isDiscovering = false
-        cleanupCountdownState()
 
         // hopCount == 0 means direct path (zero hops via repeaters)
         // hopCount > 0 means routed path through repeaters

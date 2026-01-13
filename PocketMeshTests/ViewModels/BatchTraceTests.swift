@@ -254,21 +254,6 @@ struct BatchExecutionTests {
         #expect(viewModel.completedResults.isEmpty)
     }
 
-    @Test("batchEnabled toggle clears batch state")
-    func batchEnabledToggleClearsBatchState() {
-        let viewModel = TracePathViewModel()
-        viewModel.batchEnabled = true
-        viewModel.currentTraceIndex = 3
-        viewModel.completedResults = [
-            createTestResult(hopSNRs: [5.0], durationMs: 100)
-        ]
-
-        viewModel.batchEnabled = false
-
-        #expect(viewModel.currentTraceIndex == 0)
-        #expect(viewModel.completedResults.isEmpty)
-    }
-
     @Test("cancelBatchTrace clears running state")
     func cancelBatchTraceClearsRunningState() {
         let viewModel = TracePathViewModel()

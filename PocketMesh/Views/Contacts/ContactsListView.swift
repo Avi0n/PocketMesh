@@ -145,7 +145,7 @@ struct ContactsListView: View {
                     NavigationLink {
                         DiscoveryView()
                     } label: {
-                        Label("Discover", systemImage: "antenna.radiowaves.left.and.right")
+                        Label("Discovery", systemImage: "antenna.radiowaves.left.and.right")
                     }
 
                     Divider()
@@ -310,7 +310,6 @@ struct ContactsListView: View {
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
-            .listSectionSeparator(.hidden)
 
             ForEach(filteredContacts) { contact in
                 contactRow(contact)
@@ -326,7 +325,6 @@ struct ContactsListView: View {
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
-            .listSectionSeparator(.hidden)
 
             ForEach(filteredContacts) { contact in
                 contactSplitRow(contact)

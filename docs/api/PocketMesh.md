@@ -199,97 +199,180 @@ Manages state for the map view showing contact locations.
 | `centerOnContact(_:)` | Center map on a specific contact |
 | `centerOnAllContacts()` | Center map to show all contacts |
 
----
+### RepeaterStatusViewModel (internal, @MainActor, @Observable class)
 
-### Diagnostic ViewModels
+**File:** `PocketMesh/Views/RemoteNodes/RepeaterStatusViewModel.swift`
 
-### LineOfSightViewModel (internal, @MainActor, @Observable class)
-
-**File:** `PocketMesh/Views/LineOfSight/LineOfSightViewModel.swift`
-
-Manages state and calculations for RF line of sight analysis.
-
-**Properties:**
+Manages state for repeater status display, including neighbors and telemetry.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `fromContact` | `ContactDTO?` | Starting point of analysis |
-| `fromCoordinates` | `CLLocationCoordinate2D?` | Manual coordinates as starting point |
-| `toContact` | `ContactDTO?` | Target contact for analysis |
-| `toCoordinates` | `CLLocationCoordinate2D?` | Manual coordinates as target point |
-| `elevationSamples` | `[ElevationSample]` | Terrain elevation samples along path |
-| `rfParameters` | `RFParameters` | RF calculation parameters (frequency, antenna height) |
-| `terrainClearance` | `TerrainClearance?` | Analysis results (clearance percentage, Fresnel zones) |
-| `isAnalyzing` | `Bool` | Whether analysis is in progress |
-| `error` | `String?` | Error message if analysis failed |
+| `session` | `RemoteNodeSessionDTO?` | Current repeater session |
+| `status` | `RemoteNodeStatus?` | Last received status from repeater |
+| `neighbors` | `[NeighbourInfo]` | Neighboring nodes visible to repeater |
+| `telemetry` | `TelemetryResponse?` | Last received telemetry data |
+| `isLoadingStatus` | `Bool` | Status loading state |
+| `isLoadingNeighbors` | `Bool` | Neighbors loading state |
+| `isLoadingTelemetry` | `Bool` | Telemetry loading state |
+| `neighborsExpanded` | `Bool` | Neighbors disclosure group expansion state |
+| `telemetryExpanded` | `Bool` | Telemetry disclosure group expansion state |
+| `clockTime` | `String?` | Clock time from repeater |
+| `errorMessage` | `String?` | Error message if any |
 
 **Key Methods:**
 
 | Method | Description |
 |--------|-------------|
-| `analyzeLineOfSight() async` | Performs complete line of sight analysis |
-| `clearResults()` | Clears analysis results |
-| `savePathAsFavorite() async` | Saves analyzed path for quick access |
+| `configure(appState:)` | Configure with services from AppState |
+| `registerHandlers(appState:)` | Register for push notification handlers |
+| `requestStatus(for:)` | Request status from the repeater |
+| `requestNeighbors(for:)` | Request neighbors from the repeater |
+| `requestTelemetry(for:)` | Request telemetry from the repeater |
+| `handleStatusResponse(_:)` | Handle status response from push notification |
+| `handleNeighboursResponse(_:)` | Handle neighbours response from push notification |
+| `handleTelemetryResponse(_:)` | Handle telemetry response from push notification |
+| `handleCLIResponse(_:from:)` | Handle CLI response (for clock time) |
 
-### TracePathViewModel (internal, @MainActor, @Observable class)
+**Computed Properties:**
 
-**File:** `PocketMesh/Views/Contacts/TracePathViewModel.swift`
+| Property | Description |
+|----------|-------------|
+| `uptimeDisplay` | Formatted uptime string (e.g., "2 days 5h 30m") |
+| `batteryDisplay` | Formatted battery voltage and percentage |
+| `lastRSSIDisplay` | Formatted RSSI value (dBm) |
+| `lastSNRDisplay` | Formatted SNR value (dB) |
+| `noiseFloorDisplay` | Formatted noise floor (dBm) |
+| `packetsSentDisplay` | Formatted packets sent count |
+| `packetsReceivedDisplay` | Formatted packets received count |
+| `clockDisplay` | Formatted clock time |
 
-Manages manual path construction, path tracing, and saved path management for network routing.
+### RepeaterSettingsViewModel (internal, @MainActor, @Observable class)
 
-**Properties:**
+**File:** `PocketMesh/Views/RemoteNodes/RepeaterSettingsViewModel.swift`
+
+Manages state for repeater configuration including identity, radio settings, and behavior.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `fromContact` | `ContactDTO?` | Source contact for path discovery |
-| `savedPaths` | `[SavedPathDTO]` | All saved routing paths |
-| `discoveryResult` | `PathDiscoveryResult?` | Current path discovery result |
-| `editingPath` | `SavedPathDTO?` | Path currently being edited |
-| `isDiscovering` | `Bool` | Path discovery in progress |
-| `showSavedPathsSheet` | `Bool` | Show saved paths sheet |
+| `session` | `RemoteNodeSessionDTO?` | Current repeater session |
+| `firmwareVersion` | `String?` | Device firmware version |
+| `deviceTime` | `String?` | Device clock time |
+| `name` | `String` | Repeater name |
+| `latitude` | `Double` | Repeater latitude |
+| `longitude` | `Double` | Repeater longitude |
+| `frequency` | `Double` | Radio frequency (MHz) |
+| `bandwidth` | `Double` | Radio bandwidth (kHz) |
+| `spreadingFactor` | `Int` | LoRa spreading factor |
+| `codingRate` | `Int` | LoRa coding rate |
+| `txPower` | `Int` | Transmit power (dBm) |
+| `advertIntervalMinutes` | `Int` | Advertisement interval (minutes) |
+| `floodAdvertIntervalHours` | `Int` | Flood advertisement interval (hours) |
+| `floodMaxHops` | `Int` | Maximum flood hops |
+| `repeaterEnabled` | `Bool` | Whether repeater mode is enabled |
+| `isLoadingDeviceInfo` | `Bool` | Device info loading state |
+| `isLoadingIdentity` | `Bool` | Identity loading state |
+| `isLoadingRadio` | `Bool` | Radio settings loading state |
+| `isLoadingBehavior` | `Bool` | Behavior settings loading state |
+| `isApplying` | `Bool` | Settings apply state |
+| `isRebooting` | `Bool` | Reboot in progress |
+| `errorMessage` | `String?` | Error message if any |
+| `successMessage` | `String?` | Success message if any |
+| `radioSettingsModified` | `Bool` | Whether radio settings need restart |
 
 **Key Methods:**
 
 | Method | Description |
 |--------|-------------|
-| `buildPath(from:to:) async` | Builds a path from source to target using available repeaters |
-| `tracePath(path:) async` | Traces a manually-built path through the network |
-| `savePath(name:path:) async` | Saves a path to persistent storage |
-| `deletePath(id:) async` | Deletes a saved path |
-| `editPath(id:name:path:) async` | Updates an existing saved path |
+| `configure(appState:session:)` | Configure with services and session |
+| `registerHandlers(appState:)` | Register for CLI responses |
+| `fetchDeviceInfo()` | Fetch firmware version and time |
+| `fetchIdentity()` | Fetch name, latitude, longitude |
+| `fetchRadioSettings()` | Fetch radio parameters |
+| `fetchBehaviorSettings()` | Fetch repeater behavior settings |
+| `handleCLIResponse(_:from:)` | Handle CLI response from push notification |
+| `applyRadioSettings()` | Apply all radio settings (requires restart) |
+| `applyNameImmediately()` | Apply name with debouncing |
+| `applyLatitudeImmediately()` | Apply latitude with debouncing |
+| `applyLongitudeImmediately()` | Apply longitude with debouncing |
+| `applyLocation(latitude:longitude:)` | Apply location coordinates together |
+| `applyRepeaterModeImmediately()` | Apply repeater enabled state |
+| `applyAdvertIntervalImmediately()` | Apply advertisement interval |
+| `applyFloodAdvertIntervalImmediately()` | Apply flood advertisement interval |
+| `applyFloodMaxImmediately()` | Apply flood max hops |
+| `changePassword()` | Change admin password |
+| `reboot()` | Reboot the repeater |
+| `forceAdvert()` | Force immediate advertisement |
+| `cleanup()` | Cancel all pending tasks on view disappear |
 
-**Note**: The Trace Path tool uses manual path construction where users select and order repeaters. Automatic path discovery using breadth-first search is not currently implemented.
-| `savePath(name:hops:) async` | Saves a discovered path |
-| `deletePath(id:) async` | Deletes a saved path |
-| `editPath(id:name:hops:) async` | Updates a saved path |
-| `setEditingPath(_:)` | Sets path to editing mode |
+### RoomConversationViewModel (internal, @MainActor, @Observable class)
 
-### RxLogViewModel (internal, @MainActor, @Observable class)
+**File:** `PocketMesh/Views/RemoteNodes/RoomConversationViewModel.swift`
 
-**File:** `PocketMesh/Views/Tools/RxLogViewModel.swift`
-
-Manages RF packet capture and log display for network diagnostics.
-
-**Properties:**
+Manages state for room server chat functionality.
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `logEntries` | `[RxLogEntryDTO]` | Captured RF packet log entries |
-| `isCapturing` | `Bool` | Whether packet capture is active |
-| `filterType` | `String?` | Filter by packet type |
-| `filterSource` | `Data?` | Filter by source public key prefix |
-| `filterDestination` | `Data?` | Filter by destination public key prefix |
-| `signalThreshold` | `Int?` | Filter by signal strength (RSSI) |
+| `session` | `RemoteNodeSessionDTO?` | Current room session |
+| `messages` | `[RoomMessageDTO]` | Room conversation messages |
+| `isLoading` | `Bool` | Loading state |
+| `errorMessage` | `String?` | Error message if any |
+| `composingText` | `String` | Message text being composed |
+| `isSending` | `Bool` | Whether a message is being sent |
 
 **Key Methods:**
 
 | Method | Description |
 |--------|-------------|
-| `startCapture() async` | Starts packet capture from transport |
-| `stopCapture() async` | Stops packet capture |
-| `clearLogs() async` | Clears all captured logs |
-| `exportLogs(timeRange:) async` | Exports logs to structured JSON |
-| `applyFilters()` | Applies current filters to log entries |
+| `configure(appState:)` | Configure with services from AppState |
+| `loadMessages(for:)` | Load messages for a room session |
+| `sendMessage()` | Send message to room server |
+| `refreshMessages()` | Refresh messages for current session |
+
+**Static Helpers:**
+
+| Method | Description |
+|--------|-------------|
+| `shouldShowTimestamp(at:in:)` | Determines if timestamp should be shown (>5 min gap) |
+
+### PathManagementViewModel (internal, @MainActor, @Observable class)
+
+**File:** `PocketMesh/Views/Contacts/PathManagementViewModel.swift`
+
+Manages state for routing path discovery and editing.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `isDiscovering` | `Bool` | Whether path discovery is active |
+| `isSettingPath` | `Bool` | Whether path update is in progress |
+| `discoveryResult` | `PathDiscoveryResult?` | Result of path discovery operation |
+| `showDiscoveryResult` | `Bool` | Whether to show discovery result alert |
+| `errorMessage` | `String?` | Error message if any |
+| `showError` | `Bool` | Whether to show error alert |
+| `showingPathEditor` | `Bool` | Whether path editor sheet is shown |
+| `editablePath` | `[PathHop]` | Current path being edited |
+| `availableRepeaters` | `[ContactDTO]` | Known repeaters available to add |
+| `allContacts` | `[ContactDTO]` | All contacts for name resolution |
+| `filteredAvailableRepeaters` | `[ContactDTO]` | Repeaters not already in path |
+| `onContactNeedsRefresh` | `(() -> Void)?` | Callback when contact needs refresh |
+
+**Key Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `configure(appState:onContactNeedsRefresh:)` | Configure with services and callback |
+| `loadContacts(deviceID:)` | Load contacts for name resolution |
+| `initializeEditablePath(from:)` | Initialize editable path from contact |
+| `resolveHashToName(_:)` | Resolve path hash byte to contact name |
+| `createPathHop(from:)` | Create PathHop with name resolution |
+| `addRepeater(_:)` | Add repeater to path |
+| `removeRepeater(at:)` | Remove repeater from path |
+| `moveRepeater(from:to:)` | Reorder repeaters in path |
+| `saveEditedPath(for:)` | Save edited path to contact |
+| `discoverPath(for:)` | Initiate path discovery with timeout |
+| `cancelDiscovery()` | Cancel in-progress discovery |
+| `handleDiscoveryResponse(hopCount:)` | Handle discovery response from push |
+| `resetPath(for:)` | Reset path (force flood routing) |
+| `setPath(for:path:pathLength:)` | Set specific path for contact |
 
 ---
 

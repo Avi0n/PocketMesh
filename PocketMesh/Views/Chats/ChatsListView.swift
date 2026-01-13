@@ -748,12 +748,11 @@ struct RoomConversationRow: View {
 /// - Older: Date only (e.g., "Nov 15")
 struct ConversationTimestamp: View {
     let date: Date
-    var font: Font = .caption
 
     var body: some View {
         TimelineView(.everyMinute) { context in
             Text(formattedDate(relativeTo: context.date))
-                .font(font)
+                .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }

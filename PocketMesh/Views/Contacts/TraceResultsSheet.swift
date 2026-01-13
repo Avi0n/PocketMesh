@@ -273,15 +273,11 @@ struct TraceResultHopRow: View {
     }
 
     private var signalLevel: Double {
-        if displaySNR >= 5 { return 1.0 }
-        if displaySNR >= -5 { return 0.66 }
-        return 0.33
+        TraceHop.signalLevel(for: displaySNR)
     }
 
     private var signalColor: Color {
-        if displaySNR >= 5 { return .green }
-        if displaySNR >= -5 { return .yellow }
-        return .red
+        TraceHop.signalColor(for: displaySNR)
     }
 
     var body: some View {

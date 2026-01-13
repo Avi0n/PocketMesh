@@ -1,7 +1,7 @@
 import SwiftUI
 import PocketMeshServices
 
-/// Auto-add nodes toggle
+/// Auto-add contacts toggle
 struct ContactsSettingsSection: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -13,17 +13,17 @@ struct ContactsSettingsSection: View {
 
     var body: some View {
         Section {
-            Toggle(isOn: autoAddNodesBinding) {
+            Toggle(isOn: autoAddContactsBinding) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Auto-Add Nodes")
-                    Text("Automatically add nodes from received advertisements")
+                    Text("Auto-Add Contacts")
+                    Text("Automatically add contacts from received advertisements")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             .disabled(isSaving)
         } header: {
-            Text("Nodes")
+            Text("Contacts")
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
@@ -31,7 +31,7 @@ struct ContactsSettingsSection: View {
 
     // MARK: - Binding
 
-    private var autoAddNodesBinding: Binding<Bool> {
+    private var autoAddContactsBinding: Binding<Bool> {
         Binding(
             get: { !(device?.manualAddContacts ?? true) },
             set: { saveAutoAdd(enabled: $0) }

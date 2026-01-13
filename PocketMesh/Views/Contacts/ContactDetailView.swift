@@ -86,9 +86,9 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("You won't receive messages from \(currentContact.displayName). Conversations from this user will be hidden from your Chats list, and their channel messages will not appear. Unblocking will reverse these actions and make visible any messages they have sent.")
+            Text("You won't receive messages from \(currentContact.displayName). This conversation will be hidden from your Chats list, and their channel messages will not appear. You can unblock them later in Contacts.")
         }
-        .alert("Delete \(currentContact.type.displayName)", isPresented: $showingDeleteAlert) {
+        .alert("Delete Contact", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
                 Task {
@@ -96,7 +96,7 @@ struct ContactDetailView: View {
                 }
             }
         } message: {
-            Text("This will remove \(currentContact.displayName) and delete all associated data. This action cannot be undone.")
+            Text("This will remove \(currentContact.displayName) and delete all messages. This action cannot be undone.")
         }
         .onAppear {
             nickname = currentContact.nickname ?? ""
@@ -361,6 +361,24 @@ struct ContactDetailView: View {
                 )
             }
 
+            // Block/unblock contact (only for chat contacts)
+            if currentContact.type == .chat {
+                Button {
+                    if currentContact.isBlocked {
+                        Task {
+                            await toggleBlocked()
+                        }
+                    } else {
+                        showingBlockAlert = true
+                    }
+                } label: {
+                    Label(
+                        currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
+                        systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
+                    )
+                }
+            }
+
             // Share Contact via QR
             Button {
                 showQRShareSheet = true
@@ -429,7 +447,7 @@ struct ContactDetailView: View {
                 HStack {
                     Text("Last Advert")
                     Spacer()
-                    ConversationTimestamp(date: Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)), font: .body)
+                    ConversationTimestamp(date: Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)))
                 }
             }
 
@@ -452,10 +470,7 @@ struct ContactDetailView: View {
     private var locationSection: some View {
         Section {
             // Mini map
-            Map(position: .constant(.region(MKCoordinateRegion(
-                center: contactCoordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-            )))) {
+            Map {
                 Marker(currentContact.displayName, coordinate: contactCoordinate)
             }
             .frame(height: 200)
@@ -469,11 +484,8 @@ struct ContactDetailView: View {
                 Spacer()
                 Text("\(currentContact.latitude, format: .number.precision(.fractionLength(4))), \(currentContact.longitude, format: .number.precision(.fractionLength(4)))")
                     .foregroundStyle(.secondary)
+                    .font(.caption)
             }
-            .listRowBackground(
-                UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            )
 
             // Open in Maps
             Button {
@@ -504,60 +516,42 @@ struct ContactDetailView: View {
     private var networkPathSection: some View {
         Section {
             // Current routing path
-            Label {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Route")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Text(routeDisplayText)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.primary)
-                }
-            } icon: {
-                Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Route")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+
+                Text(routeDisplayText)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.primary)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(pathAccessibilityLabel)
 
             // Hops away (only when path is known)
             if !currentContact.isFloodRouted {
-                Label {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Hops Away")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        Text(currentContact.outPathLength, format: .number)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.primary)
-                    }
-                } icon: {
-                    Image(systemName: "chevron.forward.2")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Hops Away")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    Text(currentContact.outPathLength, format: .number)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.primary)
                 }
             }
 
             // Path Discovery button (prominent)
             if pathViewModel.isDiscovering {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
-                        Spacer()
-                        ProgressView()
-                        Button("Cancel") {
-                            pathViewModel.cancelDiscovery()
-                        }
-                        .buttonStyle(.borderless)
-                        .font(.subheadline)
+                HStack {
+                    Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
+                    Spacer()
+                    ProgressView()
+                    Button("Cancel") {
+                        pathViewModel.cancelDiscovery()
                     }
-
-                    if let remaining = pathViewModel.discoverySecondsRemaining, remaining > 0 {
-                        Text("Up to \(remaining) seconds remaining")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    .buttonStyle(.borderless)
+                    .font(.subheadline)
                 }
             } else {
                 Button {
@@ -680,27 +674,10 @@ struct ContactDetailView: View {
 
     private var dangerSection: some View {
         Section {
-            if currentContact.type == .chat {
-                Button {
-                    if currentContact.isBlocked {
-                        Task {
-                            await toggleBlocked()
-                        }
-                    } else {
-                        showingBlockAlert = true
-                    }
-                } label: {
-                    Label(
-                        currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
-                        systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
-                    )
-                }
-            }
-
             Button(role: .destructive) {
                 showingDeleteAlert = true
             } label: {
-                Label("Delete \(currentContact.type.displayName)", systemImage: "trash")
+                Label("Delete Contact", systemImage: "trash")
             }
         } header: {
             Text("Danger Zone")

@@ -194,49 +194,7 @@ public protocol MeshTransport: Sendable {
 | Type | Description |
 |------|-------------|
 | `BLETransport` (public, actor) | CoreBluetooth-based transport for physical devices |
-| `WiFiTransport` (public, actor) | Network framework-based transport for WiFi devices |
 | `MockTransport` (public, actor) | Deterministic transport for unit testing |
-
-### WiFi Transport Implementation
-
-WiFi transport provides connection to MeshCore devices over TCP/IP networks.
-
-**File:** `PocketMeshServices/Transport/WiFiTransport.swift` (in PocketMeshServices package)
-
-**Connection Characteristics:**
-- **Protocol:** TCP over WiFi
-- **Port:** 4242 (MeshCore service port)
-- **Timeout:** 10 seconds (configurable)
-- **Keep-Alive:** Periodic packets to detect connection loss
-- **Auto-Reconnection:** Exponential backoff (1s, 2s, 4s, 8s, max 60s)
-
-**WiFi-Specific Behavior:**
-
-| Aspect | Description |
-|---------|-------------|
-| **Throughput** | Higher than BLE (~1KB/sec vs ~250 bytes/sec) |
-| **Latency** | Higher than BLE (~100-200ms vs ~50-100ms) |
-| **Range** | Longer than BLE (~100-300m vs ~10-50m) |
-| **Power** | Constant power supply (not battery-dependent) |
-| **Discovery** | Manual IP entry or mDNS discovery |
-| **Use Cases** | Fixed installations, repeaters, room servers |
-
-**WiFi vs BLE Transport Decision:**
-
-```swift
-// Transport is selected based on device capability
-if device.supportsWiFi {
-    transport = WiFiTransport(deviceIP: deviceIP, port: 4242)
-} else {
-    transport = BLETransport()
-}
-```
-
-**Error Handling:**
-- Connection failures propagate as `MeshTransportError.connectionFailed`
-- Send failures propagate as `MeshTransportError.sendFailed`
-- Timeouts are handled with configurable retry logic
-- Network errors are wrapped with descriptive messages
 
 ---
 
@@ -1011,5 +969,4 @@ Decoded LPP sensor values.
 
 - [Architecture Overview](../Architecture.md)
 - [BLE Transport Guide](../guides/BLE_Transport.md)
-- [WiFi Transport Guide](../guides/WiFi_Transport.md)
 - [Messaging Guide](../guides/Messaging.md)

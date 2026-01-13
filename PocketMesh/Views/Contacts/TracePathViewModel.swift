@@ -21,14 +21,24 @@ struct TraceHop: Identifiable {
         hashBytes?.map { $0.hexString }.joined()
     }
 
+    /// Map SNR to 0-1 range for cellularbars variableValue
     var signalLevel: Double {
-        // Map SNR to 0-1 range for cellularbars variableValue
+        Self.signalLevel(for: snr)
+    }
+
+    var signalColor: Color {
+        Self.signalColor(for: snr)
+    }
+
+    /// Shared signal level calculation for any SNR value
+    static func signalLevel(for snr: Double) -> Double {
         if snr >= 5 { return 1.0 }
         if snr >= -5 { return 0.66 }
         return 0.33
     }
 
-    var signalColor: Color {
+    /// Shared signal color calculation for any SNR value
+    static func signalColor(for snr: Double) -> Color {
         if snr >= 5 { return .green }
         if snr >= -5 { return .yellow }
         return .red
@@ -81,6 +91,9 @@ final class TracePathViewModel {
 
     /// Duration before error auto-clears. Injectable for testing.
     var errorAutoClearDelay: Duration = .seconds(4)
+
+    /// Buffer between consecutive batch traces to avoid network flooding.
+    private static let interTraceBufferMs = 500
 
     // MARK: - Batch Trace State
 
@@ -681,7 +694,7 @@ final class TracePathViewModel {
             if traceIndex < batchSize {
                 // Check cancellation BEFORE sleeping
                 if batchCancelled { break }
-                try? await Task.sleep(for: .milliseconds(500))
+                try? await Task.sleep(for: .milliseconds(Self.interTraceBufferMs))
                 // Check cancellation AFTER sleeping
                 if batchCancelled { break }
             }

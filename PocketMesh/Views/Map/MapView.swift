@@ -265,29 +265,6 @@ private struct ContactDetailSheet: View {
     let contact: ContactDTO
     let onMessage: () -> Void
     @Environment(\.dismiss) private var dismiss
-    @Environment(AppState.self) private var appState
-
-    /// Sheet types for repeater flows
-    private enum ActiveSheet: Identifiable, Hashable {
-        case telemetryAuth
-        case telemetryStatus(RemoteNodeSessionDTO)
-        case adminAuth
-        case adminSettings(RemoteNodeSessionDTO)
-        case roomJoin
-
-        var id: String {
-            switch self {
-            case .telemetryAuth: "telemetryAuth"
-            case .telemetryStatus(let s): "telemetryStatus-\(s.id)"
-            case .adminAuth: "adminAuth"
-            case .adminSettings(let s): "adminSettings-\(s.id)"
-            case .roomJoin: "roomJoin"
-            }
-        }
-    }
-
-    @State private var activeSheet: ActiveSheet?
-    @State private var pendingSheet: ActiveSheet?
 
     var body: some View {
         NavigationStack {
@@ -337,34 +314,11 @@ private struct ContactDetailSheet: View {
 
                 // Actions section
                 Section {
-                    switch contact.type {
-                    case .repeater:
-                        Button {
-                            activeSheet = .telemetryAuth
-                        } label: {
-                            Label("Telemetry", systemImage: "chart.line.uptrend.xyaxis")
-                        }
-
-                        Button {
-                            activeSheet = .adminAuth
-                        } label: {
-                            Label("Admin Access", systemImage: "gearshape.2")
-                        }
-
-                    case .room:
-                        Button {
-                            activeSheet = .roomJoin
-                        } label: {
-                            Label("Join Room", systemImage: "door.left.hand.open")
-                        }
-
-                    case .chat:
-                        Button {
-                            dismiss()
-                            onMessage()
-                        } label: {
-                            Label("Send Message", systemImage: "message.fill")
-                        }
+                    Button {
+                        dismiss()
+                        onMessage()
+                    } label: {
+                        Label("Send Message", systemImage: "message.fill")
                     }
                 }
             }
@@ -377,66 +331,6 @@ private struct ContactDetailSheet: View {
                     }
                 }
             }
-            .sheet(item: $activeSheet, onDismiss: presentPendingSheet) { sheet in
-                switch sheet {
-                case .telemetryAuth:
-                    if let role = RemoteNodeRole(contactType: contact.type) {
-                        NodeAuthenticationSheet(
-                            contact: contact,
-                            role: role,
-                            customTitle: "Telemetry Access"
-                        ) { session in
-                            pendingSheet = .telemetryStatus(session)
-                            activeSheet = nil
-                        }
-                        .presentationSizing(.page)
-                    }
-
-                case .telemetryStatus(let session):
-                    RepeaterStatusView(session: session)
-
-                case .adminAuth:
-                    if let role = RemoteNodeRole(contactType: contact.type) {
-                        NodeAuthenticationSheet(contact: contact, role: role) { session in
-                            pendingSheet = .adminSettings(session)
-                            activeSheet = nil
-                        }
-                        .presentationSizing(.page)
-                    }
-
-                case .adminSettings(let session):
-                    NavigationStack {
-                        RepeaterSettingsView(session: session)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") {
-                                        activeSheet = nil
-                                    }
-                                }
-                            }
-                    }
-                    .presentationSizing(.page)
-
-                case .roomJoin:
-                    if let role = RemoteNodeRole(contactType: contact.type) {
-                        NodeAuthenticationSheet(contact: contact, role: role) { session in
-                            activeSheet = nil
-                            dismiss()
-                            appState.navigateToRoom(with: session)
-                        }
-                        .presentationSizing(.page)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Sheet Management
-
-    private func presentPendingSheet() {
-        if let next = pendingSheet {
-            pendingSheet = nil
-            activeSheet = next
         }
     }
 

@@ -61,13 +61,15 @@ Join the beta on TestFlight or sideload using unsigned IPA files under [Releases
 - Push notifications with quick reply
 
 ### Future Features
+- Blocking
+- Repeater administration (CLI, stats, etc.)
 - Import/Export config and/or data
 
 
 ## Requirements
 
 -   **iOS 18.0+**
--   **Xcode 26.0+**
+-   **Xcode 16.0+**
 -   **MeshCore-compatible hardware**
 
 ## Getting Started
