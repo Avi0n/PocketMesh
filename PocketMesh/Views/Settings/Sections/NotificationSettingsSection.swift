@@ -13,11 +13,26 @@ struct NotificationSettingsSection: View {
     }
 
     var body: some View {
+        @Bindable var preferences = preferences
         Section {
             if let service = notificationService {
                 switch service.authorizationStatus {
                 case .authorized, .provisional, .ephemeral:
-                    notificationToggles
+                    Toggle(isOn: $preferences.contactMessagesEnabled) {
+                        Label("Contact Messages", systemImage: "message")
+                    }
+                    Toggle(isOn: $preferences.channelMessagesEnabled) {
+                        Label("Channel Messages", systemImage: "person.3")
+                    }
+                    Toggle(isOn: $preferences.roomMessagesEnabled) {
+                        Label("Room Messages", systemImage: "bubble.left.and.bubble.right")
+                    }
+                    Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
+                        Label("New Contact Discovered", systemImage: "person.badge.plus")
+                    }
+                    Toggle(isOn: $preferences.lowBatteryEnabled) {
+                        Label("Low Battery Warnings", systemImage: "battery.25")
+                    }
 
                 case .notDetermined:
                     Button {
@@ -42,7 +57,21 @@ struct NotificationSettingsSection: View {
                     }
 
                 @unknown default:
-                    notificationToggles
+                    Toggle(isOn: $preferences.contactMessagesEnabled) {
+                        Label("Contact Messages", systemImage: "message")
+                    }
+                    Toggle(isOn: $preferences.channelMessagesEnabled) {
+                        Label("Channel Messages", systemImage: "person.3")
+                    }
+                    Toggle(isOn: $preferences.roomMessagesEnabled) {
+                        Label("Room Messages", systemImage: "bubble.left.and.bubble.right")
+                    }
+                    Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
+                        Label("New Contact Discovered", systemImage: "person.badge.plus")
+                    }
+                    Toggle(isOn: $preferences.lowBatteryEnabled) {
+                        Label("Low Battery Warnings", systemImage: "battery.25")
+                    }
                 }
             } else {
                 Text("Connect a device to configure notifications")
@@ -57,29 +86,6 @@ struct NotificationSettingsSection: View {
                     await notificationService?.checkAuthorizationStatus()
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var notificationToggles: some View {
-        Toggle(isOn: $preferences.contactMessagesEnabled) {
-            Label("Contact Messages", systemImage: "message")
-        }
-
-        Toggle(isOn: $preferences.channelMessagesEnabled) {
-            Label("Channel Messages", systemImage: "person.3")
-        }
-
-        Toggle(isOn: $preferences.roomMessagesEnabled) {
-            Label("Room Messages", systemImage: "bubble.left.and.bubble.right")
-        }
-
-        Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
-            Label("New Contact Discovered", systemImage: "person.badge.plus")
-        }
-
-        Toggle(isOn: $preferences.lowBatteryEnabled) {
-            Label("Low Battery Warnings", systemImage: "battery.25")
         }
     }
 }
