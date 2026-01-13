@@ -30,7 +30,7 @@ struct ScrollToMentionFAB: View {
 
     @ViewBuilder
     private var unreadBadge: some View {
-        if unreadMentionCount > 1 {
+        if unreadMentionCount > 0 {
             Text(unreadMentionCount > 99 ? "99+" : "\(unreadMentionCount)")
                 .font(.caption2.bold())
                 .foregroundStyle(.white)
