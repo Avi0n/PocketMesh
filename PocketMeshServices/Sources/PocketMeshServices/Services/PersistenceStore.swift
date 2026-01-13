@@ -620,7 +620,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
 
     public func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) throws -> [UUID] {
         let targetDeviceID = deviceID
-        let targetIndex = channelIndex
+        let targetIndex: UInt8? = channelIndex
         let predicate = #Predicate<Message> { message in
             message.deviceID == targetDeviceID &&
             message.channelIndex == targetIndex &&
