@@ -7,15 +7,12 @@ struct ScrollToBottomFAB: View {
     let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            Image(systemName: "chevron.down")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 36, height: 36)
-                .background(.regularMaterial, in: .circle)
-                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-        }
-        .buttonStyle(.plain)
+        Button("Scroll to bottom", systemImage: "chevron.down", action: onTap)
+            .labelStyle(.iconOnly)
+            .font(.body.bold())
+            .buttonStyle(.glass)
+        .frame(width: 44, height: 44)
+        .clipShape(.circle)
         .overlay(alignment: .topTrailing) {
             unreadBadge
         }

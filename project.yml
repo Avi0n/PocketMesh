@@ -2,7 +2,7 @@ name: PocketMesh
 options:
   bundleIdPrefix: com.pocketmesh
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   xcodeVersion: "26.0"
   generateEmptyDirectories: true
 
