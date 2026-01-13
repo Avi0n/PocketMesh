@@ -98,6 +98,35 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Clear unread count for a contact
     func clearUnreadCount(contactID: UUID) async throws
 
+    // MARK: - Mention Tracking
+
+    /// Mark a mention as seen
+    func markMentionSeen(messageID: UUID) async throws
+
+    /// Increment unread mention count for a contact
+    func incrementUnreadMentionCount(contactID: UUID) async throws
+
+    /// Decrement unread mention count for a contact
+    func decrementUnreadMentionCount(contactID: UUID) async throws
+
+    /// Clear unread mention count for a contact
+    func clearUnreadMentionCount(contactID: UUID) async throws
+
+    /// Increment unread mention count for a channel
+    func incrementChannelUnreadMentionCount(channelID: UUID) async throws
+
+    /// Decrement unread mention count for a channel
+    func decrementChannelUnreadMentionCount(channelID: UUID) async throws
+
+    /// Clear unread mention count for a channel
+    func clearChannelUnreadMentionCount(channelID: UUID) async throws
+
+    /// Fetch unseen mention message IDs for a contact, ordered oldest-first
+    func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID]
+
+    /// Fetch unseen mention message IDs for a channel, ordered oldest-first
+    func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID]
+
     /// Delete all messages for a contact
     func deleteMessagesForContact(contactID: UUID) async throws
 
