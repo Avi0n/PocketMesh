@@ -14,7 +14,7 @@ struct ScrollToBottomFAB: View {
         }
         .buttonStyle(.plain)
         .contentShape(.circle)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .liquidGlassInteractive(in: .circle)
         .overlay(alignment: .topTrailing) {
             unreadBadge
         }
