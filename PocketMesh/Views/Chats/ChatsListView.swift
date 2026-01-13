@@ -422,15 +422,25 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    // Unread badge
-                    if contact.unreadCount > 0 {
-                        Text(contact.unreadCount, format: .number)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                    // Mention and unread badges
+                    HStack(spacing: 4) {
+                        if contact.unreadMentionCount > 0 {
+                            Text("@")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 18, height: 18)
+                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .circle)
+                        }
+
+                        if contact.unreadCount > 0 {
+                            Text(contact.unreadCount, format: .number)
+                                .font(.caption2)
+                                .bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                        }
                     }
                 }
             }
