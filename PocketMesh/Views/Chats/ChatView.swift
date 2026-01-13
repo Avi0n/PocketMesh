@@ -170,6 +170,11 @@ struct ChatView: View {
 
             unseenMentionIDs.removeAll { $0 == messageID }
             unreadMentionCount = max(0, unreadMentionCount - 1)
+
+            // Refresh parent's conversation list to update badge in sidebar (important for iPad split view)
+            if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
+                await parent.loadConversations(deviceID: deviceID)
+            }
         } catch {
             logger.error("Failed to mark mention seen: \(error)")
         }

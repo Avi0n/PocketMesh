@@ -182,6 +182,11 @@ struct ChannelChatView: View {
 
             unseenMentionIDs.removeAll { $0 == messageID }
             unreadMentionCount = max(0, unreadMentionCount - 1)
+
+            // Refresh parent's channel list to update badge in sidebar (important for iPad split view)
+            if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
+                await parent.loadChannels(deviceID: deviceID)
+            }
         } catch {
             logger.error("Failed to mark channel mention seen: \(error)")
         }
