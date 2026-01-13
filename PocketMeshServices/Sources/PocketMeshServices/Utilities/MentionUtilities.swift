@@ -99,4 +99,14 @@ public enum MentionUtilities {
             .filter { query.isEmpty || $0.displayName.localizedStandardContains(query) }
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
+
+    /// Checks if text contains a mention of the specified user name
+    /// - Parameters:
+    ///   - text: The message text to check
+    ///   - selfName: The current user's node name
+    /// - Returns: true if text contains @[selfName]
+    public static func containsSelfMention(in text: String, selfName: String) -> Bool {
+        let mentions = extractMentions(from: text)
+        return mentions.contains { $0.caseInsensitiveCompare(selfName) == .orderedSame }
+    }
 }
