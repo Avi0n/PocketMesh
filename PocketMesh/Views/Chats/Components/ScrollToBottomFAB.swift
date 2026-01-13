@@ -11,7 +11,7 @@ struct ScrollToBottomFAB: View {
             Image(systemName: "chevron.down")
                 .font(.body.bold())
                 .frame(width: 44, height: 44)
-                .background(.regularMaterial, in: .circle)
+                .liquidGlass(in: .circle)
         }
         .buttonStyle(.plain)
         .overlay(alignment: .topTrailing) {
