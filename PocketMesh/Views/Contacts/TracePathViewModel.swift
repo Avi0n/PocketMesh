@@ -246,8 +246,14 @@ final class TracePathViewModel {
 
     /// Can save path if result is successful and path hasn't changed since trace ran
     var canSavePath: Bool {
-        guard let result, result.success else { return false }
-        return fullPathBytes == result.tracedPathBytes
+        if batchEnabled {
+            guard !completedResults.isEmpty else { return false }
+            guard let firstSuccess = successfulResults.first else { return false }
+            return fullPathBytes == firstSuccess.tracedPathBytes
+        } else {
+            guard let result, result.success else { return false }
+            return fullPathBytes == result.tracedPathBytes
+        }
     }
 
     // MARK: - Configuration
@@ -349,25 +355,78 @@ final class TracePathViewModel {
         }
     }
 
+    /// Extract SNR values from intermediate hops (excluding start and end nodes)
+    private func extractHopsSNR(from result: TraceResult) -> [Double] {
+        result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode }
+            .map { $0.snr }
+    }
+
     /// Save the current path with the given name
     /// - Returns: `true` if save succeeded, `false` otherwise
     @discardableResult
     func savePath(name: String) async -> Bool {
         guard let appState,
               let deviceID = appState.connectedDevice?.id,
-              let dataStore = appState.services?.dataStore,
-              let result = result, result.success else { return false }
+              let dataStore = appState.services?.dataStore else { return false }
 
-        // Create initial run DTO (filter to intermediate hops only)
-        let hopsSNR = result.hops
-            .filter { !$0.isStartNode && !$0.isEndNode }
-            .map { $0.snr }
+        // For batch mode, save all completed results
+        if batchEnabled && !completedResults.isEmpty {
+            guard let firstSuccess = successfulResults.first else { return false }
+
+            // Create initial run from first successful result
+            let initialRun = TracePathRunDTO(
+                id: UUID(),
+                date: Date(),
+                success: true,
+                roundTripMs: firstSuccess.durationMs,
+                hopsSNR: extractHopsSNR(from: firstSuccess)
+            )
+
+            do {
+                let savedPath = try await dataStore.createSavedTracePath(
+                    deviceID: deviceID,
+                    name: name,
+                    pathBytes: Data(firstSuccess.tracedPathBytes),
+                    initialRun: initialRun
+                )
+
+                // Append remaining results as additional runs
+                for (index, batchResult) in completedResults.enumerated() {
+                    // Skip the first successful result (already saved as initial)
+                    if batchResult.id == firstSuccess.id { continue }
+
+                    let run = TracePathRunDTO(
+                        id: UUID(),
+                        date: Date().addingTimeInterval(Double(index)),
+                        success: batchResult.success,
+                        roundTripMs: batchResult.durationMs,
+                        hopsSNR: extractHopsSNR(from: batchResult)
+                    )
+                    try await dataStore.appendTracePathRun(pathID: savedPath.id, run: run)
+                }
+
+                // Refresh to get all runs
+                if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
+                    activeSavedPath = updated
+                }
+                logger.info("Saved batch path: \(name) with \(self.completedResults.count) runs")
+                return true
+            } catch {
+                logger.error("Failed to save batch path: \(error.localizedDescription)")
+                return false
+            }
+        }
+
+        // Single trace mode (original behavior)
+        guard let result, result.success else { return false }
+
         let initialRun = TracePathRunDTO(
             id: UUID(),
             date: Date(),
             success: true,
             roundTripMs: result.durationMs,
-            hopsSNR: hopsSNR
+            hopsSNR: extractHopsSNR(from: result)
         )
 
         do {
