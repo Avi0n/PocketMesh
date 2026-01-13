@@ -48,20 +48,17 @@ struct ContentView: View {
             Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
         }
         .alert(
-            "Already Connected",
+            "Could Not Connect",
             isPresented: Binding(
                 get: { appState.otherAppWarningDeviceID != nil },
                 set: { if !$0 { appState.otherAppWarningDeviceID = nil } }
             )
         ) {
-            Button("Connect Anyway") {
-                appState.proceedWithConnectionDespiteWarning()
-            }
-            Button("Cancel", role: .cancel) {
+            Button("OK") {
                 appState.cancelOtherAppWarning()
             }
         } message: {
-            Text("This device is connected to another app. Close other mesh apps before continuing.")
+            Text("Ensure no other app is connected to the device, then try again.")
         }
     }
 }

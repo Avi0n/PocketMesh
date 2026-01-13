@@ -619,11 +619,9 @@ public final class ConnectionManager {
     /// - If already connected to this device: no-op
     /// - If connected to a different device: switches to the new device
     ///
-    /// - Parameters:
-    ///   - deviceID: The UUID of the device to connect to
-    ///   - skipOtherAppCheck: If true, skips the check for other app connections
+    /// - Parameter deviceID: The UUID of the device to connect to
     /// - Throws: Connection errors
-    public func connect(to deviceID: UUID, skipOtherAppCheck: Bool = false) async throws {
+    public func connect(to deviceID: UUID) async throws {
         // Prevent concurrent connection attempts
         if connectionState == .connecting {
             logger.info("Connection already in progress, ignoring request for \(deviceID)")
@@ -659,11 +657,9 @@ public final class ConnectionManager {
             }
         }
 
-        // Check for other app connection BEFORE changing state (skip for explicit bypass)
-        if !skipOtherAppCheck {
-            if await isDeviceConnectedToOtherApp(deviceID) {
-                throw BLEError.deviceConnectedToOtherApp
-            }
+        // Check for other app connection before changing state
+        if await isDeviceConnectedToOtherApp(deviceID) {
+            throw BLEError.deviceConnectedToOtherApp
         }
 
         // Set connecting state for immediate UI feedback

@@ -365,22 +365,7 @@ public final class AppState {
         }
     }
 
-    /// Proceeds with connection despite another app warning
-    func proceedWithConnectionDespiteWarning() {
-        guard let deviceID = otherAppWarningDeviceID else { return }
-        otherAppWarningDeviceID = nil
-
-        Task {
-            do {
-                try await connectionManager.connect(to: deviceID, skipOtherAppCheck: true)
-            } catch {
-                connectionFailedMessage = error.localizedDescription
-                showingConnectionFailedAlert = true
-            }
-        }
-    }
-
-    /// Cancels the other app warning without connecting
+    /// Dismisses the other app warning alert
     func cancelOtherAppWarning() {
         otherAppWarningDeviceID = nil
     }
