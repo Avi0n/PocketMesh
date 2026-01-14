@@ -5,6 +5,7 @@ import OSLog
 private let logger = Logger(subsystem: "com.pocketmesh", category: "JoinHashtagFromMessageView")
 
 /// Sheet view for joining a hashtag channel tapped in a message
+@MainActor
 struct JoinHashtagFromMessageView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
@@ -15,6 +16,7 @@ struct JoinHashtagFromMessageView: View {
     @State private var availableSlots: [UInt8] = []
     @State private var isJoining = false
     @State private var isLoading = true
+    @State private var isMissingDevice = false
     @State private var errorMessage: String?
     @State private var successTrigger = 0
 
@@ -31,6 +33,8 @@ struct JoinHashtagFromMessageView: View {
             VStack(spacing: 0) {
                 if isLoading {
                     loadingView
+                } else if isMissingDevice {
+                    missingDeviceView
                 } else if availableSlots.isEmpty {
                     noSlotsView
                 } else {
@@ -61,6 +65,20 @@ struct JoinHashtagFromMessageView: View {
     private var loadingView: some View {
         ProgressView("Loading...")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var missingDeviceView: some View {
+        ContentUnavailableView {
+            Label("No Device Connected", systemImage: "antenna.radiowaves.left.and.right.slash")
+        } description: {
+            Text("Connect a device to join \(fullChannelName).")
+        } actions: {
+            Button("OK") {
+                onComplete(nil)
+                dismiss()
+            }
+            .liquidGlassProminentButtonStyle()
+        }
     }
 
     // MARK: - No Slots View
@@ -138,9 +156,12 @@ struct JoinHashtagFromMessageView: View {
 
     private func loadAvailableSlots() async {
         guard let deviceID = appState.connectedDevice?.id else {
+            isMissingDevice = true
             isLoading = false
             return
         }
+
+        isMissingDevice = false
 
         do {
             let existingChannels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []

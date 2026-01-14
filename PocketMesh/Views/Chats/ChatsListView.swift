@@ -4,6 +4,10 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatsListView")
 
+private struct HashtagJoinRequest: Identifiable, Hashable {
+    let id: String
+}
+
 /// List of active conversations
 struct ChatsListView: View {
     @Environment(AppState.self) private var appState
@@ -17,7 +21,7 @@ struct ChatsListView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
-    @State private var hashtagToJoin: String?
+    @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var filteredConversations: [Conversation] {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
@@ -211,8 +215,8 @@ struct ChatsListView: View {
             } message: {
                 Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
             }
-            .sheet(item: $hashtagToJoin) { name in
-                JoinHashtagFromMessageView(channelName: name) { channel in
+            .sheet(item: $hashtagToJoin) { request in
+                JoinHashtagFromMessageView(channelName: request.id) { channel in
                     hashtagToJoin = nil
                     if let channel {
                         navigationPath.append(channel)
@@ -223,13 +227,15 @@ struct ChatsListView: View {
             .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
         }
         .environment(\.openURL, OpenURLAction { url in
-            if url.scheme == "pocketmesh-hashtag",
-               let channelName = url.host,
-               let deviceID = appState.connectedDevice?.id {
-                handleHashtagTap(name: channelName, deviceID: deviceID)
+            guard url.scheme == "pocketmesh-hashtag" else {
+                return .systemAction
+            }
+            guard let channelName = url.host else {
+                logger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
                 return .handled
             }
-            return .systemAction
+            handleHashtagTap(name: channelName)
+            return .handled
         })
     }
 
@@ -355,19 +361,31 @@ struct ChatsListView: View {
 
     // MARK: - Hashtag Channel Handling
 
-    private func handleHashtagTap(name: String, deviceID: UUID) {
+    private func handleHashtagTap(name: String) {
         Task {
-            // Normalize the hashtag name (lowercase, no prefix)
             let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+                logger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
+                return
+            }
+
             let fullName = "#\(normalizedName)"
 
-            // Look up existing channel by name (case-insensitive)
+            guard let deviceID = appState.connectedDevice?.id else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+                return
+            }
+
             if let channel = await findChannelByName(fullName, deviceID: deviceID) {
-                // Channel exists - navigate to it (append to path for natural back navigation)
-                navigationPath.append(channel)
+                await MainActor.run {
+                    navigationPath.append(channel)
+                }
             } else {
-                // Channel doesn't exist - show join sheet
-                hashtagToJoin = fullName
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
             }
         }
     }
@@ -871,8 +889,3 @@ struct RoomAuthenticationSheet: View {
         .environment(AppState())
 }
 
-// MARK: - String Identifiable Conformance
-
-extension String: @retroactive Identifiable {
-    public var id: String { self }
-}

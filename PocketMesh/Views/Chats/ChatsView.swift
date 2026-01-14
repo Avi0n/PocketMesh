@@ -4,6 +4,10 @@ import OSLog
 
 private let chatsViewLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
 
+private struct HashtagJoinRequest: Identifiable, Hashable {
+    let id: String
+}
+
 struct ChatsView: View {
     private enum ChatDestination: Hashable {
         case direct(ContactDTO)
@@ -26,7 +30,7 @@ struct ChatsView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
-    @State private var hashtagToJoin: String?
+    @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
@@ -86,38 +90,38 @@ struct ChatsView: View {
     }
 
     var body: some View {
-        Group {
-            if shouldUseSplitView {
-                NavigationSplitView {
-                    NavigationStack {
-                        sidebarContent
-                    }
-                } detail: {
-                    NavigationStack {
-                        detailContent
-                    }
+        if shouldUseSplitView {
+            NavigationSplitView {
+                NavigationStack {
+                    sidebarContent
                 }
-            } else {
-                ChatsListView()
+            } detail: {
+                NavigationStack {
+                    detailContent
+                }
             }
-        }
-        .environment(\.openURL, OpenURLAction { url in
-            if url.scheme == "pocketmesh-hashtag",
-               let channelName = url.host,
-               let deviceID = appState.connectedDevice?.id {
-                handleHashtagTap(name: channelName, deviceID: deviceID)
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == "pocketmesh-hashtag" else {
+                    return .systemAction
+                }
+                guard let channelName = url.host else {
+                    chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
+                    return .handled
+                }
+                handleHashtagTap(name: channelName)
                 return .handled
-            }
-            return .systemAction
-        })
-        .sheet(item: $hashtagToJoin) { name in
-            JoinHashtagFromMessageView(channelName: name) { channel in
-                hashtagToJoin = nil
-                if let channel {
-                    selectedDestination = .channel(channel)
+            })
+            .sheet(item: $hashtagToJoin) { request in
+                JoinHashtagFromMessageView(channelName: request.id) { channel in
+                    hashtagToJoin = nil
+                    if let channel {
+                        selectedDestination = .channel(channel)
+                    }
                 }
+                .presentationDetents([.medium])
             }
-            .presentationDetents([.medium])
+        } else {
+            ChatsListView()
         }
     }
 
@@ -377,15 +381,31 @@ struct ChatsView: View {
 
     // MARK: - Hashtag Channel Handling
 
-    private func handleHashtagTap(name: String, deviceID: UUID) {
+    private func handleHashtagTap(name: String) {
         Task {
             let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+                chatsViewLogger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
+                return
+            }
+
             let fullName = "#\(normalizedName)"
 
+            guard let deviceID = appState.connectedDevice?.id else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+                return
+            }
+
             if let channel = await findChannelByName(fullName, deviceID: deviceID) {
-                selectedDestination = .channel(channel)
+                await MainActor.run {
+                    selectedDestination = .channel(channel)
+                }
             } else {
-                hashtagToJoin = fullName
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
             }
         }
     }
