@@ -148,6 +148,24 @@ public final class ConnectionManager {
     /// Interval between WiFi heartbeat probes (seconds)
     private static let wifiHeartbeatInterval: Duration = .seconds(30)
 
+    // MARK: - Resync State
+
+    /// Current resync attempt count (reset on success or disconnect)
+    private var resyncAttemptCount = 0
+
+    /// Maximum resync attempts before giving up
+    private static let maxResyncAttempts = 3
+
+    /// Interval between resync attempts
+    private static let resyncInterval: Duration = .seconds(2)
+
+    /// Task managing the resync retry loop
+    private var resyncTask: Task<Void, Never>?
+
+    /// Callback when resync fails after all attempts (triggers "Sync Failed" pill)
+    /// Note: @Sendable @MainActor ensures safe cross-isolation callback
+    public var onResyncFailed: (@Sendable @MainActor () -> Void)?
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
