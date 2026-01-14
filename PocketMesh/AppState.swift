@@ -557,6 +557,9 @@ public final class AppState {
         // Check connection health (may have died while backgrounded)
         await connectionManager.checkWiFiConnectionHealth()
         await connectionManager.checkBLEConnectionHealth()
+
+        // Trigger resync if sync failed while connected
+        await connectionManager.checkSyncHealth()
     }
 
     // MARK: - Accessibility
