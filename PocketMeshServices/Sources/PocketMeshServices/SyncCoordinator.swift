@@ -340,7 +340,11 @@ public actor SyncCoordinator {
             // Message events are processed asynchronously by the event monitor - we need to ensure
             // all handlers finish before resuming notifications, otherwise sync-time messages
             // may trigger notifications after suppression is lifted
-            await services.messagePollingService.waitForPendingHandlers()
+            let pendingHandlerDrainTimeout: Duration = .seconds(2)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
 
             // Resume notifications on success - synchronously before return
             await MainActor.run {
@@ -351,7 +355,11 @@ public actor SyncCoordinator {
             logger.info("Connection setup complete for device \(deviceID)")
         } catch {
             // Wait for any pending handlers even on error
-            await services.messagePollingService.waitForPendingHandlers()
+            let pendingHandlerDrainTimeout: Duration = .seconds(2)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
 
             // Resume notifications on error - synchronously before throw
             await MainActor.run {

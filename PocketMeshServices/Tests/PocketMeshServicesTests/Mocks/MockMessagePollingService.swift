@@ -34,9 +34,9 @@ public actor MockMessagePollingService: MessagePollingServiceProtocol {
         }
     }
 
-    public func waitForPendingHandlers() async {
+    public func waitForPendingHandlers(timeout: Duration) async -> Bool {
         waitForPendingHandlersInvocations += 1
-        // In tests, handlers complete immediately
+        return true
     }
 
     // MARK: - Test Helpers

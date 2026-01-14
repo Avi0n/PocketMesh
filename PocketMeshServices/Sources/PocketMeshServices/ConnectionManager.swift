@@ -406,10 +406,14 @@ public final class ConnectionManager {
         }
 
         await onConnectionReady?()
-        try await newServices.syncCoordinator.onConnectionEstablished(
-            deviceID: deviceID,
-            services: newServices
-        )
+        do {
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+        } catch {
+            logger.warning("Initial sync failed after WiFi reconnection: \(error.localizedDescription)")
+        }
 
         currentTransportType = .wifi
         connectionState = .ready
@@ -895,7 +899,7 @@ public final class ConnectionManager {
             // Create services
             let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
             await newServices.wireServices()
-                self.services = newServices
+            self.services = newServices
 
             // Fetch existing device to preserve local settings
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
@@ -918,24 +922,28 @@ public final class ConnectionManager {
             // Persist connection for potential future use
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
-            // Notify observers before sync starts
-            await onConnectionReady?()
-
-            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
-
-            // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
                 Task { @MainActor in
                     await self?.handleWiFiDisconnection(error: error)
                 }
             }
 
+            // Notify observers before sync starts
+            await onConnectionReady?()
+
+            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
+            do {
+                try await newServices.syncCoordinator.onConnectionEstablished(
+                    deviceID: deviceID,
+                    services: newServices
+                )
+            } catch {
+                logger.warning("Initial sync failed on WiFi connection: \(error.localizedDescription)")
+            }
+
             currentTransportType = .wifi
             connectionState = .ready
+
             startWiFiHeartbeat()
             logger.info("WiFi connection complete - device ready")
 
@@ -1015,10 +1023,14 @@ public final class ConnectionManager {
         await onConnectionReady?()
 
         // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-        try await newServices.syncCoordinator.onConnectionEstablished(
-            deviceID: deviceID,
-            services: newServices
-        )
+        do {
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+        } catch {
+            logger.warning("Initial sync failed during device switch: \(error.localizedDescription)")
+        }
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1299,10 +1311,14 @@ public final class ConnectionManager {
 
         // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
         // This fixes the handler wiring gap and ensures messages are polled during sync
-        try await newServices.syncCoordinator.onConnectionEstablished(
-            deviceID: deviceID,
-            services: newServices
-        )
+        do {
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+        } catch {
+            logger.warning("Initial sync failed, continuing with connection: \(error.localizedDescription)")
+        }
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1514,14 +1530,19 @@ public final class ConnectionManager {
             await onConnectionReady?()
 
             // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
+            do {
+                try await newServices.syncCoordinator.onConnectionEstablished(
+                    deviceID: deviceID,
+                    services: newServices
+                )
+            } catch {
+                logger.warning("[BLE] Initial sync failed after iOS auto-reconnect: \(error.localizedDescription)")
+            }
 
             currentTransportType = .bluetooth
             connectionState = .ready
             logger.info("[BLE] iOS auto-reconnect: session ready, device: \(deviceID.uuidString.prefix(8))")
+
 
         } catch {
             logger.error("[BLE] iOS auto-reconnect session setup failed: \(error.localizedDescription)")

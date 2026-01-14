@@ -27,5 +27,5 @@ public protocol MessagePollingServiceProtocol: Actor {
 
     /// Wait for all pending message handlers to complete.
     /// Call this after pollAllMessages() to ensure all messages are fully processed.
-    func waitForPendingHandlers() async
+    func waitForPendingHandlers(timeout: Duration) async -> Bool
 }
