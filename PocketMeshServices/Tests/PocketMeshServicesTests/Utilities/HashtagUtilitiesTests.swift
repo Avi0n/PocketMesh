@@ -12,7 +12,7 @@ struct HashtagUtilitiesTests {
         let pattern = HashtagUtilities.hashtagPattern
         let regex = try! NSRegularExpression(pattern: pattern)
 
-        let validCases = ["#general", "#test-channel", "#abc123", "#a"]
+        let validCases = ["#general", "#General", "#test-channel", "#abc123", "#a"]
         for text in validCases {
             let range = NSRange(text.startIndex..., in: text)
             let matches = regex.matches(in: text, range: range)
@@ -26,7 +26,7 @@ struct HashtagUtilitiesTests {
         let anchoredPattern = "^" + HashtagUtilities.hashtagPattern + "$"
         let regex = try! NSRegularExpression(pattern: anchoredPattern)
 
-        let invalidCases = ["#Test", "#UPPER", "#test_underscore", "#test.dot", "#"]
+        let invalidCases = ["#test_underscore", "#test.dot", "#", "#-bad", "#bad!", "#white space"]
         for text in invalidCases {
             let range = NSRange(text.startIndex..., in: text)
             let matches = regex.matches(in: text, range: range)
@@ -41,6 +41,13 @@ struct HashtagUtilitiesTests {
         let result = HashtagUtilities.extractHashtags(from: "Join #general today")
         #expect(result.count == 1)
         #expect(result.first?.name == "#general")
+    }
+
+    @Test("extractHashtags accepts uppercase hashtags")
+    func testExtractUppercase() {
+        let result = HashtagUtilities.extractHashtags(from: "Join #General today")
+        #expect(result.count == 1)
+        #expect(result.first?.name == "#General")
     }
 
     @Test("extractHashtags finds multiple hashtags")
@@ -82,6 +89,8 @@ struct HashtagUtilitiesTests {
     @Test("isValidHashtagName accepts valid names")
     func testIsValidAccepts() {
         #expect(HashtagUtilities.isValidHashtagName("general"))
+        #expect(HashtagUtilities.isValidHashtagName("General"))
+        #expect(HashtagUtilities.isValidHashtagName("TEST"))
         #expect(HashtagUtilities.isValidHashtagName("test-channel"))
         #expect(HashtagUtilities.isValidHashtagName("abc123"))
         #expect(HashtagUtilities.isValidHashtagName("a"))
@@ -90,9 +99,10 @@ struct HashtagUtilitiesTests {
     @Test("isValidHashtagName rejects invalid names")
     func testIsValidRejects() {
         #expect(!HashtagUtilities.isValidHashtagName(""))
-        #expect(!HashtagUtilities.isValidHashtagName("Test"))
+        #expect(!HashtagUtilities.isValidHashtagName("-bad"))
         #expect(!HashtagUtilities.isValidHashtagName("test_underscore"))
         #expect(!HashtagUtilities.isValidHashtagName("test.dot"))
+        #expect(!HashtagUtilities.isValidHashtagName("bad!"))
     }
 
     // MARK: - normalizeHashtagName Tests
@@ -102,5 +112,12 @@ struct HashtagUtilitiesTests {
         #expect(HashtagUtilities.normalizeHashtagName("#General") == "general")
         #expect(HashtagUtilities.normalizeHashtagName("#TEST") == "test")
         #expect(HashtagUtilities.normalizeHashtagName("general") == "general")
+    }
+
+    @Test("sanitizeHashtagNameInput lowercases and strips invalid characters")
+    func testSanitizeInput() {
+        #expect(HashtagUtilities.sanitizeHashtagNameInput("General") == "general")
+        #expect(HashtagUtilities.sanitizeHashtagNameInput("-General") == "general")
+        #expect(HashtagUtilities.sanitizeHashtagNameInput("gen_eral") == "general")
     }
 }

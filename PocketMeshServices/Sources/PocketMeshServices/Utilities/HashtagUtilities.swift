@@ -3,9 +3,7 @@ import Foundation
 /// Utilities for detecting and processing hashtag channel references in messages
 public enum HashtagUtilities {
 
-    /// Regex pattern for valid hashtag channels: #[a-z0-9-]+
-    /// Only matches lowercase letters, numbers, and hyphens after #
-    public static let hashtagPattern = "#[a-z0-9][a-z0-9-]*"
+    public static let hashtagPattern = "#[A-Za-z0-9][A-Za-z0-9-]*"
 
     /// Represents a detected hashtag with its location in the source text
     public struct DetectedHashtag: Equatable, Sendable {
@@ -60,11 +58,27 @@ public enum HashtagUtilities {
     /// - Parameter name: Channel name without # prefix
     /// - Returns: True if valid (starts with alphanumeric, then lowercase letters, numbers, hyphens only)
     public static func isValidHashtagName(_ name: String) -> Bool {
-        guard !name.isEmpty else { return false }
-        guard let first = name.first, first.isLowercase || first.isNumber else { return false }
-        return name.allSatisfy { char in
-            char.isLowercase || char.isNumber || char == "-"
+        guard let first = name.unicodeScalars.first else { return false }
+        guard isAllowedHashtagNameScalar(first, allowsHyphen: false) else { return false }
+        return name.unicodeScalars.allSatisfy { scalar in
+            isAllowedHashtagNameScalar(scalar, allowsHyphen: true)
         }
+    }
+
+    public static func sanitizeHashtagNameInput(_ input: String) -> String {
+        var result = String()
+        result.reserveCapacity(input.count)
+
+        for scalar in input.lowercased().unicodeScalars {
+            guard isAllowedHashtagNameScalar(scalar, allowsHyphen: true) else { continue }
+            result.unicodeScalars.append(scalar)
+        }
+
+        while result.hasPrefix("-") {
+            result.removeFirst()
+        }
+
+        return result
     }
 
     /// Normalizes a hashtag name by lowercasing and removing # prefix
@@ -83,6 +97,17 @@ public enum HashtagUtilities {
     private static let urlDetector: NSDataDetector? = {
         try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
     }()
+
+    private static func isAllowedHashtagNameScalar(_ scalar: UnicodeScalar, allowsHyphen: Bool) -> Bool {
+        switch scalar.value {
+        case 48...57, 65...90, 97...122:
+            return true
+        case 45:
+            return allowsHyphen
+        default:
+            return false
+        }
+    }
 
     private static func findURLRanges(in text: String) -> [Range<String.Index>] {
         guard let detector = urlDetector else { return [] }
