@@ -18,6 +18,7 @@ struct ChatsView: View {
     @State private var navigationPath = NavigationPath()
     @State private var activeRoute: ChatRoute?
     @State private var lastSelectedRoomIsConnected: Bool?
+    @State private var routeBeingDeleted: ChatRoute?
 
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
@@ -138,13 +139,16 @@ struct ChatsView: View {
         .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
             Button("Cancel", role: .cancel) {
                 roomToDelete = nil
+                routeBeingDeleted = nil
             }
             Button("Leave", role: .destructive) {
                 Task {
                     if let session = roomToDelete {
+                        routeBeingDeleted = .room(session)
                         await deleteRoom(session)
                     }
                     roomToDelete = nil
+                    routeBeingDeleted = nil
                 }
             }
         } message: {
@@ -236,8 +240,11 @@ struct ChatsView: View {
         }
         .onChange(of: selectedRoute) { oldValue, newValue in
             if oldValue != nil {
-                Task {
-                    await loadConversations()
+                let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
+                if !didClearSelectionForDeletion {
+                    Task {
+                        await loadConversations()
+                    }
                 }
             }
 
@@ -245,6 +252,7 @@ struct ChatsView: View {
                 roomToAuthenticate = session
                 selectedRoute = nil
                 lastSelectedRoomIsConnected = nil
+                routeBeingDeleted = nil
                 return
             }
 
@@ -487,9 +495,13 @@ struct ChatsView: View {
     private func handleDeleteConversation(_ conversation: Conversation) {
         switch conversation {
         case .direct(let contact):
+            routeBeingDeleted = .direct(contact)
             deleteDirectConversation(contact)
+
         case .channel(let channel):
+            routeBeingDeleted = .channel(channel)
             deleteChannelConversation(channel)
+
         case .room(let session):
             roomToDelete = session
             showRoomDeleteAlert = true
@@ -501,6 +513,7 @@ struct ChatsView: View {
         viewModel.removeConversation(.direct(contact))
         Task {
             try? await viewModel.deleteConversation(for: contact)
+            routeBeingDeleted = nil
         }
     }
 
@@ -509,6 +522,7 @@ struct ChatsView: View {
         viewModel.removeConversation(.channel(channel))
         Task {
             await deleteChannel(channel)
+            routeBeingDeleted = nil
         }
     }
 
@@ -543,6 +557,7 @@ struct ChatsView: View {
                 index: channel.index
             )
             await appState.services?.notificationService.updateBadgeCount()
+            await loadConversations()
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
             await loadConversations()
