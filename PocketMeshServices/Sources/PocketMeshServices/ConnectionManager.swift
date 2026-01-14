@@ -1013,10 +1013,15 @@ public final class ConnectionManager {
             await onConnectionReady?()
 
             // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
+            do {
+                try await newServices.syncCoordinator.onConnectionEstablished(
+                    deviceID: deviceID,
+                    services: newServices
+                )
+            } catch {
+                logger.warning("Initial sync failed, starting resync loop: \(error.localizedDescription)")
+                startResyncLoop(deviceID: deviceID, services: newServices)
+            }
 
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
