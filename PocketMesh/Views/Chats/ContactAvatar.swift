@@ -6,15 +6,11 @@ struct ContactAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(avatarColor)
-
-            Text(initials)
-                .font(.system(size: size * 0.4, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: size, height: size)
+        Text(initials)
+            .font(.system(size: size * 0.4, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(avatarColor, in: .circle)
     }
 
     private var initials: String {
