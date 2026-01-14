@@ -17,6 +17,7 @@ struct ChatsView: View {
     @State private var selectedRoute: ChatRoute?
     @State private var navigationPath = NavigationPath()
     @State private var activeRoute: ChatRoute?
+    @State private var lastSelectedRoomIsConnected: Bool?
 
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
@@ -240,11 +241,17 @@ struct ChatsView: View {
                 }
             }
 
-            guard let newValue else { return }
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
                 selectedRoute = nil
+                lastSelectedRoomIsConnected = nil
+                return
             }
+
+            lastSelectedRoomIsConnected = {
+                guard case .room(let session) = newValue else { return nil }
+                return session.isConnected
+            }()
         }
         .onChange(of: appState.pendingChatContact) { _, _ in
             handlePendingNavigation()
@@ -426,6 +433,19 @@ struct ChatsView: View {
         if let activeRoute {
             self.activeRoute = activeRoute.refreshedPayload(from: viewModel.allConversations)
         }
+
+        if shouldUseSplitView,
+           lastSelectedRoomIsConnected == true,
+           case .room(let session) = self.selectedRoute,
+           !session.isConnected {
+            roomToAuthenticate = session
+            self.selectedRoute = nil
+        }
+
+        lastSelectedRoomIsConnected = {
+            guard case .room(let session) = self.selectedRoute else { return nil }
+            return session.isConnected
+        }()
     }
 
     private func refreshConversations() async {
