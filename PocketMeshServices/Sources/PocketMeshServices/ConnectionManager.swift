@@ -1116,10 +1116,15 @@ public final class ConnectionManager {
         await onConnectionReady?()
 
         // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-        try await newServices.syncCoordinator.onConnectionEstablished(
-            deviceID: deviceID,
-            services: newServices
-        )
+        do {
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+        } catch {
+            logger.warning("Initial sync failed during device switch, starting resync loop: \(error.localizedDescription)")
+            startResyncLoop(deviceID: deviceID, services: newServices)
+        }
 
         currentTransportType = .bluetooth
         connectionState = .ready
