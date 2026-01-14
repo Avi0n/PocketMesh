@@ -520,6 +520,26 @@ public final class ConnectionManager {
         }
     }
 
+    /// Triggers resync if connected but sync state is failed.
+    /// Called when app returns to foreground.
+    public func checkSyncHealth() async {
+        guard connectionState == .ready,
+              shouldBeConnected,
+              let services,
+              let deviceID = connectedDevice?.id else { return }
+
+        let syncState = await services.syncCoordinator.state
+        guard case .failed = syncState else { return }
+
+        guard resyncTask == nil else {
+            logger.info("Resync loop already running, skipping foreground trigger")
+            return
+        }
+
+        logger.info("Foreground return: sync state is failed, starting resync loop")
+        startResyncLoop(deviceID: deviceID, services: services)
+    }
+
     // MARK: - Initialization
 
     /// Creates a new connection manager.
