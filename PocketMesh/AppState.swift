@@ -271,6 +271,11 @@ public final class AppState {
             }
         )
 
+        // Wire resync failed callback for "Sync Failed" pill
+        connectionManager.onResyncFailed = { [weak self] in
+            self?.showSyncFailedPill()
+        }
+
         // Wire device update callback for settings changes
         // Updates connectedDevice when radio/node settings are changed via SettingsService
         await services.settingsService.setDeviceUpdateCallback { [weak self] selfInfo in
