@@ -478,6 +478,48 @@ public final class ConnectionManager {
         }
     }
 
+    /// Starts a retry loop to resync after initial sync failure.
+    /// Retries every 2 seconds, shows "Sync Failed" pill and disconnects after 3 failures.
+    private func startResyncLoop(deviceID: UUID, services: ServiceContainer) {
+        resyncTask?.cancel()
+        resyncAttemptCount = 0
+
+        // Note: No [weak self] needed - Task is stored property, self is @MainActor class.
+        // Task inherits MainActor isolation, no retain cycle risk.
+        resyncTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.resyncInterval)
+                guard !Task.isCancelled else { break }
+
+                guard shouldBeConnected,
+                      connectionState == .ready else { break }
+
+                resyncAttemptCount += 1
+                logger.info("Resync attempt \(resyncAttemptCount)/\(Self.maxResyncAttempts)")
+
+                let success = await services.syncCoordinator.performResync(
+                    deviceID: deviceID,
+                    services: services
+                )
+
+                if success {
+                    logger.info("Resync succeeded")
+                    resyncAttemptCount = 0
+                    break
+                }
+
+                if resyncAttemptCount >= Self.maxResyncAttempts {
+                    logger.warning("Resync failed \(Self.maxResyncAttempts) times, disconnecting")
+                    onResyncFailed?()
+                    await disconnect()
+                    break
+                }
+            }
+
+            resyncTask = nil
+        }
+    }
+
     // MARK: - Initialization
 
     /// Creates a new connection manager.
