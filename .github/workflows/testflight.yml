@@ -1,13 +1,15 @@
 name: Deploy to TestFlight
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
+      source_ref:
+        description: "Git ref to build (branch/tag/SHA)"
+        required: true
+        type: string
+        default: "dev"
       skip_testflight:
-        description: 'Build only (skip TestFlight upload)'
+        description: "Build only (skip TestFlight upload)"
         required: false
         type: boolean
         default: false
@@ -21,6 +23,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
           submodules: recursive
 
       - name: Install dependencies
