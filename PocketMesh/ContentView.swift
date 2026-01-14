@@ -121,15 +121,17 @@ struct MainTabView: View {
             }
         }
 
-            if appState.shouldShowSyncingPill || appState.connectionState == .connecting {
+            if appState.shouldShowPill || appState.connectionState == .connecting {
                 SyncingPillView(
                     phase: appState.currentSyncPhase,
-                    connectionState: appState.connectionState
+                    connectionState: appState.connectionState,
+                    isFailure: appState.isPillFailure,
+                    failureText: appState.pillText
                 )
                     .padding(.top, 8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(duration: 0.3), value: appState.shouldShowSyncingPill || appState.connectionState == .connecting)
+                    .animation(.spring(duration: 0.3), value: appState.shouldShowPill || appState.connectionState == .connecting)
             }
         }
         .onChange(of: appState.selectedTab) { _, newTab in
