@@ -4,17 +4,7 @@ import OSLog
 
 private let chatsViewLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
 
-private struct HashtagJoinRequest: Identifiable, Hashable {
-    let id: String
-}
-
 struct ChatsView: View {
-    private enum ChatDestination: Hashable {
-        case direct(ContactDTO)
-        case channel(ChannelDTO)
-        case room(RemoteNodeSessionDTO)
-    }
-
     @Environment(AppState.self) private var appState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -24,7 +14,9 @@ struct ChatsView: View {
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
 
-    @State private var selectedDestination: ChatDestination?
+    @State private var selectedRoute: ChatRoute?
+    @State private var navigationPath = NavigationPath()
+    @State private var activeRoute: ChatRoute?
 
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
@@ -90,42 +82,88 @@ struct ChatsView: View {
     }
 
     var body: some View {
-        if shouldUseSplitView {
-            NavigationSplitView {
-                NavigationStack {
-                    sidebarContent
-                }
-            } detail: {
-                NavigationStack {
-                    detailContent
-                }
+        Group {
+            if shouldUseSplitView {
+                splitLayout
+            } else {
+                stackLayout
             }
-            .environment(\.openURL, OpenURLAction { url in
-                guard url.scheme == "pocketmesh-hashtag" else {
-                    return .systemAction
-                }
-                guard let channelName = url.host else {
-                    chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
-                    return .handled
-                }
-                handleHashtagTap(name: channelName)
+        }
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == HashtagDeeplinkSupport.scheme else {
+                return .systemAction
+            }
+            guard let channelName = HashtagDeeplinkSupport.channelNameFromURL(url) else {
+                chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
                 return .handled
-            })
-            .sheet(item: $hashtagToJoin) { request in
-                JoinHashtagFromMessageView(channelName: request.id) { channel in
-                    hashtagToJoin = nil
-                    if let channel {
-                        selectedDestination = .channel(channel)
-                    }
-                }
-                .presentationDetents([.medium])
             }
-        } else {
-            ChatsListView()
+            handleHashtagTap(name: channelName)
+            return .handled
+        })
+        .sheet(item: $hashtagToJoin) { request in
+            JoinHashtagFromMessageView(channelName: request.id) { channel in
+                hashtagToJoin = nil
+                if let channel {
+                    navigate(to: .channel(channel))
+                }
+            }
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingNewChat, onDismiss: {
+            if let contact = pendingChatContact {
+                pendingChatContact = nil
+                navigate(to: .direct(contact))
+            }
+        }) {
+            NewChatView(viewModel: viewModel) { contact in
+                pendingChatContact = contact
+                showingNewChat = false
+            }
+        }
+        .sheet(isPresented: $showingChannelOptions, onDismiss: {
+            Task {
+                await loadConversations()
+            }
+        }) {
+            ChannelOptionsSheet()
+        }
+        .sheet(item: $roomToAuthenticate) { session in
+            RoomAuthenticationSheet(session: session) { authenticatedSession in
+                roomToAuthenticate = nil
+                navigate(to: .room(authenticatedSession))
+            }
+            .presentationSizing(.page)
+        }
+        .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
+            Button("Cancel", role: .cancel) {
+                roomToDelete = nil
+            }
+            Button("Leave", role: .destructive) {
+                Task {
+                    if let session = roomToDelete {
+                        await deleteRoom(session)
+                    }
+                    roomToDelete = nil
+                }
+            }
+        } message: {
+            Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
         }
     }
 
-    private var sidebarContent: some View {
+    private var splitLayout: some View {
+        NavigationSplitView {
+            NavigationStack {
+                splitSidebarContent
+            }
+        } detail: {
+            NavigationStack {
+                splitDetailContent
+            }
+        }
+    }
+
+    private var splitSidebarContent: some View {
         Group {
             if viewModel.isLoading && viewModel.allConversations.isEmpty {
                 ProgressView()
@@ -143,7 +181,12 @@ struct ChatsView: View {
                     }
                 }
             } else {
-                conversationSplitList
+                ConversationListContent(
+                    viewModel: viewModel,
+                    conversations: filteredConversations,
+                    selection: $selectedRoute,
+                    onDeleteConversation: handleDeleteConversation
+                )
             }
         }
         .navigationTitle("Chats")
@@ -179,46 +222,6 @@ struct ChatsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingNewChat, onDismiss: {
-            if let contact = pendingChatContact {
-                pendingChatContact = nil
-                selectedDestination = .direct(contact)
-            }
-        }) {
-            NewChatView(viewModel: viewModel) { contact in
-                pendingChatContact = contact
-                showingNewChat = false
-            }
-        }
-        .sheet(isPresented: $showingChannelOptions, onDismiss: {
-            Task {
-                await loadConversations()
-            }
-        }) {
-            ChannelOptionsSheet()
-        }
-        .sheet(item: $roomToAuthenticate) { session in
-            RoomAuthenticationSheet(session: session) { authenticatedSession in
-                roomToAuthenticate = nil
-                selectedDestination = .room(authenticatedSession)
-            }
-            .presentationSizing(.page)
-        }
-        .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
-            Button("Cancel", role: .cancel) {
-                roomToDelete = nil
-            }
-            Button("Leave", role: .destructive) {
-                Task {
-                    if let session = roomToDelete {
-                        await deleteRoom(session)
-                    }
-                    roomToDelete = nil
-                }
-            }
-        } message: {
-            Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
-        }
         .refreshable {
             await refreshConversations()
         }
@@ -230,9 +233,7 @@ struct ChatsView: View {
             handlePendingNavigation()
             handlePendingRoomNavigation()
         }
-        .onChange(of: selectedDestination) { oldValue, newValue in
-            // Refresh conversations when selection changes to pick up any updates
-            // (e.g., mention counts, unread counts, last message previews)
+        .onChange(of: selectedRoute) { oldValue, newValue in
             if oldValue != nil {
                 Task {
                     await loadConversations()
@@ -242,7 +243,7 @@ struct ChatsView: View {
             guard let newValue else { return }
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
-                selectedDestination = nil
+                selectedRoute = nil
             }
         }
         .onChange(of: appState.pendingChatContact) { _, _ in
@@ -263,54 +264,9 @@ struct ChatsView: View {
         }
     }
 
-    private var conversationSplitList: some View {
-        List(selection: $selectedDestination) {
-            ForEach(filteredConversations) { conversation in
-                switch conversation {
-                case .direct(let contact):
-                    ConversationRow(contact: contact, viewModel: viewModel)
-                        .tag(ChatDestination.direct(contact))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            deleteDirectConversation(contact)
-                        }
-
-                case .channel(let channel):
-                    ChannelConversationRow(channel: channel, viewModel: viewModel)
-                        .tag(ChatDestination.channel(channel))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            deleteChannelConversation(channel)
-                        }
-
-                case .room(let session):
-                    RoomConversationRow(session: session)
-                        .tag(ChatDestination.room(session))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            roomToDelete = session
-                            showRoomDeleteAlert = true
-                        }
-                }
-            }
-        }
-        .listStyle(.plain)
-    }
-
-    private func deleteDirectConversation(_ contact: ContactDTO) {
-        viewModel.removeConversation(.direct(contact))
-        Task {
-            try? await viewModel.deleteConversation(for: contact)
-        }
-    }
-
-    private func deleteChannelConversation(_ channel: ChannelDTO) {
-        viewModel.removeConversation(.channel(channel))
-        Task {
-            await deleteChannel(channel)
-        }
-    }
-
     @ViewBuilder
-    private var detailContent: some View {
-        switch selectedDestination {
+    private var splitDetailContent: some View {
+        switch selectedRoute {
         case .direct(let contact):
             ChatView(contact: contact, parentViewModel: viewModel)
                 .id(contact.id)
@@ -325,10 +281,151 @@ struct ChatsView: View {
         }
     }
 
+    private var stackLayout: some View {
+        NavigationStack(path: $navigationPath) {
+            stackRootContent
+                .navigationDestination(for: ChatRoute.self) { route in
+                    switch route {
+                    case .direct(let contact):
+                        ChatView(contact: contact, parentViewModel: viewModel)
+                            .id(contact.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+
+                    case .channel(let channel):
+                        ChannelChatView(channel: channel, parentViewModel: viewModel)
+                            .id(channel.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+
+                    case .room(let session):
+                        RoomConversationView(session: session)
+                            .id(session.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+                    }
+                }
+                .onChange(of: navigationPath) { _, newPath in
+                    if newPath.isEmpty {
+                        activeRoute = nil
+                        appState.tabBarVisibility = .visible
+                        Task {
+                            await loadConversations()
+                        }
+                    }
+                }
+                .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
+        }
+    }
+
+    private var stackRootContent: some View {
+        Group {
+            if viewModel.isLoading && viewModel.allConversations.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredConversations.isEmpty {
+                ContentUnavailableView {
+                    Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
+                } description: {
+                    Text(emptyStateMessage.description)
+                } actions: {
+                    if selectedFilter != nil {
+                        Button("Clear Filter") {
+                            selectedFilter = nil
+                        }
+                    }
+                }
+            } else {
+                ConversationListContent(
+                    viewModel: viewModel,
+                    conversations: filteredConversations,
+                    onNavigate: { route in
+                        navigationPath.append(route)
+                    },
+                    onRequestRoomAuth: { session in
+                        roomToAuthenticate = session
+                    },
+                    onDeleteConversation: handleDeleteConversation
+                )
+            }
+        }
+        .navigationTitle("Chats")
+        .searchable(text: $searchText, prompt: "Search conversations")
+        .searchScopes($selectedFilter, activation: .onSearchPresentation) {
+            Text("All").tag(nil as ChatFilter?)
+            ForEach(ChatFilter.allCases) { filter in
+                Text(filter.rawValue).tag(filter as ChatFilter?)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                BLEStatusIndicatorView()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                filterMenu
+            }
+            ToolbarItem(placement: .automatic) {
+                Menu {
+                    Button {
+                        showingNewChat = true
+                    } label: {
+                        Label("New Chat", systemImage: "person")
+                    }
+
+                    Button {
+                        showingChannelOptions = true
+                    } label: {
+                        Label("New Channel", systemImage: "number")
+                    }
+                } label: {
+                    Label("New Message", systemImage: "square.and.pencil")
+                }
+            }
+        }
+        .refreshable {
+            await refreshConversations()
+        }
+        .task {
+            viewModel.configure(appState: appState)
+            await loadConversations()
+            handlePendingNavigation()
+            handlePendingRoomNavigation()
+        }
+        .onChange(of: appState.pendingChatContact) { _, _ in
+            handlePendingNavigation()
+        }
+        .onChange(of: appState.pendingRoomSession) { _, _ in
+            handlePendingRoomNavigation()
+        }
+        .onChange(of: appState.servicesVersion) { _, _ in
+            Task {
+                await loadConversations()
+            }
+        }
+        .onChange(of: appState.conversationsVersion) { _, _ in
+            Task {
+                await loadConversations()
+            }
+        }
+    }
+
     private func loadConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
+
+        if let selectedRoute {
+            self.selectedRoute = selectedRoute.refreshedPayload(from: viewModel.allConversations)
+        }
+        if let activeRoute {
+            self.activeRoute = activeRoute.refreshedPayload(from: viewModel.allConversations)
+        }
     }
 
     private func refreshConversations() async {
@@ -336,16 +433,63 @@ struct ChatsView: View {
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
-    private func handlePendingNavigation() {
-        guard let contact = appState.pendingChatContact else { return }
-        selectedDestination = .direct(contact)
-        appState.clearPendingNavigation()
+    private func navigate(to route: ChatRoute) {
+        if shouldUseSplitView {
+            selectedRoute = route
+            return
+        }
+
+        if case .room(let session) = route, !session.isConnected {
+            roomToAuthenticate = session
+            return
+        }
+
+        appState.tabBarVisibility = .hidden
+        navigationPath.removeLast(navigationPath.count)
+        navigationPath.append(route)
     }
 
-    private func handlePendingRoomNavigation() {
-        guard let session = appState.pendingRoomSession else { return }
-        selectedDestination = .room(session)
-        appState.clearPendingRoomNavigation()
+    private func closeIfShowing(route: ChatRoute) {
+        if shouldUseSplitView {
+            if selectedRoute == route {
+                selectedRoute = nil
+            }
+            return
+        }
+
+        if activeRoute == route {
+            navigationPath.removeLast(navigationPath.count)
+            activeRoute = nil
+            appState.tabBarVisibility = .visible
+        }
+    }
+
+    private func handleDeleteConversation(_ conversation: Conversation) {
+        switch conversation {
+        case .direct(let contact):
+            deleteDirectConversation(contact)
+        case .channel(let channel):
+            deleteChannelConversation(channel)
+        case .room(let session):
+            roomToDelete = session
+            showRoomDeleteAlert = true
+        }
+    }
+
+    private func deleteDirectConversation(_ contact: ContactDTO) {
+        closeIfShowing(route: .direct(contact))
+        viewModel.removeConversation(.direct(contact))
+        Task {
+            try? await viewModel.deleteConversation(for: contact)
+        }
+    }
+
+    private func deleteChannelConversation(_ channel: ChannelDTO) {
+        closeIfShowing(route: .channel(channel))
+        viewModel.removeConversation(.channel(channel))
+        Task {
+            await deleteChannel(channel)
+        }
     }
 
     private func deleteRoom(_ session: RemoteNodeSessionDTO) async {
@@ -362,9 +506,7 @@ struct ChatsView: View {
 
             await appState.services?.notificationService.updateBadgeCount()
 
-            if selectedDestination == .room(session) {
-                selectedDestination = nil
-            }
+            closeIfShowing(route: .room(session))
 
             await loadConversations()
         } catch {
@@ -387,17 +529,24 @@ struct ChatsView: View {
         }
     }
 
-    // MARK: - Hashtag Channel Handling
+    private func handlePendingNavigation() {
+        guard let contact = appState.pendingChatContact else { return }
+        navigate(to: .direct(contact))
+        appState.clearPendingNavigation()
+    }
+
+    private func handlePendingRoomNavigation() {
+        guard let session = appState.pendingRoomSession else { return }
+        navigate(to: .room(session))
+        appState.clearPendingRoomNavigation()
+    }
 
     private func handleHashtagTap(name: String) {
         Task {
-            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
-            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+            guard let fullName = HashtagDeeplinkSupport.fullChannelName(from: name) else {
                 chatsViewLogger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
                 return
             }
-
-            let fullName = "#\(normalizedName)"
 
             guard let deviceID = appState.connectedDevice?.id else {
                 await MainActor.run {
@@ -406,27 +555,28 @@ struct ChatsView: View {
                 return
             }
 
-            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
-                await MainActor.run {
-                    selectedDestination = .channel(channel)
+            do {
+                if let channel = try await HashtagDeeplinkSupport.findChannelByName(
+                    fullName,
+                    deviceID: deviceID,
+                    fetchChannels: { deviceID in
+                        try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+                    }
+                ) {
+                    await MainActor.run {
+                        navigate(to: .channel(channel))
+                    }
+                } else {
+                    await MainActor.run {
+                        hashtagToJoin = HashtagJoinRequest(id: fullName)
+                    }
                 }
-            } else {
+            } catch {
+                chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
                 await MainActor.run {
                     hashtagToJoin = HashtagJoinRequest(id: fullName)
                 }
             }
-        }
-    }
-
-    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
-        do {
-            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
-            return channels.first { channel in
-                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
-            }
-        } catch {
-            chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
-            return nil
         }
     }
 }
