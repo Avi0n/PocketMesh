@@ -233,6 +233,13 @@ public final class ConnectionManager {
         wifiReconnectAttempt = 0
     }
 
+    /// Cancels any resync retry loop in progress
+    private func cancelResyncLoop() {
+        resyncTask?.cancel()
+        resyncTask = nil
+        resyncAttemptCount = 0
+    }
+
     /// Starts periodic heartbeat to detect dead WiFi connections.
     /// ESP32's TCP stack doesn't respond to TCP keepalives, so we use application-level probes.
     private func startWiFiHeartbeat() {
@@ -281,6 +288,8 @@ public final class ConnectionManager {
 
         // Stop heartbeat before teardown
         stopWiFiHeartbeat()
+
+        cancelResyncLoop()
 
         // Tear down session (invalid now)
         await services?.stopEventMonitoring()
@@ -828,6 +837,8 @@ public final class ConnectionManager {
 
         // Stop WiFi heartbeat
         stopWiFiHeartbeat()
+
+        cancelResyncLoop()
 
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
@@ -1451,6 +1462,8 @@ public final class ConnectionManager {
         // Cancel any pending auto-reconnect timeout
         cancelAutoReconnectTimeout()
 
+        cancelResyncLoop()
+
         await services?.stopEventMonitoring()
         connectionState = .disconnected
         connectedDevice = nil
@@ -1476,6 +1489,9 @@ public final class ConnectionManager {
 
         // Tear down session layer (it's invalid now)
         await services?.stopEventMonitoring()
+
+        cancelResyncLoop()
+
         // Reset sync state before destroying services to prevent stuck "Syncing" pill
         if let services {
             await services.syncCoordinator.onDisconnected(services: services)
