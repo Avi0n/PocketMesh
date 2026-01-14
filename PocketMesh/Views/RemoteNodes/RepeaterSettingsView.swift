@@ -13,6 +13,7 @@ struct RepeaterSettingsView: View {
         case advertInterval
         case floodAdvertInterval
         case floodMaxHops
+        case identityName
     }
 
     let session: RemoteNodeSessionDTO
@@ -298,6 +299,11 @@ struct RepeaterSettingsView: View {
                     set: { viewModel.name = $0 }
                 ))
                     .textContentType(.name)
+                    .submitLabel(.done)
+                    .focused($focusedField, equals: .identityName)
+                    .onSubmit {
+                        focusedField = nil
+                    }
             } else if viewModel.isLoadingIdentity {
                 HStack {
                     Text("Name")
@@ -313,6 +319,11 @@ struct RepeaterSettingsView: View {
                     set: { viewModel.name = $0 }
                 ))
                     .textContentType(.name)
+                    .submitLabel(.done)
+                    .focused($focusedField, equals: .identityName)
+                    .onSubmit {
+                        focusedField = nil
+                    }
             }
 
             HStack {
