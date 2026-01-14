@@ -293,6 +293,35 @@ public actor SyncCoordinator {
         logger.info("Full sync complete")
     }
 
+    /// Attempts to resync data after a previous sync failure.
+    /// Unlike onConnectionEstablished, does NOT rewire handlers or restart event monitoring.
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - services: The ServiceContainer with all services
+    /// - Returns: `true` if sync succeeded, `false` if it failed
+    public func performResync(
+        deviceID: UUID,
+        services: ServiceContainer
+    ) async -> Bool {
+        logger.info("Attempting resync for device \(deviceID)")
+
+        do {
+            try await performFullSync(
+                deviceID: deviceID,
+                dataStore: services.dataStore,
+                contactService: services.contactService,
+                channelService: services.channelService,
+                messagePollingService: services.messagePollingService
+            )
+            logger.info("Resync succeeded")
+            return true
+        } catch {
+            logger.warning("Resync failed: \(error.localizedDescription)")
+            await setState(.failed(.syncFailed(error.localizedDescription)))
+            return false
+        }
+    }
+
     // MARK: - Connection Lifecycle
 
     /// Called by ConnectionManager when connection is established.
