@@ -189,15 +189,6 @@ struct ChatsListView: View {
                     appState.tabBarVisibility = .visible
                 }
             }
-            .environment(\.openURL, OpenURLAction { url in
-                if url.scheme == "pocketmesh-hashtag",
-                   let channelName = url.host,
-                   let deviceID = appState.connectedDevice?.id {
-                    handleHashtagTap(name: channelName, deviceID: deviceID)
-                    return .handled
-                }
-                return .systemAction
-            })
             .sheet(item: $roomToAuthenticate) { session in
                 RoomAuthenticationSheet(session: session) { authenticatedSession in
                     roomToAuthenticate = nil
@@ -227,10 +218,19 @@ struct ChatsListView: View {
                         navigationPath.append(channel)
                     }
                 }
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.medium])
             }
             .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
         }
+        .environment(\.openURL, OpenURLAction { url in
+            if url.scheme == "pocketmesh-hashtag",
+               let channelName = url.host,
+               let deviceID = appState.connectedDevice?.id {
+                handleHashtagTap(name: channelName, deviceID: deviceID)
+                return .handled
+            }
+            return .systemAction
+        })
     }
 
     private func handlePendingRoomNavigation() {

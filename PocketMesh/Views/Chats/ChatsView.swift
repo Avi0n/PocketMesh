@@ -26,6 +26,7 @@ struct ChatsView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
+    @State private var hashtagToJoin: String?
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
@@ -85,18 +86,38 @@ struct ChatsView: View {
     }
 
     var body: some View {
-        if shouldUseSplitView {
-            NavigationSplitView {
-                NavigationStack {
-                    sidebarContent
+        Group {
+            if shouldUseSplitView {
+                NavigationSplitView {
+                    NavigationStack {
+                        sidebarContent
+                    }
+                } detail: {
+                    NavigationStack {
+                        detailContent
+                    }
                 }
-            } detail: {
-                NavigationStack {
-                    detailContent
+            } else {
+                ChatsListView()
+            }
+        }
+        .environment(\.openURL, OpenURLAction { url in
+            if url.scheme == "pocketmesh-hashtag",
+               let channelName = url.host,
+               let deviceID = appState.connectedDevice?.id {
+                handleHashtagTap(name: channelName, deviceID: deviceID)
+                return .handled
+            }
+            return .systemAction
+        })
+        .sheet(item: $hashtagToJoin) { name in
+            JoinHashtagFromMessageView(channelName: name) { channel in
+                hashtagToJoin = nil
+                if let channel {
+                    selectedDestination = .channel(channel)
                 }
             }
-        } else {
-            ChatsListView()
+            .presentationDetents([.medium])
         }
     }
 
@@ -351,6 +372,33 @@ struct ChatsView: View {
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
             await loadConversations()
+        }
+    }
+
+    // MARK: - Hashtag Channel Handling
+
+    private func handleHashtagTap(name: String, deviceID: UUID) {
+        Task {
+            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            let fullName = "#\(normalizedName)"
+
+            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
+                selectedDestination = .channel(channel)
+            } else {
+                hashtagToJoin = fullName
+            }
+        }
+    }
+
+    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
+        do {
+            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+            return channels.first { channel in
+                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }
+        } catch {
+            chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
+            return nil
         }
     }
 }

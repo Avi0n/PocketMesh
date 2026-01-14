@@ -13,10 +13,10 @@ struct JoinHashtagFromMessageView: View {
     let onComplete: (ChannelDTO?) -> Void
 
     @State private var availableSlots: [UInt8] = []
-    @State private var selectedSlot: UInt8 = 1
     @State private var isJoining = false
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var successTrigger = 0
 
     private var normalizedName: String {
         HashtagUtilities.normalizeHashtagName(channelName)
@@ -28,29 +28,17 @@ struct JoinHashtagFromMessageView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            VStack(spacing: 0) {
                 if isLoading {
-                    ProgressView("Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    loadingView
                 } else if availableSlots.isEmpty {
-                    NoSlotsView(
-                        fullChannelName: fullChannelName,
-                        onDismiss: {
-                            onComplete(nil)
-                            dismiss()
-                        }
-                    )
+                    noSlotsView
                 } else {
-                    JoinFormView(
-                        fullChannelName: fullChannelName,
-                        availableSlots: availableSlots,
-                        selectedSlot: $selectedSlot,
-                        isJoining: $isJoining,
-                        errorMessage: $errorMessage,
-                        onJoin: { await joinChannel() }
-                    )
+                    joinConfirmationView
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Join Channel")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -64,8 +52,89 @@ struct JoinHashtagFromMessageView: View {
             .task {
                 await loadAvailableSlots()
             }
+            .sensoryFeedback(.success, trigger: successTrigger)
         }
     }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        ProgressView("Loading...")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - No Slots View
+
+    private var noSlotsView: some View {
+        ContentUnavailableView {
+            Label("No Slots Available", systemImage: "number.circle.fill")
+        } description: {
+            Text("All channel slots are full. Remove an existing channel to join \(fullChannelName).")
+        } actions: {
+            Button("OK") {
+                onComplete(nil)
+                dismiss()
+            }
+            .liquidGlassProminentButtonStyle()
+        }
+    }
+
+    // MARK: - Join Confirmation View
+
+    private var joinConfirmationView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(.cyan)
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "number")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                Text(fullChannelName)
+                    .font(.title)
+                    .bold()
+
+                Text("Hashtag channels are public. Anyone can join by entering the same name.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal)
+            }
+
+            Button {
+                Task {
+                    await joinChannel()
+                }
+            } label: {
+                if isJoining {
+                    ProgressView()
+                } else {
+                    Text("Join \(fullChannelName)")
+                }
+            }
+            .liquidGlassProminentButtonStyle()
+            .disabled(isJoining)
+            .padding(.horizontal, 48)
+            .padding(.bottom, 32)
+        }
+    }
+
+    // MARK: - Private Methods
 
     private func loadAvailableSlots() async {
         guard let deviceID = appState.connectedDevice?.id else {
@@ -80,9 +149,6 @@ struct JoinHashtagFromMessageView: View {
             let maxChannels = appState.connectedDevice?.maxChannels ?? 0
             if maxChannels > 1 {
                 availableSlots = (1..<maxChannels).filter { !usedSlots.contains($0) }
-                if let first = availableSlots.first {
-                    selectedSlot = first
-                }
             }
         } catch {
             logger.error("Failed to load channel slots: \(error)")
@@ -102,7 +168,11 @@ struct JoinHashtagFromMessageView: View {
             return
         }
 
-        // Validate channel name
+        guard let selectedSlot = availableSlots.first else {
+            errorMessage = "No available slots."
+            return
+        }
+
         guard HashtagUtilities.isValidHashtagName(normalizedName) else {
             errorMessage = "Invalid channel name format."
             return
@@ -112,8 +182,6 @@ struct JoinHashtagFromMessageView: View {
         errorMessage = nil
 
         do {
-            // Create the channel - secret derived from SHA256("#channelname")
-            // Always use lowercase normalized name for consistent secret derivation
             try await channelService.setChannel(
                 deviceID: deviceID,
                 index: selectedSlot,
@@ -121,8 +189,8 @@ struct JoinHashtagFromMessageView: View {
                 passphrase: fullChannelName
             )
 
-            // Fetch the newly created channel
             if let newChannel = try await appState.services?.dataStore.fetchChannel(deviceID: deviceID, index: selectedSlot) {
+                successTrigger += 1
                 onComplete(newChannel)
                 dismiss()
             } else {
@@ -137,101 +205,8 @@ struct JoinHashtagFromMessageView: View {
     }
 }
 
-// MARK: - Private Views
-
-private struct NoSlotsView: View {
-    let fullChannelName: String
-    let onDismiss: () -> Void
-
-    var body: some View {
-        ContentUnavailableView {
-            Label("No Slots Available", systemImage: "number.circle.fill")
-        } description: {
-            Text("All channel slots are full. Remove an existing channel to join \(fullChannelName).")
-        } actions: {
-            Button("OK") {
-                onDismiss()
-            }
-        }
-    }
-}
-
-private struct JoinFormView: View {
-    let fullChannelName: String
-    let availableSlots: [UInt8]
-    @Binding var selectedSlot: UInt8
-    @Binding var isJoining: Bool
-    @Binding var errorMessage: String?
-    let onJoin: () async -> Void
-
-    var body: some View {
-        Form {
-            Section {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(.cyan)
-                                .frame(width: 60, height: 60)
-
-                            Image(systemName: "number")
-                                .font(.title)
-                                .bold()
-                                .foregroundStyle(.white)
-                        }
-
-                        Text(fullChannelName)
-                            .font(.title2)
-                            .bold()
-                    }
-                    Spacer()
-                }
-                .listRowBackground(Color.clear)
-            }
-
-            Section {
-                Picker("Channel Slot", selection: $selectedSlot) {
-                    ForEach(availableSlots, id: \.self) { slot in
-                        Text("Slot \(slot)").tag(slot)
-                    }
-                }
-            } header: {
-                Text("Settings")
-            } footer: {
-                Text("Hashtag channels are public. Anyone can join by entering the same name.")
-            }
-
-            if let errorMessage {
-                Section {
-                    Text(errorMessage)
-                        .foregroundStyle(.red)
-                }
-            }
-
-            Section {
-                Button {
-                    Task {
-                        await onJoin()
-                    }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isJoining {
-                            ProgressView()
-                        } else {
-                            Text("Join \(fullChannelName)")
-                        }
-                        Spacer()
-                    }
-                }
-                .disabled(isJoining)
-            }
-        }
-    }
-}
-
 #Preview {
     JoinHashtagFromMessageView(channelName: "#general") { _ in }
         .environment(AppState())
+        .presentationDetents([.medium])
 }

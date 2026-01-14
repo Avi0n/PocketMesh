@@ -44,12 +44,6 @@ struct JoinHashtagChannelView: View {
                             }
                         }
                 }
-
-                Picker("Channel Slot", selection: $selectedSlot) {
-                    ForEach(availableSlots, id: \.self) { slot in
-                        Text("Slot \(slot)").tag(slot)
-                    }
-                }
             } header: {
                 Text("Hashtag Channel")
             } footer: {

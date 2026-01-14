@@ -125,8 +125,11 @@ struct MessageText: View {
             let channelName = HashtagUtilities.normalizeHashtagName(hashtag.name)
             if let url = URL(string: "pocketmesh-hashtag://\(channelName)") {
                 attributedString[attrRange].link = url
-                attributedString[attrRange].foregroundColor = baseColor
-                attributedString[attrRange].underlineStyle = .single
+                // Hashtags: bold + cyan (or white on dark bubbles), no underline
+                // This distinguishes them from URLs which remain underlined
+                let isOnDarkBubble = baseColor == .white
+                attributedString[attrRange].foregroundColor = isOnDarkBubble ? .white : .cyan
+                attributedString[attrRange].inlinePresentationIntent = .stronglyEmphasized
             }
         }
     }
