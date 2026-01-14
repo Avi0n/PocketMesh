@@ -1,6 +1,13 @@
 import UIKit
 import SwiftUI
 
+enum ChatScrollToMentionPolicy {
+    static func shouldScrollToBottom(mentionTargetID: AnyHashable?, newestItemID: AnyHashable?) -> Bool {
+        guard let mentionTargetID, let newestItemID else { return false }
+        return mentionTargetID == newestItemID
+    }
+}
+
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
 @MainActor
@@ -452,11 +459,18 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
 
         // Check for scroll-to-mention request
         let shouldScrollToMention = scrollToMentionRequest != context.coordinator.lastMentionRequest
+        var shouldScrollMentionToBottom = false
+        var mentionScrollTargetID: Item.ID?
+
         if shouldScrollToMention {
             context.coordinator.lastMentionRequest = scrollToMentionRequest
-            if let targetID = mentionTargetID {
-                controller.scrollToItem(id: targetID, animated: true)
-            }
+            mentionScrollTargetID = mentionTargetID
+
+            let newestItemID = items.last?.id
+            shouldScrollMentionToBottom = ChatScrollToMentionPolicy.shouldScrollToBottom(
+                mentionTargetID: mentionTargetID.map { AnyHashable($0) },
+                newestItemID: newestItemID.map { AnyHashable($0) }
+            )
         }
 
         // Check for scroll-to-bottom request BEFORE updating items
@@ -474,6 +488,12 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         // Perform the scroll after items are updated
         if shouldForceScroll {
             controller.scrollToBottom(animated: true)
+        } else if shouldScrollToMention {
+            if shouldScrollMentionToBottom {
+                controller.scrollToBottom(animated: true)
+            } else if let targetID = mentionScrollTargetID {
+                controller.scrollToItem(id: targetID, animated: true)
+            }
         }
     }
 
