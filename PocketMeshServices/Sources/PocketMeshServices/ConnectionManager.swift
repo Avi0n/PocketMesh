@@ -542,7 +542,8 @@ public final class ConnectionManager {
               let services,
               let deviceID = connectedDevice?.id else { return }
 
-        let syncState = await services.syncCoordinator.state
+        let syncCoordinator = services.syncCoordinator
+        let syncState = syncCoordinator.state
         guard case .failed = syncState else { return }
 
         guard resyncTask == nil else {

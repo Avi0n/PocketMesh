@@ -235,62 +235,67 @@ public actor SyncCoordinator {
     ) async throws {
         logger.info("Starting full sync for device \(deviceID)")
 
-        // Set phase before triggering pill visibility
-        await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
-        await onSyncActivityStarted?()
-
-        // Perform contacts and channels sync (activity should show pill)
         do {
-            // Phase 1: Contacts
-            let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
-            logger.info("Synced \(contactResult.contactsReceived) contacts")
-            await notifyContactsChanged()
+            // Set phase before triggering pill visibility
+            await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
+            await onSyncActivityStarted?()
 
-            // Phase 2: Channels
-            await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-            let device = try await dataStore.fetchDevice(id: deviceID)
-            let maxChannels = device?.maxChannels ?? 0
+            // Perform contacts and channels sync (activity should show pill)
+            do {
+                // Phase 1: Contacts
+                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
+                logger.info("Synced \(contactResult.contactsReceived) contacts")
+                await notifyContactsChanged()
 
-            let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
-            logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+                // Phase 2: Channels
+                await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
+                let device = try await dataStore.fetchDevice(id: deviceID)
+                let maxChannels = device?.maxChannels ?? 0
 
-            // Retry failed channels once if there are retryable errors
-            if !channelResult.isComplete {
-                let retryableIndices = channelResult.retryableIndices
-                if !retryableIndices.isEmpty {
-                    logger.info("Retrying \(retryableIndices.count) failed channels")
-                    let retryResult = try await channelService.retryFailedChannels(
-                        deviceID: deviceID,
-                        indices: retryableIndices
-                    )
+                let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
+                logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
 
-                    if retryResult.isComplete {
-                        logger.info("Retry recovered \(retryResult.channelsSynced) channels")
-                    } else {
-                        logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                // Retry failed channels once if there are retryable errors
+                if !channelResult.isComplete {
+                    let retryableIndices = channelResult.retryableIndices
+                    if !retryableIndices.isEmpty {
+                        logger.info("Retrying \(retryableIndices.count) failed channels")
+                        let retryResult = try await channelService.retryFailedChannels(
+                            deviceID: deviceID,
+                            indices: retryableIndices
+                        )
+
+                        if retryResult.isComplete {
+                            logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                        } else {
+                            logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                        }
                     }
                 }
+            } catch {
+                // End sync activity on error during contacts/channels phase
+                await onSyncActivityEnded?()
+                throw error
             }
-        } catch {
-            // End sync activity on error during contacts/channels phase
+
+            // End sync activity before messages phase (pill should hide)
             await onSyncActivityEnded?()
+
+            // Phase 3: Messages (no pill for this phase)
+            await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
+            let messageCount = try await messagePollingService.pollAllMessages()
+            logger.info("Polled \(messageCount) messages")
+            await notifyConversationsChanged()
+
+            // Complete
+            await setState(.synced)
+            await setLastSyncDate(Date())
+
+            logger.info("Full sync complete")
+        } catch {
+            await setState(.failed(.syncFailed(error.localizedDescription)))
             throw error
         }
-
-        // End sync activity before messages phase (pill should hide)
-        await onSyncActivityEnded?()
-
-        // Phase 3: Messages (no pill for this phase)
-        await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
-        let messageCount = try await messagePollingService.pollAllMessages()
-        logger.info("Polled \(messageCount) messages")
-        await notifyConversationsChanged()
-
-        // Complete
-        await setState(.synced)
-        await setLastSyncDate(Date())
-
-        logger.info("Full sync complete")
     }
 
     /// Attempts to resync data after a previous sync failure.
@@ -305,6 +310,11 @@ public actor SyncCoordinator {
     ) async -> Bool {
         logger.info("Attempting resync for device \(deviceID)")
 
+        await MainActor.run {
+            logger.info("Suppressing message notifications during resync")
+            services.notificationService.isSuppressingNotifications = true
+        }
+
         do {
             try await performFullSync(
                 deviceID: deviceID,
@@ -313,9 +323,26 @@ public actor SyncCoordinator {
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService
             )
+
+            await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+
+            await services.messagePollingService.waitForPendingHandlers()
+
+            await MainActor.run {
+                logger.info("Resuming message notifications (resync complete)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+
             logger.info("Resync succeeded")
             return true
         } catch {
+            await services.messagePollingService.waitForPendingHandlers()
+
+            await MainActor.run {
+                logger.info("Resuming message notifications (resync failed)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+
             logger.warning("Resync failed: \(error.localizedDescription)")
             await setState(.failed(.syncFailed(error.localizedDescription)))
             return false
