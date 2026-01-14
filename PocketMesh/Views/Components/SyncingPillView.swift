@@ -39,7 +39,7 @@ struct SyncingPillView: View {
 
             Text(displayText)
                 .font(.subheadline)
-                .fontWeight(.medium)
+                .bold()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -50,7 +50,7 @@ struct SyncingPillView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(displayText)
-        .accessibilityAddTraits(isFailure ? .updatesFrequently : [])
+        .accessibilityAddTraits(isFailure ? [] : .updatesFrequently)
     }
 }
 

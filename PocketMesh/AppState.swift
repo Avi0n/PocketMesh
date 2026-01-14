@@ -154,7 +154,7 @@ public final class AppState {
 
         // Announce for VoiceOver users
         if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Sync failed. The app will disconnect.")
+            announceConnectionState("Sync failed. Disconnecting.")
         }
 
         syncFailedPillTask = Task {
