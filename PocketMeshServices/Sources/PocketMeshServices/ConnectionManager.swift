@@ -433,10 +433,15 @@ public final class ConnectionManager {
         }
 
         await onConnectionReady?()
-        try await newServices.syncCoordinator.onConnectionEstablished(
-            deviceID: deviceID,
-            services: newServices
-        )
+        do {
+            try await newServices.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: newServices
+            )
+        } catch {
+            logger.warning("Initial sync failed during WiFi reconnect, starting resync loop: \(error.localizedDescription)")
+            startResyncLoop(deviceID: deviceID, services: newServices)
+        }
 
         currentTransportType = .wifi
         connectionState = .ready
