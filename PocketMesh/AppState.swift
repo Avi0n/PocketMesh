@@ -201,6 +201,9 @@ public final class AppState {
     init(modelContainer: ModelContainer) {
         self.connectionManager = ConnectionManager(modelContainer: modelContainer)
 
+        // Wire app state provider for incremental sync support
+        connectionManager.appStateProvider = AppStateProviderImpl()
+
         // Wire connection ready callback - automatically updates UI when connection completes
         connectionManager.onConnectionReady = { [weak self] in
             await self?.wireServicesIfConnected()
