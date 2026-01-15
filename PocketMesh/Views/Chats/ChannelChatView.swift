@@ -19,7 +19,7 @@ struct ChannelChatView: View {
     @State private var scrollToBottomRequest = 0
     @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
-    @State private var unseenMentionIDs: [UUID] = []
+    @State private var unseenMentionIDs: Set<UUID> = []
     @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
@@ -72,6 +72,16 @@ struct ChannelChatView: View {
             await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await loadUnseenMentions()
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
+
+            // Batch fetch link previews after initial load
+            if let dataStore = appState.services?.dataStore {
+                await viewModel.batchFetchLinkPreviews(
+                    using: linkPreviewFetcher,
+                    dataStore: dataStore,
+                    eventBroadcaster: appState.messageEventBroadcaster,
+                    isChannelMessage: true
+                )
+            }
         }
         .onDisappear {
             // Clear active channel for notification suppression
@@ -167,10 +177,10 @@ struct ChannelChatView: View {
     private func loadUnseenMentions() async {
         guard let dataStore = appState.services?.dataStore else { return }
         do {
-            unseenMentionIDs = try await dataStore.fetchUnseenChannelMentionIDs(
+            unseenMentionIDs = Set(try await dataStore.fetchUnseenChannelMentionIDs(
                 deviceID: channel.deviceID,
                 channelIndex: channel.index
-            )
+            ))
             unreadMentionCount = unseenMentionIDs.count
         } catch {
             logger.error("Failed to load unseen channel mentions: \(error)")
@@ -185,7 +195,7 @@ struct ChannelChatView: View {
             try await dataStore.markMentionSeen(messageID: messageID)
             try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
 
-            unseenMentionIDs.removeAll { $0 == messageID }
+            unseenMentionIDs.remove(messageID)
             unreadMentionCount = max(0, unreadMentionCount - 1)
 
             // Refresh parent's channel list to update badge in sidebar (important for iPad split view)
@@ -225,16 +235,16 @@ struct ChannelChatView: View {
                 emptyMessagesView
             } else {
                 ChatTableView(
-                    items: viewModel.messages,
-                    cellContent: { message in
-                        messageBubble(for: message)
+                    items: viewModel.displayItems,
+                    cellContent: { displayItem in
+                        messageBubble(for: displayItem)
                     },
                     isAtBottom: $isAtBottom,
                     unreadCount: $unreadCount,
                     scrollToBottomRequest: $scrollToBottomRequest,
                     scrollToMentionRequest: $scrollToMentionRequest,
-                    isUnseenMention: { message in
-                        message.containsSelfMention && !message.mentionSeen && unseenMentionIDs.contains(message.id)
+                    isUnseenMention: { displayItem in
+                        displayItem.containsSelfMention && !displayItem.mentionSeen && unseenMentionIDs.contains(displayItem.id)
                     },
                     onMentionBecameVisible: { messageID in
                         Task {
@@ -264,36 +274,35 @@ struct ChannelChatView: View {
         }
     }
 
-    private func messageBubble(for message: MessageDTO) -> some View {
-        let index = viewModel.messages.firstIndex(where: { $0.id == message.id }) ?? 0
-        return UnifiedMessageBubble(
-            message: message,
-            contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
-            contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
-            deviceName: appState.connectedDevice?.nodeName ?? "Me",
-            configuration: .channel(
-                isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
-                contacts: viewModel.conversations
-            ),
-            showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
-            showDirectionGap: ChatViewModel.isDirectionChange(at: index, in: viewModel.messages),
-            onRetry: { retryMessage(message) },
-            onReply: { replyText in
-                setReplyText(replyText)
-            },
-            onDelete: {
-                deleteMessage(message)
-            },
-            onShowRepeatDetails: { message in
-                showRepeatDetails(for: message)
-            },
-            onManualPreviewFetch: {
-                manualFetchLinkPreview(for: message)
-            },
-            isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
-        )
-        .onAppear {
-            fetchLinkPreviewIfNeeded(for: message)
+    @ViewBuilder
+    private func messageBubble(for item: MessageDisplayItem) -> some View {
+        if let message = viewModel.message(for: item) {
+            UnifiedMessageBubble(
+                message: message,
+                contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                deviceName: appState.connectedDevice?.nodeName ?? "Me",
+                configuration: .channel(
+                    isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
+                    contacts: viewModel.conversations
+                ),
+                showTimestamp: item.showTimestamp,
+                showDirectionGap: item.showDirectionGap,
+                onRetry: { retryMessage(message) },
+                onReply: { replyText in
+                    setReplyText(replyText)
+                },
+                onDelete: {
+                    deleteMessage(message)
+                },
+                onShowRepeatDetails: { message in
+                    showRepeatDetails(for: message)
+                },
+                onManualPreviewFetch: {
+                    manualFetchLinkPreview(for: message)
+                },
+                isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
+            )
         }
     }
 

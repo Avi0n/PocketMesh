@@ -775,7 +775,8 @@ final class ChatViewModel {
     func batchFetchLinkPreviews(
         using fetcher: LinkPreviewFetcher,
         dataStore: DataStore,
-        eventBroadcaster: MessageEventBroadcaster
+        eventBroadcaster: MessageEventBroadcaster,
+        isChannelMessage: Bool = false
     ) async {
         let needsFetch = displayItems.filter { item in
             guard item.detectedURL != nil,
@@ -789,7 +790,7 @@ final class ChatViewModel {
                 guard let message = messagesByID[item.messageID] else { continue }
                 fetcher.fetchIfNeeded(
                     for: message,
-                    isChannelMessage: false,
+                    isChannelMessage: isChannelMessage,
                     using: dataStore,
                     eventBroadcaster: eventBroadcaster
                 )
