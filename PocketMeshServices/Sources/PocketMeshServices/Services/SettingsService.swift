@@ -121,8 +121,12 @@ public enum RadioPresets {
         // Oceania
         RadioPreset(id: "au-915", name: "Australia", region: .oceania,
                     frequencyMHz: 915.800, spreadingFactor: 10, bandwidthKHz: 250, codingRate: 5),
-        RadioPreset(id: "au-vic", name: "Australia (Victoria)", region: .oceania,
+        RadioPreset(id: "au-narrow", name: "Australia (Narrow)", region: .oceania,
                     frequencyMHz: 916.575, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 8),
+        RadioPreset(id: "au-sa-wa", name: "Australia SA, WA", region: .oceania,
+                    frequencyMHz: 923.125, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 8),
+        RadioPreset(id: "au-qld", name: "Australia QLD", region: .oceania,
+                    frequencyMHz: 923.125, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 5),
         RadioPreset(id: "nz-lr", name: "New Zealand", region: .oceania,
                     frequencyMHz: 917.375, spreadingFactor: 11, bandwidthKHz: 250, codingRate: 5),
         RadioPreset(id: "nz-narrow", name: "New Zealand (Narrow)", region: .oceania,
