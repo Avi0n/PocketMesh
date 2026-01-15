@@ -305,6 +305,10 @@ struct ChannelChatView: View {
             )
         } else {
             let _ = logger.warning("Message lookup failed for displayItem id=\(item.id)")
+            Text("Message unavailable")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Message could not be loaded")
         }
     }
 

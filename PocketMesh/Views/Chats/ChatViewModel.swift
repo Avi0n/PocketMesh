@@ -326,13 +326,49 @@ final class ChatViewModel {
     /// sees the new count immediately for unread tracking.
     func appendMessageIfNew(_ message: MessageDTO) {
         guard !messages.contains(where: { $0.id == message.id }) else { return }
+        let index = messages.count
         messages.append(message)
-        // Update lookup dictionary synchronously to prevent race condition
-        // where view requests message before async rebuild completes
         messagesByID[message.id] = message
+
+        // Build display item synchronously for immediate consistency
+        let newItem = MessageDisplayItem(
+            messageID: message.id,
+            showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
+            showDirectionGap: Self.isDirectionChange(at: index, in: messages),
+            detectedURL: nil,  // URL detection deferred to avoid main thread blocking
+            isOutgoing: message.isOutgoing,
+            containsSelfMention: message.containsSelfMention,
+            mentionSeen: message.mentionSeen
+        )
+        displayItems.append(newItem)
+
+        // Async URL detection for this message only
         Task {
-            await buildDisplayItems()
+            await updateURLForDisplayItem(at: index)
         }
+    }
+
+    /// Update URL detection for a single display item at the given index
+    private func updateURLForDisplayItem(at index: Int) async {
+        guard index < displayItems.count,
+              index < messages.count else { return }
+
+        let text = messages[index].text
+        let detectedURL = await Task.detached(priority: .userInitiated) {
+            LinkPreviewService.extractFirstURL(from: text)
+        }.value
+
+        guard index < displayItems.count else { return }
+        let item = displayItems[index]
+        displayItems[index] = MessageDisplayItem(
+            messageID: item.messageID,
+            showTimestamp: item.showTimestamp,
+            showDirectionGap: item.showDirectionGap,
+            detectedURL: detectedURL,
+            isOutgoing: item.isOutgoing,
+            containsSelfMention: item.containsSelfMention,
+            mentionSeen: item.mentionSeen
+        )
     }
 
     /// Load any saved draft for the current contact
@@ -623,8 +659,10 @@ final class ChatViewModel {
         do {
             try await dataStore.deleteMessage(id: message.id)
 
-            // Remove from local array
+            // Remove from all local collections
             messages.removeAll { $0.id == message.id }
+            messagesByID.removeValue(forKey: message.id)
+            displayItems.removeAll { $0.messageID == message.id }
 
             // Update last message date if needed
             if let currentContact {
