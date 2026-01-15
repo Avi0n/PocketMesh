@@ -372,7 +372,6 @@ struct ChannelChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
-            accentColor: channel.isPublicChannel || channel.name.hasPrefix("#") ? .green : .blue,
             maxCharacters: maxChannelMessageLength,
             contacts: viewModel.allContacts
         ) {

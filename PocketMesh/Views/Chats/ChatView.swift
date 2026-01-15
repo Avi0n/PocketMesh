@@ -366,7 +366,6 @@ struct ChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: "Private Message",
-            accentColor: .blue,
             maxCharacters: ProtocolLimits.maxDirectMessageLength,
             contacts: viewModel.allContacts
         ) {

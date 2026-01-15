@@ -6,7 +6,6 @@ struct MentionInputBar: View {
     @Binding var text: String
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
-    let accentColor: Color
     let maxCharacters: Int
     let contacts: [ContactDTO]
     let onSend: () -> Void
@@ -16,7 +15,6 @@ struct MentionInputBar: View {
             text: $text,
             isFocused: $isFocused,
             placeholder: placeholder,
-            accentColor: accentColor,
             maxCharacters: maxCharacters,
             onSend: onSend
         )

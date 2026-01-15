@@ -154,7 +154,6 @@ struct RoomConversationView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: "Public Message",
-            accentColor: .orange,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
             // Force scroll to bottom on user send (before message is added)
