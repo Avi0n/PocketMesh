@@ -431,21 +431,6 @@ struct ChatsView: View {
         navigationPath.append(route)
     }
 
-    private func closeIfShowing(route: ChatRoute) {
-        if shouldUseSplitView {
-            if selectedRoute == route {
-                selectedRoute = nil
-            }
-            return
-        }
-
-        if activeRoute == route {
-            navigationPath.removeLast(navigationPath.count)
-            activeRoute = nil
-            appState.tabBarVisibility = .visible
-        }
-    }
-
     private func handleDeleteConversation(_ conversation: Conversation) {
         switch conversation {
         case .direct(let contact):
@@ -463,8 +448,21 @@ struct ChatsView: View {
     }
 
     private func deleteDirectConversation(_ contact: ContactDTO) {
-        closeIfShowing(route: .direct(contact))
-        viewModel.removeConversation(.direct(contact))
+        // Wrap both selection clearing and removal in single animation to prevent double animation
+        withAnimation {
+            if shouldUseSplitView && selectedRoute == .direct(contact) {
+                selectedRoute = nil
+            }
+            viewModel.removeConversation(.direct(contact))
+        }
+
+        // Handle stack navigation outside animation
+        if !shouldUseSplitView && activeRoute == .direct(contact) {
+            navigationPath.removeLast(navigationPath.count)
+            activeRoute = nil
+            appState.tabBarVisibility = .visible
+        }
+
         Task {
             try? await viewModel.deleteConversation(for: contact)
             routeBeingDeleted = nil
@@ -472,8 +470,21 @@ struct ChatsView: View {
     }
 
     private func deleteChannelConversation(_ channel: ChannelDTO) {
-        closeIfShowing(route: .channel(channel))
-        viewModel.removeConversation(.channel(channel))
+        // Wrap both selection clearing and removal in single animation to prevent double animation
+        withAnimation {
+            if shouldUseSplitView && selectedRoute == .channel(channel) {
+                selectedRoute = nil
+            }
+            viewModel.removeConversation(.channel(channel))
+        }
+
+        // Handle stack navigation outside animation
+        if !shouldUseSplitView && activeRoute == .channel(channel) {
+            navigationPath.removeLast(navigationPath.count)
+            activeRoute = nil
+            appState.tabBarVisibility = .visible
+        }
+
         Task {
             await deleteChannel(channel)
             routeBeingDeleted = nil
@@ -494,9 +505,22 @@ struct ChatsView: View {
 
             await appState.services?.notificationService.updateBadgeCount()
 
-            closeIfShowing(route: .room(session))
+            // Wrap selection clearing and removal in single animation
+            await MainActor.run {
+                withAnimation {
+                    if shouldUseSplitView && selectedRoute == .room(session) {
+                        selectedRoute = nil
+                    }
+                    viewModel.removeConversation(.room(session))
+                }
 
-            await loadConversations()
+                // Handle stack navigation outside animation
+                if !shouldUseSplitView && activeRoute == .room(session) {
+                    navigationPath.removeLast(navigationPath.count)
+                    activeRoute = nil
+                    appState.tabBarVisibility = .visible
+                }
+            }
         } catch {
             chatsViewLogger.error("Failed to delete room: \(error)")
         }
