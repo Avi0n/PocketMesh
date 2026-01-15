@@ -7,6 +7,13 @@ import OSLog
 @MainActor
 final class ChatViewModel {
 
+    // MARK: - Constants
+
+    /// Max link previews to fetch on initial chat load (avoids overwhelming network)
+    private let maxInitialLinkPreviews = 20
+    /// Batch size for link preview fetches (with delay between batches)
+    private let linkPreviewBatchSize = 5
+
     // MARK: - Properties
 
     private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatViewModel")
@@ -320,6 +327,9 @@ final class ChatViewModel {
     func appendMessageIfNew(_ message: MessageDTO) {
         guard !messages.contains(where: { $0.id == message.id }) else { return }
         messages.append(message)
+        // Update lookup dictionary synchronously to prevent race condition
+        // where view requests message before async rebuild completes
+        messagesByID[message.id] = message
         Task {
             await buildDisplayItems()
         }
@@ -785,8 +795,7 @@ final class ChatViewModel {
             return message.linkPreviewURL == nil
         }
 
-        // Fetch in batches of 5 with delay to avoid overwhelming
-        for batch in needsFetch.prefix(20).chunked(into: 5) {
+        for batch in needsFetch.prefix(maxInitialLinkPreviews).chunked(into: linkPreviewBatchSize) {
             for item in batch {
                 guard let message = messagesByID[item.messageID] else { continue }
                 fetcher.fetchIfNeeded(

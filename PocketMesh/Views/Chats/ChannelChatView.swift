@@ -303,6 +303,8 @@ struct ChannelChatView: View {
                 },
                 isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
             )
+        } else {
+            let _ = logger.warning("Message lookup failed for displayItem id=\(item.id)")
         }
     }
 
