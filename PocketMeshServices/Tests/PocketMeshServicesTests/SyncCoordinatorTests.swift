@@ -8,47 +8,10 @@ import MeshCore
 struct SyncCoordinatorTests {
 
     /// Creates an in-memory persistence store with a test device
-    private func createTestDataStore(deviceID: UUID, maxChannels: UInt8 = 8) async throws -> PersistenceStore {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let store = PersistenceStore(modelContainer: container)
-        let device = DeviceDTO(from: Device(
-            id: deviceID,
-            publicKey: Data(repeating: 0x01, count: 32),
-            nodeName: "TestDevice",
-            firmwareVersion: 8,
-            firmwareVersionString: "v1.0.0",
-            manufacturerName: "TestMfg",
-            buildDate: "01 Jan 2025",
-            maxContacts: 100,
-            maxChannels: maxChannels,
-            frequency: 915_000,
-            bandwidth: 250_000,
-            spreadingFactor: 10,
-            codingRate: 5,
-            txPower: 20,
-            maxTxPower: 20,
-            latitude: 0,
-            longitude: 0,
-            blePin: 0,
-            manualAddContacts: false,
-            multiAcks: 0,
-            telemetryModeBase: 0,
-            telemetryModeLoc: 0,
-            telemetryModeEnv: 0,
-            advertLocationPolicy: 0,
-            lastConnected: Date(),
-            lastContactSync: 0,
-            isActive: true
-        ))
-        try await store.saveDevice(device)
-        return store
-    }
-
-    /// Creates an in-memory persistence store with a test device that has a specific lastContactSync timestamp
-    private func createTestDataStoreWithLastSync(
+    private func createTestDataStore(
         deviceID: UUID,
-        lastContactSync: UInt32,
-        maxChannels: UInt8 = 8
+        maxChannels: UInt8 = 8,
+        lastContactSync: UInt32 = 0
     ) async throws -> PersistenceStore {
         let container = try PersistenceStore.createContainer(inMemory: true)
         let store = PersistenceStore(modelContainer: container)
@@ -445,7 +408,7 @@ struct SyncCoordinatorTests {
 
         // Create device with a lastContactSync timestamp
         let lastSyncTimestamp: UInt32 = 1704067200 // 2024-01-01 00:00:00 UTC
-        let dataStore = try await createTestDataStoreWithLastSync(
+        let dataStore = try await createTestDataStore(
             deviceID: testDeviceID,
             lastContactSync: lastSyncTimestamp
         )
