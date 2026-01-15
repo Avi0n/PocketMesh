@@ -261,6 +261,14 @@ public actor SyncCoordinator {
                 logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType))")
                 await notifyContactsChanged()
 
+                // Update lastContactSync watermark for future incremental syncs
+                if contactResult.lastSyncTimestamp > 0 {
+                    try await dataStore.updateDeviceLastContactSync(
+                        deviceID: deviceID,
+                        timestamp: contactResult.lastSyncTimestamp
+                    )
+                }
+
                 // Phase 2: Channels (foreground only)
                 let shouldSyncChannels: Bool
                 if let provider = appStateProvider {
