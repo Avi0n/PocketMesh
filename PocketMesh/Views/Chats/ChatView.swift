@@ -19,7 +19,7 @@ struct ChatView: View {
     @State private var scrollToBottomRequest = 0
     @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
-    @State private var unseenMentionIDs: [UUID] = []
+    @State private var unseenMentionIDs: Set<UUID> = []
     @FocusState private var isInputFocused: Bool
 
     @State private var linkPreviewFetcher = LinkPreviewFetcher()
@@ -158,7 +158,7 @@ struct ChatView: View {
     private func loadUnseenMentions() async {
         guard let dataStore = appState.services?.dataStore else { return }
         do {
-            unseenMentionIDs = try await dataStore.fetchUnseenMentionIDs(contactID: contact.id)
+            unseenMentionIDs = Set(try await dataStore.fetchUnseenMentionIDs(contactID: contact.id))
             unreadMentionCount = unseenMentionIDs.count
         } catch {
             logger.error("Failed to load unseen mentions: \(error)")
@@ -173,7 +173,7 @@ struct ChatView: View {
             try await dataStore.markMentionSeen(messageID: messageID)
             try await dataStore.decrementUnreadMentionCount(contactID: contact.id)
 
-            unseenMentionIDs.removeAll { $0 == messageID }
+            unseenMentionIDs.remove(messageID)
             unreadMentionCount = max(0, unreadMentionCount - 1)
 
             // Refresh parent's conversation list to update badge in sidebar (important for iPad split view)
