@@ -23,6 +23,7 @@ targets:
   PocketMesh:
     type: application
     platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
     sources:
       - path: PocketMesh
         excludes:

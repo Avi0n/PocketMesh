@@ -16,7 +16,9 @@ struct ChannelOptionsSheet: View {
         case joinPrivate
         case joinPublic
         case joinHashtag
+        #if !targetEnvironment(macCatalyst)
         case scanQR
+        #endif
 
         var id: Self { self }
     }
@@ -52,8 +54,10 @@ struct ChannelOptionsSheet: View {
                     JoinPublicChannelView(onComplete: { dismiss() })
                 case .joinHashtag:
                     JoinHashtagChannelView(availableSlots: availableSlots, onComplete: { dismiss() })
+                #if !targetEnvironment(macCatalyst)
                 case .scanQR:
                     ScanChannelQRView(availableSlots: availableSlots, onComplete: { dismiss() })
+                #endif
                 }
             }
         }
@@ -91,6 +95,7 @@ struct ChannelOptionsSheet: View {
                 .disabled(availableSlots.isEmpty)
 
                 // Scan QR Code
+                #if !targetEnvironment(macCatalyst)
                 Button {
                     selectedOption = .scanQR
                 } label: {
@@ -103,6 +108,7 @@ struct ChannelOptionsSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
+                #endif
             } header: {
                 Text("Private Channels")
             }
