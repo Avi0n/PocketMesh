@@ -45,6 +45,10 @@ struct ContactDetailView: View {
     // QR sharing state
     @State private var showQRShareSheet = false
 
+    // Telemetry state
+    @State private var isLoadingTelemetry = false
+    @State private var telemetryDataPoints: [LPPDataPoint] = []
+
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
         self.showFromDirectChat = showFromDirectChat
@@ -61,6 +65,9 @@ struct ContactDetailView: View {
 
             // Info section
             infoSection
+            
+            // Telemetry
+            telemetrySection
 
             // Location section (if available)
             if currentContact.hasLocation {
@@ -262,6 +269,21 @@ struct ContactDetailView: View {
     private func refreshContact() async {
         if let updated = try? await appState.services?.dataStore.fetchContact(id: currentContact.id) {
             currentContact = updated
+        }
+    }
+
+    // MARK: - Telemetry Actions
+
+    private func requestTelemetry() async {
+        guard let binaryService = appState.services?.binaryProtocolService else { return }
+        isLoadingTelemetry = true
+        errorMessage = nil
+        defer { isLoadingTelemetry = false }
+        do {
+            let response = try await binaryService.requestTelemetry(from: currentContact.publicKey)
+            telemetryDataPoints = response.dataPoints
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -650,6 +672,45 @@ struct ContactDetailView: View {
         }
     }
 
+    
+    // MARK: - Telemetry Section
+
+    private var telemetrySection: some View {
+        Section {
+            // Request/Refresh button
+            Button {
+                Task { await requestTelemetry() }
+            } label: {
+                if isLoadingTelemetry {
+                    HStack {
+                        ProgressView()
+                        Text("Requesting Telemetry…")
+                    }
+                } else {
+                    Label(telemetryDataPoints.isEmpty ? "Request Telemetry" : "Refresh Telemetry", systemImage: telemetryDataPoints.isEmpty ? "chart.line.uptrend.xyaxis" : "arrow.clockwise")
+                }
+            }
+            .disabled(isLoadingTelemetry)
+
+            // Results
+            if isLoadingTelemetry {
+                // Optional: additional inline spinner row (button already shows spinner)
+            } else if telemetryDataPoints.isEmpty {
+                Text("No telemetry data")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(telemetryDataPoints, id: \.self) { dataPoint in
+                    LabeledContent(dataPoint.typeName) {
+                        Text(dataPoint.formattedValue)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("Telemetry")
+        }
+    }
+    
     // MARK: - Technical Section
 
     private var technicalSection: some View {
