@@ -13,7 +13,7 @@ public final class AppStateProviderImpl: AppStateProvider {
     nonisolated public var isInForeground: Bool {
         get async {
             await MainActor.run {
-                UIApplication.shared.applicationState == .active
+                UIApplication.shared.applicationState != .background
             }
         }
     }
