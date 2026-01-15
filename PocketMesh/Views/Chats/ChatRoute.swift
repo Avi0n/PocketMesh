@@ -65,12 +65,12 @@ enum ChatRoute: Hashable {
         }
     }
 
-    func refreshedPayload(from conversations: [Conversation]) -> ChatRoute {
+    func refreshedPayload(from conversations: [Conversation]) -> ChatRoute? {
         guard let match = conversations.first(where: { conversation in
             let route = ChatRoute(conversation: conversation)
             return route.kind == kind && route.conversationID == conversationID
         }) else {
-            return self
+            return nil
         }
 
         return ChatRoute(conversation: match)

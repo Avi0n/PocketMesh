@@ -23,6 +23,7 @@ struct ChatsView: View {
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
+    @State private var sidebarListID = UUID()
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
@@ -254,6 +255,7 @@ struct ChatsView: View {
                 splitDetailContent
             }
         }
+        .id(sidebarListID)
     }
 
     private var splitSidebarContent: some View {
@@ -276,6 +278,7 @@ struct ChatsView: View {
             }
         )
         .onChange(of: selectedRoute) { oldValue, newValue in
+            // Reload conversations when navigating away (but not when clearing for deletion)
             if oldValue != nil {
                 let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
                 if !didClearSelectionForDeletion {
@@ -454,15 +457,13 @@ struct ChatsView: View {
     }
 
     private func deleteDirectConversation(_ contact: ContactDTO) {
-        // Wrap both selection clearing and removal in single animation to prevent double animation
-        withAnimation {
-            if shouldUseSplitView && selectedRoute == .direct(contact) {
-                selectedRoute = nil
-            }
-            viewModel.removeConversation(.direct(contact))
+        if shouldUseSplitView && selectedRoute == .direct(contact) {
+            selectedRoute = nil
         }
 
-        // Handle stack navigation outside animation
+        viewModel.removeConversation(.direct(contact))
+        sidebarListID = UUID()
+
         if !shouldUseSplitView && activeRoute == .direct(contact) {
             navigationPath.removeLast(navigationPath.count)
             activeRoute = nil
@@ -476,15 +477,13 @@ struct ChatsView: View {
     }
 
     private func deleteChannelConversation(_ channel: ChannelDTO) {
-        // Wrap both selection clearing and removal in single animation to prevent double animation
-        withAnimation {
-            if shouldUseSplitView && selectedRoute == .channel(channel) {
-                selectedRoute = nil
-            }
-            viewModel.removeConversation(.channel(channel))
+        if shouldUseSplitView && selectedRoute == .channel(channel) {
+            selectedRoute = nil
         }
 
-        // Handle stack navigation outside animation
+        viewModel.removeConversation(.channel(channel))
+        sidebarListID = UUID()
+
         if !shouldUseSplitView && activeRoute == .channel(channel) {
             navigationPath.removeLast(navigationPath.count)
             activeRoute = nil
@@ -511,16 +510,14 @@ struct ChatsView: View {
 
             await appState.services?.notificationService.updateBadgeCount()
 
-            // Wrap selection clearing and removal in single animation
             await MainActor.run {
-                withAnimation {
-                    if shouldUseSplitView && selectedRoute == .room(session) {
-                        selectedRoute = nil
-                    }
-                    viewModel.removeConversation(.room(session))
+                if shouldUseSplitView && selectedRoute == .room(session) {
+                    selectedRoute = nil
                 }
 
-                // Handle stack navigation outside animation
+                viewModel.removeConversation(.room(session))
+                sidebarListID = UUID()
+
                 if !shouldUseSplitView && activeRoute == .room(session) {
                     navigationPath.removeLast(navigationPath.count)
                     activeRoute = nil
@@ -541,11 +538,8 @@ struct ChatsView: View {
                 index: channel.index
             )
             await appState.services?.notificationService.updateBadgeCount()
-            // Don't reload - channel was already removed locally by viewModel.removeConversation()
-            // Reloading would replace arrays and cause double animation
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
-            // On error, reload to sync state since local removal may be inconsistent
             await loadConversations()
         }
     }
