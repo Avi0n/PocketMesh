@@ -44,6 +44,47 @@ struct SyncCoordinatorTests {
         return store
     }
 
+    /// Creates an in-memory persistence store with a test device that has a specific lastContactSync timestamp
+    private func createTestDataStoreWithLastSync(
+        deviceID: UUID,
+        lastContactSync: UInt32,
+        maxChannels: UInt8 = 8
+    ) async throws -> PersistenceStore {
+        let container = try PersistenceStore.createContainer(inMemory: true)
+        let store = PersistenceStore(modelContainer: container)
+        let device = DeviceDTO(from: Device(
+            id: deviceID,
+            publicKey: Data(repeating: 0x01, count: 32),
+            nodeName: "TestDevice",
+            firmwareVersion: 8,
+            firmwareVersionString: "v1.0.0",
+            manufacturerName: "TestMfg",
+            buildDate: "01 Jan 2025",
+            maxContacts: 100,
+            maxChannels: maxChannels,
+            frequency: 915_000,
+            bandwidth: 250_000,
+            spreadingFactor: 10,
+            codingRate: 5,
+            txPower: 20,
+            maxTxPower: 20,
+            latitude: 0,
+            longitude: 0,
+            blePin: 0,
+            manualAddContacts: false,
+            multiAcks: 0,
+            telemetryModeBase: 0,
+            telemetryModeLoc: 0,
+            telemetryModeEnv: 0,
+            advertLocationPolicy: 0,
+            lastConnected: Date(),
+            lastContactSync: lastContactSync,
+            isActive: true
+        ))
+        try await store.saveDevice(device)
+        return store
+    }
+
     @Test("SyncState cases are distinct")
     func syncStateCasesDistinct() {
         let idle = SyncState.idle
@@ -391,6 +432,43 @@ struct SyncCoordinatorTests {
         // Contact sync should also run
         let contactInvocations = await mockContactService.syncContactsInvocations
         #expect(contactInvocations.count == 1, "Contact sync should run with nil appStateProvider")
+    }
+
+    @Test("Contact sync passes lastContactSync timestamp from device")
+    @MainActor
+    func contactSyncPassesTimestamp() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+
+        // Create device with a lastContactSync timestamp
+        let lastSyncTimestamp: UInt32 = 1704067200 // 2024-01-01 00:00:00 UTC
+        let dataStore = try await createTestDataStoreWithLastSync(
+            deviceID: testDeviceID,
+            lastContactSync: lastSyncTimestamp
+        )
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: nil
+        )
+
+        let invocations = await mockContactService.syncContactsInvocations
+        #expect(invocations.count == 1)
+
+        // Verify the since parameter was passed
+        let since = invocations[0].since
+        let expectedDate = Date(timeIntervalSince1970: Double(lastSyncTimestamp))
+
+        // Use try #require to safely unwrap and produce a clear failure message
+        let actualSince = try #require(since, "Should pass lastContactSync as since parameter")
+        #expect(actualSince == expectedDate, "Since date should match device lastContactSync")
     }
 }
 
