@@ -247,9 +247,18 @@ public actor SyncCoordinator {
 
             // Perform contacts and channels sync (activity should show pill)
             do {
-                // Phase 1: Contacts
-                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
-                logger.info("Synced \(contactResult.contactsReceived) contacts")
+                // Fetch device once for both contacts (lastContactSync) and channels (maxChannels)
+                let device = try await dataStore.fetchDevice(id: deviceID)
+
+                // Phase 1: Contacts (incremental using lastContactSync)
+                let lastContactSync: Date? = {
+                    guard let timestamp = device?.lastContactSync, timestamp > 0 else { return nil }
+                    return Date(timeIntervalSince1970: Double(timestamp))
+                }()
+
+                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
+                let syncType = contactResult.isIncremental ? "incremental" : "full"
+                logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType))")
                 await notifyContactsChanged()
 
                 // Phase 2: Channels (foreground only)
@@ -261,7 +270,6 @@ public actor SyncCoordinator {
                 }
                 if shouldSyncChannels {
                     await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-                    let device = try await dataStore.fetchDevice(id: deviceID)
                     let maxChannels = device?.maxChannels ?? 0
 
                     let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
