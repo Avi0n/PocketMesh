@@ -18,12 +18,7 @@ struct ChannelConversationRow: View {
                     Spacer()
 
                     HStack(spacing: 4) {
-                        if channel.isMuted {
-                            Image(systemName: "bell.slash")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel("Muted")
-                        }
+                        MutedIndicator(isMuted: channel.isMuted)
                         if let date = channel.lastMessageDate {
                             ConversationTimestamp(date: date)
                         }
@@ -38,25 +33,11 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    HStack(spacing: 4) {
-                        if channel.unreadMentionCount > 0 {
-                            Text("@")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                                .frame(width: 18, height: 18)
-                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .circle)
-                        }
-
-                        if channel.unreadCount > 0 {
-                            Text(channel.unreadCount, format: .number)
-                                .font(.caption2)
-                                .bold()
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
-                        }
-                    }
+                    UnreadBadges(
+                        unreadCount: channel.unreadCount,
+                        unreadMentionCount: channel.unreadMentionCount,
+                        isMuted: channel.isMuted
+                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in

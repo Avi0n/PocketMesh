@@ -17,12 +17,7 @@ struct RoomConversationRow: View {
                     Spacer()
 
                     HStack(spacing: 4) {
-                        if session.isMuted {
-                            Image(systemName: "bell.slash")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel("Muted")
-                        }
+                        MutedIndicator(isMuted: session.isMuted)
                         if let date = session.lastConnectedDate {
                             ConversationTimestamp(date: date)
                         }
@@ -42,15 +37,10 @@ struct RoomConversationRow: View {
 
                     Spacer()
 
-                    if session.unreadCount > 0 {
-                        Text(session.unreadCount, format: .number)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(session.isMuted ? Color.secondary : Color.blue, in: .capsule)
-                    }
+                    UnreadBadges(
+                        unreadCount: session.unreadCount,
+                        isMuted: session.isMuted
+                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in

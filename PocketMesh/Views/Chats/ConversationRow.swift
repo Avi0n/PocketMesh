@@ -18,12 +18,7 @@ struct ConversationRow: View {
                     Spacer()
 
                     HStack(spacing: 4) {
-                        if contact.isMuted {
-                            Image(systemName: "bell.slash")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel("Muted")
-                        }
+                        MutedIndicator(isMuted: contact.isMuted)
                         if let date = contact.lastMessageDate {
                             ConversationTimestamp(date: date)
                         }
@@ -38,25 +33,11 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    HStack(spacing: 4) {
-                        if contact.unreadMentionCount > 0 {
-                            Text("@")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                                .frame(width: 18, height: 18)
-                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .circle)
-                        }
-
-                        if contact.unreadCount > 0 {
-                            Text(contact.unreadCount, format: .number)
-                                .font(.caption2)
-                                .bold()
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
-                        }
-                    }
+                    UnreadBadges(
+                        unreadCount: contact.unreadCount,
+                        unreadMentionCount: contact.unreadMentionCount,
+                        isMuted: contact.isMuted
+                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in
