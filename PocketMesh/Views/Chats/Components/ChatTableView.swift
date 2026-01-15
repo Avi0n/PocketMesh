@@ -22,6 +22,10 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     // MARK: - Properties
 
     private var items: [Item] = []
+    /// O(1) lookup for items by ID (replaces O(n) first(where:) in cell provider)
+    private var itemsByID: [Item.ID: Item] = [:]
+    /// O(1) index lookup for scroll-to-item (replaces O(n) firstIndex(where:))
+    private var itemIndexByID: [Item.ID: Int] = [:]
     private var cellContentProvider: ((Item) -> AnyView)?
     private var dataSource: UITableViewDiffableDataSource<Section, Item.ID>?
 
@@ -151,7 +155,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     private func configureDataSource() {
         dataSource = UITableViewDiffableDataSource<Section, Item.ID>(tableView: tableView) { [weak self] tableView, indexPath, itemID in
             guard let self,
-                  let item = self.items.first(where: { $0.id == itemID }) else {
+                  let item = self.itemsByID[itemID] else {
                 return UITableViewCell()
             }
 
@@ -195,6 +199,10 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         let wasAtBottom = isAtBottom
         let oldItems = items
         items = newItems
+
+        // Build O(1) lookup dictionaries
+        itemsByID = Dictionary(uniqueKeysWithValues: newItems.map { ($0.id, $0) })
+        itemIndexByID = Dictionary(uniqueKeysWithValues: newItems.enumerated().map { ($0.element.id, $0.offset) })
 
         // Apply snapshot with REVERSED order: newest-first for flipped table
         // Row 0 = newest message → appears at visual bottom after flip
@@ -307,8 +315,9 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     }
 
     func scrollToItem(id: Item.ID, animated: Bool) {
+        // Use O(1) dictionary lookup instead of O(n) firstIndex
+        guard let itemIndex = itemIndexByID[id] else { return }
         // Items are reversed in table: row 0 = newest (items.last)
-        guard let itemIndex = items.firstIndex(where: { $0.id == id }) else { return }
         let rowIndex = items.count - 1 - itemIndex
         let indexPath = IndexPath(row: rowIndex, section: 0)
         tableView.scrollToRow(at: indexPath, at: .middle, animated: animated)
