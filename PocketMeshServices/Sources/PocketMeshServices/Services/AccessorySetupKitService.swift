@@ -1,4 +1,4 @@
-#if canImport(UIKit)
+#if !targetEnvironment(macCatalyst)
 import AccessorySetupKit
 import CoreBluetooth
 import UIKit
@@ -83,10 +83,14 @@ public final class AccessorySetupKitService {
     /// Activate the AccessorySetupKit session
     /// Uses Apple's recommended closure pattern to avoid AsyncStream issues
     public func activateSession() async throws {
+        logger.info("AccessorySetupKitService: activating session")
+        
         guard session == nil else { return }
 
         let newSession = ASAccessorySession()
         session = newSession
+        
+        logger.info("AccessorySetupKitService: created new session")
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             self.activationContinuation = continuation
@@ -113,6 +117,8 @@ public final class AccessorySetupKitService {
     /// Handle incoming ASK events
     /// Called directly from session's event handler closure
     private func handleEvent(_ event: ASAccessoryEvent) {
+        logger.info("AccessorySetupKitService: handling event: \(event)")
+        
         switch event.eventType {
         case .activated:
             // Handled in activateSession continuation
@@ -451,7 +457,7 @@ public enum AccessorySetupKitError: LocalizedError {
     case noBluetoothIdentifier
     case discoveryTimeout
     case connectionFailed
-
+    
     public var errorDescription: String? {
         switch self {
         case .sessionNotActive:
@@ -476,3 +482,4 @@ public enum AccessorySetupKitError: LocalizedError {
     }
 }
 #endif
+

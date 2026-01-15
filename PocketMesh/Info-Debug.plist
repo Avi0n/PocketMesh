@@ -36,16 +36,16 @@
 	<string>PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>PocketMesh needs camera access to scan channel QR codes.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>PocketMesh uses your location to share coordinates with mesh contacts.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>PocketMesh uses the local network to enable database debugging with DataScout.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_datascout-sync._tcp</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>PocketMesh needs camera access to scan channel QR codes.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>PocketMesh uses the local network to enable database debugging with DataScout.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>PocketMesh uses your location to share coordinates with mesh contacts.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
