@@ -306,6 +306,84 @@ struct SyncCoordinatorTests {
         await delayingContactService.completeSync()
         syncTask.cancel()
     }
+
+    @Test("Background sync skips channel sync")
+    @MainActor
+    func backgroundSyncSkipsChannels() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let mockAppStateProvider = MockAppStateProvider(isInForeground: false)
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: mockAppStateProvider
+        )
+
+        // Channel sync should be skipped in background
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.isEmpty, "Channel sync should be skipped when in background")
+
+        // Contact sync should still happen
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should still run in background")
+    }
+
+    @Test("Foreground sync includes channel sync")
+    @MainActor
+    func foregroundSyncIncludesChannels() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let mockAppStateProvider = MockAppStateProvider(isInForeground: true)
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: mockAppStateProvider
+        )
+
+        // Channel sync should run in foreground
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.count == 1, "Channel sync should run when in foreground")
+    }
+
+    @Test("Nil appStateProvider defaults to foreground behavior")
+    @MainActor
+    func nilAppStateProviderDefaultsToForeground() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: nil
+        )
+
+        // Should default to foreground (run channels)
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.count == 1, "Nil appStateProvider should default to foreground behavior")
+    }
 }
 
 // MARK: - Test Helpers
