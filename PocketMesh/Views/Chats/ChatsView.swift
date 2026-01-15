@@ -389,6 +389,12 @@ struct ChatsView: View {
         viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
 
+        // If we're in the middle of deleting an item, ensure it stays removed
+        // This handles race conditions where a reload happens before DB delete completes
+        if let routeBeingDeleted {
+            viewModel.removeConversation(routeBeingDeleted.toConversation())
+        }
+
         if let selectedRoute {
             self.selectedRoute = selectedRoute.refreshedPayload(from: viewModel.allConversations)
         }

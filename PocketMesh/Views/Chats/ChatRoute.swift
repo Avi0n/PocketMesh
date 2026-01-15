@@ -54,6 +54,17 @@ enum ChatRoute: Hashable {
         }
     }
 
+    func toConversation() -> Conversation {
+        switch self {
+        case .direct(let contact):
+            return .direct(contact)
+        case .channel(let channel):
+            return .channel(channel)
+        case .room(let session):
+            return .room(session)
+        }
+    }
+
     func refreshedPayload(from conversations: [Conversation]) -> ChatRoute {
         guard let match = conversations.first(where: { conversation in
             let route = ChatRoute(conversation: conversation)
