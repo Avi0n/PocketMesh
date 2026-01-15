@@ -333,6 +333,13 @@ public final class AppState {
         messageEventBroadcaster.binaryProtocolService = services.binaryProtocolService
         messageEventBroadcaster.repeaterAdminService = services.repeaterAdminService
 
+        // Wire up ACK confirmation handler to trigger UI refresh on delivery
+        await services.messageService.setAckConfirmationHandler { [weak self] ackCode, _ in
+            Task { @MainActor in
+                self?.messageEventBroadcaster.handleAcknowledgement(ackCode: ackCode)
+            }
+        }
+
         // Wire up retry status events from MessageService
         await services.messageService.setRetryStatusHandler { [weak self] messageID, attempt, maxAttempts in
             await MainActor.run {
