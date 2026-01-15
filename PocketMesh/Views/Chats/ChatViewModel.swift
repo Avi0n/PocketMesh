@@ -40,6 +40,12 @@ final class ChatViewModel {
     /// Messages for the current conversation
     var messages: [MessageDTO] = []
 
+    /// Pre-computed display items for efficient cell rendering
+    private(set) var displayItems: [MessageDisplayItem] = []
+
+    /// O(1) message lookup by ID (used by views to get full DTO when needed)
+    private(set) var messagesByID: [UUID: MessageDTO] = [:]
+
     /// Current contact being chatted with
     var currentContact: ContactDTO?
 
@@ -293,6 +299,7 @@ final class ChatViewModel {
 
         do {
             messages = try await dataStore.fetchMessages(contactID: contact.id)
+            await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
@@ -313,6 +320,9 @@ final class ChatViewModel {
     func appendMessageIfNew(_ message: MessageDTO) {
         guard !messages.contains(where: { $0.id == message.id }) else { return }
         messages.append(message)
+        Task {
+            await buildDisplayItems()
+        }
     }
 
     /// Load any saved draft for the current contact
@@ -669,6 +679,37 @@ final class ChatViewModel {
         let previousMessage = messages[index - 1]
 
         return currentMessage.direction != previousMessage.direction
+    }
+
+    // MARK: - Display Items
+
+    /// Build display items with pre-computed properties.
+    /// URL detection runs off main thread to avoid blocking.
+    func buildDisplayItems() async {
+        messagesByID = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
+
+        // Extract texts for URL detection off main thread
+        let texts = messages.map { $0.text }
+        let urls = await Task.detached(priority: .userInitiated) {
+            texts.map { LinkPreviewService.extractFirstURL(from: $0) }
+        }.value
+
+        displayItems = messages.enumerated().map { index, message in
+            MessageDisplayItem(
+                messageID: message.id,
+                showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
+                showDirectionGap: Self.isDirectionChange(at: index, in: messages),
+                detectedURL: urls[index],
+                isOutgoing: message.isOutgoing,
+                containsSelfMention: message.containsSelfMention,
+                mentionSeen: message.mentionSeen
+            )
+        }
+    }
+
+    /// Get full message DTO for a display item
+    func message(for displayItem: MessageDisplayItem) -> MessageDTO? {
+        messagesByID[displayItem.messageID]
     }
 
     // MARK: - Message Queue
