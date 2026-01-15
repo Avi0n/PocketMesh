@@ -11,19 +11,38 @@ struct SyncingPillViewTests {
                 phase: .contacts,
                 connectionState: .connecting,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: true
+                showsDisconnectedWarning: true,
+                isFailure: false,
+                failureText: ""
             ) == "Disconnected"
         )
     }
 
-    @Test("displayText prefers Connecting over sync phases")
-    func connectingOverridesSync() {
+    @Test("displayText prefers sync phase over Connecting state")
+    func syncPhaseOverridesConnecting() {
+        // When actively syncing (phase is non-nil), show sync text even if connectionState is .connected
         #expect(
             SyncingPillView.displayText(
                 phase: .channels,
                 connectionState: .connected,
                 showsConnectedToast: false,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
+            ) == "Syncing channels"
+        )
+    }
+
+    @Test("displayText shows Connecting when no sync phase")
+    func connectingWhenNoSyncPhase() {
+        #expect(
+            SyncingPillView.displayText(
+                phase: nil,
+                connectionState: .connected,
+                showsConnectedToast: false,
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Connecting..."
         )
     }
@@ -35,7 +54,9 @@ struct SyncingPillViewTests {
                 phase: .contacts,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Syncing contacts"
         )
         #expect(
@@ -43,7 +64,9 @@ struct SyncingPillViewTests {
                 phase: .channels,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Syncing channels"
         )
     }
@@ -55,7 +78,9 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Connected"
         )
 
@@ -64,7 +89,9 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .connecting,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Connecting..."
         )
 
@@ -73,7 +100,9 @@ struct SyncingPillViewTests {
                 phase: .contacts,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Syncing contacts"
         )
     }
@@ -85,7 +114,8 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false
             ) == true
         )
 
@@ -94,7 +124,8 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .disconnected,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false
             ) == true
         )
 
@@ -103,7 +134,8 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .connected,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false
             ) == false
         )
 
@@ -112,7 +144,8 @@ struct SyncingPillViewTests {
                 phase: .channels,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: false
+                showsDisconnectedWarning: false,
+                isFailure: false
             ) == false
         )
 
@@ -121,7 +154,8 @@ struct SyncingPillViewTests {
                 phase: nil,
                 connectionState: .ready,
                 showsConnectedToast: true,
-                showsDisconnectedWarning: true
+                showsDisconnectedWarning: true,
+                isFailure: false
             ) == false
         )
     }
