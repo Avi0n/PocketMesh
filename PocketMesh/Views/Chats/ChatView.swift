@@ -235,16 +235,16 @@ struct ChatView: View {
                 emptyMessagesView
             } else {
                 ChatTableView(
-                    items: viewModel.messages,
-                    cellContent: { message in
-                        messageBubble(for: message)
+                    items: viewModel.displayItems,
+                    cellContent: { displayItem in
+                        messageBubble(for: displayItem)
                     },
                     isAtBottom: $isAtBottom,
                     unreadCount: $unreadCount,
                     scrollToBottomRequest: $scrollToBottomRequest,
                     scrollToMentionRequest: $scrollToMentionRequest,
-                    isUnseenMention: { message in
-                        message.containsSelfMention && !message.mentionSeen && unseenMentionIDs.contains(message.id)
+                    isUnseenMention: { displayItem in
+                        displayItem.containsSelfMention && !displayItem.mentionSeen && unseenMentionIDs.contains(displayItem.id)
                     },
                     onMentionBecameVisible: { messageID in
                         Task {
@@ -274,30 +274,29 @@ struct ChatView: View {
         }
     }
 
-    private func messageBubble(for message: MessageDTO) -> some View {
-        let index = viewModel.messages.firstIndex(where: { $0.id == message.id }) ?? 0
-        return UnifiedMessageBubble(
-            message: message,
-            contactName: contact.displayName,
-            contactNodeName: contact.name,
-            deviceName: appState.connectedDevice?.nodeName ?? "Me",
-            configuration: .directMessage,
-            showTimestamp: ChatViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
-            showDirectionGap: ChatViewModel.isDirectionChange(at: index, in: viewModel.messages),
-            onRetry: { retryMessage(message) },
-            onReply: { replyText in
-                setReplyText(replyText)
-            },
-            onDelete: {
-                deleteMessage(message)
-            },
-            onManualPreviewFetch: {
-                manualFetchLinkPreview(for: message)
-            },
-            isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
-        )
-        .onAppear {
-            fetchLinkPreviewIfNeeded(for: message)
+    @ViewBuilder
+    private func messageBubble(for item: MessageDisplayItem) -> some View {
+        if let message = viewModel.message(for: item) {
+            UnifiedMessageBubble(
+                message: message,
+                contactName: contact.displayName,
+                contactNodeName: contact.name,
+                deviceName: appState.connectedDevice?.nodeName ?? "Me",
+                configuration: .directMessage,
+                showTimestamp: item.showTimestamp,
+                showDirectionGap: item.showDirectionGap,
+                onRetry: { retryMessage(message) },
+                onReply: { replyText in
+                    setReplyText(replyText)
+                },
+                onDelete: {
+                    deleteMessage(message)
+                },
+                onManualPreviewFetch: {
+                    manualFetchLinkPreview(for: message)
+                },
+                isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
+            )
         }
     }
 
