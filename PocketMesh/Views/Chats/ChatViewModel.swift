@@ -416,6 +416,7 @@ final class ChatViewModel {
             }
 
             messages = fetchedMessages
+            await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
