@@ -62,6 +62,17 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
         // Update region if changed programmatically
         if let region = cameraRegion {
+            // Check if binding has caught up with pending user gesture
+            if let pendingGesture = coordinator.pendingUserGestureRegion {
+                if region.isApproximatelyEqual(to: pendingGesture) {
+                    // Binding now reflects user gesture, clear pending state
+                    coordinator.pendingUserGestureRegion = nil
+                } else {
+                    // Binding is stale (hasn't caught up with user gesture), skip applying
+                    return
+                }
+            }
+
             let shouldUpdate = coordinator.lastAppliedRegion == nil ||
                 !coordinator.lastAppliedRegion!.isApproximatelyEqual(to: region)
 
@@ -152,6 +163,10 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         var lastAppliedRegion: MKCoordinateRegion?
         var hasPendingProgrammaticRegion = false
         var hasAppliedInitialRegion = false
+
+        /// Tracks pending user gesture region awaiting async binding sync.
+        /// When set, the binding is considered stale until it matches this value.
+        var pendingUserGestureRegion: MKCoordinateRegion?
 
         // Previous state for change detection (avoid unnecessary view updates that interfere with clustering)
         var lastShowLabels: Bool = true
@@ -282,7 +297,9 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             }
 
             // Track user-initiated region changes
+            // Mark as pending so stale binding values won't revert this change
             lastAppliedRegion = mapView.region
+            pendingUserGestureRegion = mapView.region
 
             Task { @MainActor in
                 self.setCameraRegion?(mapView.region)
