@@ -116,6 +116,17 @@ public actor RemoteNodeService {
     /// Using 6-byte prefix matches MeshCore protocol format for login results.
     private var pendingLogins: [Data: CheckedContinuation<LoginResult, Error>] = [:]
 
+    /// Pending CLI request with command info for content-based response matching
+    private struct PendingCLIRequest {
+        let command: String
+        let continuation: CheckedContinuation<String, Error>
+        let timestamp: Date
+    }
+
+    /// Pending CLI requests keyed by 6-byte public key prefix.
+    /// Multiple requests per destination stored in order for FIFO fallback.
+    private var pendingCLIRequests: [Data: [PendingCLIRequest]] = [:]
+
     /// Keep-alive timer tasks
     private var keepAliveTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -200,9 +211,70 @@ public actor RemoteNodeService {
                 await handleLoginResult(result, fromPublicKeyPrefix: prefix)
             }
 
+        case .contactMessageReceived(let message):
+            // Check if this is a CLI response (textType == 0x01)
+            if message.textType == 0x01 {
+                handleCLIResponse(message)
+            }
+
         default:
             break
         }
+    }
+
+    /// Handle CLI response from a contact message.
+    private func handleCLIResponse(_ message: ContactMessage) {
+        let prefix = Data(message.senderPublicKeyPrefix.prefix(6))
+        guard var requests = pendingCLIRequests[prefix], !requests.isEmpty else {
+            return
+        }
+
+        // Try content-based matching using CLIResponse.parse()
+        let (matchIndex, matchCount) = findBestMatch(response: message.text, in: requests)
+
+        if let matchIndex {
+            // Exactly one match - deliver to that request
+            let matched = requests.remove(at: matchIndex)
+            pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
+            matched.continuation.resume(returning: message.text)
+            return
+        }
+
+        if matchCount > 1 {
+            // Multiple matches (ambiguous like "OK") - fall back to FIFO
+            let oldest = requests.removeFirst()
+            pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
+            oldest.continuation.resume(returning: message.text)
+            return
+        }
+
+        // No matches - likely a late response for a timed-out request
+        // Response still flows to CLI handler for UI display
+        logger.debug("Unmatched CLI response (no pending request): \(message.text.prefix(50))")
+    }
+
+    /// Find best matching request for a response based on CLIResponse parsing
+    /// Returns the matching index (if exactly one) and total match count
+    private func findBestMatch(response: String, in requests: [PendingCLIRequest]) -> (index: Int?, matchCount: Int) {
+        var matchingIndices: [Int] = []
+
+        for (index, request) in requests.enumerated() {
+            let parsed = CLIResponse.parse(response, forQuery: request.command)
+
+            // If parsing with this query produces a specific result (not .raw),
+            // it's a potential match
+            if case .raw = parsed {
+                continue
+            }
+            matchingIndices.append(index)
+        }
+
+        // Return match only if exactly one command matches
+        if matchingIndices.count == 1 {
+            return (matchingIndices[0], 1)
+        }
+
+        return (nil, matchingIndices.count)
     }
 
     // MARK: - Session Management
@@ -303,10 +375,12 @@ public actor RemoteNodeService {
     ///   - sessionID: The remote session ID.
     ///   - password: Optional password (uses stored password if nil).
     ///   - pathLength: Path length hint for timeout calculation.
+    ///   - onTimeoutKnown: Optional callback invoked with timeout in seconds once firmware responds.
     public func login(
         sessionID: UUID,
         password: String? = nil,
-        pathLength: UInt8 = 0
+        pathLength: UInt8 = 0,
+        onTimeoutKnown: (@Sendable (Int) async -> Void)? = nil
     ) async throws -> LoginResult {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
@@ -355,9 +429,15 @@ public actor RemoteNodeService {
                     return
                 }
 
-                // Send succeeded - use firmware's suggested timeout
-                let timeout = Duration.milliseconds(Int(sentInfo.suggestedTimeoutMs))
+                // Send succeeded - use 2x firmware's suggested timeout (round trip)
+                let timeoutMs = Int(sentInfo.suggestedTimeoutMs) * 2
+                let timeout = Duration.milliseconds(timeoutMs)
                 logger.info("login: send succeeded, starting \(timeout) timeout for prefix \(prefixHex)")
+
+                // Notify caller of timeout so they can show countdown
+                if let onTimeoutKnown {
+                    await onTimeoutKnown(timeoutMs / 1000)
+                }
                 try? await Task.sleep(for: timeout)
                 if let pending = pendingLogins.removeValue(forKey: prefix) {
                     logger.warning("Login timeout after \(timeout) for session \(sessionID), prefix \(prefixHex)")
@@ -613,8 +693,17 @@ public actor RemoteNodeService {
 
     // MARK: - CLI Commands
 
-    /// Send a CLI command to a remote node (admin only)
-    public func sendCLICommand(sessionID: UUID, command: String) async throws -> String {
+    /// Send a CLI command to a remote node and wait for response (admin only).
+    /// - Parameters:
+    ///   - sessionID: The remote node session ID.
+    ///   - command: The CLI command to send.
+    ///   - timeout: Maximum time to wait for response (default 10 seconds).
+    /// - Returns: The CLI response text from the remote node.
+    public func sendCLICommand(
+        sessionID: UUID,
+        command: String,
+        timeout: Duration = .seconds(10)
+    ) async throws -> String {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
         }
@@ -626,14 +715,69 @@ public actor RemoteNodeService {
         // Log CLI command (with password redaction)
         await auditLogger.logCLICommand(publicKey: remoteSession.publicKey, command: command)
 
-        do {
-            _ = try await session.sendCommand(to: remoteSession.publicKey, command: command)
-        } catch let error as MeshCoreError {
-            throw RemoteNodeError.sessionError(error)
-        }
+        let destinationPrefix = Data(remoteSession.publicKey.prefix(6))
+        let requestTimestamp = Date()
 
-        // CLI response handling to be implemented
-        return ""
+        // Register continuation BEFORE sending to avoid race condition
+        return try await withCheckedThrowingContinuation { continuation in
+            let request = PendingCLIRequest(
+                command: command,
+                continuation: continuation,
+                timestamp: requestTimestamp
+            )
+
+            if pendingCLIRequests[destinationPrefix] == nil {
+                pendingCLIRequests[destinationPrefix] = []
+            }
+            pendingCLIRequests[destinationPrefix]!.append(request)
+
+            Task { [self] in
+                // Send CLI command
+                do {
+                    _ = try await session.sendCommand(to: remoteSession.publicKey, command: command)
+                } catch {
+                    // Send failed - remove our specific request and resume with error
+                    if var requests = pendingCLIRequests[destinationPrefix],
+                       let index = requests.firstIndex(where: { $0.timestamp == requestTimestamp }) {
+                        let failed = requests.remove(at: index)
+                        pendingCLIRequests[destinationPrefix] = requests.isEmpty ? nil : requests
+                        let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
+                        failed.continuation.resume(throwing: RemoteNodeError.sessionError(meshError))
+                    }
+                    return
+                }
+
+                // Actively poll for response instead of passive wait
+                // Device may buffer responses without immediately sending messagesWaiting notification
+                let (seconds, attoseconds) = timeout.components
+                let deadline = Date().addingTimeInterval(TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18)
+                while Date() < deadline {
+                    // Check if our specific request was already satisfied
+                    if let requests = pendingCLIRequests[destinationPrefix],
+                       !requests.contains(where: { $0.timestamp == requestTimestamp }) {
+                        return  // Our request was matched and removed
+                    } else if pendingCLIRequests[destinationPrefix] == nil {
+                        return  // All requests cleared
+                    }
+
+                    // Poll device for pending messages
+                    // This triggers message delivery through the event dispatcher,
+                    // which will call our handleCLIResponse() if a CLI response arrives
+                    _ = try? await session.getMessage()
+
+                    // Small delay between polls
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+
+                // Timeout - remove our specific request and resume with error
+                if var requests = pendingCLIRequests[destinationPrefix],
+                   let index = requests.firstIndex(where: { $0.timestamp == requestTimestamp }) {
+                    let timedOut = requests.remove(at: index)
+                    pendingCLIRequests[destinationPrefix] = requests.isEmpty ? nil : requests
+                    timedOut.continuation.resume(throwing: RemoteNodeError.timeout)
+                }
+            }
+        }
     }
 
     // MARK: - Disconnect

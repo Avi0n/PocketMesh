@@ -21,6 +21,12 @@ struct NodeAuthenticationSheet: View {
     @State private var errorMessage: String?
     @State private var hasSavedPassword = false
 
+    // Countdown state
+    @State private var authSecondsRemaining: Int?
+    @State private var authStartTime: Date?
+    @State private var authTimeoutSeconds: Int?
+    @State private var countdownTask: Task<Void, Never>?
+
     private let maxPasswordLength = 15
 
     init(
@@ -120,6 +126,8 @@ struct NodeAuthenticationSheet: View {
                     .accessibilityLabel("Error: \(errorMessage)")
             } else if password.count > maxPasswordLength {
                 Text("MeshCore \(role == .repeater ? "repeaters" : "rooms") only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
+            } else if let remaining = authSecondsRemaining, remaining > 0 {
+                Text("Up to \(remaining) seconds remaining")
             } else {
                 // Reserve footer space to prevent layout shift when error appears
                 Text(" ")
@@ -156,6 +164,7 @@ struct NodeAuthenticationSheet: View {
         // Clear any previous error
         errorMessage = nil
         isAuthenticating = true
+        cleanupCountdownState()
 
         Task {
             do {
@@ -180,13 +189,24 @@ struct NodeAuthenticationSheet: View {
                     passwordToUse = String(pw.prefix(maxPasswordLength))
                 }
 
+                // Callback to start countdown when firmware timeout is known
+                let onTimeoutKnown: @Sendable (Int) async -> Void = { [self] seconds in
+                    await MainActor.run {
+                        self.authTimeoutSeconds = seconds
+                        self.authStartTime = Date.now
+                        self.authSecondsRemaining = seconds
+                        self.startCountdownTask()
+                    }
+                }
+
                 if role == .roomServer {
                     session = try await services.roomServerService.joinRoom(
                         deviceID: device.id,
                         contact: contact,
                         password: passwordToUse,
                         rememberPassword: rememberPassword,
-                        pathLength: pathLength
+                        pathLength: pathLength,
+                        onTimeoutKnown: onTimeoutKnown
                     )
                 } else {
                     session = try await services.repeaterAdminService.connectAsAdmin(
@@ -194,21 +214,50 @@ struct NodeAuthenticationSheet: View {
                         contact: contact,
                         password: passwordToUse,
                         rememberPassword: rememberPassword,
-                        pathLength: pathLength
+                        pathLength: pathLength,
+                        onTimeoutKnown: onTimeoutKnown
                     )
                 }
 
                 await MainActor.run {
+                    cleanupCountdownState()
                     dismiss()
                     onSuccess(session)
                 }
             } catch {
                 await MainActor.run {
+                    cleanupCountdownState()
                     errorMessage = error.localizedDescription
                     isAuthenticating = false
                 }
             }
         }
+    }
+
+    // MARK: - Countdown
+
+    private func startCountdownTask() {
+        countdownTask = Task {
+            while !Task.isCancelled, let timeout = authTimeoutSeconds, let startTime = authStartTime {
+                do {
+                    try await Task.sleep(for: .seconds(5))
+                } catch {
+                    break
+                }
+
+                let elapsed = Date.now.timeIntervalSince(startTime)
+                let remaining = max(0, timeout - Int(elapsed))
+                authSecondsRemaining = remaining
+            }
+        }
+    }
+
+    private func cleanupCountdownState() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        authSecondsRemaining = nil
+        authStartTime = nil
+        authTimeoutSeconds = nil
     }
 }
 

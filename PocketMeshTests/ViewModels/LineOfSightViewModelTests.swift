@@ -99,6 +99,15 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func updateContactLastMessage(contactID: UUID, date: Date?) async throws {}
     func incrementUnreadCount(contactID: UUID) async throws {}
     func clearUnreadCount(contactID: UUID) async throws {}
+    func markMentionSeen(messageID: UUID) async throws {}
+    func incrementUnreadMentionCount(contactID: UUID) async throws {}
+    func decrementUnreadMentionCount(contactID: UUID) async throws {}
+    func clearUnreadMentionCount(contactID: UUID) async throws {}
+    func incrementChannelUnreadMentionCount(channelID: UUID) async throws {}
+    func decrementChannelUnreadMentionCount(channelID: UUID) async throws {}
+    func clearChannelUnreadMentionCount(channelID: UUID) async throws {}
+    func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
+    func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
     func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func confirmContact(id: UUID) async throws {}

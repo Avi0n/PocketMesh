@@ -832,6 +832,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
+
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1392,25 +1395,57 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///            or indication that no more messages are waiting.
     /// - Throws: ``MeshCoreError`` if the fetch fails.
     public func getMessage() async throws -> MessageResult {
-        let data = PacketBuilder.getMessage()
-        let events = await dispatcher.subscribe()
-        try await transport.send(data)
+        let timeoutSeconds = configuration.defaultTimeout
 
-        for await event in events {
+        let stream = await dispatcher.subscribe { event in
             switch event {
-            case .contactMessageReceived(let msg):
-                return .contactMessage(msg)
-            case .channelMessageReceived(let msg):
-                return .channelMessage(msg)
-            case .noMoreMessages:
-                return .noMoreMessages
-            case .error(let code):
-                throw MeshCoreError.deviceError(code: code ?? 0)
+            case .contactMessageReceived, .channelMessageReceived, .noMoreMessages, .error:
+                return true
             default:
-                continue
+                return false
             }
         }
-        throw MeshCoreError.timeout
+
+        let data = PacketBuilder.getMessage()
+        try await transport.send(data)
+
+        return try await withThrowingTaskGroup(of: MessageResult.self) { group in
+            group.addTask {
+                for await event in stream {
+                    if Task.isCancelled {
+                        throw CancellationError()
+                    }
+
+                    switch event {
+                    case .contactMessageReceived(let msg):
+                        return .contactMessage(msg)
+                    case .channelMessageReceived(let msg):
+                        return .channelMessage(msg)
+                    case .noMoreMessages:
+                        return .noMoreMessages
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
+                    default:
+                        continue
+                    }
+                }
+
+                throw MeshCoreError.timeout
+            }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(timeoutSeconds))
+                throw MeshCoreError.timeout
+            }
+
+            defer { group.cancelAll() }
+
+            guard let result = try await group.next() else {
+                throw MeshCoreError.timeout
+            }
+
+            return result
+        }
     }
 
     /// Sends a command message to a remote node.
@@ -1656,6 +1691,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
+
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1758,6 +1796,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
+
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
                         let entries = MMAParser.parse(responseData)
@@ -1830,6 +1871,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1935,6 +1979,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 1.2
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }

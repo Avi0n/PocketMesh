@@ -4,6 +4,10 @@ import OSLog
 
 private let chatsViewLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
 
+private struct HashtagJoinRequest: Identifiable, Hashable {
+    let id: String
+}
+
 struct ChatsView: View {
     private enum ChatDestination: Hashable {
         case direct(ContactDTO)
@@ -26,6 +30,7 @@ struct ChatsView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
+    @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
@@ -94,6 +99,26 @@ struct ChatsView: View {
                 NavigationStack {
                     detailContent
                 }
+            }
+            .environment(\.openURL, OpenURLAction { url in
+                guard url.scheme == "pocketmesh-hashtag" else {
+                    return .systemAction
+                }
+                guard let channelName = url.host else {
+                    chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
+                    return .handled
+                }
+                handleHashtagTap(name: channelName)
+                return .handled
+            })
+            .sheet(item: $hashtagToJoin) { request in
+                JoinHashtagFromMessageView(channelName: request.id) { channel in
+                    hashtagToJoin = nil
+                    if let channel {
+                        selectedDestination = .channel(channel)
+                    }
+                }
+                .presentationDetents([.medium])
             }
         } else {
             ChatsListView()
@@ -205,7 +230,15 @@ struct ChatsView: View {
             handlePendingNavigation()
             handlePendingRoomNavigation()
         }
-        .onChange(of: selectedDestination) { _, newValue in
+        .onChange(of: selectedDestination) { oldValue, newValue in
+            // Refresh conversations when selection changes to pick up any updates
+            // (e.g., mention counts, unread counts, last message previews)
+            if oldValue != nil {
+                Task {
+                    await loadConversations()
+                }
+            }
+
             guard let newValue else { return }
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
@@ -351,6 +384,49 @@ struct ChatsView: View {
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
             await loadConversations()
+        }
+    }
+
+    // MARK: - Hashtag Channel Handling
+
+    private func handleHashtagTap(name: String) {
+        Task {
+            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+                chatsViewLogger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
+                return
+            }
+
+            let fullName = "#\(normalizedName)"
+
+            guard let deviceID = appState.connectedDevice?.id else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+                return
+            }
+
+            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
+                await MainActor.run {
+                    selectedDestination = .channel(channel)
+                }
+            } else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+            }
+        }
+    }
+
+    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
+        do {
+            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+            return channels.first { channel in
+                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }
+        } catch {
+            chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
+            return nil
         }
     }
 }

@@ -122,7 +122,6 @@ struct RepeaterStatusView: View {
         LabeledContent("Battery", value: viewModel.batteryDisplay)
         // Health
         LabeledContent("Uptime", value: viewModel.uptimeDisplay)
-        LabeledContent("Clock", value: viewModel.clockDisplay)
         // Radio
         LabeledContent("Last RSSI", value: viewModel.lastRSSIDisplay)
         LabeledContent("Last SNR", value: viewModel.lastSNRDisplay)
@@ -237,10 +236,6 @@ struct RepeaterStatusView: View {
                     if viewModel.telemetryLoaded {
                         Text("\(viewModel.telemetry?.dataPoints.count ?? 0)")
                             .foregroundStyle(.secondary)
-                    } else {
-                        Text("tap to load")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
                     }
                 }
             }

@@ -60,6 +60,9 @@ public final class Contact {
     /// Unread message count
     public var unreadCount: Int
 
+    /// Unread mention count (mentions of current user not yet seen)
+    public var unreadMentionCount: Int = 0
+
     /// Whether this contact was discovered via advertisement but not yet added to device
     /// Contacts from NEW_ADVERT push have this set to true until explicitly added
     public var isDiscovered: Bool
@@ -89,6 +92,7 @@ public final class Contact {
         isFavorite: Bool = false,
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
+        unreadMentionCount: Int = 0,
         isDiscovered: Bool = false,
         ocvPreset: String? = nil,
         customOCVArrayString: String? = nil
@@ -111,6 +115,7 @@ public final class Contact {
         self.isFavorite = isFavorite
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.unreadMentionCount = unreadMentionCount
         self.isDiscovered = isDiscovered
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
@@ -224,6 +229,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let isFavorite: Bool
     public let lastMessageDate: Date?
     public let unreadCount: Int
+    public let unreadMentionCount: Int
     public let isDiscovered: Bool
     public let ocvPreset: String?
     public let customOCVArrayString: String?
@@ -247,6 +253,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isFavorite = contact.isFavorite
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
+        self.unreadMentionCount = contact.unreadMentionCount
         self.isDiscovered = contact.isDiscovered
         self.ocvPreset = contact.ocvPreset
         self.customOCVArrayString = contact.customOCVArrayString
@@ -273,6 +280,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         isDiscovered: Bool,
         lastMessageDate: Date?,
         unreadCount: Int,
+        unreadMentionCount: Int = 0,
         ocvPreset: String? = nil,
         customOCVArrayString: String? = nil
     ) {
@@ -295,6 +303,7 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isDiscovered = isDiscovered
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.unreadMentionCount = unreadMentionCount
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
     }

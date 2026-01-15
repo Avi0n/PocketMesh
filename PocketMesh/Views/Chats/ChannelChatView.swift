@@ -17,6 +17,9 @@ struct ChannelChatView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
+    @State private var unreadMentionCount = 0
+    @State private var scrollToMentionRequest = 0
+    @State private var unseenMentionIDs: [UUID] = []
     @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
@@ -67,6 +70,7 @@ struct ChannelChatView: View {
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
             await viewModel.loadAllContacts(deviceID: channel.deviceID)
+            await loadUnseenMentions()
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
         .onDisappear {
@@ -93,6 +97,17 @@ struct ChannelChatView: View {
                 viewModel.appendMessageIfNew(message)
                 // Prefetch link preview immediately
                 fetchLinkPreviewIfNeeded(for: message)
+                // Handle self-mention: if at bottom, mark seen immediately; otherwise reload unseen
+                if message.containsSelfMention {
+                    Task {
+                        if isAtBottom {
+                            // User will see the message immediately, mark it seen
+                            await markNewArrivalMentionSeen(messageID: message.id)
+                        } else {
+                            await loadUnseenMentions()
+                        }
+                    }
+                }
                 Task {
                     await viewModel.loadChannelMessages(for: channel)
                 }
@@ -147,6 +162,58 @@ struct ChannelChatView: View {
         }
     }
 
+    // MARK: - Mention Tracking
+
+    private func loadUnseenMentions() async {
+        guard let dataStore = appState.services?.dataStore else { return }
+        do {
+            unseenMentionIDs = try await dataStore.fetchUnseenChannelMentionIDs(
+                deviceID: channel.deviceID,
+                channelIndex: channel.index
+            )
+            unreadMentionCount = unseenMentionIDs.count
+        } catch {
+            logger.error("Failed to load unseen channel mentions: \(error)")
+        }
+    }
+
+    private func markMentionSeen(messageID: UUID) async {
+        guard unseenMentionIDs.contains(messageID),
+              let dataStore = appState.services?.dataStore else { return }
+
+        do {
+            try await dataStore.markMentionSeen(messageID: messageID)
+            try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
+
+            unseenMentionIDs.removeAll { $0 == messageID }
+            unreadMentionCount = max(0, unreadMentionCount - 1)
+
+            // Refresh parent's channel list to update badge in sidebar (important for iPad split view)
+            if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
+                await parent.loadChannels(deviceID: deviceID)
+            }
+        } catch {
+            logger.error("Failed to mark channel mention seen: \(error)")
+        }
+    }
+
+    /// Mark a newly arrived mention as seen (for messages not yet in unseenMentionIDs)
+    private func markNewArrivalMentionSeen(messageID: UUID) async {
+        guard let dataStore = appState.services?.dataStore else { return }
+
+        do {
+            try await dataStore.markMentionSeen(messageID: messageID)
+            try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
+
+            // Refresh parent's channel list to update badge in sidebar
+            if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
+                await parent.loadChannels(deviceID: deviceID)
+            }
+        } catch {
+            logger.error("Failed to mark new channel mention seen: \(error)")
+        }
+    }
+
     // MARK: - Messages View
 
     private var messagesView: some View {
@@ -164,14 +231,32 @@ struct ChannelChatView: View {
                     },
                     isAtBottom: $isAtBottom,
                     unreadCount: $unreadCount,
-                    scrollToBottomRequest: $scrollToBottomRequest
+                    scrollToBottomRequest: $scrollToBottomRequest,
+                    scrollToMentionRequest: $scrollToMentionRequest,
+                    isUnseenMention: { message in
+                        message.containsSelfMention && !message.mentionSeen && unseenMentionIDs.contains(message.id)
+                    },
+                    onMentionBecameVisible: { messageID in
+                        Task {
+                            await markMentionSeen(messageID: messageID)
+                        }
+                    },
+                    mentionTargetID: unseenMentionIDs.first
                 )
                 .overlay(alignment: .bottomTrailing) {
-                    ScrollToBottomFAB(
-                        isVisible: !isAtBottom,
-                        unreadCount: unreadCount,
-                        onTap: { scrollToBottomRequest += 1 }
-                    )
+                    VStack(spacing: 12) {
+                        ScrollToMentionFAB(
+                            isVisible: unreadMentionCount > 0,
+                            unreadMentionCount: unreadMentionCount,
+                            onTap: { scrollToMentionRequest += 1 }
+                        )
+
+                        ScrollToBottomFAB(
+                            isVisible: !isAtBottom,
+                            unreadCount: unreadCount,
+                            onTap: { scrollToBottomRequest += 1 }
+                        )
+                    }
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
                 }

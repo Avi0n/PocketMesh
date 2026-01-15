@@ -19,11 +19,8 @@ struct JoinHashtagChannelView: View {
         self._selectedSlot = State(initialValue: availableSlots.first ?? 1)
     }
 
-    /// Valid characters: a-z, 0-9, hyphens
     private var isValidName: Bool {
-        !channelName.isEmpty && channelName.allSatisfy { char in
-            char.isLowercase || char.isNumber || char == "-"
-        }
+        HashtagUtilities.isValidHashtagName(channelName)
     }
 
     var body: some View {
@@ -38,17 +35,8 @@ struct JoinHashtagChannelView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .onChange(of: channelName) { _, newValue in
-                            // Filter to valid characters and lowercase
-                            channelName = newValue.lowercased().filter { char in
-                                char.isLetter || char.isNumber || char == "-"
-                            }
+                            channelName = HashtagUtilities.sanitizeHashtagNameInput(newValue)
                         }
-                }
-
-                Picker("Channel Slot", selection: $selectedSlot) {
-                    ForEach(availableSlots, id: \.self) { slot in
-                        Text("Slot \(slot)").tag(slot)
-                    }
                 }
             } header: {
                 Text("Hashtag Channel")

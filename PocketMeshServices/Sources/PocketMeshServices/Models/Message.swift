@@ -21,7 +21,11 @@ public enum MessageDirection: Int, Sendable, Codable {
 /// Messages are stored per-device and associated with a contact or channel.
 @Model
 public final class Message {
-    #Index<Message>([\.deviceID, \.channelIndex, \.timestamp])
+    #Index<Message>(
+        [\.deviceID, \.channelIndex, \.timestamp],
+        [\.contactID, \.containsSelfMention, \.mentionSeen],
+        [\.deviceID, \.channelIndex, \.containsSelfMention, \.mentionSeen]
+    )
 
     /// Unique message identifier
     @Attribute(.unique)
@@ -105,6 +109,12 @@ public final class Message {
     /// Whether fetch has been attempted (true = done, false = not yet tried)
     public var linkPreviewFetched: Bool = false
 
+    /// Whether this incoming message contains a mention of the current user
+    public var containsSelfMention: Bool = false
+
+    /// Whether the user has scrolled to see this mention (for tracking unread mentions)
+    public var mentionSeen: Bool = false
+
     /// Heard repeats for this message (cascade delete)
     @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)
     public var repeats: [MessageRepeat]?
@@ -136,7 +146,9 @@ public final class Message {
         linkPreviewTitle: String? = nil,
         linkPreviewImageData: Data? = nil,
         linkPreviewIconData: Data? = nil,
-        linkPreviewFetched: Bool = false
+        linkPreviewFetched: Bool = false,
+        containsSelfMention: Bool = false,
+        mentionSeen: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -165,6 +177,8 @@ public final class Message {
         self.linkPreviewImageData = linkPreviewImageData
         self.linkPreviewIconData = linkPreviewIconData
         self.linkPreviewFetched = linkPreviewFetched
+        self.containsSelfMention = containsSelfMention
+        self.mentionSeen = mentionSeen
     }
 }
 
@@ -244,6 +258,8 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let linkPreviewImageData: Data?
     public let linkPreviewIconData: Data?
     public let linkPreviewFetched: Bool
+    public let containsSelfMention: Bool
+    public let mentionSeen: Bool
 
     public init(from message: Message) {
         self.id = message.id
@@ -273,6 +289,8 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewImageData = message.linkPreviewImageData
         self.linkPreviewIconData = message.linkPreviewIconData
         self.linkPreviewFetched = message.linkPreviewFetched
+        self.containsSelfMention = message.containsSelfMention
+        self.mentionSeen = message.mentionSeen
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -303,7 +321,9 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         linkPreviewTitle: String? = nil,
         linkPreviewImageData: Data? = nil,
         linkPreviewIconData: Data? = nil,
-        linkPreviewFetched: Bool = false
+        linkPreviewFetched: Bool = false,
+        containsSelfMention: Bool = false,
+        mentionSeen: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -332,6 +352,8 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewImageData = linkPreviewImageData
         self.linkPreviewIconData = linkPreviewIconData
         self.linkPreviewFetched = linkPreviewFetched
+        self.containsSelfMention = containsSelfMention
+        self.mentionSeen = mentionSeen
     }
 
     public var isOutgoing: Bool {

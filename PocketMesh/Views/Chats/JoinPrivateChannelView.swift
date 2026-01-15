@@ -39,12 +39,6 @@ struct JoinPrivateChannelView: View {
                         // Clean and format as user types
                         secretKeyHex = newValue.uppercased().filter { $0.isHexDigit }
                     }
-
-                Picker("Channel Slot", selection: $selectedSlot) {
-                    ForEach(availableSlots, id: \.self) { slot in
-                        Text("Slot \(slot)").tag(slot)
-                    }
-                }
             } header: {
                 Text("Channel Details")
             } footer: {

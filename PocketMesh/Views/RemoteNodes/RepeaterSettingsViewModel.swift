@@ -132,19 +132,12 @@ final class RepeaterSettingsViewModel {
     private var repeaterAdminService: RepeaterAdminService?
     private let logger = Logger(subsystem: "PocketMesh", category: "RepeaterSettings")
 
-    /// Stream continuation for receiving CLI responses
-    private var responseStreamContinuation: AsyncStream<String>.Continuation?
-
-    /// Currently expected command (for logging/debugging)
-    private var currentCommand: String?
-
     // MARK: - Cleanup
 
     /// Cancel any pending operations when view disappears
-    func cleanup() {
-        responseStreamContinuation?.finish()
-        responseStreamContinuation = nil
-        currentCommand = nil
+    func cleanup() async {
+        // Clear CLI handler to stop receiving responses
+        await repeaterAdminService?.setCLIHandler { _, _ in }
     }
 
     // MARK: - Synchronous Command-Response
@@ -160,57 +153,154 @@ final class RepeaterSettingsViewModel {
             throw RepeaterSettingsError.noService
         }
 
-        currentCommand = command
-        defer {
-            currentCommand = nil
-            responseStreamContinuation?.finish()
-            responseStreamContinuation = nil
-        }
-
-        // Create stream FIRST (before sending command) to avoid missing fast responses
-        let (stream, continuation) = AsyncStream<String>.makeStream()
-        self.responseStreamContinuation = continuation
-
-        // Send command - response arrives via handleCLIResponse
-        _ = try await service.sendCommand(sessionID: session.id, command: command)
-        logger.debug("Sent command: \(command)")
-
-        // Race response against timeout
-        // Keep consuming responses until we get one that parses for our command
-        return try await withThrowingTaskGroup(of: String.self) { group in
-            group.addTask {
-                for await response in stream {
-                    // Validate response matches expected command
-                    let parsed = CLIResponse.parse(response, forQuery: command)
-                    if case .raw = parsed {
-                        // Unrecognized response - likely from a different command, keep waiting
-                        self.logger.warning("Discarding mismatched response '\(response.prefix(20))' for command '\(command)'")
-                    } else {
-                        return response
-                    }
-                }
-                throw RepeaterSettingsError.timeout
-            }
-
-            group.addTask {
-                try await Task.sleep(for: timeout)
-                throw RepeaterSettingsError.timeout
-            }
-
-            guard let result = try await group.next() else {
-                throw RepeaterSettingsError.timeout
-            }
-            group.cancelAll()
-            return result
-        }
+        // Service now handles response collection and returns directly
+        let response = try await service.sendCommand(sessionID: session.id, command: command, timeout: timeout)
+        logger.debug("Command '\(command)' response: \(response.prefix(50))")
+        return response
     }
 
     // MARK: - Configuration
 
-    func configure(appState: AppState, session: RemoteNodeSessionDTO) {
+    func configure(appState: AppState, session: RemoteNodeSessionDTO) async {
         self.repeaterAdminService = appState.services?.repeaterAdminService
         self.session = session
         self.name = session.name
+
+        // Register CLI handler to receive late responses
+        await repeaterAdminService?.setCLIHandler { [weak self] message, _ in
+            await MainActor.run {
+                self?.handleLateResponse(message.text)
+            }
+        }
+    }
+
+    /// Handle late CLI responses that arrive after timeout
+    private func handleLateResponse(_ response: String) {
+        // Only process responses for sections that:
+        // 1. Have finished loading (not currently loading)
+        // 2. Had an error (so we're actually expecting late responses)
+        // This prevents responses from being incorrectly parsed as other field types.
+
+        // Radio settings - only process if finished loading with error
+        if !isLoadingRadio && radioError != nil {
+            if frequency == nil {
+                if case .radio(let freq, let bw, let sf, let cr) = CLIResponse.parse(response, forQuery: "get radio") {
+                    self.frequency = freq
+                    self.bandwidth = bw
+                    self.spreadingFactor = sf
+                    self.codingRate = cr
+                    self.radioError = nil
+                    logger.info("Late response: received radio settings")
+                    return
+                }
+            }
+
+            if txPower == nil {
+                if case .txPower(let power) = CLIResponse.parse(response, forQuery: "get tx") {
+                    self.txPower = power
+                    self.radioError = nil
+                    logger.info("Late response: received TX power")
+                    return
+                }
+            }
+        }
+
+        // Device info - only process if finished loading with error
+        if !isLoadingDeviceInfo && deviceInfoError != nil {
+            if firmwareVersion == nil {
+                if case .version(let version) = CLIResponse.parse(response, forQuery: "ver") {
+                    self.firmwareVersion = version
+                    self.deviceInfoError = nil
+                    logger.info("Late response: received firmware version")
+                    return
+                }
+            }
+
+            if deviceTimeUTC == nil {
+                if case .deviceTime(let time) = CLIResponse.parse(response, forQuery: "clock") {
+                    self.deviceTimeUTC = time
+                    self.deviceInfoError = nil
+                    logger.info("Late response: received device time")
+                    return
+                }
+            }
+        }
+
+        // Identity settings - only process if finished loading with error
+        if !isLoadingIdentity && identityError != nil {
+            if originalName == nil {
+                if case .name(let n) = CLIResponse.parse(response, forQuery: "get name") {
+                    self.name = n
+                    self.originalName = n
+                    self.identityError = nil
+                    logger.info("Late response: received name")
+                    return
+                }
+            }
+
+            if originalLatitude == nil {
+                if case .latitude(let lat) = CLIResponse.parse(response, forQuery: "get lat") {
+                    self.latitude = lat
+                    self.originalLatitude = lat
+                    self.identityError = nil
+                    logger.info("Late response: received latitude")
+                    return
+                }
+            }
+
+            if originalLongitude == nil {
+                if case .longitude(let lon) = CLIResponse.parse(response, forQuery: "get lon") {
+                    self.longitude = lon
+                    self.originalLongitude = lon
+                    self.identityError = nil
+                    logger.info("Late response: received longitude")
+                    return
+                }
+            }
+        }
+
+        // Behavior settings - only process if finished loading with error
+        if !isLoadingBehavior && behaviorError != nil {
+            if originalRepeaterEnabled == nil {
+                if case .repeatMode(let enabled) = CLIResponse.parse(response, forQuery: "get repeat") {
+                    self.repeaterEnabled = enabled
+                    self.originalRepeaterEnabled = enabled
+                    self.behaviorError = nil
+                    logger.info("Late response: received repeat mode")
+                    return
+                }
+            }
+
+            if originalAdvertIntervalMinutes == nil {
+                if case .advertInterval(let interval) = CLIResponse.parse(response, forQuery: "get advert.interval") {
+                    self.advertIntervalMinutes = interval
+                    self.originalAdvertIntervalMinutes = interval
+                    self.behaviorError = nil
+                    logger.info("Late response: received advert interval")
+                    return
+                }
+            }
+
+            if originalFloodAdvertIntervalHours == nil {
+                if case .floodAdvertInterval(let interval) = CLIResponse.parse(response, forQuery: "get flood.advert.interval") {
+                    self.floodAdvertIntervalHours = interval
+                    self.originalFloodAdvertIntervalHours = interval
+                    self.behaviorError = nil
+                    logger.info("Late response: received flood advert interval")
+                    return
+                }
+            }
+
+            if originalFloodMaxHops == nil {
+                if case .floodMax(let hops) = CLIResponse.parse(response, forQuery: "get flood.max") {
+                    self.floodMaxHops = hops
+                    self.originalFloodMaxHops = hops
+                    self.behaviorError = nil
+                    logger.info("Late response: received flood max hops")
+                    return
+                }
+            }
+        }
     }
 
     // MARK: - Fetch Methods (Pull-to-Load)
@@ -219,6 +309,7 @@ final class RepeaterSettingsViewModel {
     func fetchDeviceInfo() async {
         isLoadingDeviceInfo = true
         deviceInfoError = nil
+        var hadTimeout = false
 
         // Get firmware version
         do {
@@ -228,6 +319,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received firmware version: \(version)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get firmware version: \(error)")
         }
 
@@ -239,12 +331,13 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received device time: \(time)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get device time: \(error)")
         }
 
-        // Only show error if no data was received
-        if !deviceInfoLoaded {
-            deviceInfoError = "Failed to load device info"
+        // Show error if any request timed out (even if some succeeded)
+        if hadTimeout {
+            deviceInfoError = "Some settings failed to load"
         }
 
         isLoadingDeviceInfo = false
@@ -254,6 +347,7 @@ final class RepeaterSettingsViewModel {
     func fetchIdentity() async {
         isLoadingIdentity = true
         identityError = nil
+        var hadTimeout = false
 
         // Get name
         do {
@@ -264,6 +358,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received name: \(n)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get name: \(error)")
         }
 
@@ -276,6 +371,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received latitude: \(lat)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get latitude: \(error)")
         }
 
@@ -288,12 +384,13 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received longitude: \(lon)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get longitude: \(error)")
         }
 
-        // Only show error if no data was received
-        if !identityLoaded {
-            identityError = "Failed to load identity settings"
+        // Show error if any request timed out (even if some succeeded)
+        if hadTimeout {
+            identityError = "Some settings failed to load"
         }
 
         isLoadingIdentity = false
@@ -303,6 +400,19 @@ final class RepeaterSettingsViewModel {
     func fetchRadioSettings() async {
         isLoadingRadio = true
         radioError = nil
+        var hadTimeout = false
+
+        // Get TX power first
+        do {
+            let response = try await sendAndWait("get tx")
+            if case .txPower(let power) = CLIResponse.parse(response, forQuery: "get tx") {
+                self.txPower = power
+                logger.debug("Received TX power: \(power)")
+            }
+        } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
+            logger.warning("Failed to get TX power: \(error)")
+        }
 
         // Get radio parameters
         do {
@@ -315,23 +425,13 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received radio: \(freq),\(bw),\(sf),\(cr)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get radio settings: \(error)")
         }
 
-        // Get TX power
-        do {
-            let response = try await sendAndWait("get tx")
-            if case .txPower(let power) = CLIResponse.parse(response, forQuery: "get tx") {
-                self.txPower = power
-                logger.debug("Received TX power: \(power)")
-            }
-        } catch {
-            logger.warning("Failed to get TX power: \(error)")
-        }
-
-        // Only show error if no data was received
-        if !radioLoaded {
-            radioError = "Failed to load radio settings"
+        // Show error if any request timed out (even if some succeeded)
+        if hadTimeout {
+            radioError = "Some settings failed to load"
         }
 
         isLoadingRadio = false
@@ -341,6 +441,7 @@ final class RepeaterSettingsViewModel {
     func fetchBehaviorSettings() async {
         isLoadingBehavior = true
         behaviorError = nil
+        var hadTimeout = false
 
         // Get repeat mode
         do {
@@ -351,6 +452,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received repeat mode: \(enabled)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get repeat mode: \(error)")
         }
 
@@ -363,6 +465,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received advert interval: \(minutes)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get advert interval: \(error)")
         }
 
@@ -375,6 +478,7 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received flood advert interval: \(hours) hours")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get flood advert interval: \(error)")
         }
 
@@ -387,44 +491,24 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received flood max: \(hops)")
             }
         } catch {
+            if case RemoteNodeError.timeout = error { hadTimeout = true }
             logger.warning("Failed to get flood max: \(error)")
         }
 
-        // Only show error if no data was received
-        if !behaviorLoaded {
-            behaviorError = "Failed to load behavior settings"
+        // Show error if any request timed out (even if some succeeded)
+        if hadTimeout {
+            behaviorError = "Some settings failed to load"
         }
 
         isLoadingBehavior = false
     }
 
-    // MARK: - CLI Response Handling
-
-    /// Handle CLI response from push notification
-    /// Yields to the waiting stream (does not finish - sendAndWait handles that)
-    func handleCLIResponse(_ message: ContactMessage, from contact: ContactDTO) {
-        // Verify response is for our session
-        guard let expectedPrefix = session?.publicKeyPrefix,
-              contact.publicKeyPrefix == expectedPrefix else {
-            return
-        }
-
-        // Yield to waiting stream (don't finish - let sendAndWait validate and decide)
-        if let continuation = responseStreamContinuation {
-            continuation.yield(message.text)
-        } else {
-            logger.debug("Response with no waiting command: \(message.text.prefix(50))")
-        }
-    }
+    // MARK: - Handler Registration
 
     /// Register for CLI responses (called from view's .task modifier)
+    /// No longer needed - service handles response collection
     func registerHandlers(appState: AppState) async {
-        guard let repeaterAdminService = appState.services?.repeaterAdminService else { return }
-        await repeaterAdminService.setCLIHandler { [weak self] frame, contact in
-            await MainActor.run {
-                self?.handleCLIResponse(frame, from: contact)
-            }
-        }
+        // Response collection now handled by RemoteNodeService
     }
 
     // MARK: - Settings Actions

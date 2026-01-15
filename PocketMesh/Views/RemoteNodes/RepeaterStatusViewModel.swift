@@ -1,5 +1,5 @@
-import SwiftUI
 import PocketMeshServices
+import SwiftUI
 
 /// ViewModel for repeater status display
 @Observable
@@ -36,15 +36,6 @@ final class RepeaterStatusViewModel {
 
     /// Whether the telemetry disclosure group is expanded
     var telemetryExpanded = false
-
-    /// Clock time from the repeater (stored as UTC)
-    private var clockTimeUTC: String?
-
-    /// Clock time converted to user's local timezone and locale
-    var clockTime: String? {
-        guard let utcString = clockTimeUTC else { return nil }
-        return Self.convertUTCToLocal(utcString)
-    }
 
     /// Error message if any
     var errorMessage: String?
@@ -114,11 +105,6 @@ final class RepeaterStatusViewModel {
             }
         }
 
-        await repeaterAdminService.setCLIHandler { [weak self] frame, contact in
-            await MainActor.run {
-                self?.handleCLIResponse(frame, from: contact)
-            }
-        }
     }
 
     // MARK: - Status
@@ -135,6 +121,41 @@ final class RepeaterStatusViewModel {
     /// Timeout task for telemetry request
     private var telemetryTimeoutTask: Task<Void, Never>?
 
+    /// Check if error is a transient "not ready" error that should be retried.
+    /// Error code 10 occurs when the firmware isn't fully ready after login.
+    private func isTransientError(_ error: Error) -> Bool {
+        guard let remoteError = error as? RemoteNodeError,
+              case .sessionError(let meshError) = remoteError,
+              case .deviceError(let code) = meshError else {
+            return false
+        }
+        return code == 10
+    }
+
+    private static let statusRetryDelays: [Duration] = [
+        .milliseconds(500),
+        .seconds(1),
+        .seconds(2),
+    ]
+
+    private func requestStatusWithRetries(sessionID: UUID) async throws -> RemoteNodeStatus {
+        guard let repeaterAdminService else {
+            throw RemoteNodeError.notConnected
+        }
+
+        var delayIterator = Self.statusRetryDelays.makeIterator()
+        while true {
+            do {
+                return try await repeaterAdminService.requestStatus(sessionID: sessionID)
+            } catch {
+                guard isTransientError(error), let delay = delayIterator.next() else {
+                    throw error
+                }
+                try? await Task.sleep(for: delay)
+            }
+        }
+    }
+
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
@@ -142,6 +163,7 @@ final class RepeaterStatusViewModel {
         self.session = session
         isLoadingStatus = true
         errorMessage = nil
+
 
         // Start timeout
         statusTimeoutTask?.cancel()
@@ -157,10 +179,8 @@ final class RepeaterStatusViewModel {
         }
 
         do {
-            let response = try await repeaterAdminService.requestStatus(sessionID: session.id)
+            let response = try await requestStatusWithRetries(sessionID: session.id)
             handleStatusResponse(response)
-            // Also request clock time
-            _ = try? await repeaterAdminService.sendCommand(sessionID: session.id, command: "clock")
         } catch {
             errorMessage = error.localizedDescription
             isLoadingStatus = false
@@ -247,6 +267,17 @@ final class RepeaterStatusViewModel {
             let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
             handleTelemetryResponse(response)
         } catch {
+            // Retry once on transient "not ready" errors (error code 10)
+            if isTransientError(error) {
+                try? await Task.sleep(for: .milliseconds(500))
+                do {
+                    let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
+                    handleTelemetryResponse(response)
+                    return
+                } catch {
+                    // Retry failed, fall through to show error
+                }
+            }
             errorMessage = error.localizedDescription
             isLoadingTelemetry = false
             telemetryTimeoutTask?.cancel()
@@ -266,55 +297,6 @@ final class RepeaterStatusViewModel {
         self.telemetryLoaded = true
     }
 
-    /// Handle CLI response (for clock time)
-    func handleCLIResponse(_ frame: ContactMessage, from contact: ContactDTO) {
-        // Validate session exists and response is from our session
-        // Note: Compare using prefix bytes since contact.publicKey and session.publicKey
-        // come from different sources (contacts database vs session)
-        guard let session = session else {
-            return
-        }
-
-        // Compare public key prefixes directly from the message sender
-        // The contact's publicKeyPrefix should match the session's publicKeyPrefix
-        guard Data(frame.senderPublicKeyPrefix) == Data(session.publicKeyPrefix) else {
-            return
-        }
-
-        let response = CLIResponse.parse(frame.text)
-        switch response {
-        case .deviceTime(let time):
-            self.clockTimeUTC = time
-        default:
-            break
-        }
-    }
-
-    /// Convert UTC time string (e.g., "06:40 - 18/4/2025 UTC") to local time using user's locale
-    private static func convertUTCToLocal(_ utcString: String) -> String {
-        // Format: "HH:mm - d/M/yyyy UTC"
-        let pattern = #"(\d{1,2}:\d{2}) - (\d{1,2}/\d{1,2}/\d{4}) UTC"#
-        guard let regex = try? Regex(pattern),
-              let match = utcString.firstMatch(of: regex),
-              match.count >= 3 else {
-            return utcString
-        }
-
-        let timeStr = String(match[1].substring ?? "")
-        let dateStr = String(match[2].substring ?? "")
-
-        let inputFormatter = DateFormatter()
-        inputFormatter.dateFormat = "HH:mm d/M/yyyy"
-        inputFormatter.timeZone = TimeZone(identifier: "UTC")
-
-        guard let date = inputFormatter.date(from: "\(timeStr) \(dateStr)") else {
-            return utcString
-        }
-
-        let timeString = date.formatted(date: .omitted, time: .shortened)
-        let dateString = date.formatted(.dateTime.year(.twoDigits).month(.twoDigits).day(.twoDigits))
-        return "\(timeString) - \(dateString)"
-    }
 
     // MARK: - Computed Properties
 
@@ -372,9 +354,6 @@ final class RepeaterStatusViewModel {
         return count.formatted()
     }
 
-    var clockDisplay: String {
-        clockTime ?? Self.emDash
-    }
 
     // MARK: - OCV Settings
 

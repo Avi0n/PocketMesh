@@ -27,6 +27,9 @@ struct MessageText: View {
         // Apply URL formatting (make links tappable)
         applyURLFormatting(&result)
 
+        // Apply hashtag formatting (make #channels tappable)
+        applyHashtagFormatting(&result)
+
         return result
     }
 
@@ -106,6 +109,30 @@ struct MessageText: View {
             attributedString[attrRange].underlineStyle = .single
         }
     }
+
+    // MARK: - Hashtag Formatting
+
+    private func applyHashtagFormatting(_ attributedString: inout AttributedString) {
+        let currentString = String(attributedString.characters)
+        let hashtags = HashtagUtilities.extractHashtags(from: currentString)
+
+        // Process in reverse to preserve indices
+        for hashtag in hashtags.reversed() {
+            guard let attrRange = Range(hashtag.range, in: attributedString) else { continue }
+
+            // Create a custom URL scheme for hashtag taps
+            // Format: pocketmesh-hashtag://channelname
+            let channelName = HashtagUtilities.normalizeHashtagName(hashtag.name)
+            if let url = URL(string: "pocketmesh-hashtag://\(channelName)") {
+                attributedString[attrRange].link = url
+                // Hashtags: bold + cyan (or white on dark bubbles), no underline
+                // This distinguishes them from URLs which remain underlined
+                let isOnDarkBubble = baseColor == .white
+                attributedString[attrRange].foregroundColor = isOnDarkBubble ? .white : .cyan
+                attributedString[attrRange].inlinePresentationIntent = .stronglyEmphasized
+            }
+        }
+    }
 }
 
 #Preview("Plain text") {
@@ -149,4 +176,14 @@ struct MessageText: View {
     MessageText("@[MyDevice] check this!", baseColor: .white, currentUserName: "MyDevice")
         .padding()
         .background(.blue)
+}
+
+#Preview("With hashtag") {
+    MessageText("Join #general for updates")
+        .padding()
+}
+
+#Preview("With hashtag and URL") {
+    MessageText("Check https://example.com#anchor and #general")
+        .padding()
 }

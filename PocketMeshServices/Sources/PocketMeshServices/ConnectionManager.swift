@@ -992,7 +992,7 @@ public final class ConnectionManager {
             // Create services
             let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
             await newServices.wireServices()
-                self.services = newServices
+            self.services = newServices
 
             // Fetch existing device to preserve local settings
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
@@ -1015,7 +1015,6 @@ public final class ConnectionManager {
             // Persist connection for potential future use
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
-            // Notify observers before sync starts
             await onConnectionReady?()
 
             // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
@@ -1038,6 +1037,7 @@ public final class ConnectionManager {
 
             currentTransportType = .wifi
             connectionState = .ready
+
             startWiFiHeartbeat()
             logger.info("WiFi connection complete - device ready")
 
@@ -1644,6 +1644,7 @@ public final class ConnectionManager {
             currentTransportType = .bluetooth
             connectionState = .ready
             logger.info("[BLE] iOS auto-reconnect: session ready, device: \(deviceID.uuidString.prefix(8))")
+
 
         } catch {
             logger.error("[BLE] iOS auto-reconnect session setup failed: \(error.localizedDescription)")

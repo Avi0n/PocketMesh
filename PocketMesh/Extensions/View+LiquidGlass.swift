@@ -30,6 +30,16 @@ extension View {
             self.buttonStyle(.borderedProminent)
         }
     }
+
+    /// Applies interactive liquid glass effect on iOS 26+, falls back to thinMaterial on earlier versions
+    @ViewBuilder
+    func liquidGlassInteractive(in shape: some Shape = .circle) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: shape)
+        } else {
+            self.background(.thinMaterial, in: shape)
+        }
+    }
 }
 
 /// A container that uses GlassEffectContainer on iOS 26+, passes through content on earlier versions

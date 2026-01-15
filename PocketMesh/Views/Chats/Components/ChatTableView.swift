@@ -1,6 +1,13 @@
 import UIKit
 import SwiftUI
 
+enum ChatScrollToMentionPolicy {
+    static func shouldScrollToBottom(mentionTargetID: AnyHashable?, newestItemID: AnyHashable?) -> Bool {
+        guard let mentionTargetID, let newestItemID else { return false }
+        return mentionTargetID == newestItemID
+    }
+}
+
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
 @MainActor
@@ -29,6 +36,15 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
     /// Callback when scroll state changes
     var onScrollStateChanged: ((Bool, Int) -> Void)?
+
+    /// Callback when a mention becomes visible
+    var onMentionBecameVisible: ((Item.ID) -> Void)?
+
+    /// Closure to check if an item contains an unseen self-mention
+    var isUnseenMention: ((Item) -> Bool)?
+
+    /// Tracks mention IDs that have already been reported as visible (prevents duplicate callbacks)
+    private var markedMentionIDs: Set<Item.ID> = []
 
     /// Current keyboard height for inset calculation
     private var keyboardHeight: CGFloat = 0
@@ -233,6 +249,12 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             lastSeenItemID = newItems.last?.id
             scrollToBottom(animated: animated && previousCount > 0)
         }
+
+        // Check for visible mentions after layout settles (handles mentions visible on load)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            self?.checkVisibleMentions()
+        }
     }
 
     // MARK: - Scroll Control
@@ -284,10 +306,43 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
         skipAutoScroll = false
     }
 
+    func scrollToItem(id: Item.ID, animated: Bool) {
+        // Items are reversed in table: row 0 = newest (items.last)
+        guard let itemIndex = items.firstIndex(where: { $0.id == id }) else { return }
+        let rowIndex = items.count - 1 - itemIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        tableView.scrollToRow(at: indexPath, at: .middle, animated: animated)
+    }
+
     // MARK: - Scroll Tracking
 
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         updateIsAtBottom()
+        checkVisibleMentions()
+    }
+
+    private func checkVisibleMentions() {
+        guard let visibleIndexPaths = tableView.indexPathsForVisibleRows,
+              let isUnseenMention,
+              let onMentionBecameVisible else { return }
+
+        for indexPath in visibleIndexPaths {
+            guard indexPath.row < items.count else { continue }
+            // Items are reversed in table: row 0 = newest (items.last)
+            let reversedIndex = items.count - 1 - indexPath.row
+            guard reversedIndex >= 0 else { continue }
+            let item = items[reversedIndex]
+            // Only report each mention once per session
+            if !markedMentionIDs.contains(item.id) && isUnseenMention(item) {
+                markedMentionIDs.insert(item.id)
+                onMentionBecameVisible(item.id)
+            }
+        }
+    }
+
+    /// Resets the debouncing state (call when conversation changes)
+    func resetMarkedMentions() {
+        markedMentionIDs.removeAll()
     }
 
     override func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -359,6 +414,10 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     @Binding var isAtBottom: Bool
     @Binding var unreadCount: Int
     @Binding var scrollToBottomRequest: Int
+    @Binding var scrollToMentionRequest: Int
+    var isUnseenMention: ((Item) -> Bool)?
+    var onMentionBecameVisible: ((Item.ID) -> Void)?
+    var mentionTargetID: Item.ID?
 
     func makeUIViewController(context: Context) -> ChatTableViewController<Item> {
         let controller = ChatTableViewController<Item>()
@@ -367,6 +426,8 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         }
         // Callback set up in updateUIViewController
         context.coordinator.lastScrollRequest = scrollToBottomRequest
+        controller.isUnseenMention = isUnseenMention
+        context.coordinator.lastMentionRequest = scrollToMentionRequest
         return controller
     }
 
@@ -392,6 +453,26 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
             }
         }
 
+        // Update mention detection closures
+        controller.isUnseenMention = isUnseenMention
+        controller.onMentionBecameVisible = onMentionBecameVisible
+
+        // Check for scroll-to-mention request
+        let shouldScrollToMention = scrollToMentionRequest != context.coordinator.lastMentionRequest
+        var shouldScrollMentionToBottom = false
+        var mentionScrollTargetID: Item.ID?
+
+        if shouldScrollToMention {
+            context.coordinator.lastMentionRequest = scrollToMentionRequest
+            mentionScrollTargetID = mentionTargetID
+
+            let newestItemID = items.last?.id
+            shouldScrollMentionToBottom = ChatScrollToMentionPolicy.shouldScrollToBottom(
+                mentionTargetID: mentionTargetID.map { AnyHashable($0) },
+                newestItemID: newestItemID.map { AnyHashable($0) }
+            )
+        }
+
         // Check for scroll-to-bottom request BEFORE updating items
         // This ensures user sends don't trigger unread badge
         let shouldForceScroll = scrollToBottomRequest != context.coordinator.lastScrollRequest
@@ -407,6 +488,12 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         // Perform the scroll after items are updated
         if shouldForceScroll {
             controller.scrollToBottom(animated: true)
+        } else if shouldScrollToMention {
+            if shouldScrollMentionToBottom {
+                controller.scrollToBottom(animated: true)
+            } else if let targetID = mentionScrollTargetID {
+                controller.scrollToItem(id: targetID, animated: true)
+            }
         }
     }
 
@@ -416,6 +503,7 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
 
     class Coordinator {
         var lastScrollRequest: Int = 0
+        var lastMentionRequest: Int = 0
         var setIsAtBottom: ((Bool) -> Void)?
         var setUnreadCount: ((Int) -> Void)?
     }

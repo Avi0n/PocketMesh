@@ -396,7 +396,11 @@ public actor SyncCoordinator {
             // Message events are processed asynchronously by the event monitor - we need to ensure
             // all handlers finish before resuming notifications, otherwise sync-time messages
             // may trigger notifications after suppression is lifted
-            await services.messagePollingService.waitForPendingHandlers()
+            let pendingHandlerDrainTimeout: Duration = .seconds(2)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
 
             // Resume notifications on success - synchronously before return
             await MainActor.run {
@@ -407,7 +411,11 @@ public actor SyncCoordinator {
             logger.info("Connection setup complete for device \(deviceID)")
         } catch {
             // Wait for any pending handlers even on error
-            await services.messagePollingService.waitForPendingHandlers()
+            let pendingHandlerDrainTimeout: Duration = .seconds(2)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
 
             // Resume notifications on error - synchronously before throw
             await MainActor.run {
@@ -451,11 +459,20 @@ public actor SyncCoordinator {
         // Populate blocked contacts cache
         await refreshBlockedContactsCache(deviceID: deviceID, dataStore: services.dataStore)
 
+        // Cache device node name for self-mention detection
+        let device = try? await services.dataStore.fetchDevice(id: deviceID)
+        let selfNodeName = device?.nodeName ?? ""
+
         // Contact message handler (direct messages)
         await services.messagePollingService.setContactMessageHandler { [weak self] message, contact in
             guard let self else { return }
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
+
+            // Check for self-mention before creating DTO
+            let hasSelfMention = !selfNodeName.isEmpty &&
+                MentionUtilities.containsSelfMention(in: message.text, selfName: selfNodeName)
+
             let messageDTO = MessageDTO(
                 id: UUID(),
                 deviceID: deviceID,
@@ -477,7 +494,9 @@ public actor SyncCoordinator {
                 roundTripTime: nil,
                 heardRepeats: 0,
                 retryAttempt: 0,
-                maxRetryAttempts: 0
+                maxRetryAttempts: 0,
+                containsSelfMention: hasSelfMention,
+                mentionSeen: false
             )
 
             // Check for duplicate before saving
@@ -501,6 +520,12 @@ public actor SyncCoordinator {
                 // Only increment unread count, post notification, and update badge for non-blocked contacts
                 if let contactID = contact?.id, contact?.isBlocked != true {
                     try await services.dataStore.incrementUnreadCount(contactID: contactID)
+
+                    // Increment unread mention count if message contains self-mention
+                    if hasSelfMention {
+                        try await services.dataStore.incrementUnreadMentionCount(contactID: contactID)
+                    }
+
                     await services.notificationService.postDirectMessageNotification(
                         from: contact?.displayName ?? "Unknown",
                         contactID: contactID,
@@ -531,6 +556,13 @@ public actor SyncCoordinator {
             let (senderNodeName, messageText) = Self.parseChannelMessage(message.text)
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
+
+            // Check for self-mention before creating DTO
+            // Filter out messages where user mentions themselves
+            let hasSelfMention = !selfNodeName.isEmpty &&
+                senderNodeName != selfNodeName &&
+                MentionUtilities.containsSelfMention(in: messageText, selfName: selfNodeName)
+
             let messageDTO = MessageDTO(
                 id: UUID(),
                 deviceID: deviceID,
@@ -552,7 +584,9 @@ public actor SyncCoordinator {
                 roundTripTime: nil,
                 heardRepeats: 0,
                 retryAttempt: 0,
-                maxRetryAttempts: 0
+                maxRetryAttempts: 0,
+                containsSelfMention: hasSelfMention,
+                mentionSeen: false
             )
 
             // Check for duplicate before saving
@@ -578,6 +612,11 @@ public actor SyncCoordinator {
                 if await !self.isBlockedSender(senderNodeName) {
                     if let channelID = channel?.id {
                         try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
+
+                        // Increment unread mention count if message contains self-mention
+                        if hasSelfMention {
+                            try await services.dataStore.incrementChannelUnreadMentionCount(channelID: channelID)
+                        }
                     }
 
                     await services.notificationService.postChannelMessageNotification(

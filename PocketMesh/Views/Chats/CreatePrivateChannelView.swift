@@ -53,12 +53,6 @@ struct CreatePrivateChannelView: View {
             Section {
                 TextField("Channel Name", text: $channelName)
                     .textContentType(.name)
-
-                Picker("Channel Slot", selection: $selectedSlot) {
-                    ForEach(availableSlots, id: \.self) { slot in
-                        Text("Slot \(slot)").tag(slot)
-                    }
-                }
             } header: {
                 Text("Channel Details")
             }

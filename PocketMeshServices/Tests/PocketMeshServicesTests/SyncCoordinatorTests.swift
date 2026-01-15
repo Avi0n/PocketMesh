@@ -354,8 +354,8 @@ actor OrderTrackingMessagePollingService: MessagePollingServiceProtocol {
         return 0
     }
 
-    func waitForPendingHandlers() async {
-        // No-op for tests
+    func waitForPendingHandlers(timeout: Duration) async -> Bool {
+        true
     }
 }
 

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 /// Represents a channel (group) for broadcast messaging.
-/// Devices support up to 8 channels (slots 0-7), with slot 0 being the public channel.
+/// Max number of channels depends on the device, with slot 0 being the public channel.
 @Model
 public final class Channel {
     /// Unique identifier
@@ -12,7 +12,7 @@ public final class Channel {
     /// The device this channel belongs to
     public var deviceID: UUID
 
-    /// Channel slot index (0-7)
+    /// Channel slot index
     public var index: UInt8
 
     /// Channel name
@@ -30,6 +30,9 @@ public final class Channel {
     /// Unread message count
     public var unreadCount: Int
 
+    /// Unread mention count (mentions of current user not yet seen)
+    public var unreadMentionCount: Int = 0
+
     /// Whether this channel's notifications are muted
     public var isMuted: Bool = false
 
@@ -42,6 +45,7 @@ public final class Channel {
         isEnabled: Bool = true,
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
+        unreadMentionCount: Int = 0,
         isMuted: Bool = false
     ) {
         self.id = id
@@ -52,6 +56,7 @@ public final class Channel {
         self.isEnabled = isEnabled
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.unreadMentionCount = unreadMentionCount
         self.isMuted = isMuted
     }
 
@@ -103,6 +108,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
     public let isEnabled: Bool
     public let lastMessageDate: Date?
     public let unreadCount: Int
+    public let unreadMentionCount: Int
     public let isMuted: Bool
 
     public init(from channel: Channel) {
@@ -114,6 +120,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isEnabled = channel.isEnabled
         self.lastMessageDate = channel.lastMessageDate
         self.unreadCount = channel.unreadCount
+        self.unreadMentionCount = channel.unreadMentionCount
         self.isMuted = channel.isMuted
     }
 
@@ -127,6 +134,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         isEnabled: Bool,
         lastMessageDate: Date?,
         unreadCount: Int,
+        unreadMentionCount: Int = 0,
         isMuted: Bool
     ) {
         self.id = id
@@ -137,6 +145,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isEnabled = isEnabled
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
+        self.unreadMentionCount = unreadMentionCount
         self.isMuted = isMuted
     }
 

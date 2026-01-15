@@ -269,4 +269,70 @@ struct MentionUtilitiesTests {
         let filtered = MentionUtilities.filterContacts([], query: "a")
         #expect(filtered.isEmpty)
     }
+
+    // MARK: - containsSelfMention Tests
+
+    @Test("containsSelfMention returns true for exact match")
+    func testContainsSelfMentionExact() {
+        let result = MentionUtilities.containsSelfMention(in: "Hello @[Alice]!", selfName: "Alice")
+        #expect(result == true)
+    }
+
+    @Test("containsSelfMention is case insensitive")
+    func testContainsSelfMentionCaseInsensitive() {
+        #expect(MentionUtilities.containsSelfMention(in: "@[ALICE]", selfName: "alice"))
+        #expect(MentionUtilities.containsSelfMention(in: "@[alice]", selfName: "ALICE"))
+        #expect(MentionUtilities.containsSelfMention(in: "@[Alice]", selfName: "aLiCe"))
+    }
+
+    @Test("containsSelfMention returns false for different name")
+    func testContainsSelfMentionDifferentName() {
+        let result = MentionUtilities.containsSelfMention(in: "@[Bob] hello", selfName: "Alice")
+        #expect(result == false)
+    }
+
+    @Test("containsSelfMention handles multiple mentions")
+    func testContainsSelfMentionMultiple() {
+        // Self mention is second
+        #expect(MentionUtilities.containsSelfMention(in: "@[Bob] @[Alice]", selfName: "Alice"))
+        // Self mention is first
+        #expect(MentionUtilities.containsSelfMention(in: "@[Alice] @[Bob]", selfName: "Alice"))
+    }
+
+    @Test("containsSelfMention returns false for empty text")
+    func testContainsSelfMentionEmptyText() {
+        let result = MentionUtilities.containsSelfMention(in: "", selfName: "Alice")
+        #expect(result == false)
+    }
+
+    @Test("containsSelfMention returns false for empty selfName")
+    func testContainsSelfMentionEmptySelfName() {
+        let result = MentionUtilities.containsSelfMention(in: "@[Alice]", selfName: "")
+        #expect(result == false)
+    }
+
+    @Test("containsSelfMention handles names with spaces")
+    func testContainsSelfMentionWithSpaces() {
+        let result = MentionUtilities.containsSelfMention(in: "@[My Node] hello", selfName: "My Node")
+        #expect(result == true)
+    }
+
+    @Test("containsSelfMention handles special characters")
+    func testContainsSelfMentionSpecialChars() {
+        let result = MentionUtilities.containsSelfMention(in: "@[Node-123] test", selfName: "Node-123")
+        #expect(result == true)
+    }
+
+    @Test("containsSelfMention returns false for partial match")
+    func testContainsSelfMentionPartialMatch() {
+        // "Ali" should not match "Alice"
+        let result = MentionUtilities.containsSelfMention(in: "@[Ali]", selfName: "Alice")
+        #expect(result == false)
+    }
+
+    @Test("containsSelfMention returns false for text without mentions")
+    func testContainsSelfMentionNoMentions() {
+        let result = MentionUtilities.containsSelfMention(in: "Hello world", selfName: "Alice")
+        #expect(result == false)
+    }
 }

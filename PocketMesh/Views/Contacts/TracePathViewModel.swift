@@ -86,6 +86,8 @@ final class TracePathViewModel {
     var result: TraceResult?
     var resultID: UUID?  // Set to new UUID only on successful trace
     var errorMessage: String?
+    var errorAutoClearDelay: Duration = .seconds(4)
+    private var errorAutoClearTask: Task<Void, Never>?
     var errorHapticTrigger = 0  // Incremented on each error for haptic feedback
 
     /// Buffer between consecutive batch traces to avoid network flooding.
@@ -274,11 +276,22 @@ final class TracePathViewModel {
     // MARK: - Error Handling
 
     func setError(_ message: String) {
+        errorAutoClearTask?.cancel()
+
         errorMessage = message
         errorHapticTrigger += 1
+
+        errorAutoClearTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: errorAutoClearDelay)
+            guard !Task.isCancelled else { return }
+            errorMessage = nil
+        }
     }
 
     func clearError() {
+        errorAutoClearTask?.cancel()
+        errorAutoClearTask = nil
         errorMessage = nil
     }
 

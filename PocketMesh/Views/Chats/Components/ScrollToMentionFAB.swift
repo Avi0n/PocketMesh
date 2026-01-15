@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// Floating action button to scroll to latest message with unread badge
-struct ScrollToBottomFAB: View {
+/// Floating action button to scroll to unread mentions
+struct ScrollToMentionFAB: View {
     let isVisible: Bool
-    let unreadCount: Int
+    let unreadMentionCount: Int
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            Image(systemName: "chevron.down")
+            Image(systemName: "at")
                 .font(.body.bold())
                 .frame(width: 44, height: 44)
         }
@@ -21,36 +21,39 @@ struct ScrollToBottomFAB: View {
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : 0.5)
         .animation(.snappy(duration: 0.2), value: isVisible)
-        .accessibilityLabel("Scroll to latest message")
-        .accessibilityValue(unreadCount > 0 ? "\(unreadCount) unread" : "")
+        .accessibilityLabel("Scroll to your oldest unread mention")
+        .accessibilityValue(unreadMentionCount > 1
+            ? "\(unreadMentionCount) unread mentions remaining"
+            : "1 unread mention")
+        .accessibilityHint("Double-tap to navigate to the message")
         .accessibilityHidden(!isVisible)
     }
 
     @ViewBuilder
     private var unreadBadge: some View {
-        if unreadCount > 0 {
-            Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+        if unreadMentionCount > 0 {
+            Text(unreadMentionCount > 99 ? "99+" : "\(unreadMentionCount)")
                 .font(.caption2.bold())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(.blue, in: .capsule)
+                .background(.red, in: .capsule)
                 .offset(x: 8, y: -8)
         }
     }
 }
 
-#Preview("Visible with unread") {
-    ScrollToBottomFAB(isVisible: true, unreadCount: 5, onTap: {})
+#Preview("Visible with multiple") {
+    ScrollToMentionFAB(isVisible: true, unreadMentionCount: 5, onTap: {})
         .padding(50)
 }
 
-#Preview("Visible no unread") {
-    ScrollToBottomFAB(isVisible: true, unreadCount: 0, onTap: {})
+#Preview("Visible with one") {
+    ScrollToMentionFAB(isVisible: true, unreadMentionCount: 1, onTap: {})
         .padding(50)
 }
 
 #Preview("Hidden") {
-    ScrollToBottomFAB(isVisible: false, unreadCount: 3, onTap: {})
+    ScrollToMentionFAB(isVisible: false, unreadMentionCount: 3, onTap: {})
         .padding(50)
 }

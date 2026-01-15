@@ -156,12 +156,18 @@ public actor MessagePollingService {
     /// Wait for all pending message handlers to complete.
     /// Call this after pollAllMessages() to ensure all messages are fully processed
     /// before performing actions that depend on completion (like resuming notifications).
-    public func waitForPendingHandlers() async {
-        // Poll until no handlers are executing
-        // The event monitor processes handlers sequentially, so we're waiting for the queue to drain
+    public func waitForPendingHandlers(timeout: Duration) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+
         while pendingHandlerCount > 0 {
+            if clock.now >= deadline {
+                return false
+            }
             try? await Task.sleep(for: .milliseconds(10))
         }
+
+        return true
     }
 
     // MARK: - Event Monitoring

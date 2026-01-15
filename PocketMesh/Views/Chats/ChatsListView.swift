@@ -4,6 +4,10 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatsListView")
 
+private struct HashtagJoinRequest: Identifiable, Hashable {
+    let id: String
+}
+
 /// List of active conversations
 struct ChatsListView: View {
     @Environment(AppState.self) private var appState
@@ -17,6 +21,7 @@ struct ChatsListView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
+    @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var filteredConversations: [Conversation] {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
@@ -186,6 +191,11 @@ struct ChatsListView: View {
                 // Restore tab bar when navigating back to the list
                 if newPath.isEmpty {
                     appState.tabBarVisibility = .visible
+                    // Refresh conversations to pick up any changes made in chat views
+                    // (e.g., mention counts, unread counts, last message previews)
+                    Task {
+                        await loadConversations()
+                    }
                 }
             }
             .sheet(item: $roomToAuthenticate) { session in
@@ -210,8 +220,28 @@ struct ChatsListView: View {
             } message: {
                 Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
             }
+            .sheet(item: $hashtagToJoin) { request in
+                JoinHashtagFromMessageView(channelName: request.id) { channel in
+                    hashtagToJoin = nil
+                    if let channel {
+                        navigationPath.append(channel)
+                    }
+                }
+                .presentationDetents([.medium])
+            }
             .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
         }
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == "pocketmesh-hashtag" else {
+                return .systemAction
+            }
+            guard let channelName = url.host else {
+                logger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
+                return .handled
+            }
+            handleHashtagTap(name: channelName)
+            return .handled
+        })
     }
 
     private func handlePendingRoomNavigation() {
@@ -333,6 +363,49 @@ struct ChatsListView: View {
             await loadConversations()
         }
     }
+
+    // MARK: - Hashtag Channel Handling
+
+    private func handleHashtagTap(name: String) {
+        Task {
+            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
+            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+                logger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
+                return
+            }
+
+            let fullName = "#\(normalizedName)"
+
+            guard let deviceID = appState.connectedDevice?.id else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+                return
+            }
+
+            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
+                await MainActor.run {
+                    navigationPath.append(channel)
+                }
+            } else {
+                await MainActor.run {
+                    hashtagToJoin = HashtagJoinRequest(id: fullName)
+                }
+            }
+        }
+    }
+
+    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
+        do {
+            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+            return channels.first { channel in
+                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
+            }
+        } catch {
+            logger.error("Failed to fetch channels for hashtag lookup: \(error)")
+            return nil
+        }
+    }
 }
 
 // MARK: - Swipe Actions
@@ -422,15 +495,25 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    // Unread badge
-                    if contact.unreadCount > 0 {
-                        Text(contact.unreadCount, format: .number)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                    // Mention and unread badges
+                    HStack(spacing: 4) {
+                        if contact.unreadMentionCount > 0 {
+                            Text("@")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 18, height: 18)
+                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .circle)
+                        }
+
+                        if contact.unreadCount > 0 {
+                            Text(contact.unreadCount, format: .number)
+                                .font(.caption2)
+                                .bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(contact.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                        }
                     }
                 }
             }
@@ -620,15 +703,25 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    // Unread badge
-                    if channel.unreadCount > 0 {
-                        Text(channel.unreadCount, format: .number)
-                            .font(.caption2)
-                            .bold()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                    // Mention and unread badges
+                    HStack(spacing: 4) {
+                        if channel.unreadMentionCount > 0 {
+                            Text("@")
+                                .font(.caption.bold())
+                                .foregroundStyle(.white)
+                                .frame(width: 18, height: 18)
+                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .circle)
+                        }
+
+                        if channel.unreadCount > 0 {
+                            Text(channel.unreadCount, format: .number)
+                                .font(.caption2)
+                                .bold()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(channel.isMuted ? Color.secondary : Color.blue, in: .capsule)
+                        }
                     }
                 }
             }
@@ -820,3 +913,4 @@ struct RoomAuthenticationSheet: View {
     ChatsListView()
         .environment(AppState())
 }
+

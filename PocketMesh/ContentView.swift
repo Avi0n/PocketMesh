@@ -93,6 +93,39 @@ struct OnboardingView: View {
 
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var showingDeviceSelection = false
+    @State private var showDisconnectedPill = false
+    @State private var showConnectedToast = false
+
+    private var hasPersistedDevice: Bool {
+        appState.connectionManager.lastConnectedDeviceID != nil
+    }
+
+    private var connectionStateID: Int {
+        switch appState.connectionState {
+        case .disconnected:
+            0
+        case .connecting:
+            1
+        case .connected:
+            2
+        case .ready:
+            3
+        }
+    }
+
+    private var shouldShowConnectingPill: Bool {
+        appState.connectionState == .connecting || appState.connectionState == .connected
+    }
+
+    private var topPillPadding: CGFloat {
+        horizontalSizeClass == .regular ? 56 : 8
+    }
+
+    private var shouldShowTopStatusPill: Bool {
+        appState.shouldShowSyncingPill || shouldShowConnectingPill || showDisconnectedPill || showConnectedToast
+    }
 
     var body: some View {
         @Bindable var appState = appState
@@ -121,17 +154,20 @@ struct MainTabView: View {
             }
         }
 
-            if appState.shouldShowPill || appState.connectionState == .connecting {
+            if shouldShowTopStatusPill {
                 SyncingPillView(
                     phase: appState.currentSyncPhase,
                     connectionState: appState.connectionState,
                     isFailure: appState.isPillFailure,
-                    failureText: appState.pillText
+                    failureText: appState.pillText,
+                    showsConnectedToast: showConnectedToast,
+                    showsDisconnectedWarning: showDisconnectedPill,
+                    onDisconnectedTap: { showingDeviceSelection = true }
                 )
-                    .padding(.top, 8)
+                    .padding(.top, topPillPadding)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(duration: 0.3), value: appState.shouldShowPill || appState.connectionState == .connecting)
+                    .animation(.spring(duration: 0.3), value: shouldShowTopStatusPill)
             }
         }
         .onChange(of: appState.selectedTab) { _, newTab in
@@ -141,6 +177,36 @@ struct MainTabView: View {
                     await appState.donateFloodAdvertTipIfOnValidTab()
                 }
             }
+        }
+        .sheet(isPresented: $showingDeviceSelection) {
+            DeviceSelectionSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .task(id: connectionStateID) {
+            showConnectedToast = false
+            guard appState.connectionState == .ready else { return }
+
+            showConnectedToast = true
+            do {
+                try await Task.sleep(for: .seconds(2))
+            } catch {
+                return
+            }
+            showConnectedToast = false
+        }
+        .task(id: "\(connectionStateID)-\(hasPersistedDevice)") {
+            showDisconnectedPill = false
+            guard hasPersistedDevice, appState.connectionState == .disconnected else { return }
+
+            do {
+                try await Task.sleep(for: .seconds(1))
+            } catch {
+                return
+            }
+
+            guard hasPersistedDevice, appState.connectionState == .disconnected else { return }
+            showDisconnectedPill = true
         }
     }
 }

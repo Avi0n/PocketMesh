@@ -436,4 +436,71 @@ final class ProtocolBugFixTests: XCTestCase {
         // Empty payload is valid (just no data points)
         XCTAssertEqual(response.dataPoints.count, 0)
     }
+
+    func test_requestStatus_throwsDeviceErrorWhenErrorResponseReceived() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "Test")
+        )
+
+        let startTask = Task {
+            try await session.start()
+        }
+
+        for _ in 0..<50 {
+            if (await transport.sentData).count >= 1 { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        var selfInfoPayload = Data()
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(Data(repeating: 0x01, count: 32))
+        selfInfoPayload.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Array($0) })
+        selfInfoPayload.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Array($0) })
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(0)
+        selfInfoPayload.append(contentsOf: withUnsafeBytes(of: UInt32(915_000).littleEndian) { Array($0) })
+        selfInfoPayload.append(contentsOf: withUnsafeBytes(of: UInt32(125_000).littleEndian) { Array($0) })
+        selfInfoPayload.append(7)
+        selfInfoPayload.append(5)
+        selfInfoPayload.append(contentsOf: "Test".utf8)
+
+        var selfInfoPacket = Data([ResponseCode.selfInfo.rawValue])
+        selfInfoPacket.append(selfInfoPayload)
+        await transport.simulateReceive(selfInfoPacket)
+
+        try await startTask.value
+
+        let publicKey = Data(repeating: 0x31, count: 32)
+        let statusTask = Task {
+            try await session.requestStatus(from: publicKey)
+        }
+
+        for _ in 0..<50 {
+            if (await transport.sentData).count >= 2 { break }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        await transport.simulateError(code: 10)
+
+        do {
+            _ = try await statusTask.value
+            XCTFail("Expected requestStatus(from:) to throw")
+        } catch let error as MeshCoreError {
+            guard case .deviceError(let code) = error else {
+                XCTFail("Expected MeshCoreError.deviceError, got \(error)")
+                return
+            }
+            XCTAssertEqual(code, 10)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        await session.stop()
+    }
 }

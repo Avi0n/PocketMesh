@@ -69,13 +69,15 @@ public actor RoomServerService {
     ///   - password: Authentication password (uses keychain if not provided)
     ///   - rememberPassword: Whether to store password in keychain
     ///   - pathLength: Path length for timeout calculation (0 = direct)
+    ///   - onTimeoutKnown: Optional callback invoked with timeout in seconds once firmware responds.
     /// - Returns: The authenticated session
     public func joinRoom(
         deviceID: UUID,
         contact: ContactDTO,
         password: String?,
         rememberPassword: Bool = true,
-        pathLength: UInt8 = 0
+        pathLength: UInt8 = 0,
+        onTimeoutKnown: (@Sendable (Int) async -> Void)? = nil
     ) async throws -> RemoteNodeSessionDTO {
         // Check if this is a new session
         let existingSession = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
@@ -96,7 +98,8 @@ public actor RoomServerService {
         _ = try await remoteNodeService.login(
             sessionID: remoteSession.id,
             password: password,
-            pathLength: pathLength
+            pathLength: pathLength,
+            onTimeoutKnown: onTimeoutKnown
         )
 
         // Store password only after successful login

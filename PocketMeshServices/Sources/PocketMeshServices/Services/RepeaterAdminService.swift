@@ -56,12 +56,14 @@ public actor RepeaterAdminService {
     // MARK: - Admin Connection
 
     /// Connect to a repeater as admin by creating a session and authenticating.
+    /// - Parameter onTimeoutKnown: Optional callback invoked with timeout in seconds once firmware responds.
     public func connectAsAdmin(
         deviceID: UUID,
         contact: ContactDTO,
         password: String?,
         rememberPassword: Bool = true,
-        pathLength: UInt8 = 0
+        pathLength: UInt8 = 0,
+        onTimeoutKnown: (@Sendable (Int) async -> Void)? = nil
     ) async throws -> RemoteNodeSessionDTO {
         let remoteSession = try await remoteNodeService.createSession(
             deviceID: deviceID,
@@ -74,7 +76,8 @@ public actor RepeaterAdminService {
         _ = try await remoteNodeService.login(
             sessionID: remoteSession.id,
             password: password,
-            pathLength: pathLength
+            pathLength: pathLength,
+            onTimeoutKnown: onTimeoutKnown
         )
 
         // Store password only after successful login
@@ -163,9 +166,17 @@ public actor RepeaterAdminService {
 
     // MARK: - CLI Commands
 
-    /// Send a CLI command to a repeater (admin only).
-    public func sendCommand(sessionID: UUID, command: String) async throws -> String {
-        try await remoteNodeService.sendCLICommand(sessionID: sessionID, command: command)
+    /// Send a CLI command to a repeater and wait for response (admin only).
+    public func sendCommand(
+        sessionID: UUID,
+        command: String,
+        timeout: Duration = .seconds(10)
+    ) async throws -> String {
+        try await remoteNodeService.sendCLICommand(
+            sessionID: sessionID,
+            command: command,
+            timeout: timeout
+        )
     }
 
     // MARK: - Session Queries

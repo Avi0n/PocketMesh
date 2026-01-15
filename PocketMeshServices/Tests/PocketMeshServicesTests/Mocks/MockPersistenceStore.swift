@@ -346,7 +346,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func updateContactLastMessage(contactID: UUID, date: Date?) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -366,13 +366,14 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: date,
-                unreadCount: contact.unreadCount
+                unreadCount: contact.unreadCount,
+                unreadMentionCount: contact.unreadMentionCount
             )
         }
     }
 
     public func incrementUnreadCount(contactID: UUID) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -392,13 +393,14 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
-                unreadCount: contact.unreadCount + 1
+                unreadCount: contact.unreadCount + 1,
+                unreadMentionCount: contact.unreadMentionCount
             )
         }
     }
 
     public func clearUnreadCount(contactID: UUID) async throws {
-        if var contact = contacts[contactID] {
+        if let contact = contacts[contactID] {
             contacts[contactID] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -418,9 +420,194 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isFavorite: contact.isFavorite,
                 isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
-                unreadCount: 0
+                unreadCount: 0,
+                unreadMentionCount: contact.unreadMentionCount
             )
         }
+    }
+
+    // MARK: - Mention Tracking
+
+    public func markMentionSeen(messageID: UUID) async throws {
+        if let message = messages[messageID] {
+            messages[messageID] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
+                deduplicationKey: message.deduplicationKey,
+                linkPreviewURL: message.linkPreviewURL,
+                linkPreviewTitle: message.linkPreviewTitle,
+                linkPreviewImageData: message.linkPreviewImageData,
+                linkPreviewIconData: message.linkPreviewIconData,
+                linkPreviewFetched: message.linkPreviewFetched,
+                containsSelfMention: message.containsSelfMention,
+                mentionSeen: true
+            )
+        }
+    }
+
+    public func incrementUnreadMentionCount(contactID: UUID) async throws {
+        if let contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: contact.unreadCount,
+                unreadMentionCount: contact.unreadMentionCount + 1
+            )
+        }
+    }
+
+    public func decrementUnreadMentionCount(contactID: UUID) async throws {
+        if let contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: contact.unreadCount,
+                unreadMentionCount: max(0, contact.unreadMentionCount - 1)
+            )
+        }
+    }
+
+    public func clearUnreadMentionCount(contactID: UUID) async throws {
+        if let contact = contacts[contactID] {
+            contacts[contactID] = ContactDTO(
+                id: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
+                name: contact.name,
+                typeRawValue: contact.typeRawValue,
+                flags: contact.flags,
+                outPathLength: contact.outPathLength,
+                outPath: contact.outPath,
+                lastAdvertTimestamp: contact.lastAdvertTimestamp,
+                latitude: contact.latitude,
+                longitude: contact.longitude,
+                lastModified: contact.lastModified,
+                nickname: contact.nickname,
+                isBlocked: contact.isBlocked,
+                isMuted: contact.isMuted,
+                isFavorite: contact.isFavorite,
+                isDiscovered: contact.isDiscovered,
+                lastMessageDate: contact.lastMessageDate,
+                unreadCount: contact.unreadCount,
+                unreadMentionCount: 0
+            )
+        }
+    }
+
+    public func incrementChannelUnreadMentionCount(channelID: UUID) async throws {
+        if let channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount,
+                unreadMentionCount: channel.unreadMentionCount + 1,
+                isMuted: channel.isMuted
+            )
+        }
+    }
+
+    public func decrementChannelUnreadMentionCount(channelID: UUID) async throws {
+        if let channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount,
+                unreadMentionCount: max(0, channel.unreadMentionCount - 1),
+                isMuted: channel.isMuted
+            )
+        }
+    }
+
+    public func clearChannelUnreadMentionCount(channelID: UUID) async throws {
+        if let channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount,
+                unreadMentionCount: 0,
+                isMuted: channel.isMuted
+            )
+        }
+    }
+
+    public func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] {
+        messages.values
+            .filter { $0.contactID == contactID && $0.containsSelfMention && !$0.mentionSeen }
+            .sorted { $0.timestamp < $1.timestamp }
+            .map(\.id)
+    }
+
+    public func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] {
+        messages.values
+            .filter { $0.deviceID == deviceID && $0.channelIndex == channelIndex && $0.containsSelfMention && !$0.mentionSeen }
+            .sorted { $0.timestamp < $1.timestamp }
+            .map(\.id)
     }
 
     public func deleteMessagesForContact(contactID: UUID) async throws {
@@ -443,7 +630,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func confirmContact(id: UUID) async throws {
-        if var contact = contacts[id] {
+        if let contact = contacts[id] {
             contacts[id] = ContactDTO(
                 id: contact.id,
                 deviceID: contact.deviceID,
@@ -463,7 +650,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isFavorite: contact.isFavorite,
                 isDiscovered: false,
                 lastMessageDate: contact.lastMessageDate,
-                unreadCount: contact.unreadCount
+                unreadCount: contact.unreadCount,
+                unreadMentionCount: contact.unreadMentionCount
             )
         }
     }
@@ -508,6 +696,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isEnabled: !info.name.isEmpty,
                 lastMessageDate: existing.lastMessageDate,
                 unreadCount: existing.unreadCount,
+                unreadMentionCount: existing.unreadMentionCount,
                 isMuted: existing.isMuted
             )
             return existing.id
@@ -522,6 +711,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             isEnabled: !info.name.isEmpty,
             lastMessageDate: nil,
             unreadCount: 0,
+            unreadMentionCount: 0,
             isMuted: false
         )
         channels[id] = dto
@@ -546,7 +736,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     }
 
     public func updateChannelLastMessage(channelID: UUID, date: Date) async throws {
-        if var channel = channels[channelID] {
+        if let channel = channels[channelID] {
             channels[channelID] = ChannelDTO(
                 id: channel.id,
                 deviceID: channel.deviceID,
@@ -556,13 +746,14 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isEnabled: channel.isEnabled,
                 lastMessageDate: date,
                 unreadCount: channel.unreadCount,
+                unreadMentionCount: channel.unreadMentionCount,
                 isMuted: channel.isMuted
             )
         }
     }
 
     public func incrementChannelUnreadCount(channelID: UUID) async throws {
-        if var channel = channels[channelID] {
+        if let channel = channels[channelID] {
             channels[channelID] = ChannelDTO(
                 id: channel.id,
                 deviceID: channel.deviceID,
@@ -572,13 +763,14 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isEnabled: channel.isEnabled,
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount + 1,
+                unreadMentionCount: channel.unreadMentionCount,
                 isMuted: channel.isMuted
             )
         }
     }
 
     public func clearChannelUnreadCount(channelID: UUID) async throws {
-        if var channel = channels[channelID] {
+        if let channel = channels[channelID] {
             channels[channelID] = ChannelDTO(
                 id: channel.id,
                 deviceID: channel.deviceID,
@@ -588,6 +780,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isEnabled: channel.isEnabled,
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: 0,
+                unreadMentionCount: channel.unreadMentionCount,
                 isMuted: channel.isMuted
             )
         }
