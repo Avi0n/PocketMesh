@@ -5,19 +5,27 @@ import Foundation
 /// Uses actor for thread-safe mutable state access.
 public actor MockAppStateProvider: AppStateProvider {
 
+    // MARK: - Stubs
+
     /// Configurable foreground state for tests
-    private var _isInForeground: Bool
+    public var stubbedIsInForeground: Bool
+
+    // MARK: - Protocol Properties
 
     public var isInForeground: Bool {
-        get async { _isInForeground }
+        get async { stubbedIsInForeground }
     }
+
+    // MARK: - Initialization
 
     public init(isInForeground: Bool = true) {
-        self._isInForeground = isInForeground
+        self.stubbedIsInForeground = isInForeground
     }
 
-    /// Set foreground state (for test configuration)
-    public func setForeground(_ value: Bool) {
-        _isInForeground = value
+    // MARK: - Test Helpers
+
+    /// Sets the stubbed foreground state
+    public func setIsInForeground(_ value: Bool) {
+        stubbedIsInForeground = value
     }
 }
