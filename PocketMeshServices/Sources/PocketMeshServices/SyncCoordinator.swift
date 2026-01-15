@@ -336,7 +336,8 @@ public actor SyncCoordinator {
                 dataStore: services.dataStore,
                 contactService: services.contactService,
                 channelService: services.channelService,
-                messagePollingService: services.messagePollingService
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
@@ -409,7 +410,8 @@ public actor SyncCoordinator {
                 dataStore: services.dataStore,
                 contactService: services.contactService,
                 channelService: services.channelService,
-                messagePollingService: services.messagePollingService
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider
             )
 
             // 4. Wire discovery handlers (for ongoing contact discovery)
