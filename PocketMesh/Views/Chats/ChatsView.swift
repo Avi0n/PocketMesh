@@ -34,13 +34,6 @@ struct ChatsView: View {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
     }
 
-    private var filterAccessibilityLabel: String {
-        if let filter = selectedFilter {
-            return "Filter conversations, currently showing \(filter.rawValue)"
-        }
-        return "Filter conversations"
-    }
-
     private var emptyStateMessage: (title: String, description: String, systemImage: String) {
         switch selectedFilter {
         case .none:
@@ -56,12 +49,100 @@ struct ChatsView: View {
         }
     }
 
-    private var filterIcon: String {
-        selectedFilter == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
+    @ViewBuilder
+    private func conversationListState<Content: View>(
+        @ViewBuilder listContent: () -> Content
+    ) -> some View {
+        if viewModel.isLoading && viewModel.allConversations.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if filteredConversations.isEmpty {
+            ContentUnavailableView {
+                Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
+            } description: {
+                Text(emptyStateMessage.description)
+            } actions: {
+                if selectedFilter != nil {
+                    Button("Clear Filter") {
+                        selectedFilter = nil
+                    }
+                }
+            }
+        } else {
+            listContent()
+        }
+    }
+
+    private func applyChatsListModifiers<Content: View>(
+        to content: Content,
+        onTaskStart: @escaping () async -> Void
+    ) -> some View {
+        content
+            .navigationTitle("Chats")
+            .searchable(text: $searchText, prompt: "Search conversations")
+            .searchScopes($selectedFilter, activation: .onSearchPresentation) {
+                Text("All").tag(nil as ChatFilter?)
+                ForEach(ChatFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter as ChatFilter?)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    filterMenu
+                }
+                ToolbarItem(placement: .automatic) {
+                    Menu {
+                        Button {
+                            showingNewChat = true
+                        } label: {
+                            Label("New Chat", systemImage: "person")
+                        }
+
+                        Button {
+                            showingChannelOptions = true
+                        } label: {
+                            Label("New Channel", systemImage: "number")
+                        }
+                    } label: {
+                        Label("New Message", systemImage: "square.and.pencil")
+                    }
+                }
+            }
+            .refreshable {
+                await refreshConversations()
+            }
+            .task {
+                await onTaskStart()
+            }
+            .onChange(of: appState.pendingChatContact) { _, _ in
+                handlePendingNavigation()
+            }
+            .onChange(of: appState.pendingRoomSession) { _, _ in
+                handlePendingRoomNavigation()
+            }
+            .onChange(of: appState.servicesVersion) { _, _ in
+                Task {
+                    await loadConversations()
+                }
+            }
+            .onChange(of: appState.conversationsVersion) { _, _ in
+                Task {
+                    await loadConversations()
+                }
+            }
     }
 
     @ViewBuilder
     private var filterMenu: some View {
+        let filterIcon = selectedFilter == nil
+            ? "line.3.horizontal.decrease.circle"
+            : "line.3.horizontal.decrease.circle.fill"
+        let accessibilityLabel = selectedFilter.map { "Filter conversations, currently showing \($0.rawValue)" }
+            ?? "Filter conversations"
+
         Menu {
             Picker("Filter", selection: $selectedFilter) {
                 Text("All").tag(nil as ChatFilter?)
@@ -74,11 +155,11 @@ struct ChatsView: View {
         } label: {
             if selectedFilter == nil {
                 Label("Filter", systemImage: filterIcon)
-                    .accessibilityLabel(filterAccessibilityLabel)
+                    .accessibilityLabel(accessibilityLabel)
             } else {
                 Label("Filter", systemImage: filterIcon)
                     .foregroundStyle(.tint)
-                    .accessibilityLabel(filterAccessibilityLabel)
+                    .accessibilityLabel(accessibilityLabel)
             }
         }
     }
@@ -169,75 +250,24 @@ struct ChatsView: View {
     }
 
     private var splitSidebarContent: some View {
-        Group {
-            if viewModel.isLoading && viewModel.allConversations.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if filteredConversations.isEmpty {
-                ContentUnavailableView {
-                    Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
-                } description: {
-                    Text(emptyStateMessage.description)
-                } actions: {
-                    if selectedFilter != nil {
-                        Button("Clear Filter") {
-                            selectedFilter = nil
-                        }
-                    }
-                }
-            } else {
+        applyChatsListModifiers(
+            to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
                     conversations: filteredConversations,
                     selection: $selectedRoute,
                     onDeleteConversation: handleDeleteConversation
                 )
+            },
+            onTaskStart: {
+                chatsViewLogger.debug("ChatsView: task started, services=\(appState.services != nil)")
+                viewModel.configure(appState: appState)
+                await loadConversations()
+                chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
+                handlePendingNavigation()
+                handlePendingRoomNavigation()
             }
-        }
-        .navigationTitle("Chats")
-        .searchable(text: $searchText, prompt: "Search conversations")
-        .searchScopes($selectedFilter, activation: .onSearchPresentation) {
-            Text("All").tag(nil as ChatFilter?)
-            ForEach(ChatFilter.allCases) { filter in
-                Text(filter.rawValue).tag(filter as ChatFilter?)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                BLEStatusIndicatorView()
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                filterMenu
-            }
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button {
-                        showingNewChat = true
-                    } label: {
-                        Label("New Chat", systemImage: "person")
-                    }
-
-                    Button {
-                        showingChannelOptions = true
-                    } label: {
-                        Label("New Channel", systemImage: "number")
-                    }
-                } label: {
-                    Label("New Message", systemImage: "square.and.pencil")
-                }
-            }
-        }
-        .refreshable {
-            await refreshConversations()
-        }
-        .task {
-            chatsViewLogger.info("ChatsView: task started, services=\(appState.services != nil)")
-            viewModel.configure(appState: appState)
-            await loadConversations()
-            chatsViewLogger.info("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
-            handlePendingNavigation()
-            handlePendingRoomNavigation()
-        }
+        )
         .onChange(of: selectedRoute) { oldValue, newValue in
             if oldValue != nil {
                 let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
@@ -260,22 +290,6 @@ struct ChatsView: View {
                 guard case .room(let session) = newValue else { return nil }
                 return session.isConnected
             }()
-        }
-        .onChange(of: appState.pendingChatContact) { _, _ in
-            handlePendingNavigation()
-        }
-        .onChange(of: appState.pendingRoomSession) { _, _ in
-            handlePendingRoomNavigation()
-        }
-        .onChange(of: appState.servicesVersion) { _, _ in
-            Task {
-                await loadConversations()
-            }
-        }
-        .onChange(of: appState.conversationsVersion) { _, _ in
-            Task {
-                await loadConversations()
-            }
         }
     }
 
@@ -340,23 +354,8 @@ struct ChatsView: View {
     }
 
     private var stackRootContent: some View {
-        Group {
-            if viewModel.isLoading && viewModel.allConversations.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if filteredConversations.isEmpty {
-                ContentUnavailableView {
-                    Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
-                } description: {
-                    Text(emptyStateMessage.description)
-                } actions: {
-                    if selectedFilter != nil {
-                        Button("Clear Filter") {
-                            selectedFilter = nil
-                        }
-                    }
-                }
-            } else {
+        applyChatsListModifiers(
+            to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
                     conversations: filteredConversations,
@@ -368,66 +367,14 @@ struct ChatsView: View {
                     },
                     onDeleteConversation: handleDeleteConversation
                 )
-            }
-        }
-        .navigationTitle("Chats")
-        .searchable(text: $searchText, prompt: "Search conversations")
-        .searchScopes($selectedFilter, activation: .onSearchPresentation) {
-            Text("All").tag(nil as ChatFilter?)
-            ForEach(ChatFilter.allCases) { filter in
-                Text(filter.rawValue).tag(filter as ChatFilter?)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                BLEStatusIndicatorView()
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                filterMenu
-            }
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button {
-                        showingNewChat = true
-                    } label: {
-                        Label("New Chat", systemImage: "person")
-                    }
-
-                    Button {
-                        showingChannelOptions = true
-                    } label: {
-                        Label("New Channel", systemImage: "number")
-                    }
-                } label: {
-                    Label("New Message", systemImage: "square.and.pencil")
-                }
-            }
-        }
-        .refreshable {
-            await refreshConversations()
-        }
-        .task {
-            viewModel.configure(appState: appState)
-            await loadConversations()
-            handlePendingNavigation()
-            handlePendingRoomNavigation()
-        }
-        .onChange(of: appState.pendingChatContact) { _, _ in
-            handlePendingNavigation()
-        }
-        .onChange(of: appState.pendingRoomSession) { _, _ in
-            handlePendingRoomNavigation()
-        }
-        .onChange(of: appState.servicesVersion) { _, _ in
-            Task {
+            },
+            onTaskStart: {
+                viewModel.configure(appState: appState)
                 await loadConversations()
+                handlePendingNavigation()
+                handlePendingRoomNavigation()
             }
-        }
-        .onChange(of: appState.conversationsVersion) { _, _ in
-            Task {
-                await loadConversations()
-            }
-        }
+        )
     }
 
     private func loadConversations() async {

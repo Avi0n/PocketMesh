@@ -2,11 +2,14 @@ import SwiftUI
 import PocketMeshServices
 
 struct ConversationListContent: View {
+    enum ListMode {
+        case selection(Binding<ChatRoute?>)
+        case navigation(onNavigate: (ChatRoute) -> Void, onRequestRoomAuth: (RemoteNodeSessionDTO) -> Void)
+    }
+
     private let viewModel: ChatViewModel
     private let conversations: [Conversation]
-    private let selection: Binding<ChatRoute?>?
-    private let onNavigate: ((ChatRoute) -> Void)?
-    private let onRequestRoomAuth: ((RemoteNodeSessionDTO) -> Void)?
+    private let mode: ListMode
     private let onDeleteConversation: (Conversation) -> Void
 
     init(
@@ -17,9 +20,7 @@ struct ConversationListContent: View {
     ) {
         self.viewModel = viewModel
         self.conversations = conversations
-        self.selection = selection
-        self.onNavigate = nil
-        self.onRequestRoomAuth = nil
+        self.mode = .selection(selection)
         self.onDeleteConversation = onDeleteConversation
     }
 
@@ -32,14 +33,13 @@ struct ConversationListContent: View {
     ) {
         self.viewModel = viewModel
         self.conversations = conversations
-        self.selection = nil
-        self.onNavigate = onNavigate
-        self.onRequestRoomAuth = onRequestRoomAuth
+        self.mode = .navigation(onNavigate: onNavigate, onRequestRoomAuth: onRequestRoomAuth)
         self.onDeleteConversation = onDeleteConversation
     }
 
     var body: some View {
-        if let selection {
+        switch mode {
+        case .selection(let selection):
             List(selection: selection) {
                 ForEach(conversations) { conversation in
                     let route = ChatRoute(conversation: conversation)
@@ -68,7 +68,8 @@ struct ConversationListContent: View {
                 }
             }
             .listStyle(.plain)
-        } else {
+
+        case .navigation(let onNavigate, let onRequestRoomAuth):
             List {
                 ForEach(conversations) { conversation in
                     let route = ChatRoute(conversation: conversation)
@@ -92,9 +93,9 @@ struct ConversationListContent: View {
                     case .room(let session):
                         Button {
                             if session.isConnected {
-                                onNavigate?(route)
+                                onNavigate(route)
                             } else {
-                                onRequestRoomAuth?(session)
+                                onRequestRoomAuth(session)
                             }
                         } label: {
                             RoomConversationRow(session: session)
