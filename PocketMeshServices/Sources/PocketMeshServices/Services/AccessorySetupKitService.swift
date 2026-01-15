@@ -544,22 +544,12 @@ public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManag
                 }
             }
         )
-
+        
         let hosting = UIHostingController(rootView: pickerView)
         hosting.modalPresentationStyle = .formSheet
 
-        // Find top-most view controller to present from
-        if let topVC = Self.topViewController() {
-            self.pickerHost = hosting
-            topVC.present(hosting, animated: true)
-        } else {
-            // If we cannot present, stop scanning and fail
-            stopScan()
-            if let continuation = pickerContinuation {
-                pickerContinuation = nil
-                continuation.resume(throwing: AccessorySetupKitError.pickerRestricted)
-            }
-        }
+        self.pickerHost = hosting
+        UIApplication.shared.windows.first?.rootViewController?.present(hosting, animated: true)
     }
 
     // Dismiss hosting controller if presented
@@ -569,49 +559,7 @@ public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManag
             pickerHost = nil
         }
     }
-
-    // Utility to get the top-most view controller for presentation
-    private static func topViewController(base: UIViewController? = nil) -> UIViewController? {
-        let baseVC: UIViewController? = {
-            // Prefer an explicitly provided base VC
-            if let base = base { return base }
-
-            // Find a foreground-active window scene and return its key window's rootViewController
-            for scene in UIApplication.shared.connectedScenes {
-                guard scene.activationState == .foregroundActive,
-                      let windowScene = scene as? UIWindowScene else { continue }
-                if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
-                    return keyWindow.rootViewController
-                }
-                // Fallback to first window's root if no keyWindow is marked yet
-                if let anyRoot = windowScene.windows.first?.rootViewController {
-                    return anyRoot
-                }
-            }
-
-            // As a final fallback, search any connected window scene for a window
-            for scene in UIApplication.shared.connectedScenes {
-                if let windowScene = scene as? UIWindowScene,
-                   let anyRoot = windowScene.windows.first?.rootViewController {
-                    return anyRoot
-                }
-            }
-
-            return nil
-        }()
-
-        if let nav = baseVC as? UINavigationController {
-            return topViewController(base: nav.visibleViewController)
-        }
-        if let tab = baseVC as? UITabBarController, let selected = tab.selectedViewController {
-            return topViewController(base: selected)
-        }
-        if let presented = baseVC?.presentedViewController {
-            return topViewController(base: presented)
-        }
-        return baseVC
-    }
-
+  
     public func removeAccessory(_ accessory: ASAccessory) async throws {}
 
     public func renameAccessory(_ accessory: ASAccessory) async throws {}
@@ -763,3 +711,4 @@ struct BluetoothDevicePickerView: View {
 }
 
 #endif
+
