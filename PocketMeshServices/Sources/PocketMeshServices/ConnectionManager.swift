@@ -97,6 +97,9 @@ public final class ConnectionManager {
     /// Use this to wire up UI observation of services.
     public var onConnectionReady: (() async -> Void)?
 
+    /// Provider for app foreground/background state detection
+    public var appStateProvider: AppStateProvider?
+
     /// Number of paired accessories (for troubleshooting UI)
     public var pairedAccessoriesCount: Int {
         accessorySetupKit.pairedAccessories.count
@@ -410,7 +413,11 @@ public final class ConnectionManager {
             throw ConnectionError.initializationFailed("No self info")
         }
 
-        let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: session,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -914,7 +921,11 @@ public final class ConnectionManager {
             self.session = session
 
             // Create services
-            let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: session,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
                 self.services = newServices
 
@@ -1004,7 +1015,11 @@ public final class ConnectionManager {
             }
 
             // Create services
-            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: newSession,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
             self.services = newServices
 
@@ -1096,7 +1111,11 @@ public final class ConnectionManager {
         let deviceCapabilities = try await newSession.queryDevice()
 
         // Create and wire services
-        let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: newSession,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -1373,7 +1392,11 @@ public final class ConnectionManager {
         }
 
         // Create services
-        let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: newSession,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -1590,9 +1613,13 @@ public final class ConnectionManager {
                 return
             }
 
-            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: newSession,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
-    
+
             // Check after await
             guard shouldBeConnected else {
                 logger.info("User disconnected during service wiring")
