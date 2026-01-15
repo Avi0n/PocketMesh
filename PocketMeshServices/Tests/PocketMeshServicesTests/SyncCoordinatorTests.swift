@@ -359,6 +359,10 @@ struct SyncCoordinatorTests {
         // Channel sync should run in foreground
         let channelInvocations = await mockChannelService.syncChannelsInvocations
         #expect(channelInvocations.count == 1, "Channel sync should run when in foreground")
+
+        // Contact sync should also run
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should run in foreground")
     }
 
     @Test("Nil appStateProvider defaults to foreground behavior")
@@ -383,6 +387,10 @@ struct SyncCoordinatorTests {
         // Should default to foreground (run channels)
         let channelInvocations = await mockChannelService.syncChannelsInvocations
         #expect(channelInvocations.count == 1, "Nil appStateProvider should default to foreground behavior")
+
+        // Contact sync should also run
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should run with nil appStateProvider")
     }
 }
 
