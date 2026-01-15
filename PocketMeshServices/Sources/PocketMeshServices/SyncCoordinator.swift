@@ -223,9 +223,13 @@ public actor SyncCoordinator {
     ///
     /// - Parameters:
     ///   - deviceID: The connected device UUID
+    ///   - dataStore: Persistence store for data operations
     ///   - contactService: Service for contact sync
     ///   - channelService: Service for channel sync
     ///   - messagePollingService: Service for message polling
+    ///   - appStateProvider: Optional provider for foreground/background state. When nil,
+    ///     defaults to foreground mode (channels sync). When provided and app is backgrounded,
+    ///     channel sync is skipped to reduce BLE traffic.
     public func performFullSync(
         deviceID: UUID,
         dataStore: PersistenceStore,
