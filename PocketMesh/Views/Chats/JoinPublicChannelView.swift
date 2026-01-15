@@ -5,7 +5,7 @@ import PocketMeshServices
 struct JoinPublicChannelView: View {
     @Environment(AppState.self) private var appState
 
-    let onComplete: () -> Void
+    let onComplete: (ChannelDTO?) -> Void
 
     @State private var isJoining = false
     @State private var errorMessage: String?
@@ -79,7 +79,13 @@ struct JoinPublicChannelView: View {
                 return
             }
             try await channelService.setupPublicChannel(deviceID: deviceID)
-            onComplete()
+
+            // Fetch the public channel (slot 0) to return it
+            var publicChannel: ChannelDTO?
+            if let channels = try? await appState.services?.dataStore.fetchChannels(deviceID: deviceID) {
+                publicChannel = channels.first { $0.index == 0 }
+            }
+            onComplete(publicChannel)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -90,7 +96,7 @@ struct JoinPublicChannelView: View {
 
 #Preview {
     NavigationStack {
-        JoinPublicChannelView(onComplete: {})
+        JoinPublicChannelView(onComplete: { _ in })
     }
     .environment(AppState())
 }

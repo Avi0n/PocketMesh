@@ -8,7 +8,7 @@ struct ScanChannelQRView: View {
     @Environment(AppState.self) private var appState
 
     let availableSlots: [UInt8]
-    let onComplete: () -> Void
+    let onComplete: (ChannelDTO?) -> Void
 
     @State private var scannedChannel: ScannedChannel?
     @State private var selectedSlot: UInt8
@@ -21,7 +21,7 @@ struct ScanChannelQRView: View {
         let secret: Data
     }
 
-    init(availableSlots: [UInt8], onComplete: @escaping () -> Void) {
+    init(availableSlots: [UInt8], onComplete: @escaping (ChannelDTO?) -> Void) {
         self.availableSlots = availableSlots
         self.onComplete = onComplete
         self._selectedSlot = State(initialValue: availableSlots.first ?? 1)
@@ -208,7 +208,12 @@ struct ScanChannelQRView: View {
                 secret: channel.secret
             )
 
-            onComplete()
+            // Fetch the joined channel to return it
+            var joinedChannel: ChannelDTO?
+            if let channels = try? await appState.services?.dataStore.fetchChannels(deviceID: deviceID) {
+                joinedChannel = channels.first { $0.index == selectedSlot }
+            }
+            onComplete(joinedChannel)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -293,7 +298,7 @@ struct QRDataScannerView: UIViewControllerRepresentable {
 
 #Preview {
     NavigationStack {
-        ScanChannelQRView(availableSlots: [1, 2, 3], onComplete: {})
+        ScanChannelQRView(availableSlots: [1, 2, 3], onComplete: { _ in })
     }
     .environment(AppState())
 }

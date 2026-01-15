@@ -6,10 +6,16 @@ struct ChannelOptionsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
 
+    let onChannelCreated: ((ChannelDTO) -> Void)?
+
     @State private var selectedOption: ChannelOption?
     @State private var availableSlots: [UInt8] = []
     @State private var hasPublicChannel = false
     @State private var isLoading = true
+
+    init(onChannelCreated: ((ChannelDTO) -> Void)? = nil) {
+        self.onChannelCreated = onChannelCreated
+    }
 
     enum ChannelOption: Identifiable {
         case createPrivate
@@ -45,15 +51,30 @@ struct ChannelOptionsSheet: View {
             .navigationDestination(item: $selectedOption) { option in
                 switch option {
                 case .createPrivate:
-                    CreatePrivateChannelView(availableSlots: availableSlots, onComplete: { dismiss() })
+                    CreatePrivateChannelView(availableSlots: availableSlots) { channel in
+                        if let channel { onChannelCreated?(channel) }
+                        dismiss()
+                    }
                 case .joinPrivate:
-                    JoinPrivateChannelView(availableSlots: availableSlots, onComplete: { dismiss() })
+                    JoinPrivateChannelView(availableSlots: availableSlots) { channel in
+                        if let channel { onChannelCreated?(channel) }
+                        dismiss()
+                    }
                 case .joinPublic:
-                    JoinPublicChannelView(onComplete: { dismiss() })
+                    JoinPublicChannelView { channel in
+                        if let channel { onChannelCreated?(channel) }
+                        dismiss()
+                    }
                 case .joinHashtag:
-                    JoinHashtagChannelView(availableSlots: availableSlots, onComplete: { dismiss() })
+                    JoinHashtagChannelView(availableSlots: availableSlots) { channel in
+                        if let channel { onChannelCreated?(channel) }
+                        dismiss()
+                    }
                 case .scanQR:
-                    ScanChannelQRView(availableSlots: availableSlots, onComplete: { dismiss() })
+                    ScanChannelQRView(availableSlots: availableSlots) { channel in
+                        if let channel { onChannelCreated?(channel) }
+                        dismiss()
+                    }
                 }
             }
         }

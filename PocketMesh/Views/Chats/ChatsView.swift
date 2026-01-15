@@ -24,6 +24,7 @@ struct ChatsView: View {
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
     @State private var pendingChatContact: ContactDTO?
+    @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var shouldUseSplitView: Bool {
@@ -206,9 +207,15 @@ struct ChatsView: View {
         .sheet(isPresented: $showingChannelOptions, onDismiss: {
             Task {
                 await loadConversations()
+                if let channel = pendingChannel {
+                    pendingChannel = nil
+                    navigate(to: .channel(channel))
+                }
             }
         }) {
-            ChannelOptionsSheet()
+            ChannelOptionsSheet { channel in
+                pendingChannel = channel
+            }
         }
         .sheet(item: $roomToAuthenticate) { session in
             RoomAuthenticationSheet(session: session) { authenticatedSession in
@@ -504,9 +511,11 @@ struct ChatsView: View {
                 index: channel.index
             )
             await appState.services?.notificationService.updateBadgeCount()
-            await loadConversations()
+            // Don't reload - channel was already removed locally by viewModel.removeConversation()
+            // Reloading would replace arrays and cause double animation
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
+            // On error, reload to sync state since local removal may be inconsistent
             await loadConversations()
         }
     }

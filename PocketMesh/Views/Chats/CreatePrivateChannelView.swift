@@ -7,16 +7,18 @@ struct CreatePrivateChannelView: View {
     @Environment(AppState.self) private var appState
 
     let availableSlots: [UInt8]
-    let onComplete: () -> Void
+    let onComplete: (ChannelDTO?) -> Void
 
     @State private var channelName = ""
     @State private var selectedSlot: UInt8
     @State private var generatedSecret: Data?
     @State private var isCreating = false
-    @State private var isCreated = false
+    @State private var createdChannel: ChannelDTO?
     @State private var errorMessage: String?
 
-    init(availableSlots: [UInt8], onComplete: @escaping () -> Void) {
+    private var isCreated: Bool { createdChannel != nil }
+
+    init(availableSlots: [UInt8], onComplete: @escaping (ChannelDTO?) -> Void) {
         self.availableSlots = availableSlots
         self.onComplete = onComplete
         self._selectedSlot = State(initialValue: availableSlots.first ?? 1)
@@ -36,7 +38,7 @@ struct CreatePrivateChannelView: View {
             if isCreated {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
-                        onComplete()
+                        onComplete(createdChannel)
                     }
                 }
             }
@@ -185,7 +187,10 @@ struct CreatePrivateChannelView: View {
                 secret: secret
             )
 
-            isCreated = true
+            // Fetch the created channel to return it
+            if let channels = try? await appState.services?.dataStore.fetchChannels(deviceID: deviceID) {
+                createdChannel = channels.first { $0.index == selectedSlot }
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -219,7 +224,7 @@ struct CreatePrivateChannelView: View {
 
 #Preview {
     NavigationStack {
-        CreatePrivateChannelView(availableSlots: [1, 2, 3], onComplete: {})
+        CreatePrivateChannelView(availableSlots: [1, 2, 3], onComplete: { _ in })
     }
     .environment(AppState())
 }
