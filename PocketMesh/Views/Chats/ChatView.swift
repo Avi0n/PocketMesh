@@ -68,6 +68,15 @@ struct ChatView: View {
             await viewModel.loadAllContacts(deviceID: contact.deviceID)
             viewModel.loadDraftIfExists()
             await loadUnseenMentions()
+
+            // Batch fetch link previews after initial load
+            if let dataStore = appState.services?.dataStore {
+                await viewModel.batchFetchLinkPreviews(
+                    using: linkPreviewFetcher,
+                    dataStore: dataStore,
+                    eventBroadcaster: appState.messageEventBroadcaster
+                )
+            }
         }
         .onDisappear {
             // Clear active conversation for notification suppression

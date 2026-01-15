@@ -767,4 +767,34 @@ final class ChatViewModel {
             }
         } while !sendQueue.isEmpty
     }
+
+    // MARK: - Link Preview Batch Fetching
+
+    /// Batch fetch link previews for messages that need them.
+    /// Called after loading messages, not per-cell onAppear.
+    func batchFetchLinkPreviews(
+        using fetcher: LinkPreviewFetcher,
+        dataStore: DataStore,
+        eventBroadcaster: MessageEventBroadcaster
+    ) async {
+        let needsFetch = displayItems.filter { item in
+            guard item.detectedURL != nil,
+                  let message = messagesByID[item.messageID] else { return false }
+            return message.linkPreviewURL == nil
+        }
+
+        // Fetch in batches of 5 with delay to avoid overwhelming
+        for batch in needsFetch.prefix(20).chunked(into: 5) {
+            for item in batch {
+                guard let message = messagesByID[item.messageID] else { continue }
+                fetcher.fetchIfNeeded(
+                    for: message,
+                    isChannelMessage: false,
+                    using: dataStore,
+                    eventBroadcaster: eventBroadcaster
+                )
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
 }
