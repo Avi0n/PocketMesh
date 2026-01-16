@@ -102,7 +102,8 @@ struct NodeAuthenticationSheet: View {
                             SecureField("Password", text: $password)
                         }
                     }
-                    .textContentType(.password)
+                    // Note: .textContentType(.password) removed - was causing memory issues
+                    // when combined with nested sheets and MKMapView in background
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
 

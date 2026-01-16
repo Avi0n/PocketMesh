@@ -20,6 +20,11 @@ final class RepeaterStatusViewModel {
     /// Last received telemetry
     var telemetry: TelemetryResponse?
 
+    /// Cached decoded data points to avoid repeated LPP decoding.
+    /// The TelemetryResponse.dataPoints computed property decodes on every access,
+    /// which causes memory pressure during SwiftUI re-renders.
+    private(set) var cachedDataPoints: [LPPDataPoint] = []
+
     /// Loading states
     var isLoadingStatus = false
     var isLoadingNeighbors = false
@@ -293,6 +298,8 @@ final class RepeaterStatusViewModel {
         }
         telemetryTimeoutTask?.cancel()  // Cancel timeout on success
         self.telemetry = response
+        // Decode and cache data points once to avoid repeated LPP decoding during view updates
+        self.cachedDataPoints = response.dataPoints
         self.isLoadingTelemetry = false
         self.telemetryLoaded = true
     }
