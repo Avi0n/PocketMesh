@@ -786,6 +786,30 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    // MARK: - RxLogEntry Lookup
+
+    private var mockRxLogEntries: [RxLogEntryDTO] = []
+
+    public func setMockRxLogEntry(_ entry: RxLogEntryDTO) {
+        mockRxLogEntries.append(entry)
+    }
+
+    public func findRxLogEntry(
+        channelIndex: UInt8?,
+        timestamp: UInt32,
+        withinSeconds: Double
+    ) async throws -> RxLogEntryDTO? {
+        let targetDate = Date(timeIntervalSince1970: Double(timestamp))
+        let minDate = targetDate.addingTimeInterval(-withinSeconds)
+        let maxDate = targetDate.addingTimeInterval(withinSeconds)
+
+        return mockRxLogEntries.first { entry in
+            entry.receivedAt >= minDate &&
+            entry.receivedAt <= maxDate &&
+            entry.channelHash == channelIndex
+        }
+    }
+
     // MARK: - Saved Trace Paths
 
     public var savedTracePaths: [UUID: SavedTracePathDTO] = [:]
@@ -930,6 +954,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         contacts = [:]
         channels = [:]
         debugLogEntries = []
+        mockRxLogEntries = []
         savedMessages = []
         savedContacts = []
         savedChannels = []

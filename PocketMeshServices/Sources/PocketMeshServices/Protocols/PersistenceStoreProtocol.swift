@@ -230,4 +230,13 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Save or update link preview data
     func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws
+
+    // MARK: - RxLogEntry Lookup
+
+    /// Find RxLogEntry matching an incoming message for path correlation
+    func findRxLogEntry(
+        channelIndex: UInt8?,
+        timestamp: UInt32,
+        withinSeconds: Double
+    ) async throws -> RxLogEntryDTO?
 }

@@ -1700,6 +1700,32 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Find RxLogEntry matching an incoming message for path correlation.
+    /// Correlates by channel hash and timestamp within a time window.
+    public func findRxLogEntry(
+        channelIndex: UInt8?,
+        timestamp: UInt32,
+        withinSeconds: Double
+    ) async throws -> RxLogEntryDTO? {
+        let channelHashInt = channelIndex.map { Int($0) }
+        let targetDate = Date(timeIntervalSince1970: Double(timestamp))
+        let minDate = targetDate.addingTimeInterval(-withinSeconds)
+        let maxDate = targetDate.addingTimeInterval(withinSeconds)
+
+        let predicate = #Predicate<RxLogEntry> { entry in
+            entry.receivedAt >= minDate &&
+            entry.receivedAt <= maxDate &&
+            entry.channelHash == channelHashInt
+        }
+
+        var descriptor = FetchDescriptor<RxLogEntry>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        descriptor.sortBy = [SortDescriptor(\.receivedAt, order: .reverse)]
+
+        let results = try modelContext.fetch(descriptor)
+        return results.first.map { RxLogEntryDTO(from: $0) }
+    }
+
     // MARK: - Heard Repeats
 
     /// Finds a sent channel message matching the given criteria within a time window.
