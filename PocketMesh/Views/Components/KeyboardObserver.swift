@@ -1,0 +1,60 @@
+import SwiftUI
+import UIKit
+import OSLog
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "KeyboardObserver")
+
+/// Observes keyboard frame changes and provides a correction value for undocked keyboards.
+/// SwiftUI's automatic keyboard avoidance doesn't handle iPad's floating/undocked/split keyboards,
+/// so this observer detects when the keyboard is undocked and publishes a correction value.
+@Observable @MainActor
+final class KeyboardObserver {
+    private(set) var bottomCorrection: CGFloat = 0
+    private nonisolated(unsafe) var observerToken: (any NSObjectProtocol)?
+
+    init() {
+        setupObservers()
+    }
+
+    deinit {
+        if let token = observerToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+    }
+
+    private func setupObservers() {
+        observerToken = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillChangeFrameNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            self?.handleKeyboardFrameChange(notification)
+        }
+    }
+
+    private func handleKeyboardFrameChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let window = UIApplication.shared.connectedScenes
+                  .compactMap({ $0 as? UIWindowScene })
+                  .first?.windows.first else {
+            return
+        }
+
+        let windowBounds = window.bounds
+
+        // Keyboard is undocked if:
+        // - Its bottom edge doesn't reach the window bottom (floating/undocked)
+        // - OR its width doesn't span the full window (split keyboard)
+        let isUndocked = keyboardFrame.maxY < windowBounds.height - 1
+            || keyboardFrame.width < windowBounds.width - 1
+
+        let newCorrection = isUndocked ? -keyboardFrame.height : 0
+
+        // Avoid redundant updates
+        guard abs(newCorrection - bottomCorrection) > 0.5 else { return }
+
+        logger.debug("Keyboard state: undocked=\(isUndocked), correction=\(newCorrection)")
+        bottomCorrection = newCorrection
+    }
+}
