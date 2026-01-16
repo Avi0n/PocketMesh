@@ -126,6 +126,7 @@ struct MessagePathSheet: View {
             ackCode: nil,
             pathLength: 3,
             snr: 6.2,
+            pathNodes: Data([0xA3, 0x7F, 0x42]),
             senderKeyPrefix: nil,
             senderNodeName: "TestNode",
             isRead: true,
@@ -133,9 +134,7 @@ struct MessagePathSheet: View {
             roundTripTime: nil,
             heardRepeats: 0,
             retryAttempt: 0,
-            maxRetryAttempts: 0,
-            deduplicationKey: nil,
-            pathNodes: Data([0xA3, 0x7F, 0x42])
+            maxRetryAttempts: 0
         )
     )
     .environment(AppState())
@@ -157,6 +156,7 @@ struct MessagePathSheet: View {
             ackCode: nil,
             pathLength: 0,
             snr: nil,
+            pathNodes: nil,
             senderKeyPrefix: nil,
             senderNodeName: nil,
             isRead: true,
@@ -164,9 +164,7 @@ struct MessagePathSheet: View {
             roundTripTime: nil,
             heardRepeats: 0,
             retryAttempt: 0,
-            maxRetryAttempts: 0,
-            deduplicationKey: nil,
-            pathNodes: nil
+            maxRetryAttempts: 0
         )
     )
     .environment(AppState())

@@ -891,6 +891,18 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return 0 // Stub
     }
 
+    // MARK: - Link Preview Data
+
+    public var linkPreviews: [String: LinkPreviewDataDTO] = [:]
+
+    public func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? {
+        linkPreviews[url]
+    }
+
+    public func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws {
+        linkPreviews[dto.url] = dto
+    }
+
     // MARK: - Debug Log Operations
 
     public func saveDebugLogEntries(_ entries: [DebugLogEntryDTO]) async throws {
@@ -955,6 +967,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         channels = [:]
         debugLogEntries = []
         mockRxLogEntries = []
+        linkPreviews = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []
