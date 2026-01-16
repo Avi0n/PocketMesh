@@ -2,6 +2,14 @@ import Foundation
 import OSLog
 import PocketMeshServices
 
+// MARK: - Constants
+
+private enum CacheConfig {
+    static let maxEntryCount = 100
+    static let maxTotalCostBytes = 50 * 1024 * 1024  // 50MB
+    static let maxConcurrentFetches = 3
+}
+
 /// Two-tier cache for link previews with URL-based deduplication.
 /// Uses actor isolation for thread safety without blocking the main thread.
 /// Limits concurrent LPMetadataProvider instances to prevent WKWebView spawn bursts.
@@ -17,13 +25,13 @@ actor LinkPreviewCache: LinkPreviewCaching {
     /// URLs that have been fetched but have no preview available
     private var noPreviewAvailable: Set<String> = []
 
-    /// Semaphore to limit concurrent LPMetadataProvider instances (max 3)
-    /// Each LPMetadataProvider spawns WKWebView on main thread
-    private let fetchSemaphore = AsyncSemaphore(value: 3)
+    /// Semaphore to limit concurrent LPMetadataProvider instances.
+    /// Each LPMetadataProvider spawns WKWebView on main thread.
+    private let fetchSemaphore = AsyncSemaphore(value: CacheConfig.maxConcurrentFetches)
 
     init() {
-        memoryCache.countLimit = 100
-        memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+        memoryCache.countLimit = CacheConfig.maxEntryCount
+        memoryCache.totalCostLimit = CacheConfig.maxTotalCostBytes
     }
 
     func preview(
@@ -38,20 +46,9 @@ actor LinkPreviewCache: LinkPreviewCaching {
             return .noPreviewAvailable
         }
 
-        // Tier 1: Memory cache (instant)
-        if let cached = memoryCache.object(forKey: urlString as NSString) {
-            return .loaded(cached.dto)
-        }
-
-        // Tier 2: Database lookup
-        do {
-            if let persisted = try await dataStore.fetchLinkPreview(url: urlString) {
-                let cost = (persisted.imageData?.count ?? 0) + (persisted.iconData?.count ?? 0)
-                memoryCache.setObject(CachedPreview(persisted), forKey: urlString as NSString, cost: cost)
-                return .loaded(persisted)
-            }
-        } catch {
-            logger.error("Failed to fetch link preview from database: \(error.localizedDescription)")
+        // Check memory and database caches
+        if let cached = await checkCaches(urlString: urlString, dataStore: dataStore) {
+            return .loaded(cached)
         }
 
         // Check preferences before network fetch
@@ -64,7 +61,7 @@ actor LinkPreviewCache: LinkPreviewCaching {
             return .loading
         }
 
-        // Tier 3: Network fetch with concurrency limiting
+        // Network fetch with concurrency limiting
         return await fetchFromNetwork(url: url, urlString: urlString, dataStore: dataStore)
     }
 
@@ -74,20 +71,9 @@ actor LinkPreviewCache: LinkPreviewCaching {
     ) async -> LinkPreviewResult {
         let urlString = url.absoluteString
 
-        // Check cache first (but allow retry for negative cache)
-        if let cached = memoryCache.object(forKey: urlString as NSString) {
-            return .loaded(cached.dto)
-        }
-
-        // Check database
-        do {
-            if let persisted = try await dataStore.fetchLinkPreview(url: urlString) {
-                let cost = (persisted.imageData?.count ?? 0) + (persisted.iconData?.count ?? 0)
-                memoryCache.setObject(CachedPreview(persisted), forKey: urlString as NSString, cost: cost)
-                return .loaded(persisted)
-            }
-        } catch {
-            logger.error("Failed to fetch link preview from database: \(error.localizedDescription)")
+        // Check memory and database caches (skip negative cache for manual retry)
+        if let cached = await checkCaches(urlString: urlString, dataStore: dataStore) {
+            return .loaded(cached)
         }
 
         // Prevent duplicate fetches
@@ -101,6 +87,33 @@ actor LinkPreviewCache: LinkPreviewCaching {
         return await fetchFromNetwork(url: url, urlString: urlString, dataStore: dataStore)
     }
 
+    // MARK: - Private Helpers
+
+    /// Checks memory cache and database for existing preview data.
+    /// Returns the DTO if found and caches in memory if loaded from database.
+    private func checkCaches(
+        urlString: String,
+        dataStore: any PersistenceStoreProtocol
+    ) async -> LinkPreviewDataDTO? {
+        // Tier 1: Memory cache (instant)
+        if let cached = memoryCache.object(forKey: urlString as NSString) {
+            return cached.dto
+        }
+
+        // Tier 2: Database lookup
+        do {
+            if let persisted = try await dataStore.fetchLinkPreview(url: urlString) {
+                let cost = (persisted.imageData?.count ?? 0) + (persisted.iconData?.count ?? 0)
+                memoryCache.setObject(CachedPreview(persisted), forKey: urlString as NSString, cost: cost)
+                return persisted
+            }
+        } catch {
+            logger.error("Failed to fetch link preview from database: \(error.localizedDescription)")
+        }
+
+        return nil
+    }
+
     private func fetchFromNetwork(
         url: URL,
         urlString: String,
@@ -111,11 +124,18 @@ actor LinkPreviewCache: LinkPreviewCaching {
         // Wait for semaphore to limit concurrent fetches
         await fetchSemaphore.wait()
 
-        let metadata = await service.fetchMetadata(for: url)
+        // Ensure semaphore is released and in-flight tracking is cleaned up
+        defer {
+            Task { await self.fetchSemaphore.signal() }
+            inFlightFetches.remove(urlString)
+        }
 
-        // Signal semaphore before cleanup
-        fetchSemaphore.signal()
-        inFlightFetches.remove(urlString)
+        // Check for cancellation after acquiring semaphore
+        guard !Task.isCancelled else {
+            return .noPreviewAvailable
+        }
+
+        let metadata = await service.fetchMetadata(for: url)
 
         guard let metadata else {
             // Cache negative result to avoid repeated fetch attempts
@@ -153,7 +173,10 @@ actor LinkPreviewCache: LinkPreviewCaching {
     }
 }
 
-/// Wrapper class for NSCache (requires reference type)
+// MARK: - Supporting Types
+
+/// Wrapper class for NSCache (requires reference type).
+/// Immutable after initialization, making @unchecked Sendable safe.
 private final class CachedPreview: @unchecked Sendable {
     let dto: LinkPreviewDataDTO
     init(_ dto: LinkPreviewDataDTO) { self.dto = dto }
@@ -178,11 +201,7 @@ actor AsyncSemaphore {
         }
     }
 
-    nonisolated func signal() {
-        Task { await _signal() }
-    }
-
-    private func _signal() {
+    func signal() {
         if let waiter = waiters.first {
             waiters.removeFirst()
             waiter.resume()

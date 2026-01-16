@@ -295,7 +295,7 @@ struct ChatView: View {
                 }
             )
         } else {
-            let _ = logger.warning("Message lookup failed for displayItem id=\(item.id)")
+            // ViewModel logs the warning for data inconsistency
             Text("Message unavailable")
                 .font(.caption)
                 .foregroundStyle(.secondary)

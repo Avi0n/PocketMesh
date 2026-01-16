@@ -46,6 +46,9 @@ final class ChatViewModel {
     /// O(1) message lookup by ID (used by views to get full DTO when needed)
     private(set) var messagesByID: [UUID: MessageDTO] = [:]
 
+    /// O(1) display item index lookup by message ID
+    private var displayItemIndexByID: [UUID: Int] = [:]
+
     /// Current contact being chatted with
     var currentContact: ContactDTO?
 
@@ -361,6 +364,7 @@ final class ChatViewModel {
             loadedPreview: nil
         )
         displayItems.append(newItem)
+        displayItemIndexByID[message.id] = displayItems.count - 1
 
         // Async URL detection for this message only
         // Capture messageID (not index) to handle concurrent buildDisplayItems() calls
@@ -372,13 +376,13 @@ final class ChatViewModel {
     }
 
     /// Update URL detection for a single display item by message ID.
-    /// Uses ID lookup instead of index to handle concurrent array modifications.
+    /// Uses O(1) dictionary lookup to handle concurrent array modifications.
     private func updateURLForDisplayItem(messageID: UUID, text: String) async {
         let detectedURL = await Task.detached(priority: .userInitiated) {
             LinkPreviewService.extractFirstURL(from: text)
         }.value
 
-        guard let index = displayItems.firstIndex(where: { $0.messageID == messageID }) else { return }
+        guard let index = displayItemIndexByID[messageID] else { return }
         let item = displayItems[index]
         displayItems[index] = MessageDisplayItem(
             messageID: item.messageID,
@@ -688,6 +692,8 @@ final class ChatViewModel {
             messages.removeAll { $0.id == message.id }
             messagesByID.removeValue(forKey: message.id)
             displayItems.removeAll { $0.messageID == message.id }
+            // Rebuild index dictionary after removal (indices shift)
+            displayItemIndexByID = Dictionary(uniqueKeysWithValues: displayItems.enumerated().map { ($0.element.messageID, $0.offset) })
 
             // Clean up preview state for deleted message
             cleanupPreviewState(for: message.id)
@@ -784,11 +790,19 @@ final class ChatViewModel {
                 loadedPreview: loadedPreviews[message.id]
             )
         }
+
+        // Build O(1) index lookup
+        displayItemIndexByID = Dictionary(uniqueKeysWithValues: displayItems.enumerated().map { ($0.element.messageID, $0.offset) })
     }
 
-    /// Get full message DTO for a display item
+    /// Get full message DTO for a display item.
+    /// Logs a warning if lookup fails (indicates data inconsistency).
     func message(for displayItem: MessageDisplayItem) -> MessageDTO? {
-        messagesByID[displayItem.messageID]
+        guard let message = messagesByID[displayItem.messageID] else {
+            logger.warning("Message lookup failed for displayItem id=\(displayItem.messageID)")
+            return nil
+        }
+        return message
     }
 
     // MARK: - Preview State Management
@@ -888,9 +902,9 @@ final class ChatViewModel {
         rebuildDisplayItem(for: messageID)
     }
 
-    /// Rebuild a single display item with current preview state
+    /// Rebuild a single display item with current preview state (O(1) lookup)
     private func rebuildDisplayItem(for messageID: UUID) {
-        guard let index = displayItems.firstIndex(where: { $0.messageID == messageID }) else { return }
+        guard let index = displayItemIndexByID[messageID] else { return }
         let item = displayItems[index]
 
         displayItems[index] = MessageDisplayItem(
