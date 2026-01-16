@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelChatV
 struct ChannelChatView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.linkPreviewCache) private var linkPreviewCache
 
     let channel: ChannelDTO
     let parentViewModel: ChatViewModel?
@@ -22,8 +23,6 @@ struct ChannelChatView: View {
     @State private var unseenMentionIDs: Set<UUID> = []
     @State private var selectedMessageForRepeats: MessageDTO?
     @FocusState private var isInputFocused: Bool
-
-    @State private var linkPreviewFetcher = LinkPreviewFetcher()
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
         self.channel = channel
@@ -66,22 +65,12 @@ struct ChannelChatView: View {
         }
         .task(id: appState.servicesVersion) {
             logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
-            viewModel.configure(appState: appState)
+            viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
             await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await loadUnseenMentions()
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
-
-            // Batch fetch link previews after initial load
-            if let dataStore = appState.services?.dataStore {
-                await viewModel.batchFetchLinkPreviews(
-                    using: linkPreviewFetcher,
-                    dataStore: dataStore,
-                    eventBroadcaster: appState.messageEventBroadcaster,
-                    isChannelMessage: true
-                )
-            }
         }
         .onDisappear {
             // Clear active channel for notification suppression
@@ -104,9 +93,11 @@ struct ChannelChatView: View {
             case .channelMessageReceived(let message, let channelIndex)
                 where channelIndex == channel.index && message.deviceID == channel.deviceID:
                 // Optimistic insert: add message immediately so ChatTableView sees new count
+                // No full reload needed - appendMessageIfNew handles local state
                 viewModel.appendMessageIfNew(message)
-                // Prefetch link preview immediately
-                fetchLinkPreviewIfNeeded(for: message)
+                // Link previews deferred - fetching during active message receipt causes
+                // WKWebView process spawning that blocks main thread and causes scroll jank.
+                // Previews will be fetched by batch mechanism when message flow settles.
                 // Handle self-mention: if at bottom, mark seen immediately; otherwise reload unseen
                 if message.containsSelfMention {
                     Task {
@@ -117,9 +108,6 @@ struct ChannelChatView: View {
                             await loadUnseenMentions()
                         }
                     }
-                }
-                Task {
-                    await viewModel.loadChannelMessages(for: channel)
                 }
             case .messageStatusUpdated:
                 // Reload to pick up status changes (Sent -> Delivered, etc.)
@@ -136,13 +124,6 @@ struct ChannelChatView: View {
                 }
             case .heardRepeatRecorded(let messageID, _):
                 // Reload to update the heard repeats count for the message
-                if viewModel.messages.contains(where: { $0.id == messageID }) {
-                    Task {
-                        await viewModel.loadChannelMessages(for: channel)
-                    }
-                }
-            case .linkPreviewUpdated(let messageID):
-                // Reload if this message belongs to the current channel
                 if viewModel.messages.contains(where: { $0.id == messageID }) {
                     Task {
                         await viewModel.loadChannelMessages(for: channel)
@@ -288,6 +269,8 @@ struct ChannelChatView: View {
                 ),
                 showTimestamp: item.showTimestamp,
                 showDirectionGap: item.showDirectionGap,
+                previewState: item.previewState,
+                loadedPreview: item.loadedPreview,
                 onRetry: { retryMessage(message) },
                 onReply: { replyText in
                     setReplyText(replyText)
@@ -298,10 +281,14 @@ struct ChannelChatView: View {
                 onShowRepeatDetails: { message in
                     showRepeatDetails(for: message)
                 },
-                onManualPreviewFetch: {
-                    manualFetchLinkPreview(for: message)
+                onRequestPreviewFetch: {
+                    viewModel.requestPreviewFetch(for: message.id)
                 },
-                isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
+                onManualPreviewFetch: {
+                    Task {
+                        await viewModel.manualFetchPreview(for: message.id)
+                    }
+                }
             )
         } else {
             let _ = logger.warning("Message lookup failed for displayItem id=\(item.id)")
@@ -310,25 +297,6 @@ struct ChannelChatView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Message could not be loaded")
         }
-    }
-
-    private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
-        guard let dataStore = appState.services?.dataStore else { return }
-        linkPreviewFetcher.fetchIfNeeded(
-            for: message,
-            isChannelMessage: true,
-            using: dataStore,
-            eventBroadcaster: appState.messageEventBroadcaster
-        )
-    }
-
-    private func manualFetchLinkPreview(for message: MessageDTO) {
-        guard let dataStore = appState.services?.dataStore else { return }
-        linkPreviewFetcher.manualFetch(
-            for: message,
-            using: dataStore,
-            eventBroadcaster: appState.messageEventBroadcaster
-        )
     }
 
     private var emptyMessagesView: some View {
@@ -395,10 +363,6 @@ struct ChannelChatView: View {
             scrollToBottomRequest += 1
             Task {
                 await viewModel.sendChannelMessage()
-                // Prefetch link preview for newly sent message
-                if let message = viewModel.messages.last, message.isOutgoing {
-                    fetchLinkPreviewIfNeeded(for: message)
-                }
             }
         }
     }

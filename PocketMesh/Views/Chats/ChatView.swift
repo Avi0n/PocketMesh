@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
 struct ChatView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.linkPreviewCache) private var linkPreviewCache
 
     @State private var contact: ContactDTO
     let parentViewModel: ChatViewModel?
@@ -21,8 +22,6 @@ struct ChatView: View {
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
     @FocusState private var isInputFocused: Bool
-
-    @State private var linkPreviewFetcher = LinkPreviewFetcher()
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
         self._contact = State(initialValue: contact)
@@ -62,21 +61,12 @@ struct ChatView: View {
             }
         })
         .task(id: appState.servicesVersion) {
-            viewModel.configure(appState: appState)
+            viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             await viewModel.loadMessages(for: contact)
             await viewModel.loadConversations(deviceID: contact.deviceID)
             await viewModel.loadAllContacts(deviceID: contact.deviceID)
             viewModel.loadDraftIfExists()
             await loadUnseenMentions()
-
-            // Batch fetch link previews after initial load
-            if let dataStore = appState.services?.dataStore {
-                await viewModel.batchFetchLinkPreviews(
-                    using: linkPreviewFetcher,
-                    dataStore: dataStore,
-                    eventBroadcaster: appState.messageEventBroadcaster
-                )
-            }
         }
         .onDisappear {
             // Clear active conversation for notification suppression
@@ -96,12 +86,11 @@ struct ChatView: View {
             switch appState.messageEventBroadcaster.latestEvent {
             case .directMessageReceived(let message, _) where message.contactID == contact.id:
                 // Optimistic insert: add message immediately so ChatTableView sees new count
+                // No full reload needed - appendMessageIfNew handles local state
                 viewModel.appendMessageIfNew(message)
-                // Prefetch link preview immediately
-                fetchLinkPreviewIfNeeded(for: message)
-                Task {
-                    await viewModel.loadMessages(for: contact)
-                }
+                // Link previews deferred - fetching during active message receipt causes
+                // WKWebView process spawning that blocks main thread and causes scroll jank.
+                // Previews will be fetched by batch mechanism when message flow settles.
                 // Handle self-mention: if at bottom, mark seen immediately; otherwise reload unseen
                 if message.containsSelfMention {
                     Task {
@@ -135,13 +124,6 @@ struct ChatView: View {
                 // Reload to pick up retry status changes
                 Task {
                     await viewModel.loadMessages(for: contact)
-                }
-            case .linkPreviewUpdated(let messageID):
-                // Reload if this message belongs to the current conversation
-                if viewModel.messages.contains(where: { $0.id == messageID }) {
-                    Task {
-                        await viewModel.loadMessages(for: contact)
-                    }
                 }
             default:
                 break
@@ -294,6 +276,8 @@ struct ChatView: View {
                 configuration: .directMessage,
                 showTimestamp: item.showTimestamp,
                 showDirectionGap: item.showDirectionGap,
+                previewState: item.previewState,
+                loadedPreview: item.loadedPreview,
                 onRetry: { retryMessage(message) },
                 onReply: { replyText in
                     setReplyText(replyText)
@@ -301,10 +285,14 @@ struct ChatView: View {
                 onDelete: {
                     deleteMessage(message)
                 },
-                onManualPreviewFetch: {
-                    manualFetchLinkPreview(for: message)
+                onRequestPreviewFetch: {
+                    viewModel.requestPreviewFetch(for: message.id)
                 },
-                isLoadingPreview: linkPreviewFetcher.isFetching(message.id)
+                onManualPreviewFetch: {
+                    Task {
+                        await viewModel.manualFetchPreview(for: message.id)
+                    }
+                }
             )
         } else {
             let _ = logger.warning("Message lookup failed for displayItem id=\(item.id)")
@@ -313,25 +301,6 @@ struct ChatView: View {
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Message could not be loaded")
         }
-    }
-
-    private func fetchLinkPreviewIfNeeded(for message: MessageDTO) {
-        guard let dataStore = appState.services?.dataStore else { return }
-        linkPreviewFetcher.fetchIfNeeded(
-            for: message,
-            isChannelMessage: false,
-            using: dataStore,
-            eventBroadcaster: appState.messageEventBroadcaster
-        )
-    }
-
-    private func manualFetchLinkPreview(for message: MessageDTO) {
-        guard let dataStore = appState.services?.dataStore else { return }
-        linkPreviewFetcher.manualFetch(
-            for: message,
-            using: dataStore,
-            eventBroadcaster: appState.messageEventBroadcaster
-        )
     }
 
     private var emptyMessagesView: some View {
@@ -388,10 +357,6 @@ struct ChatView: View {
             scrollToBottomRequest += 1
             Task {
                 await viewModel.sendMessage()
-                // Prefetch link preview for newly sent message
-                if let message = viewModel.messages.last, message.isOutgoing {
-                    fetchLinkPreviewIfNeeded(for: message)
-                }
             }
         }
     }

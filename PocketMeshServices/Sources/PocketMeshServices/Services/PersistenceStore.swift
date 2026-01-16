@@ -35,7 +35,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         SavedTracePath.self,
         TracePathRun.self,
         RxLogEntry.self,
-        DebugLogEntry.self
+        DebugLogEntry.self,
+        LinkPreviewData.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -1862,6 +1863,52 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Clears all debug log entries.
     public func clearDebugLogEntries() throws {
         try modelContext.delete(model: DebugLogEntry.self)
+        try modelContext.save()
+    }
+
+    // MARK: - Link Preview Data
+
+    /// Fetches link preview data by URL
+    public func fetchLinkPreview(url: String) throws -> LinkPreviewDataDTO? {
+        let urlToFind = url
+        let predicate = #Predicate<LinkPreviewData> { preview in
+            preview.url == urlToFind
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let preview = try modelContext.fetch(descriptor).first else {
+            return nil
+        }
+        return LinkPreviewDataDTO(from: preview)
+    }
+
+    /// Saves or updates link preview data
+    public func saveLinkPreview(_ dto: LinkPreviewDataDTO) throws {
+        let urlToFind = dto.url
+        let predicate = #Predicate<LinkPreviewData> { preview in
+            preview.url == urlToFind
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            // Update existing
+            existing.title = dto.title
+            existing.imageData = dto.imageData
+            existing.iconData = dto.iconData
+            existing.fetchedAt = dto.fetchedAt
+        } else {
+            // Insert new
+            let preview = LinkPreviewData(
+                url: dto.url,
+                title: dto.title,
+                imageData: dto.imageData,
+                iconData: dto.iconData,
+                fetchedAt: dto.fetchedAt
+            )
+            modelContext.insert(preview)
+        }
         try modelContext.save()
     }
 }

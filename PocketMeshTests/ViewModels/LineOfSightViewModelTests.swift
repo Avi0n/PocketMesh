@@ -144,6 +144,11 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func countDebugLogEntries() async throws -> Int { 0 }
     func pruneDebugLogEntries(keepCount: Int) async throws {}
     func clearDebugLogEntries() async throws {}
+
+    // MARK: - Link Preview (stubs)
+
+    func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? { nil }
+    func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws {}
 }
 
 // MARK: - Test Helpers

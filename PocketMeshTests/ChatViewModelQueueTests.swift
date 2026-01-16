@@ -4,6 +4,33 @@ import XCTest
 import SwiftData
 import MeshCore
 
+// MARK: - Mock Link Preview Cache
+
+actor MockLinkPreviewCache: LinkPreviewCaching {
+    func preview(
+        for url: URL,
+        using dataStore: any PersistenceStoreProtocol,
+        isChannelMessage: Bool
+    ) async -> LinkPreviewResult {
+        .noPreviewAvailable
+    }
+
+    func manualFetch(
+        for url: URL,
+        using dataStore: any PersistenceStoreProtocol
+    ) async -> LinkPreviewResult {
+        .noPreviewAvailable
+    }
+
+    func isFetching(_ url: URL) async -> Bool {
+        false
+    }
+
+    func cachedPreview(for url: URL) async -> LinkPreviewDataDTO? {
+        nil
+    }
+}
+
 // MARK: - Tests
 
 @MainActor
@@ -13,6 +40,7 @@ final class ChatViewModelQueueTests: XCTestCase {
     var dataStore: PersistenceStore!
     var session: MeshCoreSession!
     var messageService: MessageService!
+    var linkPreviewCache: MockLinkPreviewCache!
 
     override func setUp() async throws {
         // Create in-memory container
@@ -38,6 +66,9 @@ final class ChatViewModelQueueTests: XCTestCase {
             session: session,
             dataStore: dataStore
         )
+
+        // Create mock link preview cache
+        linkPreviewCache = MockLinkPreviewCache()
     }
 
     override func tearDown() async throws {
@@ -45,6 +76,7 @@ final class ChatViewModelQueueTests: XCTestCase {
         dataStore = nil
         session = nil
         messageService = nil
+        linkPreviewCache = nil
     }
 
     func testQueueStartsEmpty() {
@@ -55,7 +87,7 @@ final class ChatViewModelQueueTests: XCTestCase {
 
     func testSendMessageClearsInputImmediately() async throws {
         let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService)
+        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
 
         // Get the device ID
         let devices = try await dataStore.fetchDevices()
@@ -87,7 +119,7 @@ final class ChatViewModelQueueTests: XCTestCase {
 
     func testProcessQueueSendsMessagesInOrder() async throws {
         let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService)
+        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
 
         // Get the device ID
         let devices = try await dataStore.fetchDevices()
@@ -142,7 +174,7 @@ final class ChatViewModelQueueTests: XCTestCase {
         // errorMessage but doesn't break out of the loop.
 
         let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService)
+        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
 
         // Get the device ID
         let devices = try await dataStore.fetchDevices()
@@ -183,7 +215,7 @@ final class ChatViewModelQueueTests: XCTestCase {
 
     func testMessagesGoToCorrectContactEvenAfterNavigatingAway() async throws {
         let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService)
+        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
 
         // Get the device ID
         let devices = try await dataStore.fetchDevices()

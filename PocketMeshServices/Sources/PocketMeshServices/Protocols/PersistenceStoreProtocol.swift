@@ -222,4 +222,12 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Clear all debug log entries
     func clearDebugLogEntries() async throws
+
+    // MARK: - Link Preview Data
+
+    /// Fetch link preview data by URL
+    func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO?
+
+    /// Save or update link preview data
+    func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws
 }

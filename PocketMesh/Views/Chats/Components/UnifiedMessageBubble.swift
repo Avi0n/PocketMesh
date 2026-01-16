@@ -10,11 +10,13 @@ private enum MessageLayout {
 struct MessageBubbleConfiguration: Sendable {
     let accentColor: Color
     let showSenderName: Bool
+    let isChannel: Bool
     let senderNameResolver: (@Sendable (MessageDTO) -> String)?
 
     static let directMessage = MessageBubbleConfiguration(
         accentColor: .blue,
         showSenderName: false,
+        isChannel: false,
         senderNameResolver: nil
     )
 
@@ -22,6 +24,7 @@ struct MessageBubbleConfiguration: Sendable {
         MessageBubbleConfiguration(
             accentColor: isPublic ? .green : .blue,
             showSenderName: true,
+            isChannel: true,
             senderNameResolver: { message in
                 resolveSenderName(for: message, contacts: contacts)
             }
@@ -68,18 +71,17 @@ struct UnifiedMessageBubble: View {
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+
+    // Preview state from display item (replaces @State)
+    let previewState: PreviewLoadState
+    let loadedPreview: LinkPreviewDataDTO?
+
+    // Callbacks for preview lifecycle
+    let onRequestPreviewFetch: (() -> Void)?
     let onManualPreviewFetch: (() -> Void)?
-    let isLoadingPreview: Bool
 
     @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
-    @AppStorage("linkPreviewsAutoResolveDM") private var autoResolveDM = true
-    @AppStorage("linkPreviewsAutoResolveChannels") private var autoResolveChannels = true
     @Environment(\.openURL) private var openURL
-
-    private func shouldAutoResolve(isChannelMessage: Bool) -> Bool {
-        guard previewsEnabled else { return false }
-        return isChannelMessage ? autoResolveChannels : autoResolveDM
-    }
 
     init(
         message: MessageDTO,
@@ -89,12 +91,14 @@ struct UnifiedMessageBubble: View {
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
         showDirectionGap: Bool = false,
+        previewState: PreviewLoadState = .idle,
+        loadedPreview: LinkPreviewDataDTO? = nil,
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
-        onManualPreviewFetch: (() -> Void)? = nil,
-        isLoadingPreview: Bool = false
+        onRequestPreviewFetch: (() -> Void)? = nil,
+        onManualPreviewFetch: (() -> Void)? = nil
     ) {
         self.message = message
         self.contactName = contactName
@@ -103,12 +107,14 @@ struct UnifiedMessageBubble: View {
         self.configuration = configuration
         self.showTimestamp = showTimestamp
         self.showDirectionGap = showDirectionGap
+        self.previewState = previewState
+        self.loadedPreview = loadedPreview
         self.onRetry = onRetry
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
-        self.isLoadingPreview = isLoadingPreview
     }
 
     var body: some View {
@@ -145,38 +151,7 @@ struct UnifiedMessageBubble: View {
 
                     // Link preview (if applicable)
                     if previewsEnabled {
-                        if let urlString = message.linkPreviewURL,
-                           let url = URL(string: urlString) {
-                            // Fetched preview - show with metadata
-                            LinkPreviewCard(
-                                url: url,
-                                title: message.linkPreviewTitle,
-                                imageData: message.linkPreviewImageData,
-                                iconData: message.linkPreviewIconData,
-                                onTap: { openURL(url) }
-                            )
-                            .frame(maxWidth: MessageLayout.maxBubbleWidth)
-                        } else if let url = detectedURL {
-                            // URL detected - show minimal preview immediately
-                            if shouldAutoResolve(isChannelMessage: message.isChannelMessage) {
-                                LinkPreviewCard(
-                                    url: url,
-                                    title: nil,
-                                    imageData: nil,
-                                    iconData: nil,
-                                    onTap: { openURL(url) }
-                                )
-                                .frame(maxWidth: MessageLayout.maxBubbleWidth)
-                            } else {
-                                TapToLoadPreview(url: url, isLoading: isLoadingPreview) {
-                                    onManualPreviewFetch?()
-                                }
-                                .frame(
-                                    maxWidth: MessageLayout.maxBubbleWidth,
-                                    alignment: message.isOutgoing ? .trailing : .leading
-                                )
-                            }
-                        }
+                        linkPreviewContent
                     }
 
                     // Status row for outgoing messages
@@ -193,6 +168,72 @@ struct UnifiedMessageBubble: View {
         .padding(.horizontal)
         .padding(.top, showDirectionGap ? 12 : 2)
         .padding(.bottom, message.isOutgoing ? 4 : 2)
+        .onAppear {
+            // Request preview fetch when cell becomes visible
+            // ViewModel handles deduplication and cancellation
+            if previewState == .idle && detectedURL != nil && message.linkPreviewURL == nil {
+                onRequestPreviewFetch?()
+            }
+        }
+    }
+
+    // MARK: - Link Preview Content
+
+    @ViewBuilder
+    private var linkPreviewContent: some View {
+        switch previewState {
+        case .loaded:
+            if let preview = loadedPreview,
+               let url = URL(string: preview.url) {
+                LinkPreviewCard(
+                    url: url,
+                    title: preview.title,
+                    imageData: preview.imageData,
+                    iconData: preview.iconData,
+                    onTap: { openURL(url) }
+                )
+                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            }
+
+        case .loading:
+            if let url = detectedURL {
+                LinkPreviewLoadingCard(url: url)
+                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            }
+
+        case .noPreview:
+            EmptyView()
+
+        case .disabled:
+            if let url = detectedURL {
+                TapToLoadPreview(
+                    url: url,
+                    isLoading: false,
+                    onTap: {
+                        onManualPreviewFetch?()
+                    }
+                )
+                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            }
+
+        case .idle:
+            // Check for legacy message data
+            if let urlString = message.linkPreviewURL,
+               let url = URL(string: urlString) {
+                LinkPreviewCard(
+                    url: url,
+                    title: message.linkPreviewTitle,
+                    imageData: message.linkPreviewImageData,
+                    iconData: message.linkPreviewIconData,
+                    onTap: { openURL(url) }
+                )
+                .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            } else if let url = detectedURL {
+                // URL detected, waiting for fetch - show loading
+                LinkPreviewLoadingCard(url: url)
+                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            }
+        }
     }
 
     // MARK: - Computed Properties
