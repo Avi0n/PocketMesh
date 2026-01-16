@@ -216,12 +216,13 @@ struct RepeaterStatusView: View {
                         ProgressView()
                         Spacer()
                     }
-                } else if let telemetry = viewModel.telemetry {
-                    if telemetry.dataPoints.isEmpty {
+                } else if viewModel.telemetry != nil {
+                    // Use cached data points to avoid repeated LPP decoding during view updates
+                    if viewModel.cachedDataPoints.isEmpty {
                         Text("No sensor data")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(telemetry.dataPoints, id: \.self) { dataPoint in
+                        ForEach(viewModel.cachedDataPoints, id: \.self) { dataPoint in
                             TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)
                         }
                     }
@@ -234,7 +235,7 @@ struct RepeaterStatusView: View {
                     Text("Telemetry")
                     Spacer()
                     if viewModel.telemetryLoaded {
-                        Text("\(viewModel.telemetry?.dataPoints.count ?? 0)")
+                        Text("\(viewModel.cachedDataPoints.count)")
                             .foregroundStyle(.secondary)
                     }
                 }
