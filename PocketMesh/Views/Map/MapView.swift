@@ -1,6 +1,9 @@
+import os
 import SwiftUI
 import MapKit
 import PocketMeshServices
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "MapView")
 
 /// Map view displaying contacts with their locations
 struct MapView: View {
@@ -15,6 +18,8 @@ struct MapView: View {
     @State private var mapSnapshot: UIImage?
     /// Controls when snapshot is shown - delayed until after sheet presents to hide the transition
     @State private var isSnapshotActive = false
+    /// Closure to get snapshot parameters directly from MKMapView (camera + bounds, avoids async binding lag)
+    @State private var getSnapshotParams: (() -> (camera: MKMapCamera, size: CGSize)?)?
 
     var body: some View {
         NavigationStack {
@@ -107,6 +112,9 @@ struct MapView: View {
                     },
                     onMessageTap: { contact in
                         navigateToChat(with: contact)
+                    },
+                    onSnapshotParamsGetter: { getter in
+                        getSnapshotParams = getter
                     }
                 )
                 .opacity(showingSnapshot ? 0 : 1)
@@ -114,9 +122,10 @@ struct MapView: View {
                 if showingSnapshot, let snapshot = mapSnapshot {
                     // Show static snapshot while sheet is presented to prevent memory growth
                     // MKMapView clustering causes unbounded memory growth during keyboard layout cycles
+                    // Must ignore safe area to match MKMapView's positioning (UIView fills entire area)
                     Image(uiImage: snapshot)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .ignoresSafeArea()
                 }
             }
             .overlay {
@@ -279,19 +288,24 @@ struct MapView: View {
         // Capture snapshot after sheet animation completes to hide the transition
         Task {
             try? await Task.sleep(for: Self.sheetPresentationDuration)
+            // Guard against race condition if sheet was dismissed during delay
+            guard selectedContactForDetail != nil else { return }
             await captureMapSnapshot()
             isSnapshotActive = true
         }
     }
 
-    /// Captures a static snapshot of the current map region to display while sheets are presented
+    /// Captures a static snapshot of the current map view to display while sheets are presented
     private func captureMapSnapshot() async {
-        guard let region = viewModel.cameraRegion else { return }
+        // Get camera and bounds directly from MKMapView for pixel-perfect match
+        // Using camera instead of region avoids MKMapSnapshotter's automatic aspect ratio adjustment
+        guard let params = getSnapshotParams?() else { return }
 
         let options = MKMapSnapshotter.Options()
-        options.region = region
+        options.camera = params.camera
+        options.size = params.size
+        options.scale = UIScreen.main.scale
         options.mapType = viewModel.mapStyleSelection.mkMapType
-        options.size = UIScreen.main.bounds.size
         options.showsBuildings = true
 
         let snapshotter = MKMapSnapshotter(options: options)
@@ -299,7 +313,7 @@ struct MapView: View {
             let snapshot = try await snapshotter.start()
             mapSnapshot = snapshot.image
         } catch {
-            // If snapshot fails, clear it so we fall back to live map
+            logger.warning("Map snapshot capture failed: \(error.localizedDescription)")
             mapSnapshot = nil
         }
     }

@@ -15,6 +15,8 @@ struct MKMapViewRepresentable: UIViewRepresentable {
     // Callbacks for callout actions
     let onDetailTap: (ContactDTO) -> Void
     let onMessageTap: (ContactDTO) -> Void
+    /// Called once with a closure that returns snapshot parameters from the actual MKMapView (bypasses async binding)
+    var onSnapshotParamsGetter: ((@escaping () -> (camera: MKMapCamera, size: CGSize)?) -> Void)?
 
     func makeUIView(context: Context) -> MKMapView {
         let mapView = context.coordinator.mapView
@@ -31,6 +33,12 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             MKMarkerAnnotationView.self,
             forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier
         )
+
+        // Provide closure to get snapshot params directly from MKMapView (bypasses async binding lag)
+        onSnapshotParamsGetter? { [weak mapView] in
+            guard let mapView else { return nil }
+            return (camera: mapView.camera.copy() as! MKMapCamera, size: mapView.bounds.size)
+        }
 
         return mapView
     }
@@ -170,6 +178,10 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         /// When set, the binding is considered stale until it matches this value.
         var pendingUserGestureRegion: MKCoordinateRegion?
 
+        /// Timestamp of the last cluster tap handled by the gesture recognizer.
+        /// Used to prevent double-handling when both gesture and delegate fire.
+        var lastClusterTapTime: Date?
+
         // Previous state for change detection (avoid unnecessary view updates that interfere with clustering)
         var lastShowLabels: Bool = true
         var lastSelectedContactID: UUID?
@@ -187,6 +199,8 @@ struct MKMapViewRepresentable: UIViewRepresentable {
                   let cluster = clusterView.annotation as? MKClusterAnnotation else {
                 return
             }
+            // Mark that we handled this tap to prevent delegate double-handling
+            lastClusterTapTime = Date()
             mapView.showAnnotations(cluster.memberAnnotations, animated: true)
         }
 
@@ -261,8 +275,13 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             }
 
             // Handle cluster selection - zoom to show members
-            // This serves as fallback when gesture recognizer doesn't fire
+            // Skip if gesture recognizer already handled this tap (within 500ms)
             if let cluster = annotation as? MKClusterAnnotation {
+                if let tapTime = lastClusterTapTime, Date().timeIntervalSince(tapTime) < 0.5 {
+                    // Gesture already handled this tap, just deselect without zooming again
+                    mapView.deselectAnnotation(cluster, animated: false)
+                    return
+                }
                 mapView.deselectAnnotation(cluster, animated: false)
                 mapView.showAnnotations(cluster.memberAnnotations, animated: true)
                 return
