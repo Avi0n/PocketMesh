@@ -33,7 +33,7 @@ struct RepeaterStatusView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry)
+                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry || appState.connectionState != .ready)
                 }
 
                 ToolbarItemGroup(placement: .keyboard) {

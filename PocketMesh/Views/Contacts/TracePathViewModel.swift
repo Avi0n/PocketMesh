@@ -252,7 +252,7 @@ final class TracePathViewModel {
 
     /// Can run trace if path has at least one hop and device connected
     var canRunTrace: Bool {
-        !outboundPath.isEmpty && appState?.connectedDevice != nil && !isRunning
+        !outboundPath.isEmpty && appState?.connectionState == .ready && !isRunning
     }
 
     /// Can save path if result is successful and path hasn't changed since trace ran

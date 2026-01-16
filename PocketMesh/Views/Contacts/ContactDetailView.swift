@@ -567,6 +567,7 @@ struct ContactDetailView: View {
                 } label: {
                     Label("Discover Path", systemImage: "antenna.radiowaves.left.and.right")
                 }
+                .disabled(appState.connectionState != .ready)
             }
 
             // Edit Path button (secondary)
@@ -579,6 +580,7 @@ struct ContactDetailView: View {
             } label: {
                 Label("Edit Path", systemImage: "pencil")
             }
+            .disabled(appState.connectionState != .ready)
 
             // Reset Path button (destructive, disabled when already flood)
             Button(role: .destructive) {
@@ -596,7 +598,7 @@ struct ContactDetailView: View {
                     }
                 }
             }
-            .disabled(pathViewModel.isSettingPath || currentContact.isFloodRouted)
+            .disabled(pathViewModel.isSettingPath || currentContact.isFloodRouted || appState.connectionState != .ready)
         } header: {
             Text("Network Path")
         } footer: {
