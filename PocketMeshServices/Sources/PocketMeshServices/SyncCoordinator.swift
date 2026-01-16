@@ -524,6 +524,23 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
+            // Look up pathNodes from RxLogEntry (for direct messages, channelIndex is nil)
+            var pathNodes: Data?
+            do {
+                if let rxEntry = try await services.dataStore.findRxLogEntry(
+                    channelIndex: nil,
+                    timestamp: timestamp,
+                    withinSeconds: 10
+                ) {
+                    pathNodes = rxEntry.pathNodes
+                    self.logger.debug("Correlated incoming direct message to RxLogEntry, pathNodes: \(pathNodes?.count ?? 0) bytes")
+                } else {
+                    self.logger.debug("No RxLogEntry found for direct message timestamp: \(timestamp)")
+                }
+            } catch {
+                self.logger.error("Failed to lookup RxLogEntry for direct message: \(error)")
+            }
+
             // Check for self-mention before creating DTO
             let hasSelfMention = !selfNodeName.isEmpty &&
                 MentionUtilities.containsSelfMention(in: message.text, selfName: selfNodeName)
@@ -542,6 +559,7 @@ public actor SyncCoordinator {
                 ackCode: nil,
                 pathLength: message.pathLength,
                 snr: message.snr,
+                pathNodes: pathNodes,
                 senderKeyPrefix: message.senderPublicKeyPrefix,
                 senderNodeName: nil,
                 isRead: false,
@@ -616,6 +634,23 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
+            // Look up pathNodes from RxLogEntry (use 10s window for tolerance)
+            var pathNodes: Data?
+            do {
+                if let rxEntry = try await services.dataStore.findRxLogEntry(
+                    channelIndex: channel?.index,
+                    timestamp: timestamp,
+                    withinSeconds: 10
+                ) {
+                    pathNodes = rxEntry.pathNodes
+                    self.logger.debug("Correlated incoming channel message to RxLogEntry, pathNodes: \(pathNodes?.count ?? 0) bytes")
+                } else {
+                    self.logger.debug("No RxLogEntry found for channel message timestamp: \(timestamp)")
+                }
+            } catch {
+                self.logger.error("Failed to lookup RxLogEntry for channel message: \(error)")
+            }
+
             // Check for self-mention before creating DTO
             // Filter out messages where user mentions themselves
             let hasSelfMention = !selfNodeName.isEmpty &&
@@ -636,6 +671,7 @@ public actor SyncCoordinator {
                 ackCode: nil,
                 pathLength: message.pathLength,
                 snr: message.snr,
+                pathNodes: pathNodes,
                 senderKeyPrefix: nil,
                 senderNodeName: senderNodeName,
                 isRead: false,
