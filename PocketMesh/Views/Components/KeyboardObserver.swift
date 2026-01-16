@@ -58,3 +58,29 @@ final class KeyboardObserver {
         bottomCorrection = newCorrection
     }
 }
+
+/// View modifier that applies keyboard correction for undocked iPad keyboards.
+struct FloatingKeyboardAwareModifier: ViewModifier {
+    @Environment(KeyboardObserver.self) private var keyboardObserver
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.bottom, keyboardObserver.bottomCorrection)
+            .animation(
+                reduceMotion
+                    ? .none
+                    : .spring(response: 0.25, dampingFraction: 0.85),
+                value: keyboardObserver.bottomCorrection
+            )
+    }
+}
+
+extension View {
+    /// Applies correction for iPad's floating/undocked/split keyboard.
+    /// Use on views positioned with `.safeAreaInset(edge: .bottom)` that need
+    /// to move down when the keyboard undocks.
+    func floatingKeyboardAware() -> some View {
+        modifier(FloatingKeyboardAwareModifier())
+    }
+}
