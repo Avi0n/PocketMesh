@@ -10,7 +10,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "KeyboardObse
 @Observable @MainActor
 final class KeyboardObserver {
     private(set) var bottomCorrection: CGFloat = 0
-    private nonisolated(unsafe) var observerToken: (any NSObjectProtocol)?
+    nonisolated(unsafe) private var observerToken: (any NSObjectProtocol)?
 
     init() {
         setupObservers()
@@ -28,14 +28,19 @@ final class KeyboardObserver {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            self?.handleKeyboardFrameChange(notification)
+            // Extract values before crossing actor boundary
+            guard let userInfo = notification.userInfo,
+                  let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                return
+            }
+            Task { @MainActor in
+                self?.handleKeyboardFrameChange(keyboardFrame)
+            }
         }
     }
 
-    private func handleKeyboardFrameChange(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
-              let window = UIApplication.shared.connectedScenes
+    private func handleKeyboardFrameChange(_ keyboardFrame: CGRect) {
+        guard let window = UIApplication.shared.connectedScenes
                   .compactMap({ $0 as? UIWindowScene })
                   .first?.windows.first else {
             return
