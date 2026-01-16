@@ -560,11 +560,15 @@ public actor SyncCoordinator {
 
                 // Only increment unread count, post notification, and update badge for non-blocked contacts
                 if let contactID = contact?.id, contact?.isBlocked != true {
-                    try await services.dataStore.incrementUnreadCount(contactID: contactID)
+                    // Only increment unread if user is NOT currently viewing this contact's chat
+                    let isViewingContact = await services.notificationService.activeContactID == contactID
+                    if !isViewingContact {
+                        try await services.dataStore.incrementUnreadCount(contactID: contactID)
 
-                    // Increment unread mention count if message contains self-mention
-                    if hasSelfMention {
-                        try await services.dataStore.incrementUnreadMentionCount(contactID: contactID)
+                        // Increment unread mention count if message contains self-mention
+                        if hasSelfMention {
+                            try await services.dataStore.incrementUnreadMentionCount(contactID: contactID)
+                        }
                     }
 
                     await services.notificationService.postDirectMessageNotification(
@@ -652,11 +656,17 @@ public actor SyncCoordinator {
                 // Only update unread count, badges, and notify UI for non-blocked senders
                 if await !self.isBlockedSender(senderNodeName) {
                     if let channelID = channel?.id {
-                        try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
+                        // Only increment unread if user is NOT currently viewing this channel
+                        let activeIndex = await services.notificationService.activeChannelIndex
+                        let activeDeviceID = await services.notificationService.activeChannelDeviceID
+                        let isViewingChannel = activeIndex == channel?.index && activeDeviceID == channel?.deviceID
+                        if !isViewingChannel {
+                            try await services.dataStore.incrementChannelUnreadCount(channelID: channelID)
 
-                        // Increment unread mention count if message contains self-mention
-                        if hasSelfMention {
-                            try await services.dataStore.incrementChannelUnreadMentionCount(channelID: channelID)
+                            // Increment unread mention count if message contains self-mention
+                            if hasSelfMention {
+                                try await services.dataStore.incrementChannelUnreadMentionCount(channelID: channelID)
+                            }
                         }
                     }
 
