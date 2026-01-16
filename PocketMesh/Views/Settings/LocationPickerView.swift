@@ -6,6 +6,7 @@ import PocketMeshServices
 /// Map-based location picker for setting node position
 struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     // Configuration
     private let initialCoordinate: CLLocationCoordinate2D?
@@ -99,7 +100,7 @@ struct LocationPickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveLocation() }
-                        .disabled(isSaving)
+                        .disabled(isSaving || appState.connectionState != .ready)
                 }
             }
             .onAppear {

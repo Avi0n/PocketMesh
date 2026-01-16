@@ -21,7 +21,7 @@ struct ContactsSettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .disabled(isSaving)
+            .disabled(isSaving || appState.connectionState != .ready)
         } header: {
             Text("Nodes")
         }

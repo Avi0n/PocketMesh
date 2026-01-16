@@ -25,7 +25,7 @@ struct NodeSettingsSection: View {
                     isEditingName = true
                 }
                 .foregroundStyle(.secondary)
-                .disabled(isSaving)
+                .disabled(isSaving || appState.connectionState != .ready)
             }
 
             // Public Key (copy)
@@ -75,7 +75,7 @@ struct NodeSettingsSection: View {
                 }
             }
             .foregroundStyle(.primary)
-            .disabled(isSaving)
+            .disabled(isSaving || appState.connectionState != .ready)
 
             // Share Location Toggle
             Toggle(isOn: $shareLocation) {
@@ -84,7 +84,7 @@ struct NodeSettingsSection: View {
             .onChange(of: shareLocation) { _, newValue in
                 updateShareLocation(newValue)
             }
-            .disabled(isSaving)
+            .disabled(isSaving || appState.connectionState != .ready)
 
         } header: {
             Text("Node")
