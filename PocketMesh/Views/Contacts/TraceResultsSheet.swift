@@ -240,7 +240,7 @@ struct TraceResultsSheet: View {
                 VStack(alignment: .trailing) {
                     Text("\(avg) ms")
                         .font(.body.monospacedDigit())
-                    Text("(\(min)–\(max))")
+                    Text("(\(min) – \(max))")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
@@ -312,7 +312,7 @@ struct TraceResultHopRow: View {
                 // SNR display - batch mode shows avg with range, single shows plain SNR
                 if !hop.isStartNode {
                     if let stats = batchStats {
-                        Text("Avg SNR: \(stats.avg, format: .number.precision(.fractionLength(1))) dB (\(stats.min, format: .number.precision(.fractionLength(1)))–\(stats.max, format: .number.precision(.fractionLength(1))))")
+                        Text("Avg SNR: \(stats.avg, format: .number.precision(.fractionLength(1))) dB (\(stats.min, format: .number.precision(.fractionLength(1))) – \(stats.max, format: .number.precision(.fractionLength(1))))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .accessibilityLabel("Average signal to noise ratio: \(stats.avg, format: .number.precision(.fractionLength(1))) decibels, range \(stats.min, format: .number.precision(.fractionLength(1))) to \(stats.max, format: .number.precision(.fractionLength(1)))")
