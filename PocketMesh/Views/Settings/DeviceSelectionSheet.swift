@@ -84,7 +84,8 @@ struct DeviceSelectionSheet: View {
                             }
                         }
                     }
-                    .fontWeight(.semibold)
+                    .bold()
+                    .tint(.blue)
                     .disabled(selectedDevice == nil)
                 }
             }
