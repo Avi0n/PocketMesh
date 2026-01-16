@@ -21,6 +21,7 @@ struct TracePathView: View {
 
     @State private var showJumpToPath = false
     @State private var isBottomVisible = true
+    @State private var pathLoadedFromSheet = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -55,6 +56,14 @@ struct TracePathView: View {
             .overlay(alignment: .bottom) {
                 jumpToPathButton(proxy: proxy)
             }
+            .onChange(of: showingSavedPaths) { wasShowing, isShowing in
+                if wasShowing && !isShowing && pathLoadedFromSheet {
+                    pathLoadedFromSheet = false
+                    withAnimation {
+                        proxy.scrollTo("runTrace", anchor: .bottom)
+                    }
+                }
+            }
         }
         .navigationTitle("Trace Path")
         .navigationBarTitleDisplayMode(.inline)
@@ -73,6 +82,9 @@ struct TracePathView: View {
         .sheet(isPresented: $showingSavedPaths) {
             SavedPathsSheet { selectedPath in
                 viewModel.loadSavedPath(selectedPath)
+                pathLoadedFromSheet = true
+            } onDelete: { deletedPathId in
+                viewModel.handleSavedPathDeleted(id: deletedPathId)
             }
         }
         .onChange(of: viewModel.resultID) { _, newID in
