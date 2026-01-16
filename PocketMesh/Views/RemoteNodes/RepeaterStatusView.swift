@@ -184,7 +184,8 @@ struct RepeaterStatusView: View {
                     footerText: "",
                     selectedPreset: $viewModel.selectedOCVPreset,
                     voltageValues: $viewModel.ocvValues,
-                    onSave: viewModel.saveOCVSettings
+                    onSave: viewModel.saveOCVSettings,
+                    isDisabled: appState.connectionState != .ready
                 )
 
                 if let error = viewModel.ocvError {

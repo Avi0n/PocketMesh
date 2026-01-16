@@ -5,6 +5,7 @@ private let sendButtonColor = Color(red: 36/255, green: 99/255, blue: 235/255)
 
 /// Reusable chat input bar with configurable styling
 struct ChatInputBar: View {
+    @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
@@ -106,6 +107,7 @@ struct ChatInputBar: View {
     }
 
     private var canSend: Bool {
+        appState.connectionState == .ready &&
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
     }
 }

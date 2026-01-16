@@ -12,6 +12,7 @@ struct BatteryCurveSection: View {
     @Binding var voltageValues: [Int]
 
     let onSave: (OCVPreset, [Int]) async -> Void
+    var isDisabled: Bool = false
 
     @State private var isEditingValues = false
     @State private var validationError: String?
@@ -40,6 +41,7 @@ struct BatteryCurveSection: View {
                     }
                 }
             }
+            .disabled(isDisabled)
 
             BatteryCurveChart(ocvArray: voltageValues)
 
@@ -51,6 +53,7 @@ struct BatteryCurveSection: View {
                     onValueChanged: handleValueChanged
                 )
             }
+            .disabled(isDisabled)
 
             // Validation error
             if let error = validationError {

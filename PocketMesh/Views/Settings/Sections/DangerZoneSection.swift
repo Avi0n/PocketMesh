@@ -30,7 +30,7 @@ struct DangerZoneSection: View {
                     Label("Factory Reset Device", systemImage: "exclamationmark.triangle")
                 }
             }
-            .disabled(isResetting)
+            .disabled(isResetting || appState.connectionState != .ready)
         } header: {
             Text("Danger Zone")
         } footer: {

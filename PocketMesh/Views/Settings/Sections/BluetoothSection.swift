@@ -43,7 +43,7 @@ struct BluetoothSection: View {
                 guard hasInitialized else { return }
                 handlePinTypeChange(from: oldValue, to: newValue)
             }
-            .disabled(isChangingPin)
+            .disabled(isChangingPin || appState.connectionState != .ready)
 
             if pinType == .custom, let device = appState.connectedDevice, device.blePin > 0 {
                 Button {
@@ -74,6 +74,7 @@ struct BluetoothSection: View {
                     customPin = ""
                     showingChangePinEntry = true
                 }
+                .disabled(appState.connectionState != .ready)
             }
 
             if appState.connectionState == .ready,
@@ -91,7 +92,7 @@ struct BluetoothSection: View {
                         }
                     }
                 }
-                .disabled(isRenaming)
+                .disabled(isRenaming || appState.connectionState != .ready)
             }
         } header: {
             Text("Bluetooth")
