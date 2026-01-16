@@ -36,9 +36,6 @@ extension StatusResponse {
     /// Battery level in millivolts (compatibility conversion)
     public var batteryMillivolts: UInt16 { UInt16(clamping: battery) }
 
-    /// TX queue length (compatibility alias)
-    public var txQueueLength: UInt16 { UInt16(clamping: self.txQueueLength) }
-
     /// Last RSSI value (compatibility alias)
     public var lastRssi: Int16 { Int16(clamping: lastRSSI) }
 

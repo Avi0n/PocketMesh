@@ -61,7 +61,7 @@ final class RoomConversationViewModel {
             // in @State which don't update when the database changes. A better approach would be
             // to store selection by ID only and derive the session from fresh viewModel data.
             try await roomServerService.markAsRead(sessionID: session.id)
-            await syncCoordinator?.notifyConversationsChanged()
+            syncCoordinator?.notifyConversationsChanged()
         } catch {
             errorMessage = error.localizedDescription
         }

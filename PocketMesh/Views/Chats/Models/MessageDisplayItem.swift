@@ -22,6 +22,7 @@ struct MessageDisplayItem: Identifiable, Hashable, Sendable {
     let isOutgoing: Bool
     let containsSelfMention: Bool
     let mentionSeen: Bool
+    let heardRepeats: Int
 
     // Preview state (owned by ViewModel, not view)
     let previewState: PreviewLoadState

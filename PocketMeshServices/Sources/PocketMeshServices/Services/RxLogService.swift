@@ -69,7 +69,7 @@ public actor RxLogService {
     /// - Note: Only one active subscriber is supported. Subsequent calls replace the previous subscriber.
     public func entryStream() -> AsyncStream<RxLogEntryDTO> {
         AsyncStream { continuation in
-            Task { await self.setContinuation(continuation) }
+            Task { self.setContinuation(continuation) }
             continuation.onTermination = { @Sendable _ in
                 Task { await self.clearContinuation() }
             }

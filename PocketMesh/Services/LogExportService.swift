@@ -58,6 +58,7 @@ enum LogExportService {
 
     // MARK: - Section Generators
 
+    @MainActor
     private static func generateHeader() -> String {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"

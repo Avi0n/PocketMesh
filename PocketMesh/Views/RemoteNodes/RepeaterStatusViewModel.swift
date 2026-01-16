@@ -158,7 +158,7 @@ final class RepeaterStatusViewModel {
 
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
-        guard let repeaterAdminService else { return }
+        guard repeaterAdminService != nil else { return }
 
         self.session = session
         isLoadingStatus = true

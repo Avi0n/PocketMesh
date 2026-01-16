@@ -746,7 +746,7 @@ public final class AppState {
                     try? await services.dataStore.clearUnreadCount(contactID: contactID)
                     await services.notificationService.removeDeliveredNotifications(forContactID: contactID)
                     await services.notificationService.updateBadgeCount()
-                    await self.syncCoordinator?.notifyConversationsChanged()
+                    self.syncCoordinator?.notifyConversationsChanged()
                     return
                 } catch {
                     // Fall through to draft handling
@@ -768,7 +768,7 @@ public final class AppState {
                 try await services.dataStore.clearUnreadCount(contactID: contactID)
                 services.notificationService.removeDeliveredNotification(messageID: messageID)
                 await services.notificationService.updateBadgeCount()
-                await self.syncCoordinator?.notifyConversationsChanged()
+                self.syncCoordinator?.notifyConversationsChanged()
             } catch {
                 // Silently ignore
             }
@@ -782,7 +782,7 @@ public final class AppState {
                 try await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
                 services.notificationService.removeDeliveredNotification(messageID: messageID)
                 await services.notificationService.updateBadgeCount()
-                await self.syncCoordinator?.notifyConversationsChanged()
+                self.syncCoordinator?.notifyConversationsChanged()
             } catch {
                 // Silently ignore
             }

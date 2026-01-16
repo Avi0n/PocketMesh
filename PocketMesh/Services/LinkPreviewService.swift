@@ -15,7 +15,7 @@ struct LinkPreviewMetadata: Sendable {
 
 /// Service for extracting URLs from text and fetching link metadata
 final class LinkPreviewService: Sendable {
-    private nonisolated(unsafe) let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
 
     /// Shared URL detector instance to avoid creating NSDataDetector on every call
     private static let urlDetector: NSDataDetector? = {
@@ -83,7 +83,7 @@ final class LinkPreviewService: Sendable {
     /// Loads image data from an NSItemProvider, compressing if necessary
     private func loadData(from provider: NSItemProvider) async -> Data? {
         let rawData = await withCheckedContinuation { continuation in
-            provider.loadDataRepresentation(for: .image) { data, error in
+            _ = provider.loadDataRepresentation(for: .image) { data, error in
                 if let error {
                     self.logger.debug("Failed to load image data: \(error.localizedDescription)")
                 }

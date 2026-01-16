@@ -195,7 +195,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             }
 
             // Handle cluster annotations
-            if let cluster = annotation as? MKClusterAnnotation {
+            if annotation is MKClusterAnnotation {
                 let view = mapView.dequeueReusableAnnotationView(
                     withIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier,
                     for: annotation

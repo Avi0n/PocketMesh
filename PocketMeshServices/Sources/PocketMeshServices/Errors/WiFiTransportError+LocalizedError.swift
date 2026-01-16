@@ -3,7 +3,7 @@ import MeshCore
 
 // MARK: - WiFiTransportError LocalizedError Conformance
 
-extension WiFiTransportError: LocalizedError {
+extension WiFiTransportError: @retroactive LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .connectionFailed(let reason):

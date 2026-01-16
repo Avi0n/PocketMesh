@@ -81,7 +81,6 @@ public actor RoomServerService {
     ) async throws -> RemoteNodeSessionDTO {
         // Check if this is a new session
         let existingSession = try? await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey)
-        let isNewSession = existingSession == nil
 
         // Determine sync start point (used after login for history sync)
         let needsFullSync = existingSession == nil || existingSession?.lastSyncTimestamp == 0

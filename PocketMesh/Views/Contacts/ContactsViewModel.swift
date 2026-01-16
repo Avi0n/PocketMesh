@@ -98,7 +98,7 @@ final class ContactsViewModel {
         }
 
         do {
-            let result = try await contactService.syncContacts(deviceID: deviceID)
+            _ = try await contactService.syncContacts(deviceID: deviceID)
 
             // Reload from database
             await loadContacts(deviceID: deviceID)
@@ -125,7 +125,7 @@ final class ContactsViewModel {
             )
 
             // Update local list
-            if let index = contacts.firstIndex(where: { $0.id == contact.id }) {
+            if contacts.contains(where: { $0.id == contact.id }) {
                 await loadContacts(deviceID: contact.deviceID)
             }
         } catch {

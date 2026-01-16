@@ -221,7 +221,7 @@ public actor AdvertisementService {
                     if let meshContact = try await session.getContact(publicKey: publicKey) {
                         let frame = meshContact.toContactFrame()
                         let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
-                        let contactName = meshContact.advertisedName ?? "Unknown Contact"
+                        let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
                         await newContactDiscoveredHandler?(contactName, contactID)
                     }
                 } catch {
@@ -272,7 +272,7 @@ public actor AdvertisementService {
             let frame = meshContact.toContactFrame()
             _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
 
-            logger.debug("Refreshed contact path: \(meshContact.advertisedName ?? "unnamed")")
+            logger.debug("Refreshed contact path: \(meshContact.advertisedName.isEmpty ? "unnamed" : meshContact.advertisedName)")
 
             // Notify UI of contact update
             await contactUpdatedHandler?()

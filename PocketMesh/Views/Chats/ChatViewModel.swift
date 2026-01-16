@@ -313,8 +313,10 @@ final class ChatViewModel {
     func loadMessages(for contact: ContactDTO) async {
         guard let dataStore else { return }
 
-        // Clear preview state from previous conversation
-        clearPreviewState()
+        // Clear preview state only when switching to a different conversation
+        if currentContact?.id != contact.id {
+            clearPreviewState()
+        }
 
         currentContact = contact
 
@@ -330,7 +332,7 @@ final class ChatViewModel {
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
-            await syncCoordinator?.notifyConversationsChanged()
+            syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
@@ -359,6 +361,7 @@ final class ChatViewModel {
             isOutgoing: message.isOutgoing,
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
+            heardRepeats: message.heardRepeats,
             previewState: .idle,
             loadedPreview: nil
         )
@@ -391,6 +394,7 @@ final class ChatViewModel {
             isOutgoing: item.isOutgoing,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
+            heardRepeats: item.heardRepeats,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -453,8 +457,10 @@ final class ChatViewModel {
             return
         }
 
-        // Clear preview state from previous conversation
-        clearPreviewState()
+        // Clear preview state only when switching to a different conversation
+        if currentChannel?.id != channel.id {
+            clearPreviewState()
+        }
 
         currentChannel = channel
         currentContact = nil
@@ -494,7 +500,7 @@ final class ChatViewModel {
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
-            await syncCoordinator?.notifyConversationsChanged()
+            syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
             await notificationService?.updateBadgeCount()
@@ -785,6 +791,7 @@ final class ChatViewModel {
                 isOutgoing: message.isOutgoing,
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
+                heardRepeats: message.heardRepeats,
                 previewState: previewStates[message.id] ?? .idle,
                 loadedPreview: loadedPreviews[message.id]
             )
@@ -914,6 +921,7 @@ final class ChatViewModel {
             isOutgoing: item.isOutgoing,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
+            heardRepeats: item.heardRepeats,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
