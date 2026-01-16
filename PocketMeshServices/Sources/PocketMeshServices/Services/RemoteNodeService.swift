@@ -372,6 +372,11 @@ public actor RemoteNodeService {
         try await keychainService.storePassword(password, forNodeKey: publicKey)
     }
 
+    /// Delete the stored password for a contact's public key.
+    public func deletePassword(forContact contact: ContactDTO) async throws {
+        try await keychainService.deletePassword(forNodeKey: contact.publicKey)
+    }
+
     // MARK: - Login
 
     /// Login to a remote node.

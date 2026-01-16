@@ -1,5 +1,8 @@
+import os
 import SwiftUI
 import PocketMeshServices
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeAuthenticationSheet")
 
 /// Reusable password entry sheet for both room servers and repeaters
 struct NodeAuthenticationSheet: View {
@@ -15,12 +18,10 @@ struct NodeAuthenticationSheet: View {
     let onSuccess: (RemoteNodeSessionDTO) -> Void
 
     @State private var password: String = ""
-    @State private var showPassword = false
     @State private var rememberPassword = true
     @State private var isAuthenticating = false
     @State private var errorMessage: String?
     @State private var hasSavedPassword = false
-    @State private var savedPassword: String?
 
     // Countdown state
     @State private var authSecondsRemaining: Int?
@@ -60,11 +61,10 @@ struct NodeAuthenticationSheet: View {
                 }
             }
             .task {
-                if let remoteNodeService = appState.services?.remoteNodeService {
-                    hasSavedPassword = await remoteNodeService.hasPassword(forContact: contact)
-                    if hasSavedPassword {
-                        savedPassword = await remoteNodeService.retrievePassword(forContact: contact)
-                    }
+                if let remoteNodeService = appState.services?.remoteNodeService,
+                   let saved = await remoteNodeService.retrievePassword(forContact: contact) {
+                    password = saved
+                    hasSavedPassword = true
                 }
             }
             .sensoryFeedback(.error, trigger: errorMessage)
@@ -84,30 +84,9 @@ struct NodeAuthenticationSheet: View {
 
     private var authenticationSection: some View {
         Section {
-            HStack {
-                if hasSavedPassword && password.isEmpty {
-                    Button {
-                        password = savedPassword ?? ""
-                    } label: {
-                        Text(showPassword ? (savedPassword ?? "") : "••••••••")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.primary)
-
-                    Button {
-                        showPassword.toggle()
-                    } label: {
-                        Image(systemName: showPassword ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    SecureField("Password", text: $password)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
-            }
+            SecureField("Password", text: $password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
 
             Toggle("Remember Password", isOn: $rememberPassword)
         } header: {
@@ -156,7 +135,7 @@ struct NodeAuthenticationSheet: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .disabled(isAuthenticating || (role == .repeater && password.isEmpty && !hasSavedPassword))
+            .disabled(isAuthenticating || (role == .repeater && password.isEmpty))
         }
     }
 
@@ -182,14 +161,10 @@ struct NodeAuthenticationSheet: View {
                 let pathLength = UInt8(max(0, contact.outPathLength))
 
                 let session: RemoteNodeSessionDTO
-                // Only use keychain lookup (nil) when user has saved password and hasn't entered new one.
-                // Empty string is valid for rooms with empty guest password.
-                var passwordToUse = (hasSavedPassword && password.isEmpty) ? nil : password
-
                 // MeshCore repeaters and rooms only support 15-character passwords, truncate if needed
-                if let pw = passwordToUse, pw.count > maxPasswordLength {
-                    passwordToUse = String(pw.prefix(maxPasswordLength))
-                }
+                let passwordToUse = password.count > maxPasswordLength
+                    ? String(password.prefix(maxPasswordLength))
+                    : password
 
                 // Callback to start countdown when firmware timeout is known
                 let onTimeoutKnown: @Sendable (Int) async -> Void = { [self] seconds in
@@ -219,6 +194,15 @@ struct NodeAuthenticationSheet: View {
                         pathLength: pathLength,
                         onTimeoutKnown: onTimeoutKnown
                     )
+                }
+
+                // Delete saved password if user unchecked "Remember Password"
+                if hasSavedPassword && !rememberPassword {
+                    do {
+                        try await services.remoteNodeService.deletePassword(forContact: contact)
+                    } catch {
+                        logger.warning("Failed to delete saved password: \(error)")
+                    }
                 }
 
                 await MainActor.run {
