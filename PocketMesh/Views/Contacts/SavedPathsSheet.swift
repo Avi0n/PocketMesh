@@ -9,6 +9,8 @@ struct SavedPathsSheet: View {
 
     /// Callback when a path is selected
     var onSelect: (SavedTracePathDTO) -> Void
+    /// Callback when a path is deleted
+    var onDelete: ((UUID) -> Void)?
 
     @State private var pathToDelete: SavedTracePathDTO?
     @State private var pathToRename: SavedTracePathDTO?
@@ -44,7 +46,11 @@ struct SavedPathsSheet: View {
             ) {
                 Button("Delete", role: .destructive) {
                     if let path = pathToDelete {
-                        Task { await viewModel.deletePath(path) }
+                        let pathId = path.id
+                        Task {
+                            await viewModel.deletePath(path)
+                            onDelete?(pathId)
+                        }
                     }
                 }
             } message: {
@@ -140,6 +146,7 @@ private struct SavedPathRow: View {
                 if !path.recentRTTs.isEmpty {
                     MiniSparkline(values: path.recentRTTs)
                         .frame(width: 50, height: 16)
+                        .accessibilityLabel(sparklineAccessibilityLabel)
                 }
             }
         }
@@ -164,9 +171,33 @@ private struct SavedPathRow: View {
     @ViewBuilder
     private var healthDot: some View {
         let rate = path.successRate
+        let healthDescription = rate >= 90 ? "healthy" : rate >= 50 ? "degraded" : "poor"
         Circle()
             .fill(rate >= 90 ? .green : rate >= 50 ? .yellow : .red)
             .frame(width: 8, height: 8)
+            .accessibilityLabel("Path health: \(healthDescription), \(rate)% success rate")
+    }
+
+    private var sparklineAccessibilityLabel: String {
+        let rtts = path.recentRTTs
+        guard !rtts.isEmpty else { return "No response time data" }
+
+        let avgRTT = rtts.reduce(0, +) / rtts.count
+        let trend: String
+        if rtts.count >= 2 {
+            let firstHalf = rtts.prefix(rtts.count / 2).reduce(0, +) / max(1, rtts.count / 2)
+            let secondHalf = rtts.suffix(rtts.count / 2).reduce(0, +) / max(1, rtts.count / 2)
+            if secondHalf > firstHalf + 50 {
+                trend = "increasing"
+            } else if secondHalf < firstHalf - 50 {
+                trend = "decreasing"
+            } else {
+                trend = "stable"
+            }
+        } else {
+            trend = "stable"
+        }
+        return "Response times: average \(avgRTT)ms, \(trend)"
     }
 }
 

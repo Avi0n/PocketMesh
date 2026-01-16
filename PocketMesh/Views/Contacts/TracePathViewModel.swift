@@ -494,6 +494,13 @@ final class TracePathViewModel {
         pendingPathHash = nil
     }
 
+    /// Clear active saved path reference if it matches the deleted path
+    func handleSavedPathDeleted(id: UUID) {
+        guard activeSavedPath?.id == id else { return }
+        activeSavedPath = nil
+        logger.info("Cleared active saved path reference after deletion")
+    }
+
     /// Find a saved path matching the current path bytes
     /// Returns the most recently used match if multiple exist
     private func findMatchingSavedPath() async -> SavedTracePathDTO? {
