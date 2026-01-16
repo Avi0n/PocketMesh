@@ -4,17 +4,7 @@ import OSLog
 
 private let chatsViewLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
 
-private struct HashtagJoinRequest: Identifiable, Hashable {
-    let id: String
-}
-
 struct ChatsView: View {
-    private enum ChatDestination: Hashable {
-        case direct(ContactDTO)
-        case channel(ChannelDTO)
-        case room(RemoteNodeSessionDTO)
-    }
-
     @Environment(AppState.self) private var appState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -24,12 +14,18 @@ struct ChatsView: View {
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
 
-    @State private var selectedDestination: ChatDestination?
+    @State private var selectedRoute: ChatRoute?
+    @State private var navigationPath = NavigationPath()
+    @State private var activeRoute: ChatRoute?
+    @State private var lastSelectedRoomIsConnected: Bool?
+    @State private var routeBeingDeleted: ChatRoute?
 
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
+    @State private var sidebarListID = UUID()
     @State private var pendingChatContact: ContactDTO?
+    @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
 
     private var shouldUseSplitView: Bool {
@@ -38,13 +34,6 @@ struct ChatsView: View {
 
     private var filteredConversations: [Conversation] {
         viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
-    }
-
-    private var filterAccessibilityLabel: String {
-        if let filter = selectedFilter {
-            return "Filter conversations, currently showing \(filter.rawValue)"
-        }
-        return "Filter conversations"
     }
 
     private var emptyStateMessage: (title: String, description: String, systemImage: String) {
@@ -62,12 +51,100 @@ struct ChatsView: View {
         }
     }
 
-    private var filterIcon: String {
-        selectedFilter == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
+    @ViewBuilder
+    private func conversationListState<Content: View>(
+        @ViewBuilder listContent: () -> Content
+    ) -> some View {
+        if viewModel.isLoading && viewModel.allConversations.isEmpty {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if filteredConversations.isEmpty {
+            ContentUnavailableView {
+                Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
+            } description: {
+                Text(emptyStateMessage.description)
+            } actions: {
+                if selectedFilter != nil {
+                    Button("Clear Filter") {
+                        selectedFilter = nil
+                    }
+                }
+            }
+        } else {
+            listContent()
+        }
+    }
+
+    private func applyChatsListModifiers<Content: View>(
+        to content: Content,
+        onTaskStart: @escaping () async -> Void
+    ) -> some View {
+        content
+            .navigationTitle("Chats")
+            .searchable(text: $searchText, prompt: "Search conversations")
+            .searchScopes($selectedFilter, activation: .onSearchPresentation) {
+                Text("All").tag(nil as ChatFilter?)
+                ForEach(ChatFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter as ChatFilter?)
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    filterMenu
+                }
+                ToolbarItem(placement: .automatic) {
+                    Menu {
+                        Button {
+                            showingNewChat = true
+                        } label: {
+                            Label("New Chat", systemImage: "person")
+                        }
+
+                        Button {
+                            showingChannelOptions = true
+                        } label: {
+                            Label("New Channel", systemImage: "number")
+                        }
+                    } label: {
+                        Label("New Message", systemImage: "square.and.pencil")
+                    }
+                }
+            }
+            .refreshable {
+                await refreshConversations()
+            }
+            .task {
+                await onTaskStart()
+            }
+            .onChange(of: appState.pendingChatContact) { _, _ in
+                handlePendingNavigation()
+            }
+            .onChange(of: appState.pendingRoomSession) { _, _ in
+                handlePendingRoomNavigation()
+            }
+            .onChange(of: appState.servicesVersion) { _, _ in
+                Task {
+                    await loadConversations()
+                }
+            }
+            .onChange(of: appState.conversationsVersion) { _, _ in
+                Task {
+                    await loadConversations()
+                }
+            }
     }
 
     @ViewBuilder
     private var filterMenu: some View {
+        let filterIcon = selectedFilter == nil
+            ? "line.3.horizontal.decrease.circle"
+            : "line.3.horizontal.decrease.circle.fill"
+        let accessibilityLabel = selectedFilter.map { "Filter conversations, currently showing \($0.rawValue)" }
+            ?? "Filter conversations"
+
         Menu {
             Picker("Filter", selection: $selectedFilter) {
                 Text("All").tag(nil as ChatFilter?)
@@ -80,109 +157,47 @@ struct ChatsView: View {
         } label: {
             if selectedFilter == nil {
                 Label("Filter", systemImage: filterIcon)
-                    .accessibilityLabel(filterAccessibilityLabel)
+                    .accessibilityLabel(accessibilityLabel)
             } else {
                 Label("Filter", systemImage: filterIcon)
                     .foregroundStyle(.tint)
-                    .accessibilityLabel(filterAccessibilityLabel)
+                    .accessibilityLabel(accessibilityLabel)
             }
         }
     }
 
     var body: some View {
-        if shouldUseSplitView {
-            NavigationSplitView {
-                NavigationStack {
-                    sidebarContent
-                }
-            } detail: {
-                NavigationStack {
-                    detailContent
-                }
-            }
-            .environment(\.openURL, OpenURLAction { url in
-                guard url.scheme == "pocketmesh-hashtag" else {
-                    return .systemAction
-                }
-                guard let channelName = url.host else {
-                    chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
-                    return .handled
-                }
-                handleHashtagTap(name: channelName)
-                return .handled
-            })
-            .sheet(item: $hashtagToJoin) { request in
-                JoinHashtagFromMessageView(channelName: request.id) { channel in
-                    hashtagToJoin = nil
-                    if let channel {
-                        selectedDestination = .channel(channel)
-                    }
-                }
-                .presentationDetents([.medium])
-            }
-        } else {
-            ChatsListView()
-        }
-    }
-
-    private var sidebarContent: some View {
         Group {
-            if viewModel.isLoading && viewModel.allConversations.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if filteredConversations.isEmpty {
-                ContentUnavailableView {
-                    Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
-                } description: {
-                    Text(emptyStateMessage.description)
-                } actions: {
-                    if selectedFilter != nil {
-                        Button("Clear Filter") {
-                            selectedFilter = nil
-                        }
-                    }
-                }
+            if shouldUseSplitView {
+                splitLayout
             } else {
-                conversationSplitList
+                stackLayout
             }
         }
-        .navigationTitle("Chats")
-        .searchable(text: $searchText, prompt: "Search conversations")
-        .searchScopes($selectedFilter, activation: .onSearchPresentation) {
-            Text("All").tag(nil as ChatFilter?)
-            ForEach(ChatFilter.allCases) { filter in
-                Text(filter.rawValue).tag(filter as ChatFilter?)
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == HashtagDeeplinkSupport.scheme else {
+                return .systemAction
             }
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                BLEStatusIndicatorView()
+            guard let channelName = HashtagDeeplinkSupport.channelNameFromURL(url) else {
+                chatsViewLogger.error("Hashtag URL missing host: \(url.absoluteString, privacy: .public)")
+                return .handled
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                filterMenu
-            }
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    Button {
-                        showingNewChat = true
-                    } label: {
-                        Label("New Chat", systemImage: "person")
-                    }
-
-                    Button {
-                        showingChannelOptions = true
-                    } label: {
-                        Label("New Channel", systemImage: "number")
-                    }
-                } label: {
-                    Label("New Message", systemImage: "square.and.pencil")
+            handleHashtagTap(name: channelName)
+            return .handled
+        })
+        .sheet(item: $hashtagToJoin) { request in
+            JoinHashtagFromMessageView(channelName: request.id) { channel in
+                hashtagToJoin = nil
+                if let channel {
+                    navigate(to: .channel(channel))
                 }
             }
+            .presentationDetents([.medium])
         }
         .sheet(isPresented: $showingNewChat, onDismiss: {
             if let contact = pendingChatContact {
                 pendingChatContact = nil
-                selectedDestination = .direct(contact)
+                navigate(to: .direct(contact))
             }
         }) {
             NewChatView(viewModel: viewModel) { contact in
@@ -193,124 +208,104 @@ struct ChatsView: View {
         .sheet(isPresented: $showingChannelOptions, onDismiss: {
             Task {
                 await loadConversations()
+                if let channel = pendingChannel {
+                    pendingChannel = nil
+                    navigate(to: .channel(channel))
+                }
             }
         }) {
-            ChannelOptionsSheet()
+            ChannelOptionsSheet { channel in
+                pendingChannel = channel
+            }
         }
         .sheet(item: $roomToAuthenticate) { session in
             RoomAuthenticationSheet(session: session) { authenticatedSession in
                 roomToAuthenticate = nil
-                selectedDestination = .room(authenticatedSession)
+                navigate(to: .room(authenticatedSession))
             }
             .presentationSizing(.page)
         }
         .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
             Button("Cancel", role: .cancel) {
                 roomToDelete = nil
+                routeBeingDeleted = nil
             }
             Button("Leave", role: .destructive) {
                 Task {
                     if let session = roomToDelete {
+                        routeBeingDeleted = .room(session)
                         await deleteRoom(session)
                     }
                     roomToDelete = nil
+                    routeBeingDeleted = nil
                 }
             }
         } message: {
             Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
         }
-        .refreshable {
-            await refreshConversations()
+    }
+
+    private var splitLayout: some View {
+        NavigationSplitView {
+            NavigationStack {
+                splitSidebarContent
+            }
+        } detail: {
+            NavigationStack {
+                splitDetailContent
+            }
         }
-        .task {
-            chatsViewLogger.info("ChatsView: task started, services=\(appState.services != nil)")
-            viewModel.configure(appState: appState)
-            await loadConversations()
-            chatsViewLogger.info("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
-            handlePendingNavigation()
-            handlePendingRoomNavigation()
-        }
-        .onChange(of: selectedDestination) { oldValue, newValue in
-            // Refresh conversations when selection changes to pick up any updates
-            // (e.g., mention counts, unread counts, last message previews)
+        .id(sidebarListID)
+    }
+
+    private var splitSidebarContent: some View {
+        applyChatsListModifiers(
+            to: conversationListState {
+                ConversationListContent(
+                    viewModel: viewModel,
+                    conversations: filteredConversations,
+                    selection: $selectedRoute,
+                    onDeleteConversation: handleDeleteConversation
+                )
+            },
+            onTaskStart: {
+                chatsViewLogger.debug("ChatsView: task started, services=\(appState.services != nil)")
+                viewModel.configure(appState: appState)
+                await loadConversations()
+                chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
+                handlePendingNavigation()
+                handlePendingRoomNavigation()
+            }
+        )
+        .onChange(of: selectedRoute) { oldValue, newValue in
+            // Reload conversations when navigating away (but not when clearing for deletion)
             if oldValue != nil {
-                Task {
-                    await loadConversations()
+                let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
+                if !didClearSelectionForDeletion {
+                    Task {
+                        await loadConversations()
+                    }
                 }
             }
 
-            guard let newValue else { return }
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
-                selectedDestination = nil
+                selectedRoute = nil
+                lastSelectedRoomIsConnected = nil
+                routeBeingDeleted = nil
+                return
             }
-        }
-        .onChange(of: appState.pendingChatContact) { _, _ in
-            handlePendingNavigation()
-        }
-        .onChange(of: appState.pendingRoomSession) { _, _ in
-            handlePendingRoomNavigation()
-        }
-        .onChange(of: appState.servicesVersion) { _, _ in
-            Task {
-                await loadConversations()
-            }
-        }
-        .onChange(of: appState.conversationsVersion) { _, _ in
-            Task {
-                await loadConversations()
-            }
-        }
-    }
 
-    private var conversationSplitList: some View {
-        List(selection: $selectedDestination) {
-            ForEach(filteredConversations) { conversation in
-                switch conversation {
-                case .direct(let contact):
-                    ConversationRow(contact: contact, viewModel: viewModel)
-                        .tag(ChatDestination.direct(contact))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            deleteDirectConversation(contact)
-                        }
-
-                case .channel(let channel):
-                    ChannelConversationRow(channel: channel, viewModel: viewModel)
-                        .tag(ChatDestination.channel(channel))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            deleteChannelConversation(channel)
-                        }
-
-                case .room(let session):
-                    RoomConversationRow(session: session)
-                        .tag(ChatDestination.room(session))
-                        .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                            roomToDelete = session
-                            showRoomDeleteAlert = true
-                        }
-                }
-            }
-        }
-        .listStyle(.plain)
-    }
-
-    private func deleteDirectConversation(_ contact: ContactDTO) {
-        viewModel.removeConversation(.direct(contact))
-        Task {
-            try? await viewModel.deleteConversation(for: contact)
-        }
-    }
-
-    private func deleteChannelConversation(_ channel: ChannelDTO) {
-        viewModel.removeConversation(.channel(channel))
-        Task {
-            await deleteChannel(channel)
+            lastSelectedRoomIsConnected = {
+                guard case .room(let session) = newValue else { return nil }
+                return session.isConnected
+            }()
         }
     }
 
     @ViewBuilder
-    private var detailContent: some View {
-        switch selectedDestination {
+    private var splitDetailContent: some View {
+        switch selectedRoute {
         case .direct(let contact):
             ChatView(contact: contact, parentViewModel: viewModel)
                 .id(contact.id)
@@ -325,10 +320,103 @@ struct ChatsView: View {
         }
     }
 
+    private var stackLayout: some View {
+        NavigationStack(path: $navigationPath) {
+            stackRootContent
+                .navigationDestination(for: ChatRoute.self) { route in
+                    switch route {
+                    case .direct(let contact):
+                        ChatView(contact: contact, parentViewModel: viewModel)
+                            .id(contact.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+
+                    case .channel(let channel):
+                        ChannelChatView(channel: channel, parentViewModel: viewModel)
+                            .id(channel.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+
+                    case .room(let session):
+                        RoomConversationView(session: session)
+                            .id(session.id)
+                            .onAppear {
+                                activeRoute = route
+                                appState.tabBarVisibility = .hidden
+                            }
+                    }
+                }
+                .onChange(of: navigationPath) { _, newPath in
+                    if newPath.isEmpty {
+                        activeRoute = nil
+                        appState.tabBarVisibility = .visible
+                        Task {
+                            await loadConversations()
+                        }
+                    }
+                }
+                .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
+        }
+    }
+
+    private var stackRootContent: some View {
+        applyChatsListModifiers(
+            to: conversationListState {
+                ConversationListContent(
+                    viewModel: viewModel,
+                    conversations: filteredConversations,
+                    onNavigate: { route in
+                        navigationPath.append(route)
+                    },
+                    onRequestRoomAuth: { session in
+                        roomToAuthenticate = session
+                    },
+                    onDeleteConversation: handleDeleteConversation
+                )
+            },
+            onTaskStart: {
+                viewModel.configure(appState: appState)
+                await loadConversations()
+                handlePendingNavigation()
+                handlePendingRoomNavigation()
+            }
+        )
+    }
+
     private func loadConversations() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
+
+        // If we're in the middle of deleting an item, ensure it stays removed
+        // This handles race conditions where a reload happens before DB delete completes
+        if let routeBeingDeleted {
+            viewModel.removeConversation(routeBeingDeleted.toConversation())
+        }
+
+        if let selectedRoute {
+            self.selectedRoute = selectedRoute.refreshedPayload(from: viewModel.allConversations)
+        }
+        if let activeRoute {
+            self.activeRoute = activeRoute.refreshedPayload(from: viewModel.allConversations)
+        }
+
+        if shouldUseSplitView,
+           lastSelectedRoomIsConnected == true,
+           case .room(let session) = self.selectedRoute,
+           !session.isConnected {
+            roomToAuthenticate = session
+            self.selectedRoute = nil
+        }
+
+        lastSelectedRoomIsConnected = {
+            guard case .room(let session) = self.selectedRoute else { return nil }
+            return session.isConnected
+        }()
     }
 
     private func refreshConversations() async {
@@ -336,16 +424,76 @@ struct ChatsView: View {
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
-    private func handlePendingNavigation() {
-        guard let contact = appState.pendingChatContact else { return }
-        selectedDestination = .direct(contact)
-        appState.clearPendingNavigation()
+    private func navigate(to route: ChatRoute) {
+        if shouldUseSplitView {
+            selectedRoute = route
+            return
+        }
+
+        if case .room(let session) = route, !session.isConnected {
+            roomToAuthenticate = session
+            return
+        }
+
+        appState.tabBarVisibility = .hidden
+        navigationPath.removeLast(navigationPath.count)
+        navigationPath.append(route)
     }
 
-    private func handlePendingRoomNavigation() {
-        guard let session = appState.pendingRoomSession else { return }
-        selectedDestination = .room(session)
-        appState.clearPendingRoomNavigation()
+    private func handleDeleteConversation(_ conversation: Conversation) {
+        switch conversation {
+        case .direct(let contact):
+            routeBeingDeleted = .direct(contact)
+            deleteDirectConversation(contact)
+
+        case .channel(let channel):
+            routeBeingDeleted = .channel(channel)
+            deleteChannelConversation(channel)
+
+        case .room(let session):
+            roomToDelete = session
+            showRoomDeleteAlert = true
+        }
+    }
+
+    private func deleteDirectConversation(_ contact: ContactDTO) {
+        if shouldUseSplitView && selectedRoute == .direct(contact) {
+            selectedRoute = nil
+        }
+
+        viewModel.removeConversation(.direct(contact))
+        sidebarListID = UUID()
+
+        if !shouldUseSplitView && activeRoute == .direct(contact) {
+            navigationPath.removeLast(navigationPath.count)
+            activeRoute = nil
+            appState.tabBarVisibility = .visible
+        }
+
+        Task {
+            try? await viewModel.deleteConversation(for: contact)
+            routeBeingDeleted = nil
+        }
+    }
+
+    private func deleteChannelConversation(_ channel: ChannelDTO) {
+        if shouldUseSplitView && selectedRoute == .channel(channel) {
+            selectedRoute = nil
+        }
+
+        viewModel.removeConversation(.channel(channel))
+        sidebarListID = UUID()
+
+        if !shouldUseSplitView && activeRoute == .channel(channel) {
+            navigationPath.removeLast(navigationPath.count)
+            activeRoute = nil
+            appState.tabBarVisibility = .visible
+        }
+
+        Task {
+            await deleteChannel(channel)
+            routeBeingDeleted = nil
+        }
     }
 
     private func deleteRoom(_ session: RemoteNodeSessionDTO) async {
@@ -362,11 +510,20 @@ struct ChatsView: View {
 
             await appState.services?.notificationService.updateBadgeCount()
 
-            if selectedDestination == .room(session) {
-                selectedDestination = nil
-            }
+            await MainActor.run {
+                if shouldUseSplitView && selectedRoute == .room(session) {
+                    selectedRoute = nil
+                }
 
-            await loadConversations()
+                viewModel.removeConversation(.room(session))
+                sidebarListID = UUID()
+
+                if !shouldUseSplitView && activeRoute == .room(session) {
+                    navigationPath.removeLast(navigationPath.count)
+                    activeRoute = nil
+                    appState.tabBarVisibility = .visible
+                }
+            }
         } catch {
             chatsViewLogger.error("Failed to delete room: \(error)")
         }
@@ -387,17 +544,24 @@ struct ChatsView: View {
         }
     }
 
-    // MARK: - Hashtag Channel Handling
+    private func handlePendingNavigation() {
+        guard let contact = appState.pendingChatContact else { return }
+        navigate(to: .direct(contact))
+        appState.clearPendingNavigation()
+    }
+
+    private func handlePendingRoomNavigation() {
+        guard let session = appState.pendingRoomSession else { return }
+        navigate(to: .room(session))
+        appState.clearPendingRoomNavigation()
+    }
 
     private func handleHashtagTap(name: String) {
         Task {
-            let normalizedName = HashtagUtilities.normalizeHashtagName(name)
-            guard HashtagUtilities.isValidHashtagName(normalizedName) else {
+            guard let fullName = HashtagDeeplinkSupport.fullChannelName(from: name) else {
                 chatsViewLogger.error("Invalid hashtag name in tap: \(name, privacy: .public)")
                 return
             }
-
-            let fullName = "#\(normalizedName)"
 
             guard let deviceID = appState.connectedDevice?.id else {
                 await MainActor.run {
@@ -406,27 +570,28 @@ struct ChatsView: View {
                 return
             }
 
-            if let channel = await findChannelByName(fullName, deviceID: deviceID) {
-                await MainActor.run {
-                    selectedDestination = .channel(channel)
+            do {
+                if let channel = try await HashtagDeeplinkSupport.findChannelByName(
+                    fullName,
+                    deviceID: deviceID,
+                    fetchChannels: { deviceID in
+                        try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+                    }
+                ) {
+                    await MainActor.run {
+                        navigate(to: .channel(channel))
+                    }
+                } else {
+                    await MainActor.run {
+                        hashtagToJoin = HashtagJoinRequest(id: fullName)
+                    }
                 }
-            } else {
+            } catch {
+                chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
                 await MainActor.run {
                     hashtagToJoin = HashtagJoinRequest(id: fullName)
                 }
             }
-        }
-    }
-
-    private func findChannelByName(_ name: String, deviceID: UUID) async -> ChannelDTO? {
-        do {
-            let channels = try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
-            return channels.first { channel in
-                channel.name.localizedCaseInsensitiveCompare(name) == .orderedSame
-            }
-        } catch {
-            chatsViewLogger.error("Failed to fetch channels for hashtag lookup: \(error)")
-            return nil
         }
     }
 }

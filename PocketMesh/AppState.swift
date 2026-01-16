@@ -100,7 +100,6 @@ public final class AppState {
     /// Selected tab index
     var selectedTab: Int = 0
 
-    /// Tab bar visibility state - controlled from anywhere, consumed by ChatsListView
     var tabBarVisibility: Visibility = .visible
 
     /// Contact to navigate to

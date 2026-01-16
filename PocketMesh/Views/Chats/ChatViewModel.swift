@@ -238,16 +238,15 @@ final class ChatViewModel {
 
     // MARK: - Conversation List
 
-    /// Removes a conversation from local arrays (optimistic UI update).
-    /// Call before async deletion to prevent SwiftUI List animation glitches.
+    /// Removes a conversation from local arrays for optimistic UI update.
     func removeConversation(_ conversation: Conversation) {
         switch conversation {
         case .direct(let contact):
-            conversations.removeAll { $0.id == contact.id }
+            conversations = conversations.filter { $0.id != contact.id }
         case .channel(let channel):
-            channels.removeAll { $0.id == channel.id }
+            channels = channels.filter { $0.id != channel.id }
         case .room(let session):
-            roomSessions.removeAll { $0.id == session.id }
+            roomSessions = roomSessions.filter { $0.id != session.id }
         }
     }
 
