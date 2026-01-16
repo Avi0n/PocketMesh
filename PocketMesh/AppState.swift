@@ -201,6 +201,9 @@ public final class AppState {
     init(modelContainer: ModelContainer) {
         self.connectionManager = ConnectionManager(modelContainer: modelContainer)
 
+        // Wire app state provider for incremental sync support
+        connectionManager.appStateProvider = AppStateProviderImpl()
+
         // Wire connection ready callback - automatically updates UI when connection completes
         connectionManager.onConnectionReady = { [weak self] in
             await self?.wireServicesIfConnected()
@@ -537,6 +540,41 @@ public final class AppState {
         }
     }
 
+    /// Check for battery thresholds crossed while app was backgrounded
+    /// Posts a single notification if any thresholds were missed, marking all as notified
+    private func checkMissedBatteryThreshold() async {
+        guard let device = connectedDevice,
+              let settingsService = services?.settingsService,
+              let notificationService = services?.notificationService else { return }
+
+        do {
+            deviceBattery = try await settingsService.getBattery()
+        } catch {
+            return
+        }
+
+        guard let battery = deviceBattery else { return }
+        let percentage = battery.percentage(using: device.activeOCVArray)
+
+        // Find thresholds crossed while backgrounded
+        let missedThresholds = batteryWarningThresholds.filter { threshold in
+            percentage <= threshold && !notifiedBatteryThresholds.contains(threshold)
+        }
+
+        guard !missedThresholds.isEmpty else { return }
+
+        // Mark all crossed thresholds as notified
+        for threshold in missedThresholds {
+            notifiedBatteryThresholds.insert(threshold)
+        }
+
+        // Post single notification with current percentage
+        await notificationService.postLowBatteryNotification(
+            deviceName: device.nodeName,
+            batteryPercentage: percentage
+        )
+    }
+
     // MARK: - App Lifecycle
 
     /// Called when app enters background
@@ -550,9 +588,9 @@ public final class AppState {
         // Update badge count from database
         await services?.notificationService.updateBadgeCount()
 
-        // Refresh battery and restart loop if connected
+        // Check for missed battery thresholds and restart polling if connected
         if services != nil {
-            await fetchDeviceBattery()
+            await checkMissedBatteryThreshold()
             startBatteryRefreshLoop()
         }
 

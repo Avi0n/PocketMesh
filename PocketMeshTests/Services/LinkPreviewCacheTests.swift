@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MeshCore
 @testable import PocketMesh
 @testable import PocketMeshServices
 
@@ -21,17 +22,19 @@ struct LinkPreviewCacheTests {
             imageData: nil,
             iconData: nil
         )
-        dataStore.storedPreviews[url.absoluteString] = dto
+        await dataStore.setStoredPreview(dto, for: url.absoluteString)
 
         // First request should hit database
         let result1 = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
-        #expect(result1 == .loaded(dto))
-        #expect(dataStore.fetchCallCount == 1)
+        #expect(isLoaded(result1, withTitle: "Test Article"))
+        let fetchCount1 = await dataStore.fetchCallCount
+        #expect(fetchCount1 == 1)
 
         // Second request should hit memory cache (no additional fetch)
         let result2 = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
-        #expect(result2 == .loaded(dto))
-        #expect(dataStore.fetchCallCount == 1) // Should not increase
+        #expect(isLoaded(result2, withTitle: "Test Article"))
+        let fetchCount2 = await dataStore.fetchCallCount
+        #expect(fetchCount2 == 1) // Should not increase
     }
 
     @Test("Memory cache returns correct preview data")
@@ -46,7 +49,7 @@ struct LinkPreviewCacheTests {
             imageData: Data([1, 2, 3]),
             iconData: Data([4, 5, 6])
         )
-        dataStore.storedPreviews[url.absoluteString] = dto
+        await dataStore.setStoredPreview(dto, for: url.absoluteString)
 
         // Load into memory cache
         _ = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
@@ -67,20 +70,17 @@ struct LinkPreviewCacheTests {
         let url = URL(string: "https://example.com/no-preview")!
 
         // First request finds no preview (returns noPreviewAvailable)
-        let result1 = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
-        // Depending on preferences and network, this may be .disabled or .noPreviewAvailable
-        // For this test, we just verify subsequent requests don't re-fetch
+        _ = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
 
-        let initialFetchCount = dataStore.fetchCallCount
+        let initialFetchCount = await dataStore.fetchCallCount
 
         // Subsequent requests should hit negative cache (no database lookup)
-        let result2 = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
-        let result3 = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
+        _ = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
+        _ = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
 
-        // If result1 was .noPreviewAvailable, fetch count should not increase
-        // If result1 was .disabled (due to preferences), behavior may differ
         // The key assertion is that repeated requests don't exponentially increase fetches
-        #expect(dataStore.fetchCallCount <= initialFetchCount + 2)
+        let finalFetchCount = await dataStore.fetchCallCount
+        #expect(finalFetchCount <= initialFetchCount + 2)
     }
 
     @Test("Manual fetch clears negative cache and retries")
@@ -96,7 +96,8 @@ struct LinkPreviewCacheTests {
         _ = await cache.manualFetch(for: url, using: dataStore)
 
         // Verify manual fetch was attempted (fetch count increased)
-        #expect(dataStore.fetchCallCount >= 1)
+        let fetchCount = await dataStore.fetchCallCount
+        #expect(fetchCount >= 1)
     }
 
     // MARK: - In-Flight Deduplication Tests
@@ -108,7 +109,7 @@ struct LinkPreviewCacheTests {
         let url = URL(string: "https://example.com/concurrent")!
 
         // Add delay to database fetch to simulate slow operation
-        dataStore.fetchDelay = .milliseconds(100)
+        await dataStore.setFetchDelay(.milliseconds(100))
 
         // Launch multiple concurrent requests
         async let result1 = cache.preview(for: url, using: dataStore, isChannelMessage: false)
@@ -118,8 +119,7 @@ struct LinkPreviewCacheTests {
         // Wait for all to complete
         let results = await [result1, result2, result3]
 
-        // All results should be consistent (either all loading, disabled, or noPreviewAvailable)
-        // The key assertion is that we don't create multiple network fetches
+        // All results should be consistent
         #expect(results.count == 3)
     }
 
@@ -148,12 +148,12 @@ struct LinkPreviewCacheTests {
             imageData: nil,
             iconData: nil
         )
-        dataStore.storedPreviews[url.absoluteString] = dto
+        await dataStore.setStoredPreview(dto, for: url.absoluteString)
 
         // Request preview
         let result = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
 
-        #expect(result == .loaded(dto))
+        #expect(isLoaded(result, withTitle: "Persisted Preview"))
     }
 
     @Test("Database errors are handled gracefully")
@@ -163,25 +163,56 @@ struct LinkPreviewCacheTests {
         let url = URL(string: "https://example.com/error")!
 
         // Configure dataStore to throw on fetch
-        dataStore.shouldThrowOnFetch = true
+        await dataStore.setShouldThrowOnFetch(true)
 
         // Request should not crash
         let result = await cache.preview(for: url, using: dataStore, isChannelMessage: false)
 
         // Should return disabled or noPreviewAvailable, not crash
-        #expect(result == .disabled || result == .noPreviewAvailable)
+        #expect(isDisabledOrNoPreview(result))
+    }
+
+    // MARK: - Helper Functions
+
+    private func isLoaded(_ result: LinkPreviewResult, withTitle title: String) -> Bool {
+        if case .loaded(let dto) = result {
+            return dto.title == title
+        }
+        return false
+    }
+
+    private func isDisabledOrNoPreview(_ result: LinkPreviewResult) -> Bool {
+        switch result {
+        case .disabled, .noPreviewAvailable:
+            return true
+        default:
+            return false
+        }
     }
 }
 
 // MARK: - Mock Data Store
 
-private final class MockPreviewDataStore: PersistenceStoreProtocol, @unchecked Sendable {
-    var storedPreviews: [String: LinkPreviewDataDTO] = [:]
-    var fetchCallCount = 0
-    var saveCallCount = 0
-    var fetchDelay: Duration = .zero
-    var shouldThrowOnFetch = false
-    var shouldThrowOnSave = false
+private actor MockPreviewDataStore: PersistenceStoreProtocol {
+    private var storedPreviews: [String: LinkPreviewDataDTO] = [:]
+    private(set) var fetchCallCount = 0
+    private var saveCallCount = 0
+    private var fetchDelay: Duration = .zero
+    private var shouldThrowOnFetch = false
+    private var shouldThrowOnSave = false
+
+    // Async setters for actor-isolated properties
+    func setStoredPreview(_ dto: LinkPreviewDataDTO, for url: String) {
+        storedPreviews[url] = dto
+    }
+
+    func setFetchDelay(_ delay: Duration) {
+        fetchDelay = delay
+    }
+
+    func setShouldThrowOnFetch(_ value: Bool) {
+        shouldThrowOnFetch = value
+    }
 
     func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? {
         fetchCallCount += 1
@@ -214,37 +245,33 @@ private final class MockPreviewDataStore: PersistenceStoreProtocol, @unchecked S
 
     // MARK: - Required Protocol Stubs
 
-    func fetchDevices() async throws -> [DeviceDTO] { [] }
-    func fetchDevice(id: UUID) async throws -> DeviceDTO? { nil }
-    func fetchDevice(publicKey: Data) async throws -> DeviceDTO? { nil }
-    func saveDevice(_ dto: DeviceDTO) async throws {}
-    func deleteDevice(id: UUID) async throws {}
+    // Message Operations
+    func saveMessage(_ dto: MessageDTO) async throws {}
+    func fetchMessage(id: UUID) async throws -> MessageDTO? { nil }
+    func fetchMessage(ackCode: UInt32) async throws -> MessageDTO? { nil }
+    func fetchMessages(contactID: UUID, limit: Int, offset: Int) async throws -> [MessageDTO] { [] }
+    func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int, offset: Int) async throws -> [MessageDTO] { [] }
+    func updateMessageStatus(id: UUID, status: MessageStatus) async throws {}
+    func updateMessageAck(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
+    func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
+    func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+    func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {}
+    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) async throws {}
+
+    // Contact Operations
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchConversations(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchContact(id: UUID) async throws -> ContactDTO? { nil }
     func fetchContact(deviceID: UUID, publicKey: Data) async throws -> ContactDTO? { nil }
-    func fetchContact(deviceID: UUID, name: String) async throws -> ContactDTO? { nil }
+    func fetchContact(deviceID: UUID, publicKeyPrefix: Data) async throws -> ContactDTO? { nil }
+    @discardableResult func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID { UUID() }
     func saveContact(_ dto: ContactDTO) async throws {}
-    func updateContactLastSeen(id: UUID, timestamp: UInt32) async throws {}
-    func updateContactLastMessage(contactID: UUID, date: Date?) async throws {}
-    func updateContactLocation(id: UUID, lat: Double, lon: Double) async throws {}
-    func updateContactOCVPreset(id: UUID, preset: OCVPreset?) async throws {}
-    func updateContactCustomOCV(id: UUID, customOCVArrayString: String?) async throws {}
-    func setContactBlocked(_ id: UUID, isBlocked: Bool) async throws {}
-    func setContactMuted(_ id: UUID, isMuted: Bool) async throws {}
-    func setContactFavorite(_ id: UUID, isFavorite: Bool) async throws {}
     func deleteContact(id: UUID) async throws {}
-    func fetchMessages(contactID: UUID) async throws -> [MessageDTO] { [] }
-    func fetchMessages(contactID: UUID, limit: Int) async throws -> [MessageDTO] { [] }
-    func fetchMessages(deviceID: UUID, channelIndex: UInt8) async throws -> [MessageDTO] { [] }
-    func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int) async throws -> [MessageDTO] { [] }
-    func fetchMessage(id: UUID) async throws -> MessageDTO? { nil }
-    @discardableResult func saveMessage(_ dto: MessageDTO) async throws -> UUID { UUID() }
-    func updateMessageStatus(id: UUID, status: MessageStatus) async throws {}
-    func deleteMessage(id: UUID) async throws {}
-    func deleteMessages(olderThan date: Date, deviceID: UUID) async throws -> Int { 0 }
+    func updateContactLastMessage(contactID: UUID, date: Date?) async throws {}
     func incrementUnreadCount(contactID: UUID) async throws {}
     func clearUnreadCount(contactID: UUID) async throws {}
+
+    // Mention Tracking
     func markMentionSeen(messageID: UUID) async throws {}
     func incrementUnreadMentionCount(contactID: UUID) async throws {}
     func decrementUnreadMentionCount(contactID: UUID) async throws {}
@@ -254,9 +281,12 @@ private final class MockPreviewDataStore: PersistenceStoreProtocol, @unchecked S
     func clearChannelUnreadMentionCount(channelID: UUID) async throws {}
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
+    func deleteMessagesForContact(contactID: UUID) async throws {}
     func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func confirmContact(id: UUID) async throws {}
+
+    // Channel Operations
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
     func fetchChannel(id: UUID) async throws -> ChannelDTO? { nil }
@@ -266,7 +296,8 @@ private final class MockPreviewDataStore: PersistenceStoreProtocol, @unchecked S
     func updateChannelLastMessage(channelID: UUID, date: Date) async throws {}
     func incrementChannelUnreadCount(channelID: UUID) async throws {}
     func clearChannelUnreadCount(channelID: UUID) async throws {}
-    func setChannelMuted(_ id: UUID, isMuted: Bool) async throws {}
+
+    // Saved Trace Paths
     func fetchSavedTracePaths(deviceID: UUID) async throws -> [SavedTracePathDTO] { [] }
     func fetchSavedTracePath(id: UUID) async throws -> SavedTracePathDTO? { nil }
     func createSavedTracePath(deviceID: UUID, name: String, pathBytes: Data, initialRun: TracePathRunDTO?) async throws -> SavedTracePathDTO {
@@ -275,11 +306,15 @@ private final class MockPreviewDataStore: PersistenceStoreProtocol, @unchecked S
     func updateSavedTracePathName(id: UUID, name: String) async throws {}
     func deleteSavedTracePath(id: UUID) async throws {}
     func appendTracePathRun(pathID: UUID, run: TracePathRunDTO) async throws {}
+
+    // Heard Repeats
     func findSentChannelMessage(deviceID: UUID, channelIndex: UInt8, timestamp: UInt32, text: String, withinSeconds: Int) async throws -> MessageDTO? { nil }
     func saveMessageRepeat(_ dto: MessageRepeatDTO) async throws {}
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
+
+    // Debug Log Entries
     func saveDebugLogEntries(_ dtos: [DebugLogEntryDTO]) async throws {}
     func fetchDebugLogEntries(since date: Date, limit: Int) async throws -> [DebugLogEntryDTO] { [] }
     func countDebugLogEntries() async throws -> Int { 0 }

@@ -102,6 +102,12 @@ public final class ServiceContainer {
     /// Sync coordinator for managing sync lifecycle
     public let syncCoordinator: SyncCoordinator
 
+    // MARK: - App State
+
+    /// Provider for checking app foreground/background state
+    /// Used to determine sync behavior (full vs incremental)
+    public let appStateProvider: AppStateProvider?
+
     // MARK: - State
 
     /// Whether services have been wired together
@@ -117,8 +123,14 @@ public final class ServiceContainer {
     /// - Parameters:
     ///   - session: The MeshCoreSession for device communication
     ///   - modelContainer: The SwiftData model container for persistence
-    public init(session: MeshCoreSession, modelContainer: ModelContainer) {
+    ///   - appStateProvider: Optional provider for app foreground/background state
+    public init(
+        session: MeshCoreSession,
+        modelContainer: ModelContainer,
+        appStateProvider: AppStateProvider? = nil
+    ) {
         self.session = session
+        self.appStateProvider = appStateProvider
         self.dataStore = PersistenceStore(modelContainer: modelContainer)
 
         // Independent services (no dependencies)

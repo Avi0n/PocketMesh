@@ -190,6 +190,23 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Update the lastContactSync timestamp for a device.
+    /// Used to track incremental sync progress.
+    public func updateDeviceLastContactSync(deviceID: UUID, timestamp: UInt32) throws {
+        let targetID = deviceID
+        let predicate = #Predicate<Device> { device in
+            device.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let device = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.deviceNotFound
+        }
+        device.lastContactSync = timestamp
+        try modelContext.save()
+    }
+
     /// Delete a device and all its associated data
     public func deleteDevice(id: UUID) throws {
         let targetID = id

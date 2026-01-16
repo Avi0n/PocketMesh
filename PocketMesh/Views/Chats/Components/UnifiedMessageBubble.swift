@@ -4,6 +4,7 @@ import PocketMeshServices
 /// Layout constants for message bubbles
 private enum MessageLayout {
     static let maxBubbleWidth: CGFloat = 280
+    static let outgoingBubbleColor = Color(red: 36/255, green: 99/255, blue: 235/255)
 }
 
 /// Configuration for message bubble appearance and behavior
@@ -248,7 +249,7 @@ struct UnifiedMessageBubble: View {
 
     private var bubbleColor: Color {
         if message.isOutgoing {
-            return message.hasFailed ? .red.opacity(0.8) : configuration.accentColor
+            return message.hasFailed ? .red.opacity(0.8) : MessageLayout.outgoingBubbleColor
         } else {
             return Color(.systemGray5)
         }

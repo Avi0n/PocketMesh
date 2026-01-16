@@ -32,6 +32,7 @@ targets:
       - package: PocketMeshServices
     settings:
       base:
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: 0.4.1
         CURRENT_PROJECT_VERSION: 1

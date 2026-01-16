@@ -8,7 +8,11 @@ import MeshCore
 struct SyncCoordinatorTests {
 
     /// Creates an in-memory persistence store with a test device
-    private func createTestDataStore(deviceID: UUID, maxChannels: UInt8 = 8) async throws -> PersistenceStore {
+    private func createTestDataStore(
+        deviceID: UUID,
+        maxChannels: UInt8 = 8,
+        lastContactSync: UInt32 = 0
+    ) async throws -> PersistenceStore {
         let container = try PersistenceStore.createContainer(inMemory: true)
         let store = PersistenceStore(modelContainer: container)
         let device = DeviceDTO(from: Device(
@@ -37,7 +41,7 @@ struct SyncCoordinatorTests {
             telemetryModeEnv: 0,
             advertLocationPolicy: 0,
             lastConnected: Date(),
-            lastContactSync: 0,
+            lastContactSync: lastContactSync,
             isActive: true
         ))
         try await store.saveDevice(device)
@@ -305,6 +309,129 @@ struct SyncCoordinatorTests {
         // Cleanup: resume the sync so it doesn't hang
         await delayingContactService.completeSync()
         syncTask.cancel()
+    }
+
+    @Test("Background sync skips channel sync")
+    @MainActor
+    func backgroundSyncSkipsChannels() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let mockAppStateProvider = MockAppStateProvider(isInForeground: false)
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: mockAppStateProvider
+        )
+
+        // Channel sync should be skipped in background
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.isEmpty, "Channel sync should be skipped when in background")
+
+        // Contact sync should still happen
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should still run in background")
+    }
+
+    @Test("Foreground sync includes channel sync")
+    @MainActor
+    func foregroundSyncIncludesChannels() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let mockAppStateProvider = MockAppStateProvider(isInForeground: true)
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: mockAppStateProvider
+        )
+
+        // Channel sync should run in foreground
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.count == 1, "Channel sync should run when in foreground")
+
+        // Contact sync should also run
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should run in foreground")
+    }
+
+    @Test("Nil appStateProvider defaults to foreground behavior")
+    @MainActor
+    func nilAppStateProviderDefaultsToForeground() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: nil
+        )
+
+        // Should default to foreground (run channels)
+        let channelInvocations = await mockChannelService.syncChannelsInvocations
+        #expect(channelInvocations.count == 1, "Nil appStateProvider should default to foreground behavior")
+
+        // Contact sync should also run
+        let contactInvocations = await mockContactService.syncContactsInvocations
+        #expect(contactInvocations.count == 1, "Contact sync should run with nil appStateProvider")
+    }
+
+    @Test("Contact sync passes lastContactSync timestamp from device")
+    @MainActor
+    func contactSyncPassesTimestamp() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+
+        // Create device with a lastContactSync timestamp
+        let lastSyncTimestamp: UInt32 = 1704067200 // 2024-01-01 00:00:00 UTC
+        let dataStore = try await createTestDataStore(
+            deviceID: testDeviceID,
+            lastContactSync: lastSyncTimestamp
+        )
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            appStateProvider: nil
+        )
+
+        let invocations = await mockContactService.syncContactsInvocations
+        #expect(invocations.count == 1)
+
+        // Verify the since parameter was passed
+        let since = invocations[0].since
+        let expectedDate = Date(timeIntervalSince1970: Double(lastSyncTimestamp))
+
+        // Use try #require to safely unwrap and produce a clear failure message
+        let actualSince = try #require(since, "Should pass lastContactSync as since parameter")
+        #expect(actualSince == expectedDate, "Since date should match device lastContactSync")
     }
 }
 

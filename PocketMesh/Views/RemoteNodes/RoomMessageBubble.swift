@@ -1,6 +1,8 @@
 import SwiftUI
 import PocketMeshServices
 
+private let outgoingBubbleColor = Color(red: 36/255, green: 99/255, blue: 235/255)
+
 /// Message bubble for room server messages
 struct RoomMessageBubble: View {
     let message: RoomMessageDTO
@@ -61,7 +63,7 @@ struct RoomMessageBubble: View {
     private var bubbleBackground: some View {
         Group {
             if isFromSelf {
-                Color.orange
+                outgoingBubbleColor
             } else {
                 Color(.systemGray5)
             }

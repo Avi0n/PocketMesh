@@ -223,15 +223,20 @@ public actor SyncCoordinator {
     ///
     /// - Parameters:
     ///   - deviceID: The connected device UUID
+    ///   - dataStore: Persistence store for data operations
     ///   - contactService: Service for contact sync
     ///   - channelService: Service for channel sync
     ///   - messagePollingService: Service for message polling
+    ///   - appStateProvider: Optional provider for foreground/background state. When nil,
+    ///     defaults to foreground mode (channels sync). When provided and app is backgrounded,
+    ///     channel sync is skipped to reduce BLE traffic.
     public func performFullSync(
         deviceID: UUID,
         dataStore: PersistenceStore,
         contactService: some ContactServiceProtocol,
         channelService: some ChannelServiceProtocol,
-        messagePollingService: some MessagePollingServiceProtocol
+        messagePollingService: some MessagePollingServiceProtocol,
+        appStateProvider: AppStateProvider? = nil
     ) async throws {
         logger.info("Starting full sync for device \(deviceID)")
 
@@ -242,35 +247,61 @@ public actor SyncCoordinator {
 
             // Perform contacts and channels sync (activity should show pill)
             do {
-                // Phase 1: Contacts
-                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: nil)
-                logger.info("Synced \(contactResult.contactsReceived) contacts")
+                // Fetch device once for both contacts (lastContactSync) and channels (maxChannels)
+                let device = try await dataStore.fetchDevice(id: deviceID)
+
+                // Phase 1: Contacts (incremental using lastContactSync)
+                let lastContactSync: Date? = {
+                    guard let timestamp = device?.lastContactSync, timestamp > 0 else { return nil }
+                    return Date(timeIntervalSince1970: Double(timestamp))
+                }()
+
+                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
+                let syncType = contactResult.isIncremental ? "incremental" : "full"
+                logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType))")
                 await notifyContactsChanged()
 
-                // Phase 2: Channels
-                await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-                let device = try await dataStore.fetchDevice(id: deviceID)
-                let maxChannels = device?.maxChannels ?? 0
+                // Update lastContactSync watermark for future incremental syncs
+                if contactResult.lastSyncTimestamp > 0 {
+                    try await dataStore.updateDeviceLastContactSync(
+                        deviceID: deviceID,
+                        timestamp: contactResult.lastSyncTimestamp
+                    )
+                }
 
-                let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
-                logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+                // Phase 2: Channels (foreground only)
+                let shouldSyncChannels: Bool
+                if let provider = appStateProvider {
+                    shouldSyncChannels = await provider.isInForeground
+                } else {
+                    shouldSyncChannels = true
+                }
+                if shouldSyncChannels {
+                    await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
+                    let maxChannels = device?.maxChannels ?? 0
 
-                // Retry failed channels once if there are retryable errors
-                if !channelResult.isComplete {
-                    let retryableIndices = channelResult.retryableIndices
-                    if !retryableIndices.isEmpty {
-                        logger.info("Retrying \(retryableIndices.count) failed channels")
-                        let retryResult = try await channelService.retryFailedChannels(
-                            deviceID: deviceID,
-                            indices: retryableIndices
-                        )
+                    let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
+                    logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
 
-                        if retryResult.isComplete {
-                            logger.info("Retry recovered \(retryResult.channelsSynced) channels")
-                        } else {
-                            logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                    // Retry failed channels once if there are retryable errors
+                    if !channelResult.isComplete {
+                        let retryableIndices = channelResult.retryableIndices
+                        if !retryableIndices.isEmpty {
+                            logger.info("Retrying \(retryableIndices.count) failed channels")
+                            let retryResult = try await channelService.retryFailedChannels(
+                                deviceID: deviceID,
+                                indices: retryableIndices
+                            )
+
+                            if retryResult.isComplete {
+                                logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                            } else {
+                                logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                            }
                         }
                     }
+                } else {
+                    logger.info("Skipping channel sync (app in background)")
                 }
             } catch {
                 // End sync activity on error during contacts/channels phase
@@ -321,7 +352,8 @@ public actor SyncCoordinator {
                 dataStore: services.dataStore,
                 contactService: services.contactService,
                 channelService: services.channelService,
-                messagePollingService: services.messagePollingService
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
@@ -394,7 +426,8 @@ public actor SyncCoordinator {
                 dataStore: services.dataStore,
                 contactService: services.contactService,
                 channelService: services.channelService,
-                messagePollingService: services.messagePollingService
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider
             )
 
             // 4. Wire discovery handlers (for ongoing contact discovery)

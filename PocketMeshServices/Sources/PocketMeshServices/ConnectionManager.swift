@@ -97,6 +97,9 @@ public final class ConnectionManager {
     /// Use this to wire up UI observation of services.
     public var onConnectionReady: (() async -> Void)?
 
+    /// Provider for app foreground/background state detection
+    public var appStateProvider: AppStateProvider?
+
     /// Number of paired accessories (for troubleshooting UI)
     public var pairedAccessoriesCount: Int {
         accessorySetupKit.pairedAccessories.count
@@ -410,7 +413,11 @@ public final class ConnectionManager {
             throw ConnectionError.initializationFailed("No self info")
         }
 
-        let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: session,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -433,15 +440,7 @@ public final class ConnectionManager {
         }
 
         await onConnectionReady?()
-        do {
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
-        } catch {
-            logger.warning("Initial sync failed during WiFi reconnect, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: newServices)
-        }
+        await performInitialSync(deviceID: deviceID, services: newServices, context: "WiFi reconnect")
 
         currentTransportType = .wifi
         connectionState = .ready
@@ -489,6 +488,28 @@ public final class ConnectionManager {
             try await connect(to: deviceID)
         } catch {
             logger.warning("[BLE] Foreground reconnection failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Performs initial sync with automatic resync loop on failure.
+    /// - Parameters:
+    ///   - deviceID: The device ID to sync
+    ///   - services: The service container
+    ///   - context: Optional context string for logging (e.g., "WiFi reconnect")
+    private func performInitialSync(
+        deviceID: UUID,
+        services: ServiceContainer,
+        context: String = ""
+    ) async {
+        do {
+            try await services.syncCoordinator.onConnectionEstablished(
+                deviceID: deviceID,
+                services: services
+            )
+        } catch {
+            let prefix = context.isEmpty ? "" : "\(context): "
+            logger.warning("\(prefix)Initial sync failed, starting resync loop: \(error.localizedDescription)")
+            startResyncLoop(deviceID: deviceID, services: services)
         }
     }
 
@@ -900,7 +921,11 @@ public final class ConnectionManager {
             self.session = session
 
             // Create services
-            let newServices = ServiceContainer(session: session, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: session,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
                 self.services = newServices
 
@@ -990,7 +1015,11 @@ public final class ConnectionManager {
             }
 
             // Create services
-            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: newSession,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
             self.services = newServices
 
@@ -1016,17 +1045,7 @@ public final class ConnectionManager {
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
             await onConnectionReady?()
-
-            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-            do {
-                try await newServices.syncCoordinator.onConnectionEstablished(
-                    deviceID: deviceID,
-                    services: newServices
-                )
-            } catch {
-                logger.warning("Initial sync failed, starting resync loop: \(error.localizedDescription)")
-                startResyncLoop(deviceID: deviceID, services: newServices)
-            }
+            await performInitialSync(deviceID: deviceID, services: newServices)
 
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
@@ -1092,7 +1111,11 @@ public final class ConnectionManager {
         let deviceCapabilities = try await newSession.queryDevice()
 
         // Create and wire services
-        let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: newSession,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -1115,17 +1138,7 @@ public final class ConnectionManager {
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
-
-        // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-        do {
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
-        } catch {
-            logger.warning("Initial sync failed during device switch, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: newServices)
-        }
+        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch")
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1379,7 +1392,11 @@ public final class ConnectionManager {
         }
 
         // Create services
-        let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+        let newServices = ServiceContainer(
+            session: newSession,
+            modelContainer: modelContainer,
+            appStateProvider: appStateProvider
+        )
         await newServices.wireServices()
         self.services = newServices
 
@@ -1403,18 +1420,7 @@ public final class ConnectionManager {
         // Notify observers BEFORE sync starts so they can wire callbacks
         // (e.g., AppState needs to set sync activity callbacks for the syncing pill)
         await onConnectionReady?()
-
-        // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-        // This fixes the handler wiring gap and ensures messages are polled during sync
-        do {
-            try await newServices.syncCoordinator.onConnectionEstablished(
-                deviceID: deviceID,
-                services: newServices
-            )
-        } catch {
-            logger.warning("Initial sync failed, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: newServices)
-        }
+        await performInitialSync(deviceID: deviceID, services: newServices)
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1607,9 +1613,13 @@ public final class ConnectionManager {
                 return
             }
 
-            let newServices = ServiceContainer(session: newSession, modelContainer: modelContainer)
+            let newServices = ServiceContainer(
+                session: newSession,
+                modelContainer: modelContainer,
+                appStateProvider: appStateProvider
+            )
             await newServices.wireServices()
-    
+
             // Check after await
             guard shouldBeConnected else {
                 logger.info("User disconnected during service wiring")
@@ -1629,17 +1639,7 @@ public final class ConnectionManager {
 
             // Notify observers BEFORE sync starts so they can wire callbacks
             await onConnectionReady?()
-
-            // Hand off to SyncCoordinator for handler wiring, event monitoring, and full sync
-            do {
-                try await newServices.syncCoordinator.onConnectionEstablished(
-                    deviceID: deviceID,
-                    services: newServices
-                )
-            } catch {
-                logger.warning("[BLE] Initial sync failed, starting resync loop: \(error.localizedDescription)")
-                startResyncLoop(deviceID: deviceID, services: newServices)
-            }
+            await performInitialSync(deviceID: deviceID, services: newServices, context: "[BLE] iOS auto-reconnect")
 
             currentTransportType = .bluetooth
             connectionState = .ready

@@ -13,13 +13,14 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: true,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Disconnected"
         )
     }
 
-    @Test("displayText prefers Connecting over sync phases")
-    func connectingOverridesSync() {
+    @Test("displayText prefers sync phase over Connecting state")
+    func syncPhaseOverridesConnecting() {
+        // When actively syncing (phase is non-nil), show sync text even if connectionState is .connected
         #expect(
             SyncingPillView.displayText(
                 phase: .channels,
@@ -27,7 +28,21 @@ struct SyncingPillViewTests {
                 showsConnectedToast: false,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
+            ) == "Syncing channels"
+        )
+    }
+
+    @Test("displayText shows Connecting when no sync phase")
+    func connectingWhenNoSyncPhase() {
+        #expect(
+            SyncingPillView.displayText(
+                phase: nil,
+                connectionState: .connected,
+                showsConnectedToast: false,
+                showsDisconnectedWarning: false,
+                isFailure: false,
+                failureText: ""
             ) == "Connecting..."
         )
     }
@@ -41,7 +56,7 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Syncing contacts"
         )
         #expect(
@@ -51,7 +66,7 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Syncing channels"
         )
     }
@@ -65,7 +80,7 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Connected"
         )
 
@@ -76,7 +91,7 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Connecting..."
         )
 
@@ -87,7 +102,7 @@ struct SyncingPillViewTests {
                 showsConnectedToast: true,
                 showsDisconnectedWarning: false,
                 isFailure: false,
-                failureText: "Sync Failed"
+                failureText: ""
             ) == "Syncing contacts"
         )
     }

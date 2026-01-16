@@ -48,13 +48,8 @@ struct SyncingPillView: View {
             return "Disconnected"
         }
 
-        switch connectionState {
-        case .connecting, .connected:
-            return "Connecting..."
-        case .disconnected, .ready:
-            break
-        }
-
+        // Sync phase takes priority over connection state
+        // (sync runs while connectionState is still .connected)
         switch phase {
         case .contacts:
             return "Syncing contacts"
@@ -63,6 +58,13 @@ struct SyncingPillView: View {
         case .messages:
             return "Syncing"
         case nil:
+            break
+        }
+
+        switch connectionState {
+        case .connecting, .connected:
+            return "Connecting..."
+        case .disconnected, .ready:
             break
         }
 
