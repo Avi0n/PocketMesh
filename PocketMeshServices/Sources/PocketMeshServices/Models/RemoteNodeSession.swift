@@ -236,4 +236,11 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public var canPost: Bool { isRoom && permissionLevel.canPost }
 
     public var isAdmin: Bool { permissionLevel.isAdmin }
+
+    /// Converts lastSyncTimestamp to Date for sorting.
+    /// Returns nil if no messages have been synced (timestamp is 0).
+    public var lastMessageDate: Date? {
+        guard lastSyncTimestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(lastSyncTimestamp))
+    }
 }
