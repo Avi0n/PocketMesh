@@ -397,6 +397,56 @@ struct SyncCoordinatorTests {
         #expect(contactInvocations.count == 1, "Contact sync should run with nil appStateProvider")
     }
 
+    @Test("performFullSync ignores duplicate calls when already syncing")
+    @MainActor
+    func performFullSyncIgnoresDuplicateWhenSyncing() async throws {
+        let coordinator = SyncCoordinator()
+        let delayingContactService = DelayingContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        let tracker = CallbackTracker()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { await tracker.incrementEndedCount() }, // Reusing endedCount to track starts
+            onEnded: { },
+            onPhaseChanged: { _ in }
+        )
+
+        // Start first sync in background - it will block during contacts phase
+        let firstSyncTask = Task {
+            try await coordinator.performFullSync(
+                deviceID: testDeviceID,
+                dataStore: dataStore,
+                contactService: delayingContactService,
+                channelService: mockChannelService,
+                messagePollingService: mockMessagePollingService
+            )
+        }
+
+        // Wait for first sync to start
+        try await Task.sleep(for: .milliseconds(50))
+
+        // Try to start a second sync while first is still running
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: delayingContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService
+        )
+
+        // Verify onSyncActivityStarted was only called once (not twice)
+        let startCount = await tracker.endedCount
+        #expect(startCount == 1, "onSyncActivityStarted should only be called once even with duplicate performFullSync calls")
+
+        // Cleanup
+        await delayingContactService.completeSync()
+        firstSyncTask.cancel()
+    }
+
     @Test("Contact sync passes lastContactSync timestamp from device")
     @MainActor
     func contactSyncPassesTimestamp() async throws {

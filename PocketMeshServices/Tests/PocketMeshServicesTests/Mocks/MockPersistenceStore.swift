@@ -910,6 +910,18 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         debugLogEntries.removeAll()
     }
 
+    // MARK: - Link Preview Cache
+
+    public var linkPreviews: [String: LinkPreviewDataDTO] = [:]
+
+    public func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? {
+        linkPreviews[url]
+    }
+
+    public func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws {
+        linkPreviews[dto.url] = dto
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations

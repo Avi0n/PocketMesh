@@ -238,6 +238,13 @@ public actor SyncCoordinator {
         messagePollingService: some MessagePollingServiceProtocol,
         appStateProvider: AppStateProvider? = nil
     ) async throws {
+        // Prevent concurrent syncs - check before logging to avoid noise
+        let currentState = await state
+        if currentState.isSyncing {
+            logger.warning("performFullSync called while already syncing, ignoring duplicate")
+            return
+        }
+
         logger.info("Starting full sync for device \(deviceID)")
 
         do {
@@ -405,6 +412,13 @@ public actor SyncCoordinator {
     ///   - services: The ServiceContainer with all services
     public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer) async throws {
         logger.info("Connection established for device \(deviceID)")
+
+        // Prevent duplicate sync if already syncing (race condition during rapid auto-reconnect cycles)
+        let currentState = await state
+        if currentState.isSyncing {
+            logger.warning("onConnectionEstablished called while already syncing, ignoring duplicate")
+            return
+        }
 
         // Suppress message notifications during sync to avoid flooding user on reconnect
         // Unread counts and badges still update - only system notifications are suppressed
