@@ -1,6 +1,9 @@
 import MapKit
+import os
 import SwiftUI
 import PocketMeshServices
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "MapRepresentable")
 
 /// UIViewRepresentable wrapper for MKMapView with custom contact annotations
 struct MKMapViewRepresentable: UIViewRepresentable {
@@ -75,9 +78,11 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             if let pendingGesture = coordinator.pendingUserGestureRegion {
                 if region.isApproximatelyEqual(to: pendingGesture) {
                     // Binding now reflects user gesture, clear pending state
+                    logger.debug("Region: binding caught up, clearing pendingUserGestureRegion")
                     coordinator.pendingUserGestureRegion = nil
                 } else {
                     // Binding is stale (hasn't caught up with user gesture), skip applying
+                    logger.debug("Region: binding stale (span=\(region.span.latitudeDelta, format: .fixed(precision: 4))), pending span=\(pendingGesture.span.latitudeDelta, format: .fixed(precision: 4))), skipping")
                     return
                 }
             }
@@ -86,6 +91,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
                 !coordinator.lastAppliedRegion!.isApproximatelyEqual(to: region)
 
             if shouldUpdate {
+                logger.debug("Region: applying via setRegion (span=\(region.span.latitudeDelta, format: .fixed(precision: 4)))")
                 coordinator.hasPendingProgrammaticRegion = true
                 coordinator.hasAppliedInitialRegion = true
                 mapView.setRegion(region, animated: coordinator.lastAppliedRegion != nil)
@@ -182,6 +188,10 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         /// Used to prevent double-handling when both gesture and delegate fire.
         var lastClusterTapTime: Date?
 
+        /// Set before showAnnotations calls to ensure pendingUserGestureRegion is set
+        /// even if hasPendingProgrammaticRegion is true from a prior setRegion.
+        var hasPendingShowAnnotations = false
+
         // Previous state for change detection (avoid unnecessary view updates that interfere with clustering)
         var lastShowLabels: Bool = true
         var lastSelectedContactID: UUID?
@@ -201,6 +211,10 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             }
             // Mark that we handled this tap to prevent delegate double-handling
             lastClusterTapTime = Date()
+            // Mark that we're about to call showAnnotations so regionDidChangeAnimated
+            // will set pendingUserGestureRegion to protect against stale binding values
+            hasPendingShowAnnotations = true
+            logger.debug("Cluster: gesture tapped, calling showAnnotations for \(cluster.memberAnnotations.count) members")
             mapView.showAnnotations(cluster.memberAnnotations, animated: true)
         }
 
@@ -279,15 +293,20 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             if let cluster = annotation as? MKClusterAnnotation {
                 if let tapTime = lastClusterTapTime, Date().timeIntervalSince(tapTime) < 0.5 {
                     // Gesture already handled this tap, just deselect without zooming again
+                    logger.debug("Cluster: didSelect skipped (gesture handled \(Date().timeIntervalSince(tapTime), format: .fixed(precision: 3))s ago)")
                     mapView.deselectAnnotation(cluster, animated: false)
                     return
                 }
+                logger.debug("Cluster: didSelect calling showAnnotations (fallback path)")
                 mapView.deselectAnnotation(cluster, animated: false)
+                hasPendingShowAnnotations = true
                 mapView.showAnnotations(cluster.memberAnnotations, animated: true)
                 return
             }
 
             guard let contactAnnotation = annotation as? ContactAnnotation else { return }
+
+            logger.debug("Selection: didSelect for \(contactAnnotation.contact.displayName)")
 
             // Update name label visibility
             if let view = mapView.view(for: annotation) as? ContactPinView {
@@ -296,6 +315,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
             // Defer binding update to avoid SwiftUI state mutation during update
             Task { @MainActor in
+                logger.debug("Selection: updating selectedContact binding")
                 self.setSelectedContact?(contactAnnotation.contact)
             }
         }
@@ -314,10 +334,31 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
-            guard !isUpdatingFromSwiftUI else { return }
+            guard !isUpdatingFromSwiftUI else {
+                logger.debug("Region: regionDidChangeAnimated skipped (isUpdatingFromSwiftUI)")
+                return
+            }
 
-            // Don't overwrite binding during programmatic region changes
+            let newSpan = mapView.region.span.latitudeDelta
+
+            // Handle showAnnotations region changes - must set pendingUserGestureRegion
+            // to protect against stale binding values, since the binding wasn't updated
+            if hasPendingShowAnnotations {
+                logger.debug("Region: regionDidChangeAnimated from showAnnotations (span=\(newSpan, format: .fixed(precision: 4)))")
+                hasPendingShowAnnotations = false
+                hasPendingProgrammaticRegion = false // Clear if also set
+                lastAppliedRegion = mapView.region
+                pendingUserGestureRegion = mapView.region
+                Task { @MainActor in
+                    logger.debug("Region: updating cameraRegion binding (from showAnnotations)")
+                    self.setCameraRegion?(mapView.region)
+                }
+                return
+            }
+
+            // Don't overwrite binding during programmatic region changes from setRegion
             if hasPendingProgrammaticRegion {
+                logger.debug("Region: regionDidChangeAnimated from programmatic change (span=\(newSpan, format: .fixed(precision: 4)))")
                 hasPendingProgrammaticRegion = false
                 lastAppliedRegion = mapView.region
                 return
@@ -326,16 +367,19 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             // Don't write back until we've applied at least one programmatic region
             // This prevents the initial default region from overwriting the intended region
             guard hasAppliedInitialRegion else {
+                logger.debug("Region: regionDidChangeAnimated before initial region (span=\(newSpan, format: .fixed(precision: 4)))")
                 lastAppliedRegion = mapView.region
                 return
             }
 
             // Track user-initiated region changes
             // Mark as pending so stale binding values won't revert this change
+            logger.debug("Region: regionDidChangeAnimated setting pendingUserGestureRegion (span=\(newSpan, format: .fixed(precision: 4)))")
             lastAppliedRegion = mapView.region
             pendingUserGestureRegion = mapView.region
 
             Task { @MainActor in
+                logger.debug("Region: updating cameraRegion binding")
                 self.setCameraRegion?(mapView.region)
             }
         }
