@@ -608,15 +608,10 @@ public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManag
 
         // Update or insert discovered device entry
         let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
-        if let idx = discoveredDevices.firstIndex(where: { $0.id == device.id }) {
-            // Update RSSI/name
-            discoveredDevices[idx] = device
-        } else {
+        
+        if !discoveredDevices.contains(where: { $0.id == device.id }) {
             discoveredDevices.append(device)
         }
-
-        // Keep list reasonably sized and sorted by signal strength
-        discoveredDevices.sort { $0.rssi > $1.rssi }
     }
 }
 
