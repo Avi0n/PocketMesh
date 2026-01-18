@@ -113,6 +113,12 @@ public actor HeardRepeatsService {
             // Increment and return new count
             let newCount = try await persistenceStore.incrementMessageHeardRepeats(id: message.id)
 
+            // Update status to delivered on first repeat (channel messages don't have ACK)
+            if newCount == 1 && message.status == .sent {
+                try await persistenceStore.updateMessageStatus(id: message.id, status: .delivered)
+                logger.info("Updated message \(message.id) status to delivered")
+            }
+
             logger.info("Recorded repeat #\(newCount) for message \(message.id)")
 
             // Notify handler

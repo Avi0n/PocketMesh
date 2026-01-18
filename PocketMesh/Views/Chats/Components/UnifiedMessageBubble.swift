@@ -72,6 +72,7 @@ struct UnifiedMessageBubble: View {
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+    let onSendAgain: (() -> Void)?
 
     // Preview state from display item (replaces @State)
     let previewState: PreviewLoadState
@@ -98,6 +99,7 @@ struct UnifiedMessageBubble: View {
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
+        onSendAgain: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -114,6 +116,7 @@ struct UnifiedMessageBubble: View {
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onSendAgain = onSendAgain
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -288,6 +291,15 @@ struct UnifiedMessageBubble: View {
                 onShowRepeatDetails(message)
             } label: {
                 Label("Repeat Details", systemImage: "arrow.triangle.branch")
+            }
+        }
+
+        // Send Again button (for outgoing messages not yet delivered)
+        if message.isOutgoing && (message.status == .sent || message.status == .failed), let onSendAgain {
+            Button {
+                onSendAgain()
+            } label: {
+                Label("Send Again", systemImage: "arrow.uturn.forward")
             }
         }
 

@@ -688,6 +688,17 @@ final class ChatViewModel {
         }
     }
 
+    /// Send the same message text again as a new message.
+    /// Used for "Send Again" context menu action.
+    func sendAgain(_ message: MessageDTO) async {
+        composingText = message.text
+        if currentChannel != nil {
+            await sendChannelMessage()
+        } else {
+            await sendMessage()
+        }
+    }
+
     /// Delete a single message
     func deleteMessage(_ message: MessageDTO) async {
         guard let dataStore else { return }

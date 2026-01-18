@@ -285,6 +285,9 @@ struct ChatView: View {
                 onDelete: {
                     deleteMessage(message)
                 },
+                onSendAgain: {
+                    sendAgain(message)
+                },
                 onRequestPreviewFetch: {
                     viewModel.requestPreviewFetch(for: message.id)
                 },
@@ -339,6 +342,12 @@ struct ChatView: View {
         logger.info("retryMessage called for message: \(message.id)")
         Task {
             await viewModel.retryMessage(message)
+        }
+    }
+
+    private func sendAgain(_ message: MessageDTO) {
+        Task {
+            await viewModel.sendAgain(message)
         }
     }
 

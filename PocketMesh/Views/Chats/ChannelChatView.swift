@@ -281,6 +281,9 @@ struct ChannelChatView: View {
                 onShowRepeatDetails: { message in
                     showRepeatDetails(for: message)
                 },
+                onSendAgain: {
+                    sendAgain(message)
+                },
                 onRequestPreviewFetch: {
                     viewModel.requestPreviewFetch(for: message.id)
                 },
@@ -339,6 +342,12 @@ struct ChannelChatView: View {
     private func retryMessage(_ message: MessageDTO) {
         Task {
             await viewModel.retryChannelMessage(message)
+        }
+    }
+
+    private func sendAgain(_ message: MessageDTO) {
+        Task {
+            await viewModel.sendAgain(message)
         }
     }
 
