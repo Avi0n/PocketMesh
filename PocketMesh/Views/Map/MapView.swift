@@ -46,8 +46,8 @@ struct MapView: View {
                     )
                     .presentationDetents([.large])
                 }
+                .liquidGlassToolbarBackground()
         }
-        .liquidGlassToolbarBackground()
     }
 
     // MARK: - Map Canvas
@@ -216,7 +216,7 @@ struct MapView: View {
                     viewModel.showLabels.toggle()
                 }
             } label: {
-                Image(systemName: "text.rectangle.fill")
+                Image(systemName: "character.textbox")
                     .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(viewModel.showLabels ? .blue : .primary)
                     .frame(width: 44, height: 44)

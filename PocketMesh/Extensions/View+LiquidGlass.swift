@@ -49,7 +49,9 @@ extension View {
         if #available(iOS 26.0, *) {
             self
         } else {
-            self.toolbarBackground(.regularMaterial, for: .navigationBar, .tabBar)
+            self
+                .toolbarBackground(.regularMaterial, for: .navigationBar, .tabBar)
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar, .tabBar)
         }
     }
     #endif
