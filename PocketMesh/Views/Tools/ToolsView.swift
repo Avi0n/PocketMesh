@@ -63,7 +63,9 @@ struct ToolsView: View {
                             .navigationBarTitleDisplayMode(.inline)
                     }
                 }
+                .liquidGlassToolbarBackground()
             }
+            .ignoresSafeArea(edges: .top)
             .onChange(of: sidebarPath) { _, _ in
                 if sidebarPath.isEmpty, isShowingLineOfSightPoints {
                     isShowingLineOfSightPoints = false
@@ -140,7 +142,7 @@ struct ToolsView: View {
                 switch destination {
                 case .lineOfSightPoints:
                     LineOfSightView(viewModel: lineOfSightViewModel, layoutMode: .panel)
-                        .navigationTitle("Points")
+                        .navigationTitle("Line of Sight")
                         .navigationBarTitleDisplayMode(.inline)
                 }
             }

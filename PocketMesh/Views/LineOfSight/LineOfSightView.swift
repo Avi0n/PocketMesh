@@ -249,6 +249,7 @@ struct LineOfSightView: View {
                 }
         } else {
             base
+                .liquidGlassToolbarBackground()
         }
     }
 
@@ -269,6 +270,7 @@ struct LineOfSightView: View {
     private var mapCanvas: some View {
         ZStack {
             mapLayer
+                .ignoresSafeArea()
 
             VStack {
                 Spacer()
@@ -472,6 +474,7 @@ struct LineOfSightView: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(isDropPinMode ? .blue : .primary)
                 .frame(width: 44, height: 44)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isDropPinMode ? "Cancel drop pin" : "Drop pin")
