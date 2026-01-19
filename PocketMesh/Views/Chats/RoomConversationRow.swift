@@ -10,9 +10,18 @@ struct RoomConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(session.name)
-                        .font(.headline)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(session.name)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        if session.isFavorite {
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(.yellow)
+                                .font(.caption)
+                                .accessibilityLabel("Favorite")
+                        }
+                    }
 
                     Spacer()
 
