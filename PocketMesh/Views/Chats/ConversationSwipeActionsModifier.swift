@@ -26,6 +26,19 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                 }
                 .tint(.indigo)
             }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                Button {
+                    Task {
+                        await viewModel.toggleFavorite(conversation)
+                    }
+                } label: {
+                    Label(
+                        conversation.isFavorite ? "Unfavorite" : "Favorite",
+                        systemImage: conversation.isFavorite ? "star.slash" : "star.fill"
+                    )
+                }
+                .tint(.yellow)
+            }
     }
 }
 
