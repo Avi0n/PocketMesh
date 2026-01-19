@@ -62,6 +62,17 @@ enum Conversation: Identifiable, Hashable {
         }
     }
 
+    var isFavorite: Bool {
+        switch self {
+        case .direct(let contact):
+            return contact.isFavorite
+        case .channel(let channel):
+            return channel.isFavorite
+        case .room(let session):
+            return session.isFavorite
+        }
+    }
+
     var isChannel: Bool {
         if case .channel = self { return true }
         return false
