@@ -25,12 +25,7 @@ extension Array where Element == Conversation {
                 return false
             }
         case .favorites:
-            categoryFiltered = self.filter {
-                if case .direct(let contact) = $0 {
-                    return contact.isFavorite
-                }
-                return false
-            }
+            categoryFiltered = self.filter { $0.isFavorite }
         }
 
         if searchText.isEmpty {
