@@ -455,42 +455,12 @@ struct LineOfSightView: View {
     // MARK: - Map Controls Stack
 
     private var mapControlsStack: some View {
-        VStack(spacing: 0) {
-            // User location button
-            MapUserLocationButton(scope: mapScope)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
-
-            Divider()
-                .frame(width: 36)
-
-            // Map style picker
-            mapStyleButton
-
-            Divider()
-                .frame(width: 36)
-
-            // Drop pin toggle
+        MapControlsToolbar(
+            mapScope: mapScope,
+            showingLayersMenu: $showingMapStyleMenu
+        ) {
             dropPinButton
         }
-        .background(.regularMaterial, in: .rect(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-        .padding()
-    }
-
-    private var mapStyleButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.3)) {
-                showingMapStyleMenu.toggle()
-            }
-        } label: {
-            Image(systemName: "square.3.layers.3d.down.right")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.primary)
-                .frame(width: 44, height: 44)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Map style")
     }
 
     private var dropPinButton: some View {
