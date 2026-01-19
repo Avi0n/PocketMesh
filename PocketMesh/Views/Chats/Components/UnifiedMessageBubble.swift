@@ -295,7 +295,7 @@ struct UnifiedMessageBubble: View {
         }
 
         // Send Again button (for outgoing messages not yet delivered)
-        if message.isOutgoing && (message.status == .sent || message.status == .failed), let onSendAgain {
+        if message.isOutgoing && (message.status == .sent || message.status == .failed) && message.heardRepeats == 0, let onSendAgain {
             Button {
                 onSendAgain()
             } label: {
