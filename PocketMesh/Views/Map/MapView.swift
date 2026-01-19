@@ -175,77 +175,45 @@ struct MapView: View {
     }
 
     private var mapControlsStack: some View {
-        VStack(spacing: 0) {
-            // User location button (custom since we can't use MapUserLocationButton without scope)
-            Button {
-                centerOnUserLocation()
-            } label: {
-                Image(systemName: "location.fill")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Center on my location")
-
-            Divider()
-                .frame(width: 36)
-
-            // Layers button
-            Button {
-                withAnimation(.spring(response: 0.3)) {
-                    viewModel.showingLayersMenu.toggle()
-                }
-            } label: {
-                Image(systemName: "square.3.layers.3d.down.right")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Map layers")
-
-            Divider()
-                .frame(width: 36)
-
-            // Labels toggle button
-            Button {
-                withAnimation {
-                    viewModel.showLabels.toggle()
-                }
-            } label: {
-                Image(systemName: "character.textbox")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(viewModel.showLabels ? .blue : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(viewModel.showLabels ? "Hide labels" : "Show labels")
-
-            Divider()
-                .frame(width: 36)
-
-            // Center on all button
-            Button {
-                clearSelection()
-                viewModel.centerOnAllContacts()
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.contactsWithLocation.isEmpty)
-            .accessibilityLabel("Center on all contacts")
+        MapControlsToolbar(
+            onLocationTap: { centerOnUserLocation() },
+            showingLayersMenu: $viewModel.showingLayersMenu
+        ) {
+            labelsToggleButton
+            centerAllButton
         }
-        .liquidGlass(in: .rect(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-        .padding()
+    }
+
+    private var labelsToggleButton: some View {
+        Button {
+            withAnimation {
+                viewModel.showLabels.toggle()
+            }
+        } label: {
+            Image(systemName: "character.textbox")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(viewModel.showLabels ? .blue : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(viewModel.showLabels ? "Hide labels" : "Show labels")
+    }
+
+    private var centerAllButton: some View {
+        Button {
+            clearSelection()
+            viewModel.centerOnAllContacts()
+        } label: {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.contactsWithLocation.isEmpty)
+        .accessibilityLabel("Center on all contacts")
     }
 
     // MARK: - Refresh Button
