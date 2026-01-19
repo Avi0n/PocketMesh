@@ -313,6 +313,8 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO] { [] }
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool { false }
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int { 0 }
+    func incrementMessageSendCount(id: UUID) async throws -> Int { 0 }
+    func updateMessageTimestamp(id: UUID, timestamp: UInt32) async throws {}
 
     // Debug Log Entries
     func saveDebugLogEntries(_ dtos: [DebugLogEntryDTO]) async throws {}

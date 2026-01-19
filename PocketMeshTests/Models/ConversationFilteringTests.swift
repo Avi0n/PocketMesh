@@ -38,7 +38,8 @@ final class ConversationFilteringTests: XCTestCase {
     private func makeChannel(
         name: String,
         unreadCount: Int = 0,
-        isMuted: Bool = false
+        isMuted: Bool = false,
+        isFavorite: Bool = false
     ) -> ChannelDTO {
         ChannelDTO(
             id: UUID(),
@@ -49,14 +50,16 @@ final class ConversationFilteringTests: XCTestCase {
             isEnabled: true,
             lastMessageDate: Date(),
             unreadCount: unreadCount,
-            isMuted: isMuted
+            isMuted: isMuted,
+            isFavorite: isFavorite
         )
     }
 
     private func makeRoom(
         name: String,
         unreadCount: Int = 0,
-        isMuted: Bool = false
+        isMuted: Bool = false,
+        isFavorite: Bool = false
     ) -> RemoteNodeSessionDTO {
         RemoteNodeSessionDTO(
             id: UUID(),
@@ -67,7 +70,8 @@ final class ConversationFilteringTests: XCTestCase {
             isConnected: true,
             lastConnectedDate: Date(),
             unreadCount: unreadCount,
-            isMuted: isMuted
+            isMuted: isMuted,
+            isFavorite: isFavorite
         )
     }
 
@@ -136,18 +140,16 @@ final class ConversationFilteringTests: XCTestCase {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice", isFavorite: true)),
             .direct(makeContact(name: "Bob", isFavorite: false)),
-            .channel(makeChannel(name: "General"))
+            .channel(makeChannel(name: "General", isFavorite: true)),
+            .channel(makeChannel(name: "Random", isFavorite: false)),
+            .room(makeRoom(name: "FavRoom", isFavorite: true)),
+            .room(makeRoom(name: "OtherRoom", isFavorite: false))
         ]
 
         let result = conversations.filtered(by: .favorites, searchText: "")
 
-        XCTAssertEqual(result.count, 1)
-        if case .direct(let contact) = result.first {
-            XCTAssertEqual(contact.displayName, "Alice")
-            XCTAssertTrue(contact.isFavorite)
-        } else {
-            XCTFail("Expected direct conversation")
-        }
+        XCTAssertEqual(result.count, 3)
+        XCTAssertTrue(result.allSatisfy { $0.isFavorite })
     }
 
     func testSearchWithinFilter() {
