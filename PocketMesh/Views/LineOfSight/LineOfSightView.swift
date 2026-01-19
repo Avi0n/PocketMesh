@@ -232,6 +232,7 @@ struct LineOfSightView: View {
                         .accessibilityLabel("Back")
                     }
                 }
+                .liquidGlassToolbarBackground()
                 .onDisappear {
                     showAnalysisSheet = false
                 }
