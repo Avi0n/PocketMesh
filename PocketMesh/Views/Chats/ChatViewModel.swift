@@ -236,6 +236,107 @@ final class ChatViewModel {
         }
     }
 
+    // MARK: - Favorite
+
+    /// Toggles favorite state for a conversation with optimistic UI update
+    func toggleFavorite(_ conversation: Conversation) async {
+        let originalState = conversation.isFavorite
+        let newState = !originalState
+
+        // Optimistic UI update
+        updateConversationFavoriteState(conversation, isFavorite: newState)
+
+        do {
+            switch conversation {
+            case .direct(let contact):
+                try await dataStore?.setContactFavorite(contact.id, isFavorite: newState)
+            case .channel(let channel):
+                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
+            case .room(let session):
+                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            }
+        } catch {
+            // Rollback on failure
+            updateConversationFavoriteState(conversation, isFavorite: originalState)
+            logger.error("Failed to toggle favorite: \(error)")
+        }
+    }
+
+    /// Updates the favorite state in the local conversations array
+    private func updateConversationFavoriteState(_ conversation: Conversation, isFavorite: Bool) {
+        switch conversation {
+        case .direct(let contact):
+            if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
+                let updated = conversations[index]
+                conversations[index] = ContactDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    typeRawValue: updated.typeRawValue,
+                    flags: updated.flags,
+                    outPathLength: updated.outPathLength,
+                    outPath: updated.outPath,
+                    lastAdvertTimestamp: updated.lastAdvertTimestamp,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    lastModified: updated.lastModified,
+                    nickname: updated.nickname,
+                    isBlocked: updated.isBlocked,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite,
+                    isDiscovered: updated.isDiscovered,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    ocvPreset: updated.ocvPreset,
+                    customOCVArrayString: updated.customOCVArrayString
+                )
+            }
+        case .channel(let channel):
+            if let index = channels.firstIndex(where: { $0.id == channel.id }) {
+                let updated = channels[index]
+                channels[index] = ChannelDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    index: updated.index,
+                    name: updated.name,
+                    secret: updated.secret,
+                    isEnabled: updated.isEnabled,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    unreadMentionCount: updated.unreadMentionCount,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite
+                )
+            }
+        case .room(let session):
+            if let index = roomSessions.firstIndex(where: { $0.id == session.id }) {
+                let updated = roomSessions[index]
+                roomSessions[index] = RemoteNodeSessionDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    role: updated.role,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    isConnected: updated.isConnected,
+                    permissionLevel: updated.permissionLevel,
+                    lastConnectedDate: updated.lastConnectedDate,
+                    lastBatteryMillivolts: updated.lastBatteryMillivolts,
+                    lastUptimeSeconds: updated.lastUptimeSeconds,
+                    lastNoiseFloor: updated.lastNoiseFloor,
+                    unreadCount: updated.unreadCount,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite,
+                    lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
+                    neighborCount: updated.neighborCount,
+                    lastSyncTimestamp: updated.lastSyncTimestamp
+                )
+            }
+        }
+    }
+
     // MARK: - Conversation List
 
     /// Removes a conversation from local arrays for optimistic UI update.
