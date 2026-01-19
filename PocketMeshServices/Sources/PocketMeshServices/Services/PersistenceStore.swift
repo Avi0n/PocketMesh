@@ -667,6 +667,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Sets the favorite state for a contact
+    public func setContactFavorite(_ contactID: UUID, isFavorite: Bool) throws {
+        let targetID = contactID
+        let predicate = #Predicate<Contact> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Contact>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let contact = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.contactNotFound
+        }
+
+        contact.isFavorite = isFavorite
+        try modelContext.save()
+    }
+
     /// Delete all messages for a contact using batch delete
     public func deleteMessagesForContact(contactID: UUID) throws {
         let targetContactID: UUID? = contactID
@@ -1123,6 +1138,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Sets the favorite state for a channel
+    public func setChannelFavorite(_ channelID: UUID, isFavorite: Bool) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.channelNotFound
+        }
+
+        channel.isFavorite = isFavorite
+        try modelContext.save()
+    }
+
     // MARK: - Badge Count Support
 
     /// Efficiently calculate total unread counts for badge display
@@ -1484,6 +1514,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
 
         session.isMuted = isMuted
+        try modelContext.save()
+    }
+
+    /// Sets the favorite state for a remote node session
+    public func setSessionFavorite(_ sessionID: UUID, isFavorite: Bool) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { $0.id == targetID }
+        var descriptor = FetchDescriptor<RemoteNodeSession>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.remoteNodeSessionNotFound
+        }
+
+        session.isFavorite = isFavorite
         try modelContext.save()
     }
 
