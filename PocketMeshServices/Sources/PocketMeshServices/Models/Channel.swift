@@ -36,6 +36,9 @@ public final class Channel {
     /// Whether this channel's notifications are muted
     public var isMuted: Bool = false
 
+    /// Whether this channel is marked as favorite
+    public var isFavorite: Bool = false
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -46,7 +49,8 @@ public final class Channel {
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
         unreadMentionCount: Int = 0,
-        isMuted: Bool = false
+        isMuted: Bool = false,
+        isFavorite: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -58,6 +62,7 @@ public final class Channel {
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount
         self.isMuted = isMuted
+        self.isFavorite = isFavorite
     }
 
     /// Creates a Channel from a protocol ChannelInfo
@@ -110,6 +115,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
     public let unreadCount: Int
     public let unreadMentionCount: Int
     public let isMuted: Bool
+    public let isFavorite: Bool
 
     public init(from channel: Channel) {
         self.id = channel.id
@@ -122,6 +128,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.unreadCount = channel.unreadCount
         self.unreadMentionCount = channel.unreadMentionCount
         self.isMuted = channel.isMuted
+        self.isFavorite = channel.isFavorite
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -135,7 +142,8 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         lastMessageDate: Date?,
         unreadCount: Int,
         unreadMentionCount: Int = 0,
-        isMuted: Bool
+        isMuted: Bool,
+        isFavorite: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -147,6 +155,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount
         self.isMuted = isMuted
+        self.isFavorite = isFavorite
     }
 
     public var isPublicChannel: Bool {
