@@ -882,7 +882,9 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: 0,
             isStartNode: true,
-            isEndNode: false
+            isEndNode: false,
+            latitude: nil,
+            longitude: nil
         ))
 
         // Intermediate hops - each shows SNR it measured when receiving
@@ -899,7 +901,9 @@ final class TracePathViewModel {
                 resolvedName: resolvedName,
                 snr: node.snr,
                 isStartNode: false,
-                isEndNode: false
+                isEndNode: false,
+                latitude: nil,
+                longitude: nil
             ))
         }
 
@@ -910,7 +914,9 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: endSnr,
             isStartNode: false,
-            isEndNode: true
+            isEndNode: true,
+            latitude: nil,
+            longitude: nil
         ))
 
         result = TraceResult(

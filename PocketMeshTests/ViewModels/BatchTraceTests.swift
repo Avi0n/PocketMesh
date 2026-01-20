@@ -12,7 +12,9 @@ private func createTestHop(snr: Double, isStartNode: Bool = false, isEndNode: Bo
         resolvedName: nil,
         snr: snr,
         isStartNode: isStartNode,
-        isEndNode: isEndNode
+        isEndNode: isEndNode,
+        latitude: nil,
+        longitude: nil
     )
 }
 
