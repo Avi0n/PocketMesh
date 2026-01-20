@@ -22,3 +22,16 @@ struct NoiseFloorReadingTests {
         #expect(reading.timestamp == timestamp)
     }
 }
+
+@Suite("NoiseFloorStatistics")
+struct NoiseFloorStatisticsTests {
+
+    @Test("statistics calculates min/max/avg correctly")
+    func statisticsCalculatesCorrectly() {
+        let stats = NoiseFloorStatistics(min: -110, max: -80, average: -95.5)
+
+        #expect(stats.min == -110)
+        #expect(stats.max == -80)
+        #expect(stats.average == -95.5)
+    }
+}

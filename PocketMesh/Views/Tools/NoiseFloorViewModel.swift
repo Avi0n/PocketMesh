@@ -7,3 +7,9 @@ struct NoiseFloorReading: Identifiable {
     let lastRSSI: Int8
     let lastSNR: Double
 }
+
+struct NoiseFloorStatistics {
+    let min: Int16
+    let max: Int16
+    let average: Double
+}
