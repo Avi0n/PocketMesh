@@ -164,6 +164,34 @@ private struct ChartSection: View {
     let viewModel: NoiseFloorViewModel
     let startTime: Date
 
+    private var trendDescription: String {
+        let readings = viewModel.readings
+        guard readings.count >= 4 else { return "stable" }
+
+        let halfCount = readings.count / 2
+        let firstHalf = readings.prefix(halfCount)
+        let secondHalf = readings.suffix(halfCount)
+
+        let firstAvg = firstHalf.map { Int($0.noiseFloor) }.reduce(0, +) / max(1, halfCount)
+        let secondAvg = secondHalf.map { Int($0.noiseFloor) }.reduce(0, +) / max(1, halfCount)
+
+        if secondAvg > firstAvg + 3 {
+            return "increasing"
+        } else if secondAvg < firstAvg - 3 {
+            return "decreasing"
+        }
+        return "stable"
+    }
+
+    private var chartAccessibilityLabel: String {
+        let count = viewModel.readings.count
+        guard count > 0, let stats = viewModel.statistics else {
+            return "Noise floor history chart, no data"
+        }
+
+        return "Noise floor history: \(count) readings, minimum \(stats.min) dBm, maximum \(stats.max) dBm, average \(Int(stats.average)) dBm, trend \(trendDescription)"
+    }
+
     private var chartDomain: ClosedRange<Double> {
         guard let lastReading = viewModel.readings.last else {
             return 0...300
@@ -213,7 +241,7 @@ private struct ChartSection: View {
                 content.clipped()
             }
             .frame(maxHeight: .infinity)
-            .accessibilityLabel("Noise floor history chart showing \(viewModel.readings.count) readings")
+            .accessibilityLabel(chartAccessibilityLabel)
         }
         .frame(maxHeight: .infinity)
         .padding()
