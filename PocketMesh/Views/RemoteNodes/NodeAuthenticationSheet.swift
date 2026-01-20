@@ -135,7 +135,7 @@ struct NodeAuthenticationSheet: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .disabled(isAuthenticating || (role == .repeater && password.isEmpty))
+            .disabled(isAuthenticating)
         }
     }
 
