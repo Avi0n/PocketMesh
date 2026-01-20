@@ -29,6 +29,7 @@ struct RoomConversationView: View {
                     readOnlyBanner
                 }
             }
+            .ignoreKeyboardOnIPad()
             .environment(keyboardObserver)
             .navigationTitle(session.name)
             .navigationBarTitleDisplayMode(.inline)

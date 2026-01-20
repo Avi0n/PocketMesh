@@ -4,88 +4,121 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "KeyboardObserver")
 
-/// Observes keyboard frame changes and provides a correction value for undocked keyboards.
-/// SwiftUI's automatic keyboard avoidance doesn't handle iPad's floating/undocked/split keyboards,
-/// so this observer detects when the keyboard is undocked and publishes a correction value.
+/// Observes keyboard show/hide to provide height for docked keyboards only.
+/// Key insight: iOS sends `keyboardWillHide` for floating/undocked keyboards,
+/// so we only get `keyboardWillShow` for docked keyboards.
+/// Use with `.ignoresSafeArea(.keyboard)` to disable SwiftUI's automatic avoidance.
 @Observable @MainActor
 final class KeyboardObserver {
-    private(set) var bottomCorrection: CGFloat = 0
-    nonisolated(unsafe) private var observerToken: (any NSObjectProtocol)?
+    /// Height to add as bottom padding when keyboard is docked (0 when floating/hidden)
+    private(set) var keyboardHeight: CGFloat = 0
+
+    nonisolated(unsafe) private var showToken: (any NSObjectProtocol)?
+    nonisolated(unsafe) private var hideToken: (any NSObjectProtocol)?
 
     init() {
         setupObservers()
     }
 
     deinit {
-        if let token = observerToken {
+        if let token = showToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+        if let token = hideToken {
             NotificationCenter.default.removeObserver(token)
         }
     }
 
     private func setupObservers() {
-        observerToken = NotificationCenter.default.addObserver(
-            forName: UIResponder.keyboardWillChangeFrameNotification,
+        // keyboardWillShow is only sent for docked keyboards
+        // Floating/undocked keyboards send keyboardWillHide instead
+        showToken = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            // Extract values before crossing actor boundary
             guard let userInfo = notification.userInfo,
                   let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
                 return
             }
             Task { @MainActor in
-                self?.handleKeyboardFrameChange(keyboardFrame)
+                self?.handleKeyboardShow(keyboardFrame)
+            }
+        }
+
+        hideToken = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleKeyboardHide()
             }
         }
     }
 
-    private func handleKeyboardFrameChange(_ keyboardFrame: CGRect) {
+    private func handleKeyboardShow(_ keyboardFrame: CGRect) {
         guard let window = UIApplication.shared.connectedScenes
                   .compactMap({ $0 as? UIWindowScene })
                   .first?.windows.first else {
             return
         }
 
-        let windowBounds = window.bounds
+        // Convert keyboard frame from screen coordinates to window coordinates
+        // Critical for Stage Manager and Slide Over where they differ
+        let windowFrame = window.convert(keyboardFrame, from: nil)
 
-        // Keyboard is undocked if:
-        // - Its bottom edge doesn't reach the window bottom (floating/undocked)
-        // - OR its width doesn't span the full window (split keyboard)
-        let isUndocked = keyboardFrame.maxY < windowBounds.height - 1
-            || keyboardFrame.width < windowBounds.width - 1
+        logger.info("[KBObserver] keyboardWillShow: screenFrame h=\(keyboardFrame.height), windowFrame h=\(windowFrame.height)")
 
-        let newCorrection = isUndocked ? -keyboardFrame.height : 0
+        let newHeight = windowFrame.height
 
-        // Avoid redundant updates
-        guard abs(newCorrection - bottomCorrection) > 0.5 else { return }
+        guard abs(newHeight - keyboardHeight) > 0.5 else { return }
+        keyboardHeight = newHeight
+    }
 
-        logger.debug("Keyboard state: undocked=\(isUndocked), correction=\(newCorrection)")
-        bottomCorrection = newCorrection
+    private func handleKeyboardHide() {
+        logger.info("[KBObserver] keyboardWillHide")
+        guard keyboardHeight > 0 else { return }
+        keyboardHeight = 0
     }
 }
 
-/// View modifier that applies keyboard correction for undocked iPad keyboards.
+// MARK: - View Modifier
+
 struct FloatingKeyboardAwareModifier: ViewModifier {
     @Environment(KeyboardObserver.self) private var keyboardObserver
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     func body(content: Content) -> some View {
         content
-            .padding(.bottom, keyboardObserver.bottomCorrection)
+            .padding(.bottom, isIPad ? keyboardObserver.keyboardHeight : 0)
             .animation(
-                reduceMotion
-                    ? .none
-                    : .spring(response: 0.25, dampingFraction: 0.85),
-                value: keyboardObserver.bottomCorrection
+                reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.85),
+                value: keyboardObserver.keyboardHeight
             )
     }
 }
 
 extension View {
-    /// Applies correction for iPad's floating/undocked/split keyboard.
-    /// Use on views positioned with `.safeAreaInset(edge: .bottom)` that need
-    /// to move down when the keyboard undocks.
+    /// Applies padding for docked keyboards on iPad only.
+    /// Use with `.ignoresSafeArea(.keyboard)` on iPad to disable
+    /// SwiftUI's automatic keyboard avoidance.
     func floatingKeyboardAware() -> some View {
         modifier(FloatingKeyboardAwareModifier())
+    }
+
+    /// Conditionally ignores keyboard safe area on iPad only.
+    /// iPhone uses SwiftUI's default keyboard avoidance.
+    @ViewBuilder
+    func ignoreKeyboardOnIPad() -> some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            self.ignoresSafeArea(.keyboard)
+        } else {
+            self
+        }
     }
 }

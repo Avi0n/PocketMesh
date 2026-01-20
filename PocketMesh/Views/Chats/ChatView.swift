@@ -36,6 +36,7 @@ struct ChatView: View {
                 inputBar
                     .floatingKeyboardAware()
             }
+            .ignoreKeyboardOnIPad()
             .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
