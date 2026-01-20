@@ -893,6 +893,7 @@ final class TracePathViewModel {
         // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
+        let deviceLocation = appState?.locationService.currentLocation
         let path = traceInfo.path
 
         // Start node has no SNR (it transmitted first, didn't receive anything)
@@ -902,15 +903,22 @@ final class TracePathViewModel {
             snr: 0,
             isStartNode: true,
             isEndNode: false,
-            latitude: nil,
-            longitude: nil
+            latitude: deviceLocation?.coordinate.latitude,
+            longitude: deviceLocation?.coordinate.longitude
         ))
 
         // Intermediate hops - each shows SNR it measured when receiving
         for node in path where node.hashBytes != nil {
             let resolvedName: String?
+            var latitude: Double?
+            var longitude: Double?
+
             if let bytes = node.hashBytes, bytes.count == 1 {
                 resolvedName = resolveHashToName(bytes[0])
+                if let location = resolveHashToLocation(bytes[0]) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                }
             } else {
                 resolvedName = nil  // Multi-byte: no resolution possible
             }
@@ -921,8 +929,8 @@ final class TracePathViewModel {
                 snr: node.snr,
                 isStartNode: false,
                 isEndNode: false,
-                latitude: nil,
-                longitude: nil
+                latitude: latitude,
+                longitude: longitude
             ))
         }
 
@@ -934,8 +942,8 @@ final class TracePathViewModel {
             snr: endSnr,
             isStartNode: false,
             isEndNode: true,
-            latitude: nil,
-            longitude: nil
+            latitude: deviceLocation?.coordinate.latitude,
+            longitude: deviceLocation?.coordinate.longitude
         ))
 
         result = TraceResult(
