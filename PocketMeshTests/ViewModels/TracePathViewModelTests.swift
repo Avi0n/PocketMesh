@@ -869,6 +869,141 @@ struct PathCaptureTests {
     }
 }
 
+// MARK: - Location Resolution Tests
+
+@Suite("Location Resolution")
+@MainActor
+struct LocationResolutionTests {
+
+    @Test("resolveHashToLocation returns location for single matching contact")
+    func returnsLocationForSingleMatch() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 37.7749,
+            longitude: -122.4194,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location != nil)
+        #expect(location?.latitude == 37.7749)
+        #expect(location?.longitude == -122.4194)
+    }
+
+    @Test("resolveHashToLocation returns nil for no matches")
+    func returnsNilForNoMatch() {
+        let viewModel = TracePathViewModel()
+        viewModel.setContactsForTesting([])
+
+        let location = viewModel.resolveHashToLocation(0xFF)
+        #expect(location == nil)
+    }
+
+    @Test("resolveHashToLocation returns nil for multiple matches (ambiguous)")
+    func returnsNilForMultipleMatches() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact1 = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower1",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 37.0,
+            longitude: -122.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        let contact2 = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(1), count: 31)),
+            name: "Tower2",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 38.0,
+            longitude: -123.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact1, contact2])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location == nil)
+    }
+
+    @Test("resolveHashToLocation returns nil for contact without location")
+    func returnsNilForContactWithoutLocation() {
+        let viewModel = TracePathViewModel()
+        let deviceID = UUID()
+
+        let contact = ContactDTO(
+            id: UUID(),
+            deviceID: deviceID,
+            publicKey: Data([0x3F] + Array(repeating: UInt8(0), count: 31)),
+            name: "Tower",
+            typeRawValue: ContactType.repeater.rawValue,
+            flags: 0,
+            outPathLength: 0,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
+        viewModel.setContactsForTesting([contact])
+
+        let location = viewModel.resolveHashToLocation(0x3F)
+        #expect(location == nil)
+    }
+}
+
 // MARK: - Failure Result Tests
 
 @Suite("Failure Result Path Display")

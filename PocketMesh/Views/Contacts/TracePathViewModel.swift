@@ -305,12 +305,31 @@ final class TracePathViewModel {
         errorMessage = nil
     }
 
-    // MARK: - Name Resolution
+    // MARK: - Hash Resolution
 
     /// Resolve a hash byte to contact name (single match only)
     func resolveHashToName(_ hashByte: UInt8) -> String? {
         let matches = allContacts.filter { $0.publicKey.first == hashByte }
         return matches.count == 1 ? matches[0].displayName : nil
+    }
+
+    /// Resolve a hash byte to contact location (single match only)
+    func resolveHashToLocation(_ hashByte: UInt8) -> (latitude: Double, longitude: Double)? {
+        let matches = allContacts.filter { $0.publicKey.first == hashByte }
+
+        guard matches.count == 1 else {
+            if matches.count > 1 {
+                logger.debug("Ambiguous hash 0x\(hashByte.hexString): \(matches.count) contacts match")
+            }
+            return nil
+        }
+
+        let contact = matches[0]
+        guard contact.hasLocation else {
+            logger.debug("Contact \(contact.displayName) has no location set")
+            return nil
+        }
+        return (contact.latitude, contact.longitude)
     }
 
     // MARK: - Data Loading
@@ -994,6 +1013,11 @@ final class TracePathViewModel {
     /// Test helper to set pending path hash
     func setPendingPathHashForTesting(_ pathHash: [UInt8]?) {
         pendingPathHash = pathHash
+    }
+
+    /// Test helper to set contacts for hash resolution
+    func setContactsForTesting(_ contacts: [ContactDTO]) {
+        allContacts = contacts
     }
     #endif
 }
