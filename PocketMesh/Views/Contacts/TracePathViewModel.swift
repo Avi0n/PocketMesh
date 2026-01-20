@@ -1,4 +1,5 @@
 import Combine
+import CoreLocation
 import SwiftUI
 import UIKit
 import MeshCore
@@ -275,6 +276,35 @@ final class TracePathViewModel {
             guard let result, result.success else { return false }
             return fullPathBytes == result.tracedPathBytes
         }
+    }
+
+    // MARK: - Distance Calculation
+
+    /// Total path distance in meters, or nil if any hop lacks valid location
+    var totalPathDistance: Double? {
+        guard let result, result.success else { return nil }
+
+        let hops = result.hops
+        guard hops.count >= 2 else { return nil }
+
+        var totalMeters: Double = 0
+
+        for i in 0..<(hops.count - 1) {
+            let current = hops[i]
+            let next = hops[i + 1]
+
+            guard current.hasLocation, next.hasLocation,
+                  let curLat = current.latitude, let curLon = current.longitude,
+                  let nextLat = next.latitude, let nextLon = next.longitude else {
+                return nil
+            }
+
+            let from = CLLocation(latitude: curLat, longitude: curLon)
+            let to = CLLocation(latitude: nextLat, longitude: nextLon)
+            totalMeters += from.distance(from: to)
+        }
+
+        return totalMeters
     }
 
     // MARK: - Configuration

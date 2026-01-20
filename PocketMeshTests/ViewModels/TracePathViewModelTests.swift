@@ -1039,3 +1039,101 @@ struct FailureResultTests {
         #expect(result.tracedPathString == "")
     }
 }
+
+// MARK: - Total Path Distance Tests
+
+@Suite("Total Path Distance")
+@MainActor
+struct TotalPathDistanceTests {
+
+    @Test("calculates correct distance for multi-hop path")
+    func calculatesCorrectDistance() {
+        let viewModel = TracePathViewModel()
+
+        // San Francisco to Oakland to Berkeley (roughly)
+        let sf = (lat: 37.7749, lon: -122.4194)
+        let oakland = (lat: 37.8044, lon: -122.2712)
+        let berkeley = (lat: 37.8716, lon: -122.2727)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: sf.lat, longitude: sf.lon),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Oakland", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: oakland.lat, longitude: oakland.lon),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Berkeley", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: berkeley.lat, longitude: berkeley.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: sf.lat, longitude: sf.lon)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F])
+
+        let distance = viewModel.totalPathDistance
+        #expect(distance != nil)
+        // SF→Oakland ~13km, Oakland→Berkeley ~8km, Berkeley→SF ~17km ≈ 38km total
+        #expect(distance! > 30_000) // > 30km
+        #expect(distance! < 50_000) // < 50km
+    }
+
+    @Test("returns nil when hop missing location")
+    func returnsNilWhenHopMissingLocation() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Unknown", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil when hop has zero location")
+    func returnsNilWhenHopHasZeroLocation() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 0, longitude: 0),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil for failed result")
+    func returnsNilForFailedResult() {
+        let viewModel = TracePathViewModel()
+
+        viewModel.result = TraceResult(hops: [], durationMs: 0, success: false, errorMessage: "Timeout", tracedPathBytes: [])
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("returns nil when device location unavailable")
+    func returnsNilWhenDeviceLocationUnavailable() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        #expect(viewModel.totalPathDistance == nil)
+    }
+}
