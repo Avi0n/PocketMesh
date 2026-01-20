@@ -12,6 +12,7 @@ struct TraceResultsSheet: View {
     @State private var savePathName = ""
     @State private var saveHapticTrigger = 0
     @State private var copyHapticTrigger = 0
+    @State private var showingDistanceInfo = false
 
     var body: some View {
         NavigationStack {
@@ -113,6 +114,9 @@ struct TraceResultsSheet: View {
                             .font(.body.monospacedDigit())
                     }
                 }
+
+                // Total distance row
+                totalDistanceRow
 
                 // Save path action (only for successful traces when not running a saved path)
                 if !viewModel.isRunningSavedPath {
@@ -247,6 +251,74 @@ struct TraceResultsSheet: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Average round trip: \(avg) milliseconds, range \(min) to \(max)")
+        }
+    }
+
+    // MARK: - Total Distance Row
+
+    private func formatDistance(_ meters: Double) -> String {
+        let measurement = Measurement(value: meters, unit: UnitLength.meters)
+        return measurement.formatted(.measurement(width: .abbreviated, usage: .road))
+    }
+
+    @ViewBuilder
+    private var totalDistanceRow: some View {
+        HStack {
+            Text("Total Distance")
+                .foregroundStyle(.secondary)
+            Spacer()
+
+            if let distance = viewModel.totalPathDistance {
+                Text(formatDistance(distance))
+                    .font(.body.monospacedDigit())
+            } else {
+                HStack {
+                    Text("Unavailable")
+                        .foregroundStyle(.secondary)
+                    Button("Distance info", systemImage: "info.circle") {
+                        showingDistanceInfo = true
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Distance unavailable")
+                    .accessibilityHint("Double tap for details about missing locations")
+                }
+            }
+        }
+        .sheet(isPresented: $showingDistanceInfo) {
+            distanceInfoSheet
+                .presentationDetents([.height(300)])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var distanceInfoSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Distance cannot be calculated because the following repeaters don't have location coordinates set.")
+                }
+                Section("Repeaters Without Locations") {
+                    ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
+                        Text(name)
+                    }
+                }
+                Section {
+                    Text("To calculate distance, add location coordinates to these contacts in their detail screens.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Distance Unavailable")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showingDistanceInfo = false
+                    }
+                }
+            }
         }
     }
 }
