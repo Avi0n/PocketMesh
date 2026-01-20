@@ -42,8 +42,7 @@ struct TracePathView: View {
             case .list:
                 listView
             case .map:
-                Text("Map view coming soon")
-                    .foregroundStyle(.secondary)
+                TracePathMapView(traceViewModel: viewModel)
             }
         }
         .navigationTitle("Trace Path")
