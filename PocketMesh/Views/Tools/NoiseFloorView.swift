@@ -51,7 +51,7 @@ extension NoiseFloorView {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .modifier(GlassEffectModifier())
+        .liquidGlass(in: .capsule)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(viewModel.isPolling ? "Live polling active" : "Polling paused")
     }
@@ -259,18 +259,6 @@ private struct StatisticsSection: View {
                 .monospacedDigit()
             Text(unit)
                 .foregroundStyle(.secondary)
-        }
-    }
-}
-
-// MARK: - Glass Effect Modifier
-
-private struct GlassEffectModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect()
-        } else {
-            content.background(.ultraThinMaterial, in: .capsule)
         }
     }
 }
