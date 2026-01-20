@@ -1,8 +1,5 @@
 import SwiftUI
 import UIKit
-import OSLog
-
-private let logger = Logger(subsystem: "com.pocketmesh", category: "KeyboardObserver")
 
 /// Observes keyboard show/hide to provide height for docked keyboards only.
 /// Key insight: iOS sends `keyboardWillHide` for floating/undocked keyboards,
@@ -67,9 +64,6 @@ final class KeyboardObserver {
         // Convert keyboard frame from screen coordinates to window coordinates
         // Critical for Stage Manager and Slide Over where they differ
         let windowFrame = window.convert(keyboardFrame, from: nil)
-
-        logger.info("[KBObserver] keyboardWillShow: screenFrame h=\(keyboardFrame.height), windowFrame h=\(windowFrame.height)")
-
         let newHeight = windowFrame.height
 
         guard abs(newHeight - keyboardHeight) > 0.5 else { return }
@@ -77,7 +71,6 @@ final class KeyboardObserver {
     }
 
     private func handleKeyboardHide() {
-        logger.info("[KBObserver] keyboardWillHide")
         guard keyboardHeight > 0 else { return }
         keyboardHeight = 0
     }

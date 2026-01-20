@@ -1,8 +1,5 @@
 import UIKit
 import SwiftUI
-import OSLog
-
-private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatTableView")
 
 enum ChatScrollToMentionPolicy {
     static func shouldScrollToBottom(mentionTargetID: AnyHashable?, newestItemID: AnyHashable?) -> Bool {
@@ -124,8 +121,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             return
         }
 
-        logger.info("[ChatTableView] keyboardWillShow: x=\(keyboardFrame.origin.x), y=\(keyboardFrame.origin.y), w=\(keyboardFrame.width), h=\(keyboardFrame.height)")
-
         let wasAtBottom = isAtBottom
         keyboardHeight = keyboardFrame.height
 
@@ -146,7 +141,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     }
 
     @objc private func keyboardWillHide(_ notification: Notification) {
-        logger.info("[ChatTableView] keyboardWillHide")
         keyboardHeight = 0
     }
 
