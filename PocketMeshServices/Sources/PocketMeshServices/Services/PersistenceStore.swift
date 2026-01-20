@@ -1788,12 +1788,12 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Find RxLogEntry matching an incoming message for path correlation.
     ///
     /// For channel messages: Correlates by channel index and sender timestamp (stored in RxLogEntry).
-    /// For direct messages: Correlates by recent receivedAt, payload type, and optional contact name.
+    /// For direct messages: Correlates by sender timestamp (now stored via decryption), payload type, and optional contact name.
     ///
     /// - Parameters:
     ///   - channelIndex: Channel index for channel messages, nil for direct messages
     ///   - senderTimestamp: The sender's timestamp from the message
-    ///   - withinSeconds: Time window for correlation
+    ///   - withinSeconds: Time window for correlation (unused, kept for API compatibility)
     ///   - contactName: For direct messages, the sender's contact name for additional filtering
     public func findRxLogEntry(
         channelIndex: UInt8?,
@@ -1801,15 +1801,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         withinSeconds: Double,
         contactName: String? = nil
     ) async throws -> RxLogEntryDTO? {
-        // For channel messages, use senderTimestamp stored in RxLogEntry (from decryption)
-        // For direct messages, use receivedAt relative to NOW since we don't store senderTimestamp
-        let now = Date()
-        let minDate = now.addingTimeInterval(-withinSeconds)
-        let maxDate = now
+        let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {
             // Channel message: match on channelHash and senderTimestamp
-            let targetTimestamp = Int(senderTimestamp)
             let channelIndexInt = Int(channelIndex)
 
             let predicate = #Predicate<RxLogEntry> { entry in
@@ -1824,22 +1819,20 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             let results = try modelContext.fetch(descriptor)
             return results.first.map { RxLogEntryDTO(from: $0) }
         } else {
-            // Direct message: match on recent receivedAt, payloadType, and optionally contactName
+            // Direct message: match on senderTimestamp (now stored via decryption)
             let textMessageType = Int(PayloadType.textMessage.rawValue)
 
             let predicate: Predicate<RxLogEntry>
             if let contactName {
                 predicate = #Predicate<RxLogEntry> { entry in
-                    entry.receivedAt >= minDate &&
-                    entry.receivedAt <= maxDate &&
+                    entry.senderTimestamp == targetTimestamp &&
                     entry.channelHash == nil &&
                     entry.payloadType == textMessageType &&
                     entry.fromContactName == contactName
                 }
             } else {
                 predicate = #Predicate<RxLogEntry> { entry in
-                    entry.receivedAt >= minDate &&
-                    entry.receivedAt <= maxDate &&
+                    entry.senderTimestamp == targetTimestamp &&
                     entry.channelHash == nil &&
                     entry.payloadType == textMessageType
                 }

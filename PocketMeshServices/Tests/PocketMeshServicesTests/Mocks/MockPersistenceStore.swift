@@ -843,10 +843,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         withinSeconds: Double,
         contactName: String? = nil
     ) async throws -> RxLogEntryDTO? {
-        let now = Date()
-        let minDate = now.addingTimeInterval(-withinSeconds)
-        let maxDate = now
-
         if let channelIndex {
             // Channel message: match by channelHash and senderTimestamp
             return mockRxLogEntries.first { entry in
@@ -854,10 +850,9 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 entry.senderTimestamp == senderTimestamp
             }
         } else {
-            // Direct message: match by recent receivedAt and optionally contactName
+            // Direct message: match by senderTimestamp (now stored via decryption)
             return mockRxLogEntries.first { entry in
-                entry.receivedAt >= minDate &&
-                entry.receivedAt <= maxDate &&
+                entry.senderTimestamp == senderTimestamp &&
                 entry.channelHash == nil &&
                 (contactName == nil || entry.fromContactName == contactName)
             }
