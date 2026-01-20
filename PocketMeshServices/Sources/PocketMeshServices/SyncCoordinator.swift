@@ -230,13 +230,15 @@ public actor SyncCoordinator {
     ///   - appStateProvider: Optional provider for foreground/background state. When nil,
     ///     defaults to foreground mode (channels sync). When provided and app is backgrounded,
     ///     channel sync is skipped to reduce BLE traffic.
+    ///   - rxLogService: Optional service for updating contact public keys after sync.
     public func performFullSync(
         deviceID: UUID,
         dataStore: PersistenceStore,
         contactService: some ContactServiceProtocol,
         channelService: some ChannelServiceProtocol,
         messagePollingService: some MessagePollingServiceProtocol,
-        appStateProvider: AppStateProvider? = nil
+        appStateProvider: AppStateProvider? = nil,
+        rxLogService: RxLogService? = nil
     ) async throws {
         // Prevent concurrent syncs - check before logging to avoid noise
         let currentState = await state
@@ -274,6 +276,17 @@ public actor SyncCoordinator {
                         deviceID: deviceID,
                         timestamp: contactResult.lastSyncTimestamp
                     )
+                }
+
+                // Update RxLogService with contact public keys for direct message decryption
+                if let rxLogService {
+                    do {
+                        let publicKeys = try await dataStore.fetchContactPublicKeysByPrefix(deviceID: deviceID)
+                        await rxLogService.updateContactPublicKeys(publicKeys)
+                        logger.debug("Updated \(publicKeys.count) contact public keys for direct message decryption")
+                    } catch {
+                        logger.error("Failed to fetch contact public keys: \(error)")
+                    }
                 }
 
                 // Phase 2: Channels (foreground only)
@@ -360,7 +373,8 @@ public actor SyncCoordinator {
                 contactService: services.contactService,
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService,
-                appStateProvider: services.appStateProvider
+                appStateProvider: services.appStateProvider,
+                rxLogService: services.rxLogService
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
@@ -434,20 +448,30 @@ public actor SyncCoordinator {
             // 2. NOW start event monitoring (handlers are ready)
             await services.startEventMonitoring(deviceID: deviceID)
 
-            // 3. Perform full sync
+            // 3. Export device private key for direct message decryption
+            do {
+                let privateKey = try await services.session.exportPrivateKey()
+                await services.rxLogService.updatePrivateKey(privateKey)
+                logger.debug("Device private key exported for direct message decryption")
+            } catch {
+                logger.warning("Failed to export private key: \(error.localizedDescription)")
+            }
+
+            // 4. Perform full sync
             try await performFullSync(
                 deviceID: deviceID,
                 dataStore: services.dataStore,
                 contactService: services.contactService,
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService,
-                appStateProvider: services.appStateProvider
+                appStateProvider: services.appStateProvider,
+                rxLogService: services.rxLogService
             )
 
-            // 4. Wire discovery handlers (for ongoing contact discovery)
+            // 5. Wire discovery handlers (for ongoing contact discovery)
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
 
-            // 5. Wait for any pending message handlers to complete
+            // 6. Wait for any pending message handlers to complete
             // Message events are processed asynchronously by the event monitor - we need to ensure
             // all handlers finish before resuming notifications, otherwise sync-time messages
             // may trigger notifications after suppression is lifted
