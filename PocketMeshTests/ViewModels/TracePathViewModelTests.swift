@@ -45,6 +45,83 @@ private func createTestContact() -> ContactDTO {
     return ContactDTO(from: contact)
 }
 
+// MARK: - TraceHop Location Tests
+
+@Suite("TraceHop Location")
+@MainActor
+struct TraceHopLocationTests {
+
+    @Test("hasLocation returns true with valid non-zero coordinates")
+    func hasLocationWithValidCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 37.7749,
+            longitude: -122.4194
+        )
+        #expect(hop.hasLocation == true)
+    }
+
+    @Test("hasLocation returns false with zero coordinates")
+    func hasLocationWithZeroCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 0,
+            longitude: 0
+        )
+        #expect(hop.hasLocation == false)
+    }
+
+    @Test("hasLocation returns false with nil coordinates")
+    func hasLocationWithNilCoordinates() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: nil,
+            longitude: nil
+        )
+        #expect(hop.hasLocation == false)
+    }
+
+    @Test("hasLocation returns true if only latitude is non-zero")
+    func hasLocationWithOnlyLatitude() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 45.0,
+            longitude: 0
+        )
+        #expect(hop.hasLocation == true)
+    }
+
+    @Test("hasLocation returns true if only longitude is non-zero")
+    func hasLocationWithOnlyLongitude() {
+        let hop = TraceHop(
+            hashBytes: Data([0x3F]),
+            resolvedName: "Tower",
+            snr: 5.0,
+            isStartNode: false,
+            isEndNode: false,
+            latitude: 0,
+            longitude: -122.0
+        )
+        #expect(hop.hasLocation == true)
+    }
+}
+
 // MARK: - Path Edit Clears Saved Path Tests
 
 @Suite("Path Edit Clears Saved Path")
