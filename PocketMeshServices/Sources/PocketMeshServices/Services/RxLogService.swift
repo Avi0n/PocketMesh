@@ -16,6 +16,10 @@ public actor RxLogService {
     private var channelNames: [UInt8: String] = [:]   // channelIndex -> name
     private var contactNames: [Data: String] = [:]    // pubkey prefix -> name
 
+    // Crypto keys for direct message decryption
+    private var myPrivateKey: Data?
+    private var contactPublicKeysByPrefix: [UInt8: [Data]] = [:]  // 1-byte prefix -> array of 32-byte public keys
+
     // Stream for UI updates
     private var streamContinuation: AsyncStream<RxLogEntryDTO>.Continuation?
 
@@ -184,6 +188,17 @@ public actor RxLogService {
         contactNames = names
     }
 
+    /// Update device private key for direct message decryption.
+    public func updatePrivateKey(_ key: Data?) {
+        myPrivateKey = key
+    }
+
+    /// Update contact public keys for direct message decryption.
+    /// Called when contacts sync completes.
+    public func updateContactPublicKeys(_ keys: [UInt8: [Data]]) {
+        contactPublicKeysByPrefix = keys
+    }
+
     /// Process a parsed RX log event.
     public func process(_ parsed: ParsedRxLogData) async {
         guard let deviceID else { return }
@@ -223,6 +238,31 @@ public actor RxLogService {
                 }
             } else {
                 decryptStatus = .pending
+            }
+        }
+
+        // Decrypt direct messages to extract senderTimestamp
+        // Try all contacts with matching prefix byte (1-byte hash has collision risk)
+        if (parsed.payloadType == .textMessage || parsed.payloadType == .response),
+           (parsed.routeType == .direct || parsed.routeType == .tcDirect),
+           let senderPrefix = parsed.senderPubkeyPrefix?.first,
+           let candidateKeys = contactPublicKeysByPrefix[senderPrefix],
+           let myPrivateKey = self.myPrivateKey {
+
+            for senderPublicKey in candidateKeys {
+                if let timestamp = DirectMessageCrypto.extractTimestamp(
+                    payload: parsed.packetPayload,
+                    myPrivateKey: myPrivateKey,
+                    senderPublicKey: senderPublicKey
+                ) {
+                    senderTimestamp = timestamp
+                    logger.debug("Decrypted direct message senderTimestamp: \(timestamp)")
+                    break
+                }
+            }
+
+            if senderTimestamp == nil {
+                logger.debug("Failed to decrypt direct message (tried \(candidateKeys.count) candidate keys)")
             }
         }
 
