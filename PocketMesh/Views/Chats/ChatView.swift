@@ -21,6 +21,7 @@ struct ChatView: View {
     @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
@@ -60,6 +61,11 @@ struct ChatView: View {
                 ContactDetailView(contact: contact, showFromDirectChat: true)
             }
         })
+        .sheet(item: $selectedMessageForPath) { message in
+            MessagePathSheet(message: message)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: appState.servicesVersion) {
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             await viewModel.loadMessages(for: contact)
@@ -285,6 +291,7 @@ struct ChatView: View {
                 onDelete: {
                     deleteMessage(message)
                 },
+                onShowPath: { selectedMessageForPath = $0 },
                 onSendAgain: {
                     sendAgain(message)
                 },

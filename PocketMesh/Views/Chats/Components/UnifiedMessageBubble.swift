@@ -72,6 +72,7 @@ struct UnifiedMessageBubble: View {
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+    let onShowPath: ((MessageDTO) -> Void)?
     let onSendAgain: (() -> Void)?
 
     // Preview state from display item (replaces @State)
@@ -99,6 +100,7 @@ struct UnifiedMessageBubble: View {
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
+        onShowPath: ((MessageDTO) -> Void)? = nil,
         onSendAgain: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
@@ -116,6 +118,7 @@ struct UnifiedMessageBubble: View {
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onShowPath = onShowPath
         self.onSendAgain = onSendAgain
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
@@ -316,17 +319,27 @@ struct UnifiedMessageBubble: View {
             }
         }
 
-        // Incoming message details in submenu (more fields)
+        // Incoming message details in submenu
         if !message.isOutgoing {
             Menu {
+                if message.pathNodes != nil {
+                    Button {
+                        onShowPath?(message)
+                    } label: {
+                        Label("View Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    }
+                }
+
+                Text("Hops: \(hopCountFormatted(message.pathLength))")
+
+                Divider()
+
                 Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
                 Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
 
                 if let snr = message.snr {
                     Text("SNR: \(snrFormatted(snr))")
                 }
-
-                Text("Hops: \(hopCountFormatted(message.pathLength))")
             } label: {
                 Label("Details", systemImage: "info.circle")
             }

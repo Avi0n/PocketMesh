@@ -22,6 +22,7 @@ struct ChannelChatView: View {
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
     @State private var selectedMessageForRepeats: MessageDTO?
+    @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
@@ -60,6 +61,11 @@ struct ChannelChatView: View {
         }
         .sheet(item: $selectedMessageForRepeats) { message in
             RepeatDetailsSheet(message: message)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $selectedMessageForPath) { message in
+            MessagePathSheet(message: message)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -286,6 +292,7 @@ struct ChannelChatView: View {
                 onShowRepeatDetails: { message in
                     showRepeatDetails(for: message)
                 },
+                onShowPath: { selectedMessageForPath = $0 },
                 onSendAgain: {
                     sendAgain(message)
                 },
