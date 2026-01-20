@@ -307,6 +307,15 @@ final class TracePathViewModel {
         return totalMeters
     }
 
+    /// Names of intermediate repeaters that lack location data
+    var repeatersWithoutLocation: [String] {
+        guard let result else { return [] }
+
+        return result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode && !$0.hasLocation }
+            .map { $0.resolvedName ?? $0.hashDisplayString ?? "Unknown" }
+    }
+
     // MARK: - Configuration
 
     func configure(appState: AppState) {

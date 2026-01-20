@@ -1137,3 +1137,94 @@ struct TotalPathDistanceTests {
         #expect(viewModel.totalPathDistance == nil)
     }
 }
+
+// MARK: - Repeaters Without Location Tests
+
+@Suite("Repeaters Without Location")
+@MainActor
+struct RepeatersWithoutLocationTests {
+
+    @Test("returns names of hops missing locations")
+    func returnsNamesOfMissingLocations() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower A", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Tower B", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: Data([0x5F]), resolvedName: "Tower C", snr: 3.0, isStartNode: false, isEndNode: false,
+                     latitude: 0, longitude: 0),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F, 0x5F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 2)
+        #expect(missing.contains("Tower A"))
+        #expect(missing.contains("Tower C"))
+        #expect(!missing.contains("Tower B"))
+    }
+
+    @Test("uses hash display for unresolved names")
+    func usesHashDisplayForUnresolvedNames() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: 37.7749, longitude: -122.4194),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: nil, snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: 37.7749, longitude: -122.4194)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 1)
+        #expect(missing[0] == "3F") // hex display
+    }
+
+    @Test("excludes start and end nodes")
+    func excludesStartAndEndNodes() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil), // Start node missing - excluded
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil) // End node missing - excluded
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 0) // Only intermediate hops count
+    }
+
+    @Test("returns empty when device location missing but no intermediate repeaters affected")
+    func returnsEmptyWhenOnlyDeviceMissing() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "My Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "My Device", snr: 2.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        let missing = viewModel.repeatersWithoutLocation
+        #expect(missing.count == 0)
+    }
+}
