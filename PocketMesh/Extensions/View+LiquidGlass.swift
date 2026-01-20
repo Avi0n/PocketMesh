@@ -40,6 +40,23 @@ extension View {
             self.background(.thinMaterial, in: shape)
         }
     }
+
+    #if os(iOS)
+    /// Applies visible toolbar backgrounds for full-screen content views.
+    /// On iOS 26+, explicitly sets visibility so system applies liquid glass.
+    /// On iOS 18, uses regularMaterial background.
+    @ViewBuilder
+    func liquidGlassToolbarBackground() -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+        } else {
+            self
+                .toolbarBackground(.regularMaterial, for: .navigationBar, .tabBar)
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar, .tabBar)
+        }
+    }
+    #endif
 }
 
 /// A container that uses GlassEffectContainer on iOS 26+, passes through content on earlier versions

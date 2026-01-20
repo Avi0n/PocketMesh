@@ -87,8 +87,8 @@ public final class NotificationService: NSObject {
     // MARK: - Badge Management
 
     /// Callback to get total unread count from data layer
-    /// Returns (contactUnread, channelUnread) tuple for preference-aware calculation
-    public var getBadgeCount: (@Sendable () async -> (contacts: Int, channels: Int))?
+    /// Returns (contactUnread, channelUnread, roomUnread) tuple for preference-aware calculation
+    public var getBadgeCount: (@Sendable () async -> (contacts: Int, channels: Int, rooms: Int))?
 
     /// Cached notification preferences (refreshed on each badge update)
     private var cachedPreferences: NotificationPreferences?
@@ -568,6 +568,11 @@ public final class NotificationService: NSObject {
         // Only include channel messages if preference enabled
         if prefs.channelMessagesEnabled {
             totalUnread += counts.channels
+        }
+
+        // Only include room messages if preference enabled
+        if prefs.roomMessagesEnabled {
+            totalUnread += counts.rooms
         }
 
         // Update badge

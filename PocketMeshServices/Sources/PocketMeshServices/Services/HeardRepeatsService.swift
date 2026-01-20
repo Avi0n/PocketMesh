@@ -58,16 +58,39 @@ public actor HeardRepeatsService {
     /// - Returns: The updated heardRepeats count if a match was found, nil otherwise
     @discardableResult
     public func processForRepeats(_ entry: RxLogEntryDTO) async -> Int? {
+        logger.info("[REPEAT-DEBUG] processForRepeats called, entryID=\(entry.id)")
+
         // Only process successfully decrypted channel messages
-        guard entry.payloadType == .groupText,
-              entry.decryptStatus == .success,
-              let decodedText = entry.decodedText,
-              let channelIndex = entry.channelHash,
-              let senderTimestamp = entry.senderTimestamp,
-              let deviceID = self.deviceID,
-              let localNodeName = self.localNodeName else {
+        guard entry.payloadType == .groupText else {
+            logger.info("[REPEAT-DEBUG] Skip: payloadType=\(String(describing: entry.payloadType)), expected .groupText")
             return nil
         }
+        guard entry.decryptStatus == .success else {
+            logger.info("[REPEAT-DEBUG] Skip: decryptStatus=\(String(describing: entry.decryptStatus)), expected .success")
+            return nil
+        }
+        guard let decodedText = entry.decodedText else {
+            logger.info("[REPEAT-DEBUG] Skip: decodedText is nil")
+            return nil
+        }
+        guard let channelIndex = entry.channelHash else {
+            logger.info("[REPEAT-DEBUG] Skip: channelHash is nil")
+            return nil
+        }
+        guard let senderTimestamp = entry.senderTimestamp else {
+            logger.info("[REPEAT-DEBUG] Skip: senderTimestamp is nil")
+            return nil
+        }
+        guard let deviceID = self.deviceID else {
+            logger.info("[REPEAT-DEBUG] Skip: self.deviceID is nil (service not configured)")
+            return nil
+        }
+        guard let localNodeName = self.localNodeName else {
+            logger.info("[REPEAT-DEBUG] Skip: self.localNodeName is nil (service not configured)")
+            return nil
+        }
+
+        logger.info("[REPEAT-DEBUG] Passed guards: channel=\(channelIndex), localNodeName=\(localNodeName)")
 
         // Parse "NodeName: MessageText" format using shared utility
         guard let (senderName, messageText) = ChannelMessageFormat.parse(decodedText) else {
@@ -77,6 +100,7 @@ public actor HeardRepeatsService {
 
         // Only match messages from our own node
         guard senderName == localNodeName else {
+            logger.info("[REPEAT-DEBUG] Skip: senderName=\(senderName), localNodeName=\(localNodeName) - not a match")
             return nil
         }
 
@@ -88,6 +112,7 @@ public actor HeardRepeatsService {
 
         // Find matching sent message
         do {
+            logger.info("[REPEAT-DEBUG] Searching for sent message: deviceID=\(deviceID), channel=\(channelIndex), timestamp=\(senderTimestamp), text=\(messageText.prefix(30))")
             guard let message = try await persistenceStore.findSentChannelMessage(
                 deviceID: deviceID,
                 channelIndex: channelIndex,
@@ -95,8 +120,10 @@ public actor HeardRepeatsService {
                 text: messageText,
                 withinSeconds: 10
             ) else {
+                logger.info("[REPEAT-DEBUG] No matching sent message found")
                 return nil
             }
+            logger.info("[REPEAT-DEBUG] Found matching message: id=\(message.id), status=\(String(describing: message.status))")
 
             // Create repeat entry
             let repeatDTO = MessageRepeatDTO(
@@ -117,7 +144,10 @@ public actor HeardRepeatsService {
 
             // Notify handler
             if let handler = onRepeatRecorded {
+                logger.info("[REPEAT-DEBUG] Calling onRepeatRecorded handler for message=\(message.id), count=\(newCount)")
                 await handler(message.id, newCount)
+            } else {
+                logger.warning("[REPEAT-DEBUG] No onRepeatRecorded handler set!")
             }
 
             return newCount

@@ -51,6 +51,9 @@ public final class RemoteNodeSession {
     /// Whether this room's notifications are muted
     public var isMuted: Bool = false
 
+    /// Whether this session/node is marked as favorite
+    public var isFavorite: Bool = false
+
     /// Last RX airtime in seconds (repeater-specific)
     public var lastRxAirtimeSeconds: UInt32?
 
@@ -78,6 +81,7 @@ public final class RemoteNodeSession {
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
         isMuted: Bool = false,
+        isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
         lastSyncTimestamp: UInt32 = 0
@@ -97,6 +101,7 @@ public final class RemoteNodeSession {
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
         self.isMuted = isMuted
+        self.isFavorite = isFavorite
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
@@ -157,6 +162,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public let lastNoiseFloor: Int16?
     public let unreadCount: Int
     public let isMuted: Bool
+    public let isFavorite: Bool
     public let lastRxAirtimeSeconds: UInt32?
     public let neighborCount: Int
     public let lastSyncTimestamp: UInt32
@@ -177,6 +183,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastNoiseFloor = model.lastNoiseFloor
         self.unreadCount = model.unreadCount
         self.isMuted = model.isMuted
+        self.isFavorite = model.isFavorite
         self.lastRxAirtimeSeconds = model.lastRxAirtimeSeconds
         self.neighborCount = model.neighborCount
         self.lastSyncTimestamp = model.lastSyncTimestamp
@@ -199,6 +206,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
         isMuted: Bool = false,
+        isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
         lastSyncTimestamp: UInt32 = 0
@@ -218,6 +226,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
         self.isMuted = isMuted
+        self.isFavorite = isFavorite
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
@@ -236,4 +245,11 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public var canPost: Bool { isRoom && permissionLevel.canPost }
 
     public var isAdmin: Bool { permissionLevel.isAdmin }
+
+    /// Converts lastSyncTimestamp to Date for sorting.
+    /// Returns nil if no messages have been synced (timestamp is 0).
+    public var lastMessageDate: Date? {
+        guard lastSyncTimestamp > 0 else { return nil }
+        return Date(timeIntervalSince1970: TimeInterval(lastSyncTimestamp))
+    }
 }

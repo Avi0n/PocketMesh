@@ -773,6 +773,37 @@ public actor MessageService {
         }
     }
 
+    /// Resend an existing channel message, incrementing its send count.
+    ///
+    /// This is used for "Send Again" - it re-transmits the same message
+    /// rather than creating a duplicate. Uses a new timestamp so the mesh
+    /// treats it as a fresh broadcast, and updates the stored timestamp
+    /// so the message moves to the bottom of the chat.
+    public func resendChannelMessage(messageID: UUID) async throws {
+        guard let message = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Message not found")
+        }
+        guard let channelIndex = message.channelIndex else {
+            throw MessageServiceError.sendFailed("Not a channel message")
+        }
+
+        let now = Date()
+        let newTimestamp = UInt32(now.timeIntervalSince1970)
+
+        // Re-send via mesh with new timestamp (fresh broadcast)
+        try await session.sendChannelMessage(
+            channel: channelIndex,
+            text: message.text,
+            timestamp: now
+        )
+
+        // Update stored timestamp (moves message to bottom of chat)
+        try await dataStore.updateMessageTimestamp(id: messageID, timestamp: newTimestamp)
+
+        // Increment send count
+        _ = try await dataStore.incrementMessageSendCount(id: messageID)
+    }
+
     // MARK: - ACK Handling
 
     /// Processes an acknowledgement from the session event stream

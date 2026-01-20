@@ -20,6 +20,7 @@ struct MessageDisplayItem: Identifiable, Hashable, Sendable {
 
     // Forwarded properties from message (lightweight copies)
     let isOutgoing: Bool
+    let status: MessageStatus
     let containsSelfMention: Bool
     let mentionSeen: Bool
     let heardRepeats: Int

@@ -11,9 +11,18 @@ struct ConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(contact.displayName)
-                        .font(.headline)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(contact.displayName)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        if contact.isFavorite {
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(.yellow)
+                                .font(.caption)
+                                .accessibilityLabel("Favorite")
+                        }
+                    }
 
                     Spacer()
 

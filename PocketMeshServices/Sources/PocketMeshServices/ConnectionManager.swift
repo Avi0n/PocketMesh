@@ -97,6 +97,10 @@ public final class ConnectionManager {
     /// Use this to wire up UI observation of services.
     public var onConnectionReady: (() async -> Void)?
 
+    /// Called when connection is lost (disconnection, BLE power off, etc).
+    /// Use this to update UI state when services become unavailable.
+    public var onConnectionLost: (() async -> Void)?
+
     /// Provider for app foreground/background state detection
     public var appStateProvider: AppStateProvider?
 
@@ -1498,6 +1502,9 @@ public final class ConnectionManager {
         session = nil
         // Keep transport reference for iOS auto-reconnect to use
 
+        // Notify UI layer of connection loss
+        await onConnectionLost?()
+
         // iOS auto-reconnect handles normal disconnects via handleIOSAutoReconnect()
         // Bluetooth power-cycle handled via onBluetoothPoweredOn callback
     }
@@ -1545,6 +1552,7 @@ public final class ConnectionManager {
                 )
                 connectionState = .disconnected
                 connectedDevice = nil
+                await onConnectionLost?()
             }
         }
     }

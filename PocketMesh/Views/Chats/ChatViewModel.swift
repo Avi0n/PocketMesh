@@ -236,6 +236,107 @@ final class ChatViewModel {
         }
     }
 
+    // MARK: - Favorite
+
+    /// Toggles favorite state for a conversation with optimistic UI update
+    func toggleFavorite(_ conversation: Conversation) async {
+        let originalState = conversation.isFavorite
+        let newState = !originalState
+
+        // Optimistic UI update
+        updateConversationFavoriteState(conversation, isFavorite: newState)
+
+        do {
+            switch conversation {
+            case .direct(let contact):
+                try await dataStore?.setContactFavorite(contact.id, isFavorite: newState)
+            case .channel(let channel):
+                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
+            case .room(let session):
+                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            }
+        } catch {
+            // Rollback on failure
+            updateConversationFavoriteState(conversation, isFavorite: originalState)
+            logger.error("Failed to toggle favorite: \(error)")
+        }
+    }
+
+    /// Updates the favorite state in the local conversations array
+    private func updateConversationFavoriteState(_ conversation: Conversation, isFavorite: Bool) {
+        switch conversation {
+        case .direct(let contact):
+            if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
+                let updated = conversations[index]
+                conversations[index] = ContactDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    typeRawValue: updated.typeRawValue,
+                    flags: updated.flags,
+                    outPathLength: updated.outPathLength,
+                    outPath: updated.outPath,
+                    lastAdvertTimestamp: updated.lastAdvertTimestamp,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    lastModified: updated.lastModified,
+                    nickname: updated.nickname,
+                    isBlocked: updated.isBlocked,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite,
+                    isDiscovered: updated.isDiscovered,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    ocvPreset: updated.ocvPreset,
+                    customOCVArrayString: updated.customOCVArrayString
+                )
+            }
+        case .channel(let channel):
+            if let index = channels.firstIndex(where: { $0.id == channel.id }) {
+                let updated = channels[index]
+                channels[index] = ChannelDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    index: updated.index,
+                    name: updated.name,
+                    secret: updated.secret,
+                    isEnabled: updated.isEnabled,
+                    lastMessageDate: updated.lastMessageDate,
+                    unreadCount: updated.unreadCount,
+                    unreadMentionCount: updated.unreadMentionCount,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite
+                )
+            }
+        case .room(let session):
+            if let index = roomSessions.firstIndex(where: { $0.id == session.id }) {
+                let updated = roomSessions[index]
+                roomSessions[index] = RemoteNodeSessionDTO(
+                    id: updated.id,
+                    deviceID: updated.deviceID,
+                    publicKey: updated.publicKey,
+                    name: updated.name,
+                    role: updated.role,
+                    latitude: updated.latitude,
+                    longitude: updated.longitude,
+                    isConnected: updated.isConnected,
+                    permissionLevel: updated.permissionLevel,
+                    lastConnectedDate: updated.lastConnectedDate,
+                    lastBatteryMillivolts: updated.lastBatteryMillivolts,
+                    lastUptimeSeconds: updated.lastUptimeSeconds,
+                    lastNoiseFloor: updated.lastNoiseFloor,
+                    unreadCount: updated.unreadCount,
+                    isMuted: updated.isMuted,
+                    isFavorite: isFavorite,
+                    lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
+                    neighborCount: updated.neighborCount,
+                    lastSyncTimestamp: updated.lastSyncTimestamp
+                )
+            }
+        }
+    }
+
     // MARK: - Conversation List
 
     /// Removes a conversation from local arrays for optimistic UI update.
@@ -359,6 +460,7 @@ final class ChatViewModel {
             showDirectionGap: Self.isDirectionChange(at: index, in: messages),
             detectedURL: nil,  // URL detection deferred to avoid main thread blocking
             isOutgoing: message.isOutgoing,
+            status: message.status,
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
             heardRepeats: message.heardRepeats,
@@ -392,6 +494,7 @@ final class ChatViewModel {
             showDirectionGap: item.showDirectionGap,
             detectedURL: detectedURL,
             isOutgoing: item.isOutgoing,
+            status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
@@ -428,7 +531,7 @@ final class ChatViewModel {
         do {
             // Create message immediately and show it
             let message = try await messageService.createPendingMessage(text: text, to: contact)
-            messages.append(message)
+            appendMessageIfNew(message)
 
             // Queue for sending
             sendQueue.append(QueuedMessage(messageID: message.id, contactID: contact.id))
@@ -686,6 +789,28 @@ final class ChatViewModel {
         }
     }
 
+    /// Resend a channel message in place, or copy text for direct messages.
+    /// Used for "Send Again" context menu action.
+    func sendAgain(_ message: MessageDTO) async {
+        if message.channelIndex != nil {
+            // Channel messages: resend in place (increments send count)
+            guard let messageService else { return }
+            do {
+                try await messageService.resendChannelMessage(messageID: message.id)
+                // Reload to show updated send count
+                if let channel = currentChannel {
+                    await loadChannelMessages(for: channel)
+                }
+            } catch {
+                logger.error("Failed to resend message: \(error)")
+            }
+        } else {
+            // Direct messages: keep existing behavior (copy to compose field)
+            composingText = message.text
+            await sendMessage()
+        }
+    }
+
     /// Delete a single message
     func deleteMessage(_ message: MessageDTO) async {
         guard let dataStore else { return }
@@ -789,6 +914,7 @@ final class ChatViewModel {
                 showDirectionGap: Self.isDirectionChange(at: index, in: messages),
                 detectedURL: urls[index],
                 isOutgoing: message.isOutgoing,
+                status: message.status,
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
                 heardRepeats: message.heardRepeats,
@@ -919,6 +1045,7 @@ final class ChatViewModel {
             showDirectionGap: item.showDirectionGap,
             detectedURL: item.detectedURL,
             isOutgoing: item.isOutgoing,
+            status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,

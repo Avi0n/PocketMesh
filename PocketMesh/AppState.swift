@@ -7,6 +7,16 @@ import OSLog
 import TipKit
 import UIKit
 
+/// Represents the current state of the status pill UI component
+enum StatusPillState: Hashable {
+    case hidden
+    case connecting
+    case syncing
+    case ready
+    case disconnected
+    case failed(message: String)
+}
+
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
 /// Handles only UI state, navigation, and notification wiring.
@@ -127,16 +137,32 @@ public final class AppState {
     /// Counter for sync/settings operations (on-demand) - shows pill
     private var syncActivityCount: Int = 0
 
-    /// Whether the syncing pill should be displayed
-    /// True for: contacts/channels sync, on-demand operations, settings changes
-    /// NOT shown for: message polling
-    var shouldShowSyncingPill: Bool {
-        syncActivityCount > 0
+    // MARK: - Ready Toast
+
+    /// Whether the "Ready" toast pill is visible (shown briefly after connection completes)
+    private(set) var showReadyToast = false
+
+    /// Task managing the ready toast visibility timer
+    private var readyToastTask: Task<Void, Never>?
+
+    /// Shows "Ready" toast pill for 2 seconds
+    func showReadyToastBriefly() {
+        readyToastTask?.cancel()
+        showReadyToast = true
+
+        readyToastTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            showReadyToast = false
+        }
     }
 
-    /// Current sync phase for display in the pill (contacts, channels, etc.)
-    /// Stored directly for SwiftUI observation (actors aren't observable)
-    var currentSyncPhase: SyncPhase?
+    /// Hides the ready toast immediately (called on disconnect)
+    func hideReadyToast() {
+        readyToastTask?.cancel()
+        readyToastTask = nil
+        showReadyToast = false
+    }
 
     // MARK: - Sync Failed Pill
 
@@ -145,6 +171,14 @@ public final class AppState {
 
     /// Task managing the pill visibility timer
     private var syncFailedPillTask: Task<Void, Never>?
+
+    // MARK: - Disconnected Pill
+
+    /// Whether the "Disconnected" pill is visible (shown after 1s delay)
+    private(set) var disconnectedPillVisible = false
+
+    /// Task managing the disconnected pill delay
+    private var disconnectedPillTask: Task<Void, Never>?
 
     /// Shows "Sync Failed" pill for 7 seconds with VoiceOver announcement
     func showSyncFailedPill() {
@@ -170,19 +204,52 @@ public final class AppState {
         syncFailedPillVisible = false
     }
 
-    /// Whether any pill should be shown (syncing or failed)
-    var shouldShowPill: Bool {
-        syncActivityCount > 0 || syncFailedPillVisible
+    /// Updates disconnected pill visibility based on connection state
+    /// Called when connectionState changes
+    func updateDisconnectedPillState() {
+        disconnectedPillTask?.cancel()
+
+        // Requires: disconnected + previously paired device
+        guard connectionState == .disconnected,
+              connectionManager.lastConnectedDeviceID != nil else {
+            disconnectedPillVisible = false
+            return
+        }
+
+        // Show after 1 second delay to avoid flash during brief reconnects
+        disconnectedPillTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            disconnectedPillVisible = true
+        }
     }
 
-    /// Display text for the pill
-    var pillText: String {
-        syncFailedPillVisible ? "Sync Failed" : "Syncing"
+    /// Hides disconnected pill immediately (called when connection starts)
+    func hideDisconnectedPill() {
+        disconnectedPillTask?.cancel()
+        disconnectedPillTask = nil
+        disconnectedPillVisible = false
     }
 
-    /// Whether pill indicates a failure state (for styling)
-    var isPillFailure: Bool {
-        syncFailedPillVisible
+    /// The current status pill state, computed from all relevant conditions
+    /// Priority: failed > syncing > ready > connecting > disconnected > hidden
+    var statusPillState: StatusPillState {
+        if syncFailedPillVisible {
+            return .failed(message: "Sync Failed")
+        }
+        if syncActivityCount > 0 {
+            return .syncing
+        }
+        if showReadyToast {
+            return .ready
+        }
+        if connectionState == .connecting || connectionState == .connected {
+            return .connecting
+        }
+        if disconnectedPillVisible {
+            return .disconnected
+        }
+        return .hidden
     }
 
     // MARK: - Derived State
@@ -205,6 +272,11 @@ public final class AppState {
 
         // Wire connection ready callback - automatically updates UI when connection completes
         connectionManager.onConnectionReady = { [weak self] in
+            await self?.wireServicesIfConnected()
+        }
+
+        // Wire connection lost callback - updates UI when connection is lost
+        connectionManager.onConnectionLost = { [weak self] in
             await self?.wireServicesIfConnected()
         }
 
@@ -232,12 +304,19 @@ public final class AppState {
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
             syncActivityCount = 0
+            // Hide ready toast on disconnect
+            hideReadyToast()
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
             // Clear battery notification thresholds for next connection
             notifiedBatteryThresholds = []
+            // Update disconnected pill state (may show after delay)
+            updateDisconnectedPillState()
             return
         }
+
+        // Hide disconnected pill when services are available (connected)
+        hideDisconnectedPill()
 
         // Announce reconnection for VoiceOver users
         if UIAccessibility.isVoiceOverRunning {
@@ -266,11 +345,14 @@ public final class AppState {
                 self?.syncActivityCount += 1
             },
             onEnded: { @MainActor [weak self] in
-                self?.syncActivityCount -= 1
+                guard let self else { return }
+                self.syncActivityCount -= 1
+                // Show "Ready" toast when all sync activity completes
+                if self.syncActivityCount == 0 {
+                    self.showReadyToastBriefly()
+                }
             },
-            onPhaseChanged: { @MainActor [weak self] phase in
-                self?.currentSyncPhase = phase
-            }
+            onPhaseChanged: { _ in }
         )
 
         // Wire resync failed callback for "Sync Failed" pill
@@ -375,7 +457,7 @@ public final class AppState {
             do {
                 return try await dataStore.getTotalUnreadCounts()
             } catch {
-                return (contacts: 0, channels: 0)
+                return (contacts: 0, channels: 0, rooms: 0)
             }
         }
 
@@ -394,6 +476,8 @@ public final class AppState {
 
     /// Start device scan/pairing
     func startDeviceScan() {
+        // Hide disconnected pill when starting new connection
+        hideDisconnectedPill()
         // Clear any previous pairing failure state
         failedPairingDeviceID = nil
         isPairing = true
@@ -461,6 +545,8 @@ public final class AppState {
 
     /// Connect to a device via WiFi/TCP
     func connectViaWiFi(host: String, port: UInt16) async throws {
+        // Hide disconnected pill when starting new connection
+        hideDisconnectedPill()
         try await connectionManager.connectViaWiFi(host: host, port: port)
         await wireServicesIfConnected()
     }

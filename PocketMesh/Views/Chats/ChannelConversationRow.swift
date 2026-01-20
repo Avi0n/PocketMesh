@@ -11,9 +11,18 @@ struct ChannelConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
-                        .font(.headline)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        if channel.isFavorite {
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(.yellow)
+                                .font(.caption)
+                                .accessibilityLabel("Favorite")
+                        }
+                    }
 
                     Spacer()
 

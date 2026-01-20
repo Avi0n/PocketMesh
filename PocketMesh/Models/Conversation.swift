@@ -36,7 +36,7 @@ enum Conversation: Identifiable, Hashable {
         case .channel(let channel):
             return channel.lastMessageDate
         case .room(let session):
-            return session.lastConnectedDate
+            return session.lastMessageDate ?? session.lastConnectedDate
         }
     }
 
@@ -59,6 +59,17 @@ enum Conversation: Identifiable, Hashable {
             return channel.isMuted
         case .room(let session):
             return session.isMuted
+        }
+    }
+
+    var isFavorite: Bool {
+        switch self {
+        case .direct(let contact):
+            return contact.isFavorite
+        case .channel(let channel):
+            return channel.isFavorite
+        case .room(let session):
+            return session.isFavorite
         }
     }
 

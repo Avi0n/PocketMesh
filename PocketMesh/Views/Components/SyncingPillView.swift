@@ -1,177 +1,116 @@
 import SwiftUI
-import PocketMeshServices
 
 /// A pill-shaped indicator that appears at the top of the app during sync and connection operations
 struct SyncingPillView: View {
-    var phase: SyncPhase?
-    var connectionState: ConnectionState = .disconnected
-    var isFailure: Bool = false
-    var failureText: String = "Sync Failed"
-    var showsConnectedToast: Bool = false
-    var showsDisconnectedWarning: Bool = false
+    let state: StatusPillState
     var onDisconnectedTap: (() -> Void)?
 
-    static func shouldShowConnectedToast(
-        phase: SyncPhase?,
-        connectionState: ConnectionState,
-        showsConnectedToast: Bool,
-        showsDisconnectedWarning: Bool,
-        isFailure: Bool
-    ) -> Bool {
-        guard !isFailure else { return false }
-        guard showsConnectedToast else { return false }
-        guard !showsDisconnectedWarning else { return false }
-        guard phase == nil else { return false }
-
-        switch connectionState {
-        case .connecting, .connected:
-            return false
-        case .disconnected, .ready:
-            return true
-        }
-    }
-
-    static func displayText(
-        phase: SyncPhase?,
-        connectionState: ConnectionState,
-        showsConnectedToast: Bool,
-        showsDisconnectedWarning: Bool,
-        isFailure: Bool,
-        failureText: String
-    ) -> String {
-        // Failure takes priority
-        if isFailure {
-            return failureText
-        }
-
-        if showsDisconnectedWarning {
-            return "Disconnected"
-        }
-
-        // Sync phase takes priority over connection state
-        // (sync runs while connectionState is still .connected)
-        switch phase {
-        case .contacts:
-            return "Syncing contacts"
-        case .channels:
-            return "Syncing channels"
-        case .messages:
-            return "Syncing"
-        case nil:
-            break
-        }
-
-        switch connectionState {
-        case .connecting, .connected:
-            return "Connecting..."
-        case .disconnected, .ready:
-            break
-        }
-
-        if shouldShowConnectedToast(
-            phase: phase,
-            connectionState: connectionState,
-            showsConnectedToast: showsConnectedToast,
-            showsDisconnectedWarning: showsDisconnectedWarning,
-            isFailure: isFailure
-        ) {
-            return "Connected"
-        }
-
-        return "Syncing"
-    }
-
-    private var shouldShowConnectedToast: Bool {
-        Self.shouldShowConnectedToast(
-            phase: phase,
-            connectionState: connectionState,
-            showsConnectedToast: showsConnectedToast,
-            showsDisconnectedWarning: showsDisconnectedWarning,
-            isFailure: isFailure
-        )
-    }
-
-    private var displayText: String {
-        Self.displayText(
-            phase: phase,
-            connectionState: connectionState,
-            showsConnectedToast: showsConnectedToast,
-            showsDisconnectedWarning: showsDisconnectedWarning,
-            isFailure: isFailure,
-            failureText: failureText
-        )
-    }
-
     var body: some View {
-        if showsDisconnectedWarning, let onDisconnectedTap {
+        if case .disconnected = state, let onDisconnectedTap {
             Button(action: onDisconnectedTap) {
-                pillBody()
+                pillBody
             }
             .buttonStyle(.plain)
             .accessibilityHint("Double tap to connect device")
         } else {
-            pillBody()
+            pillBody
         }
     }
 
-    @ViewBuilder
-    private func pillBody() -> some View {
+    private var pillBody: some View {
         HStack(spacing: 8) {
-            if isFailure {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-            } else if showsDisconnectedWarning {
-                Image(systemName: "exclamationmark.triangle")
-                    .foregroundStyle(.orange)
-            } else if shouldShowConnectedToast {
-                Image(systemName: "checkmark.circle")
-                    .foregroundStyle(.green)
-            } else {
-                ProgressView()
-                    .controlSize(.small)
-            }
-
+            icon
             Text(displayText)
                 .font(.subheadline)
                 .fontWeight(isFailure ? .bold : .medium)
-                .foregroundStyle((isFailure || showsDisconnectedWarning) ? (isFailure ? .red : .orange) : .primary)
+                .foregroundStyle(textColor)
+                .contentTransition(.identity)
         }
+        .geometryGroup()
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background {
             Capsule()
-                .fill(isFailure ? AnyShapeStyle(.red.opacity(0.15)) : AnyShapeStyle(.regularMaterial))
+                .fill(backgroundStyle)
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(displayText)
         .accessibilityAddTraits(isFailure ? [] : .updatesFrequently)
     }
+
+    @ViewBuilder
+    private var icon: some View {
+        Group {
+            switch state {
+            case .failed:
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            case .disconnected:
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+            case .ready:
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(.green)
+            case .connecting, .syncing:
+                Image(systemName: "arrow.trianglehead.2.clockwise")
+                    .symbolEffect(.rotate, isActive: true)
+            case .hidden:
+                EmptyView()
+            }
+        }
+        .font(.subheadline)
+        .frame(width: 16, height: 16)
+    }
+
+    private var displayText: String {
+        switch state {
+        case .failed(let message):
+            message
+        case .syncing:
+            "Syncing"
+        case .connecting:
+            "Connecting"
+        case .ready:
+            "Ready"
+        case .disconnected:
+            "Disconnected"
+        case .hidden:
+            ""
+        }
+    }
+
+    private var isFailure: Bool {
+        if case .failed = state { return true }
+        return false
+    }
+
+    private var textColor: Color {
+        if isFailure { return .red }
+        if case .disconnected = state { return .orange }
+        return .primary
+    }
+
+    private var backgroundStyle: AnyShapeStyle {
+        if isFailure {
+            AnyShapeStyle(.red.opacity(0.15))
+        } else {
+            AnyShapeStyle(.regularMaterial)
+        }
+    }
 }
 
-#Preview("Syncing") {
+#Preview("All States") {
     ZStack {
         Color.gray.opacity(0.3)
             .ignoresSafeArea()
 
         VStack(spacing: 12) {
-            SyncingPillView(phase: .contacts)
-            SyncingPillView(phase: nil, connectionState: .connecting)
-            SyncingPillView(showsConnectedToast: true)
-            SyncingPillView(showsDisconnectedWarning: true)
-            Spacer()
-        }
-        .padding(.top, 60)
-    }
-}
-
-#Preview("Sync Failed") {
-    ZStack {
-        Color.gray.opacity(0.3)
-            .ignoresSafeArea()
-
-        VStack {
-            SyncingPillView(isFailure: true)
+            SyncingPillView(state: .connecting)
+            SyncingPillView(state: .syncing)
+            SyncingPillView(state: .ready)
+            SyncingPillView(state: .disconnected)
+            SyncingPillView(state: .failed(message: "Sync Failed"))
             Spacer()
         }
         .padding(.top, 60)

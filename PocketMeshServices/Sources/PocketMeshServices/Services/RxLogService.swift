@@ -25,6 +25,9 @@ public actor RxLogService {
     // Heard repeats processing
     private var heardRepeatsService: HeardRepeatsService?
 
+    // Reentrancy guard for reprocessing
+    private var isReprocessing = false
+
     public init(session: MeshCoreSession, persistenceStore: PersistenceStore) {
         self.session = session
         self.persistenceStore = persistenceStore
@@ -48,6 +51,11 @@ public actor RxLogService {
 
         eventMonitorTask = Task { [weak self] in
             guard let self else { return }
+
+            // Load secrets from database before entering event loop
+            // This eliminates the race condition where events arrive before secrets are synced
+            await self.loadSecretsFromDatabase(deviceID: deviceID)
+
             let events = await session.events()
 
             for await event in events {
@@ -56,6 +64,20 @@ public actor RxLogService {
                     await self.process(parsed)
                 }
             }
+        }
+    }
+
+    /// Load channel secrets from database to enable decryption before sync completes.
+    private func loadSecretsFromDatabase(deviceID: UUID) async {
+        do {
+            let channels = try await persistenceStore.fetchChannels(deviceID: deviceID)
+            channelSecrets = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.secret) })
+            channelNames = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.name) })
+            if !channels.isEmpty {
+                logger.info("Loaded \(channels.count) channel secrets from database")
+            }
+        } catch {
+            logger.error("Failed to load channel secrets: \(error.localizedDescription)")
         }
     }
 
@@ -89,9 +111,72 @@ public actor RxLogService {
     }
 
     /// Update channel cache (secrets and names).
-    public func updateChannels(secrets: [UInt8: Data], names: [UInt8: String]) {
+    /// Re-processes any recent noMatchingKey entries when secrets are provided.
+    public func updateChannels(secrets: [UInt8: Data], names: [UInt8: String]) async {
         channelSecrets = secrets
         channelNames = names
+
+        if !secrets.isEmpty {
+            await reprocessNoMatchingKeyEntries()
+        }
+    }
+
+    /// Re-process recent entries that failed decryption due to missing keys.
+    /// Uses a reentrancy guard to prevent overlapping reprocessing.
+    private func reprocessNoMatchingKeyEntries() async {
+        guard !isReprocessing else { return }
+        isReprocessing = true
+        defer { isReprocessing = false }
+
+        guard let deviceID else { return }
+
+        let cutoff = Date().addingTimeInterval(-60)
+
+        do {
+            let entries = try await persistenceStore.fetchRecentNoMatchingKeyEntries(
+                deviceID: deviceID,
+                since: cutoff
+            )
+
+            guard !entries.isEmpty else { return }
+            logger.info("Re-processing \(entries.count) noMatchingKey entries")
+
+            // Collect successful decryptions for batch update
+            var updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)] = []
+            var decryptedEntries: [RxLogEntryDTO] = []
+
+            for entry in entries {
+                guard !Task.isCancelled else { break }
+
+                let decrypted = decryptEntry(entry)
+                guard decrypted.decodedText != nil else { continue }
+
+                updates.append((
+                    id: entry.id,
+                    channelHash: decrypted.channelHash,
+                    channelName: channelNames[decrypted.channelHash ?? 0],
+                    senderTimestamp: decrypted.senderTimestamp
+                ))
+                decryptedEntries.append(decrypted)
+            }
+
+            // Batch update database (decodedText is @Transient, not persisted)
+            if !updates.isEmpty {
+                try await persistenceStore.batchUpdateRxLogDecryption(updates)
+
+                // Process for heard repeats after DB update
+                if let heardRepeatsService {
+                    for entry in decryptedEntries {
+                        guard !Task.isCancelled else { break }
+                        await heardRepeatsService.processForRepeats(entry)
+                    }
+                }
+
+                logger.info("Successfully re-processed \(updates.count) entries")
+            }
+        } catch {
+            logger.error("Failed to re-process noMatchingKey entries: \(error.localizedDescription)")
+        }
     }
 
     /// Update contact names cache.

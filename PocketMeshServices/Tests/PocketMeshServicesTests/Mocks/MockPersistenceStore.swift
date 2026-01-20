@@ -159,7 +159,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         if let error = stubbedUpdateMessageStatusError {
             throw error
         }
-        if var message = messages[id] {
+        if let message = messages[id] {
             messages[id] = MessageDTO(
                 id: message.id,
                 deviceID: message.deviceID,
@@ -180,8 +180,38 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 replyToID: message.replyToID,
                 roundTripTime: message.roundTripTime,
                 heardRepeats: message.heardRepeats,
+                sendCount: message.sendCount,
                 retryAttempt: retryAttempt,
                 maxRetryAttempts: maxRetryAttempts
+            )
+        }
+    }
+
+    public func updateMessageTimestamp(id: UUID, timestamp: UInt32) async throws {
+        if let message = messages[id] {
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                sendCount: message.sendCount,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
             )
         }
     }
@@ -891,16 +921,36 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return 0 // Stub
     }
 
-    // MARK: - Link Preview Data
-
-    public var linkPreviews: [String: LinkPreviewDataDTO] = [:]
-
-    public func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? {
-        linkPreviews[url]
-    }
-
-    public func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws {
-        linkPreviews[dto.url] = dto
+    public func incrementMessageSendCount(id: UUID) async throws -> Int {
+        if let message = messages[id] {
+            let newCount = message.sendCount + 1
+            messages[id] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                sendCount: newCount,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
+            )
+            return newCount
+        }
+        return 0
     }
 
     // MARK: - Debug Log Operations

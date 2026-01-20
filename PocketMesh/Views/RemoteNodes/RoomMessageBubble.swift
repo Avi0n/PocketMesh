@@ -53,6 +53,7 @@ struct RoomMessageBubble: View {
             }
 
             Text(message.text)
+                .foregroundStyle(textColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(bubbleBackground)
@@ -68,6 +69,10 @@ struct RoomMessageBubble: View {
                 Color(.systemGray5)
             }
         }
+    }
+
+    private var textColor: Color {
+        isFromSelf ? .white : .primary
     }
 }
 

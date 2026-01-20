@@ -49,6 +49,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Update message retry status
     func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws
 
+    /// Update message timestamp (for resending)
+    func updateMessageTimestamp(id: UUID, timestamp: UInt32) async throws
+
     /// Update heard repeats count
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws
 
@@ -205,6 +208,9 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Increment heard repeats count and return new count
     func incrementMessageHeardRepeats(id: UUID) async throws -> Int
+
+    /// Increment send count and return new count
+    func incrementMessageSendCount(id: UUID) async throws -> Int
 
     // MARK: - Debug Log Entries
 
