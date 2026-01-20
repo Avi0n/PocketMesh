@@ -81,3 +81,120 @@ struct SignalQualityTests {
         #expect(SignalQuality.unknown.icon == "questionmark.circle")
     }
 }
+
+@Suite("NoiseFloorViewModel")
+@MainActor
+struct NoiseFloorViewModelTests {
+
+    @Test("initial state is empty")
+    func initialStateIsEmpty() {
+        let viewModel = NoiseFloorViewModel()
+
+        #expect(viewModel.currentReading == nil)
+        #expect(viewModel.readings.isEmpty)
+        #expect(viewModel.isPolling == false)
+        #expect(viewModel.error == nil)
+    }
+
+    @Test("statistics returns nil when no readings")
+    func statisticsReturnsNilWhenEmpty() {
+        let viewModel = NoiseFloorViewModel()
+
+        #expect(viewModel.statistics == nil)
+    }
+
+    @Test("statistics calculates correctly with readings")
+    func statisticsCalculatesWithReadings() {
+        let viewModel = NoiseFloorViewModel()
+        viewModel.appendReading(NoiseFloorReading(id: UUID(), timestamp: .now, noiseFloor: -100, lastRSSI: -80, lastSNR: 5))
+        viewModel.appendReading(NoiseFloorReading(id: UUID(), timestamp: .now, noiseFloor: -90, lastRSSI: -80, lastSNR: 5))
+        viewModel.appendReading(NoiseFloorReading(id: UUID(), timestamp: .now, noiseFloor: -95, lastRSSI: -80, lastSNR: 5))
+
+        let stats = viewModel.statistics
+        #expect(stats?.min == -100)
+        #expect(stats?.max == -90)
+        #expect(stats?.average == -95.0)
+    }
+
+    @Test("qualityLevel returns unknown when no reading")
+    func qualityLevelReturnsUnknownWhenNoReading() {
+        let viewModel = NoiseFloorViewModel()
+
+        #expect(viewModel.qualityLevel == .unknown)
+    }
+
+    @Test("qualityLevel returns correct quality for current reading")
+    func qualityLevelReturnsCorrectQuality() {
+        let viewModel = NoiseFloorViewModel()
+        viewModel.appendReading(NoiseFloorReading(
+            id: UUID(),
+            timestamp: .now,
+            noiseFloor: -105,
+            lastRSSI: -80,
+            lastSNR: 5
+        ))
+
+        #expect(viewModel.qualityLevel == .excellent)
+    }
+
+    @Test("appendReading adds to readings and updates current")
+    func appendReadingAddsToReadings() {
+        let viewModel = NoiseFloorViewModel()
+        let reading = NoiseFloorReading(
+            id: UUID(),
+            timestamp: .now,
+            noiseFloor: -95,
+            lastRSSI: -80,
+            lastSNR: 5
+        )
+
+        viewModel.appendReading(reading)
+
+        #expect(viewModel.readings.count == 1)
+        #expect(viewModel.currentReading?.noiseFloor == -95)
+    }
+
+    @Test("appendReading respects maxReadings limit")
+    func appendReadingRespectsLimit() {
+        let viewModel = NoiseFloorViewModel()
+
+        for i in 0..<250 {
+            let reading = NoiseFloorReading(
+                id: UUID(),
+                timestamp: .now,
+                noiseFloor: Int16(-100 + i),
+                lastRSSI: -80,
+                lastSNR: 5
+            )
+            viewModel.appendReading(reading)
+        }
+
+        #expect(viewModel.readings.count == 200)
+    }
+
+    @Test("appendReading invalidates cached statistics")
+    func appendReadingInvalidatesCache() {
+        let viewModel = NoiseFloorViewModel()
+        viewModel.appendReading(NoiseFloorReading(id: UUID(), timestamp: .now, noiseFloor: -100, lastRSSI: -80, lastSNR: 5))
+
+        let stats1 = viewModel.statistics
+        #expect(stats1?.min == -100)
+        #expect(stats1?.max == -100)
+
+        viewModel.appendReading(NoiseFloorReading(id: UUID(), timestamp: .now, noiseFloor: -90, lastRSSI: -80, lastSNR: 5))
+
+        let stats2 = viewModel.statistics
+        #expect(stats2?.min == -100)
+        #expect(stats2?.max == -90)
+    }
+
+    @Test("stopPolling cancels task and sets isPolling false")
+    func stopPollingCancelsTask() {
+        let viewModel = NoiseFloorViewModel()
+        viewModel.isPolling = true
+
+        viewModel.stopPolling()
+
+        #expect(viewModel.isPolling == false)
+    }
+}
