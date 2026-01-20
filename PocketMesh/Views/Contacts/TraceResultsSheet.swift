@@ -288,7 +288,7 @@ struct TraceResultsSheet: View {
         }
         .sheet(isPresented: $showingDistanceInfo) {
             distanceInfoSheet
-                .presentationDetents([.height(300)])
+                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
     }
