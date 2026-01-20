@@ -1,6 +1,19 @@
 import SwiftUI
 import PocketMeshServices
 
+/// View mode for trace path building
+enum TracePathViewMode: String, CaseIterable {
+    case list
+    case map
+
+    var label: String {
+        switch self {
+        case .list: "List"
+        case .map: "Map"
+        }
+    }
+}
+
 /// View for building and executing network path traces
 struct TracePathView: View {
     @Environment(\.appState) private var appState
@@ -21,6 +34,7 @@ struct TracePathView: View {
 
     @State private var showJumpToPath = false
     @State private var pathLoadedFromSheet = false
+    @State private var viewMode: TracePathViewMode = .list
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -55,6 +69,15 @@ struct TracePathView: View {
         .navigationTitle("Trace Path")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("View Mode", selection: $viewMode) {
+                    ForEach(TracePathViewMode.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("Saved", systemImage: "bookmark") {
                     showingSavedPaths = true
