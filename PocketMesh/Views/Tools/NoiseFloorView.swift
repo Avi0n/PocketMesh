@@ -3,8 +3,9 @@ import Charts
 
 struct NoiseFloorView: View {
     @Environment(\.appState) private var appState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var viewModel = NoiseFloorViewModel()
+    @State private var chartStartTime = Date()
 
     private var isConnected: Bool {
         appState.services?.session != nil
@@ -20,40 +21,13 @@ struct NoiseFloorView: View {
                 mainContent
             }
         }
-        .navigationTitle("Noise Floor")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                liveStatusPill
-            }
-        }
         .task(id: appState.servicesVersion) {
+            chartStartTime = Date()
             viewModel.startPolling(appState: appState)
         }
         .onDisappear {
             viewModel.stopPolling()
         }
-    }
-}
-
-// MARK: - Live Status
-
-extension NoiseFloorView {
-    private var liveStatusPill: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(viewModel.isPolling ? .green : .gray)
-                .frame(width: 8, height: 8)
-                .modifier(PulseAnimationModifier(isActive: viewModel.isPolling && !reduceMotion))
-
-            Text(viewModel.isPolling ? "Live" : "Paused")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .liquidGlass(in: .capsule)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(viewModel.isPolling ? "Live polling active" : "Polling paused")
     }
 }
 
@@ -81,18 +55,29 @@ extension NoiseFloorView {
 
 extension NoiseFloorView {
     private var mainContent: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                if let error = viewModel.error {
-                    ErrorBanner(message: error)
-                }
-
-                CurrentReadingSection(viewModel: viewModel)
-                ChartSection(viewModel: viewModel)
-                StatisticsSection(viewModel: viewModel)
+        VStack(spacing: 16) {
+            if let error = viewModel.error {
+                ErrorBanner(message: error)
             }
-            .padding()
+
+            ChartSection(viewModel: viewModel, startTime: chartStartTime)
+
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 16) {
+                    CurrentReadingSection(viewModel: viewModel)
+                    StatisticsSection(viewModel: viewModel)
+                }
+            } else {
+                HStack(spacing: 16) {
+                    CurrentReadingSection(viewModel: viewModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    StatisticsSection(viewModel: viewModel)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .padding()
     }
 }
 
@@ -125,6 +110,8 @@ private struct CurrentReadingSection: View {
 
     var body: some View {
         VStack(spacing: 8) {
+            Spacer(minLength: 0)
+
             Text(displayValue, format: .number)
                 .font(.largeTitle)
                 .fontDesign(.rounded)
@@ -135,10 +122,12 @@ private struct CurrentReadingSection: View {
                 .foregroundStyle(.secondary)
 
             qualityBadge
+
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .liquidGlass(in: .rect(cornerRadius: 16))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+        .liquidGlass(in: .rect(cornerRadius: 12))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(.updatesFrequently)
@@ -173,35 +162,60 @@ private struct CurrentReadingSection: View {
 
 private struct ChartSection: View {
     let viewModel: NoiseFloorViewModel
+    let startTime: Date
+
+    private var chartDomain: ClosedRange<Double> {
+        guard let lastReading = viewModel.readings.last else {
+            return 0...300
+        }
+        let latestElapsed = lastReading.timestamp.timeIntervalSince(startTime)
+        if latestElapsed <= 300 {
+            return 0...300
+        }
+        return (latestElapsed - 300)...latestElapsed
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("History")
+            Text("Noise Floor")
                 .font(.headline)
 
             Chart(viewModel.readings) { reading in
+                let elapsed = reading.timestamp.timeIntervalSince(startTime)
                 LineMark(
-                    x: .value("Time", reading.timestamp),
+                    x: .value("Time", elapsed),
                     y: .value("dBm", reading.noiseFloor)
                 )
                 .foregroundStyle(.blue.gradient)
 
                 AreaMark(
-                    x: .value("Time", reading.timestamp),
-                    y: .value("dBm", reading.noiseFloor)
+                    x: .value("Time", elapsed),
+                    yStart: .value("Min", -130),
+                    yEnd: .value("dBm", reading.noiseFloor)
                 )
                 .foregroundStyle(.blue.opacity(0.1))
             }
             .chartYScale(domain: -130 ... -60)
+            .chartXScale(domain: chartDomain)
             .chartXAxis {
-                AxisMarks(values: .automatic) { _ in
+                AxisMarks(values: .stride(by: 60)) { value in
                     AxisGridLine()
-                    AxisValueLabel(format: .dateTime.minute().second())
+                    AxisValueLabel {
+                        if let seconds = value.as(Double.self) {
+                            let minute = Int(seconds) / 60
+                            Text("\(minute):00")
+                                .monospacedDigit()
+                        }
+                    }
                 }
             }
-            .frame(height: 200)
+            .chartPlotStyle { content in
+                content.clipped()
+            }
+            .frame(maxHeight: .infinity)
             .accessibilityLabel("Noise floor history chart showing \(viewModel.readings.count) readings")
         }
+        .frame(maxHeight: .infinity)
         .padding()
         .liquidGlass(in: .rect(cornerRadius: 12))
     }
@@ -233,7 +247,10 @@ private struct StatisticsSection: View {
                 }
                 .font(.subheadline)
             }
+
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding()
         .liquidGlass(in: .rect(cornerRadius: 12))
     }
@@ -260,31 +277,6 @@ private struct StatisticsSection: View {
             Text(unit)
                 .foregroundStyle(.secondary)
         }
-    }
-}
-
-// MARK: - Pulse Animation Modifier
-
-private struct PulseAnimationModifier: ViewModifier {
-    let isActive: Bool
-
-    @State private var isPulsing = false
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(isActive && isPulsing ? 0.4 : 1.0)
-            .animation(
-                isActive ? .easeInOut(duration: 1.0).repeatForever(autoreverses: true) : .default,
-                value: isPulsing
-            )
-            .onAppear {
-                if isActive {
-                    isPulsing = true
-                }
-            }
-            .onChange(of: isActive) { _, newValue in
-                isPulsing = newValue
-            }
     }
 }
 
