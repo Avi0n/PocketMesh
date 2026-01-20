@@ -323,6 +323,19 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return contacts.values.first { $0.deviceID == deviceID && $0.publicKey.prefix(6) == publicKeyPrefix }
     }
 
+    public func fetchContactPublicKeysByPrefix(deviceID: UUID) async throws -> [UInt8: [Data]] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        var result: [UInt8: [Data]] = [:]
+        for contact in contacts.values {
+            guard contact.deviceID == deviceID, contact.publicKey.count >= 1 else { continue }
+            let prefix = contact.publicKey[0]
+            result[prefix, default: []].append(contact.publicKey)
+        }
+        return result
+    }
+
     @discardableResult
     public func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID {
         if let error = stubbedSaveContactError {
@@ -826,17 +839,28 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
 
     public func findRxLogEntry(
         channelIndex: UInt8?,
-        timestamp: UInt32,
-        withinSeconds: Double
+        senderTimestamp: UInt32,
+        withinSeconds: Double,
+        contactName: String? = nil
     ) async throws -> RxLogEntryDTO? {
-        let targetDate = Date(timeIntervalSince1970: Double(timestamp))
-        let minDate = targetDate.addingTimeInterval(-withinSeconds)
-        let maxDate = targetDate.addingTimeInterval(withinSeconds)
+        let now = Date()
+        let minDate = now.addingTimeInterval(-withinSeconds)
+        let maxDate = now
 
-        return mockRxLogEntries.first { entry in
-            entry.receivedAt >= minDate &&
-            entry.receivedAt <= maxDate &&
-            entry.channelHash == channelIndex
+        if let channelIndex {
+            // Channel message: match by channelHash and senderTimestamp
+            return mockRxLogEntries.first { entry in
+                entry.channelHash == channelIndex &&
+                entry.senderTimestamp == senderTimestamp
+            }
+        } else {
+            // Direct message: match by recent receivedAt and optionally contactName
+            return mockRxLogEntries.first { entry in
+                entry.receivedAt >= minDate &&
+                entry.receivedAt <= maxDate &&
+                entry.channelHash == nil &&
+                (contactName == nil || entry.fromContactName == contactName)
+            }
         }
     }
 

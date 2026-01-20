@@ -7,7 +7,7 @@ import OSLog
 struct MessagePathSheet: View {
     let message: MessageDTO
 
-    @Environment(AppState.self) private var appState
+    @Environment(\.appState) private var appState
 
     @State private var contacts: [ContactDTO] = []
     @State private var isLoading = true
@@ -84,11 +84,9 @@ struct MessagePathSheet: View {
     }
 
     private var emptyStateDescription: String {
-        // Check pathNodes first (actual data), then fall back to pathLength for hint
         if message.pathNodes == nil {
-            if message.pathLength == 0 || message.pathLength == 0xFF {
-                return "This message was received directly"
-            }
+            // Path nodes come from RX log correlation, which may not be available
+            // for all messages (firmware limitation for direct messages)
             return "Path data is not available for this message"
         }
         return ""

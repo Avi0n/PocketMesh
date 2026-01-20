@@ -524,18 +524,21 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
-            // Look up pathNodes from RxLogEntry (for direct messages, channelIndex is nil)
+            // Look up path data from RxLogEntry (for direct messages, channelIndex is nil)
             var pathNodes: Data?
+            var pathLength = message.pathLength
             do {
                 if let rxEntry = try await services.dataStore.findRxLogEntry(
                     channelIndex: nil,
-                    timestamp: timestamp,
-                    withinSeconds: 10
+                    senderTimestamp: timestamp,
+                    withinSeconds: 10,
+                    contactName: contact?.displayName
                 ) {
                     pathNodes = rxEntry.pathNodes
-                    self.logger.debug("Correlated incoming direct message to RxLogEntry, pathNodes: \(pathNodes?.count ?? 0) bytes")
+                    pathLength = rxEntry.pathLength  // Use RxLogEntry pathLength for consistency
+                    self.logger.debug("Correlated incoming direct message to RxLogEntry, pathLength: \(pathLength), pathNodes: \(pathNodes?.count ?? 0) bytes")
                 } else {
-                    self.logger.debug("No RxLogEntry found for direct message timestamp: \(timestamp)")
+                    self.logger.debug("No RxLogEntry found for direct message from \(contact?.displayName ?? "unknown")")
                 }
             } catch {
                 self.logger.error("Failed to lookup RxLogEntry for direct message: \(error)")
@@ -557,7 +560,7 @@ public actor SyncCoordinator {
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
                 ackCode: nil,
-                pathLength: message.pathLength,
+                pathLength: pathLength,
                 snr: message.snr,
                 pathNodes: pathNodes,
                 senderKeyPrefix: message.senderPublicKeyPrefix,
@@ -634,18 +637,21 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
-            // Look up pathNodes from RxLogEntry (use 10s window for tolerance)
+            // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
             var pathNodes: Data?
+            var pathLength = message.pathLength
+            self.logger.debug("Looking up RxLogEntry for channel \(channel?.index ?? 255) with senderTimestamp: \(timestamp)")
             do {
                 if let rxEntry = try await services.dataStore.findRxLogEntry(
                     channelIndex: channel?.index,
-                    timestamp: timestamp,
+                    senderTimestamp: timestamp,
                     withinSeconds: 10
                 ) {
                     pathNodes = rxEntry.pathNodes
-                    self.logger.debug("Correlated incoming channel message to RxLogEntry, pathNodes: \(pathNodes?.count ?? 0) bytes")
+                    pathLength = rxEntry.pathLength  // Use RxLogEntry pathLength for consistency
+                    self.logger.info("Correlated channel message to RxLogEntry: pathLength=\(pathLength), pathNodes=\(pathNodes?.count ?? 0) bytes")
                 } else {
-                    self.logger.debug("No RxLogEntry found for channel message timestamp: \(timestamp)")
+                    self.logger.warning("No RxLogEntry found for channel \(channel?.index ?? 255), senderTimestamp: \(timestamp)")
                 }
             } catch {
                 self.logger.error("Failed to lookup RxLogEntry for channel message: \(error)")
@@ -669,7 +675,7 @@ public actor SyncCoordinator {
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
                 ackCode: nil,
-                pathLength: message.pathLength,
+                pathLength: pathLength,
                 snr: message.snr,
                 pathNodes: pathNodes,
                 senderKeyPrefix: nil,

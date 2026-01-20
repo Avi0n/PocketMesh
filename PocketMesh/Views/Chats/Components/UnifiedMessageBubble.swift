@@ -322,10 +322,12 @@ struct UnifiedMessageBubble: View {
         // Incoming message details in submenu
         if !message.isOutgoing {
             Menu {
-                Button {
-                    onShowPath?(message)
-                } label: {
-                    Label("View Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                if message.pathNodes != nil {
+                    Button {
+                        onShowPath?(message)
+                    } label: {
+                        Label("View Path", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    }
                 }
 
                 Text("Hops: \(hopCountFormatted(message.pathLength))")

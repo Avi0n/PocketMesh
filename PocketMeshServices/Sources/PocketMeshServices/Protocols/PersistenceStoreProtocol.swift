@@ -82,6 +82,11 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Fetch a contact by public key prefix
     func fetchContact(deviceID: UUID, publicKeyPrefix: Data) async throws -> ContactDTO?
 
+    /// Fetch all contacts with their public keys for crypto operations.
+    /// Returns dictionary mapping 1-byte public key prefix to array of full 32-byte public keys.
+    /// Multiple contacts may share the same prefix byte, so we store all of them.
+    func fetchContactPublicKeysByPrefix(deviceID: UUID) async throws -> [UInt8: [Data]]
+
     /// Save or update a contact from a ContactFrame
     @discardableResult
     func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID
@@ -239,10 +244,14 @@ public protocol PersistenceStoreProtocol: Actor {
 
     // MARK: - RxLogEntry Lookup
 
-    /// Find RxLogEntry matching an incoming message for path correlation
+    /// Find RxLogEntry matching an incoming message for path correlation.
+    ///
+    /// For channel messages: Correlates by channel index and sender timestamp.
+    /// For direct messages: Correlates by recent receivedAt, payload type, and optional contact name.
     func findRxLogEntry(
         channelIndex: UInt8?,
-        timestamp: UInt32,
-        withinSeconds: Double
+        senderTimestamp: UInt32,
+        withinSeconds: Double,
+        contactName: String?
     ) async throws -> RxLogEntryDTO?
 }
