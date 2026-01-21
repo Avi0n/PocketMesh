@@ -279,12 +279,24 @@ final class ChatViewModel {
     // MARK: - Favorite
 
     /// Toggles favorite state for a conversation with optimistic UI update
-    func toggleFavorite(_ conversation: Conversation) async {
+    /// - Parameters:
+    ///   - conversation: The conversation to toggle
+    ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
+    ///     conflicts with swipe action dismissal animations
+    func toggleFavorite(_ conversation: Conversation, disableAnimation: Bool = false) async {
         let originalState = conversation.isFavorite
         let newState = !originalState
 
         // Optimistic UI update
-        updateConversationFavoriteState(conversation, isFavorite: newState)
+        if disableAnimation {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                updateConversationFavoriteState(conversation, isFavorite: newState)
+            }
+        } else {
+            updateConversationFavoriteState(conversation, isFavorite: newState)
+        }
 
         do {
             switch conversation {
@@ -297,7 +309,15 @@ final class ChatViewModel {
             }
         } catch {
             // Rollback on failure
-            updateConversationFavoriteState(conversation, isFavorite: originalState)
+            if disableAnimation {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+            } else {
+                updateConversationFavoriteState(conversation, isFavorite: originalState)
+            }
             logger.error("Failed to toggle favorite: \(error)")
         }
     }
