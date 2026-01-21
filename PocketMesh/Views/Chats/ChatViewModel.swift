@@ -23,18 +23,54 @@ final class ChatViewModel {
     /// Current room sessions
     var roomSessions: [RemoteNodeSessionDTO] = []
 
-    /// Combined conversations (contacts + channels + rooms)
+    /// Combined conversations (contacts + channels + rooms) - favorites first
     var allConversations: [Conversation] {
-        // Filter out repeaters and blocked contacts from direct conversations
+        favoriteConversations + nonFavoriteConversations
+    }
+
+    /// Favorite conversations sorted by last message date
+    var favoriteConversations: [Conversation] {
+        rebuildConversationCacheIfNeeded()
+        return cachedFavoriteConversations
+    }
+
+    /// Non-favorite conversations sorted by last message date
+    var nonFavoriteConversations: [Conversation] {
+        rebuildConversationCacheIfNeeded()
+        return cachedNonFavoriteConversations
+    }
+
+    // MARK: - Conversation Cache
+
+    private var cachedFavoriteConversations: [Conversation] = []
+    private var cachedNonFavoriteConversations: [Conversation] = []
+    private var conversationCacheValid = false
+
+    /// Invalidates the conversation cache, forcing rebuild on next access
+    func invalidateConversationCache() {
+        conversationCacheValid = false
+    }
+
+    private func rebuildConversationCacheIfNeeded() {
+        guard !conversationCacheValid else { return }
+
         let contactConversations = conversations
             .filter { $0.type != .repeater && !$0.isBlocked }
             .map { Conversation.direct($0) }
-        // Show channels that are configured (have a name OR have a non-zero secret)
-        let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
-        // Show all room sessions (connected or disconnected)
+        let channelConversations = channels
+            .filter { !$0.name.isEmpty || $0.hasSecret }
+            .map { Conversation.channel($0) }
         let roomConversations = roomSessions.map { Conversation.room($0) }
-        return (contactConversations + channelConversations + roomConversations)
+        let all = contactConversations + channelConversations + roomConversations
+
+        cachedFavoriteConversations = all
+            .filter { $0.isFavorite }
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+        cachedNonFavoriteConversations = all
+            .filter { !$0.isFavorite }
+            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+
+        conversationCacheValid = true
     }
 
     /// Messages for the current conversation
@@ -166,6 +202,7 @@ final class ChatViewModel {
 
     /// Updates the mute state in the local conversations array
     private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
@@ -267,6 +304,7 @@ final class ChatViewModel {
 
     /// Updates the favorite state in the local conversations array
     private func updateConversationFavoriteState(_ conversation: Conversation, isFavorite: Bool) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
@@ -344,6 +382,7 @@ final class ChatViewModel {
 
     /// Removes a conversation from local arrays for optimistic UI update.
     func removeConversation(_ conversation: Conversation) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             conversations = conversations.filter { $0.id != contact.id }
@@ -363,6 +402,7 @@ final class ChatViewModel {
 
         do {
             conversations = try await dataStore.fetchConversations(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -387,6 +427,7 @@ final class ChatViewModel {
 
         do {
             channels = try await dataStore.fetchChannels(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             // Silently handle - channels are optional
         }
@@ -398,6 +439,7 @@ final class ChatViewModel {
 
         do {
             roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             // Silently handle - rooms are optional
         }
