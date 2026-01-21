@@ -29,7 +29,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 Button {
                     Task {
-                        await viewModel.toggleFavorite(conversation)
+                        await viewModel.toggleFavorite(conversation, disableAnimation: true)
                     }
                 } label: {
                     Label(
