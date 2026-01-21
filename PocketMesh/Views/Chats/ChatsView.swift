@@ -32,8 +32,16 @@ struct ChatsView: View {
         horizontalSizeClass == .regular
     }
 
+    private var filteredFavorites: [Conversation] {
+        viewModel.favoriteConversations.filtered(by: selectedFilter, searchText: searchText)
+    }
+
+    private var filteredOthers: [Conversation] {
+        viewModel.nonFavoriteConversations.filtered(by: selectedFilter, searchText: searchText)
+    }
+
     private var filteredConversations: [Conversation] {
-        viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
+        filteredFavorites + filteredOthers
     }
 
     private var emptyStateMessage: (title: String, description: String, systemImage: String) {
@@ -263,7 +271,8 @@ struct ChatsView: View {
             to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
-                    conversations: filteredConversations,
+                    favoriteConversations: filteredFavorites,
+                    otherConversations: filteredOthers,
                     selection: $selectedRoute,
                     onDeleteConversation: handleDeleteConversation
                 )
@@ -368,7 +377,8 @@ struct ChatsView: View {
             to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
-                    conversations: filteredConversations,
+                    favoriteConversations: filteredFavorites,
+                    otherConversations: filteredOthers,
                     onNavigate: { route in
                         navigationPath.append(route)
                     },
