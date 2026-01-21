@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import PocketMesh
 @testable import PocketMeshServices
@@ -23,9 +24,9 @@ struct ChatViewModelConversationTests {
             outPathLength: 0,
             outPath: Data(),
             lastAdvertTimestamp: 0,
-            latitude: nil,
-            longitude: nil,
-            lastModified: Date(),
+            latitude: 0,
+            longitude: 0,
+            lastModified: 0,
             nickname: nil,
             isBlocked: false,
             isMuted: false,

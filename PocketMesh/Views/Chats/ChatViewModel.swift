@@ -42,9 +42,9 @@ final class ChatViewModel {
 
     // MARK: - Conversation Cache
 
-    private var cachedFavoriteConversations: [Conversation] = []
-    private var cachedNonFavoriteConversations: [Conversation] = []
-    private var conversationCacheValid = false
+    @ObservationIgnored private var cachedFavoriteConversations: [Conversation] = []
+    @ObservationIgnored private var cachedNonFavoriteConversations: [Conversation] = []
+    @ObservationIgnored private var conversationCacheValid = false
 
     /// Invalidates the conversation cache, forcing rebuild on next access
     func invalidateConversationCache() {
