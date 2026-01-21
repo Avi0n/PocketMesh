@@ -657,11 +657,11 @@ final class TracePathViewModel {
                     roundTripMs: 0,
                     hopsSNR: []
                 )
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     do {
                         try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                         if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                            activeSavedPath = updated
+                            self?.activeSavedPath = updated
                         }
                     } catch {
                         logger.error("Failed to record send failure: \(error.localizedDescription)")
@@ -840,9 +840,11 @@ final class TracePathViewModel {
                         pendingPathHash = nil
                         pendingTag = nil
 
-                        // Resume continuation (only if not already resumed by handleTraceResponse)
-                        traceContinuation?.resume()
-                        traceContinuation = nil
+                        // Resume continuation atomically (only if not already resumed by handleTraceResponse)
+                        if let continuation = traceContinuation {
+                            traceContinuation = nil
+                            continuation.resume()
+                        }
                     }
                 } catch {
                     // Cancelled - handleTraceResponse already resumed continuation
@@ -864,11 +866,11 @@ final class TracePathViewModel {
             hopsSNR: []
         )
 
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             do {
                 try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                 if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                    activeSavedPath = updated
+                    self?.activeSavedPath = updated
                 }
             } catch {
                 logger.error("Failed to record run: \(error.localizedDescription)")
@@ -1027,12 +1029,12 @@ final class TracePathViewModel {
                 hopsSNR: hopsSNR
             )
 
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 do {
                     try await dataStore.appendTracePathRun(pathID: savedPath.id, run: runDTO)
                     // Refresh saved path to get updated runs
                     if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                        activeSavedPath = updated
+                        self?.activeSavedPath = updated
                     }
                     logger.info("Appended run to saved path")
                 } catch {

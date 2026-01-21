@@ -96,8 +96,8 @@ struct TracePathListView: View {
                     .foregroundStyle(.secondary)
                     .frame(minHeight: 44)
             } else {
-                ForEach(viewModel.outboundPath) { hop in
-                    TracePathHopRow(hop: hop)
+                ForEach(Array(viewModel.outboundPath.enumerated()), id: \.element.id) { index, hop in
+                    TracePathHopRow(hop: hop, hopNumber: index + 1)
                 }
                 .onMove { source, destination in
                     dragHapticTrigger += 1
@@ -230,6 +230,7 @@ struct TracePathListView: View {
 
 struct TracePathHopRow: View {
     let hop: PathHop
+    let hopNumber: Int
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -244,6 +245,9 @@ struct TracePathHopRow: View {
             }
         }
         .frame(minHeight: 44)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Hop \(hopNumber): \(hop.resolvedName ?? hop.hashByte.hexString)")
+        .accessibilityHint("Swipe left to delete, use drag handle to reorder")
     }
 }
 

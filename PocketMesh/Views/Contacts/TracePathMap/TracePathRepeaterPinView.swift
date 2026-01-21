@@ -48,7 +48,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
 
         // Circle
         circleView.translatesAutoresizingMaskIntoConstraints = false
-        circleView.backgroundColor = UIColor(red: 0, green: 170.0/255.0, blue: 1, alpha: 1) // cyan
+        circleView.backgroundColor = .systemCyan // cyan
         circleView.layer.shadowColor = UIColor.black.cgColor
         circleView.layer.shadowOpacity = 0.3
         circleView.layer.shadowRadius = 2
@@ -67,7 +67,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         triangleImageView.contentMode = .scaleAspectFit
         triangleImageView.image = UIImage(systemName: "triangle.fill")
         triangleImageView.transform = CGAffineTransform(rotationAngle: .pi)
-        triangleImageView.tintColor = UIColor(red: 0, green: 170.0/255.0, blue: 1, alpha: 1)
+        triangleImageView.tintColor = .systemCyan
         addSubview(triangleImageView)
 
         updateLayout()
