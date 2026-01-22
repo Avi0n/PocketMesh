@@ -51,7 +51,7 @@ struct RadioPresetSection: View {
                 guard let newID = newValue else { return }
                 applyPreset(id: newID)
             }
-            .disabled(isApplying)
+            .radioDisabled(for: appState.connectionState, or: isApplying)
 
             if let preset = presets.first(where: { $0.id == selectedPresetID }) {
                 // Display preset settings

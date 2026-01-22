@@ -33,7 +33,10 @@ struct RepeaterStatusView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry)
+                    .radioDisabled(
+                        for: appState.connectionState,
+                        or: viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry
+                    )
                 }
 
                 ToolbarItemGroup(placement: .keyboard) {
@@ -184,7 +187,8 @@ struct RepeaterStatusView: View {
                     footerText: "",
                     selectedPreset: $viewModel.selectedOCVPreset,
                     voltageValues: $viewModel.ocvValues,
-                    onSave: viewModel.saveOCVSettings
+                    onSave: viewModel.saveOCVSettings,
+                    isDisabled: appState.connectionState != .ready
                 )
 
                 if let error = viewModel.ocvError {
