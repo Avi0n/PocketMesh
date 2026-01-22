@@ -19,15 +19,15 @@ final class StatsBadgeAnnotation: NSObject, MKAnnotation {
     var distanceString: String {
         let miles = distanceMeters / 1609.34
         if miles >= 0.1 {
-            return String(format: "%.1f mi", miles)
+            return "\(miles.formatted(.number.precision(.fractionLength(1)))) mi"
         } else {
-            return String(format: "%.0f m", distanceMeters)
+            return "\(distanceMeters.formatted(.number.precision(.fractionLength(0)))) m"
         }
     }
 
     /// Formatted SNR string (e.g., "8 dB")
     var snrString: String {
-        String(format: "%.0f dB", snrDB)
+        "\(snrDB.formatted(.number.precision(.fractionLength(0)))) dB"
     }
 
     /// Combined display string

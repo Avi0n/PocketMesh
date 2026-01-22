@@ -16,6 +16,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
     private var nameLabel: UILabel?
     private var nameLabelContainer: UIView?
     private var nameLabelPositionConstraints: [NSLayoutConstraint] = []
+    private var layoutConstraints: [NSLayoutConstraint] = []
 
     // MARK: - State
 
@@ -144,43 +145,49 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         let triangleSize: CGFloat = 10
         let ringSize: CGFloat = 44
 
-        // Remove existing constraints
-        NSLayoutConstraint.deactivate(constraints)
-        circleView.constraints.forEach { circleView.removeConstraint($0) }
+        // Remove only the layout constraints we manage, not badge constraints
+        NSLayoutConstraint.deactivate(layoutConstraints)
+        layoutConstraints.removeAll()
 
         // Selection ring
-        NSLayoutConstraint.activate([
+        let ringConstraints = [
             selectionRing.widthAnchor.constraint(equalToConstant: ringSize),
             selectionRing.heightAnchor.constraint(equalToConstant: ringSize),
             selectionRing.centerXAnchor.constraint(equalTo: centerXAnchor),
             selectionRing.centerYAnchor.constraint(equalTo: circleView.centerYAnchor)
-        ])
+        ]
+        layoutConstraints.append(contentsOf: ringConstraints)
         selectionRing.layer.cornerRadius = ringSize / 2
 
         // Circle
-        NSLayoutConstraint.activate([
+        let circleConstraints = [
             circleView.widthAnchor.constraint(equalToConstant: circleSize),
             circleView.heightAnchor.constraint(equalToConstant: circleSize),
             circleView.centerXAnchor.constraint(equalTo: centerXAnchor),
             circleView.topAnchor.constraint(equalTo: topAnchor, constant: 4)
-        ])
+        ]
+        layoutConstraints.append(contentsOf: circleConstraints)
         circleView.layer.cornerRadius = circleSize / 2
 
         // Icon
-        NSLayoutConstraint.activate([
+        let iconConstraints = [
             iconImageView.widthAnchor.constraint(equalToConstant: iconSize),
             iconImageView.heightAnchor.constraint(equalToConstant: iconSize),
             iconImageView.centerXAnchor.constraint(equalTo: circleView.centerXAnchor),
             iconImageView.centerYAnchor.constraint(equalTo: circleView.centerYAnchor)
-        ])
+        ]
+        layoutConstraints.append(contentsOf: iconConstraints)
 
         // Triangle
-        NSLayoutConstraint.activate([
+        let triangleConstraints = [
             triangleImageView.widthAnchor.constraint(equalToConstant: triangleSize),
             triangleImageView.heightAnchor.constraint(equalToConstant: triangleSize),
             triangleImageView.centerXAnchor.constraint(equalTo: centerXAnchor),
             triangleImageView.topAnchor.constraint(equalTo: circleView.bottomAnchor, constant: -3)
-        ])
+        ]
+        layoutConstraints.append(contentsOf: triangleConstraints)
+
+        NSLayoutConstraint.activate(layoutConstraints)
 
         let totalHeight = circleSize + triangleSize + 4
         frame = CGRect(x: 0, y: 0, width: ringSize, height: totalHeight)
