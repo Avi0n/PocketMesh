@@ -359,7 +359,8 @@ public actor SyncCoordinator {
     /// - Returns: `true` if sync succeeded, `false` if it failed
     public func performResync(
         deviceID: UUID,
-        services: ServiceContainer
+        services: ServiceContainer,
+        forceFullSync: Bool = false
     ) async -> Bool {
         logger.info("Attempting resync for device \(deviceID)")
 
@@ -376,7 +377,8 @@ public actor SyncCoordinator {
                 channelService: services.channelService,
                 messagePollingService: services.messagePollingService,
                 appStateProvider: services.appStateProvider,
-                rxLogService: services.rxLogService
+                rxLogService: services.rxLogService,
+                forceFullSync: forceFullSync
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)

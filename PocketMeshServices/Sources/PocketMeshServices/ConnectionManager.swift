@@ -519,13 +519,17 @@ public final class ConnectionManager {
         } catch {
             let prefix = context.isEmpty ? "" : "\(context): "
             logger.warning("\(prefix)Initial sync failed, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: services)
+            startResyncLoop(deviceID: deviceID, services: services, forceFullSync: forceFullSync)
         }
     }
 
     /// Starts a retry loop to resync after initial sync failure.
     /// Retries every 2 seconds, shows "Sync Failed" pill and disconnects after 3 failures.
-    private func startResyncLoop(deviceID: UUID, services: ServiceContainer) {
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - services: The ServiceContainer with all services
+    ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
+    private func startResyncLoop(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) {
         resyncTask?.cancel()
         resyncAttemptCount = 0
 
@@ -544,7 +548,8 @@ public final class ConnectionManager {
 
                 let success = await services.syncCoordinator.performResync(
                     deviceID: deviceID,
-                    services: services
+                    services: services,
+                    forceFullSync: forceFullSync
                 )
 
                 if success {
