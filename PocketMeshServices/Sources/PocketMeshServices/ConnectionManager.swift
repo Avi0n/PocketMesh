@@ -1152,7 +1152,7 @@ public final class ConnectionManager {
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch")
+        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch", forceFullSync: true)
 
         currentTransportType = .bluetooth
         connectionState = .ready
