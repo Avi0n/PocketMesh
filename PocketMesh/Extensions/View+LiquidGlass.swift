@@ -59,6 +59,18 @@ extension View {
     #endif
 }
 
+extension View {
+    /// Applies glassEffectID on iOS 26+ for smooth morphing transitions, no-op on earlier versions
+    @ViewBuilder
+    func liquidGlassID<ID: Hashable & Sendable>(_ id: ID, in namespace: Namespace.ID) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffectID(id, in: namespace)
+        } else {
+            self
+        }
+    }
+}
+
 /// A container that uses GlassEffectContainer on iOS 26+, passes through content on earlier versions
 struct LiquidGlassContainer<Content: View>: View {
     let spacing: CGFloat
