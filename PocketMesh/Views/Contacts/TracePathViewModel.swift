@@ -398,6 +398,7 @@ final class TracePathViewModel {
         outboundPath.append(hop)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Remove a repeater from the path
@@ -407,6 +408,7 @@ final class TracePathViewModel {
         outboundPath.remove(at: index)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Move a repeater within the path
@@ -415,6 +417,7 @@ final class TracePathViewModel {
         outboundPath.move(fromOffsets: source, toOffset: destination)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Copy full path string to clipboard

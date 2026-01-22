@@ -186,9 +186,9 @@ struct TracePathListView: View {
                         ProgressView()
                             .controlSize(.small)
                         if viewModel.batchEnabled {
-                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
+                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
                         } else {
-                            Text("Running Trace...")
+                            Text("Running Trace")
                         }
                     }
                     .frame(minWidth: 160)

@@ -34,7 +34,7 @@ struct TracePathView: View {
 
     @State private var showJumpToPath = false
     @State private var pathLoadedFromSheet = false
-    @State private var viewMode: TracePathViewMode = .list
+    @AppStorage("tracePathViewMode") private var viewMode: TracePathViewMode = .list
 
     var body: some View {
         Group {

@@ -154,11 +154,8 @@ final class TracePathMapViewModel {
     // MARK: - Trace Execution
 
     func runTrace() async {
+        centerOnPath()
         await traceViewModel?.runTrace()
-
-        if traceViewModel?.result?.success == true {
-            centerOnPath()
-        }
     }
 
     func savePath(name: String) async -> Bool {

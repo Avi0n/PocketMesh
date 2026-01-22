@@ -19,6 +19,8 @@ struct TracePathMapView: View {
     @State private var pinTapHaptic = 0
     @State private var rejectedTapHaptic = 0
 
+    @Namespace private var buttonNamespace
+
     var body: some View {
         ZStack {
             mapContent
@@ -50,6 +52,11 @@ struct TracePathMapView: View {
         .onChange(of: appState.locationService.currentLocation) { _, newLocation in
             mapViewModel.updateUserLocation(newLocation)
         }
+        .onChange(of: traceViewModel.availableRepeaters.isEmpty) { wasEmpty, isEmpty in
+            if wasEmpty && !isEmpty {
+                mapViewModel.centerOnAllRepeaters()
+            }
+        }
         .onChange(of: traceViewModel.resultID) { _, _ in
             mapViewModel.updateOverlaysWithResults()
         }
@@ -71,17 +78,6 @@ struct TracePathMapView: View {
             }
         } message: {
             Text("Enter a name for this path")
-        }
-        .confirmationDialog(
-            "Clear Path",
-            isPresented: $showingClearConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Clear Path", role: .destructive) {
-                mapViewModel.clearPath()
-            }
-        } message: {
-            Text("Remove all repeaters from the path?")
         }
         .sensoryFeedback(.impact(weight: .light), trigger: pinTapHaptic)
         .sensoryFeedback(.warning, trigger: rejectedTapHaptic)
@@ -135,7 +131,7 @@ struct TracePathMapView: View {
     private func resultsBanner(result: TraceResult) -> some View {
         VStack {
             HStack {
-                let hopCount = result.hops.count - 1
+                let hopCount = result.hops.count - 2
                 Text("\(hopCount) hops")
 
                 if let distance = traceViewModel.totalPathDistance {
@@ -147,7 +143,7 @@ struct TracePathMapView: View {
             .font(.subheadline.weight(.medium))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.regularMaterial, in: .capsule)
+            .liquidGlass(in: .capsule)
 
             Spacer()
         }
@@ -177,65 +173,52 @@ struct TracePathMapView: View {
         VStack {
             Spacer()
 
-            ZStack {
-                // Run Trace button always centered
-                if mapViewModel.hasPath {
-                    Button {
-                        Task {
-                            await mapViewModel.runTrace()
-                        }
-                    } label: {
-                        if mapViewModel.isRunning {
-                            ProgressView()
-                                .frame(width: 120)
-                        } else {
-                            Text("Run Trace")
-                                .frame(width: 120)
-                        }
-                    }
-                    .liquidGlassProminentButtonStyle()
-                    .disabled(!mapViewModel.canRunTrace)
-                }
-
-                // Side buttons float to edges
-                if mapViewModel.hasPath {
-                    HStack {
+            LiquidGlassContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    if mapViewModel.hasPath {
                         // Clear button
                         Button {
                             showingClearConfirmation = true
                         } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .frame(width: 44, height: 44)
+                            Text("Clear")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Clear path")
-                        .accessibilityHint("Double tap to remove all repeaters from the path")
-
-                        Spacer()
-
-                        // Save button (only after successful trace)
-                        if mapViewModel.canSave {
-                            Button {
-                                saveName = mapViewModel.generatePathName()
-                                showingSavePrompt = true
-                            } label: {
-                                Image(systemName: "square.and.arrow.down")
-                                    .font(.title2)
-                                    .frame(width: 44, height: 44)
+                        .liquidGlassButtonStyle()
+                        .liquidGlassID("clear", in: buttonNamespace)
+                        .confirmationDialog(
+                            "Clear Path",
+                            isPresented: $showingClearConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button("Clear Path", role: .destructive) {
+                                mapViewModel.clearPath()
                             }
-                            .buttonStyle(.plain)
-                            .background(.regularMaterial, in: .circle)
-                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                            .accessibilityLabel("Save path")
-                            .accessibilityHint("Double tap to save this traced path")
-                            .transition(.scale.combined(with: .opacity))
+                        } message: {
+                            Text("Remove all repeaters from the path?")
                         }
+
+                        // Run Trace button
+                        Button {
+                            Task {
+                                await mapViewModel.runTrace()
+                            }
+                        } label: {
+                            if mapViewModel.isRunning {
+                                HStack {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Running Trace")
+                                }
+                            } else {
+                                Text("Run Trace")
+                            }
+                        }
+                        .liquidGlassProminentButtonStyle()
+                        .liquidGlassID("trace", in: buttonNamespace)
+                        .disabled(!mapViewModel.canRunTrace)
                     }
-                    .padding(.horizontal, 60)
-                    .animation(.spring(response: 0.3), value: mapViewModel.canSave)
                 }
             }
+            .animation(.spring(response: 0.3), value: mapViewModel.hasPath)
             .padding(.bottom, 24)
         }
     }
