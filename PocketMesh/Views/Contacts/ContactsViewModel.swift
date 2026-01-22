@@ -169,7 +169,10 @@ final class ContactsViewModel {
 
     /// Delete contact
     func deleteContact(_ contact: ContactDTO) async {
-        guard let contactService else { return }
+        guard let contactService else {
+            errorMessage = "Connect to a radio to delete nodes"
+            return
+        }
 
         // Remove from UI immediately to avoid race condition with List animation
         let backup = contacts
