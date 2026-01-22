@@ -195,7 +195,7 @@ struct WiFiConnectionSheet: View {
 
         Task {
             do {
-                try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
+                try await appState.connectViaWiFi(host: ipAddress, port: portNumber, forceFullSync: true)
                 await appState.wireServicesIfConnected()
                 dismiss()
                 // Navigate directly to radio settings
