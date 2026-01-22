@@ -141,8 +141,9 @@ struct UnifiedMessageBubble: View {
                     // Sender name for incoming channel messages
                     if !message.isOutgoing && configuration.showSenderName {
                         Text(senderName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.footnote)
+                            .bold()
+                            .foregroundStyle(senderColor)
                     }
 
                     // Message text with context menu
@@ -247,6 +248,10 @@ struct UnifiedMessageBubble: View {
 
     private var senderName: String {
         configuration.senderNameResolver?(message) ?? "Unknown"
+    }
+
+    private var senderColor: Color {
+        Color.forSenderName(senderName)
     }
 
     private var detectedURL: URL? {

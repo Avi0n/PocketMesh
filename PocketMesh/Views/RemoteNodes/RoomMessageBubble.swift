@@ -47,8 +47,9 @@ struct RoomMessageBubble: View {
             // Show author name for messages from others
             if !isFromSelf {
                 Text(message.authorDisplayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .bold()
+                    .foregroundStyle(Color.forSenderName(message.authorDisplayName))
                     .padding(.horizontal, 12)
             }
 
