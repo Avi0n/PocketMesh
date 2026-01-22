@@ -500,15 +500,18 @@ public final class ConnectionManager {
     ///   - deviceID: The device ID to sync
     ///   - services: The service container
     ///   - context: Optional context string for logging (e.g., "WiFi reconnect")
+    ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
     private func performInitialSync(
         deviceID: UUID,
         services: ServiceContainer,
-        context: String = ""
+        context: String = "",
+        forceFullSync: Bool = false
     ) async {
         do {
             try await services.syncCoordinator.onConnectionEstablished(
                 deviceID: deviceID,
-                services: services
+                services: services,
+                forceFullSync: forceFullSync
             )
         } catch {
             let prefix = context.isEmpty ? "" : "\(context): "
