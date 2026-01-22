@@ -4,7 +4,7 @@ import os
 
 // MARK: - Contact Service Errors
 
-public enum ContactServiceError: Error, Sendable {
+public enum ContactServiceError: Error, Sendable, LocalizedError {
     case notConnected
     case sendFailed
     case invalidResponse
@@ -12,6 +12,25 @@ public enum ContactServiceError: Error, Sendable {
     case contactNotFound
     case contactTableFull
     case sessionError(MeshCoreError)
+
+    public var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            return "Not connected to radio"
+        case .sendFailed:
+            return "Failed to send message"
+        case .invalidResponse:
+            return "Invalid response from device"
+        case .syncInterrupted:
+            return "Sync was interrupted"
+        case .contactNotFound:
+            return "Contact not found on device"
+        case .contactTableFull:
+            return "Device contact table is full"
+        case .sessionError(let error):
+            return error.localizedDescription
+        }
+    }
 }
 
 /// Reason for contact cleanup (deletion or blocking)
@@ -97,6 +116,9 @@ public actor ContactService {
             var receivedCount = 0
             var lastTimestamp: UInt32 = 0
 
+            // Build set of public keys from device for cleanup
+            let devicePublicKeys = Set(meshContacts.map(\.publicKey))
+
             for meshContact in meshContacts {
                 let frame = meshContact.toContactFrame()
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
@@ -108,6 +130,16 @@ public actor ContactService {
                 }
 
                 syncProgressHandler?(receivedCount, meshContacts.count)
+            }
+
+            // On full sync, remove local contacts that no longer exist on device
+            if since == nil {
+                let localContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+                for localContact in localContacts where !devicePublicKeys.contains(localContact.publicKey) {
+                    try await dataStore.deleteMessagesForContact(contactID: localContact.id)
+                    try await dataStore.deleteContact(id: localContact.id)
+                    await cleanupHandler?(localContact.id, .deleted)
+                }
             }
 
             return ContactSyncResult(

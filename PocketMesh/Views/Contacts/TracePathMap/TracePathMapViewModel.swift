@@ -55,9 +55,9 @@ final class TracePathMapViewModel {
         !(traceViewModel?.outboundPath.isEmpty ?? true)
     }
 
-    /// Whether trace can be run
+    /// Whether trace can be run (when connected)
     var canRunTrace: Bool {
-        traceViewModel?.canRunTrace ?? false
+        traceViewModel?.canRunTraceWhenConnected ?? false
     }
 
     /// Whether trace is currently running

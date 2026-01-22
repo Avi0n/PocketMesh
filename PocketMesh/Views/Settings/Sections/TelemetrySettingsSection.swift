@@ -22,7 +22,7 @@ struct TelemetrySettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .disabled(isSaving)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             if device?.telemetryModeBase ?? 0 > 0 {
                 Toggle(isOn: locationEnabledBinding) {
@@ -33,7 +33,7 @@ struct TelemetrySettingsSection: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 Toggle(isOn: environmentEnabledBinding) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -43,7 +43,7 @@ struct TelemetrySettingsSection: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 Toggle(isOn: $filterByTrusted) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -53,7 +53,7 @@ struct TelemetrySettingsSection: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 if filterByTrusted {
                     NavigationLink {

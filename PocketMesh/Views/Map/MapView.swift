@@ -411,6 +411,7 @@ private struct ContactDetailSheet: View {
                         } label: {
                             Label("Send Message", systemImage: "message.fill")
                         }
+                        .radioDisabled(for: appState.connectionState)
                     }
                 }
             }

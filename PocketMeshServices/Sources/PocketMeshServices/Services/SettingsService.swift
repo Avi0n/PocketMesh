@@ -409,16 +409,30 @@ public actor SettingsService {
 
     /// Set location with verification
     public func setLocationVerified(latitude: Double, longitude: Double) async throws -> MeshCore.SelfInfo {
+        // Calculate the scaled values we're actually sending
+        let scaledLatSent = Int32(latitude * 1_000_000)
+        let scaledLonSent = Int32(longitude * 1_000_000)
+
         try await setLocation(latitude: latitude, longitude: longitude)
 
+        // Read back and compare at scaled integer level for precise diagnostics
         let selfInfo = try await getSelfInfo()
+        let scaledLatReceived = Int32(selfInfo.latitude * 1_000_000)
+        let scaledLonReceived = Int32(selfInfo.longitude * 1_000_000)
 
-        // Location is stored as scaled integers, allow small floating point tolerance
-        let tolerance = 0.000002  // ~0.2 meters at equator
-        guard abs(selfInfo.latitude - latitude) < tolerance &&
-              abs(selfInfo.longitude - longitude) < tolerance else {
+        let latDiff = abs(scaledLatSent - scaledLatReceived)
+        let lonDiff = abs(scaledLonSent - scaledLonReceived)
+
+        // Tolerance of 2 scaled units (~0.2m) handles floating-point conversion
+        let tolerance: Int32 = 2
+
+        guard latDiff <= tolerance && lonDiff <= tolerance else {
+            logger.error("[Location] Verification failed - sent: (\(scaledLatSent), \(scaledLonSent)), received: (\(scaledLatReceived), \(scaledLonReceived)), diff: (lat=\(latDiff), lon=\(lonDiff))")
+
+            let expectedLat = Double(scaledLatSent) / 1_000_000
+            let expectedLon = Double(scaledLonSent) / 1_000_000
             throw SettingsServiceError.verificationFailed(
-                expected: "(\(latitude), \(longitude))",
+                expected: "(\(expectedLat), \(expectedLon))",
                 actual: "(\(selfInfo.latitude), \(selfInfo.longitude))"
             )
         }

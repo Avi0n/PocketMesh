@@ -12,6 +12,7 @@ struct RoomConversationView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
+    @State private var keyboardObserver = KeyboardObserver()
     @FocusState private var isInputFocused: Bool
 
     init(session: RemoteNodeSessionDTO) {
@@ -23,10 +24,13 @@ struct RoomConversationView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if session.canPost {
                     inputBar
+                        .floatingKeyboardAware()
                 } else {
                     readOnlyBanner
                 }
             }
+            .ignoreKeyboardOnIPad()
+            .environment(keyboardObserver)
             .navigationTitle(session.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

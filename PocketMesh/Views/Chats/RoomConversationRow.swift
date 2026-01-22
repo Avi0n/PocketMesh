@@ -9,27 +9,24 @@ struct RoomConversationRow: View {
             NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 44)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    HStack(spacing: 4) {
-                        Text(session.name)
-                            .font(.headline)
-                            .lineLimit(1)
-
-                        if session.isFavorite {
-                            Image(systemName: "star.fill")
-                                .foregroundStyle(.yellow)
-                                .font(.caption)
-                                .accessibilityLabel("Favorite")
-                        }
-                    }
+                HStack(spacing: 4) {
+                    Text(session.name)
+                        .font(.headline)
+                        .lineLimit(1)
 
                     Spacer()
 
-                    HStack(spacing: 4) {
-                        MutedIndicator(isMuted: session.isMuted)
-                        if let date = session.lastMessageDate {
-                            ConversationTimestamp(date: date)
-                        }
+                    MutedIndicator(isMuted: session.isMuted)
+
+                    if session.isFavorite {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.yellow)
+                            .font(.caption)
+                            .accessibilityLabel("Favorite")
+                    }
+
+                    if let date = session.lastMessageDate {
+                        ConversationTimestamp(date: date)
                     }
                 }
 

@@ -3,6 +3,7 @@ import PocketMeshServices
 
 /// List-based view for building trace paths
 struct TracePathListView: View {
+    @Environment(\.appState) private var appState
     @Bindable var viewModel: TracePathViewModel
 
     @Binding var addHapticTrigger: Int
@@ -214,7 +215,7 @@ struct TracePathListView: View {
                             .padding(.vertical, 4)
                     }
                     .liquidGlassProminentButtonStyle()
-                    .disabled(!viewModel.canRunTrace)
+                    .radioDisabled(for: appState.connectionState, or: !viewModel.canRunTraceWhenConnected)
                 }
                 Spacer()
             }

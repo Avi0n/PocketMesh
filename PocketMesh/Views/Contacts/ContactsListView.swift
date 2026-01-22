@@ -252,6 +252,20 @@ struct ContactsListView: View {
         } message: {
             Text("Distance sorting requires location access.")
         }
+        .alert("Error", isPresented: showErrorBinding) {
+            Button("OK", role: .cancel) {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "An error occurred")
+        }
+    }
+
+    private var showErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )
     }
 
     // MARK: - Views

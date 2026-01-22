@@ -28,7 +28,8 @@ struct AdvancedSettingsView: View {
                     footerText: "Configure the voltage-to-percentage curve for your device's battery.",
                     selectedPreset: $selectedOCVPreset,
                     voltageValues: $ocvValues,
-                    onSave: saveOCVToDevice
+                    onSave: saveOCVToDevice,
+                    isDisabled: appState.connectionState != .ready
                 )
 
                 // Danger Zone
