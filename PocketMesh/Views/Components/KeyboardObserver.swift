@@ -12,6 +12,7 @@ final class KeyboardObserver {
 
     nonisolated(unsafe) private var showToken: (any NSObjectProtocol)?
     nonisolated(unsafe) private var hideToken: (any NSObjectProtocol)?
+    nonisolated(unsafe) private var changeToken: (any NSObjectProtocol)?
 
     init() {
         setupObservers()
@@ -22,6 +23,9 @@ final class KeyboardObserver {
             NotificationCenter.default.removeObserver(token)
         }
         if let token = hideToken {
+            NotificationCenter.default.removeObserver(token)
+        }
+        if let token = changeToken {
             NotificationCenter.default.removeObserver(token)
         }
     }
@@ -52,22 +56,58 @@ final class KeyboardObserver {
                 self?.handleKeyboardHide()
             }
         }
+
+        // Handle keyboard size changes while visible (QuickType, keyboard switches, dictation)
+        changeToken = NotificationCenter.default.addObserver(
+            forName: UIResponder.keyboardWillChangeFrameNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let userInfo = notification.userInfo,
+                  let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+                return
+            }
+            Task { @MainActor in
+                self?.handleKeyboardFrameChange(keyboardFrame)
+            }
+        }
     }
 
     private func handleKeyboardShow(_ keyboardFrame: CGRect) {
-        guard let window = UIApplication.shared.connectedScenes
+        let newHeight = calculateKeyboardOverlap(keyboardFrame)
+        guard abs(newHeight - keyboardHeight) > 0.5 else { return }
+        keyboardHeight = newHeight
+    }
+
+    private func handleKeyboardFrameChange(_ keyboardFrame: CGRect) {
+        // Only update if keyboard is currently shown (height > 0)
+        // This avoids reacting to change notifications during hide transitions
+        guard keyboardHeight > 0 else { return }
+
+        let newHeight = calculateKeyboardOverlap(keyboardFrame)
+        guard abs(newHeight - keyboardHeight) > 0.5 else { return }
+        keyboardHeight = newHeight
+    }
+
+    /// Calculates actual keyboard overlap with the key window
+    private func calculateKeyboardOverlap(_ keyboardFrame: CGRect) -> CGFloat {
+        // Find the key window - the one actually receiving input
+        guard let keyWindow = UIApplication.shared.connectedScenes
                   .compactMap({ $0 as? UIWindowScene })
-                  .first?.windows.first else {
-            return
+                  .first(where: { $0.activationState == .foregroundActive })?
+                  .keyWindow else {
+            return 0
         }
 
         // Convert keyboard frame from screen coordinates to window coordinates
-        // Critical for Stage Manager and Slide Over where they differ
-        let windowFrame = window.convert(keyboardFrame, from: nil)
-        let newHeight = windowFrame.height
+        let keyboardInWindow = keyWindow.convert(keyboardFrame, from: nil)
 
-        guard abs(newHeight - keyboardHeight) > 0.5 else { return }
-        keyboardHeight = newHeight
+        // Calculate actual overlap between keyboard and window bounds
+        let windowBounds = keyWindow.bounds
+        let intersection = windowBounds.intersection(keyboardInWindow)
+
+        // Return overlap height, or 0 if no overlap
+        return intersection.isNull ? 0 : intersection.height
     }
 
     private func handleKeyboardHide() {
