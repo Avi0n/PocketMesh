@@ -41,10 +41,20 @@ struct ScanChannelQRView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    private var unavailableView: some View {
+        // Fallback for unsupported devices
+        ContentUnavailableView(
+            "Scanner Not Available",
+            systemImage: "qrcode.viewfinder",
+            description: Text("QR scanning is not supported on this device")
+        )
+    }
+    
     // MARK: - Scanner View
 
     private var scannerView: some View {
         ZStack {
+            #if !targetEnvironment(macCatalyst)
             if QRDataScannerView.isSupported && QRDataScannerView.isAvailable {
                 QRDataScannerView { result in
                     handleScanResult(result)
@@ -52,13 +62,11 @@ struct ScanChannelQRView: View {
                     cameraPermissionDenied = true
                 }
             } else {
-                // Fallback for unsupported devices
-                ContentUnavailableView(
-                    "Scanner Not Available",
-                    systemImage: "qrcode.viewfinder",
-                    description: Text("QR scanning is not supported on this device")
-                )
+                unavailableView
             }
+            #else
+            unavailableView
+            #endif
 
             // Overlay with scan frame
             VStack {
@@ -218,7 +226,7 @@ struct ScanChannelQRView: View {
 }
 
 // MARK: - QR Scanner using DataScannerViewController
-
+#if !targetEnvironment(macCatalyst)
 struct QRDataScannerView: UIViewControllerRepresentable {
     let onScan: (String) -> Void
     let onPermissionDenied: () -> Void
@@ -290,6 +298,7 @@ struct QRDataScannerView: UIViewControllerRepresentable {
         }
     }
 }
+#endif
 
 #Preview {
     NavigationStack {

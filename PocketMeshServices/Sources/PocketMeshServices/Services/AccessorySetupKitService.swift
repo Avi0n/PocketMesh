@@ -1,7 +1,8 @@
-#if canImport(UIKit)
-import AccessorySetupKit
 import CoreBluetooth
 import UIKit
+
+#if !targetEnvironment(macCatalyst)
+import AccessorySetupKit
 import os
 
 /// Delegate protocol for accessory state changes
@@ -83,10 +84,14 @@ public final class AccessorySetupKitService {
     /// Activate the AccessorySetupKit session
     /// Uses Apple's recommended closure pattern to avoid AsyncStream issues
     public func activateSession() async throws {
+        logger.info("AccessorySetupKitService: activating session")
+        
         guard session == nil else { return }
 
         let newSession = ASAccessorySession()
         session = newSession
+        
+        logger.info("AccessorySetupKitService: created new session")
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             self.activationContinuation = continuation
@@ -113,6 +118,8 @@ public final class AccessorySetupKitService {
     /// Handle incoming ASK events
     /// Called directly from session's event handler closure
     private func handleEvent(_ event: ASAccessoryEvent) {
+        logger.info("AccessorySetupKitService: handling event: \(event)")
+        
         switch event.eventType {
         case .activated:
             // Handled in activateSession continuation
@@ -411,8 +418,10 @@ public enum AccessorySetupKitError: LocalizedError {
 }
 
 #else
-// macOS stubs for compilation
+// Mac Catalyst version using CoreBluetooth
 import Foundation
+import SwiftUI
+
 
 public struct ASAccessory {
     public var bluetoothIdentifier: UUID? { nil }
@@ -426,19 +435,184 @@ public protocol AccessorySetupKitServiceDelegate: AnyObject {
 }
 
 @MainActor @Observable
-public final class AccessorySetupKitService {
+public final class AccessorySetupKitService: NSObject, @MainActor CBCentralManagerDelegate {
+
+    // Wrapper for discovered devices shown in the picker
+    public struct DiscoveredDevice: Identifiable, Hashable {
+        public let id: UUID
+        public let name: String
+        public let rssi: Int
+    }
+
+    // Current discovered devices (kept in sync with scanning)
+    public private(set) var discoveredDevices: [DiscoveredDevice] = []
+
+    // Map to retain CBPeripheral references by identifier
+    private var peripheralsByID: [UUID: CBPeripheral] = [:]
+
+    // Track scanning state
+    private var isScanning = false
+
+    // Host view controller for the picker presentation
+    private weak var pickerHost: UIViewController?
+
+    private var central: CBCentralManager?
+    private var centralState: CBManagerState = .unknown
     public private(set) var pairedAccessories: [ASAccessory] = []
     public private(set) var isSessionActive = false
     public weak var delegate: AccessorySetupKitServiceDelegate?
 
-    public init() {}
+    private var pickerContinuation: CheckedContinuation<UUID, Error>?
 
-    public func activateSession() async throws {}
-    public func showPicker() async throws -> UUID { throw AccessorySetupKitError.sessionNotActive }
+    public override init() {
+        super.init()
+        self.central = CBCentralManager(delegate: self, queue: nil)
+        self.isSessionActive = true
+    }
+
+    public func activateSession() async throws {
+        if central == nil {
+            central = CBCentralManager(delegate: self, queue: nil)
+        }
+    }
+
+    public func showPicker() async throws -> UUID {
+        guard pickerContinuation == nil else { throw AccessorySetupKitError.pickerAlreadyActive }
+        guard let central else { throw AccessorySetupKitError.sessionNotActive }
+
+        // Ensure Bluetooth is powered on
+        if centralState == .unknown || centralState == .resetting {
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        guard centralState == .poweredOn else { throw AccessorySetupKitError.pickerRestricted }
+
+        // Prepare scanning state
+        discoveredDevices.removeAll()
+        peripheralsByID.removeAll()
+        startScan()
+
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<UUID, Error>) in
+            self.pickerContinuation = continuation
+            presentPickerUI()
+        }
+    }
+
+    // Start scanning for peripherals matching our service
+    private func startScan() {
+        guard let central, !isScanning else { return }
+        let serviceUUID = CBUUID(string: BLEServiceUUID.nordicUART)
+        isScanning = true
+        central.scanForPeripherals(withServices: [serviceUUID])
+    }
+
+    // Stop scanning if in progress
+    private func stopScan() {
+        guard let central, isScanning else { return }
+        central.stopScan()
+        isScanning = false
+    }
+
+    // Public rescan action for the picker UI
+    public func rescan() {
+        stopScan()
+        discoveredDevices.removeAll()
+        peripheralsByID.removeAll()
+        startScan()
+    }
+
+    // Present the SwiftUI picker UI in a hosting controller
+    private func presentPickerUI() {
+        // Build the SwiftUI picker view
+        let pickerView = BluetoothDevicePickerView(
+            service: self,
+            onSelect: { [weak self] uuid in
+                guard let self else { return }
+                self.stopScan()
+                self.dismissPickerUI()
+                if let continuation = self.pickerContinuation {
+                    self.pickerContinuation = nil
+                    continuation.resume(returning: uuid)
+                }
+            },
+            onCancel: { [weak self] in
+                guard let self else { return }
+                self.stopScan()
+                self.dismissPickerUI()
+                if let continuation = self.pickerContinuation {
+                    self.pickerContinuation = nil
+                    continuation.resume(throwing: AccessorySetupKitError.pickerDismissed)
+                }
+            }
+        )
+        
+        let hosting = UIHostingController(rootView: pickerView)
+        hosting.modalPresentationStyle = .formSheet
+
+        self.pickerHost = hosting
+        UIApplication.shared.windows.first?.rootViewController?.present(hosting, animated: true)
+    }
+
+    // Dismiss hosting controller if presented
+    private func dismissPickerUI() {
+        if let host = pickerHost {
+            host.dismiss(animated: true)
+            pickerHost = nil
+        }
+    }
+  
     public func removeAccessory(_ accessory: ASAccessory) async throws {}
+
     public func renameAccessory(_ accessory: ASAccessory) async throws {}
+
     public func accessory(for bluetoothID: UUID) -> ASAccessory? { nil }
-    public func invalidateSession() {}
+
+    public func invalidateSession() {
+        if isScanning {
+            central?.stopScan()
+            isScanning = false
+        }
+        pickerContinuation?.resume(throwing: AccessorySetupKitError.sessionInvalidated)
+        pickerContinuation = nil
+        isSessionActive = false
+        pairedAccessories = []
+        central = nil
+    }
+
+    // MARK: - CBCentralManagerDelegate
+
+    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        centralState = central.state
+        if central.state == .poweredOn {
+            // If the picker is active and we're not scanning, start scanning
+            if pickerContinuation != nil && !isScanning {
+                startScan()
+            }
+        } else if central.state == .poweredOff || central.state == .unauthorized || central.state == .unsupported {
+            stopScan()
+            dismissPickerUI()
+            if let continuation = pickerContinuation {
+                pickerContinuation = nil
+                continuation.resume(throwing: AccessorySetupKitError.pickerRestricted)
+            }
+        }
+    }
+
+    public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
+        let nameFromAdv = (advertisementData[CBAdvertisementDataLocalNameKey] as? String) ?? ""
+        let name = peripheral.name ?? nameFromAdv
+        // Only include devices that match the expected name pattern
+        guard name.contains("MeshCore-") else { return }
+
+        // Track peripheral
+        peripheralsByID[peripheral.identifier] = peripheral
+
+        // Update or insert discovered device entry
+        let device = DiscoveredDevice(id: peripheral.identifier, name: name, rssi: RSSI.intValue)
+        
+        if !discoveredDevices.contains(where: { $0.id == device.id }) {
+            discoveredDevices.append(device)
+        }
+    }
 }
 
 public enum AccessorySetupKitError: LocalizedError {
@@ -451,7 +625,7 @@ public enum AccessorySetupKitError: LocalizedError {
     case noBluetoothIdentifier
     case discoveryTimeout
     case connectionFailed
-
+    
     public var errorDescription: String? {
         switch self {
         case .sessionNotActive:
@@ -475,4 +649,61 @@ public enum AccessorySetupKitError: LocalizedError {
         }
     }
 }
+
+struct BluetoothDevicePickerView: View {
+    // Reference to the service to access discovered devices and rescan
+    @State private var selection: UUID?
+
+    @Bindable var service: AccessorySetupKitService
+    let onSelect: (UUID) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if service.discoveredDevices.isEmpty {
+                    ContentUnavailableView(
+                        "No Devices",
+                        systemImage: "antenna.radiowaves.left.and.right",
+                        description: Text("Make sure your device is powered on and nearby. Click the refresh button to scan again.")
+                    )
+                } else {
+                    List(service.discoveredDevices) { device in
+                        Button {
+                            selection = device.id
+                            onSelect(device.id)
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(device.name.isEmpty ? "Unknown" : device.name)
+                                        .font(.body)
+                                    Text("RSSI: \(device.rssi)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Select Device")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        service.rescan()
+                    } label: {
+                        Label("Refresh", systemImage: "arrow.clockwise")
+                    }
+                }
+            }
+        }
+    }
+}
+
 #endif
+
