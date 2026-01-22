@@ -173,6 +173,9 @@ public final class ConnectionManager {
     /// Note: @Sendable @MainActor ensures safe cross-isolation callback
     public var onResyncFailed: (@Sendable @MainActor () -> Void)?
 
+    /// Temporary flag for forcing full sync on next connection
+    private var pendingForceFullSync: Bool = false
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -778,9 +781,11 @@ public final class ConnectionManager {
     /// - If already connected to this device: no-op
     /// - If connected to a different device: switches to the new device
     ///
-    /// - Parameter deviceID: The UUID of the device to connect to
+    /// - Parameters:
+    ///   - deviceID: The UUID of the device to connect to
+    ///   - forceFullSync: Whether to force a full sync instead of incremental
     /// - Throws: Connection errors
-    public func connect(to deviceID: UUID) async throws {
+    public func connect(to deviceID: UUID, forceFullSync: Bool = false) async throws {
         // Prevent concurrent connection attempts
         if connectionState == .connecting {
             logger.info("Connection already in progress, ignoring request for \(deviceID)")
@@ -831,6 +836,7 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly connecting
         shouldBeConnected = true
+        pendingForceFullSync = forceFullSync
 
         do {
             // Validate device is still registered with ASK
@@ -1427,7 +1433,9 @@ public final class ConnectionManager {
         // Notify observers BEFORE sync starts so they can wire callbacks
         // (e.g., AppState needs to set sync activity callbacks for the syncing pill)
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices)
+        let shouldForceFullSync = pendingForceFullSync
+        pendingForceFullSync = false
+        await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: shouldForceFullSync)
 
         currentTransportType = .bluetooth
         connectionState = .ready
