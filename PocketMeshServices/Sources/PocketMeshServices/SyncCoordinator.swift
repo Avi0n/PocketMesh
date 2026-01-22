@@ -869,4 +869,37 @@ public actor SyncCoordinator {
         }
         return (nil, text)
     }
+
+    // MARK: - Timestamp Correction
+
+    /// Maximum acceptable time in the future for a sender timestamp (5 minutes)
+    private static let timestampToleranceFuture: TimeInterval = 5 * 60
+
+    /// Maximum acceptable time in the past for a sender timestamp (6 months)
+    private static let timestampTolerancePast: TimeInterval = 6 * 30 * 24 * 60 * 60
+
+    /// Corrects invalid timestamps from senders with broken clocks.
+    ///
+    /// Returns the corrected timestamp and whether correction was applied.
+    /// Timestamps are considered invalid if:
+    /// - More than 5 minutes in the future (relative to receive time)
+    /// - More than 6 months in the past (relative to receive time)
+    ///
+    /// - Parameters:
+    ///   - timestamp: The sender's claimed timestamp
+    ///   - receiveTime: When the message was received (defaults to now)
+    /// - Returns: Tuple of (corrected timestamp, was corrected flag)
+    nonisolated static func correctTimestampIfNeeded(
+        _ timestamp: UInt32,
+        receiveTime: Date = Date()
+    ) -> (correctedTimestamp: UInt32, wasCorrected: Bool) {
+        let senderDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
+        let futureThreshold = receiveTime.addingTimeInterval(timestampToleranceFuture)
+        let pastThreshold = receiveTime.addingTimeInterval(-timestampTolerancePast)
+
+        if senderDate > futureThreshold || senderDate < pastThreshold {
+            return (UInt32(receiveTime.timeIntervalSince1970), true)
+        }
+        return (timestamp, false)
+    }
 }
