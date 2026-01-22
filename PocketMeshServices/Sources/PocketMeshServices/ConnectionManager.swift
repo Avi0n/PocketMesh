@@ -976,8 +976,9 @@ public final class ConnectionManager {
     /// - Parameters:
     ///   - host: The hostname or IP address of the device
     ///   - port: The TCP port to connect to
+    ///   - forceFullSync: When true, performs a complete sync ignoring cached timestamps
     /// - Throws: Connection or session errors
-    public func connectViaWiFi(host: String, port: UInt16) async throws {
+    public func connectViaWiFi(host: String, port: UInt16, forceFullSync: Bool = false) async throws {
         logger.info("Connecting via WiFi to \(host):\(port)")
 
         // Disconnect existing connection if any
@@ -1058,7 +1059,7 @@ public final class ConnectionManager {
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
             await onConnectionReady?()
-            await performInitialSync(deviceID: deviceID, services: newServices)
+            await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: forceFullSync)
 
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
