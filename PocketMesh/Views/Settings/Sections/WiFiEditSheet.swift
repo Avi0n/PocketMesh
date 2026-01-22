@@ -164,7 +164,7 @@ struct WiFiEditSheet: View {
             do {
                 // Disconnect from current connection, then connect to new address
                 await appState.disconnect()
-                try await appState.connectViaWiFi(host: ipAddress, port: portNumber)
+                try await appState.connectViaWiFi(host: ipAddress, port: portNumber, forceFullSync: true)
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription
