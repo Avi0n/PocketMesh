@@ -339,7 +339,10 @@ struct UnifiedMessageBubble: View {
 
                 Divider()
 
-                Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
+                Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))\(message.timestampCorrected ? " (?)" : "")")
+                    .accessibilityLabel(message.timestampCorrected
+                        ? "Sent time adjusted due to sender clock error"
+                        : "Sent \(message.date.formatted(date: .abbreviated, time: .shortened))")
                 Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
 
                 if let snr = message.snr {
