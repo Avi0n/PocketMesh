@@ -280,18 +280,20 @@ final class TracePathViewModel {
 
     // MARK: - Distance Calculation
 
-    /// Total path distance in meters, or nil if any hop lacks valid location
+    /// Total path distance in meters between repeaters, or nil if any repeater lacks valid location.
+    /// Only considers intermediate hops (repeaters), not start/end nodes (local device).
     var totalPathDistance: Double? {
         guard let result, result.success else { return nil }
 
-        let hops = result.hops
-        guard hops.count >= 2 else { return nil }
+        // Filter to only intermediate repeaters (exclude start and end nodes)
+        let repeaters = result.hops.filter { !$0.isStartNode && !$0.isEndNode }
+        guard repeaters.count >= 2 else { return nil }
 
         var totalMeters: Double = 0
 
-        for i in 0..<(hops.count - 1) {
-            let current = hops[i]
-            let next = hops[i + 1]
+        for i in 0..<(repeaters.count - 1) {
+            let current = repeaters[i]
+            let next = repeaters[i + 1]
 
             guard current.hasLocation, next.hasLocation,
                   let curLat = current.latitude, let curLon = current.longitude,

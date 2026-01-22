@@ -296,18 +296,23 @@ struct TraceResultsSheet: View {
     private var distanceInfoSheet: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Distance cannot be calculated because the following repeaters don't have location coordinates set.")
-                }
-                Section("Repeaters Without Locations") {
-                    ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
-                        Text(name)
+                if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
+                    Section {
+                        Text("Distance calculation requires at least 2 repeaters in the path.")
                     }
-                }
-                Section {
-                    Text("To calculate distance, add location coordinates to these contacts in their detail screens.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                } else if viewModel.repeatersWithoutLocation.isEmpty {
+                    Section {
+                        Text("Distance cannot be calculated. All repeaters have coordinates but an error occurred.")
+                    }
+                } else {
+                    Section {
+                        Text("Distance cannot be calculated because the following repeaters don't have location coordinates set.")
+                    }
+                    Section("Repeaters Without Locations") {
+                        ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
+                            Text(name)
+                        }
+                    }
                 }
             }
             .navigationTitle("Distance Unavailable")
