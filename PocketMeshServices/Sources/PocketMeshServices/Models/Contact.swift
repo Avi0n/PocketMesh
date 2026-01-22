@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import SwiftData
 
@@ -162,9 +163,13 @@ public extension Contact {
         outPathLength < 0
     }
 
-    /// Whether this contact has a known location
+    /// Whether this contact has a known, valid location
     var hasLocation: Bool {
-        latitude != 0 || longitude != 0
+        let hasNonZero = latitude != 0 || longitude != 0
+        guard hasNonZero else { return false }
+        return CLLocationCoordinate2DIsValid(
+            CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        )
     }
 
     /// Whether this contact is a repeater
@@ -325,7 +330,11 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     }
 
     public var hasLocation: Bool {
-        latitude != 0 || longitude != 0
+        let hasNonZero = latitude != 0 || longitude != 0
+        guard hasNonZero else { return false }
+        return CLLocationCoordinate2DIsValid(
+            CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        )
     }
 
     public var publicKeyHex: String {
