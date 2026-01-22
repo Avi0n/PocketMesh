@@ -72,9 +72,9 @@ struct DeviceSelectionSheet: View {
                         Task {
                             do {
                                 if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
-                                    try await appState.connectViaWiFi(host: host, port: port)
+                                    try await appState.connectViaWiFi(host: host, port: port, forceFullSync: true)
                                 } else {
-                                    try await appState.connectionManager.connect(to: device.id)
+                                    try await appState.connectionManager.connect(to: device.id, forceFullSync: true)
                                 }
                             } catch BLEError.deviceConnectedToOtherApp {
                                 appState.otherAppWarningDeviceID = device.id
