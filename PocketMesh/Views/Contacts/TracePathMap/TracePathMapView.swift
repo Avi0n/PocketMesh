@@ -14,7 +14,10 @@ struct TracePathMapView: View {
     @State private var showingSavePrompt = false
     @State private var saveName = ""
     @State private var showingClearConfirmation = false
+    @State private var showingSaveSuccess = false
+    @State private var showingSaveError = false
     @State private var pinTapHaptic = 0
+    @State private var rejectedTapHaptic = 0
 
     var body: some View {
         ZStack {
@@ -42,6 +45,7 @@ struct TracePathMapView: View {
                 userLocation: appState.locationService.currentLocation
             )
             mapViewModel.rebuildOverlays()
+            mapViewModel.centerOnAllRepeaters()
         }
         .onChange(of: appState.locationService.currentLocation) { _, newLocation in
             mapViewModel.updateUserLocation(newLocation)
@@ -56,8 +60,13 @@ struct TracePathMapView: View {
             }
             Button("Save") {
                 Task {
-                    await mapViewModel.savePath(name: saveName)
+                    let success = await mapViewModel.savePath(name: saveName)
                     saveName = ""
+                    if success {
+                        showingSaveSuccess = true
+                    } else {
+                        showingSaveError = true
+                    }
                 }
             }
         } message: {
@@ -75,6 +84,17 @@ struct TracePathMapView: View {
             Text("Remove all repeaters from the path?")
         }
         .sensoryFeedback(.impact(weight: .light), trigger: pinTapHaptic)
+        .sensoryFeedback(.warning, trigger: rejectedTapHaptic)
+        .alert("Path Saved", isPresented: $showingSaveSuccess) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The path has been saved successfully.")
+        }
+        .alert("Save Failed", isPresented: $showingSaveError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Failed to save the path. Please try again.")
+        }
     }
 
     // MARK: - Map Content
@@ -90,9 +110,13 @@ struct TracePathMapView: View {
             isRepeaterInPath: { mapViewModel.isRepeaterInPath($0) },
             hopIndex: { mapViewModel.hopIndex(for: $0) },
             isLastHop: { mapViewModel.isLastHop($0) },
-            onRepeaterTap: {
-                pinTapHaptic += 1
-                mapViewModel.handleRepeaterTap($0)
+            onRepeaterTap: { repeater in
+                let result = mapViewModel.handleRepeaterTap(repeater)
+                if result == .rejectedMiddleHop {
+                    rejectedTapHaptic += 1
+                } else {
+                    pinTapHaptic += 1
+                }
             },
             onCenterOnUser: {
                 if let location = appState.locationService.currentLocation {
@@ -103,7 +127,7 @@ struct TracePathMapView: View {
                 }
             }
         )
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea()
     }
 
     // MARK: - Results Banner
@@ -111,12 +135,13 @@ struct TracePathMapView: View {
     private func resultsBanner(result: TraceResult) -> some View {
         VStack {
             HStack {
-                Text("RTT: \(result.durationMs)ms")
+                let hopCount = result.hops.count - 1
+                Text("\(hopCount) hops")
 
                 if let distance = traceViewModel.totalPathDistance {
                     Text("•")
                     let miles = distance / 1609.34
-                    Text(String(format: "Total: %.1f mi", miles))
+                    Text("\(miles, format: .number.precision(.fractionLength(1))) mi")
                 }
             }
             .font(.subheadline.weight(.medium))
@@ -152,23 +177,9 @@ struct TracePathMapView: View {
         VStack {
             Spacer()
 
-            if mapViewModel.hasPath {
-                HStack(spacing: 12) {
-                    // Clear button with confirmation
-                    Button {
-                        showingClearConfirmation = true
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .background(.regularMaterial, in: .circle)
-                    .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                    .accessibilityLabel("Clear path")
-                    .accessibilityHint("Double tap to remove all repeaters from the path")
-
-                    // Run Trace button
+            ZStack {
+                // Run Trace button always centered
+                if mapViewModel.hasPath {
                     Button {
                         Task {
                             await mapViewModel.runTrace()
@@ -184,28 +195,48 @@ struct TracePathMapView: View {
                     }
                     .liquidGlassProminentButtonStyle()
                     .disabled(!mapViewModel.canRunTrace)
+                }
 
-                    // Save button (only after successful trace)
-                    if mapViewModel.canSave {
+                // Side buttons float to edges
+                if mapViewModel.hasPath {
+                    HStack {
+                        // Clear button
                         Button {
-                            saveName = mapViewModel.generatePathName()
-                            showingSavePrompt = true
+                            showingClearConfirmation = true
                         } label: {
-                            Image(systemName: "square.and.arrow.down")
+                            Image(systemName: "xmark.circle.fill")
                                 .font(.title2)
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
-                        .background(.regularMaterial, in: .circle)
-                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                        .accessibilityLabel("Save path")
-                        .accessibilityHint("Double tap to save this traced path")
-                        .transition(.scale.combined(with: .opacity))
+                        .accessibilityLabel("Clear path")
+                        .accessibilityHint("Double tap to remove all repeaters from the path")
+
+                        Spacer()
+
+                        // Save button (only after successful trace)
+                        if mapViewModel.canSave {
+                            Button {
+                                saveName = mapViewModel.generatePathName()
+                                showingSavePrompt = true
+                            } label: {
+                                Image(systemName: "square.and.arrow.down")
+                                    .font(.title2)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .buttonStyle(.plain)
+                            .background(.regularMaterial, in: .circle)
+                            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                            .accessibilityLabel("Save path")
+                            .accessibilityHint("Double tap to save this traced path")
+                            .transition(.scale.combined(with: .opacity))
+                        }
                     }
+                    .padding(.horizontal, 60)
+                    .animation(.spring(response: 0.3), value: mapViewModel.canSave)
                 }
-                .padding(.bottom, 24)
-                .animation(.spring(response: 0.3), value: mapViewModel.canSave)
             }
+            .padding(.bottom, 24)
         }
     }
 
@@ -231,13 +262,14 @@ struct TracePathMapView: View {
                     Button {
                         mapViewModel.showLabels.toggle()
                     } label: {
-                        Image(systemName: mapViewModel.showLabels ? "textformat" : "textformat.slash")
+                        Image(systemName: "character.textbox")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
                             .frame(width: 44, height: 44)
                             .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(mapViewModel.showLabels ? "Hide labels" : "Show labels")
 
                     // Center on path
                     if mapViewModel.hasPath {

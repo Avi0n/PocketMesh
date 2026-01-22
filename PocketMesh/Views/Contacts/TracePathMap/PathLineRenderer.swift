@@ -16,7 +16,7 @@ final class PathLineRenderer: MKPolylineRenderer {
 
         switch pathOverlay.signalQuality {
         case .untraced:
-            strokeColor = UIColor.white.withAlphaComponent(0.8)
+            strokeColor = UIColor.systemGray
             lineWidth = 2
             lineDashPattern = [8, 6]
 

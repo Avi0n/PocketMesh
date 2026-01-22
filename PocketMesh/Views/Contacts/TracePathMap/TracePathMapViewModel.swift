@@ -106,22 +106,36 @@ final class TracePathMapViewModel {
         return path.last?.hashByte == hashByte
     }
 
-    /// Handle tap on a repeater
-    func handleRepeaterTap(_ repeater: ContactDTO) {
-        guard let traceViewModel else { return }
+    enum RepeaterTapResult {
+        case added
+        case removed
+        case rejectedMiddleHop
+        case ignored
+    }
 
+    /// Handle tap on a repeater, returns the result of the tap action
+    @discardableResult
+    func handleRepeaterTap(_ repeater: ContactDTO) -> RepeaterTapResult {
+        guard let traceViewModel else { return .ignored }
+
+        let result: RepeaterTapResult
         if isLastHop(repeater) {
             // Remove last hop
             if let lastIndex = traceViewModel.outboundPath.indices.last {
                 traceViewModel.removeRepeater(at: lastIndex)
             }
+            result = .removed
         } else if !isRepeaterInPath(repeater) {
             // Add to path
             traceViewModel.addRepeater(repeater)
+            result = .added
+        } else {
+            // Tapping middle hop - provide feedback that this action is not allowed
+            result = .rejectedMiddleHop
         }
-        // Tapping middle hop does nothing
 
         rebuildOverlays()
+        return result
     }
 
     /// Clear the path
@@ -134,6 +148,10 @@ final class TracePathMapViewModel {
 
     func runTrace() async {
         await traceViewModel?.runTrace()
+
+        if traceViewModel?.result?.success == true {
+            centerOnPath()
+        }
     }
 
     func savePath(name: String) async -> Bool {
@@ -280,6 +298,37 @@ final class TracePathMapViewModel {
             latitudeDelta: (maxLat - minLat) * 1.5 + 0.01,
             longitudeDelta: (maxLon - minLon) * 1.5 + 0.01
         )
+
+        cameraRegion = MKCoordinateRegion(center: center, span: span)
+    }
+
+    /// Center map to show all repeaters
+    func centerOnAllRepeaters() {
+        let repeaters = repeatersWithLocation
+        guard !repeaters.isEmpty else {
+            cameraRegion = nil
+            return
+        }
+
+        var minLat = Double.greatestFiniteMagnitude
+        var maxLat = -Double.greatestFiniteMagnitude
+        var minLon = Double.greatestFiniteMagnitude
+        var maxLon = -Double.greatestFiniteMagnitude
+
+        for repeater in repeaters {
+            minLat = min(minLat, repeater.latitude)
+            maxLat = max(maxLat, repeater.latitude)
+            minLon = min(minLon, repeater.longitude)
+            maxLon = max(maxLon, repeater.longitude)
+        }
+
+        let centerLat = (minLat + maxLat) / 2
+        let centerLon = (minLon + maxLon) / 2
+        let latDelta = max(0.01, (maxLat - minLat) * 1.5)
+        let lonDelta = max(0.01, (maxLon - minLon) * 1.5)
+
+        let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+        let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
 
         cameraRegion = MKCoordinateRegion(center: center, span: span)
     }

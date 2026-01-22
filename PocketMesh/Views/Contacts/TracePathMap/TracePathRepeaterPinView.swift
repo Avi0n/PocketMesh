@@ -15,6 +15,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
     private var numberBadge: UILabel?
     private var nameLabel: UILabel?
     private var nameLabelContainer: UIView?
+    private var nameLabelPositionConstraints: [NSLayoutConstraint] = []
 
     // MARK: - State
 
@@ -125,7 +126,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
                 accessibilityTraits = [.button, .selected]
             } else {
                 accessibilityLabel = "Repeater: \(repeater.displayName), hop \(hopIndex ?? 0) in path"
-                accessibilityHint = nil
+                accessibilityHint = "This hop cannot be removed. Only the last hop can be removed."
                 accessibilityTraits = [.button, .selected, .notEnabled]
             }
         } else {
@@ -184,6 +185,16 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         let totalHeight = circleSize + triangleSize + 4
         frame = CGRect(x: 0, y: 0, width: ringSize, height: totalHeight)
         centerOffset = CGPoint(x: 0, y: -totalHeight / 2)
+
+        // Name label position constraints (must be set after deactivation above)
+        NSLayoutConstraint.deactivate(nameLabelPositionConstraints)
+        if let blur = nameLabelContainer {
+            nameLabelPositionConstraints = [
+                blur.centerXAnchor.constraint(equalTo: circleView.centerXAnchor),
+                blur.bottomAnchor.constraint(equalTo: circleView.topAnchor, constant: -4)
+            ]
+            NSLayoutConstraint.activate(nameLabelPositionConstraints)
+        }
     }
 
     // MARK: - Number Badge
@@ -241,9 +252,9 @@ final class TracePathRepeaterPinView: MKAnnotationView {
             label.textAlignment = .center
             blur.contentView.addSubview(label)
 
+            // Internal constraints only (label within blur)
+            // Position constraints are set in updateLayout() to survive constraint deactivation
             NSLayoutConstraint.activate([
-                blur.centerXAnchor.constraint(equalTo: centerXAnchor),
-                blur.bottomAnchor.constraint(equalTo: topAnchor, constant: 0),
                 label.topAnchor.constraint(equalTo: blur.topAnchor, constant: 4),
                 label.bottomAnchor.constraint(equalTo: blur.bottomAnchor, constant: -4),
                 label.leadingAnchor.constraint(equalTo: blur.leadingAnchor, constant: 8),

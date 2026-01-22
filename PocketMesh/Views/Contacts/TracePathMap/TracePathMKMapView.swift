@@ -110,7 +110,7 @@ struct TracePathMKMapView: UIViewRepresentable {
                     inPath: inPath,
                     hopIndex: index,
                     isLastHop: isLast,
-                    showLabel: showLabels && !inPath
+                    showLabel: showLabels
                 )
             }
         }
@@ -192,7 +192,7 @@ struct TracePathMKMapView: UIViewRepresentable {
                     inPath: inPath,
                     hopIndex: index,
                     isLastHop: isLast,
-                    showLabel: showLabels && !inPath
+                    showLabel: showLabels
                 )
 
                 view.onTap = { [weak self] in
@@ -239,6 +239,8 @@ struct TracePathMKMapView: UIViewRepresentable {
             // Cancel any pending region task before starting new one
             pendingRegionTask?.cancel()
             pendingRegionTask = Task { @MainActor in
+                // Check cancellation before any state mutations
+                guard !Task.isCancelled else { return }
                 self.setCameraRegion(mapView.region)
                 // Brief delay then clear gesture flag
                 try? await Task.sleep(for: .milliseconds(100))
