@@ -177,6 +177,7 @@ public final class ConnectionManager {
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
     private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
+    private let userDisconnectedKey = "com.pocketmesh.userExplicitlyDisconnected"
 
     // MARK: - Simulator Support
 
@@ -210,6 +211,21 @@ public final class ConnectionManager {
     private func clearPersistedConnection() {
         UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
         UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
+    }
+
+    /// Whether the user explicitly disconnected (should skip auto-reconnect)
+    private var userExplicitlyDisconnected: Bool {
+        UserDefaults.standard.bool(forKey: userDisconnectedKey)
+    }
+
+    /// Records that user explicitly disconnected
+    private func setUserDisconnected() {
+        UserDefaults.standard.set(true, forKey: userDisconnectedKey)
+    }
+
+    /// Clears user disconnect flag (when user initiates connection)
+    private func clearUserDisconnected() {
+        UserDefaults.standard.removeObject(forKey: userDisconnectedKey)
     }
 
     /// Checks if a device is connected to the system by another app.
@@ -640,6 +656,11 @@ public final class ConnectionManager {
         logger.info("Activating ConnectionManager")
 
         #if targetEnvironment(simulator)
+        // Skip auto-reconnect if user explicitly disconnected
+        if userExplicitlyDisconnected {
+            logger.info("Simulator: skipping auto-reconnect - user previously disconnected")
+            return
+        }
         // On simulator, skip ASK entirely and auto-reconnect to simulator device
         if let lastDeviceID = lastConnectedDeviceID,
            lastDeviceID == MockDataProvider.simulatorDeviceID {
@@ -661,6 +682,12 @@ public final class ConnectionManager {
         } catch {
             logger.error("Failed to activate AccessorySetupKit: \(error.localizedDescription)")
             // Don't return - WiFi doesn't need ASK
+        }
+
+        // Skip auto-reconnect if user explicitly disconnected
+        if userExplicitlyDisconnected {
+            logger.info("Skipping auto-reconnect: user previously disconnected")
+            return
         }
 
         // Auto-reconnect to last device if available
@@ -723,6 +750,7 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly pairing
         shouldBeConnected = true
+        clearUserDisconnected()
 
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
@@ -828,6 +856,7 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly connecting
         shouldBeConnected = true
+        clearUserDisconnected()
 
         do {
             // Validate device is still registered with ASK
@@ -873,6 +902,7 @@ public final class ConnectionManager {
 
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
+        setUserDisconnected()
 
         // Stop event monitoring
         await services?.stopEventMonitoring()
@@ -909,6 +939,7 @@ public final class ConnectionManager {
 
         connectionState = .connecting
         shouldBeConnected = true
+        clearUserDisconnected()
 
         do {
             // Connect simulator mode
@@ -975,6 +1006,7 @@ public final class ConnectionManager {
 
         connectionState = .connecting
         shouldBeConnected = true
+        clearUserDisconnected()
 
         do {
             // Create and configure WiFi transport
@@ -1081,6 +1113,7 @@ public final class ConnectionManager {
 
         // Update intent
         shouldBeConnected = true
+        clearUserDisconnected()
 
         // Validate device is registered with ASK
         if accessorySetupKit.isSessionActive {

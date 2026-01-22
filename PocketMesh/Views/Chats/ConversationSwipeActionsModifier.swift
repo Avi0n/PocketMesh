@@ -1,9 +1,15 @@
 import SwiftUI
 
 struct ConversationSwipeActionsModifier: ViewModifier {
+    @Environment(AppState.self) private var appState: AppState?
+
     let conversation: Conversation
     let viewModel: ChatViewModel
     let onDelete: () -> Void
+
+    private var isConnected: Bool {
+        appState?.connectionState == .ready
+    }
 
     func body(content: Content) -> some View {
         content
@@ -13,6 +19,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .disabled(!isConnected)
 
                 Button {
                     Task {
@@ -25,6 +32,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                     )
                 }
                 .tint(.indigo)
+                .disabled(!isConnected)
             }
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 Button {
@@ -38,6 +46,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                     )
                 }
                 .tint(.yellow)
+                .disabled(!isConnected)
             }
     }
 }
