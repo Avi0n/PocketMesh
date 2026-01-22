@@ -544,10 +544,10 @@ public final class AppState {
     }
 
     /// Connect to a device via WiFi/TCP
-    func connectViaWiFi(host: String, port: UInt16) async throws {
+    func connectViaWiFi(host: String, port: UInt16, forceFullSync: Bool = false) async throws {
         // Hide disconnected pill when starting new connection
         hideDisconnectedPill()
-        try await connectionManager.connectViaWiFi(host: host, port: port)
+        try await connectionManager.connectViaWiFi(host: host, port: port, forceFullSync: forceFullSync)
         await wireServicesIfConnected()
     }
 
