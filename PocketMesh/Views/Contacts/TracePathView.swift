@@ -306,7 +306,7 @@ struct TracePathView: View {
                             .padding(.vertical, 4)
                     }
                     .liquidGlassProminentButtonStyle()
-                    .disabled(!viewModel.canRunTrace)
+                    .radioDisabled(for: appState.connectionState, or: !viewModel.canRunTraceWhenConnected)
                     .accessibilityLabel("Run trace")
                     .accessibilityHint(viewModel.batchEnabled
                         ? "Double tap to run \(viewModel.batchSize) traces"

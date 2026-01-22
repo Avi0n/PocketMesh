@@ -25,8 +25,8 @@ struct NodeSettingsSection: View {
                     isEditingName = true
                 }
                 .foregroundStyle(.secondary)
-                .disabled(isSaving || appState.connectionState != .ready)
             }
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             // Public Key (copy)
             if let device = appState.connectedDevice {
@@ -75,7 +75,7 @@ struct NodeSettingsSection: View {
                 }
             }
             .foregroundStyle(.primary)
-            .disabled(isSaving || appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             // Share Location Toggle
             Toggle(isOn: $shareLocation) {
@@ -84,7 +84,7 @@ struct NodeSettingsSection: View {
             .onChange(of: shareLocation) { _, newValue in
                 updateShareLocation(newValue)
             }
-            .disabled(isSaving || appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
         } header: {
             Text("Node")

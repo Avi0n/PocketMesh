@@ -346,6 +346,7 @@ struct ContactDetailView: View {
                     } label: {
                         Label("Send Message", systemImage: "message.fill")
                     }
+                    .radioDisabled(for: appState.connectionState)
                 }
             }
 
@@ -376,6 +377,7 @@ struct ContactDetailView: View {
             } label: {
                 Label("Share Contact via Advert", systemImage: "antenna.radiowaves.left.and.right")
             }
+            .radioDisabled(for: appState.connectionState)
         }
     }
 
@@ -567,7 +569,7 @@ struct ContactDetailView: View {
                 } label: {
                     Label("Discover Path", systemImage: "antenna.radiowaves.left.and.right")
                 }
-                .disabled(appState.connectionState != .ready)
+                .radioDisabled(for: appState.connectionState)
             }
 
             // Edit Path button (secondary)
@@ -580,7 +582,7 @@ struct ContactDetailView: View {
             } label: {
                 Label("Edit Path", systemImage: "pencil")
             }
-            .disabled(appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState)
 
             // Reset Path button (destructive, disabled when already flood)
             Button(role: .destructive) {
@@ -598,7 +600,7 @@ struct ContactDetailView: View {
                     }
                 }
             }
-            .disabled(pathViewModel.isSettingPath || currentContact.isFloodRouted || appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState, or: pathViewModel.isSettingPath || currentContact.isFloodRouted)
         } header: {
             Text("Network Path")
         } footer: {
@@ -697,6 +699,7 @@ struct ContactDetailView: View {
                         systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
                     )
                 }
+                .radioDisabled(for: appState.connectionState)
             }
 
             Button(role: .destructive) {
@@ -704,6 +707,7 @@ struct ContactDetailView: View {
             } label: {
                 Label("Delete \(currentContact.type.displayName)", systemImage: "trash")
             }
+            .radioDisabled(for: appState.connectionState)
         } header: {
             Text("Danger Zone")
         }

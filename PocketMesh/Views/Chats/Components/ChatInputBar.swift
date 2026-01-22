@@ -99,6 +99,8 @@ struct ChatInputBar: View {
     private var sendAccessibilityHint: String {
         if isOverLimit {
             return "Remove \(characterCount - maxCharacters) characters to send"
+        } else if appState.connectionState != .ready {
+            return "Requires radio connection"
         } else if canSend {
             return "Tap to send your message"
         } else {

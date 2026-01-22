@@ -21,7 +21,7 @@ struct ContactsSettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .disabled(isSaving || appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
         } header: {
             Text("Nodes")
         }

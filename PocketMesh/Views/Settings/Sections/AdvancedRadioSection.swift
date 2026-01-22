@@ -103,7 +103,7 @@ struct AdvancedRadioSection: View {
                 }
                 .animation(.default, value: showSuccess)
             }
-            .disabled(isApplying || showSuccess || appState.connectionState != .ready)
+            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess)
             }
         } header: {
             Text("Radio Configuration")

@@ -100,7 +100,7 @@ struct LocationPickerView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveLocation() }
-                        .disabled(isSaving || appState.connectionState != .ready)
+                        .radioDisabled(for: appState.connectionState, or: isSaving)
                 }
             }
             .onAppear {
