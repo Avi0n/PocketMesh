@@ -909,12 +909,13 @@ public actor SyncCoordinator {
         _ timestamp: UInt32,
         receiveTime: Date = Date()
     ) -> (correctedTimestamp: UInt32, wasCorrected: Bool) {
-        let senderDate = Date(timeIntervalSince1970: TimeInterval(timestamp))
-        let futureThreshold = receiveTime.addingTimeInterval(timestampToleranceFuture)
-        let pastThreshold = receiveTime.addingTimeInterval(-timestampTolerancePast)
+        // Use integer seconds to avoid sub-second precision issues at boundaries
+        let receiveSeconds = UInt32(receiveTime.timeIntervalSince1970)
+        let futureThreshold = receiveSeconds + UInt32(timestampToleranceFuture)
+        let pastThreshold = receiveSeconds - UInt32(timestampTolerancePast)
 
-        if senderDate > futureThreshold || senderDate < pastThreshold {
-            return (UInt32(receiveTime.timeIntervalSince1970), true)
+        if timestamp > futureThreshold || timestamp < pastThreshold {
+            return (receiveSeconds, true)
         }
         return (timestamp, false)
     }
