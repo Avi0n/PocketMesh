@@ -111,7 +111,7 @@ struct HashtagChannelNavigationTests {
             isEnabled: true,
             lastMessageDate: nil,
             unreadCount: 0,
-            isMuted: false
+            notificationLevel: .all
         )
     }
 }

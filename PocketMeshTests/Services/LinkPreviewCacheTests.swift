@@ -256,7 +256,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
     func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {}
-    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) async throws {}
+    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) throws {}
 
     // Contact Operations
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
@@ -335,4 +335,8 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func deleteDiscoveredNode(id: UUID) async throws {}
     func clearDiscoveredNodes(deviceID: UUID) async throws {}
     func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
+
+    // Notification Level
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
 }

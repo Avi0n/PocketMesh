@@ -797,4 +797,36 @@ struct PersistenceStoreTests {
         // Only Alice's 2 unreads should count, Bob is muted
         #expect(contacts == 2)
     }
+
+    @Test("Notification levels affect badge count correctly")
+    func notificationLevelsAffectBadgeCount() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create channel with unreads
+        let channelInfo = ChannelInfo(index: 1, name: "Test", secret: Data(repeating: 0x42, count: 16))
+        let channelID = try await store.saveChannel(deviceID: device.id, from: channelInfo)
+        try await store.incrementChannelUnreadCount(channelID: channelID)
+        try await store.incrementChannelUnreadCount(channelID: channelID)
+
+        // Default (all) - should count all unreads
+        var counts = try await store.getTotalUnreadCounts()
+        #expect(counts.channels == 2)
+
+        // Muted - should exclude from badge
+        try await store.setChannelNotificationLevel(channelID, level: .muted)
+        counts = try await store.getTotalUnreadCounts()
+        #expect(counts.channels == 0)
+
+        // Mentions only with no mentions - should show 0
+        try await store.setChannelNotificationLevel(channelID, level: .mentionsOnly)
+        counts = try await store.getTotalUnreadCounts()
+        #expect(counts.channels == 0)
+
+        // Mentions only with mentions - should show mention count
+        try await store.incrementChannelUnreadMentionCount(channelID: channelID)
+        counts = try await store.getTotalUnreadCounts()
+        #expect(counts.channels == 1)
+    }
 }
