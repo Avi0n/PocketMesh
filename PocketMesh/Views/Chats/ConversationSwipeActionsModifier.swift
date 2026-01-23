@@ -17,7 +17,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                 Button(role: .destructive) {
                     onDelete()
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(L10n.Chats.Chats.SwipeAction.delete, systemImage: "trash")
                 }
                 .disabled(!isConnected)
 
@@ -27,7 +27,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                     }
                 } label: {
                     Label(
-                        conversation.isMuted ? "Unmute" : "Mute",
+                        conversation.isMuted ? L10n.Chats.Chats.SwipeAction.unmute : L10n.Chats.Chats.SwipeAction.mute,
                         systemImage: conversation.isMuted ? "bell" : "bell.slash"
                     )
                 }
@@ -41,7 +41,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                     }
                 } label: {
                     Label(
-                        conversation.isFavorite ? "Unfavorite" : "Favorite",
+                        conversation.isFavorite ? L10n.Chats.Chats.SwipeAction.unfavorite : L10n.Chats.Chats.SwipeAction.favorite,
                         systemImage: conversation.isFavorite ? "star.slash" : "star.fill"
                     )
                 }

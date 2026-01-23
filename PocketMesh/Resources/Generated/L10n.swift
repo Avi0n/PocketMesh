@@ -11,7 +11,673 @@ import Foundation
 // swiftlint:disable nesting type_body_length type_name vertical_whitespace_opening_braces
 public enum L10n {
   public enum Chats {
+    public enum Chats {
+      /// Location: ChatsView.swift - Navigation title for main chat list
+      public static let title = L10n.tr("Chats", "chats.title", fallback: "Chats")
+      public enum Accessibility {
+        /// Location: ChatsView.swift - VoiceOver announcement when viewing cached data offline
+        public static let offlineAnnouncement = L10n.tr("Chats", "chats.accessibility.offlineAnnouncement", fallback: "Viewing cached data. Connect to device for updates.")
+      }
+      public enum Alert {
+        public enum CannotRefresh {
+          /// Location: ChatsView.swift - Alert message for offline refresh
+          public static let message = L10n.tr("Chats", "chats.alert.cannotRefresh.message", fallback: "Connect to your device to get the latest messages.")
+          /// Location: ChatsView.swift - Alert title when offline refresh attempted
+          public static let title = L10n.tr("Chats", "chats.alert.cannotRefresh.title", fallback: "Cannot Refresh")
+        }
+        public enum LeaveRoom {
+          /// Location: ChatsView.swift - Button to confirm leaving a room
+          public static let confirm = L10n.tr("Chats", "chats.alert.leaveRoom.confirm", fallback: "Leave")
+          /// Location: ChatsView.swift - Alert message explaining what leaving a room does
+          public static let message = L10n.tr("Chats", "chats.alert.leaveRoom.message", fallback: "This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
+          /// Location: ChatsView.swift - Alert title for leaving a room
+          public static let title = L10n.tr("Chats", "chats.alert.leaveRoom.title", fallback: "Leave Room")
+        }
+        public enum UnableToSend {
+          /// Location: ChatView.swift - Alert message when message send fails
+          public static let message = L10n.tr("Chats", "chats.alert.unableToSend.message", fallback: "Please ensure your device is connected and try again.")
+          /// Location: ChatView.swift - Alert title when message send fails
+          public static let title = L10n.tr("Chats", "chats.alert.unableToSend.title", fallback: "Unable to Send")
+        }
+      }
+      public enum Channel {
+        /// Location: ChannelChatView.swift - Fallback channel name format - %d is channel index
+        public static func defaultName(_ p1: Int) -> String {
+          return L10n.tr("Chats", "chats.channel.defaultName", p1, fallback: "Channel %d")
+        }
+        /// Location: ChannelChatView.swift - Header subtitle for private channels
+        public static let typePrivate = L10n.tr("Chats", "chats.channel.typePrivate", fallback: "Private Channel")
+        /// Location: ChannelChatView.swift - Header subtitle for public channels
+        public static let typePublic = L10n.tr("Chats", "chats.channel.typePublic", fallback: "Public Channel")
+        public enum EmptyState {
+          /// Location: ChannelChatView.swift - Empty state message
+          public static let noMessages = L10n.tr("Chats", "chats.channel.emptyState.noMessages", fallback: "No messages yet")
+          /// Location: ChannelChatView.swift - Empty state description for private channel
+          public static let privateDescription = L10n.tr("Chats", "chats.channel.emptyState.privateDescription", fallback: "This is a private channel")
+          /// Location: ChannelChatView.swift - Empty state description for public channel
+          public static let publicDescription = L10n.tr("Chats", "chats.channel.emptyState.publicDescription", fallback: "This is a public broadcast channel")
+        }
+      }
+      public enum ChannelInfo {
+        /// Location: ChannelInfoSheet.swift - Button to copy secret key
+        public static let copy = L10n.tr("Chats", "chats.channelInfo.copy", fallback: "Copy")
+        /// Location: ChannelInfoSheet.swift - Delete channel button
+        public static let deleteButton = L10n.tr("Chats", "chats.channelInfo.deleteButton", fallback: "Delete Channel")
+        /// Location: ChannelInfoSheet.swift - Footer explaining delete action
+        public static let deleteFooter = L10n.tr("Chats", "chats.channelInfo.deleteFooter", fallback: "Deleting removes this channel from your device. You can rejoin later if you have the secret key.")
+        /// Location: ChannelInfoSheet.swift - Label for last message date
+        public static let lastMessage = L10n.tr("Chats", "chats.channelInfo.lastMessage", fallback: "Last Message")
+        /// Location: ChannelInfoSheet.swift - Section header for manual sharing
+        public static let manualSharing = L10n.tr("Chats", "chats.channelInfo.manualSharing", fallback: "Manual Sharing")
+        /// Location: ChannelInfoSheet.swift - Footer explaining manual sharing
+        public static let manualSharingFooter = L10n.tr("Chats", "chats.channelInfo.manualSharingFooter", fallback: "Share the channel name and this secret key for others to join manually.")
+        /// Location: ChannelInfoSheet.swift - QR code instruction text
+        public static let scanToJoin = L10n.tr("Chats", "chats.channelInfo.scanToJoin", fallback: "Scan to join this channel")
+        /// Location: ChannelInfoSheet.swift - Label for secret key
+        public static let secretKey = L10n.tr("Chats", "chats.channelInfo.secretKey", fallback: "Secret Key")
+        /// Location: ChannelInfoSheet.swift - Section header for QR sharing
+        public static let shareChannel = L10n.tr("Chats", "chats.channelInfo.shareChannel", fallback: "Share Channel")
+        /// Location: ChannelInfoSheet.swift - Label for channel slot
+        public static let slot = L10n.tr("Chats", "chats.channelInfo.slot", fallback: "Slot")
+        /// Location: ChannelInfoSheet.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.channelInfo.title", fallback: "Channel Info")
+        public enum ChannelType {
+          /// Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number
+          public static func hashtag(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.channelInfo.channelType.hashtag", p1, fallback: "Hashtag Channel • Slot %d")
+          }
+          /// Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number
+          public static func `private`(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.channelInfo.channelType.private", p1, fallback: "Private Channel • Slot %d")
+          }
+          /// Location: ChannelInfoSheet.swift - Channel type label for public channel
+          public static let `public` = L10n.tr("Chats", "chats.channelInfo.channelType.public", fallback: "Public Channel • Slot 0")
+        }
+        public enum DeleteConfirm {
+          /// Location: ChannelInfoSheet.swift - Confirmation dialog message
+          public static let message = L10n.tr("Chats", "chats.channelInfo.deleteConfirm.message", fallback: "This will remove the channel from your device and delete all local messages. This action cannot be undone.")
+          /// Location: ChannelInfoSheet.swift - Confirmation dialog title
+          public static let title = L10n.tr("Chats", "chats.channelInfo.deleteConfirm.title", fallback: "Delete Channel")
+        }
+      }
+      public enum ChannelOptions {
+        /// Location: ChannelOptionsSheet.swift - Loading indicator text
+        public static let loading = L10n.tr("Chats", "chats.channelOptions.loading", fallback: "Loading channels...")
+        /// Location: ChannelOptionsSheet.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.channelOptions.title", fallback: "New Channel")
+        public enum CreatePrivate {
+          /// Location: ChannelOptionsSheet.swift - Create private channel option description
+          public static let description = L10n.tr("Chats", "chats.channelOptions.createPrivate.description", fallback: "Generate a secret key and QR code to share")
+          /// Location: ChannelOptionsSheet.swift - Create private channel option title
+          public static let title = L10n.tr("Chats", "chats.channelOptions.createPrivate.title", fallback: "Create a Private Channel")
+        }
+        public enum Footer {
+          /// Location: ChannelOptionsSheet.swift - Footer when public channel already exists
+          public static let hasPublic = L10n.tr("Chats", "chats.channelOptions.footer.hasPublic", fallback: "The public channel is already configured on slot 0.")
+          /// Location: ChannelOptionsSheet.swift - Footer when all slots are in use
+          public static let noSlots = L10n.tr("Chats", "chats.channelOptions.footer.noSlots", fallback: "All channel slots are in use. Delete an existing channel to add a new one.")
+        }
+        public enum JoinHashtag {
+          /// Location: ChannelOptionsSheet.swift - Join hashtag channel option description
+          public static let description = L10n.tr("Chats", "chats.channelOptions.joinHashtag.description", fallback: "Public channel anyone can join by name")
+          /// Location: ChannelOptionsSheet.swift - Join hashtag channel option title
+          public static let title = L10n.tr("Chats", "chats.channelOptions.joinHashtag.title", fallback: "Join a Hashtag Channel")
+        }
+        public enum JoinPrivate {
+          /// Location: ChannelOptionsSheet.swift - Join private channel option description
+          public static let description = L10n.tr("Chats", "chats.channelOptions.joinPrivate.description", fallback: "Enter channel name and secret key")
+          /// Location: ChannelOptionsSheet.swift - Join private channel option title
+          public static let title = L10n.tr("Chats", "chats.channelOptions.joinPrivate.title", fallback: "Join a Private Channel")
+        }
+        public enum JoinPublic {
+          /// Location: ChannelOptionsSheet.swift - Join public channel option description
+          public static let description = L10n.tr("Chats", "chats.channelOptions.joinPublic.description", fallback: "The default public channel")
+          /// Location: ChannelOptionsSheet.swift - Join public channel option title
+          public static let title = L10n.tr("Chats", "chats.channelOptions.joinPublic.title", fallback: "Join the Public Channel")
+        }
+        public enum ScanQR {
+          /// Location: ChannelOptionsSheet.swift - Scan QR code option description
+          public static let description = L10n.tr("Chats", "chats.channelOptions.scanQR.description", fallback: "Join a channel by scanning its QR code")
+          /// Location: ChannelOptionsSheet.swift - Scan QR code option title
+          public static let title = L10n.tr("Chats", "chats.channelOptions.scanQR.title", fallback: "Scan a QR Code")
+        }
+        public enum Section {
+          /// Location: ChannelOptionsSheet.swift - Section header for private channels
+          public static let `private` = L10n.tr("Chats", "chats.channelOptions.section.private", fallback: "Private Channels")
+          /// Location: ChannelOptionsSheet.swift - Section header for public channels
+          public static let `public` = L10n.tr("Chats", "chats.channelOptions.section.public", fallback: "Public Channels")
+        }
+      }
+      public enum Common {
+        /// Location: Various - Cancel button (use L10n.Localizable.Common.cancel)
+        public static let cancel = L10n.tr("Chats", "chats.common.cancel", fallback: "Cancel")
+        /// Location: Various - Done button (use L10n.Localizable.Common.done)
+        public static let done = L10n.tr("Chats", "chats.common.done", fallback: "Done")
+        /// Location: Various - OK button (use L10n.Localizable.Common.ok)
+        public static let ok = L10n.tr("Chats", "chats.common.ok", fallback: "OK")
+      }
+      public enum Compose {
+        /// Location: ChatsView.swift - Button to create or join a channel
+        public static let newChannel = L10n.tr("Chats", "chats.compose.newChannel", fallback: "New Channel")
+        /// Location: ChatsView.swift - Button to start a new direct chat
+        public static let newChat = L10n.tr("Chats", "chats.compose.newChat", fallback: "New Chat")
+        /// Location: ChatsView.swift - Menu label for new message options
+        public static let newMessage = L10n.tr("Chats", "chats.compose.newMessage", fallback: "New Message")
+      }
+      public enum ConnectionStatus {
+        /// Location: ChatView.swift - Connection status format for direct path - %d is hop count
+        public static func direct(_ p1: Int) -> String {
+          return L10n.tr("Chats", "chats.connectionStatus.direct", p1, fallback: "Direct • %d hops")
+        }
+        /// Location: ChatView.swift - Connection status for flood routed contacts
+        public static let floodRouting = L10n.tr("Chats", "chats.connectionStatus.floodRouting", fallback: "Flood routing")
+        /// Location: ChatView.swift - Connection status when route is unknown
+        public static let unknown = L10n.tr("Chats", "chats.connectionStatus.unknown", fallback: "Unknown route")
+      }
+      public enum ContactInfo {
+        /// Location: ChatView.swift - Label showing contact has location
+        public static let hasLocation = L10n.tr("Chats", "chats.contactInfo.hasLocation", fallback: "Has location")
+      }
+      public enum CreatePrivate {
+        /// Location: CreatePrivateChannelView.swift - Text field placeholder for channel name
+        public static let channelName = L10n.tr("Chats", "chats.createPrivate.channelName", fallback: "Channel Name")
+        /// Location: CreatePrivateChannelView.swift - Button to create channel
+        public static let createButton = L10n.tr("Chats", "chats.createPrivate.createButton", fallback: "Create Channel")
+        /// Location: CreatePrivateChannelView.swift - Footer explaining generated secret
+        public static let secretFooter = L10n.tr("Chats", "chats.createPrivate.secretFooter", fallback: "A random secret key has been generated. You'll be able to share it via QR code after creating the channel.")
+        /// Location: CreatePrivateChannelView.swift - Footer explaining manual sharing
+        public static let shareManuallyFooter = L10n.tr("Chats", "chats.createPrivate.shareManuallyFooter", fallback: "Share the channel name and this secret key with others. They'll need both to join.")
+        /// Location: CreatePrivateChannelView.swift - Title when creating channel
+        public static let titleCreate = L10n.tr("Chats", "chats.createPrivate.titleCreate", fallback: "Create Private Channel")
+        /// Location: CreatePrivateChannelView.swift - Title when sharing created channel
+        public static let titleShare = L10n.tr("Chats", "chats.createPrivate.titleShare", fallback: "Share Private Channel")
+        public enum Section {
+          /// Location: CreatePrivateChannelView.swift - Section header for channel details
+          public static let details = L10n.tr("Chats", "chats.createPrivate.section.details", fallback: "Channel Details")
+          /// Location: CreatePrivateChannelView.swift - Section header for generated secret
+          public static let secret = L10n.tr("Chats", "chats.createPrivate.section.secret", fallback: "Generated Secret")
+          /// Location: CreatePrivateChannelView.swift - Section header for manual sharing
+          public static let shareManually = L10n.tr("Chats", "chats.createPrivate.section.shareManually", fallback: "Share Manually")
+        }
+      }
+      public enum EmptyState {
+        /// Location: ChatsView.swift - Split view placeholder when no conversation selected
+        public static let selectConversation = L10n.tr("Chats", "chats.emptyState.selectConversation", fallback: "Select a conversation")
+        /// Location: ChatView.swift - Empty state text prompting user to start chatting
+        public static let startConversation = L10n.tr("Chats", "chats.emptyState.startConversation", fallback: "Start a conversation")
+        public enum NoChannels {
+          /// Location: ChatsView.swift - Description when no channels
+          public static let description = L10n.tr("Chats", "chats.emptyState.noChannels.description", fallback: "Join or create a channel")
+          /// Location: ChatsView.swift - Title when no channels
+          public static let title = L10n.tr("Chats", "chats.emptyState.noChannels.title", fallback: "No Channels")
+        }
+        public enum NoConversations {
+          /// Location: ChatsView.swift - Description when no conversations exist
+          public static let description = L10n.tr("Chats", "chats.emptyState.noConversations.description", fallback: "Start a conversation from Contacts")
+          /// Location: ChatsView.swift - Title when no conversations exist
+          public static let title = L10n.tr("Chats", "chats.emptyState.noConversations.title", fallback: "No Conversations")
+        }
+        public enum NoDirectMessages {
+          /// Location: ChatsView.swift - Description when no direct messages
+          public static let description = L10n.tr("Chats", "chats.emptyState.noDirectMessages.description", fallback: "Start a chat from Contacts")
+          /// Location: ChatsView.swift - Title when no direct messages
+          public static let title = L10n.tr("Chats", "chats.emptyState.noDirectMessages.title", fallback: "No Direct Messages")
+        }
+        public enum NoFavorites {
+          /// Location: ChatsView.swift - Description when no favorites
+          public static let description = L10n.tr("Chats", "chats.emptyState.noFavorites.description", fallback: "Mark contacts as favorites to see them here")
+          /// Location: ChatsView.swift - Title when no favorites
+          public static let title = L10n.tr("Chats", "chats.emptyState.noFavorites.title", fallback: "No Favorites")
+        }
+        public enum NoUnread {
+          /// Location: ChatsView.swift - Description when no unread messages
+          public static let description = L10n.tr("Chats", "chats.emptyState.noUnread.description", fallback: "You're all caught up")
+          /// Location: ChatsView.swift - Title when no unread messages
+          public static let title = L10n.tr("Chats", "chats.emptyState.noUnread.title", fallback: "No Unread Messages")
+        }
+      }
+      public enum Error {
+        /// Location: ChannelInfoSheet.swift - Error when device not connected
+        public static let noDeviceConnected = L10n.tr("Chats", "chats.error.noDeviceConnected", fallback: "No device connected")
+        /// Location: ChannelInfoSheet.swift - Error when services unavailable
+        public static let servicesUnavailable = L10n.tr("Chats", "chats.error.servicesUnavailable", fallback: "Services not available")
+      }
+      public enum Fab {
+        public enum Badge {
+          /// Location: ScrollToMentionFAB.swift, ScrollToBottomFAB.swift - Badge text for 99+ unread
+          public static let overflow = L10n.tr("Chats", "chats.fab.badge.overflow", fallback: "99+")
+        }
+        public enum ScrollToBottom {
+          /// Location: ScrollToBottomFAB.swift - Accessibility label for scroll to bottom button
+          public static let accessibilityLabel = L10n.tr("Chats", "chats.fab.scrollToBottom.accessibilityLabel", fallback: "Scroll to latest message")
+        }
+        public enum ScrollToMention {
+          /// Location: ScrollToMentionFAB.swift - Accessibility hint for scroll to mention button
+          public static let accessibilityHint = L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityHint", fallback: "Double-tap to navigate to the message")
+          /// Location: ScrollToMentionFAB.swift - Accessibility label for scroll to mention button
+          public static let accessibilityLabel = L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityLabel", fallback: "Scroll to your oldest unread mention")
+        }
+      }
+      public enum Filter {
+        /// Location: ChatsView.swift - Accessibility label when no filter is active
+        public static let accessibilityLabel = L10n.tr("Chats", "chats.filter.accessibilityLabel", fallback: "Filter conversations")
+        /// Location: ChatsView.swift - Accessibility label format when filter is active - %@ is the filter name
+        public static func accessibilityLabelActive(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.filter.accessibilityLabelActive", String(describing: p1), fallback: "Filter conversations, currently showing %@")
+        }
+        /// Location: ChatsView.swift - Filter option for all conversations
+        public static let all = L10n.tr("Chats", "chats.filter.all", fallback: "All")
+        /// Location: ChatsView.swift - Button to clear active filter
+        public static let clear = L10n.tr("Chats", "chats.filter.clear", fallback: "Clear Filter")
+        /// Location: ChatsView.swift - Filter menu title
+        public static let title = L10n.tr("Chats", "chats.filter.title", fallback: "Filter")
+      }
+      public enum Input {
+        /// Location: ChatInputBar.swift - Accessibility hint for text input
+        public static let accessibilityHint = L10n.tr("Chats", "chats.input.accessibilityHint", fallback: "Type your message here")
+        /// Location: ChatInputBar.swift - Accessibility label for text input
+        public static let accessibilityLabel = L10n.tr("Chats", "chats.input.accessibilityLabel", fallback: "Message input")
+        /// Location: ChatInputBar.swift - Accessibility label for character count - %d is current, %d is max
+        public static func characterCount(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Chats", "chats.input.characterCount", p1, p2, fallback: "%d of %d characters")
+        }
+        /// Location: ChatInputBar.swift - Accessibility hint when over character limit - %d is characters to remove
+        public static func removeCharacters(_ p1: Int) -> String {
+          return L10n.tr("Chats", "chats.input.removeCharacters", p1, fallback: "Remove %d characters to send")
+        }
+        /// Location: ChatInputBar.swift - Accessibility hint when not connected
+        public static let requiresConnection = L10n.tr("Chats", "chats.input.requiresConnection", fallback: "Requires radio connection")
+        /// Location: ChatInputBar.swift - Accessibility label for send button
+        public static let sendMessage = L10n.tr("Chats", "chats.input.sendMessage", fallback: "Send message")
+        /// Location: ChatInputBar.swift - Accessibility hint when ready to send
+        public static let tapToSend = L10n.tr("Chats", "chats.input.tapToSend", fallback: "Tap to send your message")
+        /// Location: ChatInputBar.swift - Accessibility label when message too long
+        public static let tooLong = L10n.tr("Chats", "chats.input.tooLong", fallback: "Message too long")
+        /// Location: ChatInputBar.swift - Accessibility hint when message is empty
+        public static let typeFirst = L10n.tr("Chats", "chats.input.typeFirst", fallback: "Type a message first")
+        public enum Placeholder {
+          /// Location: ChatView.swift - Input bar placeholder for direct messages
+          public static let directMessage = L10n.tr("Chats", "chats.input.placeholder.directMessage", fallback: "Private Message")
+        }
+      }
+      public enum JoinFromMessage {
+        /// Location: JoinHashtagFromMessageView.swift - Description of hashtag channels
+        public static let description = L10n.tr("Chats", "chats.joinFromMessage.description", fallback: "Hashtag channels are public. Anyone can join by entering the same name.")
+        /// Location: JoinHashtagFromMessageView.swift - Button to join channel - %@ is channel name
+        public static func joinButton(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.joinFromMessage.joinButton", String(describing: p1), fallback: "Join %@")
+        }
+        /// Location: JoinHashtagFromMessageView.swift - Loading text
+        public static let loading = L10n.tr("Chats", "chats.joinFromMessage.loading", fallback: "Loading...")
+        /// Location: JoinHashtagFromMessageView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.joinFromMessage.title", fallback: "Join Channel")
+        public enum Error {
+          /// Location: JoinHashtagFromMessageView.swift - Error for invalid channel name
+          public static let invalidName = L10n.tr("Chats", "chats.joinFromMessage.error.invalidName", fallback: "Invalid channel name format.")
+          /// Location: JoinHashtagFromMessageView.swift - Error when channel created but couldn't be loaded
+          public static let loadFailed = L10n.tr("Chats", "chats.joinFromMessage.error.loadFailed", fallback: "Channel created but could not be loaded.")
+          /// Location: JoinHashtagFromMessageView.swift - Error for no available slots
+          public static let noSlots = L10n.tr("Chats", "chats.joinFromMessage.error.noSlots", fallback: "No available slots.")
+        }
+        public enum NoDevice {
+          /// Location: JoinHashtagFromMessageView.swift - No device connected description - %@ is channel name
+          public static func description(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.joinFromMessage.noDevice.description", String(describing: p1), fallback: "Connect a device to join %@.")
+          }
+          /// Location: JoinHashtagFromMessageView.swift - No device connected title
+          public static let title = L10n.tr("Chats", "chats.joinFromMessage.noDevice.title", fallback: "No Device Connected")
+        }
+        public enum NoSlots {
+          /// Location: JoinHashtagFromMessageView.swift - No slots available description - %@ is channel name
+          public static func description(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.joinFromMessage.noSlots.description", String(describing: p1), fallback: "All channel slots are full. Remove an existing channel to join %@.")
+          }
+          /// Location: JoinHashtagFromMessageView.swift - No slots available title
+          public static let title = L10n.tr("Chats", "chats.joinFromMessage.noSlots.title", fallback: "No Slots Available")
+        }
+      }
+      public enum JoinHashtag {
+        /// Location: JoinHashtagChannelView.swift - Footer label when channel already joined
+        public static let alreadyJoined = L10n.tr("Chats", "chats.joinHashtag.alreadyJoined", fallback: "Already joined")
+        /// Location: JoinHashtagChannelView.swift - Accessibility label for already joined
+        public static let alreadyJoinedAccessibility = L10n.tr("Chats", "chats.joinHashtag.alreadyJoinedAccessibility", fallback: "Channel already joined")
+        /// Location: JoinHashtagChannelView.swift - Description about encryption
+        public static let encryptionDescription = L10n.tr("Chats", "chats.joinHashtag.encryptionDescription", fallback: "The channel name is used to generate the encryption key. Anyone with the same name can read messages.")
+        /// Location: JoinHashtagChannelView.swift - Accessibility hint for existing channel
+        public static let existingHint = L10n.tr("Chats", "chats.joinHashtag.existingHint", fallback: "Opens the channel you've already joined")
+        /// Location: JoinHashtagChannelView.swift - Footer explaining hashtag channels
+        public static let footer = L10n.tr("Chats", "chats.joinHashtag.footer", fallback: "Hashtag channels are public. Anyone can join by entering the same name. Only lowercase letters, numbers, and hyphens are allowed.")
+        /// Location: JoinHashtagChannelView.swift - Button format for existing channel - %@ is channel name
+        public static func goToButton(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.joinHashtag.goToButton", String(describing: p1), fallback: "Go to #%@")
+        }
+        /// Location: JoinHashtagChannelView.swift - Button format for new channel - %@ is channel name
+        public static func joinButton(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.joinHashtag.joinButton", String(describing: p1), fallback: "Join #%@")
+        }
+        /// Location: JoinHashtagChannelView.swift - Accessibility hint for new channel
+        public static let newHint = L10n.tr("Chats", "chats.joinHashtag.newHint", fallback: "Creates and joins this hashtag channel")
+        /// Location: JoinHashtagChannelView.swift - Text field placeholder
+        public static let placeholder = L10n.tr("Chats", "chats.joinHashtag.placeholder", fallback: "channel-name")
+        /// Location: JoinHashtagChannelView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.joinHashtag.title", fallback: "Join Hashtag Channel")
+        public enum Section {
+          /// Location: JoinHashtagChannelView.swift - Section header
+          public static let header = L10n.tr("Chats", "chats.joinHashtag.section.header", fallback: "Hashtag Channel")
+        }
+      }
+      public enum JoinPrivate {
+        /// Location: JoinPrivateChannelView.swift - Footer explaining how to join
+        public static let footer = L10n.tr("Chats", "chats.joinPrivate.footer", fallback: "Enter the channel name and secret key shared by the channel creator.")
+        /// Location: JoinPrivateChannelView.swift - Button to join channel
+        public static let joinButton = L10n.tr("Chats", "chats.joinPrivate.joinButton", fallback: "Join Channel")
+        /// Location: JoinPrivateChannelView.swift - Text field placeholder for secret key
+        public static let secretKeyPlaceholder = L10n.tr("Chats", "chats.joinPrivate.secretKeyPlaceholder", fallback: "Secret Key (32 hex characters)")
+        /// Location: JoinPrivateChannelView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.joinPrivate.title", fallback: "Join Private Channel")
+        public enum Error {
+          /// Location: JoinPrivateChannelView.swift - Error for invalid secret key format
+          public static let invalidFormat = L10n.tr("Chats", "chats.joinPrivate.error.invalidFormat", fallback: "Invalid secret key format")
+          /// Location: JoinPrivateChannelView.swift - Validation error for invalid secret
+          public static let invalidSecret = L10n.tr("Chats", "chats.joinPrivate.error.invalidSecret", fallback: "Secret key must be exactly 32 hexadecimal characters (0-9, A-F)")
+        }
+      }
+      public enum JoinPublic {
+        /// Location: JoinPublicChannelView.swift - Button to add public channel
+        public static let addButton = L10n.tr("Chats", "chats.joinPublic.addButton", fallback: "Add Public Channel")
+        /// Location: JoinPublicChannelView.swift - Channel name displayed
+        public static let channelName = L10n.tr("Chats", "chats.joinPublic.channelName", fallback: "Public Channel")
+        /// Location: JoinPublicChannelView.swift - Description of public channel
+        public static let description = L10n.tr("Chats", "chats.joinPublic.description", fallback: "The public channel is an open broadcast channel on slot 0. All devices on the mesh network can send and receive messages on this channel.")
+        /// Location: JoinPublicChannelView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.joinPublic.title", fallback: "Join Public Channel")
+      }
+      public enum Message {
+        /// Location: ChatView.swift - Placeholder when message data is unavailable
+        public static let unavailable = L10n.tr("Chats", "chats.message.unavailable", fallback: "Message unavailable")
+        /// Location: ChatView.swift - Accessibility label for unavailable message
+        public static let unavailableAccessibility = L10n.tr("Chats", "chats.message.unavailableAccessibility", fallback: "Message could not be loaded")
+        public enum Action {
+          /// Location: UnifiedMessageBubble.swift - Context menu action to copy
+          public static let copy = L10n.tr("Chats", "chats.message.action.copy", fallback: "Copy")
+          /// Location: UnifiedMessageBubble.swift - Context menu action to delete
+          public static let delete = L10n.tr("Chats", "chats.message.action.delete", fallback: "Delete")
+          /// Location: UnifiedMessageBubble.swift - Context menu submenu label
+          public static let details = L10n.tr("Chats", "chats.message.action.details", fallback: "Details")
+          /// Location: UnifiedMessageBubble.swift - Context menu action to view repeat details
+          public static let repeatDetails = L10n.tr("Chats", "chats.message.action.repeatDetails", fallback: "Repeat Details")
+          /// Location: UnifiedMessageBubble.swift - Context menu action to reply
+          public static let reply = L10n.tr("Chats", "chats.message.action.reply", fallback: "Reply")
+          /// Location: UnifiedMessageBubble.swift - Context menu action to send again
+          public static let sendAgain = L10n.tr("Chats", "chats.message.action.sendAgain", fallback: "Send Again")
+          /// Location: UnifiedMessageBubble.swift - Context menu action to view path
+          public static let viewPath = L10n.tr("Chats", "chats.message.action.viewPath", fallback: "View Path")
+        }
+        public enum Hops {
+          /// Location: UnifiedMessageBubble.swift - Hop count direct
+          public static let direct = L10n.tr("Chats", "chats.message.hops.direct", fallback: "Direct")
+        }
+        public enum Info {
+          /// Location: UnifiedMessageBubble.swift - Indicator that timestamp was adjusted
+          public static let adjusted = L10n.tr("Chats", "chats.message.info.adjusted", fallback: "(adjusted)")
+          /// Location: UnifiedMessageBubble.swift - Accessibility label for adjusted timestamp
+          public static let adjustedAccessibility = L10n.tr("Chats", "chats.message.info.adjustedAccessibility", fallback: "Sent time adjusted due to sender clock error")
+          /// Location: UnifiedMessageBubble.swift - Accessibility hint for adjusted timestamp
+          public static let adjustedHint = L10n.tr("Chats", "chats.message.info.adjustedHint", fallback: "Sender's clock was incorrect")
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing heard repeats - %d is count, second %@ is "repeat" or "repeats"
+          public static func heardRepeats(_ p1: Int, _ p2: Any) -> String {
+            return L10n.tr("Chats", "chats.message.info.heardRepeats", p1, String(describing: p2), fallback: "Heard: %d %@")
+          }
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing hop count - %@ is count or "Direct"
+          public static func hops(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.message.info.hops", String(describing: p1), fallback: "Hops: %@")
+          }
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing received time - %@ is formatted date
+          public static func received(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.message.info.received", String(describing: p1), fallback: "Received: %@")
+          }
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing round trip time - %d is milliseconds
+          public static func roundTrip(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.message.info.roundTrip", p1, fallback: "Round trip: %dms")
+          }
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing sent time - %@ is formatted date
+          public static func sent(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.message.info.sent", String(describing: p1), fallback: "Sent: %@")
+          }
+          /// Location: UnifiedMessageBubble.swift - Context menu text showing SNR - %@ is formatted value
+          public static func snr(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.message.info.snr", String(describing: p1), fallback: "SNR: %@")
+          }
+        }
+        public enum Repeat {
+          /// Location: UnifiedMessageBubble.swift - Plural form of repeats
+          public static let plural = L10n.tr("Chats", "chats.message.repeat.plural", fallback: "repeats")
+          /// Location: UnifiedMessageBubble.swift - Singular form of repeat
+          public static let singular = L10n.tr("Chats", "chats.message.repeat.singular", fallback: "repeat")
+        }
+        public enum Sender {
+          /// Location: UnifiedMessageBubble.swift - Fallback sender name
+          public static let unknown = L10n.tr("Chats", "chats.message.sender.unknown", fallback: "Unknown")
+        }
+        public enum Status {
+          /// Location: UnifiedMessageBubble.swift - Message status delivered
+          public static let delivered = L10n.tr("Chats", "chats.message.status.delivered", fallback: "Delivered")
+          /// Location: UnifiedMessageBubble.swift - Message status failed
+          public static let failed = L10n.tr("Chats", "chats.message.status.failed", fallback: "Failed")
+          /// Location: UnifiedMessageBubble.swift - Status row retry button
+          public static let retry = L10n.tr("Chats", "chats.message.status.retry", fallback: "Retry")
+          /// Location: UnifiedMessageBubble.swift - Message status retrying
+          public static let retrying = L10n.tr("Chats", "chats.message.status.retrying", fallback: "Retrying...")
+          /// Location: UnifiedMessageBubble.swift - Message status sending
+          public static let sending = L10n.tr("Chats", "chats.message.status.sending", fallback: "Sending...")
+          /// Location: UnifiedMessageBubble.swift - Message status sent
+          public static let sent = L10n.tr("Chats", "chats.message.status.sent", fallback: "Sent")
+          /// Location: UnifiedMessageBubble.swift - Message status sent multiple times - %d is count
+          public static func sentMultiple(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.message.status.sentMultiple", p1, fallback: "Sent %d times")
+          }
+        }
+      }
+      public enum NewChat {
+        /// Location: NewChatView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.newChat.title", fallback: "New Chat")
+        public enum ContactType {
+          /// Location: NewChatView.swift - Contact type label for direct contacts
+          public static let direct = L10n.tr("Chats", "chats.newChat.contactType.direct", fallback: "Direct")
+          /// Location: NewChatView.swift - Contact type label for repeaters
+          public static let repeater = L10n.tr("Chats", "chats.newChat.contactType.repeater", fallback: "Repeater")
+          /// Location: NewChatView.swift - Contact type label for rooms
+          public static let room = L10n.tr("Chats", "chats.newChat.contactType.room", fallback: "Room")
+        }
+        public enum EmptyState {
+          /// Location: NewChatView.swift - Empty state description
+          public static let description = L10n.tr("Chats", "chats.newChat.emptyState.description", fallback: "Contacts will appear when discovered")
+          /// Location: NewChatView.swift - Empty state title
+          public static let title = L10n.tr("Chats", "chats.newChat.emptyState.title", fallback: "No Contacts")
+        }
+        public enum Search {
+          /// Location: NewChatView.swift - Search placeholder
+          public static let placeholder = L10n.tr("Chats", "chats.newChat.search.placeholder", fallback: "Search contacts")
+        }
+      }
+      public enum Path {
+        /// Location: MessagePathSheet.swift - Accessibility label for copy button
+        public static let copyAccessibility = L10n.tr("Chats", "chats.path.copyAccessibility", fallback: "Copy path to clipboard")
+        /// Location: MessagePathSheet.swift - Button to copy path
+        public static let copyButton = L10n.tr("Chats", "chats.path.copyButton", fallback: "Copy Path")
+        /// Location: MessagePathSheet.swift - Accessibility hint for copy button
+        public static let copyHint = L10n.tr("Chats", "chats.path.copyHint", fallback: "Copies node IDs as hexadecimal values")
+        /// Location: MessagePathSheet.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.path.title", fallback: "Message Path")
+        public enum Hop {
+          /// Location: PathHopRowView.swift - Accessibility value format for non-last hops - %@ is hex ID
+          public static func nodeId(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.path.hop.nodeId", String(describing: p1), fallback: "Node ID: %@")
+          }
+          /// Location: PathHopRowView.swift - Label for intermediate hops - %d is hop number
+          public static func number(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.path.hop.number", p1, fallback: "Hop %d")
+          }
+          /// Location: PathHopRowView.swift - Label for sender (first hop)
+          public static let sender = L10n.tr("Chats", "chats.path.hop.sender", fallback: "Sender")
+          /// Location: PathHopRowView.swift - Accessibility value format for last hop - %@ is quality, %@ is SNR
+          public static func signalQuality(_ p1: Any, _ p2: Any) -> String {
+            return L10n.tr("Chats", "chats.path.hop.signalQuality", String(describing: p1), String(describing: p2), fallback: "Signal quality: %@, SNR %@ dB")
+          }
+          /// Location: PathHopRowView.swift - Unknown signal quality
+          public static let signalUnknown = L10n.tr("Chats", "chats.path.hop.signalUnknown", fallback: "Unknown")
+          /// Location: PathHopRowView.swift - Unknown node name
+          public static let unknown = L10n.tr("Chats", "chats.path.hop.unknown", fallback: "<unknown>")
+        }
+        public enum Section {
+          /// Location: MessagePathSheet.swift - Section header for path
+          public static let header = L10n.tr("Chats", "chats.path.section.header", fallback: "Path")
+        }
+        public enum Unavailable {
+          /// Location: MessagePathSheet.swift - Empty state description
+          public static let description = L10n.tr("Chats", "chats.path.unavailable.description", fallback: "Path data is not available for this message")
+          /// Location: MessagePathSheet.swift - Empty state title
+          public static let title = L10n.tr("Chats", "chats.path.unavailable.title", fallback: "Path Unavailable")
+        }
+      }
+      public enum Preview {
+        /// Location: TapToLoadPreview.swift - Loading state text
+        public static let loading = L10n.tr("Chats", "chats.preview.loading", fallback: "Loading preview...")
+        /// Location: TapToLoadPreview.swift - Loading accessibility label format - %@ is host
+        public static func loadingAccessibility(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.preview.loadingAccessibility", String(describing: p1), fallback: "Loading preview for %@")
+        }
+        /// Location: TapToLoadPreview.swift - Loading accessibility hint
+        public static let loadingHint = L10n.tr("Chats", "chats.preview.loadingHint", fallback: "Please wait")
+        /// Location: TapToLoadPreview.swift - Idle accessibility label format - %@ is host
+        public static func tapAccessibility(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.preview.tapAccessibility", String(describing: p1), fallback: "Load preview for %@")
+        }
+        /// Location: TapToLoadPreview.swift - Idle accessibility hint
+        public static let tapHint = L10n.tr("Chats", "chats.preview.tapHint", fallback: "Fetches title and image from the website")
+        /// Location: TapToLoadPreview.swift - Idle state text
+        public static let tapToLoad = L10n.tr("Chats", "chats.preview.tapToLoad", fallback: "Tap to load preview")
+      }
+      public enum Repeats {
+        /// Location: RepeatDetailsSheet.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.repeats.title", fallback: "Repeat Details")
+        /// Location: RepeatRowView.swift - Unknown repeater name
+        public static let unknownRepeater = L10n.tr("Chats", "chats.repeats.unknownRepeater", fallback: "<unknown repeater>")
+        public enum EmptyState {
+          /// Location: RepeatDetailsSheet.swift - Empty state description
+          public static let description = L10n.tr("Chats", "chats.repeats.emptyState.description", fallback: "Repeats will appear here as your message propagates through the mesh")
+          /// Location: RepeatDetailsSheet.swift - Empty state title
+          public static let title = L10n.tr("Chats", "chats.repeats.emptyState.title", fallback: "No repeats yet")
+        }
+        public enum Hop {
+          /// Location: RepeatRowView.swift - Plural hops label - %d is count
+          public static func plural(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.repeats.hop.plural", p1, fallback: "%d Hops")
+          }
+          /// Location: RepeatRowView.swift - Singular hop label
+          public static let singular = L10n.tr("Chats", "chats.repeats.hop.singular", fallback: "1 Hop")
+        }
+        public enum Row {
+          /// Location: RepeatRowView.swift - Accessibility label format - %@ is repeater name
+          public static func accessibility(_ p1: Any) -> String {
+            return L10n.tr("Chats", "chats.repeats.row.accessibility", String(describing: p1), fallback: "Repeat from %@")
+          }
+          /// Location: RepeatRowView.swift - Accessibility value format - %@ is quality, %@ is SNR, %@ is RSSI
+          public static func accessibilityValue(_ p1: Any, _ p2: Any, _ p3: Any) -> String {
+            return L10n.tr("Chats", "chats.repeats.row.accessibilityValue", String(describing: p1), String(describing: p2), String(describing: p3), fallback: "%@ signal, SNR %@, RSSI %@")
+          }
+        }
+      }
+      public enum Room {
+        /// Location: RoomConversationRow.swift - Status when room is connected
+        public static let connected = L10n.tr("Chats", "chats.room.connected", fallback: "Connected")
+        /// Location: RoomConversationRow.swift - Prompt to reconnect to room
+        public static let tapToReconnect = L10n.tr("Chats", "chats.room.tapToReconnect", fallback: "Tap to reconnect")
+      }
+      public enum RoomAuth {
+        public enum NotFound {
+          /// Location: RoomAuthenticationSheet.swift - Error description when room not found
+          public static let description = L10n.tr("Chats", "chats.roomAuth.notFound.description", fallback: "Could not find the room contact")
+          /// Location: RoomAuthenticationSheet.swift - Error title when room not found
+          public static let title = L10n.tr("Chats", "chats.roomAuth.notFound.title", fallback: "Room Not Found")
+        }
+      }
+      public enum Row {
+        /// Location: ConversationRow.swift, ChannelConversationRow.swift, RoomConversationRow.swift - Accessibility label for favorite indicator
+        public static let favorite = L10n.tr("Chats", "chats.row.favorite", fallback: "Favorite")
+        /// Location: MutedIndicator.swift - Accessibility label for muted indicator
+        public static let muted = L10n.tr("Chats", "chats.row.muted", fallback: "Muted")
+        /// Location: ConversationRow.swift, ChannelConversationRow.swift - Default text when no messages exist
+        public static let noMessages = L10n.tr("Chats", "chats.row.noMessages", fallback: "No messages yet")
+      }
+      public enum ScanQR {
+        /// Location: ScanChannelQRView.swift - Instruction to point camera
+        public static let instruction = L10n.tr("Chats", "chats.scanQR.instruction", fallback: "Point your camera at a channel QR code")
+        /// Location: ScanChannelQRView.swift - Button to open settings
+        public static let openSettings = L10n.tr("Chats", "chats.scanQR.openSettings", fallback: "Open Settings")
+        /// Location: ScanChannelQRView.swift - Button to scan again
+        public static let scanAgain = L10n.tr("Chats", "chats.scanQR.scanAgain", fallback: "Scan Again")
+        /// Location: ScanChannelQRView.swift - Navigation title
+        public static let title = L10n.tr("Chats", "chats.scanQR.title", fallback: "Scan QR Code")
+        public enum Error {
+          /// Location: ScanChannelQRView.swift - Error for invalid channel data
+          public static let invalidData = L10n.tr("Chats", "chats.scanQR.error.invalidData", fallback: "Invalid channel data in QR code")
+          /// Location: ScanChannelQRView.swift - Error for invalid QR format
+          public static let invalidFormat = L10n.tr("Chats", "chats.scanQR.error.invalidFormat", fallback: "Invalid QR code format")
+        }
+        public enum NotAvailable {
+          /// Location: ScanChannelQRView.swift - Error description when scanner not available
+          public static let description = L10n.tr("Chats", "chats.scanQR.notAvailable.description", fallback: "QR scanning is not supported on this device")
+          /// Location: ScanChannelQRView.swift - Error when scanner not available
+          public static let title = L10n.tr("Chats", "chats.scanQR.notAvailable.title", fallback: "Scanner Not Available")
+        }
+        public enum PermissionDenied {
+          /// Location: ScanChannelQRView.swift - Camera permission denied message
+          public static let message = L10n.tr("Chats", "chats.scanQR.permissionDenied.message", fallback: "Please enable camera access in Settings to scan QR codes.")
+          /// Location: ScanChannelQRView.swift - Camera permission denied title
+          public static let title = L10n.tr("Chats", "chats.scanQR.permissionDenied.title", fallback: "Camera Access Required")
+        }
+      }
+      public enum Search {
+        /// Location: ChatsView.swift - Search placeholder
+        public static let placeholder = L10n.tr("Chats", "chats.search.placeholder", fallback: "Search conversations")
+      }
+      public enum Section {
+        /// Location: ConversationListContent.swift - Section accessibility label for other conversations
+        public static let conversations = L10n.tr("Chats", "chats.section.conversations", fallback: "Conversations")
+        /// Location: ConversationListContent.swift - Section accessibility label for favorites
+        public static let favorites = L10n.tr("Chats", "chats.section.favorites", fallback: "Favorites")
+      }
+      public enum Signal {
+        /// Location: UnifiedMessageBubble.swift - SNR quality excellent
+        public static let excellent = L10n.tr("Chats", "chats.signal.excellent", fallback: "Excellent")
+        /// Location: UnifiedMessageBubble.swift - SNR quality fair
+        public static let fair = L10n.tr("Chats", "chats.signal.fair", fallback: "Fair")
+        /// Location: UnifiedMessageBubble.swift - SNR quality good
+        public static let good = L10n.tr("Chats", "chats.signal.good", fallback: "Good")
+        /// Location: UnifiedMessageBubble.swift - SNR quality poor
+        public static let poor = L10n.tr("Chats", "chats.signal.poor", fallback: "Poor")
+        /// Location: UnifiedMessageBubble.swift - SNR quality very poor
+        public static let veryPoor = L10n.tr("Chats", "chats.signal.veryPoor", fallback: "Very Poor")
+      }
+      public enum SwipeAction {
+        /// Location: ConversationSwipeActionsModifier.swift - Swipe action to delete
+        public static let delete = L10n.tr("Chats", "chats.swipeAction.delete", fallback: "Delete")
+        /// Location: ConversationSwipeActionsModifier.swift - Swipe action to add to favorites
+        public static let favorite = L10n.tr("Chats", "chats.swipeAction.favorite", fallback: "Favorite")
+        /// Location: ConversationSwipeActionsModifier.swift - Swipe action to mute
+        public static let mute = L10n.tr("Chats", "chats.swipeAction.mute", fallback: "Mute")
+        /// Location: ConversationSwipeActionsModifier.swift - Swipe action to remove from favorites
+        public static let unfavorite = L10n.tr("Chats", "chats.swipeAction.unfavorite", fallback: "Unfavorite")
+        /// Location: ConversationSwipeActionsModifier.swift - Swipe action to unmute
+        public static let unmute = L10n.tr("Chats", "chats.swipeAction.unmute", fallback: "Unmute")
+      }
+      public enum Timestamp {
+        /// Location: MessageTimestampView.swift - Prefix for yesterday's date
+        public static let yesterday = L10n.tr("Chats", "chats.timestamp.yesterday", fallback: "Yesterday")
+      }
     }
+  }
   public enum Contacts {
     }
   public enum Localizable {

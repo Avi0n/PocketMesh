@@ -139,10 +139,10 @@ struct ChatView: View {
                 break
             }
         }
-        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {
+            Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
         } message: {
-            Text("Please ensure your device is connected and try again.")
+            Text(L10n.Chats.Chats.Alert.UnableToSend.message)
         }
     }
 
@@ -218,11 +218,11 @@ struct ChatView: View {
 
     private var connectionStatus: String {
         if contact.isFloodRouted {
-            return "Flood routing"
+            return L10n.Chats.Chats.ConnectionStatus.floodRouting
         } else if contact.outPathLength >= 0 {
-            return "Direct • \(contact.outPathLength) hops"
+            return L10n.Chats.Chats.ConnectionStatus.direct(Int(contact.outPathLength))
         }
-        return "Unknown route"
+        return L10n.Chats.Chats.ConnectionStatus.unknown
     }
 
     // MARK: - Messages View
@@ -311,10 +311,10 @@ struct ChatView: View {
             )
         } else {
             // ViewModel logs the warning for data inconsistency
-            Text("Message unavailable")
+            Text(L10n.Chats.Chats.Message.unavailable)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Message could not be loaded")
+                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
         }
     }
 
@@ -326,11 +326,11 @@ struct ChatView: View {
                 .font(.title2)
                 .bold()
 
-            Text("Start a conversation")
+            Text(L10n.Chats.Chats.EmptyState.startConversation)
                 .foregroundStyle(.secondary)
 
             if contact.hasLocation {
-                Label("Has location", systemImage: "location.fill")
+                Label(L10n.Chats.Chats.ContactInfo.hasLocation, systemImage: "location.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -369,7 +369,7 @@ struct ChatView: View {
         MentionInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Private Message",
+            placeholder: L10n.Chats.Chats.Input.Placeholder.directMessage,
             maxCharacters: ProtocolLimits.maxDirectMessageLength,
             contacts: viewModel.allContacts
         ) {

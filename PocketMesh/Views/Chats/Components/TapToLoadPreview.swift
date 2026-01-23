@@ -17,7 +17,7 @@ struct TapToLoadPreview: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text(isLoading ? "Loading preview..." : "Tap to load preview")
+                Text(isLoading ? L10n.Chats.Chats.Preview.loading : L10n.Chats.Chats.Preview.tapToLoad)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -27,8 +27,8 @@ struct TapToLoadPreview: View {
         }
         .buttonStyle(.plain)
         .disabled(isLoading)
-        .accessibilityLabel(isLoading ? "Loading preview for \(url.host ?? "link")" : "Load preview for \(url.host ?? "link")")
-        .accessibilityHint(isLoading ? "Please wait" : "Fetches title and image from the website")
+        .accessibilityLabel(isLoading ? L10n.Chats.Chats.Preview.loadingAccessibility(url.host ?? "link") : L10n.Chats.Chats.Preview.tapAccessibility(url.host ?? "link"))
+        .accessibilityHint(isLoading ? L10n.Chats.Chats.Preview.loadingHint : L10n.Chats.Chats.Preview.tapHint)
     }
 }
 

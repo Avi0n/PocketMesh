@@ -29,7 +29,7 @@ struct MessagePathSheet: View {
                 } else if pathBytes.isEmpty {
                     Section {
                         ContentUnavailableView(
-                            "Path Unavailable",
+                            L10n.Chats.Chats.Path.Unavailable.title,
                             systemImage: "point.topleft.down.to.point.bottomright.curvepath",
                             description: Text(emptyStateDescription)
                         )
@@ -55,22 +55,22 @@ struct MessagePathSheet: View {
 
                             Spacer()
 
-                            Button("Copy Path", systemImage: "doc.on.doc") {
+                            Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
                                 copyHapticTrigger += 1
                                 UIPasteboard.general.string = message.pathStringForClipboard
                             }
                             .labelStyle(.iconOnly)
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Copy path to clipboard")
-                            .accessibilityHint("Copies node IDs as hexadecimal values")
+                            .accessibilityLabel(L10n.Chats.Chats.Path.copyAccessibility)
+                            .accessibilityHint(L10n.Chats.Chats.Path.copyHint)
                         }
                     } header: {
-                        Text("Path")
+                        Text(L10n.Chats.Chats.Path.Section.header)
                     }
                 }
             }
             .sensoryFeedback(.success, trigger: copyHapticTrigger)
-            .navigationTitle("Message Path")
+            .navigationTitle(L10n.Chats.Chats.Path.title)
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 await loadContacts()
@@ -87,7 +87,7 @@ struct MessagePathSheet: View {
         if message.pathNodes == nil {
             // Path nodes come from RX log correlation, which may not be available
             // for all messages (firmware limitation for direct messages)
-            return "Path data is not available for this message"
+            return L10n.Chats.Chats.Path.Unavailable.description
         }
         return ""
     }

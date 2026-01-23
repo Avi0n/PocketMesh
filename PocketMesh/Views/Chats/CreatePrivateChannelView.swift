@@ -33,12 +33,12 @@ struct CreatePrivateChannelView: View {
                 shareChannelView
             }
         }
-        .navigationTitle(isCreated ? "Share Private Channel" : "Create Private Channel")
+        .navigationTitle(isCreated ? L10n.Chats.Chats.CreatePrivate.titleShare : L10n.Chats.Chats.CreatePrivate.titleCreate)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if isCreated {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(L10n.Chats.Chats.Common.done) {
                         onComplete(createdChannel)
                     }
                 }
@@ -55,24 +55,24 @@ struct CreatePrivateChannelView: View {
     private var createChannelForm: some View {
         Group {
             Section {
-                TextField("Channel Name", text: $channelName)
+                TextField(L10n.Chats.Chats.CreatePrivate.channelName, text: $channelName)
                     .textContentType(.name)
             } header: {
-                Text("Channel Details")
+                Text(L10n.Chats.Chats.CreatePrivate.Section.details)
             }
 
             Section {
                 if let secret = generatedSecret {
-                    LabeledContent("Secret Key") {
+                    LabeledContent(L10n.Chats.Chats.ChannelInfo.secretKey) {
                         Text(secret.hexString())
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("Generated Secret")
+                Text(L10n.Chats.Chats.CreatePrivate.Section.secret)
             } footer: {
-                Text("A random secret key has been generated. You'll be able to share it via QR code after creating the channel.")
+                Text(L10n.Chats.Chats.CreatePrivate.secretFooter)
             }
 
             if let errorMessage {
@@ -93,7 +93,7 @@ struct CreatePrivateChannelView: View {
                         if isCreating {
                             ProgressView()
                         } else {
-                            Text("Create Channel")
+                            Text(L10n.Chats.Chats.CreatePrivate.createButton)
                         }
                         Spacer()
                     }
@@ -122,7 +122,7 @@ struct CreatePrivateChannelView: View {
                         Text(channelName)
                             .font(.headline)
 
-                        Text("Scan to join this channel")
+                        Text(L10n.Chats.Chats.ChannelInfo.scanToJoin)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -134,7 +134,7 @@ struct CreatePrivateChannelView: View {
             Section {
                 if let secret = generatedSecret {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Secret Key")
+                        Text(L10n.Chats.Chats.ChannelInfo.secretKey)
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -144,7 +144,7 @@ struct CreatePrivateChannelView: View {
 
                             Spacer()
 
-                            Button("Copy", systemImage: "doc.on.doc") {
+                            Button(L10n.Chats.Chats.ChannelInfo.copy, systemImage: "doc.on.doc") {
                                 copyHapticTrigger += 1
                                 UIPasteboard.general.string = secret.hexString()
                             }
@@ -153,9 +153,9 @@ struct CreatePrivateChannelView: View {
                     }
                 }
             } header: {
-                Text("Share Manually")
+                Text(L10n.Chats.Chats.CreatePrivate.Section.shareManually)
             } footer: {
-                Text("Share the channel name and this secret key with others. They'll need both to join.")
+                Text(L10n.Chats.Chats.CreatePrivate.shareManuallyFooter)
             }
         }
     }
@@ -171,7 +171,7 @@ struct CreatePrivateChannelView: View {
     private func createChannel() async {
         guard let deviceID = appState.connectedDevice?.id,
               let secret = generatedSecret else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
@@ -180,7 +180,7 @@ struct CreatePrivateChannelView: View {
 
         do {
             guard let channelService = appState.services?.channelService else {
-                errorMessage = "Services not available"
+                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
                 return
             }
             try await channelService.setChannelWithSecret(

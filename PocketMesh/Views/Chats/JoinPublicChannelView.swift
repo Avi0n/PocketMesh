@@ -20,11 +20,11 @@ struct JoinPublicChannelView: View {
                             .font(.system(size: 60))
                             .foregroundStyle(.green)
 
-                        Text("Public Channel")
+                        Text(L10n.Chats.Chats.JoinPublic.channelName)
                             .font(.title2)
                             .bold()
 
-                        Text("The public channel is an open broadcast channel on slot 0. All devices on the mesh network can send and receive messages on this channel.")
+                        Text(L10n.Chats.Chats.JoinPublic.description)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -52,7 +52,7 @@ struct JoinPublicChannelView: View {
                         if isJoining {
                             ProgressView()
                         } else {
-                            Text("Add Public Channel")
+                            Text(L10n.Chats.Chats.JoinPublic.addButton)
                         }
                         Spacer()
                     }
@@ -60,13 +60,13 @@ struct JoinPublicChannelView: View {
                 .disabled(isJoining)
             }
         }
-        .navigationTitle("Join Public Channel")
+        .navigationTitle(L10n.Chats.Chats.JoinPublic.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private func joinPublicChannel() async {
         guard let deviceID = appState.connectedDevice?.id else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
@@ -75,7 +75,7 @@ struct JoinPublicChannelView: View {
 
         do {
             guard let channelService = appState.services?.channelService else {
-                errorMessage = "Services not available"
+                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
                 return
             }
             try await channelService.setupPublicChannel(deviceID: deviceID)

@@ -28,10 +28,10 @@ struct JoinPrivateChannelView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Channel Name", text: $channelName)
+                TextField(L10n.Chats.Chats.CreatePrivate.channelName, text: $channelName)
                     .textContentType(.name)
 
-                TextField("Secret Key (32 hex characters)", text: $secretKeyHex)
+                TextField(L10n.Chats.Chats.JoinPrivate.secretKeyPlaceholder, text: $secretKeyHex)
                     .textContentType(.password)
                     .font(.system(.body, design: .monospaced))
                     .textInputAutocapitalization(.characters)
@@ -40,13 +40,13 @@ struct JoinPrivateChannelView: View {
                         secretKeyHex = newValue.uppercased().filter { $0.isHexDigit }
                     }
             } header: {
-                Text("Channel Details")
+                Text(L10n.Chats.Chats.CreatePrivate.Section.details)
             } footer: {
                 if !secretKeyHex.isEmpty && !isValidSecret {
-                    Text("Secret key must be exactly 32 hexadecimal characters (0-9, A-F)")
+                    Text(L10n.Chats.Chats.JoinPrivate.Error.invalidSecret)
                         .foregroundStyle(.red)
                 } else {
-                    Text("Enter the channel name and secret key shared by the channel creator.")
+                    Text(L10n.Chats.Chats.JoinPrivate.footer)
                 }
             }
 
@@ -68,7 +68,7 @@ struct JoinPrivateChannelView: View {
                         if isJoining {
                             ProgressView()
                         } else {
-                            Text("Join Channel")
+                            Text(L10n.Chats.Chats.JoinPrivate.joinButton)
                         }
                         Spacer()
                     }
@@ -76,18 +76,18 @@ struct JoinPrivateChannelView: View {
                 .disabled(channelName.isEmpty || !isValidSecret || isJoining)
             }
         }
-        .navigationTitle("Join Private Channel")
+        .navigationTitle(L10n.Chats.Chats.JoinPrivate.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private func joinChannel() async {
         guard let deviceID = appState.connectedDevice?.id else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
         guard let secret = Data(hexString: secretKeyHex) else {
-            errorMessage = "Invalid secret key format"
+            errorMessage = L10n.Chats.Chats.JoinPrivate.Error.invalidFormat
             return
         }
 
@@ -96,7 +96,7 @@ struct JoinPrivateChannelView: View {
 
         do {
             guard let channelService = appState.services?.channelService else {
-                errorMessage = "Services not available"
+                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
                 return
             }
             try await channelService.setChannelWithSecret(

@@ -23,7 +23,7 @@ struct ConversationRow: View {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
-                            .accessibilityLabel("Favorite")
+                            .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
                     }
 
                     if let date = contact.lastMessageDate {
@@ -32,7 +32,7 @@ struct ConversationRow: View {
                 }
 
                 HStack {
-                    Text(viewModel.lastMessagePreview(for: contact) ?? "No messages yet")
+                    Text(viewModel.lastMessagePreview(for: contact) ?? L10n.Chats.Chats.Row.noMessages)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

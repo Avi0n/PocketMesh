@@ -43,9 +43,9 @@ struct RepeatDetailsSheet: View {
                 } else if repeats.isEmpty {
                     Section {
                         ContentUnavailableView(
-                            "No repeats yet",
+                            L10n.Chats.Chats.Repeats.EmptyState.title,
                             systemImage: "arrow.triangle.branch",
-                            description: Text("Repeats will appear here as your message propagates through the mesh")
+                            description: Text(L10n.Chats.Chats.Repeats.EmptyState.description)
                         )
                     }
                 } else {
@@ -66,7 +66,7 @@ struct RepeatDetailsSheet: View {
 
                             Spacer()
 
-                            Button("Copy Path", systemImage: "doc.on.doc") {
+                            Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
                                 copyHapticTrigger += 1
                                 UIPasteboard.general.string = repeaterBytesClipboardString
                             }
@@ -74,12 +74,12 @@ struct RepeatDetailsSheet: View {
                             .buttonStyle(.borderless)
                         }
                     } header: {
-                        Text("Path")
+                        Text(L10n.Chats.Chats.Path.Section.header)
                     }
                 }
             }
             .sensoryFeedback(.success, trigger: copyHapticTrigger)
-            .navigationTitle("Repeat Details")
+            .navigationTitle(L10n.Chats.Chats.Repeats.title)
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 await loadRepeats()

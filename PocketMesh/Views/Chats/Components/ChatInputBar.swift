@@ -41,8 +41,8 @@ struct ChatInputBar: View {
             .textFieldBackground()
             .lineLimit(1...5)
             .focused($isFocused)
-            .accessibilityLabel("Message input")
-            .accessibilityHint("Type your message here")
+            .accessibilityLabel(L10n.Chats.Chats.Input.accessibilityLabel)
+            .accessibilityHint(L10n.Chats.Chats.Input.accessibilityHint)
     }
 
     private var sendButtonWithCounter: some View {
@@ -59,7 +59,7 @@ struct ChatInputBar: View {
             .font(.caption2)
             .monospacedDigit()
             .foregroundStyle(isOverLimit ? .red : .secondary)
-            .accessibilityLabel("\(characterCount) of \(maxCharacters) characters")
+            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(characterCount, maxCharacters))
     }
 
     @ViewBuilder
@@ -88,21 +88,21 @@ struct ChatInputBar: View {
 
     private var sendAccessibilityLabel: String {
         if isOverLimit {
-            return "Message too long"
+            return L10n.Chats.Chats.Input.tooLong
         } else {
-            return "Send message"
+            return L10n.Chats.Chats.Input.sendMessage
         }
     }
 
     private var sendAccessibilityHint: String {
         if isOverLimit {
-            return "Remove \(characterCount - maxCharacters) characters to send"
+            return L10n.Chats.Chats.Input.removeCharacters(characterCount - maxCharacters)
         } else if appState.connectionState != .ready {
-            return "Requires radio connection"
+            return L10n.Chats.Chats.Input.requiresConnection
         } else if canSend {
-            return "Tap to send your message"
+            return L10n.Chats.Chats.Input.tapToSend
         } else {
-            return "Type a message first"
+            return L10n.Chats.Chats.Input.typeFirst
         }
     }
 
