@@ -86,6 +86,8 @@ struct UnifiedMessageBubble: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
+    @State private var copyHapticTrigger = 0
+
     init(
         message: MessageDTO,
         contactName: String,
@@ -183,6 +185,7 @@ struct UnifiedMessageBubble: View {
                 onRequestPreviewFetch?()
             }
         }
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     // MARK: - Link Preview Content
@@ -288,6 +291,7 @@ struct UnifiedMessageBubble: View {
         }
 
         Button {
+            copyHapticTrigger += 1
             UIPasteboard.general.string = message.text
         } label: {
             Label("Copy", systemImage: "doc.on.doc")

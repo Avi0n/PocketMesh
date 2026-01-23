@@ -13,6 +13,7 @@ struct ChannelInfoSheet: View {
     @State private var isDeleting = false
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
+    @State private var copyHapticTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -68,6 +69,7 @@ struct ChannelInfoSheet: View {
         } message: {
             Text("This will remove the channel from your device and delete all local messages. This action cannot be undone.")
         }
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     // MARK: - Channel Header Section
@@ -160,6 +162,7 @@ struct ChannelInfoSheet: View {
                     Spacer()
 
                     Button("Copy", systemImage: "doc.on.doc") {
+                        copyHapticTrigger += 1
                         UIPasteboard.general.string = channel.secret.hexString()
                     }
                     .labelStyle(.iconOnly)

@@ -15,6 +15,7 @@ struct CreatePrivateChannelView: View {
     @State private var isCreating = false
     @State private var createdChannel: ChannelDTO?
     @State private var errorMessage: String?
+    @State private var copyHapticTrigger = 0
 
     private var isCreated: Bool { createdChannel != nil }
 
@@ -46,6 +47,7 @@ struct CreatePrivateChannelView: View {
         .onAppear {
             generateSecret()
         }
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     // MARK: - Create Form
@@ -143,6 +145,7 @@ struct CreatePrivateChannelView: View {
                             Spacer()
 
                             Button("Copy", systemImage: "doc.on.doc") {
+                                copyHapticTrigger += 1
                                 UIPasteboard.general.string = secret.hexString()
                             }
                             .labelStyle(.iconOnly)

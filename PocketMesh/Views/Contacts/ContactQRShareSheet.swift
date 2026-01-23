@@ -12,6 +12,7 @@ struct ContactQRShareSheet: View {
 
     @State private var showCopyFeedback = false
     @State private var qrImage: UIImage?
+    @State private var copyHapticTrigger = 0
 
     private var contactURI: String {
         ContactService.exportContactURI(name: contactName, publicKey: publicKey, type: contactType)
@@ -47,6 +48,7 @@ struct ContactQRShareSheet: View {
             .onAppear {
                 qrImage = generateQRCode()
             }
+            .sensoryFeedback(.success, trigger: copyHapticTrigger)
         }
     }
 
@@ -77,6 +79,7 @@ struct ContactQRShareSheet: View {
     }
 
     private func copyToClipboard() {
+        copyHapticTrigger += 1
         UIPasteboard.general.string = publicKey.hexString().lowercased()
         showCopyFeedback = true
 

@@ -239,6 +239,8 @@ private struct StorageBar: View {
 private struct PublicKeyView: View {
     let publicKey: Data
 
+    @State private var copyHapticTrigger = 0
+
     var body: some View {
         List {
             Section {
@@ -253,6 +255,7 @@ private struct PublicKeyView: View {
 
             Section {
                 Button {
+                    copyHapticTrigger += 1
                     UIPasteboard.general.string = publicKey.hexString()
                 } label: {
                     Label("Copy to Clipboard", systemImage: "doc.on.doc")
@@ -268,6 +271,7 @@ private struct PublicKeyView: View {
             }
         }
         .navigationTitle("Public Key")
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 }
 

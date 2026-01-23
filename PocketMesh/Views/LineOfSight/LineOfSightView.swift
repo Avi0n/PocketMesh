@@ -75,6 +75,7 @@ struct LineOfSightView: View {
     @State private var isInitialPointBZoom = false
     @State private var isRFSettingsExpanded = false
     @State private var showingMapStyleMenu = false
+    @State private var copyHapticTrigger = 0
     @Namespace private var mapScope
 
     private let layoutMode: LineOfSightLayoutMode
@@ -737,6 +738,7 @@ struct LineOfSightView: View {
                 }
 
                 Button("Copy Coordinates", systemImage: "doc.on.doc") {
+                    copyHapticTrigger += 1
                     let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                     UIPasteboard.general.string = coordText
                 }
@@ -751,6 +753,7 @@ struct LineOfSightView: View {
                 .labelStyle(.iconOnly)
         }
         .glassButtonStyle()
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
         .controlSize(.small)
 
         // Relocate button (toggles on/off)
@@ -895,6 +898,7 @@ struct LineOfSightView: View {
                         }
 
                         Button("Copy Coordinates", systemImage: "doc.on.doc") {
+                            copyHapticTrigger += 1
                             let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                             UIPasteboard.general.string = coordText
                         }
@@ -909,6 +913,7 @@ struct LineOfSightView: View {
                         .labelStyle(.iconOnly)
                 }
                 .glassButtonStyle()
+                .sensoryFeedback(.success, trigger: copyHapticTrigger)
                 .controlSize(.small)
 
                 // Relocate button (toggles on/off)

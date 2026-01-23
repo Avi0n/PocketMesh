@@ -13,6 +13,7 @@ struct NodeSettingsSection: View {
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
     @State private var isSaving = false
+    @State private var copyHapticTrigger = 0
 
     var body: some View {
         Section {
@@ -31,6 +32,7 @@ struct NodeSettingsSection: View {
             // Public Key (copy)
             if let device = appState.connectedDevice {
                 Button {
+                    copyHapticTrigger += 1
                     let hex = device.publicKey.map { String(format: "%02X", $0) }.joined()
                     UIPasteboard.general.string = hex
                 } label: {
@@ -105,6 +107,7 @@ struct NodeSettingsSection: View {
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     private func saveNodeName() {
