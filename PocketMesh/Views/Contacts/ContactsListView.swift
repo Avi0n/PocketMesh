@@ -79,7 +79,7 @@ struct ContactsListView: View {
 
     private var contactsSidebarContent: some View {
         Group {
-            if viewModel.isLoading && viewModel.contacts.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredContacts.isEmpty && !isSearching {

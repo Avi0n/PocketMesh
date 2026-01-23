@@ -6,12 +6,13 @@ struct DiscoveryView: View {
     @Environment(\.appState) private var appState
     @State private var discoveredContacts: [ContactDTO] = []
     @State private var isLoading = false
+    @State private var hasLoadedOnce = false
     @State private var addingContactID: UUID?
     @State private var errorMessage: String?
 
     var body: some View {
         Group {
-            if isLoading && discoveredContacts.isEmpty {
+            if !hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if discoveredContacts.isEmpty {
@@ -118,6 +119,7 @@ struct DiscoveryView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+        hasLoadedOnce = true
         isLoading = false
     }
 

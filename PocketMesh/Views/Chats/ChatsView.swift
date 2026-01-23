@@ -64,7 +64,7 @@ struct ChatsView: View {
     private func conversationListState<Content: View>(
         @ViewBuilder listContent: () -> Content
     ) -> some View {
-        if viewModel.isLoading && viewModel.allConversations.isEmpty {
+        if !viewModel.hasLoadedOnce {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if filteredConversations.isEmpty {

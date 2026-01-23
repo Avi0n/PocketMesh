@@ -224,7 +224,7 @@ struct ChannelChatView: View {
 
     private var messagesView: some View {
         Group {
-            if viewModel.isLoading && viewModel.messages.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.messages.isEmpty {

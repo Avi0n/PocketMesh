@@ -29,6 +29,9 @@ final class ContactsViewModel {
     /// Loading state
     var isLoading = false
 
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
+
     /// Syncing state
     var isSyncing = false
 
@@ -77,6 +80,7 @@ final class ContactsViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 

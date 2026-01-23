@@ -208,6 +208,20 @@ struct ChatViewModelTests {
         #expect(conversations.isEmpty)
     }
 
+    // MARK: - Loading State Tests
+
+    @Test("hasLoadedOnce starts false")
+    func hasLoadedOnceStartsFalse() {
+        let viewModel = ChatViewModel()
+        #expect(viewModel.hasLoadedOnce == false)
+    }
+
+    @Test("isLoading starts false")
+    func isLoadingStartsFalse() {
+        let viewModel = ChatViewModel()
+        #expect(viewModel.isLoading == false)
+    }
+
 }
 
 // MARK: - Blocked Contact Filtering Tests
