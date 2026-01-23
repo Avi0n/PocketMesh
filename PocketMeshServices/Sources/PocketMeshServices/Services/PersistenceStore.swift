@@ -995,6 +995,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isEnabled = dto.isEnabled
             existing.lastMessageDate = dto.lastMessageDate
             existing.unreadCount = dto.unreadCount
+            existing.unreadMentionCount = dto.unreadMentionCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
         } else {
             let channel = Channel(
                 id: dto.id,
@@ -1004,7 +1007,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 secret: dto.secret,
                 isEnabled: dto.isEnabled,
                 lastMessageDate: dto.lastMessageDate,
-                unreadCount: dto.unreadCount
+                unreadCount: dto.unreadCount,
+                unreadMentionCount: dto.unreadMentionCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite
             )
             modelContext.insert(channel)
         }
@@ -1108,7 +1114,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.channelNotFound
         }
 
-        channel.isMuted = isMuted
+        channel.notificationLevel = isMuted ? .muted : .all
         try modelContext.save()
     }
 
@@ -1144,8 +1150,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
 
         // Only fetch channels with unread messages for this device
+        let mutedRawValue = NotificationLevel.muted.rawValue
         let channelPredicate = #Predicate<Channel> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && !$0.isMuted
+            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && $0.notificationLevelRawValue != mutedRawValue
         }
         let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
         let channelsWithUnread = try modelContext.fetch(channelDescriptor)
@@ -1153,7 +1160,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
 
         // Only fetch room sessions with unread messages for this device
         let roomPredicate = #Predicate<RemoteNodeSession> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && !$0.isMuted
+            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && $0.notificationLevelRawValue != mutedRawValue
         }
         let roomDescriptor = FetchDescriptor<RemoteNodeSession>(predicate: roomPredicate)
         let roomsWithUnread = try modelContext.fetch(roomDescriptor)
@@ -1279,6 +1286,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.lastUptimeSeconds = dto.lastUptimeSeconds
             existing.lastNoiseFloor = dto.lastNoiseFloor
             existing.unreadCount = dto.unreadCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
             existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
             existing.neighborCount = dto.neighborCount
             existing.lastSyncTimestamp = dto.lastSyncTimestamp
@@ -1301,6 +1310,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 lastUptimeSeconds: dto.lastUptimeSeconds,
                 lastNoiseFloor: dto.lastNoiseFloor,
                 unreadCount: dto.unreadCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite,
                 lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
                 neighborCount: dto.neighborCount,
                 lastSyncTimestamp: dto.lastSyncTimestamp
@@ -1495,7 +1506,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.remoteNodeSessionNotFound
         }
 
-        session.isMuted = isMuted
+        session.notificationLevel = isMuted ? .muted : .all
         try modelContext.save()
     }
 

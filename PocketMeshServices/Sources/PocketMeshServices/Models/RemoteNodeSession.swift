@@ -48,8 +48,14 @@ public final class RemoteNodeSession {
     /// Unread message count (room-specific)
     public var unreadCount: Int
 
-    /// Whether this room's notifications are muted
-    public var isMuted: Bool = false
+    /// Notification level for this room (stored as raw value for SwiftData)
+    public var notificationLevelRawValue: Int = NotificationLevel.all.rawValue
+
+    /// Notification level computed property
+    public var notificationLevel: NotificationLevel {
+        get { NotificationLevel(rawValue: notificationLevelRawValue) ?? .all }
+        set { notificationLevelRawValue = newValue.rawValue }
+    }
 
     /// Whether this session/node is marked as favorite
     public var isFavorite: Bool = false
@@ -80,7 +86,7 @@ public final class RemoteNodeSession {
         lastUptimeSeconds: UInt32? = nil,
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
-        isMuted: Bool = false,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
@@ -100,7 +106,7 @@ public final class RemoteNodeSession {
         self.lastUptimeSeconds = lastUptimeSeconds
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
-        self.isMuted = isMuted
+        self.notificationLevelRawValue = notificationLevel.rawValue
         self.isFavorite = isFavorite
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
@@ -161,8 +167,11 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public let lastUptimeSeconds: UInt32?
     public let lastNoiseFloor: Int16?
     public let unreadCount: Int
-    public let isMuted: Bool
+    public let notificationLevel: NotificationLevel
     public let isFavorite: Bool
+
+    /// Convenience property for checking if muted
+    public var isMuted: Bool { notificationLevel == .muted }
     public let lastRxAirtimeSeconds: UInt32?
     public let neighborCount: Int
     public let lastSyncTimestamp: UInt32
@@ -182,7 +191,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastUptimeSeconds = model.lastUptimeSeconds
         self.lastNoiseFloor = model.lastNoiseFloor
         self.unreadCount = model.unreadCount
-        self.isMuted = model.isMuted
+        self.notificationLevel = model.notificationLevel
         self.isFavorite = model.isFavorite
         self.lastRxAirtimeSeconds = model.lastRxAirtimeSeconds
         self.neighborCount = model.neighborCount
@@ -205,7 +214,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         lastUptimeSeconds: UInt32? = nil,
         lastNoiseFloor: Int16? = nil,
         unreadCount: Int = 0,
-        isMuted: Bool = false,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
@@ -225,7 +234,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastUptimeSeconds = lastUptimeSeconds
         self.lastNoiseFloor = lastNoiseFloor
         self.unreadCount = unreadCount
-        self.isMuted = isMuted
+        self.notificationLevel = notificationLevel
         self.isFavorite = isFavorite
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount

@@ -292,7 +292,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: isMuted,
+                    notificationLevel: isMuted ? .muted : .all,
                     isFavorite: updated.isFavorite
                 )
             }
@@ -314,7 +314,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: isMuted,
+                    notificationLevel: isMuted ? .muted : .all,
                     isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
@@ -464,7 +464,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite
                 )
             }
@@ -486,7 +486,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,

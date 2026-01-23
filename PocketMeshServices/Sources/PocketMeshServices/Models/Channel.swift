@@ -33,8 +33,14 @@ public final class Channel {
     /// Unread mention count (mentions of current user not yet seen)
     public var unreadMentionCount: Int = 0
 
-    /// Whether this channel's notifications are muted
-    public var isMuted: Bool = false
+    /// Notification level for this channel (stored as raw value for SwiftData)
+    public var notificationLevelRawValue: Int = NotificationLevel.all.rawValue
+
+    /// Notification level computed property
+    public var notificationLevel: NotificationLevel {
+        get { NotificationLevel(rawValue: notificationLevelRawValue) ?? .all }
+        set { notificationLevelRawValue = newValue.rawValue }
+    }
 
     /// Whether this channel is marked as favorite
     public var isFavorite: Bool = false
@@ -49,7 +55,7 @@ public final class Channel {
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
         unreadMentionCount: Int = 0,
-        isMuted: Bool = false,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false
     ) {
         self.id = id
@@ -61,7 +67,7 @@ public final class Channel {
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount
-        self.isMuted = isMuted
+        self.notificationLevelRawValue = notificationLevel.rawValue
         self.isFavorite = isFavorite
     }
 
@@ -114,8 +120,11 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
     public let lastMessageDate: Date?
     public let unreadCount: Int
     public let unreadMentionCount: Int
-    public let isMuted: Bool
+    public let notificationLevel: NotificationLevel
     public let isFavorite: Bool
+
+    /// Convenience property for checking if muted
+    public var isMuted: Bool { notificationLevel == .muted }
 
     public init(from channel: Channel) {
         self.id = channel.id
@@ -127,7 +136,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastMessageDate = channel.lastMessageDate
         self.unreadCount = channel.unreadCount
         self.unreadMentionCount = channel.unreadMentionCount
-        self.isMuted = channel.isMuted
+        self.notificationLevel = channel.notificationLevel
         self.isFavorite = channel.isFavorite
     }
 
@@ -142,7 +151,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         lastMessageDate: Date?,
         unreadCount: Int,
         unreadMentionCount: Int = 0,
-        isMuted: Bool,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false
     ) {
         self.id = id
@@ -154,7 +163,7 @@ public struct ChannelDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount
-        self.isMuted = isMuted
+        self.notificationLevel = notificationLevel
         self.isFavorite = isFavorite
     }
 
