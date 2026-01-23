@@ -38,9 +38,9 @@ private enum LOSMapStyleSelection: String, CaseIterable, Hashable {
 
     var label: String {
         switch self {
-        case .standard: "Standard"
-        case .satellite: "Satellite"
-        case .terrain: "Terrain"
+        case .standard: L10n.Tools.Tools.LineOfSight.MapStyle.standard
+        case .satellite: L10n.Tools.Tools.LineOfSight.MapStyle.satellite
+        case .terrain: L10n.Tools.Tools.LineOfSight.MapStyle.terrain
         }
     }
 
@@ -243,10 +243,10 @@ struct LineOfSightView: View {
                         Button {
                             dismissLineOfSight()
                         } label: {
-                            Label("Back", systemImage: "chevron.left")
+                            Label(L10n.Tools.Tools.LineOfSight.back, systemImage: "chevron.left")
                                 .labelStyle(.titleAndIcon)
                         }
-                        .accessibilityLabel("Back")
+                        .accessibilityLabel(L10n.Tools.Tools.LineOfSight.back)
                     }
                 }
                 .liquidGlassToolbarBackground()
@@ -408,7 +408,7 @@ struct LineOfSightView: View {
 
                 // Point A annotation (only if dropped pin, not contact)
                 if let pointA = viewModel.pointA, pointA.contact == nil {
-                    Annotation("Point A", coordinate: pointA.coordinate) {
+                    Annotation(L10n.Tools.Tools.LineOfSight.pointA, coordinate: pointA.coordinate) {
                         PointMarker(label: "A", color: .blue)
                             .opacity(markerOpacity(for: .pointA))
                     }
@@ -417,7 +417,7 @@ struct LineOfSightView: View {
 
                 // Point B annotation (only if dropped pin, not contact)
                 if let pointB = viewModel.pointB, pointB.contact == nil {
-                    Annotation("Point B", coordinate: pointB.coordinate) {
+                    Annotation(L10n.Tools.Tools.LineOfSight.pointB, coordinate: pointB.coordinate) {
                         PointMarker(label: "B", color: .green)
                             .opacity(markerOpacity(for: .pointB))
                     }
@@ -426,7 +426,7 @@ struct LineOfSightView: View {
 
                 // Simulated repeater annotation (crosshairs target)
                 if let repeaterPoint = viewModel.repeaterPoint {
-                    Annotation("Repeater", coordinate: repeaterPoint.coordinate) {
+                    Annotation(L10n.Tools.Tools.LineOfSight.repeater, coordinate: repeaterPoint.coordinate) {
                         RepeaterTargetMarker()
                             .opacity(markerOpacity(for: .repeater))
                     }
@@ -491,7 +491,7 @@ struct LineOfSightView: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(isDropPinMode ? "Cancel drop pin" : "Drop pin")
+        .accessibilityLabel(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin)
     }
 
     // MARK: - Analysis Sheet
@@ -561,13 +561,13 @@ struct LineOfSightView: View {
         VStack(alignment: .leading, spacing: 12) {
             // Header with optional cancel button
             HStack {
-                Text("Points")
+                Text(L10n.Tools.Tools.LineOfSight.points)
                     .font(.headline)
 
                 Spacer()
 
                 if isRelocating {
-                    Button("Cancel") {
+                    Button(L10n.Tools.Tools.LineOfSight.cancel) {
                         viewModel.relocatingPoint = nil
                     }
                     .glassButtonStyle()
@@ -607,14 +607,14 @@ struct LineOfSightView: View {
                 )
 
                 if viewModel.pointA == nil || viewModel.pointB == nil {
-                    Text("Tap the pin button on the map to select points")
+                    Text(L10n.Tools.Tools.LineOfSight.selectPointsHint)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 if viewModel.elevationFetchFailed {
                     Label(
-                        "Elevation data unavailable. Using sea level (0m) as approximation.",
+                        L10n.Tools.Tools.LineOfSight.elevationUnavailable,
                         systemImage: "exclamationmark.triangle.fill"
                     )
                     .font(.caption)
@@ -627,24 +627,24 @@ struct LineOfSightView: View {
     @ViewBuilder
     private func relocatingMessageView(for pointID: PointID) -> some View {
         let pointName: String = switch pointID {
-        case .pointA: "Point A"
-        case .pointB: "Point B"
-        case .repeater: "Repeater"
+        case .pointA: L10n.Tools.Tools.LineOfSight.pointA
+        case .pointB: L10n.Tools.Tools.LineOfSight.pointB
+        case .repeater: L10n.Tools.Tools.LineOfSight.repeater
         }
 
         VStack(alignment: .leading, spacing: 8) {
-            Text("Relocating \(pointName)...")
+            Text(L10n.Tools.Tools.LineOfSight.relocating(pointName))
                 .font(.subheadline)
                 .bold()
 
-            Text("Tap the map to set a new location")
+            Text(L10n.Tools.Tools.LineOfSight.tapMapInstruction)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Relocating \(pointName). Tap the map to set a new location.")
+        .accessibilityLabel("\(L10n.Tools.Tools.LineOfSight.relocating(pointName)) \(L10n.Tools.Tools.LineOfSight.tapMapInstruction)")
     }
 
     @ViewBuilder
@@ -682,7 +682,7 @@ struct LineOfSightView: View {
                             HStack(spacing: 4) {
                                 ProgressView()
                                     .controlSize(.mini)
-                                Text("Loading elevation...")
+                                Text(L10n.Tools.Tools.LineOfSight.loadingElevation)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -701,7 +701,7 @@ struct LineOfSightView: View {
                         onClear: onClear
                     )
                 } else {
-                    Text("Not selected")
+                    Text(L10n.Tools.Tools.LineOfSight.notSelected)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -731,13 +731,13 @@ struct LineOfSightView: View {
         // Share menu
         Menu {
             if let coord = point?.coordinate {
-                Button("Open in Maps", systemImage: "map") {
+                Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
                     let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                    mapItem.name = pointID == .pointA ? "Point A" : "Point B"
+                    mapItem.name = pointID == .pointA ? L10n.Tools.Tools.LineOfSight.pointA : L10n.Tools.Tools.LineOfSight.pointB
                     mapItem.openInMaps()
                 }
 
-                Button("Copy Coordinates", systemImage: "doc.on.doc") {
+                Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
                     copyHapticTrigger += 1
                     let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                     UIPasteboard.general.string = coordText
@@ -745,11 +745,11 @@ struct LineOfSightView: View {
 
                 let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                 ShareLink(item: coordText) {
-                    Label("Share...", systemImage: "square.and.arrow.up")
+                    Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
                 }
             }
         } label: {
-            Label("Share", systemImage: "square.and.arrow.up")
+            Label(L10n.Tools.Tools.LineOfSight.shareLabel, systemImage: "square.and.arrow.up")
                 .labelStyle(.iconOnly)
         }
         .glassButtonStyle()
@@ -757,7 +757,7 @@ struct LineOfSightView: View {
         .controlSize(.small)
 
         // Relocate button (toggles on/off)
-        Button("Relocate", systemImage: "mappin") {
+        Button(L10n.Tools.Tools.LineOfSight.relocate, systemImage: "mappin") {
             if viewModel.relocatingPoint == pointID {
                 viewModel.relocatingPoint = nil
             } else {
@@ -773,7 +773,7 @@ struct LineOfSightView: View {
         .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != pointID)
 
         // Edit/Done toggle
-        Button(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil") {
+        Button(isEditing ? L10n.Tools.Tools.LineOfSight.done : L10n.Tools.Tools.LineOfSight.edit, systemImage: isEditing ? "checkmark" : "pencil") {
             withAnimation {
                 editingPoint = isEditing ? nil : pointID
             }
@@ -783,7 +783,7 @@ struct LineOfSightView: View {
         .controlSize(.small)
 
         // Clear button
-        Button("Clear", systemImage: "xmark", action: onClear)
+        Button(L10n.Tools.Tools.LineOfSight.clear, systemImage: "xmark", action: onClear)
             .labelStyle(.iconOnly)
             .glassButtonStyle()
             .controlSize(.small)
@@ -794,7 +794,7 @@ struct LineOfSightView: View {
         Grid(alignment: .leading, verticalSpacing: 8) {
             // Ground elevation row
             GridRow {
-                Text("Ground elevation")
+                Text(L10n.Tools.Tools.LineOfSight.groundElevation)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -812,7 +812,7 @@ struct LineOfSightView: View {
 
             // Additional height row
             GridRow {
-                Text("Additional height")
+                Text(L10n.Tools.Tools.LineOfSight.additionalHeight)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -838,7 +838,7 @@ struct LineOfSightView: View {
                     .gridCellColumns(2)
 
                 GridRow {
-                    Text("Total height")
+                    Text(L10n.Tools.Tools.LineOfSight.totalHeight)
                         .font(.caption)
                         .bold()
 
@@ -874,7 +874,7 @@ struct LineOfSightView: View {
                     }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Repeater")
+                    Text(L10n.Tools.Tools.LineOfSight.repeater)
                         .font(.subheadline)
                         .lineLimit(1)
 
@@ -891,13 +891,13 @@ struct LineOfSightView: View {
                 // Share menu
                 Menu {
                     if let coord = viewModel.repeaterPoint?.coordinate {
-                        Button("Open in Maps", systemImage: "map") {
+                        Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
                             let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                            mapItem.name = "Repeater Location"
+                            mapItem.name = L10n.Tools.Tools.LineOfSight.repeaterLocation
                             mapItem.openInMaps()
                         }
 
-                        Button("Copy Coordinates", systemImage: "doc.on.doc") {
+                        Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
                             copyHapticTrigger += 1
                             let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                             UIPasteboard.general.string = coordText
@@ -905,11 +905,11 @@ struct LineOfSightView: View {
 
                         let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
                         ShareLink(item: coordText) {
-                            Label("Share...", systemImage: "square.and.arrow.up")
+                            Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
                         }
                     }
                 } label: {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    Label(L10n.Tools.Tools.LineOfSight.shareLabel, systemImage: "square.and.arrow.up")
                         .labelStyle(.iconOnly)
                 }
                 .glassButtonStyle()
@@ -917,7 +917,7 @@ struct LineOfSightView: View {
                 .controlSize(.small)
 
                 // Relocate button (toggles on/off)
-                Button("Relocate", systemImage: "mappin") {
+                Button(L10n.Tools.Tools.LineOfSight.relocate, systemImage: "mappin") {
                     if viewModel.relocatingPoint == .repeater {
                         viewModel.relocatingPoint = nil
                     } else {
@@ -933,7 +933,7 @@ struct LineOfSightView: View {
                 .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != .repeater)
 
                 // Edit/Done toggle
-                Button(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil") {
+                Button(isEditing ? L10n.Tools.Tools.LineOfSight.done : L10n.Tools.Tools.LineOfSight.edit, systemImage: isEditing ? "checkmark" : "pencil") {
                     withAnimation {
                         editingPoint = isEditing ? nil : .repeater
                     }
@@ -943,7 +943,7 @@ struct LineOfSightView: View {
                 .controlSize(.small)
 
                 // Clear button
-                Button("Clear", systemImage: "xmark") {
+                Button(L10n.Tools.Tools.LineOfSight.clear, systemImage: "xmark") {
                     viewModel.clearRepeater()
                 }
                 .labelStyle(.iconOnly)
@@ -966,7 +966,7 @@ struct LineOfSightView: View {
         Grid(alignment: .leading, verticalSpacing: 8) {
             if let groundElevation = viewModel.repeaterGroundElevation {
                 GridRow {
-                    Text("Ground elevation")
+                    Text(L10n.Tools.Tools.LineOfSight.groundElevation)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -977,7 +977,7 @@ struct LineOfSightView: View {
             }
 
             GridRow {
-                Text("Additional height")
+                Text(L10n.Tools.Tools.LineOfSight.additionalHeight)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -1003,7 +1003,7 @@ struct LineOfSightView: View {
                     .gridCellColumns(2)
 
                 GridRow {
-                    Text("Total height")
+                    Text(L10n.Tools.Tools.LineOfSight.totalHeight)
                         .font(.caption)
                         .bold()
                     Spacer()
@@ -1036,7 +1036,7 @@ struct LineOfSightView: View {
                             .foregroundStyle(.white)
                     }
 
-                Text("Add Repeater")
+                Text(L10n.Tools.Tools.LineOfSight.addRepeater)
                     .font(.subheadline)
 
                 Spacer()
@@ -1064,7 +1064,7 @@ struct LineOfSightView: View {
                 viewModel.analyze()
             }
         } label: {
-            Label("Analyze Line of Sight", systemImage: "waveform.path")
+            Label(L10n.Tools.Tools.LineOfSight.analyze, systemImage: "waveform.path")
                 .frame(maxWidth: .infinity)
         }
         .glassProminentButtonStyle()
@@ -1083,13 +1083,13 @@ struct LineOfSightView: View {
     private var terrainProfileSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Terrain Profile")
+                Text(L10n.Tools.Tools.LineOfSight.terrainProfile)
                     .font(.headline)
 
                 Spacer()
 
                 Label(
-                    "Adjusted for earth curvature (\(LOSFormatters.formatKFactor(viewModel.refractionK)))",
+                    L10n.Tools.Tools.LineOfSight.earthCurvature(LOSFormatters.formatKFactor(viewModel.refractionK)),
                     systemImage: "globe"
                 )
                 .font(.caption2)
@@ -1117,7 +1117,7 @@ struct LineOfSightView: View {
             )
             .overlay {
                 if showDragHint, let center = repeaterMarkerCenter {
-                    Text("Drag to adjust")
+                    Text(L10n.Tools.Tools.LineOfSight.dragToAdjust)
                         .font(.caption)
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 10)
@@ -1143,23 +1143,23 @@ struct LineOfSightView: View {
 
                 // Refraction k-factor picker
                 HStack {
-                    Label("Refraction", systemImage: "globe")
+                    Label(L10n.Tools.Tools.LineOfSight.refraction, systemImage: "globe")
                         .foregroundStyle(.secondary)
                     Spacer()
                     Picker("", selection: Binding(
                         get: { viewModel.refractionK },
                         set: { viewModel.refractionK = $0 }
                     )) {
-                        Text("None").tag(1.0)
-                        Text("Standard (k=1.33)").tag(4.0 / 3.0)
-                        Text("Ducting (k=4)").tag(4.0)
+                        Text(L10n.Tools.Tools.LineOfSight.Refraction.none).tag(1.0)
+                        Text(L10n.Tools.Tools.LineOfSight.Refraction.standard).tag(4.0 / 3.0)
+                        Text(L10n.Tools.Tools.LineOfSight.Refraction.ducting).tag(4.0)
                     }
                     .pickerStyle(.menu)
                 }
             }
             .padding(.top, 8)
         } label: {
-            Label("RF Settings", systemImage: "antenna.radiowaves.left.and.right")
+            Label(L10n.Tools.Tools.LineOfSight.rfSettings, systemImage: "antenna.radiowaves.left.and.right")
                 .font(.headline)
         }
         .tint(.primary)
@@ -1170,7 +1170,7 @@ struct LineOfSightView: View {
     private var loadingSection: some View {
         HStack {
             Spacer()
-            ProgressView("Analyzing path...")
+            ProgressView(L10n.Tools.Tools.LineOfSight.analyzing)
             Spacer()
         }
         .padding()
@@ -1184,7 +1184,7 @@ struct LineOfSightView: View {
                 .font(.largeTitle)
                 .foregroundStyle(.orange)
 
-            Text("Analysis Failed")
+            Text(L10n.Tools.Tools.LineOfSight.analysisFailed)
                 .font(.headline)
 
             Text(message)
@@ -1192,7 +1192,7 @@ struct LineOfSightView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Button("Retry") {
+            Button(L10n.Tools.Tools.LineOfSight.retry) {
                 if viewModel.repeaterPoint != nil {
                     viewModel.analyzeWithRepeater()
                 } else {
@@ -1516,10 +1516,10 @@ private struct FrequencyInputRow: View {
 
     var body: some View {
         HStack {
-            Label("Frequency", systemImage: "antenna.radiowaves.left.and.right")
+            Label(L10n.Tools.Tools.LineOfSight.frequency, systemImage: "antenna.radiowaves.left.and.right")
                 .foregroundStyle(.secondary)
             Spacer()
-            TextField("MHz", text: $text)
+            TextField(L10n.Tools.Tools.LineOfSight.mhz, text: $text)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 80)
@@ -1534,7 +1534,7 @@ private struct FrequencyInputRow: View {
                     }
                 }
 
-            Text("MHz")
+            Text(L10n.Tools.Tools.LineOfSight.mhz)
                 .foregroundStyle(.secondary)
 
             if isFocused {

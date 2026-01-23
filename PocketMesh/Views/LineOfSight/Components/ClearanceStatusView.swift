@@ -18,7 +18,7 @@ struct ClearanceStatusView: View {
             if status != .blocked {
                 Text("·")
                     .foregroundStyle(.secondary)
-                Text("\(clampedPercent)% clearance")
+                Text(L10n.Tools.Tools.LineOfSight.clearancePercent(clampedPercent))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

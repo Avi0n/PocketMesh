@@ -2311,7 +2311,313 @@ public enum L10n {
     }
   }
   public enum Tools {
+    public enum Tools {
+      /// Location: ToolsView.swift - Tool selection label
+      public static let lineOfSight = L10n.tr("Tools", "tools.lineOfSight", fallback: "Line of Sight")
+      /// Location: ToolsView.swift - Tool selection label
+      public static let noiseFloor = L10n.tr("Tools", "tools.noiseFloor", fallback: "Noise Floor")
+      /// Location: ToolsView.swift - Tool selection label
+      public static let rxLog = L10n.tr("Tools", "tools.rxLog", fallback: "RX Log")
+      /// Location: ToolsView.swift - Empty state when no tool selected
+      public static let selectTool = L10n.tr("Tools", "tools.selectTool", fallback: "Select a tool")
+      /// Location: ToolsView.swift - Navigation title
+      public static let title = L10n.tr("Tools", "tools.title", fallback: "Tools")
+      /// Location: ToolsView.swift - Tool selection label
+      public static let tracePath = L10n.tr("Tools", "tools.tracePath", fallback: "Trace Path")
+      public enum LineOfSight {
+        /// Location: LineOfSightView.swift - Additional height label
+        public static let additionalHeight = L10n.tr("Tools", "tools.lineOfSight.additionalHeight", fallback: "Additional height")
+        /// Location: LineOfSightView.swift - Add repeater button
+        public static let addRepeater = L10n.tr("Tools", "tools.lineOfSight.addRepeater", fallback: "Add Repeater")
+        /// Location: LineOfSightView.swift - Analysis failed title
+        public static let analysisFailed = L10n.tr("Tools", "tools.lineOfSight.analysisFailed", fallback: "Analysis Failed")
+        /// Location: LineOfSightView.swift - Analyze button
+        public static let analyze = L10n.tr("Tools", "tools.lineOfSight.analyze", fallback: "Analyze Line of Sight")
+        /// Location: LineOfSightView.swift - Analyzing progress
+        public static let analyzing = L10n.tr("Tools", "tools.lineOfSight.analyzing", fallback: "Analyzing path...")
+        /// Location: LineOfSightView.swift - Back button label
+        public static let back = L10n.tr("Tools", "tools.lineOfSight.back", fallback: "Back")
+        /// Location: LineOfSightView.swift - Cancel button
+        public static let cancel = L10n.tr("Tools", "tools.lineOfSight.cancel", fallback: "Cancel")
+        /// Location: LineOfSightView.swift - Drop pin mode enabled
+        public static let cancelDropPin = L10n.tr("Tools", "tools.lineOfSight.cancelDropPin", fallback: "Cancel drop pin")
+        /// Location: LineOfSightView.swift - Clear button
+        public static let clear = L10n.tr("Tools", "tools.lineOfSight.clear", fallback: "Clear")
+        /// Location: ResultsCardView.swift - Clearance section title
+        public static let clearance = L10n.tr("Tools", "tools.lineOfSight.clearance", fallback: "Clearance")
+        /// Location: ClearanceStatusView.swift - Clearance percentage, %lld is percent
+        public static func clearancePercent(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.lineOfSight.clearancePercent", p1, fallback: "%lld%% clearance")
+        }
+        /// Location: LineOfSightView.swift - Copy coordinates button
+        public static let copyCoordinates = L10n.tr("Tools", "tools.lineOfSight.copyCoordinates", fallback: "Copy Coordinates")
+        /// Location: ResultsCardView.swift - Diffraction loss label
+        public static let diffractionLoss = L10n.tr("Tools", "tools.lineOfSight.diffractionLoss", fallback: "Diffraction loss")
+        /// Location: ResultsCardView.swift - Distance label
+        public static let distance = L10n.tr("Tools", "tools.lineOfSight.distance", fallback: "Distance")
+        /// Location: LineOfSightView.swift - Done button
+        public static let done = L10n.tr("Tools", "tools.lineOfSight.done", fallback: "Done")
+        /// Location: LineOfSightView.swift - Drag to adjust tooltip
+        public static let dragToAdjust = L10n.tr("Tools", "tools.lineOfSight.dragToAdjust", fallback: "Drag to adjust")
+        /// Location: LineOfSightViewModel.swift - Dropped pin display name
+        public static let droppedPin = L10n.tr("Tools", "tools.lineOfSight.droppedPin", fallback: "Dropped pin")
+        /// Location: LineOfSightView.swift - Drop pin mode disabled
+        public static let dropPin = L10n.tr("Tools", "tools.lineOfSight.dropPin", fallback: "Drop pin")
+        /// Location: LineOfSightView.swift - Earth curvature note, %@ is k-factor
+        public static func earthCurvature(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.lineOfSight.earthCurvature", String(describing: p1), fallback: "Adjusted for earth curvature (%@)")
+        }
+        /// Location: LineOfSightView.swift - Edit button
+        public static let edit = L10n.tr("Tools", "tools.lineOfSight.edit", fallback: "Edit")
+        /// Location: TerrainProfileCanvas.swift - Elevation data attribution
+        public static let elevationAttribution = L10n.tr("Tools", "tools.lineOfSight.elevationAttribution", fallback: "Elevation data: Copernicus DEM GLO-90 via Open-Meteo")
+        /// Location: LineOfSightView.swift - Elevation unavailable warning
+        public static let elevationUnavailable = L10n.tr("Tools", "tools.lineOfSight.elevationUnavailable", fallback: "Elevation data unavailable. Using sea level (0m) as approximation.")
+        /// Location: ResultsCardView.swift - Free space loss label
+        public static let freeSpaceLoss = L10n.tr("Tools", "tools.lineOfSight.freeSpaceLoss", fallback: "Free space loss")
+        /// Location: LineOfSightView.swift - Frequency label
+        public static let frequency = L10n.tr("Tools", "tools.lineOfSight.frequency", fallback: "Frequency")
+        /// Location: LineOfSightView.swift - Ground elevation label
+        public static let groundElevation = L10n.tr("Tools", "tools.lineOfSight.groundElevation", fallback: "Ground elevation")
+        /// Location: TerrainProfileCanvas.swift - Indirect route label
+        public static let indirectRoute = L10n.tr("Tools", "tools.lineOfSight.indirectRoute", fallback: "Indirect route via R u{00B7} Relocate on map to adjust")
+        /// Location: LineOfSightView.swift - Loading elevation status
+        public static let loadingElevation = L10n.tr("Tools", "tools.lineOfSight.loadingElevation", fallback: "Loading elevation...")
+        /// Location: ResultsCardView.swift - Loss suffix
+        public static let loss = L10n.tr("Tools", "tools.lineOfSight.loss", fallback: "loss")
+        /// Location: LineOfSightView.swift - MHz unit
+        public static let mhz = L10n.tr("Tools", "tools.lineOfSight.mhz", fallback: "MHz")
+        /// Location: TerrainProfileCanvas.swift - Empty state title
+        public static let noData = L10n.tr("Tools", "tools.lineOfSight.noData", fallback: "No Data")
+        /// Location: LineOfSightView.swift - Not selected placeholder
+        public static let notSelected = L10n.tr("Tools", "tools.lineOfSight.notSelected", fallback: "Not selected")
+        /// Location: ResultsCardView.swift - Obstructions found label
+        public static let obstructionsFound = L10n.tr("Tools", "tools.lineOfSight.obstructionsFound", fallback: "Obstructions found")
+        /// Location: LineOfSightView.swift - Open in Maps button
+        public static let openInMaps = L10n.tr("Tools", "tools.lineOfSight.openInMaps", fallback: "Open in Maps")
+        /// Location: ResultsCardView.swift - Path loss breakdown section
+        public static let pathLossBreakdown = L10n.tr("Tools", "tools.lineOfSight.pathLossBreakdown", fallback: "Path Loss Breakdown")
+        /// Location: LineOfSightView.swift - Point A annotation
+        public static let pointA = L10n.tr("Tools", "tools.lineOfSight.pointA", fallback: "Point A")
+        /// Location: LineOfSightView.swift - Point B annotation
+        public static let pointB = L10n.tr("Tools", "tools.lineOfSight.pointB", fallback: "Point B")
+        /// Location: LineOfSightView.swift - Points section title
+        public static let points = L10n.tr("Tools", "tools.lineOfSight.points", fallback: "Points")
+        /// Location: LineOfSightView.swift - Refraction label
+        public static let refraction = L10n.tr("Tools", "tools.lineOfSight.refraction", fallback: "Refraction")
+        /// Location: LineOfSightView.swift - Relocate button
+        public static let relocate = L10n.tr("Tools", "tools.lineOfSight.relocate", fallback: "Relocate")
+        /// Location: LineOfSightView.swift - Relocating message, %@ is point name
+        public static func relocating(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.lineOfSight.relocating", String(describing: p1), fallback: "Relocating %@...")
+        }
+        /// Location: LineOfSightView.swift - Repeater annotation
+        public static let repeater = L10n.tr("Tools", "tools.lineOfSight.repeater", fallback: "Repeater")
+        /// Location: LineOfSightView.swift - Repeater location map item name
+        public static let repeaterLocation = L10n.tr("Tools", "tools.lineOfSight.repeaterLocation", fallback: "Repeater Location")
+        /// Location: ResultsCardView.swift - Section title
+        public static let results = L10n.tr("Tools", "tools.lineOfSight.results", fallback: "Results")
+        /// Location: LineOfSightView.swift - Retry button
+        public static let retry = L10n.tr("Tools", "tools.lineOfSight.retry", fallback: "Retry")
+        /// Location: LineOfSightView.swift - RF Settings section
+        public static let rfSettings = L10n.tr("Tools", "tools.lineOfSight.rfSettings", fallback: "RF Settings")
+        /// Location: LineOfSightView.swift - Select points hint
+        public static let selectPointsHint = L10n.tr("Tools", "tools.lineOfSight.selectPointsHint", fallback: "Tap the pin button on the map to select points")
+        /// Location: TerrainProfileCanvas.swift - Empty state description
+        public static let selectTwoPoints = L10n.tr("Tools", "tools.lineOfSight.selectTwoPoints", fallback: "Select two points to analyze")
+        /// Location: LineOfSightView.swift - Share button
+        public static let share = L10n.tr("Tools", "tools.lineOfSight.share", fallback: "Share...")
+        /// Location: LineOfSightView.swift - Share label
+        public static let shareLabel = L10n.tr("Tools", "tools.lineOfSight.shareLabel", fallback: "Share")
+        /// Location: ResultsCardView.swift - Status label
+        public static let status = L10n.tr("Tools", "tools.lineOfSight.status", fallback: "Status")
+        /// Location: LineOfSightView.swift - Tap map instruction
+        public static let tapMapInstruction = L10n.tr("Tools", "tools.lineOfSight.tapMapInstruction", fallback: "Tap the map to set a new location")
+        /// Location: LineOfSightView.swift - Terrain profile section
+        public static let terrainProfile = L10n.tr("Tools", "tools.lineOfSight.terrainProfile", fallback: "Terrain Profile")
+        /// Location: ResultsCardView.swift - Total label
+        public static let total = L10n.tr("Tools", "tools.lineOfSight.total", fallback: "Total")
+        /// Location: LineOfSightView.swift - Total height label
+        public static let totalHeight = L10n.tr("Tools", "tools.lineOfSight.totalHeight", fallback: "Total height")
+        /// Location: ResultsCardView.swift - Worst clearance label
+        public static func worstClearance(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.lineOfSight.worstClearance", p1, fallback: "Worst clearance (% of 1st Fresnel)")
+        }
+        /// Location: ResultsCardView.swift - Worst clearance short label
+        public static let worstClearanceShort = L10n.tr("Tools", "tools.lineOfSight.worstClearanceShort", fallback: "Worst clearance")
+        public enum Legend {
+          /// Location: TerrainProfileCanvas.swift - Legend: clear
+          public static let clear = L10n.tr("Tools", "tools.lineOfSight.legend.clear", fallback: "Clear")
+          /// Location: TerrainProfileCanvas.swift - Legend: line of sight
+          public static let los = L10n.tr("Tools", "tools.lineOfSight.legend.los", fallback: "LOS")
+          /// Location: TerrainProfileCanvas.swift - Legend: obstructed
+          public static let obstructed = L10n.tr("Tools", "tools.lineOfSight.legend.obstructed", fallback: "Obstructed")
+          /// Location: TerrainProfileCanvas.swift - Legend: terrain
+          public static let terrain = L10n.tr("Tools", "tools.lineOfSight.legend.terrain", fallback: "Terrain")
+        }
+        public enum MapStyle {
+          /// Location: LineOfSightView.swift - Map style: satellite
+          public static let satellite = L10n.tr("Tools", "tools.lineOfSight.mapStyle.satellite", fallback: "Satellite")
+          /// Location: LineOfSightView.swift - Map style: standard
+          public static let standard = L10n.tr("Tools", "tools.lineOfSight.mapStyle.standard", fallback: "Standard")
+          /// Location: LineOfSightView.swift - Map style: terrain
+          public static let terrain = L10n.tr("Tools", "tools.lineOfSight.mapStyle.terrain", fallback: "Terrain")
+        }
+        public enum Refraction {
+          /// Location: LineOfSightView.swift - Refraction: ducting
+          public static let ducting = L10n.tr("Tools", "tools.lineOfSight.refraction.ducting", fallback: "Ducting (k=4)")
+          /// Location: LineOfSightView.swift - Refraction: none
+          public static let `none` = L10n.tr("Tools", "tools.lineOfSight.refraction.none", fallback: "None")
+          /// Location: LineOfSightView.swift - Refraction: standard
+          public static let standard = L10n.tr("Tools", "tools.lineOfSight.refraction.standard", fallback: "Standard (k=1.33)")
+        }
+      }
+      public enum NoiseFloor {
+        /// Location: NoiseFloorView.swift - Average label
+        public static let average = L10n.tr("Tools", "tools.noiseFloor.average", fallback: "Average")
+        /// Location: NoiseFloorView.swift - Chart accessibility, %lld readings, %lld min, %lld max, %lld avg, %@ trend
+        public static func chartAccessibility(_ p1: Int, _ p2: Int, _ p3: Int, _ p4: Int, _ p5: Any) -> String {
+          return L10n.tr("Tools", "tools.noiseFloor.chartAccessibility", p1, p2, p3, p4, String(describing: p5), fallback: "Noise floor history: %lld readings, minimum %lld dBm, maximum %lld dBm, average %lld dBm, trend %@")
+        }
+        /// Location: NoiseFloorView.swift - Chart accessibility when empty
+        public static let chartAccessibilityEmpty = L10n.tr("Tools", "tools.noiseFloor.chartAccessibilityEmpty", fallback: "Noise floor history chart, no data")
+        /// Location: NoiseFloorView.swift - Collecting data title
+        public static let collectingData = L10n.tr("Tools", "tools.noiseFloor.collectingData", fallback: "Collecting Data...")
+        /// Location: NoiseFloorView.swift - Collecting data description
+        public static let collectingDataDescription = L10n.tr("Tools", "tools.noiseFloor.collectingDataDescription", fallback: "Noise floor readings will appear as they are collected.")
+        /// Location: NoiseFloorView.swift - Unit label for decibels
+        public static let db = L10n.tr("Tools", "tools.noiseFloor.dB", fallback: "dB")
+        /// Location: NoiseFloorView.swift - Unit label
+        public static let dBm = L10n.tr("Tools", "tools.noiseFloor.dBm", fallback: "dBm")
+        /// Location: NoiseFloorView.swift - Last RSSI label
+        public static let lastRssi = L10n.tr("Tools", "tools.noiseFloor.lastRssi", fallback: "Last RSSI")
+        /// Location: NoiseFloorView.swift - Last SNR label
+        public static let lastSnr = L10n.tr("Tools", "tools.noiseFloor.lastSnr", fallback: "Last SNR")
+        /// Location: NoiseFloorView.swift - Maximum label
+        public static let maximum = L10n.tr("Tools", "tools.noiseFloor.maximum", fallback: "Maximum")
+        /// Location: NoiseFloorView.swift - Minimum label
+        public static let minimum = L10n.tr("Tools", "tools.noiseFloor.minimum", fallback: "Minimum")
+        /// Location: NoiseFloorView.swift - No reading accessibility
+        public static let noReading = L10n.tr("Tools", "tools.noiseFloor.noReading", fallback: "No reading available")
+        /// Location: NoiseFloorView.swift - Disconnected state description
+        public static let notConnectedDescription = L10n.tr("Tools", "tools.noiseFloor.notConnectedDescription", fallback: "Connect to a mesh radio to measure noise floor.")
+        /// Location: NoiseFloorView.swift - Statistics section title
+        public static let statistics = L10n.tr("Tools", "tools.noiseFloor.statistics", fallback: "Statistics")
+        /// Location: NoiseFloorView.swift - Trend: decreasing
+        public static let trendDecreasing = L10n.tr("Tools", "tools.noiseFloor.trendDecreasing", fallback: "decreasing")
+        /// Location: NoiseFloorView.swift - Trend: increasing
+        public static let trendIncreasing = L10n.tr("Tools", "tools.noiseFloor.trendIncreasing", fallback: "increasing")
+        /// Location: NoiseFloorView.swift - Trend: stable
+        public static let trendStable = L10n.tr("Tools", "tools.noiseFloor.trendStable", fallback: "stable")
+        public enum Error {
+          /// Location: NoiseFloorViewModel.swift - Error: device disconnected
+          public static let disconnected = L10n.tr("Tools", "tools.noiseFloor.error.disconnected", fallback: "Device disconnected")
+          /// Location: NoiseFloorViewModel.swift - Error: unable to read stats
+          public static let unableToRead = L10n.tr("Tools", "tools.noiseFloor.error.unableToRead", fallback: "Unable to read radio stats")
+        }
+        public enum Quality {
+          /// Location: NoiseFloorViewModel.swift - Signal quality: excellent
+          public static let excellent = L10n.tr("Tools", "tools.noiseFloor.quality.excellent", fallback: "Excellent")
+          /// Location: NoiseFloorViewModel.swift - Signal quality: fair
+          public static let fair = L10n.tr("Tools", "tools.noiseFloor.quality.fair", fallback: "Fair")
+          /// Location: NoiseFloorViewModel.swift - Signal quality: good
+          public static let good = L10n.tr("Tools", "tools.noiseFloor.quality.good", fallback: "Good")
+          /// Location: NoiseFloorViewModel.swift - Signal quality: poor
+          public static let poor = L10n.tr("Tools", "tools.noiseFloor.quality.poor", fallback: "Poor")
+          /// Location: NoiseFloorViewModel.swift - Signal quality: unknown
+          public static let unknown = L10n.tr("Tools", "tools.noiseFloor.quality.unknown", fallback: "Unknown")
+        }
+      }
+      public enum RxLog {
+        /// Location: RxLogView.swift - Bytes suffix for size display
+        public static let bytes = L10n.tr("Tools", "tools.rxLog.bytes", fallback: "bytes")
+        /// Location: RxLogView.swift - Channel hash label
+        public static let channelHashLabel = L10n.tr("Tools", "tools.rxLog.channelHashLabel", fallback: "Channel Hash:")
+        /// Location: RxLogView.swift - Channel name label
+        public static let channelNameLabel = L10n.tr("Tools", "tools.rxLog.channelNameLabel", fallback: "Channel Name:")
+        /// Location: RxLogView.swift - Copy button
+        public static let copy = L10n.tr("Tools", "tools.rxLog.copy", fallback: "Copy")
+        /// Location: RxLogView.swift - Filter menu section header
+        public static let decryptStatus = L10n.tr("Tools", "tools.rxLog.decryptStatus", fallback: "Decrypt Status")
+        /// Location: RxLogView.swift - Delete confirmation button
+        public static let delete = L10n.tr("Tools", "tools.rxLog.delete", fallback: "Delete")
+        /// Location: RxLogView.swift - Delete confirmation dialog title
+        public static let deleteConfirmation = L10n.tr("Tools", "tools.rxLog.deleteConfirmation", fallback: "Delete all logs?")
+        /// Location: RxLogView.swift - Delete logs button
+        public static let deleteLogs = L10n.tr("Tools", "tools.rxLog.deleteLogs", fallback: "Delete Logs")
+        /// Location: RxLogView.swift - Direct route label
+        public static let direct = L10n.tr("Tools", "tools.rxLog.direct", fallback: "Direct")
+        /// Location: RxLogView.swift - Filter button label
+        public static let filter = L10n.tr("Tools", "tools.rxLog.filter", fallback: "Filter")
+        /// Location: RxLogView.swift - From label
+        public static let fromLabel = L10n.tr("Tools", "tools.rxLog.fromLabel", fallback: "From:")
+        /// Location: RxLogView.swift - Group duplicates toggle
+        public static let groupDuplicates = L10n.tr("Tools", "tools.rxLog.groupDuplicates", fallback: "Group Duplicates")
+        /// Location: RxLogView.swift - Hash label
+        public static let hashLabel = L10n.tr("Tools", "tools.rxLog.hashLabel", fallback: "Hash:")
+        /// Location: RxLogView.swift - Path detail for multiple hops
+        public static let hopPlural = L10n.tr("Tools", "tools.rxLog.hopPlural", fallback: "hops")
+        /// Location: RxLogView.swift - Path detail for single hop
+        public static let hopSingular = L10n.tr("Tools", "tools.rxLog.hopSingular", fallback: "hop")
+        /// Location: RxLogView.swift - Empty state title when listening
+        public static let listening = L10n.tr("Tools", "tools.rxLog.listening", fallback: "Listening...")
+        /// Location: RxLogView.swift - Empty state description
+        public static let listeningDescription = L10n.tr("Tools", "tools.rxLog.listeningDescription", fallback: "RF packets will appear here as they arrive.")
+        /// Location: RxLogView.swift - Live status indicator
+        public static let live = L10n.tr("Tools", "tools.rxLog.live", fallback: "Live")
+        /// Location: RxLogView.swift - Overflow menu button label
+        public static let more = L10n.tr("Tools", "tools.rxLog.more", fallback: "More")
+        /// Location: RxLogView.swift - Disconnected state title
+        public static let notConnected = L10n.tr("Tools", "tools.rxLog.notConnected", fallback: "Not Connected")
+        /// Location: RxLogView.swift - Disconnected state description
+        public static let notConnectedDescription = L10n.tr("Tools", "tools.rxLog.notConnectedDescription", fallback: "Connect to a mesh radio to view RF packets.")
+        /// Location: RxLogView.swift - Offline status indicator
+        public static let offline = L10n.tr("Tools", "tools.rxLog.offline", fallback: "Offline")
+        /// Location: RxLogView.swift - Packet count in header, %lld is count
+        public static func packetsCount(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.rxLog.packetsCount", p1, fallback: "%lld packets")
+        }
+        /// Location: RxLogView.swift - Path label
+        public static let pathLabel = L10n.tr("Tools", "tools.rxLog.pathLabel", fallback: "Path:")
+        /// Location: RxLogView.swift - Raw payload section title
+        public static let rawPayload = L10n.tr("Tools", "tools.rxLog.rawPayload", fallback: "Raw Payload")
+        /// Location: RxLogView.swift - Duplicate count accessibility label, %lld is count
+        public static func receivedTimes(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.rxLog.receivedTimes", p1, fallback: "Received %lld times")
+        }
+        /// Location: RxLogView.swift - Filter menu section header
+        public static let routeType = L10n.tr("Tools", "tools.rxLog.routeType", fallback: "Route Type")
+        /// Location: RxLogView.swift - RSSI label
+        public static let rssiLabel = L10n.tr("Tools", "tools.rxLog.rssiLabel", fallback: "RSSI:")
+        /// Location: RxLogView.swift - Signal strength accessibility label, %@ is quality
+        public static func signalStrength(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.rxLog.signalStrength", String(describing: p1), fallback: "Signal strength: %@")
+        }
+        /// Location: RxLogView.swift - Size label
+        public static let sizeLabel = L10n.tr("Tools", "tools.rxLog.sizeLabel", fallback: "Size:")
+        /// Location: RxLogView.swift - SNR label
+        public static let snrLabel = L10n.tr("Tools", "tools.rxLog.snrLabel", fallback: "SNR:")
+        /// Location: RxLogView.swift - Text label
+        public static let textLabel = L10n.tr("Tools", "tools.rxLog.textLabel", fallback: "Text:")
+        /// Location: RxLogView.swift - To label
+        public static let toLabel = L10n.tr("Tools", "tools.rxLog.toLabel", fallback: "To:")
+        /// Location: RxLogView.swift - Type label
+        public static let typeLabel = L10n.tr("Tools", "tools.rxLog.typeLabel", fallback: "Type:")
+        public enum Filter {
+          /// Location: RxLogViewModel.swift - Route filter: all
+          public static let all = L10n.tr("Tools", "tools.rxLog.filter.all", fallback: "All")
+          /// Location: RxLogViewModel.swift - Decrypt filter: decrypted
+          public static let decrypted = L10n.tr("Tools", "tools.rxLog.filter.decrypted", fallback: "Decrypted")
+          /// Location: RxLogViewModel.swift - Route filter: direct only
+          public static let directOnly = L10n.tr("Tools", "tools.rxLog.filter.directOnly", fallback: "Direct Only")
+          /// Location: RxLogViewModel.swift - Decrypt filter: failed
+          public static let failed = L10n.tr("Tools", "tools.rxLog.filter.failed", fallback: "Failed")
+          /// Location: RxLogViewModel.swift - Route filter: flood only
+          public static let floodOnly = L10n.tr("Tools", "tools.rxLog.filter.floodOnly", fallback: "Flood Only")
+        }
+      }
     }
+  }
 }
 // swiftlint:enable explicit_type_interface function_parameter_count identifier_name line_length
 // swiftlint:enable nesting type_body_length type_name vertical_whitespace_opening_braces
