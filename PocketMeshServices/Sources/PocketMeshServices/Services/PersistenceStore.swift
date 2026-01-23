@@ -791,6 +791,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             ackCode: dto.ackCode,
             pathLength: dto.pathLength,
             snr: dto.snr,
+            pathNodes: dto.pathNodes,
             senderKeyPrefix: dto.senderKeyPrefix,
             senderNodeName: dto.senderNodeName,
             isRead: dto.isRead,
