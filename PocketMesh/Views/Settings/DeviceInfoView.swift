@@ -99,7 +99,7 @@ struct DeviceInfoView: View {
                 // Capabilities
                 Section {
                     HStack {
-                        Label(L10n.Settings.DeviceInfo.maxContacts, systemImage: "person.2")
+                        Label(L10n.Settings.DeviceInfo.maxNodes, systemImage: "person.2")
                         Spacer()
                         Text("\(device.maxContacts)")
                             .foregroundStyle(.secondary)

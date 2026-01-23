@@ -130,6 +130,7 @@ struct DiscoveryView: View {
             return
         }
 
+        let maxContacts = appState.connectedDevice?.maxContacts
         addingContactID = contact.id
 
         do {
@@ -144,6 +145,12 @@ struct DiscoveryView: View {
 
             // Remove from local list
             discoveredContacts.removeAll { $0.id == contact.id }
+        } catch ContactServiceError.contactTableFull {
+            if let maxContacts {
+                errorMessage = "Node list is full (max \(maxContacts) nodes)"
+            } else {
+                errorMessage = "Node list is full"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

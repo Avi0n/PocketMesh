@@ -347,21 +347,19 @@ struct UnifiedMessageBubble: View {
             }
         }
 
-        // Incoming message details in submenu
+        // Incoming message path and details
         if !message.isOutgoing {
-            Menu {
-                if message.pathNodes != nil {
-                    Button {
-                        onShowPath?(message)
-                    } label: {
-                        Label(L10n.Chats.Chats.Message.Action.viewPath, systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-                    }
+            if message.pathNodes != nil {
+                Button {
+                    onShowPath?(message)
+                } label: {
+                    Label(L10n.Chats.Chats.Message.Action.viewPath, systemImage: "point.topleft.down.to.point.bottomright.curvepath")
                 }
+            }
 
-                Text(L10n.Chats.Chats.Message.Info.hops(hopCountFormatted(message.pathLength)))
+            Text(L10n.Chats.Chats.Message.Info.hops(hopCountFormatted(message.pathLength)))
 
-                Divider()
-
+            Menu {
                 Text(L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)) + (message.timestampCorrected ? " " + L10n.Chats.Chats.Message.Info.adjusted : ""))
                     .accessibilityLabel(message.timestampCorrected
                         ? L10n.Chats.Chats.Message.Info.adjustedAccessibility

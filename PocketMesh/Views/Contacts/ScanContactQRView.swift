@@ -191,11 +191,14 @@ struct ScanContactQRView: View {
     @MainActor
     private func importContact(_ contact: ParsedContact) async {
         guard let services = appState.services,
-              let deviceID = appState.connectedDevice?.id else {
+              let device = appState.connectedDevice else {
             logger.error("Services or device not available")
             errorMessage = L10n.Contacts.Contacts.Add.Error.notConnected
             return
         }
+
+        let deviceID = device.id
+        let maxContacts = device.maxContacts
 
         isImporting = true
         errorMessage = nil
@@ -225,6 +228,10 @@ struct ScanContactQRView: View {
             dismiss()
 
             onScan(contact.name, contact.publicKey)
+        } catch ContactServiceError.contactTableFull {
+            logger.error("Node list is full")
+            errorMessage = "Node list is full (max \(maxContacts) nodes)"
+            isImporting = false
         } catch {
             logger.error("Failed to import contact: \(error.localizedDescription)")
             errorMessage = "Failed to import contact: \(error.localizedDescription)"

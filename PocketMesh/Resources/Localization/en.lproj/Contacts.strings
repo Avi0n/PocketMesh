@@ -396,8 +396,8 @@
 /* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
 "contacts.add.error.invalidSize" = "Public key must be %d bytes (%d hex characters)";
 
-/* Location: AddContactSheet.swift - Purpose: Contact table full error */
-"contacts.add.error.tableFull" = "Contact table is full (max %d contacts)";
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "Node list is full (max %d nodes)";
 
 // MARK: - Contact QR Share Sheet
 
@@ -820,8 +820,29 @@
 /* Location: TraceResultsSheet.swift - Purpose: Distance info hint */
 "contacts.results.distanceInfoHint" = "Double tap for details about missing locations";
 
-/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title */
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (unavailable) */
 "contacts.results.distanceInfoTitle" = "Distance Unavailable";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Distance Info";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "Distance shown is between repeaters only. Your device's distance to the first repeater is not included because device location is unavailable.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Partial Distance";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Enable location services or set a location for your device to see the full path distance.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "To Include Full Path";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Partial distance";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Double tap to learn why device location is excluded";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Distance calculation requires at least 2 repeaters in the path.";

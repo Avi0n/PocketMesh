@@ -716,12 +716,12 @@ public enum L10n {
           public static func invalidSize(_ p1: Int, _ p2: Int) -> String {
             return L10n.tr("Contacts", "contacts.add.error.invalidSize", p1, p2, fallback: "Public key must be %d bytes (%d hex characters)")
           }
+          /// Location: AddContactSheet.swift - Purpose: Node list full error
+          public static func nodeListFull(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.add.error.nodeListFull", p1, fallback: "Node list is full (max %d nodes)")
+          }
           /// Location: AddContactSheet.swift - Purpose: Not connected error
           public static let notConnected = L10n.tr("Contacts", "contacts.add.error.notConnected", fallback: "Not connected to device")
-          /// Location: AddContactSheet.swift - Purpose: Contact table full error
-          public static func tableFull(_ p1: Int) -> String {
-            return L10n.tr("Contacts", "contacts.add.error.tableFull", p1, fallback: "Contact table is full (max %d contacts)")
-          }
         }
       }
       public enum Blocked {
@@ -1141,14 +1141,28 @@ public enum L10n {
         public static let distanceInfo = L10n.tr("Contacts", "contacts.results.distanceInfo", fallback: "Distance info")
         /// Location: TraceResultsSheet.swift - Purpose: Distance info hint
         public static let distanceInfoHint = L10n.tr("Contacts", "contacts.results.distanceInfoHint", fallback: "Double tap for details about missing locations")
-        /// Location: TraceResultsSheet.swift - Purpose: Distance info navigation title
+        /// Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (unavailable)
         public static let distanceInfoTitle = L10n.tr("Contacts", "contacts.results.distanceInfoTitle", fallback: "Distance Unavailable")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial)
+        public static let distanceInfoTitlePartial = L10n.tr("Contacts", "contacts.results.distanceInfoTitlePartial", fallback: "Distance Info")
         /// Location: TraceResultsSheet.swift - Purpose: Distance unavailable accessibility
         public static let distanceUnavailableLabel = L10n.tr("Contacts", "contacts.results.distanceUnavailableLabel", fallback: "Distance unavailable")
+        /// Location: TraceResultsSheet.swift - Purpose: Full path section header
+        public static let fullPathHeader = L10n.tr("Contacts", "contacts.results.fullPathHeader", fallback: "To Include Full Path")
+        /// Location: TraceResultsSheet.swift - Purpose: Full path tip
+        public static let fullPathTip = L10n.tr("Contacts", "contacts.results.fullPathTip", fallback: "Enable location services or set a location for your device to see the full path distance.")
         /// Location: TraceResultsSheet.swift - Purpose: Distance missing locations message
         public static let missingLocations = L10n.tr("Contacts", "contacts.results.missingLocations", fallback: "Distance cannot be calculated because the following repeaters don't have location coordinates set.")
         /// Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message
         public static let needsRepeaters = L10n.tr("Contacts", "contacts.results.needsRepeaters", fallback: "Distance calculation requires at least 2 repeaters in the path.")
+        /// Location: TraceResultsSheet.swift - Purpose: Partial distance explanation
+        public static let partialDistanceExplanation = L10n.tr("Contacts", "contacts.results.partialDistanceExplanation", fallback: "Distance shown is between repeaters only. Your device's distance to the first repeater is not included because device location is unavailable.")
+        /// Location: TraceResultsSheet.swift - Purpose: Partial distance section header
+        public static let partialDistanceHeader = L10n.tr("Contacts", "contacts.results.partialDistanceHeader", fallback: "Partial Distance")
+        /// Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint
+        public static let partialDistanceHint = L10n.tr("Contacts", "contacts.results.partialDistanceHint", fallback: "Double tap to learn why device location is excluded")
+        /// Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label
+        public static let partialDistanceLabel = L10n.tr("Contacts", "contacts.results.partialDistanceLabel", fallback: "Partial distance")
         /// Location: TraceResultsSheet.swift - Purpose: Repeaters without locations section
         public static let repeatersWithoutLocations = L10n.tr("Contacts", "contacts.results.repeatersWithoutLocations", fallback: "Repeaters Without Locations")
         /// Location: TraceResultsSheet.swift - Purpose: Save path button
@@ -2358,8 +2372,8 @@ public enum L10n {
       public static let manufacturer = L10n.tr("Settings", "deviceInfo.manufacturer", fallback: "Manufacturer")
       /// Label for max channels capability
       public static let maxChannels = L10n.tr("Settings", "deviceInfo.maxChannels", fallback: "Max Channels")
-      /// Label for max contacts capability
-      public static let maxContacts = L10n.tr("Settings", "deviceInfo.maxContacts", fallback: "Max Contacts")
+      /// Label for max nodes capability
+      public static let maxNodes = L10n.tr("Settings", "deviceInfo.maxNodes", fallback: "Max Nodes")
       /// Label for max TX power capability
       public static let maxTxPower = L10n.tr("Settings", "deviceInfo.maxTxPower", fallback: "Max TX Power")
       /// Label for public key

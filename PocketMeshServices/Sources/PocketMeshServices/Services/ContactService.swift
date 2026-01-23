@@ -26,7 +26,7 @@ public enum ContactServiceError: Error, Sendable, LocalizedError {
         case .contactNotFound:
             return "Contact not found on device"
         case .contactTableFull:
-            return "Device contact table is full"
+            return "Device node list is full"
         case .sessionError(let error):
             return error.localizedDescription
         }

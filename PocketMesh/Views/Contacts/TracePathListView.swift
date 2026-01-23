@@ -133,8 +133,7 @@ struct TracePathListView: View {
             } label: {
                 HStack {
                     Text(L10n.Contacts.Contacts.Trace.List.repeaters)
-                    Text("·")
-                        .foregroundStyle(.secondary)
+                    Spacer()
                     Text("\(viewModel.availableRepeaters.count)")
                         .foregroundStyle(.secondary)
                 }

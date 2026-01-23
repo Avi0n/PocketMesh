@@ -310,20 +310,33 @@ final class TracePathViewModel {
 
     // MARK: - Distance Calculation
 
-    /// Total path distance in meters between repeaters, or nil if any repeater lacks valid location.
-    /// Only considers intermediate hops (repeaters), not start/end nodes (local device).
+    /// Total path distance in meters, using a priority cascade:
+    /// 1. Full path (including device legs) if device has location
+    /// 2. Intermediate repeaters only if device lacks location
+    /// 3. Nil if fewer than 2 hops with valid location
     var totalPathDistance: Double? {
         guard let result, result.success else { return nil }
+        guard result.hops.count >= 2 else { return nil }
 
-        // Filter to only intermediate repeaters (exclude start and end nodes)
+        // Priority 1: Full path including device legs
+        if let fullDistance = calculateDistance(for: result.hops) {
+            return fullDistance
+        }
+
+        // Priority 2: Intermediate repeaters only (device has no location)
         let repeaters = result.hops.filter { !$0.isStartNode && !$0.isEndNode }
-        guard repeaters.count >= 2 else { return nil }
+        return calculateDistance(for: repeaters)
+    }
+
+    /// Calculate total distance for a sequence of hops, or nil if any lacks location
+    private func calculateDistance(for hops: [TraceHop]) -> Double? {
+        guard hops.count >= 2 else { return nil }
 
         var totalMeters: Double = 0
 
-        for i in 0..<(repeaters.count - 1) {
-            let current = repeaters[i]
-            let next = repeaters[i + 1]
+        for i in 0..<(hops.count - 1) {
+            let current = hops[i]
+            let next = hops[i + 1]
 
             guard current.hasLocation, next.hasLocation,
                   let curLat = current.latitude, let curLon = current.longitude,
@@ -346,6 +359,16 @@ final class TracePathViewModel {
         return result.hops
             .filter { !$0.isStartNode && !$0.isEndNode && !$0.hasLocation }
             .map { $0.resolvedName ?? $0.hashDisplayString ?? "Unknown" }
+    }
+
+    /// Whether the distance calculation used intermediate-only fallback (device has no location)
+    var isDistanceUsingFallback: Bool {
+        guard let result, result.success, totalPathDistance != nil else { return false }
+
+        guard let startNode = result.hops.first, let endNode = result.hops.last else { return false }
+
+        // If device nodes lack location, we used the intermediate-only fallback
+        return !startNode.hasLocation || !endNode.hasLocation
     }
 
     // MARK: - Configuration
@@ -1019,8 +1042,19 @@ final class TracePathViewModel {
         // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
         let deviceName = appState?.connectedDevice?.nodeName ?? L10n.Contacts.Contacts.Results.Hop.myDevice
-        let deviceLocation = appState?.locationService.currentLocation
         let path = traceInfo.path
+
+        // Resolve device location: GPS first, then device's set location, treat (0,0) as nil
+        var deviceLat: Double?
+        var deviceLon: Double?
+        if let gpsLocation = appState?.locationService.currentLocation {
+            deviceLat = gpsLocation.coordinate.latitude
+            deviceLon = gpsLocation.coordinate.longitude
+        } else if let device = appState?.connectedDevice,
+                  device.latitude != 0 || device.longitude != 0 {
+            deviceLat = device.latitude
+            deviceLon = device.longitude
+        }
 
         // Start node has no SNR (it transmitted first, didn't receive anything)
         hops.append(TraceHop(
@@ -1029,8 +1063,8 @@ final class TracePathViewModel {
             snr: 0,
             isStartNode: true,
             isEndNode: false,
-            latitude: deviceLocation?.coordinate.latitude,
-            longitude: deviceLocation?.coordinate.longitude
+            latitude: deviceLat,
+            longitude: deviceLon
         ))
 
         // Intermediate hops - each shows SNR it measured when receiving
@@ -1076,8 +1110,8 @@ final class TracePathViewModel {
             snr: endSnr,
             isStartNode: false,
             isEndNode: true,
-            latitude: deviceLocation?.coordinate.latitude,
-            longitude: deviceLocation?.coordinate.longitude
+            latitude: deviceLat,
+            longitude: deviceLon
         ))
 
         result = TraceResult(

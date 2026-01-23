@@ -1046,11 +1046,11 @@ struct FailureResultTests {
 @MainActor
 struct TotalPathDistanceTests {
 
-    @Test("calculates correct distance for multi-hop path")
-    func calculatesCorrectDistance() {
+    @Test("calculates full path distance when device has location")
+    func calculatesFullPathDistanceWithDeviceLocation() {
         let viewModel = TracePathViewModel()
 
-        // San Francisco to Oakland to Berkeley (roughly)
+        // San Francisco to Oakland to Berkeley and back (full path)
         let sf = (lat: 37.7749, lon: -122.4194)
         let oakland = (lat: 37.8044, lon: -122.2712)
         let berkeley = (lat: 37.8716, lon: -122.2727)
@@ -1071,8 +1071,35 @@ struct TotalPathDistanceTests {
         let distance = viewModel.totalPathDistance
         #expect(distance != nil)
         // SF→Oakland ~13km, Oakland→Berkeley ~8km, Berkeley→SF ~17km ≈ 38km total
-        #expect(distance! > 30_000) // > 30km
-        #expect(distance! < 50_000) // < 50km
+        #expect(distance! > 30_000)  // > 30km
+        #expect(distance! < 50_000)  // < 50km
+    }
+
+    @Test("falls back to intermediate-only distance when device lacks location")
+    func fallsBackToIntermediateOnlyDistance() {
+        let viewModel = TracePathViewModel()
+
+        let oakland = (lat: 37.8044, lon: -122.2712)
+        let berkeley = (lat: 37.8716, lon: -122.2727)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),  // No device location
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Oakland", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: oakland.lat, longitude: oakland.lon),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Berkeley", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: berkeley.lat, longitude: berkeley.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)  // No device location
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F])
+
+        let distance = viewModel.totalPathDistance
+        #expect(distance != nil)
+        // Falls back to Oakland→Berkeley only ≈ 7.5km
+        #expect(distance! > 7_000)  // > 7km
+        #expect(distance! < 9_000)  // < 9km
     }
 
     @Test("returns nil when hop missing location")
@@ -1119,22 +1146,112 @@ struct TotalPathDistanceTests {
         #expect(viewModel.totalPathDistance == nil)
     }
 
-    @Test("returns nil when device location unavailable")
-    func returnsNilWhenDeviceLocationUnavailable() {
+    @Test("calculates distance for single repeater when device has location")
+    func calculatesDistanceForSingleRepeaterWithDeviceLocation() {
+        let viewModel = TracePathViewModel()
+
+        let sf = (lat: 37.7749, lon: -122.4194)
+        let tower = (lat: 37.8, lon: -122.3)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: sf.lat, longitude: sf.lon),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: tower.lat, longitude: tower.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: sf.lat, longitude: sf.lon)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        // Full path: SF→Tower→SF should calculate (device has location)
+        #expect(viewModel.totalPathDistance != nil)
+    }
+
+    @Test("returns nil with single repeater and no device location")
+    func returnsNilWithSingleRepeaterNoDeviceLocation() {
+        let viewModel = TracePathViewModel()
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),  // No device location
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: 37.8, longitude: -122.3),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)  // No device location
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
+
+        // Only 1 intermediate repeater, device has no location - can't calculate distance
+        #expect(viewModel.totalPathDistance == nil)
+    }
+
+    @Test("isDistanceUsingFallback is false when device has location")
+    func isDistanceUsingFallbackFalseWithDeviceLocation() {
+        let viewModel = TracePathViewModel()
+
+        let sf = (lat: 37.7749, lon: -122.4194)
+        let oakland = (lat: 37.8044, lon: -122.2712)
+        let berkeley = (lat: 37.8716, lon: -122.2727)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: sf.lat, longitude: sf.lon),
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Oakland", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: oakland.lat, longitude: oakland.lon),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Berkeley", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: berkeley.lat, longitude: berkeley.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: sf.lat, longitude: sf.lon)
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F])
+
+        #expect(viewModel.isDistanceUsingFallback == false)
+    }
+
+    @Test("isDistanceUsingFallback is true when device lacks location")
+    func isDistanceUsingFallbackTrueWithoutDeviceLocation() {
+        let viewModel = TracePathViewModel()
+
+        let oakland = (lat: 37.8044, lon: -122.2712)
+        let berkeley = (lat: 37.8716, lon: -122.2727)
+
+        let hops = [
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
+                     latitude: nil, longitude: nil),  // No device location
+            TraceHop(hashBytes: Data([0x3F]), resolvedName: "Oakland", snr: 5.0, isStartNode: false, isEndNode: false,
+                     latitude: oakland.lat, longitude: oakland.lon),
+            TraceHop(hashBytes: Data([0x4F]), resolvedName: "Berkeley", snr: 4.0, isStartNode: false, isEndNode: false,
+                     latitude: berkeley.lat, longitude: berkeley.lon),
+            TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
+                     latitude: nil, longitude: nil)  // No device location
+        ]
+
+        viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F, 0x4F])
+
+        #expect(viewModel.isDistanceUsingFallback == true)
+    }
+
+    @Test("isDistanceUsingFallback is false when distance is nil")
+    func isDistanceUsingFallbackFalseWhenDistanceNil() {
         let viewModel = TracePathViewModel()
 
         let hops = [
             TraceHop(hashBytes: nil, resolvedName: "Device", snr: 0, isStartNode: true, isEndNode: false,
                      latitude: nil, longitude: nil),
             TraceHop(hashBytes: Data([0x3F]), resolvedName: "Tower", snr: 5.0, isStartNode: false, isEndNode: false,
-                     latitude: 37.8, longitude: -122.3),
+                     latitude: nil, longitude: nil),  // Repeater also missing location
             TraceHop(hashBytes: nil, resolvedName: "Device", snr: 3.0, isStartNode: false, isEndNode: true,
                      latitude: nil, longitude: nil)
         ]
 
         viewModel.result = TraceResult(hops: hops, durationMs: 100, success: true, errorMessage: nil, tracedPathBytes: [0x3F])
 
+        // Distance is nil because repeater lacks location, so fallback flag is false
         #expect(viewModel.totalPathDistance == nil)
+        #expect(viewModel.isDistanceUsingFallback == false)
     }
 }
 
