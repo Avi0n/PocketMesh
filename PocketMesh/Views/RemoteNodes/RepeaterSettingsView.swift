@@ -36,12 +36,12 @@ struct RepeaterSettingsView: View {
             deviceInfoSection
             actionsSection
         }
-        .navigationTitle("Repeater Settings")
+        .navigationTitle(L10n.RemoteNodes.RemoteNodes.Settings.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button(L10n.RemoteNodes.RemoteNodes.Settings.done) {
                     focusedField = nil
                 }
             }
@@ -56,10 +56,10 @@ struct RepeaterSettingsView: View {
                 await viewModel.cleanup()
             }
         }
-        .alert("Success", isPresented: $viewModel.showSuccessAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.RemoteNodes.RemoteNodes.Settings.success, isPresented: $viewModel.showSuccessAlert) {
+            Button(L10n.RemoteNodes.RemoteNodes.Settings.ok, role: .cancel) { }
         } message: {
-            Text(viewModel.successMessage ?? "Settings applied")
+            Text(viewModel.successMessage ?? L10n.RemoteNodes.RemoteNodes.Settings.settingsApplied)
         }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(
@@ -97,7 +97,7 @@ struct RepeaterSettingsView: View {
 
     private var deviceInfoSection: some View {
         ExpandableSettingsSection(
-            title: "Device Info",
+            title: L10n.RemoteNodes.RemoteNodes.Settings.deviceInfo,
             icon: "info.circle",
             isExpanded: $viewModel.isDeviceInfoExpanded,
             isLoaded: { viewModel.deviceInfoLoaded },
@@ -105,8 +105,8 @@ struct RepeaterSettingsView: View {
             error: $viewModel.deviceInfoError,
             onLoad: { await viewModel.fetchDeviceInfo() }
         ) {
-            LabeledContent("Firmware", value: viewModel.firmwareVersion ?? "\u{2014}")
-            LabeledContent("Device Time", value: viewModel.deviceTime ?? "\u{2014}")
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Settings.firmware, value: viewModel.firmwareVersion ?? "\u{2014}")
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Settings.deviceTime, value: viewModel.deviceTime ?? "\u{2014}")
         }
     }
 
@@ -114,7 +114,7 @@ struct RepeaterSettingsView: View {
 
     private var radioSettingsSection: some View {
         ExpandableSettingsSection(
-            title: "Radio Parameters",
+            title: L10n.RemoteNodes.RemoteNodes.Settings.radioParameters,
             icon: "antenna.radiowaves.left.and.right",
             isExpanded: $viewModel.isRadioExpanded,
             isLoaded: { viewModel.radioLoaded },
@@ -127,7 +127,7 @@ struct RepeaterSettingsView: View {
                 HStack {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.yellow)
-                    Text("Applying these changes will restart the repeater")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.radioRestartWarning)
                         .font(.subheadline)
                 }
                 .padding()
@@ -137,10 +137,10 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Frequency (MHz)")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.frequencyMHz)
                 Spacer()
                 if let frequency = viewModel.frequency {
-                    TextField("MHz", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.mhz, value: Binding(
                         get: { frequency },
                         set: { viewModel.frequency = $0 }
                     ), format: .number.precision(.fractionLength(3)))
@@ -152,7 +152,7 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingRadio ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.radioError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 100, alignment: .trailing)
@@ -160,7 +160,7 @@ struct RepeaterSettingsView: View {
             }
 
             if let bandwidth = viewModel.bandwidth {
-                Picker("Bandwidth (kHz)", selection: Binding(
+                Picker(L10n.RemoteNodes.RemoteNodes.Settings.bandwidthKHz, selection: Binding(
                     get: { bandwidth },
                     set: { viewModel.bandwidth = $0 }
                 )) {
@@ -172,22 +172,22 @@ struct RepeaterSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.primary)
-                .accessibilityHint("Lower values increase range but decrease speed")
+                .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Settings.bandwidthHint)
                 .onChange(of: viewModel.bandwidth) { _, _ in
                     viewModel.radioSettingsModified = true
                 }
             } else {
                 HStack {
-                    Text("Bandwidth (kHz)")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.bandwidthKHz)
                     Spacer()
-                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingRadio ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.radioError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             if let spreadingFactor = viewModel.spreadingFactor {
-                Picker("Spreading Factor", selection: Binding(
+                Picker(L10n.RemoteNodes.RemoteNodes.Settings.spreadingFactor, selection: Binding(
                     get: { spreadingFactor },
                     set: { viewModel.spreadingFactor = $0 }
                 )) {
@@ -199,22 +199,22 @@ struct RepeaterSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.primary)
-                .accessibilityHint("Higher values increase range but decrease speed")
+                .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Settings.spreadingFactorHint)
                 .onChange(of: viewModel.spreadingFactor) { _, _ in
                     viewModel.radioSettingsModified = true
                 }
             } else {
                 HStack {
-                    Text("Spreading Factor")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.spreadingFactor)
                     Spacer()
-                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingRadio ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.radioError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             if let codingRate = viewModel.codingRate {
-                Picker("Coding Rate", selection: Binding(
+                Picker(L10n.RemoteNodes.RemoteNodes.Settings.codingRate, selection: Binding(
                     get: { codingRate },
                     set: { viewModel.codingRate = $0 }
                 )) {
@@ -226,25 +226,25 @@ struct RepeaterSettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(.primary)
-                .accessibilityHint("Higher values add error correction but decrease speed")
+                .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Settings.codingRateHint)
                 .onChange(of: viewModel.codingRate) { _, _ in
                     viewModel.radioSettingsModified = true
                 }
             } else {
                 HStack {
-                    Text("Coding Rate")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.codingRate)
                     Spacer()
-                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingRadio ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.radioError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             HStack {
-                Text("TX Power (dBm)")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.txPowerDbm)
                 Spacer()
                 if let txPower = viewModel.txPower {
-                    TextField("dBm", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.dbm, value: Binding(
                         get: { txPower },
                         set: { viewModel.txPower = $0 }
                     ), format: .number)
@@ -256,7 +256,7 @@ struct RepeaterSettingsView: View {
                             viewModel.radioSettingsModified = true
                         }
                 } else {
-                    Text(viewModel.isLoadingRadio ? "Loading..." : (viewModel.radioError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingRadio ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.radioError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .trailing)
@@ -272,7 +272,7 @@ struct RepeaterSettingsView: View {
                     if viewModel.isApplying {
                         ProgressView()
                     } else {
-                        Text("Apply Radio Settings")
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.applyRadioSettings)
                     }
                     Spacer()
                 }
@@ -285,7 +285,7 @@ struct RepeaterSettingsView: View {
 
     private var identitySection: some View {
         ExpandableSettingsSection(
-            title: "Identity & Location",
+            title: L10n.RemoteNodes.RemoteNodes.Settings.identityLocation,
             icon: "person.text.rectangle",
             isExpanded: $viewModel.isIdentityExpanded,
             isLoaded: { viewModel.identityLoaded },
@@ -294,7 +294,7 @@ struct RepeaterSettingsView: View {
             onLoad: { await viewModel.fetchIdentity() }
         ) {
             if let name = viewModel.name {
-                TextField("Name", text: Binding(
+                TextField(L10n.RemoteNodes.RemoteNodes.name, text: Binding(
                     get: { name },
                     set: { viewModel.name = $0 }
                 ))
@@ -306,15 +306,15 @@ struct RepeaterSettingsView: View {
                     }
             } else if viewModel.isLoadingIdentity {
                 HStack {
-                    Text("Name")
+                    Text(L10n.RemoteNodes.RemoteNodes.name)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text("Loading...")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                TextField("Name", text: Binding(
+                TextField(L10n.RemoteNodes.RemoteNodes.name, text: Binding(
                     get: { "" },
                     set: { viewModel.name = $0 }
                 ))
@@ -327,10 +327,10 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Latitude")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.latitude)
                 Spacer()
                 if let latitude = viewModel.latitude {
-                    TextField("Lat", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.lat, value: Binding(
                         get: { latitude },
                         set: { viewModel.latitude = $0 }
                     ), format: .number.precision(.fractionLength(6)))
@@ -338,7 +338,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text(viewModel.isLoadingIdentity ? "Loading..." : (viewModel.identityError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingIdentity ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.identityError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -346,10 +346,10 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Longitude")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.longitude)
                 Spacer()
                 if let longitude = viewModel.longitude {
-                    TextField("Lon", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.lon, value: Binding(
                         get: { longitude },
                         set: { viewModel.longitude = $0 }
                     ), format: .number.precision(.fractionLength(6)))
@@ -357,7 +357,7 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 120)
                 } else {
-                    Text(viewModel.isLoadingIdentity ? "Loading..." : (viewModel.identityError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingIdentity ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.identityError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(width: 120, alignment: .trailing)
@@ -367,7 +367,7 @@ struct RepeaterSettingsView: View {
             Button {
                 showingLocationPicker = true
             } label: {
-                Label("Pick on Map", systemImage: "mappin.and.ellipse")
+                Label(L10n.RemoteNodes.RemoteNodes.Settings.pickOnMap, systemImage: "mappin.and.ellipse")
             }
 
             Button {
@@ -382,7 +382,7 @@ struct RepeaterSettingsView: View {
                             .foregroundStyle(.green)
                             .transition(.scale.combined(with: .opacity))
                     } else {
-                        Text("Apply Identity Settings")
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.applyIdentitySettings)
                             .transition(.opacity)
                     }
                     Spacer()
@@ -397,7 +397,7 @@ struct RepeaterSettingsView: View {
 
     private var behaviorSection: some View {
         ExpandableSettingsSection(
-            title: "Behavior",
+            title: L10n.RemoteNodes.RemoteNodes.Settings.behavior,
             icon: "slider.horizontal.3",
             isExpanded: $viewModel.isBehaviorExpanded,
             isLoaded: { viewModel.behaviorLoaded },
@@ -405,13 +405,13 @@ struct RepeaterSettingsView: View {
             error: $viewModel.behaviorError,
             onLoad: { await viewModel.fetchBehaviorSettings() }
         ) {
-            Toggle("Repeater Mode", isOn: Binding(
+            Toggle(L10n.RemoteNodes.RemoteNodes.Settings.repeaterMode, isOn: Binding(
                 get: { viewModel.repeaterEnabled ?? false },
                 set: { viewModel.repeaterEnabled = $0 }
             ))
                 .overlay(alignment: .trailing) {
                     if viewModel.repeaterEnabled == nil && viewModel.isLoadingBehavior {
-                        Text("Loading...")
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .padding(.trailing, 60)
@@ -419,10 +419,10 @@ struct RepeaterSettingsView: View {
                 }
 
             HStack {
-                Text("Advert Interval (0-hop)")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.advertInterval0Hop)
                 Spacer()
                 if let interval = viewModel.advertIntervalMinutes {
-                    TextField("min", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.min, value: Binding(
                         get: { interval },
                         set: { viewModel.advertIntervalMinutes = $0 }
                     ), format: .number)
@@ -430,10 +430,10 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                         .focused($focusedField, equals: .advertInterval)
-                    Text("min")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.min)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -446,10 +446,10 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Advert Interval (flood)")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.advertIntervalFlood)
                 Spacer()
                 if let interval = viewModel.floodAdvertIntervalHours {
-                    TextField("hrs", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.hrs, value: Binding(
                         get: { interval },
                         set: { viewModel.floodAdvertIntervalHours = $0 }
                     ), format: .number)
@@ -457,10 +457,10 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                         .focused($focusedField, equals: .floodAdvertInterval)
-                    Text("hrs")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.hrs)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -473,10 +473,10 @@ struct RepeaterSettingsView: View {
             }
 
             HStack {
-                Text("Max Flood Hops")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.maxFloodHops)
                 Spacer()
                 if let hops = viewModel.floodMaxHops {
-                    TextField("hops", value: Binding(
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.hops, value: Binding(
                         get: { hops },
                         set: { viewModel.floodMaxHops = $0 }
                     ), format: .number)
@@ -484,10 +484,10 @@ struct RepeaterSettingsView: View {
                         .multilineTextAlignment(.trailing)
                         .frame(width: 60)
                         .focused($focusedField, equals: .floodMaxHops)
-                    Text("hops")
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.hops)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingBehavior ? "Loading..." : (viewModel.behaviorError != nil ? "Failed to load" : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError != nil ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -511,7 +511,7 @@ struct RepeaterSettingsView: View {
                             .foregroundStyle(.green)
                             .transition(.scale.combined(with: .opacity))
                     } else {
-                        Text("Apply Behavior Settings")
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.applyBehaviorSettings)
                             .transition(.opacity)
                     }
                     Spacer()
@@ -527,19 +527,19 @@ struct RepeaterSettingsView: View {
     private var securitySection: some View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.isSecurityExpanded) {
-                SecureField("New Password", text: $viewModel.newPassword)
-                SecureField("Confirm Password", text: $viewModel.confirmPassword)
+                SecureField(L10n.RemoteNodes.RemoteNodes.Settings.newPassword, text: $viewModel.newPassword)
+                SecureField(L10n.RemoteNodes.RemoteNodes.Settings.confirmPassword, text: $viewModel.confirmPassword)
 
-                Button("Change Password") {
+                Button(L10n.RemoteNodes.RemoteNodes.Settings.changePassword) {
                     Task { await viewModel.changePassword() }
                 }
                 .disabled(viewModel.isApplying || viewModel.newPassword.isEmpty || viewModel.newPassword != viewModel.confirmPassword)
 
-                Text("Change the admin authentication password.")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.securityFooter)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } label: {
-                Label("Security", systemImage: "lock")
+                Label(L10n.RemoteNodes.RemoteNodes.Settings.security, systemImage: "lock")
             }
         }
     }
@@ -547,27 +547,27 @@ struct RepeaterSettingsView: View {
     // MARK: - Actions Section
 
     private var actionsSection: some View {
-        Section("Device Actions") {
-            Button("Send Advert") {
+        Section(L10n.RemoteNodes.RemoteNodes.Settings.deviceActions) {
+            Button(L10n.RemoteNodes.RemoteNodes.Settings.sendAdvert) {
                 Task { await viewModel.forceAdvert() }
             }
 
-            Button("Sync Time") {
+            Button(L10n.RemoteNodes.RemoteNodes.Settings.syncTime) {
                 Task { await viewModel.syncTime() }
             }
             .disabled(viewModel.isApplying)
 
-            Button("Reboot Device", role: .destructive) {
+            Button(L10n.RemoteNodes.RemoteNodes.Settings.rebootDevice, role: .destructive) {
                 showRebootConfirmation = true
             }
             .disabled(viewModel.isRebooting)
-            .confirmationDialog("Reboot Repeater?", isPresented: $showRebootConfirmation) {
-                Button("Reboot", role: .destructive) {
+            .confirmationDialog(L10n.RemoteNodes.RemoteNodes.Settings.rebootConfirmTitle, isPresented: $showRebootConfirmation) {
+                Button(L10n.RemoteNodes.RemoteNodes.Settings.reboot, role: .destructive) {
                     Task { await viewModel.reboot() }
                 }
-                Button("Cancel", role: .cancel) { }
+                Button(L10n.RemoteNodes.RemoteNodes.cancel, role: .cancel) { }
             } message: {
-                Text("The repeater will restart and be temporarily unavailable.")
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.rebootMessage)
             }
 
             if let error = viewModel.errorMessage {

@@ -1825,7 +1825,315 @@ public enum L10n {
     }
   }
   public enum RemoteNodes {
+    public enum RemoteNodes {
+      /// Location: Multiple files - Cancel button
+      public static let cancel = L10n.tr("RemoteNodes", "remoteNodes.cancel", fallback: "Cancel")
+      /// Location: Multiple files - Done button
+      public static let done = L10n.tr("RemoteNodes", "remoteNodes.done", fallback: "Done")
+      /// Location: Multiple files - Name label
+      public static let name = L10n.tr("RemoteNodes", "remoteNodes.name", fallback: "Name")
+      public enum Auth {
+        /// Location: NodeAuthenticationSheet.swift - Navigation title for repeater admin access
+        public static let adminAccess = L10n.tr("RemoteNodes", "remoteNodes.auth.adminAccess", fallback: "Admin Access")
+        /// Location: NodeAuthenticationSheet.swift - Authentication section header
+        public static let authentication = L10n.tr("RemoteNodes", "remoteNodes.auth.authentication", fallback: "Authentication")
+        /// Location: NodeAuthenticationSheet.swift - Cancel button
+        public static let cancel = L10n.tr("RemoteNodes", "remoteNodes.auth.cancel", fallback: "Cancel")
+        /// Location: NodeAuthenticationSheet.swift - Connect button
+        public static let connect = L10n.tr("RemoteNodes", "remoteNodes.auth.connect", fallback: "Connect")
+        /// Location: NodeAuthenticationSheet.swift - Error accessibility label prefix
+        public static func errorPrefix(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.auth.errorPrefix", String(describing: p1), fallback: "Error: %@")
+        }
+        /// Location: NodeAuthenticationSheet.swift - Navigation title for room authentication
+        public static let joinRoom = L10n.tr("RemoteNodes", "remoteNodes.auth.joinRoom", fallback: "Join Room")
+        /// Location: NodeAuthenticationSheet.swift - Name label
+        public static let name = L10n.tr("RemoteNodes", "remoteNodes.auth.name", fallback: "Name")
+        /// Location: NodeAuthenticationSheet.swift - Node details section header
+        public static let nodeDetails = L10n.tr("RemoteNodes", "remoteNodes.auth.nodeDetails", fallback: "Node Details")
+        /// Location: NodeAuthenticationSheet.swift - Password field placeholder
+        public static let password = L10n.tr("RemoteNodes", "remoteNodes.auth.password", fallback: "Password")
+        /// Location: NodeAuthenticationSheet.swift - Password too long warning for repeaters
+        public static func passwordTooLongRepeaters(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.auth.passwordTooLongRepeaters", p1, fallback: "MeshCore repeaters only accept passwords up to %d characters. Extra characters will be ignored.")
+        }
+        /// Location: NodeAuthenticationSheet.swift - Password too long warning for rooms
+        public static func passwordTooLongRooms(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.auth.passwordTooLongRooms", p1, fallback: "MeshCore rooms only accept passwords up to %d characters. Extra characters will be ignored.")
+        }
+        /// Location: NodeAuthenticationSheet.swift - Remember password toggle
+        public static let rememberPassword = L10n.tr("RemoteNodes", "remoteNodes.auth.rememberPassword", fallback: "Remember Password")
+        /// Location: NodeAuthenticationSheet.swift - Countdown text showing seconds remaining
+        public static func secondsRemaining(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.auth.secondsRemaining", p1, fallback: "Up to %d seconds remaining")
+        }
+        /// Location: NodeAuthenticationSheet.swift - Accessibility announcement for countdown
+        public static func secondsRemainingAnnouncement(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.auth.secondsRemainingAnnouncement", p1, fallback: "%d seconds remaining")
+        }
+        /// Location: NodeAuthenticationSheet.swift - Type label
+        public static let type = L10n.tr("RemoteNodes", "remoteNodes.auth.type", fallback: "Type")
+        /// Location: NodeAuthenticationSheet.swift - Repeater type value
+        public static let typeRepeater = L10n.tr("RemoteNodes", "remoteNodes.auth.typeRepeater", fallback: "Repeater")
+        /// Location: NodeAuthenticationSheet.swift - Room type value
+        public static let typeRoom = L10n.tr("RemoteNodes", "remoteNodes.auth.typeRoom", fallback: "Room")
+      }
+      public enum Room {
+        /// Location: RoomConversationView.swift - Activity section header
+        public static let activity = L10n.tr("RemoteNodes", "remoteNodes.room.activity", fallback: "Activity")
+        /// Location: RoomConversationView.swift - Empty state hint
+        public static let beFirstToPost = L10n.tr("RemoteNodes", "remoteNodes.room.beFirstToPost", fallback: "Be the first to post")
+        /// Location: RoomConversationView.swift - Connected status
+        public static let connected = L10n.tr("RemoteNodes", "remoteNodes.room.connected", fallback: "Connected")
+        /// Location: RoomConversationView.swift - Details section header
+        public static let details = L10n.tr("RemoteNodes", "remoteNodes.room.details", fallback: "Details")
+        /// Location: RoomConversationView.swift - Disconnected status
+        public static let disconnected = L10n.tr("RemoteNodes", "remoteNodes.room.disconnected", fallback: "Disconnected")
+        /// Location: RoomConversationView.swift - Identification section header
+        public static let identification = L10n.tr("RemoteNodes", "remoteNodes.room.identification", fallback: "Identification")
+        /// Location: RoomConversationView.swift - Room info sheet title
+        public static let infoTitle = L10n.tr("RemoteNodes", "remoteNodes.room.infoTitle", fallback: "Room Info")
+        /// Location: RoomConversationView.swift - Last connected label
+        public static let lastConnected = L10n.tr("RemoteNodes", "remoteNodes.room.lastConnected", fallback: "Last Connected")
+        /// Location: RoomConversationView.swift - Empty state title
+        public static let noMessagesYet = L10n.tr("RemoteNodes", "remoteNodes.room.noMessagesYet", fallback: "No public messages yet")
+        /// Location: RoomConversationView.swift - Permission label
+        public static let permission = L10n.tr("RemoteNodes", "remoteNodes.room.permission", fallback: "Permission")
+        /// Location: RoomConversationView.swift - Public key label
+        public static let publicKey = L10n.tr("RemoteNodes", "remoteNodes.room.publicKey", fallback: "Public Key")
+        /// Location: RoomConversationView.swift - Input placeholder
+        public static let publicMessage = L10n.tr("RemoteNodes", "remoteNodes.room.publicMessage", fallback: "Public Message")
+        /// Location: RoomConversationView.swift - Status label
+        public static let status = L10n.tr("RemoteNodes", "remoteNodes.room.status", fallback: "Status")
+        /// Location: RoomConversationView.swift - Read-only banner
+        public static let viewOnlyBanner = L10n.tr("RemoteNodes", "remoteNodes.room.viewOnlyBanner", fallback: "View only - join as member to post")
+      }
+      public enum Settings {
+        /// Location: RepeaterSettingsView.swift - Advert interval (0-hop) label
+        public static let advertInterval0Hop = L10n.tr("RemoteNodes", "remoteNodes.settings.advertInterval0Hop", fallback: "Advert Interval (0-hop)")
+        /// Location: RepeaterSettingsView.swift - Advert interval (flood) label
+        public static let advertIntervalFlood = L10n.tr("RemoteNodes", "remoteNodes.settings.advertIntervalFlood", fallback: "Advert Interval (flood)")
+        /// Location: RepeaterSettingsViewModel.swift - Advert interval validation error
+        public static let advertIntervalValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.advertIntervalValidation", fallback: "Accepts 0 (disabled) or 60-240 min")
+        /// Location: RepeaterSettingsViewModel.swift - Advert sent success
+        public static let advertSent = L10n.tr("RemoteNodes", "remoteNodes.settings.advertSent", fallback: "Advertisement sent")
+        /// Location: RepeaterSettingsView.swift - Apply behavior settings button
+        public static let applyBehaviorSettings = L10n.tr("RemoteNodes", "remoteNodes.settings.applyBehaviorSettings", fallback: "Apply Behavior Settings")
+        /// Location: RepeaterSettingsView.swift - Apply identity settings button
+        public static let applyIdentitySettings = L10n.tr("RemoteNodes", "remoteNodes.settings.applyIdentitySettings", fallback: "Apply Identity Settings")
+        /// Location: RepeaterSettingsView.swift - Apply radio settings button
+        public static let applyRadioSettings = L10n.tr("RemoteNodes", "remoteNodes.settings.applyRadioSettings", fallback: "Apply Radio Settings")
+        /// Location: RepeaterSettingsView.swift - Bandwidth accessibility hint
+        public static let bandwidthHint = L10n.tr("RemoteNodes", "remoteNodes.settings.bandwidthHint", fallback: "Lower values increase range but decrease speed")
+        /// Location: RepeaterSettingsView.swift - Bandwidth label
+        public static let bandwidthKHz = L10n.tr("RemoteNodes", "remoteNodes.settings.bandwidthKHz", fallback: "Bandwidth (kHz)")
+        /// Location: RepeaterSettingsView.swift - Behavior section title
+        public static let behavior = L10n.tr("RemoteNodes", "remoteNodes.settings.behavior", fallback: "Behavior")
+        /// Location: RepeaterSettingsView.swift - Change password button
+        public static let changePassword = L10n.tr("RemoteNodes", "remoteNodes.settings.changePassword", fallback: "Change Password")
+        /// Location: RepeaterSettingsViewModel.swift - Clock ahead error
+        public static let clockAheadError = L10n.tr("RemoteNodes", "remoteNodes.settings.clockAheadError", fallback: "Repeater clock is ahead of phone time. If it's too far forward, reboot the repeater then sync time again.")
+        /// Location: RepeaterSettingsView.swift - Coding rate label
+        public static let codingRate = L10n.tr("RemoteNodes", "remoteNodes.settings.codingRate", fallback: "Coding Rate")
+        /// Location: RepeaterSettingsView.swift - Coding rate accessibility hint
+        public static let codingRateHint = L10n.tr("RemoteNodes", "remoteNodes.settings.codingRateHint", fallback: "Higher values add error correction but decrease speed")
+        /// Location: RepeaterSettingsView.swift - Confirm password placeholder
+        public static let confirmPassword = L10n.tr("RemoteNodes", "remoteNodes.settings.confirmPassword", fallback: "Confirm Password")
+        /// Location: RepeaterSettingsView.swift - dBm placeholder
+        public static let dbm = L10n.tr("RemoteNodes", "remoteNodes.settings.dbm", fallback: "dBm")
+        /// Location: RepeaterSettingsView.swift - Device actions section header
+        public static let deviceActions = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceActions", fallback: "Device Actions")
+        /// Location: RepeaterSettingsView.swift - Device info section title
+        public static let deviceInfo = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceInfo", fallback: "Device Info")
+        /// Location: RepeaterSettingsView.swift - Device time label
+        public static let deviceTime = L10n.tr("RemoteNodes", "remoteNodes.settings.deviceTime", fallback: "Device Time")
+        /// Location: RepeaterSettingsView.swift - Done button (used in multiple places)
+        public static let done = L10n.tr("RemoteNodes", "remoteNodes.settings.done", fallback: "Done")
+        /// Location: RepeaterSettingsView.swift - Failed to load placeholder
+        public static let failedToLoad = L10n.tr("RemoteNodes", "remoteNodes.settings.failedToLoad", fallback: "Failed to load")
+        /// Location: RepeaterSettingsView.swift - Firmware label
+        public static let firmware = L10n.tr("RemoteNodes", "remoteNodes.settings.firmware", fallback: "Firmware")
+        /// Location: RepeaterSettingsViewModel.swift - Flood interval validation error
+        public static let floodIntervalValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.floodIntervalValidation", fallback: "Accepts 3-48 hours")
+        /// Location: RepeaterSettingsViewModel.swift - Flood max hops validation error
+        public static let floodMaxValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.floodMaxValidation", fallback: "Accepts 0-64 hops")
+        /// Location: RepeaterSettingsView.swift - Frequency label
+        public static let frequencyMHz = L10n.tr("RemoteNodes", "remoteNodes.settings.frequencyMHz", fallback: "Frequency (MHz)")
+        /// Location: RepeaterSettingsView.swift - Hops unit
+        public static let hops = L10n.tr("RemoteNodes", "remoteNodes.settings.hops", fallback: "hops")
+        /// Location: RepeaterSettingsView.swift - Hours unit
+        public static let hrs = L10n.tr("RemoteNodes", "remoteNodes.settings.hrs", fallback: "hrs")
+        /// Location: RepeaterSettingsView.swift - Identity & location section title
+        public static let identityLocation = L10n.tr("RemoteNodes", "remoteNodes.settings.identityLocation", fallback: "Identity & Location")
+        /// Location: RepeaterSettingsView.swift - Lat placeholder
+        public static let lat = L10n.tr("RemoteNodes", "remoteNodes.settings.lat", fallback: "Lat")
+        /// Location: RepeaterSettingsView.swift - Latitude label
+        public static let latitude = L10n.tr("RemoteNodes", "remoteNodes.settings.latitude", fallback: "Latitude")
+        /// Location: RepeaterSettingsView.swift - Loading placeholder
+        public static let loading = L10n.tr("RemoteNodes", "remoteNodes.settings.loading", fallback: "Loading...")
+        /// Location: RepeaterSettingsView.swift - Lon placeholder
+        public static let lon = L10n.tr("RemoteNodes", "remoteNodes.settings.lon", fallback: "Lon")
+        /// Location: RepeaterSettingsView.swift - Longitude label
+        public static let longitude = L10n.tr("RemoteNodes", "remoteNodes.settings.longitude", fallback: "Longitude")
+        /// Location: RepeaterSettingsView.swift - Max flood hops label
+        public static let maxFloodHops = L10n.tr("RemoteNodes", "remoteNodes.settings.maxFloodHops", fallback: "Max Flood Hops")
+        /// Location: RepeaterSettingsView.swift - MHz placeholder
+        public static let mhz = L10n.tr("RemoteNodes", "remoteNodes.settings.mhz", fallback: "MHz")
+        /// Location: RepeaterSettingsView.swift - Minutes unit
+        public static let min = L10n.tr("RemoteNodes", "remoteNodes.settings.min", fallback: "min")
+        /// Location: RepeaterSettingsView.swift - New password placeholder
+        public static let newPassword = L10n.tr("RemoteNodes", "remoteNodes.settings.newPassword", fallback: "New Password")
+        /// Location: RepeaterSettingsViewModel.swift - No service error
+        public static let noService = L10n.tr("RemoteNodes", "remoteNodes.settings.noService", fallback: "Repeater service not available")
+        /// Location: RepeaterSettingsViewModel.swift - Not connected error
+        public static let notConnected = L10n.tr("RemoteNodes", "remoteNodes.settings.notConnected", fallback: "Not connected to repeater")
+        /// Location: RepeaterSettingsView.swift - OK button
+        public static let ok = L10n.tr("RemoteNodes", "remoteNodes.settings.ok", fallback: "OK")
+        /// Location: RepeaterSettingsViewModel.swift - Password changed success
+        public static let passwordChangedSuccess = L10n.tr("RemoteNodes", "remoteNodes.settings.passwordChangedSuccess", fallback: "Password changed successfully")
+        /// Location: RepeaterSettingsViewModel.swift - Password change failure
+        public static let passwordChangeFailed = L10n.tr("RemoteNodes", "remoteNodes.settings.passwordChangeFailed", fallback: "Failed to change password")
+        /// Location: RepeaterSettingsViewModel.swift - Empty password error
+        public static let passwordEmpty = L10n.tr("RemoteNodes", "remoteNodes.settings.passwordEmpty", fallback: "Password cannot be empty")
+        /// Location: RepeaterSettingsViewModel.swift - Password mismatch error
+        public static let passwordMismatch = L10n.tr("RemoteNodes", "remoteNodes.settings.passwordMismatch", fallback: "Passwords do not match")
+        /// Location: RepeaterSettingsView.swift - Pick on map button
+        public static let pickOnMap = L10n.tr("RemoteNodes", "remoteNodes.settings.pickOnMap", fallback: "Pick on Map")
+        /// Location: RepeaterSettingsViewModel.swift - Radio applied success
+        public static let radioAppliedSuccess = L10n.tr("RemoteNodes", "remoteNodes.settings.radioAppliedSuccess", fallback: "Radio settings applied. Restart device to take effect.")
+        /// Location: RepeaterSettingsViewModel.swift - Radio apply partial failure
+        public static let radioApplyFailed = L10n.tr("RemoteNodes", "remoteNodes.settings.radioApplyFailed", fallback: "Some radio settings failed to apply")
+        /// Location: RepeaterSettingsViewModel.swift - Radio not loaded error
+        public static let radioNotLoaded = L10n.tr("RemoteNodes", "remoteNodes.settings.radioNotLoaded", fallback: "Radio settings not loaded")
+        /// Location: RepeaterSettingsView.swift - Radio parameters section title
+        public static let radioParameters = L10n.tr("RemoteNodes", "remoteNodes.settings.radioParameters", fallback: "Radio Parameters")
+        /// Location: RepeaterSettingsView.swift - Radio restart warning
+        public static let radioRestartWarning = L10n.tr("RemoteNodes", "remoteNodes.settings.radioRestartWarning", fallback: "Applying these changes will restart the repeater")
+        /// Location: RepeaterSettingsView.swift - Reboot confirmation dialog button
+        public static let reboot = L10n.tr("RemoteNodes", "remoteNodes.settings.reboot", fallback: "Reboot")
+        /// Location: RepeaterSettingsView.swift - Reboot confirmation dialog title
+        public static let rebootConfirmTitle = L10n.tr("RemoteNodes", "remoteNodes.settings.rebootConfirmTitle", fallback: "Reboot Repeater?")
+        /// Location: RepeaterSettingsView.swift - Reboot device button
+        public static let rebootDevice = L10n.tr("RemoteNodes", "remoteNodes.settings.rebootDevice", fallback: "Reboot Device")
+        /// Location: RepeaterSettingsView.swift - Reboot confirmation message
+        public static let rebootMessage = L10n.tr("RemoteNodes", "remoteNodes.settings.rebootMessage", fallback: "The repeater will restart and be temporarily unavailable.")
+        /// Location: RepeaterSettingsViewModel.swift - Reboot sent success
+        public static let rebootSent = L10n.tr("RemoteNodes", "remoteNodes.settings.rebootSent", fallback: "Reboot command sent")
+        /// Location: RepeaterSettingsView.swift - Repeater mode toggle
+        public static let repeaterMode = L10n.tr("RemoteNodes", "remoteNodes.settings.repeaterMode", fallback: "Repeater Mode")
+        /// Location: RepeaterSettingsView.swift - Security section title
+        public static let security = L10n.tr("RemoteNodes", "remoteNodes.settings.security", fallback: "Security")
+        /// Location: RepeaterSettingsView.swift - Security footer text
+        public static let securityFooter = L10n.tr("RemoteNodes", "remoteNodes.settings.securityFooter", fallback: "Change the admin authentication password.")
+        /// Location: RepeaterSettingsView.swift - Send advert button
+        public static let sendAdvert = L10n.tr("RemoteNodes", "remoteNodes.settings.sendAdvert", fallback: "Send Advert")
+        /// Location: RepeaterSettingsView.swift - Default success message
+        public static let settingsApplied = L10n.tr("RemoteNodes", "remoteNodes.settings.settingsApplied", fallback: "Settings applied")
+        /// Location: RepeaterSettingsViewModel.swift - General apply failure
+        public static let someSettingsFailedToApply = L10n.tr("RemoteNodes", "remoteNodes.settings.someSettingsFailedToApply", fallback: "Some settings failed to apply")
+        /// Location: RepeaterSettingsViewModel.swift - Partial load error
+        public static let someSettingsFailedToLoad = L10n.tr("RemoteNodes", "remoteNodes.settings.someSettingsFailedToLoad", fallback: "Some settings failed to load")
+        /// Location: RepeaterSettingsView.swift - Spreading factor label
+        public static let spreadingFactor = L10n.tr("RemoteNodes", "remoteNodes.settings.spreadingFactor", fallback: "Spreading Factor")
+        /// Location: RepeaterSettingsView.swift - Spreading factor accessibility hint
+        public static let spreadingFactorHint = L10n.tr("RemoteNodes", "remoteNodes.settings.spreadingFactorHint", fallback: "Higher values increase range but decrease speed")
+        /// Location: RepeaterSettingsView.swift - Success alert title
+        public static let success = L10n.tr("RemoteNodes", "remoteNodes.settings.success", fallback: "Success")
+        /// Location: RepeaterSettingsView.swift - Sync time button
+        public static let syncTime = L10n.tr("RemoteNodes", "remoteNodes.settings.syncTime", fallback: "Sync Time")
+        /// Location: RepeaterSettingsViewModel.swift - Sync time failure
+        public static let syncTimeFailed = L10n.tr("RemoteNodes", "remoteNodes.settings.syncTimeFailed", fallback: "Failed to sync time")
+        /// Location: RepeaterSettingsViewModel.swift - Timeout error
+        public static let timeout = L10n.tr("RemoteNodes", "remoteNodes.settings.timeout", fallback: "Command timed out")
+        /// Location: RepeaterSettingsViewModel.swift - Time synced success
+        public static let timeSynced = L10n.tr("RemoteNodes", "remoteNodes.settings.timeSynced", fallback: "Time synced")
+        /// Location: RepeaterSettingsView.swift - Navigation title
+        public static let title = L10n.tr("RemoteNodes", "remoteNodes.settings.title", fallback: "Repeater Settings")
+        /// Location: RepeaterSettingsView.swift - TX power label
+        public static let txPowerDbm = L10n.tr("RemoteNodes", "remoteNodes.settings.txPowerDbm", fallback: "TX Power (dBm)")
+        /// Location: RepeaterSettingsViewModel.swift - Unexpected response error
+        public static func unexpectedResponse(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.settings.unexpectedResponse", String(describing: p1), fallback: "Unexpected response: %@")
+        }
+      }
+      public enum Status {
+        /// Location: RepeaterStatusView.swift - Battery label
+        public static let battery = L10n.tr("RemoteNodes", "remoteNodes.status.battery", fallback: "Battery")
+        /// Location: RepeaterStatusView.swift - Battery curve section label
+        public static let batteryCurve = L10n.tr("RemoteNodes", "remoteNodes.status.batteryCurve", fallback: "Battery Curve")
+        /// Location: RepeaterStatusView.swift - Hours ago format
+        public static func hoursAgo(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.hoursAgo", p1, fallback: "%dh ago")
+        }
+        /// Location: RepeaterStatusView.swift - Last RSSI label
+        public static let lastRssi = L10n.tr("RemoteNodes", "remoteNodes.status.lastRssi", fallback: "Last RSSI")
+        /// Location: RepeaterStatusView.swift - Last SNR label
+        public static let lastSnr = L10n.tr("RemoteNodes", "remoteNodes.status.lastSnr", fallback: "Last SNR")
+        /// Location: RepeaterStatusView.swift - Minutes ago format
+        public static func minutesAgo(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.minutesAgo", p1, fallback: "%dm ago")
+        }
+        /// Location: RepeaterStatusView.swift - Neighbors section label
+        public static let neighbors = L10n.tr("RemoteNodes", "remoteNodes.status.neighbors", fallback: "Neighbors")
+        /// Location: RepeaterStatusView.swift - Noise floor label
+        public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.status.noiseFloor", fallback: "Noise Floor")
+        /// Location: RepeaterStatusView.swift - No neighbors empty state
+        public static let noNeighbors = L10n.tr("RemoteNodes", "remoteNodes.status.noNeighbors", fallback: "No neighbors discovered")
+        /// Location: RepeaterStatusView.swift - No sensor data empty state
+        public static let noSensorData = L10n.tr("RemoteNodes", "remoteNodes.status.noSensorData", fallback: "No sensor data")
+        /// Location: RepeaterStatusView.swift - No telemetry data empty state
+        public static let noTelemetryData = L10n.tr("RemoteNodes", "remoteNodes.status.noTelemetryData", fallback: "No telemetry data")
+        /// Location: RepeaterStatusViewModel.swift - Failed to load OCV settings
+        public static let ocvLoadFailed = L10n.tr("RemoteNodes", "remoteNodes.status.ocvLoadFailed", fallback: "Failed to load battery curve settings")
+        /// Location: RepeaterStatusViewModel.swift - OCV save failed
+        public static func ocvSaveFailed(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.ocvSaveFailed", String(describing: p1), fallback: "Failed to save: %@")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Cannot save OCV error
+        public static let ocvSaveNoContact = L10n.tr("RemoteNodes", "remoteNodes.status.ocvSaveNoContact", fallback: "Cannot save: contact not found")
+        /// Location: RepeaterStatusView.swift - Packets received label
+        public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.status.packetsReceived", fallback: "Packets Received")
+        /// Location: RepeaterStatusView.swift - Packets sent label
+        public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.status.packetsSent", fallback: "Packets Sent")
+        /// Location: RepeaterStatusViewModel.swift - Request timed out
+        public static let requestTimedOut = L10n.tr("RemoteNodes", "remoteNodes.status.requestTimedOut", fallback: "Request timed out")
+        /// Location: RepeaterStatusView.swift - Seconds ago format
+        public static func secondsAgo(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.secondsAgo", p1, fallback: "%ds ago")
+        }
+        /// Location: RepeaterStatusView.swift - SNR display format
+        public static func snrFormat(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.snrFormat", String(describing: p1), fallback: "SNR %@dB")
+        }
+        /// Location: RepeaterStatusView.swift - Status section header
+        public static let statusSection = L10n.tr("RemoteNodes", "remoteNodes.status.statusSection", fallback: "Status")
+        /// Location: RepeaterStatusView.swift - Telemetry section label
+        public static let telemetry = L10n.tr("RemoteNodes", "remoteNodes.status.telemetry", fallback: "Telemetry")
+        /// Location: RepeaterStatusView.swift - Navigation title
+        public static let title = L10n.tr("RemoteNodes", "remoteNodes.status.title", fallback: "Repeater Status")
+        /// Location: RepeaterStatusView.swift - Unknown neighbor name
+        public static let unknown = L10n.tr("RemoteNodes", "remoteNodes.status.unknown", fallback: "Unknown")
+        /// Location: RepeaterStatusView.swift - Uptime label
+        public static let uptime = L10n.tr("RemoteNodes", "remoteNodes.status.uptime", fallback: "Uptime")
+        /// Location: RepeaterStatusViewModel.swift - Uptime 1 day format
+        public static func uptime1Day(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.uptime1Day", p1, p2, fallback: "1 day %dh %dm")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Uptime multiple days format
+        public static func uptimeDays(_ p1: Int, _ p2: Int, _ p3: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.uptimeDays", p1, p2, p3, fallback: "%d days %dh %dm")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Uptime hours format
+        public static func uptimeHours(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.uptimeHours", p1, p2, fallback: "%dh %dm")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Uptime minutes format
+        public static func uptimeMinutes(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.uptimeMinutes", p1, fallback: "%dm")
+        }
+      }
     }
+  }
   public enum Settings {
     /// Build number display with build number
     public static func build(_ p1: Any) -> String {

@@ -177,7 +177,7 @@ final class RepeaterStatusViewModel {
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 if self?.isLoadingStatus == true && self?.status == nil {
-                    self?.errorMessage = "Request timed out"
+                    self?.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
                     self?.isLoadingStatus = false
                 }
             }
@@ -208,7 +208,7 @@ final class RepeaterStatusViewModel {
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 if self?.isLoadingNeighbors == true && (self?.neighbors.isEmpty ?? true) {
-                    self?.errorMessage = "Request timed out"
+                    self?.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
                     self?.isLoadingNeighbors = false
                 }
             }
@@ -318,14 +318,14 @@ final class RepeaterStatusViewModel {
 
         if days > 0 {
             if days == 1 {
-                return "1 day \(hours)h \(minutes)m"
+                return L10n.RemoteNodes.RemoteNodes.Status.uptime1Day(hours, minutes)
             } else {
-                return "\(days) days \(hours)h \(minutes)m"
+                return L10n.RemoteNodes.RemoteNodes.Status.uptimeDays(days, hours, minutes)
             }
         } else if hours > 0 {
-            return "\(hours)h \(minutes)m"
+            return L10n.RemoteNodes.RemoteNodes.Status.uptimeHours(hours, minutes)
         }
-        return "\(minutes)m"
+        return L10n.RemoteNodes.RemoteNodes.Status.uptimeMinutes(minutes)
     }
 
     var batteryDisplay: String {
@@ -393,7 +393,7 @@ final class RepeaterStatusViewModel {
                 ocvValues = OCVPreset.liIon.ocvArray
             }
         } catch {
-            ocvError = "Failed to load battery curve settings"
+            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvLoadFailed
         }
     }
 
@@ -401,7 +401,7 @@ final class RepeaterStatusViewModel {
     func saveOCVSettings(preset: OCVPreset, values: [Int]) async {
         guard let contactService,
               let contactID else {
-            ocvError = "Cannot save: contact not found"
+            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvSaveNoContact
             return
         }
 
@@ -427,7 +427,7 @@ final class RepeaterStatusViewModel {
             selectedOCVPreset = preset
             ocvValues = values
         } catch {
-            ocvError = "Failed to save: \(error.localizedDescription)"
+            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvSaveFailed(error.localizedDescription)
         }
     }
 }
