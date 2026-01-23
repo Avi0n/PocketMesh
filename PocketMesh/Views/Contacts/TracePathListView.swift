@@ -42,7 +42,7 @@ struct TracePathListView: View {
     private var codeInputSection: some View {
         Section {
             HStack {
-                TextField("Enter codes (e.g., A3, B7, F2)", text: $codeInput)
+                TextField("Example: A3, B7, F2)", text: $codeInput)
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .onSubmit {
