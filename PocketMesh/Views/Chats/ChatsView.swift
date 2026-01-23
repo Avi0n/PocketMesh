@@ -27,6 +27,7 @@ struct ChatsView: View {
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
+    @State private var showOfflineRefreshAlert = false
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
@@ -63,7 +64,7 @@ struct ChatsView: View {
     private func conversationListState<Content: View>(
         @ViewBuilder listContent: () -> Content
     ) -> some View {
-        if viewModel.isLoading && viewModel.allConversations.isEmpty {
+        if !viewModel.hasLoadedOnce {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if filteredConversations.isEmpty {
@@ -122,7 +123,16 @@ struct ChatsView: View {
                 }
             }
             .refreshable {
-                await refreshConversations()
+                if appState.connectionState != .ready {
+                    showOfflineRefreshAlert = true
+                } else {
+                    await refreshConversations()
+                }
+            }
+            .alert("Cannot Refresh", isPresented: $showOfflineRefreshAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Connect to your device to get the latest messages.")
             }
             .task {
                 await onTaskStart()
@@ -282,6 +292,7 @@ struct ChatsView: View {
                 viewModel.configure(appState: appState)
                 await loadConversations()
                 chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
+                announceOfflineStateIfNeeded()
                 handlePendingNavigation()
                 handlePendingRoomNavigation()
             }
@@ -391,6 +402,7 @@ struct ChatsView: View {
             onTaskStart: {
                 viewModel.configure(appState: appState)
                 await loadConversations()
+                announceOfflineStateIfNeeded()
                 handlePendingNavigation()
                 handlePendingRoomNavigation()
             }
@@ -398,7 +410,7 @@ struct ChatsView: View {
     }
 
     private func loadConversations() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
 
@@ -429,8 +441,19 @@ struct ChatsView: View {
         }()
     }
 
+    private func announceOfflineStateIfNeeded() {
+        guard UIAccessibility.isVoiceOverRunning,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "Viewing cached data. Connect to device for updates."
+        )
+    }
+
     private func refreshConversations() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
@@ -573,7 +596,7 @@ struct ChatsView: View {
                 return
             }
 
-            guard let deviceID = appState.connectedDevice?.id else {
+            guard let deviceID = appState.currentDeviceID else {
                 await MainActor.run {
                     hashtagToJoin = HashtagJoinRequest(id: fullName)
                 }
@@ -585,7 +608,7 @@ struct ChatsView: View {
                     fullName,
                     deviceID: deviceID,
                     fetchChannels: { deviceID in
-                        try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+                        try await appState.offlineDataStore?.fetchChannels(deviceID: deviceID) ?? []
                     }
                 ) {
                     await MainActor.run {

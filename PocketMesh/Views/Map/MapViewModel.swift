@@ -44,8 +44,8 @@ final class MapViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
-        self.deviceID = appState.connectedDevice?.id
+        self.dataStore = appState.offlineDataStore
+        self.deviceID = appState.currentDeviceID
     }
 
     /// Configure with services (for testing)

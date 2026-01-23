@@ -29,6 +29,9 @@ final class ContactsViewModel {
     /// Loading state
     var isLoading = false
 
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
+
     /// Syncing state
     var isSyncing = false
 
@@ -52,7 +55,7 @@ final class ContactsViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.dataStore = appState.offlineDataStore
         self.contactService = appState.services?.contactService
     }
 
@@ -77,6 +80,7 @@ final class ContactsViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 

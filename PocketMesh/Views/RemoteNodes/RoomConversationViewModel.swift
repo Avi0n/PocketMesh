@@ -17,6 +17,9 @@ final class RoomConversationViewModel {
     /// Loading state
     var isLoading = false
 
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
+
     /// Error message if any
     var errorMessage: String?
 
@@ -66,6 +69,7 @@ final class RoomConversationViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 

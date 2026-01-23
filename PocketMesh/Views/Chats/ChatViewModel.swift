@@ -94,6 +94,9 @@ final class ChatViewModel {
     /// Loading state
     var isLoading = false
 
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
+
     /// Error message if any
     var errorMessage: String?
 
@@ -139,6 +142,7 @@ final class ChatViewModel {
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
     private var syncCoordinator: SyncCoordinator?
+    private weak var appState: AppState?
 
     // MARK: - Initialization
 
@@ -146,7 +150,8 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (with link preview cache for message views)
     func configure(appState: AppState, linkPreviewCache: any LinkPreviewCaching) {
-        self.dataStore = appState.services?.dataStore
+        self.appState = appState
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
@@ -157,7 +162,8 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (for conversation list views that don't show previews)
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.appState = appState
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
@@ -176,6 +182,7 @@ final class ChatViewModel {
 
     /// Toggles mute state for a conversation with optimistic UI update
     func toggleMute(_ conversation: Conversation) async {
+        guard appState?.connectionState == .ready else { return }
         let originalState = conversation.isMuted
         let newState = !originalState
 
@@ -284,6 +291,7 @@ final class ChatViewModel {
     ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
     ///     conflicts with swipe action dismissal animations
     func toggleFavorite(_ conversation: Conversation, disableAnimation: Bool = false) async {
+        guard appState?.connectionState == .ready else { return }
         let originalState = conversation.isFavorite
         let newState = !originalState
 
@@ -427,6 +435,7 @@ final class ChatViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -506,6 +515,7 @@ final class ChatViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -678,6 +688,7 @@ final class ChatViewModel {
         }
 
         logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -878,6 +889,7 @@ final class ChatViewModel {
 
     /// Delete a single message
     func deleteMessage(_ message: MessageDTO) async {
+        guard appState?.connectionState == .ready else { return }
         guard let dataStore else { return }
 
         do {
@@ -914,6 +926,7 @@ final class ChatViewModel {
 
     /// Delete all messages for a contact (conversation deletion)
     func deleteConversation(for contact: ContactDTO) async throws {
+        guard appState?.connectionState == .ready else { return }
         guard let dataStore else { return }
 
         // Fetch all messages for this contact

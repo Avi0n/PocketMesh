@@ -55,6 +55,32 @@ public final class AppState {
     /// Incremented when services change (device switch, reconnect). Views observe this to reload.
     public private(set) var servicesVersion: Int = 0
 
+    // MARK: - Offline Data Access
+
+    /// Cached standalone persistence store for offline browsing
+    private var cachedOfflineStore: PersistenceStore?
+
+    /// Device ID for data access - returns connected device or last-connected device for offline browsing
+    public var currentDeviceID: UUID? {
+        connectedDevice?.id ?? connectionManager.lastConnectedDeviceID
+    }
+
+    /// Data store that works regardless of connection state - uses services when connected, cached standalone store when disconnected
+    public var offlineDataStore: PersistenceStore? {
+        if let services {
+            cachedOfflineStore = nil  // Clear cache when services available
+            return services.dataStore
+        }
+        guard connectionManager.lastConnectedDeviceID != nil else {
+            cachedOfflineStore = nil
+            return nil
+        }
+        if cachedOfflineStore == nil {
+            cachedOfflineStore = createStandalonePersistenceStore()
+        }
+        return cachedOfflineStore
+    }
+
     /// Incremented when contacts data changes. Views observe this to reload contact lists.
     public private(set) var contactsVersion: Int = 0
 
