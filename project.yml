@@ -30,6 +30,26 @@ targets:
       - path: AppIcon.icon
     dependencies:
       - package: PocketMeshServices
+    preBuildScripts:
+      - name: SwiftGen
+        script: |
+          if ! command -v swiftgen &> /dev/null; then
+              echo "error: SwiftGen not installed. Install with: brew install swiftgen"
+              exit 1
+          fi
+          swiftgen config run --config "${PROJECT_DIR}/swiftgen.yml"
+        inputFiles:
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Localizable.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Chats.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Contacts.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Map.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Settings.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Tools.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
+        outputFiles:
+          - $(DERIVED_FILE_DIR)/L10n.generated.swift
+        basedOnDependencyAnalysis: false
     settings:
       base:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
