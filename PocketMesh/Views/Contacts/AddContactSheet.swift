@@ -172,9 +172,9 @@ private struct TypePickerSection: View {
     var body: some View {
         Section {
             Picker(L10n.Contacts.Contacts.Add.type, selection: $selectedType) {
-                Text(L10n.Contacts.Contacts.Type.chat).tag(ContactType.chat)
-                Text(L10n.Contacts.Contacts.Type.repeater).tag(ContactType.repeater)
-                Text(L10n.Contacts.Contacts.Type.room).tag(ContactType.room)
+                Text(L10n.Contacts.Contacts.NodeKind.chat).tag(ContactType.chat)
+                Text(L10n.Contacts.Contacts.NodeKind.repeater).tag(ContactType.repeater)
+                Text(L10n.Contacts.Contacts.NodeKind.room).tag(ContactType.room)
             }
             .pickerStyle(.segmented)
         } header: {

@@ -962,6 +962,18 @@ public enum L10n {
           }
         }
       }
+      public enum NodeKind {
+        /// Location: Multiple files - Purpose: Chat contact type label
+        public static let chat = L10n.tr("Contacts", "contacts.nodeKind.chat", fallback: "Chat")
+        /// Location: Multiple files - Purpose: Chat contact full label
+        public static let chatContact = L10n.tr("Contacts", "contacts.nodeKind.chatContact", fallback: "Chat Contact")
+        /// Location: ContactsListView.swift - Purpose: Contact label in search results
+        public static let contact = L10n.tr("Contacts", "contacts.nodeKind.contact", fallback: "Contact")
+        /// Location: Multiple files - Purpose: Repeater contact type label
+        public static let repeater = L10n.tr("Contacts", "contacts.nodeKind.repeater", fallback: "Repeater")
+        /// Location: Multiple files - Purpose: Room contact type label
+        public static let room = L10n.tr("Contacts", "contacts.nodeKind.room", fallback: "Room")
+      }
       public enum PathDetail {
         /// Location: SavedPathDetailView.swift - Purpose: Average stat label
         public static let avg = L10n.tr("Contacts", "contacts.pathDetail.avg", fallback: "Avg")
@@ -1434,18 +1446,6 @@ public enum L10n {
           public static let map = L10n.tr("Contacts", "contacts.trace.mode.map", fallback: "Map")
         }
       }
-      public enum `Type` {
-        /// Location: Multiple files - Purpose: Chat contact type label
-        public static let chat = L10n.tr("Contacts", "contacts.type.chat", fallback: "Chat")
-        /// Location: Multiple files - Purpose: Chat contact full label
-        public static let chatContact = L10n.tr("Contacts", "contacts.type.chatContact", fallback: "Chat Contact")
-        /// Location: ContactsListView.swift - Purpose: Contact label in search results
-        public static let contact = L10n.tr("Contacts", "contacts.type.contact", fallback: "Contact")
-        /// Location: Multiple files - Purpose: Repeater contact type label
-        public static let repeater = L10n.tr("Contacts", "contacts.type.repeater", fallback: "Repeater")
-        /// Location: Multiple files - Purpose: Room contact type label
-        public static let room = L10n.tr("Contacts", "contacts.type.room", fallback: "Room")
-      }
       public enum ViewModel {
         /// Location: ContactsViewModel.swift - Purpose: Delete requires connection error
         public static let connectToDelete = L10n.tr("Contacts", "contacts.viewModel.connectToDelete", fallback: "Connect to a radio to delete nodes")
@@ -1537,13 +1537,13 @@ public enum L10n {
         public static let details = L10n.tr("Map", "map.callout.details", fallback: "Details")
         /// Location: ContactCalloutContent.swift - Purpose: Button to send message from callout
         public static let message = L10n.tr("Map", "map.callout.message", fallback: "Message")
-        public enum `Type` {
+        public enum NodeKind {
           /// Location: ContactCalloutContent.swift - Purpose: Display name for contact in callout
-          public static let contact = L10n.tr("Map", "map.callout.type.contact", fallback: "Contact")
+          public static let contact = L10n.tr("Map", "map.callout.nodeKind.contact", fallback: "Contact")
           /// Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout
-          public static let repeater = L10n.tr("Map", "map.callout.type.repeater", fallback: "Repeater")
+          public static let repeater = L10n.tr("Map", "map.callout.nodeKind.repeater", fallback: "Repeater")
           /// Location: ContactCalloutContent.swift - Purpose: Display name for room in callout
-          public static let room = L10n.tr("Map", "map.callout.type.room", fallback: "Room")
+          public static let room = L10n.tr("Map", "map.callout.nodeKind.room", fallback: "Room")
         }
       }
       public enum Common {
@@ -1618,6 +1618,14 @@ public enum L10n {
         /// Location: MapView.swift - Purpose: Empty state title when no contacts have location
         public static let title = L10n.tr("Map", "map.emptyState.title", fallback: "No Contacts on Map")
       }
+      public enum NodeKind {
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type
+        public static let chatContact = L10n.tr("Map", "map.nodeKind.chatContact", fallback: "Chat Contact")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type
+        public static let repeater = L10n.tr("Map", "map.nodeKind.repeater", fallback: "Repeater")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type
+        public static let room = L10n.tr("Map", "map.nodeKind.room", fallback: "Room")
+      }
       public enum Style {
         /// Location: MapStyleSelection.swift - Purpose: Hybrid map style option
         public static let hybrid = L10n.tr("Map", "map.style.hybrid", fallback: "Hybrid")
@@ -1625,14 +1633,6 @@ public enum L10n {
         public static let satellite = L10n.tr("Map", "map.style.satellite", fallback: "Satellite")
         /// Location: MapStyleSelection.swift - Purpose: Standard map style option
         public static let standard = L10n.tr("Map", "map.style.standard", fallback: "Standard")
-      }
-      public enum `Type` {
-        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type
-        public static let chatContact = L10n.tr("Map", "map.type.chatContact", fallback: "Chat Contact")
-        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type
-        public static let repeater = L10n.tr("Map", "map.type.repeater", fallback: "Repeater")
-        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type
-        public static let room = L10n.tr("Map", "map.type.room", fallback: "Room")
       }
     }
   }

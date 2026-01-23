@@ -730,9 +730,9 @@ struct ContactDetailView: View {
 
     private var contactTypeLabel: String {
         switch currentContact.type {
-        case .chat: return L10n.Contacts.Contacts.Type.chatContact
-        case .repeater: return L10n.Contacts.Contacts.Type.repeater
-        case .room: return L10n.Contacts.Contacts.Type.room
+        case .chat: return L10n.Contacts.Contacts.NodeKind.chatContact
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 

@@ -530,9 +530,9 @@ struct ContactRowView: View {
 
     private var contactTypeLabel: String {
         switch contact.type {
-        case .chat: return L10n.Contacts.Contacts.Type.contact
-        case .repeater: return L10n.Contacts.Contacts.Type.repeater
-        case .room: return L10n.Contacts.Contacts.Type.room
+        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 

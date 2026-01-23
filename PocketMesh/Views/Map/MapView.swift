@@ -506,11 +506,11 @@ private struct ContactDetailSheet: View {
     private var typeDisplayName: String {
         switch contact.type {
         case .chat:
-            L10n.Map.Map.Type.chatContact
+            L10n.Map.Map.NodeKind.chatContact
         case .repeater:
-            L10n.Map.Map.Type.repeater
+            L10n.Map.Map.NodeKind.repeater
         case .room:
-            L10n.Map.Map.Type.room
+            L10n.Map.Map.NodeKind.room
         }
     }
 

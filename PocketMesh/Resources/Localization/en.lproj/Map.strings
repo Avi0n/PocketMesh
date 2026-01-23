@@ -117,13 +117,13 @@
 // MARK: - Contact Type Names
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type */
-"map.type.chatContact" = "Chat Contact";
+"map.nodeKind.chatContact" = "Chat Contact";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type */
-"map.type.repeater" = "Repeater";
+"map.nodeKind.repeater" = "Repeater";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type */
-"map.type.room" = "Room";
+"map.nodeKind.room" = "Room";
 
 // MARK: - Contact Callout
 
@@ -134,13 +134,13 @@
 "map.callout.message" = "Message";
 
 /* Location: ContactCalloutContent.swift - Purpose: Display name for contact in callout */
-"map.callout.type.contact" = "Contact";
+"map.callout.nodeKind.contact" = "Contact";
 
 /* Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout */
-"map.callout.type.repeater" = "Repeater";
+"map.callout.nodeKind.repeater" = "Repeater";
 
 /* Location: ContactCalloutContent.swift - Purpose: Display name for room in callout */
-"map.callout.type.room" = "Room";
+"map.callout.nodeKind.room" = "Room";
 
 // MARK: - Contact Annotation
 

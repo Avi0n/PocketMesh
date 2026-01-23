@@ -65,11 +65,11 @@ struct ContactCalloutContent: View {
     private var typeDisplayName: String {
         switch contact.type {
         case .chat:
-            L10n.Map.Map.Callout.Type.contact
+            L10n.Map.Map.Callout.NodeKind.contact
         case .repeater:
-            L10n.Map.Map.Callout.Type.repeater
+            L10n.Map.Map.Callout.NodeKind.repeater
         case .room:
-            L10n.Map.Map.Callout.Type.room
+            L10n.Map.Map.Callout.NodeKind.room
         }
     }
 }

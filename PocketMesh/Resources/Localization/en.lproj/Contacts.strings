@@ -35,19 +35,19 @@
 // MARK: - Contact Types
 
 /* Location: Multiple files - Purpose: Chat contact type label */
-"contacts.type.chat" = "Chat";
+"contacts.nodeKind.chat" = "Chat";
 
 /* Location: Multiple files - Purpose: Chat contact full label */
-"contacts.type.chatContact" = "Chat Contact";
+"contacts.nodeKind.chatContact" = "Chat Contact";
 
 /* Location: Multiple files - Purpose: Repeater contact type label */
-"contacts.type.repeater" = "Repeater";
+"contacts.nodeKind.repeater" = "Repeater";
 
 /* Location: Multiple files - Purpose: Room contact type label */
-"contacts.type.room" = "Room";
+"contacts.nodeKind.room" = "Room";
 
 /* Location: ContactsListView.swift - Purpose: Contact label in search results */
-"contacts.type.contact" = "Contact";
+"contacts.nodeKind.contact" = "Contact";
 
 // MARK: - Route Types
 
