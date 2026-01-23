@@ -17,7 +17,7 @@ struct ChannelConversationRow: View {
 
                     Spacer()
 
-                    MutedIndicator(isMuted: channel.isMuted)
+                    NotificationLevelIndicator(level: channel.notificationLevel)
 
                     if channel.isFavorite {
                         Image(systemName: "star.fill")
