@@ -96,8 +96,8 @@
 /* Section header for device capabilities */
 "deviceInfo.capabilities.header" = "Capacidades";
 
-/* Label for max contacts capability */
-"deviceInfo.maxContacts" = "Contactos máximos";
+/* Label for max nodes capability */
+"deviceInfo.maxNodes" = "Nodos máximos";
 
 /* Label for max channels capability */
 "deviceInfo.maxChannels" = "Canales máximos";

@@ -396,8 +396,8 @@
 /* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
 "contacts.add.error.invalidSize" = "Publieke sleutel moet %d bytes zijn (%d hex-tekens)";
 
-/* Location: AddContactSheet.swift - Purpose: Contact table full error */
-"contacts.add.error.tableFull" = "Contactentabel is vol (max %d contacten)";
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "Knooppuntlijst is vol (max %d knooppunten)";
 
 // MARK: - Contact QR Share Sheet
 
@@ -822,6 +822,27 @@
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title */
 "contacts.results.distanceInfoTitle" = "Afstand niet beschikbaar";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Afstandsinfo";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "De weergegeven afstand is alleen tussen repeaters. De afstand van uw apparaat naar de eerste repeater is niet inbegrepen omdat de apparaatlocatie niet beschikbaar is.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Gedeeltelijke afstand";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Schakel locatiediensten in of stel een locatie in voor uw apparaat om de volledige padafstand te zien.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "Voor volledig pad";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Gedeeltelijke afstand";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Dubbeltik om te leren waarom de apparaatlocatie is uitgesloten";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Afstandsberekening vereist minimaal 2 repeaters in het pad.";

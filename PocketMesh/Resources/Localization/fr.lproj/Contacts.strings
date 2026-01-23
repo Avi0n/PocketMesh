@@ -396,8 +396,8 @@
 /* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
 "contacts.add.error.invalidSize" = "La clé publique doit faire %d octets (%d caractères hexadécimaux)";
 
-/* Location: AddContactSheet.swift - Purpose: Contact table full error */
-"contacts.add.error.tableFull" = "La table de contacts est pleine (max %d contacts)";
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "La liste de nœuds est pleine (max %d nœuds)";
 
 // MARK: - Contact QR Share Sheet
 
@@ -822,6 +822,27 @@
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title */
 "contacts.results.distanceInfoTitle" = "Distance non disponible";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Info distance";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "La distance affichée concerne uniquement le trajet entre les répéteurs. La distance entre votre appareil et le premier répéteur n'est pas incluse car la position de l'appareil n'est pas disponible.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Distance partielle";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Activez les services de localisation ou définissez une position pour votre appareil pour voir la distance complète du chemin.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "Pour inclure le chemin complet";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Distance partielle";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Touchez deux fois pour savoir pourquoi la position de l'appareil est exclue";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Le calcul de la distance nécessite au moins 2 répéteurs dans le chemin.";

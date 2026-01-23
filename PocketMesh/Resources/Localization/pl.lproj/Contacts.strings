@@ -396,8 +396,8 @@
 /* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
 "contacts.add.error.invalidSize" = "Klucz publiczny musi mieć %d bajtów (%d znaków szesnastkowych)";
 
-/* Location: AddContactSheet.swift - Purpose: Contact table full error */
-"contacts.add.error.tableFull" = "Tabela kontaktów jest pełna (maks. %d kontaktów)";
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "Lista węzłów jest pełna (maks. %d węzłów)";
 
 // MARK: - Contact QR Share Sheet
 
@@ -822,6 +822,27 @@
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title */
 "contacts.results.distanceInfoTitle" = "Odległość niedostępna";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Informacje o odległości";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "Wyświetlana odległość dotyczy tylko trasy między przekaźnikami. Odległość od urządzenia do pierwszego przekaźnika nie jest uwzględniona, ponieważ lokalizacja urządzenia jest niedostępna.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Częściowa odległość";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Włącz usługi lokalizacji lub ustaw lokalizację urządzenia, aby zobaczyć pełną odległość ścieżki.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "Aby uwzględnić pełną ścieżkę";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Częściowa odległość";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Stuknij dwukrotnie, aby dowiedzieć się, dlaczego lokalizacja urządzenia jest wykluczona";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Obliczenie odległości wymaga co najmniej 2 przekaźników w ścieżce.";

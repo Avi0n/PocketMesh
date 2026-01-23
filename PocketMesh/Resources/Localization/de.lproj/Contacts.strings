@@ -396,8 +396,8 @@
 /* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
 "contacts.add.error.invalidSize" = "Öffentlicher Schlüssel muss %d Bytes (%d Hex-Zeichen) haben";
 
-/* Location: AddContactSheet.swift - Purpose: Contact table full error */
-"contacts.add.error.tableFull" = "Kontakttabelle ist voll (max. %d Kontakte)";
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "Knotenliste ist voll (max. %d Knoten)";
 
 // MARK: - Contact QR Share Sheet
 
@@ -820,8 +820,29 @@
 /* Location: TraceResultsSheet.swift - Purpose: Distance info hint */
 "contacts.results.distanceInfoHint" = "Doppeltippen für Details zu fehlenden Standorten";
 
-/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title */
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (unavailable) */
 "contacts.results.distanceInfoTitle" = "Entfernung nicht verfügbar";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Entfernungsinfo";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "Die angezeigte Entfernung umfasst nur die Strecke zwischen Repeatern. Die Entfernung von Ihrem Gerät zum ersten Repeater ist nicht enthalten, da der Gerätestandort nicht verfügbar ist.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Teilentfernung";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Aktivieren Sie Standortdienste oder legen Sie einen Standort für Ihr Gerät fest, um die vollständige Pfadentfernung zu sehen.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "Für vollständigen Pfad";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Teilentfernung";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Doppeltippen, um zu erfahren, warum der Gerätestandort ausgeschlossen ist";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Entfernungsberechnung erfordert mindestens 2 Repeater im Pfad.";
