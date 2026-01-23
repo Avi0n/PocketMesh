@@ -137,7 +137,7 @@ struct ResultsCardView: View {
 
             Grid(alignment: .leading, verticalSpacing: 6) {
                 GridRow {
-                    Text(L10n.Tools.Tools.LineOfSight.worstClearance(""))
+                    Text(L10n.Tools.Tools.LineOfSight.worstClearanceShort)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(LOSFormatters.formatClearancePercent(result.worstClearancePercent))%")

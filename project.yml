@@ -2,7 +2,7 @@ name: PocketMesh
 options:
   bundleIdPrefix: com.pocketmesh
   deploymentTarget:
-    iOS: "18.0"
+    iOS: "26.0"
   xcodeVersion: "26.0"
   generateEmptyDirectories: true
 
@@ -39,6 +39,7 @@ targets:
           fi
           swiftgen config run --config "${PROJECT_DIR}/swiftgen.yml"
         inputFiles:
+          - $(PROJECT_DIR)/swiftgen.yml
           - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Localizable.strings
           - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Chats.strings
           - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Contacts.strings
@@ -48,7 +49,7 @@ targets:
           - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
           - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
         outputFiles:
-          - $(DERIVED_FILE_DIR)/L10n.generated.swift
+          - $(PROJECT_DIR)/PocketMesh/Resources/Generated/L10n.swift
         basedOnDependencyAnalysis: false
     settings:
       base:

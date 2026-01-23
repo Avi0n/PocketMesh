@@ -312,9 +312,9 @@ final class RepeaterStatusViewModel {
 
     var uptimeDisplay: String {
         guard let uptime = status?.uptimeSeconds else { return Self.emDash }
-        let days = uptime / 86400
-        let hours = (uptime % 86400) / 3600
-        let minutes = (uptime % 3600) / 60
+        let days = Int(uptime / 86400)
+        let hours = Int((uptime % 86400) / 3600)
+        let minutes = Int((uptime % 3600) / 60)
 
         if days > 0 {
             if days == 1 {
