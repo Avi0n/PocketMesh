@@ -78,6 +78,7 @@ struct ChannelChatView: View {
                     dismiss()
                 }
             )
+            .environment(\.chatViewModel, viewModel)
         }
         .sheet(item: $selectedMessageForRepeats) { message in
             RepeatDetailsSheet(message: message)

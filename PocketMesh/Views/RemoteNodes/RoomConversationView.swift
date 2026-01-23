@@ -8,6 +8,7 @@ struct RoomConversationView: View {
 
     @State private var session: RemoteNodeSessionDTO
     @State private var viewModel = RoomConversationViewModel()
+    @State private var chatViewModel = ChatViewModel()
     @State private var showingRoomInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
@@ -43,9 +44,11 @@ struct RoomConversationView: View {
             }
             .sheet(isPresented: $showingRoomInfo) {
                 RoomInfoSheet(session: session)
+                    .environment(\.chatViewModel, chatViewModel)
             }
             .task {
                 viewModel.configure(appState: appState)
+                chatViewModel.configure(appState: appState)
                 await viewModel.loadMessages(for: session)
             }
             .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in

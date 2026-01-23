@@ -6,11 +6,14 @@ import CoreImage.CIFilterBuiltins
 struct ChannelInfoSheet: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chatViewModel) private var viewModel
 
     let channel: ChannelDTO
     let onClearMessages: () -> Void
     let onDelete: () -> Void
 
+    @State private var notificationLevel: NotificationLevel
+    @State private var isFavorite: Bool
     @State private var isDeleting = false
     @State private var isClearingMessages = false
     @State private var showingDeleteConfirmation = false
@@ -18,11 +21,35 @@ struct ChannelInfoSheet: View {
     @State private var errorMessage: String?
     @State private var copyHapticTrigger = 0
 
+    init(channel: ChannelDTO, onDelete: @escaping () -> Void) {
+        self.channel = channel
+        self.onDelete = onDelete
+        self._notificationLevel = State(initialValue: channel.notificationLevel)
+        self._isFavorite = State(initialValue: channel.isFavorite)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 // Channel Header Section
                 channelHeaderSection
+
+                // Quick Actions Section
+                ConversationQuickActionsSection(
+                    notificationLevel: $notificationLevel,
+                    isFavorite: $isFavorite,
+                    availableLevels: NotificationLevel.channelLevels
+                )
+                .onChange(of: notificationLevel) { _, newValue in
+                    Task {
+                        await viewModel?.setNotificationLevel(.channel(channel), level: newValue)
+                    }
+                }
+                .onChange(of: isFavorite) { _, newValue in
+                    Task {
+                        await viewModel?.setFavorite(.channel(channel), isFavorite: newValue)
+                    }
+                }
 
                 // Channel Info Section
                 channelInfoSection
@@ -87,6 +114,7 @@ struct ChannelInfoSheet: View {
             Text(L10n.Chats.Chats.ChannelInfo.DeleteConfirm.message)
         }
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Channel Header Section

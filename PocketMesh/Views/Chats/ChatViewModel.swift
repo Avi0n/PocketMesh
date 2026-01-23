@@ -331,6 +331,15 @@ final class ChatViewModel {
 
     // MARK: - Favorite
 
+    /// Sets favorite state for a conversation with optimistic UI update
+    func setFavorite(_ conversation: Conversation, isFavorite: Bool) async {
+        guard appState?.connectionState == .ready else { return }
+        guard conversation.isFavorite != isFavorite else { return }
+
+        // Reuse existing toggle logic
+        await toggleFavorite(conversation)
+    }
+
     /// Toggles favorite state for a conversation.
     ///
     /// For direct messages (contacts), this pushes the change to the device and waits
@@ -1572,5 +1581,18 @@ final class ChatViewModel {
                 await loadConversations(deviceID: deviceID)
             }
         } while !sendQueue.isEmpty
+    }
+}
+
+// MARK: - Environment Key
+
+private struct ChatViewModelKey: EnvironmentKey {
+    static let defaultValue: ChatViewModel? = nil
+}
+
+extension EnvironmentValues {
+    var chatViewModel: ChatViewModel? {
+        get { self[ChatViewModelKey.self] }
+        set { self[ChatViewModelKey.self] = newValue }
     }
 }
