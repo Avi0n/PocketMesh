@@ -534,16 +534,17 @@ final class ChatViewModel {
     /// sees the new count immediately for unread tracking.
     func appendMessageIfNew(_ message: MessageDTO) {
         guard !messages.contains(where: { $0.id == message.id }) else { return }
-        let index = messages.count
+        let previous = messages.last
         messages.append(message)
         messagesByID[message.id] = message
 
         // Build display item synchronously for immediate consistency
+        let flags = Self.computeDisplayFlags(for: message, previous: previous)
         let newItem = MessageDisplayItem(
             messageID: message.id,
-            showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
-            showDirectionGap: Self.isDirectionChange(at: index, in: messages),
-            showSenderName: Self.shouldShowSenderName(at: index, in: messages),
+            showTimestamp: flags.showTimestamp,
+            showDirectionGap: flags.showDirectionGap,
+            showSenderName: flags.showSenderName,
             detectedURL: nil,  // URL detection deferred to avoid main thread blocking
             isOutgoing: message.isOutgoing,
             status: message.status,
@@ -1096,6 +1097,49 @@ final class ChatViewModel {
         return true
     }
 
+    /// Pre-computed display flags for a single message
+    struct DisplayFlags {
+        let showTimestamp: Bool
+        let showDirectionGap: Bool
+        let showSenderName: Bool
+    }
+
+    /// Computes all display flags in a single pass to avoid redundant message lookups.
+    /// Used by buildDisplayItems() for O(n) performance instead of O(3n).
+    static func computeDisplayFlags(for message: MessageDTO, previous: MessageDTO?) -> DisplayFlags {
+        guard let previous else {
+            // First message: show timestamp, no direction gap, show sender name
+            return DisplayFlags(showTimestamp: true, showDirectionGap: false, showSenderName: true)
+        }
+
+        // Time gap calculation (shared by timestamp and sender name logic)
+        let timeGap = abs(Int(message.timestamp) - Int(previous.timestamp))
+
+        // Timestamp: gap > 5 minutes
+        let showTimestamp = timeGap > 300
+
+        // Direction gap: direction changed from previous
+        let showDirectionGap = message.direction != previous.direction
+
+        // Sender name grouping (channel messages only)
+        let showSenderName: Bool
+        if message.contactID != nil || message.isOutgoing {
+            // Direct messages or outgoing: always true (UI ignores for direct messages anyway)
+            showSenderName = true
+        } else if previous.isOutgoing || timeGap > 300 {
+            // Direction change or time gap breaks group
+            showSenderName = true
+        } else if let currentName = message.senderNodeName, let previousName = previous.senderNodeName {
+            // Same sender continues group
+            showSenderName = currentName != previousName
+        } else {
+            // Malformed message: show name to be safe
+            showSenderName = true
+        }
+
+        return DisplayFlags(showTimestamp: showTimestamp, showDirectionGap: showDirectionGap, showSenderName: showSenderName)
+    }
+
     // MARK: - Display Items
 
     /// Build display items with pre-computed properties.
@@ -1110,11 +1154,15 @@ final class ChatViewModel {
         }.value
 
         displayItems = messages.enumerated().map { index, message in
-            MessageDisplayItem(
+            // Compute all display flags in single pass to avoid redundant array lookups
+            let previous: MessageDTO? = index > 0 ? messages[index - 1] : nil
+            let flags = Self.computeDisplayFlags(for: message, previous: previous)
+
+            return MessageDisplayItem(
                 messageID: message.id,
-                showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
-                showDirectionGap: Self.isDirectionChange(at: index, in: messages),
-                showSenderName: Self.shouldShowSenderName(at: index, in: messages),
+                showTimestamp: flags.showTimestamp,
+                showDirectionGap: flags.showDirectionGap,
+                showSenderName: flags.showSenderName,
                 detectedURL: urls[index],
                 isOutgoing: message.isOutgoing,
                 status: message.status,
