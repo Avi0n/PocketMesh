@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Chats.stringsdict
+  PocketMesh
+
+  Russian pluralization rules for chat-related strings.
+  Russian uses Slavic plural rules: one (1, 21, 31...), few (2-4, 22-24...), many (0, 5-20, 25-30...), other (fractions).
+  AI-translated - please verify with native speakers.
+-->
+<plist version="1.0">
+<dict>
+    <!-- Unread mentions count for badge display -->
+    <key>chats.unreadMentions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@mentions@</string>
+        <key>mentions</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d непрочитанное упоминание</string>
+            <key>few</key>
+            <string>%d непрочитанных упоминания</string>
+            <key>many</key>
+            <string>%d непрочитанных упоминаний</string>
+            <key>other</key>
+            <string>%d непрочитанного упоминания</string>
+        </dict>
+    </dict>
+
+    <!-- Unread messages count for badge display -->
+    <key>chats.unreadMessages</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@messages@</string>
+        <key>messages</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d непрочитанное сообщение</string>
+            <key>few</key>
+            <string>%d непрочитанных сообщения</string>
+            <key>many</key>
+            <string>%d непрочитанных сообщений</string>
+            <key>other</key>
+            <string>%d непрочитанного сообщения</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

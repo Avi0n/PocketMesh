@@ -1,0 +1,643 @@
+/*
+  Settings.strings
+  PocketMesh
+
+  Russian translation of strings for the Settings feature.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Main Settings View
+
+/* Navigation title for the main settings screen */
+"title" = "Настройки";
+
+/* Placeholder shown in split view detail when no setting is selected */
+"selectSetting" = "Выберите настройку";
+
+/* Footer text for the advanced settings row */
+"advancedSettings.footer" = "Настройка радио, телеметрия, настройки контактов и управление устройством";
+
+/* Label for the advanced settings navigation row */
+"advancedSettings.title" = "Расширенные настройки";
+
+/* Version display prefix with version number */
+"version" = "v%@";
+
+/* Build number display with build number */
+"build" = "Сборка %@";
+
+
+// MARK: - Demo Mode Section
+
+/* Section header for demo mode */
+"demoMode.header" = "Демо-режим";
+
+/* Toggle label to enable demo mode */
+"demoMode.enabled" = "Включён";
+
+/* Footer explaining what demo mode does */
+"demoMode.footer" = "Демо-режим позволяет тестировать без оборудования, используя тестовые данные.";
+
+
+// MARK: - Device Section
+
+/* Section header for device information */
+"device.header" = "Устройство";
+
+/* Status shown when device is connected */
+"device.connected" = "Подключено";
+
+/* Footer shown when no device is connected */
+"device.noDeviceConnected" = "Устройство MeshCore не подключено";
+
+/* Button to connect a device */
+"device.connect" = "Подключить устройство";
+
+
+// MARK: - Device Info View
+
+/* Navigation title for device info screen */
+"deviceInfo.title" = "Информация об устройстве";
+
+/* Section header for connection status */
+"deviceInfo.connection.header" = "Подключение";
+
+/* Label for connection status */
+"deviceInfo.connection.status" = "Статус";
+
+/* Section header for power and storage */
+"deviceInfo.powerStorage.header" = "Питание и память";
+
+/* Label for battery level */
+"deviceInfo.battery" = "Батарея";
+
+/* Label for storage used */
+"deviceInfo.storageUsed" = "Использовано памяти";
+
+/* Combined label for battery and storage when loading */
+"deviceInfo.batteryAndStorage" = "Батарея и память";
+
+/* Section header for firmware information */
+"deviceInfo.firmware.header" = "Прошивка";
+
+/* Label for firmware version */
+"deviceInfo.firmwareVersion" = "Версия прошивки";
+
+/* Label for build date */
+"deviceInfo.buildDate" = "Дата сборки";
+
+/* Label for manufacturer */
+"deviceInfo.manufacturer" = "Производитель";
+
+/* Placeholder when a value is unknown */
+"deviceInfo.unknown" = "Неизвестно";
+
+/* Section header for device capabilities */
+"deviceInfo.capabilities.header" = "Возможности";
+
+/* Label for max contacts capability */
+"deviceInfo.maxContacts" = "Макс. контактов";
+
+/* Label for max channels capability */
+"deviceInfo.maxChannels" = "Макс. каналов";
+
+/* Label for max TX power capability */
+"deviceInfo.maxTxPower" = "Макс. мощность TX";
+
+/* TX power display format with dBm unit */
+"deviceInfo.txPowerFormat" = "%@ дБм";
+
+/* Section header for identity information */
+"deviceInfo.identity.header" = "Идентификация";
+
+/* Label for public key */
+"deviceInfo.publicKey" = "Публичный ключ";
+
+/* Button to share contact information */
+"deviceInfo.shareContact" = "Поделиться моим контактом";
+
+/* Title for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.title" = "Устройство не подключено";
+
+/* Description for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.description" = "Подключитесь к устройству MeshCore для просмотра информации";
+
+/* Fallback manufacturer name */
+"deviceInfo.defaultManufacturer" = "Устройство MeshCore";
+
+
+// MARK: - Public Key View
+
+/* Navigation title for public key screen */
+"publicKey.title" = "Публичный ключ";
+
+/* Section header describing the key type */
+"publicKey.header" = "32-байтный публичный ключ Ed25519";
+
+/* Footer explaining the public key's purpose */
+"publicKey.footer" = "Этот ключ однозначно идентифицирует ваше устройство в сети mesh";
+
+/* Section header for base64 representation */
+"publicKey.base64.header" = "Base64";
+
+/* Button to copy key to clipboard */
+"publicKey.copy" = "Копировать в буфер обмена";
+
+
+// MARK: - Device Selection Sheet
+
+/* Navigation title for device selection */
+"deviceSelection.title" = "Подключить устройство";
+
+/* Button to connect to selected device */
+"deviceSelection.connect" = "Подключить";
+
+/* Section header for previously paired devices */
+"deviceSelection.previouslyPaired" = "Ранее сопряжённые";
+
+/* Footer text prompting user to select a device */
+"deviceSelection.selectToReconnect" = "Выберите устройство для повторного подключения";
+
+/* Button to connect via WiFi */
+"deviceSelection.connectViaWifi" = "Подключиться через WiFi";
+
+/* Button to scan for Bluetooth devices */
+"deviceSelection.scanBluetooth" = "Поиск Bluetooth-устройств";
+
+/* Title for empty state when no devices are paired */
+"deviceSelection.noPairedDevices" = "Нет сопряжённых устройств";
+
+/* Description for empty state */
+"deviceSelection.noPairedDescription" = "Вы ещё не сопряжены ни с одним устройством.";
+
+/* Button to scan for new devices */
+"deviceSelection.scanForDevices" = "Поиск устройств";
+
+/* Label shown when device is connected to another app */
+"deviceSelection.connectedElsewhere" = "Подключено к другому приложению";
+
+/* Fallback connection type description */
+"deviceSelection.bluetooth" = "Bluetooth";
+
+
+// MARK: - Location Picker View
+
+/* Navigation title for location picker */
+"locationPicker.title" = "Установить местоположение";
+
+/* Marker title for node location on map */
+"locationPicker.markerTitle" = "Местоположение узла";
+
+/* Button to clear the selected location */
+"locationPicker.clearLocation" = "Очистить местоположение";
+
+/* Button to drop a pin at the map center */
+"locationPicker.dropPin" = "Поставить метку в центре";
+
+/* Label for latitude display */
+"locationPicker.latitude" = "Широта:";
+
+/* Label for longitude display */
+"locationPicker.longitude" = "Долгота:";
+
+
+// MARK: - Trusted Contacts Picker
+
+/* Navigation title for trusted contacts picker */
+"trustedContacts.title" = "Доверенные контакты";
+
+/* Title for empty state when no contacts exist */
+"trustedContacts.noContacts" = "Нет контактов";
+
+/* Description for empty state */
+"trustedContacts.noContactsDescription" = "Добавьте контакты, чтобы выбрать доверенных";
+
+
+// MARK: - About Section
+
+/* Section header for about links */
+"about.header" = "О приложении";
+
+/* Link to MeshCore website */
+"about.website" = "Сайт MeshCore";
+
+/* Link to MeshCore online map */
+"about.onlineMap" = "Онлайн-карта MeshCore";
+
+/* Link to GitHub repository */
+"about.github" = "GitHub";
+
+
+// MARK: - Advanced Radio Section
+
+/* Section header for radio configuration */
+"advancedRadio.header" = "Конфигурация радио";
+
+/* Label for frequency input */
+"advancedRadio.frequency" = "Частота (МГц)";
+
+/* Placeholder for frequency text field */
+"advancedRadio.frequencyPlaceholder" = "МГц";
+
+/* Label for bandwidth picker */
+"advancedRadio.bandwidth" = "Полоса пропускания (кГц)";
+
+/* Label for spreading factor picker */
+"advancedRadio.spreadingFactor" = "Фактор расширения";
+
+/* Label for coding rate picker */
+"advancedRadio.codingRate" = "Скорость кодирования";
+
+/* Label for TX power input */
+"advancedRadio.txPower" = "Мощность TX (дБм)";
+
+/* Placeholder for TX power text field */
+"advancedRadio.txPowerPlaceholder" = "дБм";
+
+/* Button to apply radio settings */
+"advancedRadio.apply" = "Применить настройки радио";
+
+/* Footer warning about incorrect radio settings */
+"advancedRadio.footer" = "Предупреждение: Неверные настройки могут помешать связи с другими устройствами mesh.";
+
+/* Error message for invalid input */
+"advancedRadio.invalidInput" = "Неверные значения или устройство не подключено";
+
+
+// MARK: - Battery Curve Section
+
+/* Section header for battery curve */
+"batteryCurve.header" = "Кривая батареи";
+
+/* Footer explaining battery curve configuration */
+"batteryCurve.footer" = "Настройте кривую напряжение-процент для батареи вашего устройства.";
+
+/* Label for preset picker */
+"batteryCurve.preset" = "Пресет";
+
+/* Option for custom battery curve */
+"batteryCurve.custom" = "Пользовательский";
+
+/* Disclosure group label for editing values */
+"batteryCurve.editValues" = "Редактировать значения";
+
+/* Validation error for value out of range - %d is the percentage level */
+"batteryCurve.validation.outOfRange" = "Значение при %d%% должно быть 1000-5000 мВ";
+
+/* Validation error for non-descending values */
+"batteryCurve.validation.notDescending" = "Значения должны быть в убывающем порядке";
+
+/* Unit label for millivolts */
+"batteryCurve.mV" = "мВ";
+
+
+// MARK: - Bluetooth Section
+
+/* Section header for Bluetooth settings */
+"bluetooth.header" = "Bluetooth";
+
+/* Label for PIN type picker */
+"bluetooth.pinType" = "Тип PIN";
+
+/* PIN type option for default PIN */
+"bluetooth.pinType.default" = "По умолчанию";
+
+/* PIN type option for custom PIN */
+"bluetooth.pinType.custom" = "Пользовательский PIN";
+
+/* Label showing current PIN */
+"bluetooth.currentPin" = "Текущий PIN";
+
+/* Button to change the PIN */
+"bluetooth.changePin" = "Изменить PIN";
+
+/* Button to change the device display name */
+"bluetooth.changeDisplayName" = "Изменить отображаемое имя";
+
+/* Footer explaining default PIN */
+"bluetooth.defaultPinFooter" = "PIN по умолчанию: 123456. Устройства с экранами показывают собственный PIN.";
+
+/* Alert title for setting custom PIN */
+"bluetooth.alert.setPin.title" = "Установить пользовательский PIN";
+
+/* Alert title for changing custom PIN */
+"bluetooth.alert.changePin.title" = "Изменить пользовательский PIN";
+
+/* Placeholder for PIN text field */
+"bluetooth.pinPlaceholder" = "6-значный PIN";
+
+/* Button to set the PIN */
+"bluetooth.setPin" = "Установить PIN";
+
+/* Alert message for setting PIN */
+"bluetooth.alert.setPin.message" = "Введите 6-значный PIN. Устройство перезагрузится для применения изменений.";
+
+/* Alert message for changing PIN */
+"bluetooth.alert.changePin.message" = "Введите новый 6-значный PIN. Устройство перезагрузится для применения изменений.";
+
+/* Alert title for confirming PIN type change */
+"bluetooth.alert.changePinType.title" = "Изменить тип PIN?";
+
+/* Button to confirm change */
+"bluetooth.alert.change" = "Изменить";
+
+/* Alert message for PIN type change */
+"bluetooth.alert.changePinType.message" = "Устройство перезагрузится для применения изменений.";
+
+/* Error for invalid PIN format */
+"bluetooth.error.invalidPin" = "PIN должен быть 6-значным числом от 100000 до 999999";
+
+
+// MARK: - Contacts Settings Section
+
+/* Section header for nodes/contacts settings */
+"contacts.header" = "Узлы";
+
+/* Toggle label for auto-add nodes */
+"contacts.autoAdd" = "Автодобавление узлов";
+
+/* Description for auto-add nodes toggle */
+"contacts.autoAddDescription" = "Автоматически добавлять узлы из полученных объявлений";
+
+
+// MARK: - Danger Zone Section
+
+/* Section header for danger zone */
+"dangerZone.header" = "Опасная зона";
+
+/* Button to forget/unpair the device */
+"dangerZone.forgetDevice" = "Забыть устройство";
+
+/* Button to factory reset the device */
+"dangerZone.factoryReset" = "Сброс до заводских настроек";
+
+/* Text shown while resetting */
+"dangerZone.resetting" = "Сброс...";
+
+/* Footer explaining factory reset */
+"dangerZone.footer" = "Сброс до заводских настроек удаляет все контакты, сообщения и настройки на устройстве.";
+
+/* Alert title for forget device confirmation */
+"dangerZone.alert.forget.title" = "Забыть устройство";
+
+/* Button to confirm forget */
+"dangerZone.alert.forget.confirm" = "Забыть";
+
+/* Alert message for forget device */
+"dangerZone.alert.forget.message" = "Это удалит устройство из списка сопряжённых. Вы можете сопрячь его снова позже.";
+
+/* Alert title for factory reset confirmation */
+"dangerZone.alert.reset.title" = "Сброс до заводских настроек";
+
+/* Button to confirm reset */
+"dangerZone.alert.reset.confirm" = "Сбросить";
+
+/* Alert message for factory reset */
+"dangerZone.alert.reset.message" = "Это удалит ВСЕ данные на устройстве, включая контакты, сообщения и настройки. Это действие нельзя отменить.";
+
+/* Error when services are not available */
+"dangerZone.error.servicesUnavailable" = "Сервисы недоступны";
+
+
+// MARK: - Diagnostics Section
+
+/* Section header for diagnostics */
+"diagnostics.header" = "Диагностика";
+
+/* Button to export debug logs */
+"diagnostics.exportLogs" = "Экспорт отладочных логов";
+
+/* Button to clear debug logs */
+"diagnostics.clearLogs" = "Очистить отладочные логи";
+
+/* Footer explaining log export */
+"diagnostics.footer" = "Экспорт включает отладочные логи за последние 24 часа по всем сессиям приложения. Логи хранятся локально и автоматически очищаются.";
+
+/* Alert title for clear logs confirmation */
+"diagnostics.alert.clear.title" = "Очистить отладочные логи";
+
+/* Button to confirm clear */
+"diagnostics.alert.clear.confirm" = "Очистить";
+
+/* Alert message for clear logs */
+"diagnostics.alert.clear.message" = "Это удалит все сохранённые отладочные логи. Экспортированные файлы логов не будут затронуты.";
+
+/* Error when export fails */
+"diagnostics.error.exportFailed" = "Не удалось создать файл экспорта";
+
+
+// MARK: - Link Preview Settings Section
+
+/* Section header for privacy settings */
+"linkPreviews.header" = "Конфиденциальность";
+
+/* Toggle label for link previews */
+"linkPreviews.toggle" = "Предпросмотр ссылок";
+
+/* Toggle label for showing previews in DMs */
+"linkPreviews.showInDMs" = "Показывать в личных сообщениях";
+
+/* Toggle label for showing previews in channels */
+"linkPreviews.showInChannels" = "Показывать в каналах";
+
+/* Footer explaining link preview privacy implications */
+"linkPreviews.footer" = "Предпросмотр ссылок загружает данные из интернета, что может раскрыть ваш IP-адрес серверу, на котором размещена ссылка.";
+
+
+// MARK: - Node Settings Section
+
+/* Section header for node settings */
+"node.header" = "Узел";
+
+/* Label for node name */
+"node.name" = "Имя узла";
+
+/* Default node name when unknown */
+"node.unknown" = "Неизвестно";
+
+/* Button text to copy */
+"node.copy" = "Копировать";
+
+/* Label for set location button */
+"node.setLocation" = "Установить местоположение";
+
+/* Text shown when location is set */
+"node.locationSet" = "Установлено";
+
+/* Text shown when location is not set */
+"node.locationNotSet" = "Не установлено";
+
+/* Toggle label for share location publicly */
+"node.shareLocationPublicly" = "Публично делиться местоположением";
+
+/* Footer explaining node visibility */
+"node.footer" = "Имя и местоположение вашего узла видны другим пользователям mesh при включённом общем доступе.";
+
+/* Alert title for editing node name */
+"node.alert.editName.title" = "Изменить имя узла";
+
+
+// MARK: - Notification Settings Section
+
+/* Section header for notifications */
+"notifications.header" = "Уведомления";
+
+/* Toggle label for contact messages notifications */
+"notifications.contactMessages" = "Сообщения от контактов";
+
+/* Toggle label for channel messages notifications */
+"notifications.channelMessages" = "Сообщения в каналах";
+
+/* Toggle label for room messages notifications */
+"notifications.roomMessages" = "Сообщения в комнатах";
+
+/* Toggle label for new contact discovered notifications */
+"notifications.newContactDiscovered" = "Обнаружен новый контакт";
+
+/* Toggle label for low battery warnings */
+"notifications.lowBattery" = "Предупреждения о низком заряде";
+
+/* Button to enable notifications */
+"notifications.enable" = "Включить уведомления";
+
+/* Label shown when notifications are disabled */
+"notifications.disabled" = "Уведомления отключены";
+
+/* Button to open system settings */
+"notifications.openSettings" = "Открыть настройки";
+
+/* Message shown when device not connected */
+"notifications.connectDevice" = "Подключите устройство для настройки уведомлений";
+
+
+// MARK: - Radio Preset Section
+
+/* Section header for radio settings */
+"radio.header" = "Радио";
+
+/* Label for radio preset picker */
+"radio.preset" = "Пресет радио";
+
+/* Footer explaining radio presets */
+"radio.footer" = "Выберите пресет, соответствующий вашему региону. Устройства MeshCore должны использовать одинаковые настройки радио для связи.";
+
+
+// MARK: - Telemetry Settings Section
+
+/* Section header for telemetry settings */
+"telemetry.header" = "Телеметрия";
+
+/* Toggle label for allowing telemetry requests */
+"telemetry.allowRequests" = "Разрешить запросы телеметрии";
+
+/* Description for telemetry requests toggle */
+"telemetry.allowRequestsDescription" = "Требуется для ручной трассировки пути к вам другими пользователями. Показывает уровень заряда батареи.";
+
+/* Toggle label for including location in telemetry */
+"telemetry.includeLocation" = "Включить местоположение";
+
+/* Description for include location toggle */
+"telemetry.includeLocationDescription" = "Передавать GPS-координаты в телеметрии";
+
+/* Toggle label for including environment sensors */
+"telemetry.includeEnvironment" = "Включить датчики окружающей среды";
+
+/* Description for include environment toggle */
+"telemetry.includeEnvironmentDescription" = "Передавать температуру, влажность и т.д.";
+
+/* Toggle label for trusted contacts only */
+"telemetry.trustedOnly" = "Передавать только доверенным контактам";
+
+/* Description for trusted contacts toggle */
+"telemetry.trustedOnlyDescription" = "Ограничить телеметрию выбранными контактами";
+
+/* Link to manage trusted contacts */
+"telemetry.manageTrusted" = "Управление доверенными контактами";
+
+/* Footer explaining telemetry */
+"telemetry.footer" = "Когда включено, другие узлы могут запрашивать данные телеметрии вашего устройства.";
+
+
+// MARK: - WiFi Section
+
+/* Section header for WiFi settings */
+"wifi.header" = "WiFi";
+
+/* Label for IP address */
+"wifi.address" = "Адрес";
+
+/* Label for port number */
+"wifi.port" = "Порт";
+
+/* Button to edit WiFi connection */
+"wifi.editConnection" = "Редактировать подключение";
+
+/* Footer explaining WiFi address */
+"wifi.footer" = "Адрес вашего устройства в локальной сети";
+
+
+// MARK: - WiFi Edit Sheet
+
+/* Navigation title for WiFi edit sheet */
+"wifiEdit.title" = "Редактировать WiFi-подключение";
+
+/* Section header for connection details */
+"wifiEdit.connectionDetails" = "Данные подключения";
+
+/* Placeholder for IP address field */
+"wifiEdit.ipPlaceholder" = "IP-адрес";
+
+/* Placeholder for port field */
+"wifiEdit.portPlaceholder" = "Порт";
+
+/* Accessibility label for clear IP button */
+"wifiEdit.clearIp" = "Очистить IP-адрес";
+
+/* Accessibility label for clear port button */
+"wifiEdit.clearPort" = "Очистить порт";
+
+/* Footer explaining reconnection */
+"wifiEdit.footer" = "Изменение этих значений отключит и подключит заново к новому адресу.";
+
+/* Text shown while reconnecting */
+"wifiEdit.reconnecting" = "Переподключение...";
+
+/* Button to save changes */
+"wifiEdit.saveChanges" = "Сохранить изменения";
+
+/* Error for invalid port */
+"wifiEdit.error.invalidPort" = "Неверный номер порта";
+
+
+// MARK: - Error Alert
+
+/* Alert title for generic errors */
+"alert.error.title" = "Ошибка";
+
+
+// MARK: - Retry Alert
+
+/* Alert title when max retries exceeded */
+"alert.retry.unableToSave" = "Не удалось сохранить настройку";
+
+/* Alert title for connection errors */
+"alert.retry.connectionError" = "Ошибка подключения";
+
+/* Button to retry the operation */
+"alert.retry.retry" = "Повторить";
+
+/* Alert message when max retries exceeded */
+"alert.retry.ensureConnected" = "Пожалуйста, убедитесь, что ваше устройство подключено.";
+
+
+// MARK: - Battery Curve Chart
+
+/* Chart X axis label */
+"chart.percent" = "Процент";
+
+/* Chart Y axis label */
+"chart.voltage" = "Напряжение (В)";
+
+/* Accessibility label for battery curve chart */
+"chart.accessibility" = "Кривая разряда батареи, показывающая напряжение на каждом уровне заряда";

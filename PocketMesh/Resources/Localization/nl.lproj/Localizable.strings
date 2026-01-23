@@ -1,0 +1,180 @@
+/*
+  Localizable.strings
+  PocketMesh
+
+  Dutch translation of common strings used across the app.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Common Actions
+
+/* Location: Multiple files - Generic cancel button */
+"common.cancel" = "Annuleren";
+
+/* Location: Multiple files - Generic done button */
+"common.done" = "Klaar";
+
+/* Location: Multiple files - Generic OK button */
+"common.ok" = "OK";
+
+/* Location: Multiple files - Generic save button */
+"common.save" = "Opslaan";
+
+/* Location: Multiple files - Generic delete button */
+"common.delete" = "Verwijderen";
+
+/* Location: Multiple files - Generic edit button */
+"common.edit" = "Bewerken";
+
+/* Location: Multiple files - Generic close button */
+"common.close" = "Sluiten";
+
+/* Location: Multiple files - Generic refresh button */
+"common.refresh" = "Vernieuwen";
+
+/* Location: Multiple files - Generic copy button */
+"common.copy" = "Kopiëren";
+
+/* Location: Multiple files - Generic share button */
+"common.share" = "Delen";
+
+/* Location: Multiple files - Generic back button */
+"common.back" = "Terug";
+
+/* Location: Multiple files - Generic next button */
+"common.next" = "Volgende";
+
+/* Location: Multiple files - Generic continue button */
+"common.continue" = "Doorgaan";
+
+/* Location: Multiple files - Generic skip button */
+"common.skip" = "Overslaan";
+
+/* Location: Multiple files - Generic retry button */
+"common.retry" = "Opnieuw";
+
+/* Location: Multiple files - Generic loading text */
+"common.loading" = "Laden...";
+
+/* Location: Multiple files - Generic error title */
+"common.error" = "Fout";
+
+/* Location: Multiple files - Generic success title */
+"common.success" = "Succes";
+
+// MARK: - Tab Bar
+
+/* Location: MainTabView.swift - Contacts tab title */
+"tabs.contacts" = "Contacten";
+
+/* Location: MainTabView.swift - Chats tab title */
+"tabs.chats" = "Chats";
+
+/* Location: MainTabView.swift - Map tab title */
+"tabs.map" = "Kaart";
+
+/* Location: MainTabView.swift - Tools tab title */
+"tabs.tools" = "Gereedschap";
+
+/* Location: MainTabView.swift - Settings tab title */
+"tabs.settings" = "Instellingen";
+
+// MARK: - Connection Status
+
+/* Location: Multiple files - Device connected status */
+"connection.connected" = "Verbonden";
+
+/* Location: Multiple files - Device disconnected status */
+"connection.disconnected" = "Niet verbonden";
+
+/* Location: Multiple files - Device connecting status */
+"connection.connecting" = "Verbinden...";
+
+/* Location: Multiple files - Device reconnecting status */
+"connection.reconnecting" = "Opnieuw verbinden...";
+
+// MARK: - Time Formats
+
+/* Location: Multiple files - Just now time indicator */
+"time.justNow" = "Zojuist";
+
+/* Location: Multiple files - Minutes ago format, %lld is count */
+"time.minutesAgo" = "%lld min geleden";
+
+/* Location: Multiple files - Hours ago format, %lld is count */
+"time.hoursAgo" = "%lld uur geleden";
+
+/* Location: Multiple files - Days ago format, %lld is count */
+"time.daysAgo" = "%lld dagen geleden";
+
+/* Location: Multiple files - Yesterday indicator */
+"time.yesterday" = "Gisteren";
+
+// MARK: - Empty States
+
+/* Location: Multiple files - Generic no results message */
+"empty.noResults" = "Geen resultaten";
+
+/* Location: Multiple files - Generic no data message */
+"empty.noData" = "Geen gegevens beschikbaar";
+
+// MARK: - Alerts
+
+/* Location: Multiple files - Bluetooth disabled alert title */
+"alert.bluetoothDisabled.title" = "Bluetooth uitgeschakeld";
+
+/* Location: Multiple files - Bluetooth disabled alert message */
+"alert.bluetoothDisabled.message" = "Schakel Bluetooth in om verbinding te maken met je mesh-radio.";
+
+/* Location: Multiple files - Device disconnected alert title */
+"alert.deviceDisconnected.title" = "Apparaat niet verbonden";
+
+/* Location: Multiple files - Device disconnected alert message */
+"alert.deviceDisconnected.message" = "Verbind met een mesh-radio om deze functie te gebruiken.";
+
+/* Location: Multiple files - Network error alert title */
+"alert.networkError.title" = "Netwerkfout";
+
+/* Location: Multiple files - Network error alert message */
+"alert.networkError.message" = "Kan geen verbinding maken met de server. Controleer je internetverbinding.";
+
+// MARK: - Node Types
+
+/* Location: Multiple files - Contact node type */
+"nodeType.contact" = "Contact";
+
+/* Location: Multiple files - Repeater node type */
+"nodeType.repeater" = "Repeater";
+
+/* Location: Multiple files - Room node type */
+"nodeType.room" = "Kamer";
+
+// MARK: - Permission Levels
+
+/* Location: Multiple files - Viewer permission level */
+"permission.viewer" = "Kijker";
+
+/* Location: Multiple files - Member permission level */
+"permission.member" = "Lid";
+
+/* Location: Multiple files - Admin permission level */
+"permission.admin" = "Beheerder";
+
+// MARK: - Route Types
+
+/* Location: Multiple files - Direct route type */
+"route.direct" = "Direct";
+
+/* Location: Multiple files - Flood route type */
+"route.flood" = "Flood";
+
+/* Location: Multiple files - Unknown route type */
+"route.unknown" = "Onbekend";
+
+// MARK: - Hops
+
+/* Location: Multiple files - Hops count format, %lld is count */
+"hops.count" = "%lld sprongen";
+
+/* Location: Multiple files - Single hop */
+"hops.singular" = "1 sprong";

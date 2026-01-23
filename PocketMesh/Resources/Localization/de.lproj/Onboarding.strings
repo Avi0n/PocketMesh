@@ -1,0 +1,238 @@
+/*
+  Onboarding.strings
+  PocketMesh
+
+  German translation of strings for the Onboarding feature.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Welcome View
+
+/* Location: WelcomeView.swift - App title displayed on welcome screen */
+"welcome.title" = "PocketMesh";
+
+/* Location: WelcomeView.swift - Subtitle describing the app */
+"welcome.subtitle" = "Inoffizieller MeshCore-Client für iOS";
+
+/* Location: WelcomeView.swift - Feature title for multi-hop routing */
+"welcome.feature.multiHop.title" = "Multi-Hop-Routing";
+
+/* Location: WelcomeView.swift - Feature description for multi-hop routing */
+"welcome.feature.multiHop.description" = "Deine Nachricht findet einen Weg durch das Mesh";
+
+/* Location: WelcomeView.swift - Feature title for community network */
+"welcome.feature.community.title" = "Community-Netzwerk";
+
+/* Location: WelcomeView.swift - Feature description for community network */
+"welcome.feature.community.description" = "Netzwerk aufgebaut von Nutzern wie dir";
+
+/* Location: WelcomeView.swift - Button to proceed to next onboarding step */
+"welcome.getStarted" = "Los geht's";
+
+
+// MARK: - Permissions View
+
+/* Location: PermissionsView.swift - Screen title for permissions */
+"permissions.title" = "Berechtigungen";
+
+/* Location: PermissionsView.swift - Subtitle encouraging notification permission */
+"permissions.subtitle" = "Erlaube Benachrichtigungen für das beste Erlebnis";
+
+/* Location: PermissionsView.swift - Permission card title for notifications */
+"permissions.notifications.title" = "Benachrichtigungen";
+
+/* Location: PermissionsView.swift - Permission card description for notifications */
+"permissions.notifications.description" = "Erhalte Hinweise bei neuen Nachrichten";
+
+/* Location: PermissionsView.swift - Permission card title for location */
+"permissions.location.title" = "Standort";
+
+/* Location: PermissionsView.swift - Permission card description for location */
+"permissions.location.description" = "Siehe deinen Standort auf der Karte";
+
+/* Location: PermissionsView.swift - Button when all permissions granted */
+"permissions.continue" = "Weiter";
+
+/* Location: PermissionsView.swift - Button when some permissions skipped */
+"permissions.skipForNow" = "Vorerst überspringen";
+
+/* Location: PermissionsView.swift - Button to go back */
+"permissions.back" = "Zurück";
+
+/* Location: PermissionsView.swift - Badge shown for optional permissions */
+"permissions.optional" = "Optional";
+
+/* Location: PermissionsView.swift - Button to open system settings */
+"permissions.openSettings" = "Einstellungen";
+
+/* Location: PermissionsView.swift - Button to allow a permission */
+"permissions.allow" = "Erlauben";
+
+/* Location: PermissionsView.swift - Alert title for location permission */
+"permissions.locationAlert.title" = "Standortberechtigung";
+
+/* Location: PermissionsView.swift - Alert button to open settings */
+"permissions.locationAlert.openSettings" = "Einstellungen öffnen";
+
+/* Location: PermissionsView.swift - Alert message explaining denied location permission */
+"permissions.locationAlert.message" = "Die Standortberechtigung wurde zuvor verweigert. Bitte aktiviere sie in den Einstellungen, um deinen Standort mit Mesh-Kontakten zu teilen.";
+
+
+// MARK: - Device Scan View
+
+/* Location: DeviceScanView.swift - Screen title for device pairing */
+"deviceScan.title" = "Gerät koppeln";
+
+/* Location: DeviceScanView.swift - Subtitle with pairing instructions */
+"deviceScan.subtitle" = "Stelle sicher, dass dein MeshCore-Gerät eingeschaltet und in der Nähe ist";
+
+/* Location: DeviceScanView.swift - Message shown when device is already paired */
+"deviceScan.alreadyPaired" = "Dein Gerät ist bereits gekoppelt";
+
+/* Location: DeviceScanView.swift - Instruction step 1 */
+"deviceScan.instruction.powerOn" = "Schalte dein MeshCore-Gerät ein";
+
+/* Location: DeviceScanView.swift - Instruction step 2 */
+"deviceScan.instruction.tapAdd" = "Tippe unten auf \"Gerät hinzufügen\"";
+
+/* Location: DeviceScanView.swift - Instruction step 3 */
+"deviceScan.instruction.selectDevice" = "Wähle dein Gerät aus der Liste";
+
+/* Location: DeviceScanView.swift - Instruction step 4 */
+"deviceScan.instruction.enterPin" = "Gib die PIN ein, wenn du dazu aufgefordert wirst";
+
+/* Location: DeviceScanView.swift - Button to continue after pairing */
+"deviceScan.continue" = "Weiter";
+
+/* Location: DeviceScanView.swift - Button label while connecting */
+"deviceScan.connecting" = "Verbinde...";
+
+/* Location: DeviceScanView.swift - Button to connect simulator (debug) */
+"deviceScan.connectSimulator" = "Simulator verbinden";
+
+/* Location: DeviceScanView.swift - Button to continue in demo mode */
+"deviceScan.continueDemo" = "Im Demo-Modus fortfahren";
+
+/* Location: DeviceScanView.swift - Button to add a new device */
+"deviceScan.addDevice" = "Gerät hinzufügen";
+
+/* Location: DeviceScanView.swift - Button for troubleshooting */
+"deviceScan.deviceNotAppearing" = "Gerät erscheint nicht?";
+
+/* Location: DeviceScanView.swift - Button to connect via WiFi */
+"deviceScan.connectViaWifi" = "Über WLAN verbinden";
+
+/* Location: DeviceScanView.swift - Alert title when demo mode is unlocked */
+"deviceScan.demoModeAlert.title" = "Demo-Modus freigeschaltet";
+
+/* Location: DeviceScanView.swift - Alert message for demo mode */
+"deviceScan.demoModeAlert.message" = "Du kannst jetzt ohne Gerät fortfahren. Schalte den Demo-Modus jederzeit in den Einstellungen um.";
+
+
+// MARK: - Troubleshooting Sheet
+
+/* Location: DeviceScanView.swift - Navigation title for troubleshooting sheet */
+"troubleshooting.title" = "Fehlerbehebung";
+
+/* Location: DeviceScanView.swift - Section header for basic checks */
+"troubleshooting.basicChecks.header" = "Grundlegende Prüfungen";
+
+/* Location: DeviceScanView.swift - Check to ensure device is powered on */
+"troubleshooting.basicChecks.powerOn" = "Stelle sicher, dass dein Gerät eingeschaltet ist";
+
+/* Location: DeviceScanView.swift - Check to move device closer */
+"troubleshooting.basicChecks.moveCloser" = "Bringe das Gerät näher an dein Telefon";
+
+/* Location: DeviceScanView.swift - Check to restart the device */
+"troubleshooting.basicChecks.restart" = "Starte das MeshCore-Gerät neu";
+
+/* Location: DeviceScanView.swift - Section header for factory reset help */
+"troubleshooting.factoryReset.header" = "Gerät auf Werkseinstellungen zurückgesetzt?";
+
+/* Location: DeviceScanView.swift - Explanation about stale pairings */
+"troubleshooting.factoryReset.explanation" = "Wenn du dein MeshCore-Gerät auf Werkseinstellungen zurückgesetzt hast, hat iOS möglicherweise noch die alte Kopplung gespeichert. Das Löschen in den Systemeinstellungen ermöglicht, dass das Gerät wieder erscheint.";
+
+/* Location: DeviceScanView.swift - Additional explanation about removal confirmation */
+"troubleshooting.factoryReset.confirmationNote" = "Durch Tippen unten wirst du aufgefordert, die alte Kopplung zu bestätigen. Das ist normal — es ermöglicht deinem zurückgesetzten Gerät, wieder zu erscheinen.";
+
+/* Location: DeviceScanView.swift - Button to clear previous pairing */
+"troubleshooting.factoryReset.clearPairing" = "Vorherige Kopplung löschen";
+
+/* Location: DeviceScanView.swift - Footer when no pairings found */
+"troubleshooting.factoryReset.noPairings" = "Keine vorherigen Kopplungen gefunden.";
+
+/* Location: DeviceScanView.swift - Footer showing pairing count - uses stringsdict */
+"troubleshooting.factoryReset.pairingsFound" = "%d vorherige Kopplung(en) gefunden.";
+
+/* Location: DeviceScanView.swift - Section header for system settings info */
+"troubleshooting.systemSettings.header" = "Systemeinstellungen";
+
+/* Location: DeviceScanView.swift - Info about managing accessories */
+"troubleshooting.systemSettings.manageAccessories" = "Du kannst Bluetooth-Zubehör auch verwalten unter:";
+
+/* Location: DeviceScanView.swift - Path to accessories in settings */
+"troubleshooting.systemSettings.path" = "Einstellungen → Datenschutz & Sicherheit → Zubehör";
+
+
+// MARK: - Mesh Animation View
+
+/* Location: MeshAnimationView.swift - Accessibility label for mesh visualization */
+"meshAnimation.accessibilityLabel" = "Mesh-Netzwerk-Visualisierung";
+
+
+// MARK: - Radio Preset Onboarding View
+
+/* Location: RadioPresetOnboardingView.swift - Screen title for radio settings */
+"radioPreset.title" = "Funkeinstellungen";
+
+/* Location: RadioPresetOnboardingView.swift - Subtitle with instructions and Discord link */
+"radioPreset.subtitle" = "Du kannst diese Einstellungen jederzeit in den PocketMesh-Einstellungen ändern. Wenn du nicht sicher bist, welches Preset du verwenden sollst, frag im [MeshCore Discord](https://meshcore.co.uk/contact.html)";
+
+/* Location: RadioPresetOnboardingView.swift - Button label while applying preset */
+"radioPreset.applying" = "Wird angewendet...";
+
+/* Location: RadioPresetOnboardingView.swift - Button to apply selected preset */
+"radioPreset.apply" = "Anwenden";
+
+/* Location: RadioPresetOnboardingView.swift - Button to continue */
+"radioPreset.continue" = "Weiter";
+
+/* Location: RadioPresetOnboardingView.swift - Button to skip radio setup */
+"radioPreset.skip" = "Überspringen";
+
+/* Location: RadioPresetOnboardingView.swift - Label for custom (non-preset) radio settings */
+"radioPreset.custom" = "Benutzerdefiniert";
+
+
+// MARK: - WiFi Connection Sheet
+
+/* Location: WiFiConnectionSheet.swift - Navigation title */
+"wifiConnection.title" = "Über WLAN verbinden";
+
+/* Location: WiFiConnectionSheet.swift - Section header for connection details */
+"wifiConnection.connectionDetails.header" = "Verbindungsdetails";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for IP address field */
+"wifiConnection.ipAddress.placeholder" = "IP-Adresse";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear IP button */
+"wifiConnection.ipAddress.clearAccessibility" = "IP-Adresse löschen";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for port field */
+"wifiConnection.port.placeholder" = "Port";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear port button */
+"wifiConnection.port.clearAccessibility" = "Port löschen";
+
+/* Location: WiFiConnectionSheet.swift - Footer explaining connection details */
+"wifiConnection.connectionDetails.footer" = "Gib die lokale Netzwerkadresse deines MeshCore-Geräts ein. Der Standardport ist 5000.";
+
+/* Location: WiFiConnectionSheet.swift - Button label while connecting */
+"wifiConnection.connecting" = "Verbinde...";
+
+/* Location: WiFiConnectionSheet.swift - Button to initiate connection */
+"wifiConnection.connect" = "Verbinden";
+
+/* Location: WiFiConnectionSheet.swift - Error message for invalid port */
+"wifiConnection.error.invalidPort" = "Ungültige Portnummer";

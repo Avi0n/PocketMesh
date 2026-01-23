@@ -1,0 +1,238 @@
+/*
+  Onboarding.strings
+  PocketMesh
+
+  Dutch translation of strings for the Onboarding feature.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Welcome View
+
+/* Location: WelcomeView.swift - App title displayed on welcome screen */
+"welcome.title" = "PocketMesh";
+
+/* Location: WelcomeView.swift - Subtitle describing the app */
+"welcome.subtitle" = "Onofficiële MeshCore-client voor iOS";
+
+/* Location: WelcomeView.swift - Feature title for multi-hop routing */
+"welcome.feature.multiHop.title" = "Multi-hop routing";
+
+/* Location: WelcomeView.swift - Feature description for multi-hop routing */
+"welcome.feature.multiHop.description" = "Je bericht vindt zijn weg door het mesh";
+
+/* Location: WelcomeView.swift - Feature title for community network */
+"welcome.feature.community.title" = "Community-netwerk";
+
+/* Location: WelcomeView.swift - Feature description for community network */
+"welcome.feature.community.description" = "Netwerk gebouwd door gebruikers zoals jij";
+
+/* Location: WelcomeView.swift - Button to proceed to next onboarding step */
+"welcome.getStarted" = "Aan de slag";
+
+
+// MARK: - Permissions View
+
+/* Location: PermissionsView.swift - Screen title for permissions */
+"permissions.title" = "Machtigingen";
+
+/* Location: PermissionsView.swift - Subtitle encouraging notification permission */
+"permissions.subtitle" = "Sta meldingen toe voor de beste ervaring";
+
+/* Location: PermissionsView.swift - Permission card title for notifications */
+"permissions.notifications.title" = "Meldingen";
+
+/* Location: PermissionsView.swift - Permission card description for notifications */
+"permissions.notifications.description" = "Ontvang meldingen voor nieuwe berichten";
+
+/* Location: PermissionsView.swift - Permission card title for location */
+"permissions.location.title" = "Locatie";
+
+/* Location: PermissionsView.swift - Permission card description for location */
+"permissions.location.description" = "Bekijk je locatie op de kaart";
+
+/* Location: PermissionsView.swift - Button when all permissions granted */
+"permissions.continue" = "Doorgaan";
+
+/* Location: PermissionsView.swift - Button when some permissions skipped */
+"permissions.skipForNow" = "Nu overslaan";
+
+/* Location: PermissionsView.swift - Button to go back */
+"permissions.back" = "Terug";
+
+/* Location: PermissionsView.swift - Badge shown for optional permissions */
+"permissions.optional" = "Optioneel";
+
+/* Location: PermissionsView.swift - Button to open system settings */
+"permissions.openSettings" = "Instellingen";
+
+/* Location: PermissionsView.swift - Button to allow a permission */
+"permissions.allow" = "Toestaan";
+
+/* Location: PermissionsView.swift - Alert title for location permission */
+"permissions.locationAlert.title" = "Locatiemachtiging";
+
+/* Location: PermissionsView.swift - Alert button to open settings */
+"permissions.locationAlert.openSettings" = "Open Instellingen";
+
+/* Location: PermissionsView.swift - Alert message explaining denied location permission */
+"permissions.locationAlert.message" = "Locatiemachtiging is eerder geweigerd. Schakel deze in via Instellingen om je locatie te delen met mesh-contacten.";
+
+
+// MARK: - Device Scan View
+
+/* Location: DeviceScanView.swift - Screen title for device pairing */
+"deviceScan.title" = "Apparaat koppelen";
+
+/* Location: DeviceScanView.swift - Subtitle with pairing instructions */
+"deviceScan.subtitle" = "Zorg dat je MeshCore-apparaat is ingeschakeld en in de buurt is";
+
+/* Location: DeviceScanView.swift - Message shown when device is already paired */
+"deviceScan.alreadyPaired" = "Je apparaat is al gekoppeld";
+
+/* Location: DeviceScanView.swift - Instruction step 1 */
+"deviceScan.instruction.powerOn" = "Schakel je MeshCore-apparaat in";
+
+/* Location: DeviceScanView.swift - Instruction step 2 */
+"deviceScan.instruction.tapAdd" = "Tik hieronder op \"Apparaat toevoegen\"";
+
+/* Location: DeviceScanView.swift - Instruction step 3 */
+"deviceScan.instruction.selectDevice" = "Selecteer je apparaat uit de lijst";
+
+/* Location: DeviceScanView.swift - Instruction step 4 */
+"deviceScan.instruction.enterPin" = "Voer de pincode in wanneer daarom wordt gevraagd";
+
+/* Location: DeviceScanView.swift - Button to continue after pairing */
+"deviceScan.continue" = "Doorgaan";
+
+/* Location: DeviceScanView.swift - Button label while connecting */
+"deviceScan.connecting" = "Verbinden...";
+
+/* Location: DeviceScanView.swift - Button to connect simulator (debug) */
+"deviceScan.connectSimulator" = "Simulator verbinden";
+
+/* Location: DeviceScanView.swift - Button to continue in demo mode */
+"deviceScan.continueDemo" = "Doorgaan in demomodus";
+
+/* Location: DeviceScanView.swift - Button to add a new device */
+"deviceScan.addDevice" = "Apparaat toevoegen";
+
+/* Location: DeviceScanView.swift - Button for troubleshooting */
+"deviceScan.deviceNotAppearing" = "Apparaat verschijnt niet?";
+
+/* Location: DeviceScanView.swift - Button to connect via WiFi */
+"deviceScan.connectViaWifi" = "Verbinden via wifi";
+
+/* Location: DeviceScanView.swift - Alert title when demo mode is unlocked */
+"deviceScan.demoModeAlert.title" = "Demomodus ontgrendeld";
+
+/* Location: DeviceScanView.swift - Alert message for demo mode */
+"deviceScan.demoModeAlert.message" = "Je kunt nu doorgaan zonder apparaat. Schakel demomodus op elk moment uit via Instellingen.";
+
+
+// MARK: - Troubleshooting Sheet
+
+/* Location: DeviceScanView.swift - Navigation title for troubleshooting sheet */
+"troubleshooting.title" = "Probleemoplossing";
+
+/* Location: DeviceScanView.swift - Section header for basic checks */
+"troubleshooting.basicChecks.header" = "Basiscontroles";
+
+/* Location: DeviceScanView.swift - Check to ensure device is powered on */
+"troubleshooting.basicChecks.powerOn" = "Zorg dat je apparaat is ingeschakeld";
+
+/* Location: DeviceScanView.swift - Check to move device closer */
+"troubleshooting.basicChecks.moveCloser" = "Breng het apparaat dichter bij je telefoon";
+
+/* Location: DeviceScanView.swift - Check to restart the device */
+"troubleshooting.basicChecks.restart" = "Herstart het MeshCore-apparaat";
+
+/* Location: DeviceScanView.swift - Section header for factory reset help */
+"troubleshooting.factoryReset.header" = "Apparaat teruggezet naar fabrieksinstellingen?";
+
+/* Location: DeviceScanView.swift - Explanation about stale pairings */
+"troubleshooting.factoryReset.explanation" = "Als je je MeshCore-apparaat naar fabrieksinstellingen hebt teruggezet, heeft iOS mogelijk nog de oude koppeling opgeslagen. Door deze te wissen in systeeminstellingen kan het apparaat weer verschijnen.";
+
+/* Location: DeviceScanView.swift - Additional explanation about removal confirmation */
+"troubleshooting.factoryReset.confirmationNote" = "Door hieronder te tikken wordt je gevraagd om de oude koppeling te bevestigen. Dit is normaal — het zorgt ervoor dat je teruggezette apparaat weer verschijnt.";
+
+/* Location: DeviceScanView.swift - Button to clear previous pairing */
+"troubleshooting.factoryReset.clearPairing" = "Vorige koppeling wissen";
+
+/* Location: DeviceScanView.swift - Footer when no pairings found */
+"troubleshooting.factoryReset.noPairings" = "Geen vorige koppelingen gevonden.";
+
+/* Location: DeviceScanView.swift - Footer showing pairing count - uses stringsdict */
+"troubleshooting.factoryReset.pairingsFound" = "%d vorige koppeling(en) gevonden.";
+
+/* Location: DeviceScanView.swift - Section header for system settings info */
+"troubleshooting.systemSettings.header" = "Systeeminstellingen";
+
+/* Location: DeviceScanView.swift - Info about managing accessories */
+"troubleshooting.systemSettings.manageAccessories" = "Je kunt Bluetooth-accessoires ook beheren via:";
+
+/* Location: DeviceScanView.swift - Path to accessories in settings */
+"troubleshooting.systemSettings.path" = "Instellingen → Privacy en beveiliging → Accessoires";
+
+
+// MARK: - Mesh Animation View
+
+/* Location: MeshAnimationView.swift - Accessibility label for mesh visualization */
+"meshAnimation.accessibilityLabel" = "Mesh-netwerk visualisatie";
+
+
+// MARK: - Radio Preset Onboarding View
+
+/* Location: RadioPresetOnboardingView.swift - Screen title for radio settings */
+"radioPreset.title" = "Radio-instellingen";
+
+/* Location: RadioPresetOnboardingView.swift - Subtitle with instructions and Discord link */
+"radioPreset.subtitle" = "Je kunt deze instellingen op elk moment wijzigen in de PocketMesh-instellingen. Als je niet zeker weet welke preset je moet gebruiken, vraag het in de [MeshCore Discord](https://meshcore.co.uk/contact.html)";
+
+/* Location: RadioPresetOnboardingView.swift - Button label while applying preset */
+"radioPreset.applying" = "Toepassen...";
+
+/* Location: RadioPresetOnboardingView.swift - Button to apply selected preset */
+"radioPreset.apply" = "Toepassen";
+
+/* Location: RadioPresetOnboardingView.swift - Button to continue */
+"radioPreset.continue" = "Doorgaan";
+
+/* Location: RadioPresetOnboardingView.swift - Button to skip radio setup */
+"radioPreset.skip" = "Overslaan";
+
+/* Location: RadioPresetOnboardingView.swift - Label for custom (non-preset) radio settings */
+"radioPreset.custom" = "Aangepast";
+
+
+// MARK: - WiFi Connection Sheet
+
+/* Location: WiFiConnectionSheet.swift - Navigation title */
+"wifiConnection.title" = "Verbinden via wifi";
+
+/* Location: WiFiConnectionSheet.swift - Section header for connection details */
+"wifiConnection.connectionDetails.header" = "Verbindingsgegevens";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for IP address field */
+"wifiConnection.ipAddress.placeholder" = "IP-adres";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear IP button */
+"wifiConnection.ipAddress.clearAccessibility" = "IP-adres wissen";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for port field */
+"wifiConnection.port.placeholder" = "Poort";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear port button */
+"wifiConnection.port.clearAccessibility" = "Poort wissen";
+
+/* Location: WiFiConnectionSheet.swift - Footer explaining connection details */
+"wifiConnection.connectionDetails.footer" = "Voer het lokale netwerkadres van je MeshCore-apparaat in. De standaardpoort is 5000.";
+
+/* Location: WiFiConnectionSheet.swift - Button label while connecting */
+"wifiConnection.connecting" = "Verbinden...";
+
+/* Location: WiFiConnectionSheet.swift - Button to initiate connection */
+"wifiConnection.connect" = "Verbinden";
+
+/* Location: WiFiConnectionSheet.swift - Error message for invalid port */
+"wifiConnection.error.invalidPort" = "Ongeldig poortnummer";

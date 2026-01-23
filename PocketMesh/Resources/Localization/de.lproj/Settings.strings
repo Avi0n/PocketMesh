@@ -1,0 +1,643 @@
+/*
+  Settings.strings
+  PocketMesh
+
+  German translation of strings for the Settings feature.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Main Settings View
+
+/* Navigation title for the main settings screen */
+"title" = "Einstellungen";
+
+/* Placeholder shown in split view detail when no setting is selected */
+"selectSetting" = "Eine Einstellung auswählen";
+
+/* Footer text for the advanced settings row */
+"advancedSettings.footer" = "Funk-Tuning, Telemetrie, Kontakteinstellungen und Geräteverwaltung";
+
+/* Label for the advanced settings navigation row */
+"advancedSettings.title" = "Erweiterte Einstellungen";
+
+/* Version display prefix with version number */
+"version" = "v%@";
+
+/* Build number display with build number */
+"build" = "Build %@";
+
+
+// MARK: - Demo Mode Section
+
+/* Section header for demo mode */
+"demoMode.header" = "Demo-Modus";
+
+/* Toggle label to enable demo mode */
+"demoMode.enabled" = "Aktiviert";
+
+/* Footer explaining what demo mode does */
+"demoMode.footer" = "Demo-Modus ermöglicht Tests ohne Hardware mit Beispieldaten.";
+
+
+// MARK: - Device Section
+
+/* Section header for device information */
+"device.header" = "Gerät";
+
+/* Status shown when device is connected */
+"device.connected" = "Verbunden";
+
+/* Footer shown when no device is connected */
+"device.noDeviceConnected" = "Kein MeshCore-Gerät verbunden";
+
+/* Button to connect a device */
+"device.connect" = "Gerät verbinden";
+
+
+// MARK: - Device Info View
+
+/* Navigation title for device info screen */
+"deviceInfo.title" = "Geräteinfo";
+
+/* Section header for connection status */
+"deviceInfo.connection.header" = "Verbindung";
+
+/* Label for connection status */
+"deviceInfo.connection.status" = "Status";
+
+/* Section header for power and storage */
+"deviceInfo.powerStorage.header" = "Akku & Speicher";
+
+/* Label for battery level */
+"deviceInfo.battery" = "Akku";
+
+/* Label for storage used */
+"deviceInfo.storageUsed" = "Belegter Speicher";
+
+/* Combined label for battery and storage when loading */
+"deviceInfo.batteryAndStorage" = "Akku & Speicher";
+
+/* Section header for firmware information */
+"deviceInfo.firmware.header" = "Firmware";
+
+/* Label for firmware version */
+"deviceInfo.firmwareVersion" = "Firmware-Version";
+
+/* Label for build date */
+"deviceInfo.buildDate" = "Build-Datum";
+
+/* Label for manufacturer */
+"deviceInfo.manufacturer" = "Hersteller";
+
+/* Placeholder when a value is unknown */
+"deviceInfo.unknown" = "Unbekannt";
+
+/* Section header for device capabilities */
+"deviceInfo.capabilities.header" = "Fähigkeiten";
+
+/* Label for max contacts capability */
+"deviceInfo.maxContacts" = "Max. Kontakte";
+
+/* Label for max channels capability */
+"deviceInfo.maxChannels" = "Max. Kanäle";
+
+/* Label for max TX power capability */
+"deviceInfo.maxTxPower" = "Max. Sendeleistung";
+
+/* TX power display format with dBm unit */
+"deviceInfo.txPowerFormat" = "%@ dBm";
+
+/* Section header for identity information */
+"deviceInfo.identity.header" = "Identität";
+
+/* Label for public key */
+"deviceInfo.publicKey" = "Öffentlicher Schlüssel";
+
+/* Button to share contact information */
+"deviceInfo.shareContact" = "Meinen Kontakt teilen";
+
+/* Title for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.title" = "Kein Gerät verbunden";
+
+/* Description for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.description" = "Verbinde dich mit einem MeshCore-Gerät, um seine Informationen anzuzeigen";
+
+/* Fallback manufacturer name */
+"deviceInfo.defaultManufacturer" = "MeshCore-Gerät";
+
+
+// MARK: - Public Key View
+
+/* Navigation title for public key screen */
+"publicKey.title" = "Öffentlicher Schlüssel";
+
+/* Section header describing the key type */
+"publicKey.header" = "32-Byte Ed25519 öffentlicher Schlüssel";
+
+/* Footer explaining the public key's purpose */
+"publicKey.footer" = "Dieser Schlüssel identifiziert dein Gerät eindeutig im Mesh-Netzwerk";
+
+/* Section header for base64 representation */
+"publicKey.base64.header" = "Base64";
+
+/* Button to copy key to clipboard */
+"publicKey.copy" = "In Zwischenablage kopieren";
+
+
+// MARK: - Device Selection Sheet
+
+/* Navigation title for device selection */
+"deviceSelection.title" = "Gerät verbinden";
+
+/* Button to connect to selected device */
+"deviceSelection.connect" = "Verbinden";
+
+/* Section header for previously paired devices */
+"deviceSelection.previouslyPaired" = "Zuvor gekoppelt";
+
+/* Footer text prompting user to select a device */
+"deviceSelection.selectToReconnect" = "Wähle ein Gerät zum Wiederverbinden";
+
+/* Button to connect via WiFi */
+"deviceSelection.connectViaWifi" = "Über WLAN verbinden";
+
+/* Button to scan for Bluetooth devices */
+"deviceSelection.scanBluetooth" = "Nach Bluetooth-Gerät suchen";
+
+/* Title for empty state when no devices are paired */
+"deviceSelection.noPairedDevices" = "Keine gekoppelten Geräte";
+
+/* Description for empty state */
+"deviceSelection.noPairedDescription" = "Du hast noch keine Geräte gekoppelt.";
+
+/* Button to scan for new devices */
+"deviceSelection.scanForDevices" = "Nach Geräten suchen";
+
+/* Label shown when device is connected to another app */
+"deviceSelection.connectedElsewhere" = "Anderswo verbunden";
+
+/* Fallback connection type description */
+"deviceSelection.bluetooth" = "Bluetooth";
+
+
+// MARK: - Location Picker View
+
+/* Navigation title for location picker */
+"locationPicker.title" = "Standort festlegen";
+
+/* Marker title for node location on map */
+"locationPicker.markerTitle" = "Knoten-Standort";
+
+/* Button to clear the selected location */
+"locationPicker.clearLocation" = "Standort löschen";
+
+/* Button to drop a pin at the map center */
+"locationPicker.dropPin" = "Stecknadel in die Mitte setzen";
+
+/* Label for latitude display */
+"locationPicker.latitude" = "Breitengrad:";
+
+/* Label for longitude display */
+"locationPicker.longitude" = "Längengrad:";
+
+
+// MARK: - Trusted Contacts Picker
+
+/* Navigation title for trusted contacts picker */
+"trustedContacts.title" = "Vertrauenswürdige Kontakte";
+
+/* Title for empty state when no contacts exist */
+"trustedContacts.noContacts" = "Keine Kontakte";
+
+/* Description for empty state */
+"trustedContacts.noContactsDescription" = "Füge Kontakte hinzu, um vertrauenswürdige auszuwählen";
+
+
+// MARK: - About Section
+
+/* Section header for about links */
+"about.header" = "Über";
+
+/* Link to MeshCore website */
+"about.website" = "MeshCore-Webseite";
+
+/* Link to MeshCore online map */
+"about.onlineMap" = "MeshCore Online-Karte";
+
+/* Link to GitHub repository */
+"about.github" = "GitHub";
+
+
+// MARK: - Advanced Radio Section
+
+/* Section header for radio configuration */
+"advancedRadio.header" = "Funk-Konfiguration";
+
+/* Label for frequency input */
+"advancedRadio.frequency" = "Frequenz (MHz)";
+
+/* Placeholder for frequency text field */
+"advancedRadio.frequencyPlaceholder" = "MHz";
+
+/* Label for bandwidth picker */
+"advancedRadio.bandwidth" = "Bandbreite (kHz)";
+
+/* Label for spreading factor picker */
+"advancedRadio.spreadingFactor" = "Spreizfaktor";
+
+/* Label for coding rate picker */
+"advancedRadio.codingRate" = "Codierrate";
+
+/* Label for TX power input */
+"advancedRadio.txPower" = "Sendeleistung (dBm)";
+
+/* Placeholder for TX power text field */
+"advancedRadio.txPowerPlaceholder" = "dBm";
+
+/* Button to apply radio settings */
+"advancedRadio.apply" = "Funkeinstellungen anwenden";
+
+/* Footer warning about incorrect radio settings */
+"advancedRadio.footer" = "Warnung: Falsche Einstellungen können die Kommunikation mit anderen Mesh-Geräten verhindern.";
+
+/* Error message for invalid input */
+"advancedRadio.invalidInput" = "Ungültige Eingabewerte oder Gerät nicht verbunden";
+
+
+// MARK: - Battery Curve Section
+
+/* Section header for battery curve */
+"batteryCurve.header" = "Akkukurve";
+
+/* Footer explaining battery curve configuration */
+"batteryCurve.footer" = "Konfiguriere die Spannungs-zu-Prozent-Kurve für den Akku deines Geräts.";
+
+/* Label for preset picker */
+"batteryCurve.preset" = "Voreinstellung";
+
+/* Option for custom battery curve */
+"batteryCurve.custom" = "Benutzerdefiniert";
+
+/* Disclosure group label for editing values */
+"batteryCurve.editValues" = "Werte bearbeiten";
+
+/* Validation error for value out of range - %d is the percentage level */
+"batteryCurve.validation.outOfRange" = "Wert bei %d%% muss 1000-5000 mV sein";
+
+/* Validation error for non-descending values */
+"batteryCurve.validation.notDescending" = "Werte müssen in absteigender Reihenfolge sein";
+
+/* Unit label for millivolts */
+"batteryCurve.mV" = "mV";
+
+
+// MARK: - Bluetooth Section
+
+/* Section header for Bluetooth settings */
+"bluetooth.header" = "Bluetooth";
+
+/* Label for PIN type picker */
+"bluetooth.pinType" = "PIN-Typ";
+
+/* PIN type option for default PIN */
+"bluetooth.pinType.default" = "Standard";
+
+/* PIN type option for custom PIN */
+"bluetooth.pinType.custom" = "Eigene PIN";
+
+/* Label showing current PIN */
+"bluetooth.currentPin" = "Aktuelle PIN";
+
+/* Button to change the PIN */
+"bluetooth.changePin" = "PIN ändern";
+
+/* Button to change the device display name */
+"bluetooth.changeDisplayName" = "Anzeigename ändern";
+
+/* Footer explaining default PIN */
+"bluetooth.defaultPinFooter" = "Standard-PIN ist 123456. Geräte mit Display zeigen ihre eigene PIN an.";
+
+/* Alert title for setting custom PIN */
+"bluetooth.alert.setPin.title" = "Eigene PIN festlegen";
+
+/* Alert title for changing custom PIN */
+"bluetooth.alert.changePin.title" = "Eigene PIN ändern";
+
+/* Placeholder for PIN text field */
+"bluetooth.pinPlaceholder" = "6-stellige PIN";
+
+/* Button to set the PIN */
+"bluetooth.setPin" = "PIN festlegen";
+
+/* Alert message for setting PIN */
+"bluetooth.alert.setPin.message" = "Gib eine 6-stellige PIN ein. Das Gerät wird neu gestartet, um die Änderung anzuwenden.";
+
+/* Alert message for changing PIN */
+"bluetooth.alert.changePin.message" = "Gib eine neue 6-stellige PIN ein. Das Gerät wird neu gestartet, um die Änderung anzuwenden.";
+
+/* Alert title for confirming PIN type change */
+"bluetooth.alert.changePinType.title" = "PIN-Typ ändern?";
+
+/* Button to confirm change */
+"bluetooth.alert.change" = "Ändern";
+
+/* Alert message for PIN type change */
+"bluetooth.alert.changePinType.message" = "Das Gerät wird neu gestartet, um die Änderung anzuwenden.";
+
+/* Error for invalid PIN format */
+"bluetooth.error.invalidPin" = "PIN muss eine 6-stellige Zahl zwischen 100000 und 999999 sein";
+
+
+// MARK: - Contacts Settings Section
+
+/* Section header for nodes/contacts settings */
+"contacts.header" = "Knoten";
+
+/* Toggle label for auto-add nodes */
+"contacts.autoAdd" = "Knoten automatisch hinzufügen";
+
+/* Description for auto-add nodes toggle */
+"contacts.autoAddDescription" = "Knoten automatisch aus empfangenen Ankündigungen hinzufügen";
+
+
+// MARK: - Danger Zone Section
+
+/* Section header for danger zone */
+"dangerZone.header" = "Gefahrenzone";
+
+/* Button to forget/unpair the device */
+"dangerZone.forgetDevice" = "Gerät vergessen";
+
+/* Button to factory reset the device */
+"dangerZone.factoryReset" = "Gerät auf Werkseinstellungen zurücksetzen";
+
+/* Text shown while resetting */
+"dangerZone.resetting" = "Wird zurückgesetzt...";
+
+/* Footer explaining factory reset */
+"dangerZone.footer" = "Werksreset löscht alle Kontakte, Nachrichten und Einstellungen auf dem Gerät.";
+
+/* Alert title for forget device confirmation */
+"dangerZone.alert.forget.title" = "Gerät vergessen";
+
+/* Button to confirm forget */
+"dangerZone.alert.forget.confirm" = "Vergessen";
+
+/* Alert message for forget device */
+"dangerZone.alert.forget.message" = "Das Gerät wird aus deinen gekoppelten Geräten entfernt. Du kannst es später erneut koppeln.";
+
+/* Alert title for factory reset confirmation */
+"dangerZone.alert.reset.title" = "Werkseinstellungen";
+
+/* Button to confirm reset */
+"dangerZone.alert.reset.confirm" = "Zurücksetzen";
+
+/* Alert message for factory reset */
+"dangerZone.alert.reset.message" = "Alle Daten auf dem Gerät werden gelöscht, einschließlich Kontakte, Nachrichten und Einstellungen. Dies kann nicht rückgängig gemacht werden.";
+
+/* Error when services are not available */
+"dangerZone.error.servicesUnavailable" = "Dienste nicht verfügbar";
+
+
+// MARK: - Diagnostics Section
+
+/* Section header for diagnostics */
+"diagnostics.header" = "Diagnose";
+
+/* Button to export debug logs */
+"diagnostics.exportLogs" = "Debug-Protokolle exportieren";
+
+/* Button to clear debug logs */
+"diagnostics.clearLogs" = "Debug-Protokolle löschen";
+
+/* Footer explaining log export */
+"diagnostics.footer" = "Export enthält Debug-Protokolle der letzten 24 Stunden aus allen App-Sitzungen. Protokolle werden lokal gespeichert und automatisch bereinigt.";
+
+/* Alert title for clear logs confirmation */
+"diagnostics.alert.clear.title" = "Debug-Protokolle löschen";
+
+/* Button to confirm clear */
+"diagnostics.alert.clear.confirm" = "Löschen";
+
+/* Alert message for clear logs */
+"diagnostics.alert.clear.message" = "Alle gespeicherten Debug-Protokolle werden gelöscht. Exportierte Protokolldateien bleiben unberührt.";
+
+/* Error when export fails */
+"diagnostics.error.exportFailed" = "Exportdatei konnte nicht erstellt werden";
+
+
+// MARK: - Link Preview Settings Section
+
+/* Section header for privacy settings */
+"linkPreviews.header" = "Datenschutz";
+
+/* Toggle label for link previews */
+"linkPreviews.toggle" = "Link-Vorschauen";
+
+/* Toggle label for showing previews in DMs */
+"linkPreviews.showInDMs" = "In Direktnachrichten anzeigen";
+
+/* Toggle label for showing previews in channels */
+"linkPreviews.showInChannels" = "In Kanälen anzeigen";
+
+/* Footer explaining link preview privacy implications */
+"linkPreviews.footer" = "Link-Vorschauen rufen Daten aus dem Web ab, was deine IP-Adresse dem Server offenbaren kann, der den Link hostet.";
+
+
+// MARK: - Node Settings Section
+
+/* Section header for node settings */
+"node.header" = "Knoten";
+
+/* Label for node name */
+"node.name" = "Knotenname";
+
+/* Default node name when unknown */
+"node.unknown" = "Unbekannt";
+
+/* Button text to copy */
+"node.copy" = "Kopieren";
+
+/* Label for set location button */
+"node.setLocation" = "Standort festlegen";
+
+/* Text shown when location is set */
+"node.locationSet" = "Festgelegt";
+
+/* Text shown when location is not set */
+"node.locationNotSet" = "Nicht festgelegt";
+
+/* Toggle label for share location publicly */
+"node.shareLocationPublicly" = "Standort öffentlich teilen";
+
+/* Footer explaining node visibility */
+"node.footer" = "Dein Knotenname und Standort sind für andere Mesh-Nutzer sichtbar, wenn geteilt.";
+
+/* Alert title for editing node name */
+"node.alert.editName.title" = "Knotenname bearbeiten";
+
+
+// MARK: - Notification Settings Section
+
+/* Section header for notifications */
+"notifications.header" = "Benachrichtigungen";
+
+/* Toggle label for contact messages notifications */
+"notifications.contactMessages" = "Kontakt-Nachrichten";
+
+/* Toggle label for channel messages notifications */
+"notifications.channelMessages" = "Kanal-Nachrichten";
+
+/* Toggle label for room messages notifications */
+"notifications.roomMessages" = "Raum-Nachrichten";
+
+/* Toggle label for new contact discovered notifications */
+"notifications.newContactDiscovered" = "Neuer Kontakt entdeckt";
+
+/* Toggle label for low battery warnings */
+"notifications.lowBattery" = "Akkustandswarnungen";
+
+/* Button to enable notifications */
+"notifications.enable" = "Benachrichtigungen aktivieren";
+
+/* Label shown when notifications are disabled */
+"notifications.disabled" = "Benachrichtigungen deaktiviert";
+
+/* Button to open system settings */
+"notifications.openSettings" = "Einstellungen öffnen";
+
+/* Message shown when device not connected */
+"notifications.connectDevice" = "Verbinde ein Gerät, um Benachrichtigungen zu konfigurieren";
+
+
+// MARK: - Radio Preset Section
+
+/* Section header for radio settings */
+"radio.header" = "Funk";
+
+/* Label for radio preset picker */
+"radio.preset" = "Funk-Voreinstellung";
+
+/* Footer explaining radio presets */
+"radio.footer" = "Wähle eine Voreinstellung passend zu deiner Region. MeshCore-Geräte müssen dieselben Funkeinstellungen verwenden, um kommunizieren zu können.";
+
+
+// MARK: - Telemetry Settings Section
+
+/* Section header for telemetry settings */
+"telemetry.header" = "Telemetrie";
+
+/* Toggle label for allowing telemetry requests */
+"telemetry.allowRequests" = "Telemetrie-Anfragen erlauben";
+
+/* Description for telemetry requests toggle */
+"telemetry.allowRequestsDescription" = "Erforderlich, damit andere Nutzer manuell einen Pfad zu dir verfolgen können. Teilt den Akkustand.";
+
+/* Toggle label for including location in telemetry */
+"telemetry.includeLocation" = "Standort einbeziehen";
+
+/* Description for include location toggle */
+"telemetry.includeLocationDescription" = "GPS-Koordinaten in Telemetrie teilen";
+
+/* Toggle label for including environment sensors */
+"telemetry.includeEnvironment" = "Umgebungssensoren einbeziehen";
+
+/* Description for include environment toggle */
+"telemetry.includeEnvironmentDescription" = "Temperatur, Luftfeuchtigkeit usw. teilen";
+
+/* Toggle label for trusted contacts only */
+"telemetry.trustedOnly" = "Nur mit vertrauenswürdigen Kontakten teilen";
+
+/* Description for trusted contacts toggle */
+"telemetry.trustedOnlyDescription" = "Telemetrie auf ausgewählte Kontakte beschränken";
+
+/* Link to manage trusted contacts */
+"telemetry.manageTrusted" = "Vertrauenswürdige Kontakte verwalten";
+
+/* Footer explaining telemetry */
+"telemetry.footer" = "Wenn aktiviert, können andere Knoten die Telemetriedaten deines Geräts anfordern.";
+
+
+// MARK: - WiFi Section
+
+/* Section header for WiFi settings */
+"wifi.header" = "WLAN";
+
+/* Label for IP address */
+"wifi.address" = "Adresse";
+
+/* Label for port number */
+"wifi.port" = "Port";
+
+/* Button to edit WiFi connection */
+"wifi.editConnection" = "Verbindung bearbeiten";
+
+/* Footer explaining WiFi address */
+"wifi.footer" = "Lokale Netzwerkadresse deines Geräts";
+
+
+// MARK: - WiFi Edit Sheet
+
+/* Navigation title for WiFi edit sheet */
+"wifiEdit.title" = "WLAN-Verbindung bearbeiten";
+
+/* Section header for connection details */
+"wifiEdit.connectionDetails" = "Verbindungsdetails";
+
+/* Placeholder for IP address field */
+"wifiEdit.ipPlaceholder" = "IP-Adresse";
+
+/* Placeholder for port field */
+"wifiEdit.portPlaceholder" = "Port";
+
+/* Accessibility label for clear IP button */
+"wifiEdit.clearIp" = "IP-Adresse löschen";
+
+/* Accessibility label for clear port button */
+"wifiEdit.clearPort" = "Port löschen";
+
+/* Footer explaining reconnection */
+"wifiEdit.footer" = "Das Ändern dieser Werte trennt die Verbindung und verbindet sich mit der neuen Adresse.";
+
+/* Text shown while reconnecting */
+"wifiEdit.reconnecting" = "Verbinde erneut...";
+
+/* Button to save changes */
+"wifiEdit.saveChanges" = "Änderungen speichern";
+
+/* Error for invalid port */
+"wifiEdit.error.invalidPort" = "Ungültige Portnummer";
+
+
+// MARK: - Error Alert
+
+/* Alert title for generic errors */
+"alert.error.title" = "Fehler";
+
+
+// MARK: - Retry Alert
+
+/* Alert title when max retries exceeded */
+"alert.retry.unableToSave" = "Einstellung konnte nicht gespeichert werden";
+
+/* Alert title for connection errors */
+"alert.retry.connectionError" = "Verbindungsfehler";
+
+/* Button to retry the operation */
+"alert.retry.retry" = "Erneut versuchen";
+
+/* Alert message when max retries exceeded */
+"alert.retry.ensureConnected" = "Bitte stelle sicher, dass dein Gerät verbunden ist.";
+
+
+// MARK: - Battery Curve Chart
+
+/* Chart X axis label */
+"chart.percent" = "Prozent";
+
+/* Chart Y axis label */
+"chart.voltage" = "Spannung (V)";
+
+/* Accessibility label for battery curve chart */
+"chart.accessibility" = "Akkuentladekurve zeigt Spannung bei jedem Prozentstand";

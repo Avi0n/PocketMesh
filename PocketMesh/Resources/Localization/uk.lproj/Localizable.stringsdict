@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Localizable.stringsdict
+  PocketMesh
+
+  Ukrainian pluralization rules for common strings.
+  Ukrainian uses Slavic plural rules: one (1, 21, 31...), few (2-4, 22-24...), many (0, 5-20, 25-30...), other (fractions).
+  AI-translated - please verify with native speakers.
+-->
+<plist version="1.0">
+<dict>
+    <!-- Hop count pluralization for path display -->
+    <key>hops.count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@hops@</string>
+        <key>hops</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d перехід</string>
+            <key>few</key>
+            <string>%d переходи</string>
+            <key>many</key>
+            <string>%d переходів</string>
+            <key>other</key>
+            <string>%d переходу</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

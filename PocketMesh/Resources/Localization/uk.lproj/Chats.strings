@@ -1,0 +1,495 @@
+/*
+  Chats.strings
+  PocketMesh
+
+  Ukrainian translation of strings for the Chats feature.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Chat List View
+
+/* Location: ChatListView.swift - Navigation title */
+"chats.title" = "Чати";
+
+/* Location: ChatListView.swift - Search placeholder */
+"chats.search" = "Пошук";
+
+/* Location: ChatListView.swift - Empty state title when no chats */
+"chats.emptyState.title" = "Немає чатів";
+
+/* Location: ChatListView.swift - Empty state description */
+"chats.emptyState.description" = "Почніть розмову з контактом, щоб розпочати спілкування.";
+
+/* Location: ChatListView.swift - Empty state button */
+"chats.emptyState.startChat" = "Почати чат";
+
+/* Location: ChatListView.swift - Section header for pinned chats */
+"chats.section.pinned" = "Закріплені";
+
+/* Location: ChatListView.swift - Section header for recent chats */
+"chats.section.recent" = "Останні";
+
+// MARK: - Chat List Row
+
+/* Location: ChatListRow.swift - Draft message prefix */
+"chats.row.draft" = "Чернетка:";
+
+/* Location: ChatListRow.swift - Voice message indicator */
+"chats.row.voiceMessage" = "Голосове повідомлення";
+
+/* Location: ChatListRow.swift - Image message indicator */
+"chats.row.image" = "Зображення";
+
+/* Location: ChatListRow.swift - Attachment indicator */
+"chats.row.attachment" = "Вкладення";
+
+/* Location: ChatListRow.swift - You prefix for sent messages */
+"chats.row.you" = "Ви:";
+
+/* Location: ChatListRow.swift - Typing indicator */
+"chats.row.typing" = "Друкує...";
+
+/* Location: ChatListRow.swift - Muted indicator accessibility */
+"chats.row.muted" = "Сповіщення вимкнено";
+
+/* Location: ChatListRow.swift - Unread count accessibility, %lld is count */
+"chats.row.unreadCount" = "%lld непрочитаних";
+
+// MARK: - Chat List Context Menu
+
+/* Location: ChatListView.swift - Context menu: Pin chat */
+"chats.contextMenu.pin" = "Закріпити";
+
+/* Location: ChatListView.swift - Context menu: Unpin chat */
+"chats.contextMenu.unpin" = "Відкріпити";
+
+/* Location: ChatListView.swift - Context menu: Mute notifications */
+"chats.contextMenu.mute" = "Вимкнути сповіщення";
+
+/* Location: ChatListView.swift - Context menu: Unmute notifications */
+"chats.contextMenu.unmute" = "Увімкнути сповіщення";
+
+/* Location: ChatListView.swift - Context menu: Mark as read */
+"chats.contextMenu.markAsRead" = "Позначити як прочитане";
+
+/* Location: ChatListView.swift - Context menu: Mark as unread */
+"chats.contextMenu.markAsUnread" = "Позначити як непрочитане";
+
+/* Location: ChatListView.swift - Context menu: Delete chat */
+"chats.contextMenu.delete" = "Видалити чат";
+
+/* Location: ChatListView.swift - Context menu: Archive chat */
+"chats.contextMenu.archive" = "Архівувати";
+
+// MARK: - Conversation View
+
+/* Location: ConversationView.swift - Navigation title placeholder when loading */
+"conversation.loading" = "Завантаження...";
+
+/* Location: ConversationView.swift - Message input placeholder */
+"conversation.inputPlaceholder" = "Повідомлення";
+
+/* Location: ConversationView.swift - Send button accessibility label */
+"conversation.send" = "Надіслати";
+
+/* Location: ConversationView.swift - Attach button accessibility label */
+"conversation.attach" = "Прикріпити";
+
+/* Location: ConversationView.swift - Voice message button accessibility label */
+"conversation.voiceMessage" = "Голосове повідомлення";
+
+/* Location: ConversationView.swift - Scroll to bottom button accessibility label */
+"conversation.scrollToBottom" = "Прокрутити вниз";
+
+/* Location: ConversationView.swift - New messages indicator, %lld is count */
+"conversation.newMessages" = "%lld нових повідомлень";
+
+// MARK: - Conversation Empty State
+
+/* Location: ConversationView.swift - Empty conversation title */
+"conversation.emptyState.title" = "Немає повідомлень";
+
+/* Location: ConversationView.swift - Empty conversation description */
+"conversation.emptyState.description" = "Надішліть повідомлення, щоб почати розмову.";
+
+/* Location: ConversationView.swift - Empty conversation with contact, %@ is name */
+"conversation.emptyState.startWith" = "Почніть розмову з %@";
+
+// MARK: - Message Bubble
+
+/* Location: MessageBubble.swift - Sent status */
+"message.status.sent" = "Надіслано";
+
+/* Location: MessageBubble.swift - Delivered status */
+"message.status.delivered" = "Доставлено";
+
+/* Location: MessageBubble.swift - Read status */
+"message.status.read" = "Прочитано";
+
+/* Location: MessageBubble.swift - Failed status */
+"message.status.failed" = "Помилка";
+
+/* Location: MessageBubble.swift - Pending status */
+"message.status.pending" = "Очікування...";
+
+/* Location: MessageBubble.swift - Edited indicator */
+"message.edited" = "Змінено";
+
+/* Location: MessageBubble.swift - Forwarded indicator */
+"message.forwarded" = "Переслано";
+
+/* Location: MessageBubble.swift - Reply indicator, %@ is name */
+"message.replyTo" = "Відповідь для %@";
+
+// MARK: - Message Context Menu
+
+/* Location: MessageBubble.swift - Context menu: Reply */
+"message.contextMenu.reply" = "Відповісти";
+
+/* Location: MessageBubble.swift - Context menu: Copy */
+"message.contextMenu.copy" = "Копіювати";
+
+/* Location: MessageBubble.swift - Context menu: Forward */
+"message.contextMenu.forward" = "Переслати";
+
+/* Location: MessageBubble.swift - Context menu: Edit */
+"message.contextMenu.edit" = "Редагувати";
+
+/* Location: MessageBubble.swift - Context menu: Delete */
+"message.contextMenu.delete" = "Видалити";
+
+/* Location: MessageBubble.swift - Context menu: Select */
+"message.contextMenu.select" = "Вибрати";
+
+/* Location: MessageBubble.swift - Context menu: Info */
+"message.contextMenu.info" = "Інформація";
+
+/* Location: MessageBubble.swift - Context menu: Retry */
+"message.contextMenu.retry" = "Повторити";
+
+// MARK: - Message Types
+
+/* Location: MessageBubble.swift - System message: Contact joined */
+"message.system.joined" = "%@ приєднався до чату";
+
+/* Location: MessageBubble.swift - System message: Contact left */
+"message.system.left" = "%@ покинув чат";
+
+/* Location: MessageBubble.swift - System message: Chat created */
+"message.system.created" = "Чат створено";
+
+/* Location: MessageBubble.swift - System message: Name changed */
+"message.system.nameChanged" = "Назву чату змінено на %@";
+
+// MARK: - Delete Message Confirmation
+
+/* Location: ConversationView.swift - Delete confirmation title */
+"message.delete.title" = "Видалити повідомлення?";
+
+/* Location: ConversationView.swift - Delete confirmation message */
+"message.delete.message" = "Цю дію неможливо скасувати.";
+
+/* Location: ConversationView.swift - Delete for me option */
+"message.delete.forMe" = "Видалити для мене";
+
+/* Location: ConversationView.swift - Delete for everyone option */
+"message.delete.forEveryone" = "Видалити для всіх";
+
+// MARK: - Conversation Info
+
+/* Location: ConversationInfoView.swift - Navigation title */
+"conversationInfo.title" = "Інформація про чат";
+
+/* Location: ConversationInfoView.swift - Section header: Participants */
+"conversationInfo.participants" = "Учасники";
+
+/* Location: ConversationInfoView.swift - Section header: Media */
+"conversationInfo.media" = "Медіа";
+
+/* Location: ConversationInfoView.swift - Section header: Settings */
+"conversationInfo.settings" = "Налаштування";
+
+/* Location: ConversationInfoView.swift - Notifications toggle */
+"conversationInfo.notifications" = "Сповіщення";
+
+/* Location: ConversationInfoView.swift - Media, links, docs button */
+"conversationInfo.mediaLinksAndDocs" = "Медіа, посилання та документи";
+
+/* Location: ConversationInfoView.swift - Search in conversation */
+"conversationInfo.searchInConversation" = "Пошук у розмові";
+
+/* Location: ConversationInfoView.swift - Clear chat history */
+"conversationInfo.clearHistory" = "Очистити історію чату";
+
+/* Location: ConversationInfoView.swift - Leave group */
+"conversationInfo.leaveGroup" = "Покинути групу";
+
+/* Location: ConversationInfoView.swift - Delete chat */
+"conversationInfo.deleteChat" = "Видалити чат";
+
+// MARK: - Forward Message
+
+/* Location: ForwardMessageView.swift - Navigation title */
+"forward.title" = "Переслати до";
+
+/* Location: ForwardMessageView.swift - Search placeholder */
+"forward.search" = "Пошук контактів";
+
+/* Location: ForwardMessageView.swift - Section header: Recent */
+"forward.recent" = "Останні";
+
+/* Location: ForwardMessageView.swift - Section header: Contacts */
+"forward.contacts" = "Контакти";
+
+/* Location: ForwardMessageView.swift - Forward button, %lld is count */
+"forward.send" = "Переслати (%lld)";
+
+// MARK: - Voice Messages
+
+/* Location: VoiceMessageRecorder.swift - Recording indicator */
+"voice.recording" = "Запис...";
+
+/* Location: VoiceMessageRecorder.swift - Slide to cancel hint */
+"voice.slideToCancel" = "Проведіть для скасування";
+
+/* Location: VoiceMessageRecorder.swift - Release to send hint */
+"voice.releaseToSend" = "Відпустіть для надсилання";
+
+/* Location: VoiceMessagePlayer.swift - Duration format, %@ is time */
+"voice.duration" = "%@";
+
+/* Location: VoiceMessagePlayer.swift - Play button accessibility */
+"voice.play" = "Відтворити голосове повідомлення";
+
+/* Location: VoiceMessagePlayer.swift - Pause button accessibility */
+"voice.pause" = "Призупинити голосове повідомлення";
+
+// MARK: - Attachments
+
+/* Location: AttachmentPicker.swift - Title */
+"attachments.title" = "Додати вкладення";
+
+/* Location: AttachmentPicker.swift - Camera option */
+"attachments.camera" = "Камера";
+
+/* Location: AttachmentPicker.swift - Photo library option */
+"attachments.photoLibrary" = "Бібліотека фото";
+
+/* Location: AttachmentPicker.swift - Document option */
+"attachments.document" = "Документ";
+
+/* Location: AttachmentPicker.swift - Location option */
+"attachments.location" = "Місцезнаходження";
+
+/* Location: AttachmentPicker.swift - Contact option */
+"attachments.contact" = "Контакт";
+
+// MARK: - Search Messages
+
+/* Location: SearchMessagesView.swift - Navigation title */
+"searchMessages.title" = "Пошук повідомлень";
+
+/* Location: SearchMessagesView.swift - Placeholder */
+"searchMessages.placeholder" = "Пошук у повідомленнях";
+
+/* Location: SearchMessagesView.swift - No results */
+"searchMessages.noResults" = "Немає результатів";
+
+/* Location: SearchMessagesView.swift - Results count, %lld is count */
+"searchMessages.resultsCount" = "%lld результатів";
+
+// MARK: - Chat Settings
+
+/* Location: ChatSettingsView.swift - Navigation title */
+"chatSettings.title" = "Налаштування чату";
+
+/* Location: ChatSettingsView.swift - Theme section */
+"chatSettings.theme" = "Тема";
+
+/* Location: ChatSettingsView.swift - Background option */
+"chatSettings.background" = "Фон";
+
+/* Location: ChatSettingsView.swift - Font size option */
+"chatSettings.fontSize" = "Розмір шрифту";
+
+/* Location: ChatSettingsView.swift - Send with return toggle */
+"chatSettings.sendWithReturn" = "Надсилати клавішею Enter";
+
+// MARK: - Errors
+
+/* Location: ChatError.swift - Failed to load messages */
+"chats.error.loadFailed" = "Не вдалося завантажити повідомлення";
+
+/* Location: ChatError.swift - Failed to send message */
+"chats.error.sendFailed" = "Не вдалося надіслати повідомлення";
+
+/* Location: ChatError.swift - Failed to delete message */
+"chats.error.deleteFailed" = "Не вдалося видалити повідомлення";
+
+/* Location: ChatError.swift - Network error */
+"chats.error.network" = "Помилка мережі. Будь ласка, спробуйте ще раз.";
+
+/* Location: ChatError.swift - Message too long */
+"chats.error.messageTooLong" = "Повідомлення занадто довге";
+
+// MARK: - Timestamps
+
+/* Location: ConversationView.swift - Today header */
+"chats.timestamp.today" = "Сьогодні";
+
+/* Location: ConversationView.swift - Yesterday header */
+"chats.timestamp.yesterday" = "Вчора";
+
+// MARK: - Delivery Info
+
+/* Location: MessageInfoView.swift - Navigation title */
+"deliveryInfo.title" = "Інформація про повідомлення";
+
+/* Location: MessageInfoView.swift - Sent timestamp */
+"deliveryInfo.sent" = "Надіслано";
+
+/* Location: MessageInfoView.swift - Delivered timestamp */
+"deliveryInfo.delivered" = "Доставлено";
+
+/* Location: MessageInfoView.swift - Read timestamp */
+"deliveryInfo.read" = "Прочитано";
+
+/* Location: MessageInfoView.swift - Played timestamp (for voice messages) */
+"deliveryInfo.played" = "Відтворено";
+
+// MARK: - Mentions
+
+/* Location: MentionSuggestionView.swift - Mention everyone option */
+"mentions.everyone" = "Всі";
+
+/* Location: MentionSuggestionView.swift - Mention everyone description */
+"mentions.everyoneDescription" = "Сповістити всіх учасників";
+
+// MARK: - Reactions
+
+/* Location: ReactionPicker.swift - Add reaction button */
+"reactions.add" = "Додати реакцію";
+
+/* Location: ReactionPicker.swift - All reactions tab */
+"reactions.all" = "Всі";
+
+/* Location: ReactionPicker.swift - Reacted by header, %@ is emoji */
+"reactions.reactedWith" = "Відреагували %@";
+
+// MARK: - Link Preview
+
+/* Location: LinkPreviewView.swift - Tap to load preview */
+"linkPreview.tapToLoad" = "Натисніть для завантаження попереднього перегляду";
+
+/* Location: LinkPreviewView.swift - Failed to load */
+"linkPreview.failed" = "Не вдалося завантажити попередній перегляд";
+
+// MARK: - Message Actions
+
+/* Location: ConversationView.swift - Edit message title */
+"messageActions.editTitle" = "Редагувати повідомлення";
+
+/* Location: ConversationView.swift - Edit message save button */
+"messageActions.saveEdit" = "Зберегти";
+
+/* Location: ConversationView.swift - Reply header with name */
+"messageActions.replyingTo" = "Відповідь для %@";
+
+/* Location: ConversationView.swift - Cancel reply button */
+"messageActions.cancelReply" = "Скасувати відповідь";
+
+// MARK: - Multi-Select Mode
+
+/* Location: ConversationView.swift - Select all button */
+"multiSelect.selectAll" = "Вибрати все";
+
+/* Location: ConversationView.swift - Selected count */
+"multiSelect.selected" = "%lld вибрано";
+
+/* Location: ConversationView.swift - Delete selected button */
+"multiSelect.delete" = "Видалити";
+
+/* Location: ConversationView.swift - Forward selected button */
+"multiSelect.forward" = "Переслати";
+
+// MARK: - Encryption
+
+/* Location: ConversationView.swift - Encrypted chat indicator */
+"encryption.enabled" = "Повідомлення захищені наскрізним шифруванням";
+
+/* Location: ConversationView.swift - Encryption info */
+"encryption.info" = "Повідомлення захищені наскрізним шифруванням. Натисніть для додаткової інформації.";
+
+// MARK: - Trace Path View
+
+/* Location: TracePathView.swift - Navigation title */
+"tracePath.title" = "Трасування шляху";
+
+/* Location: TracePathView.swift - Direct route label */
+"tracePath.directRoute" = "Прямий маршрут";
+
+/* Location: TracePathView.swift - Route through label */
+"tracePath.routeThrough" = "Маршрут через:";
+
+/* Location: TracePathView.swift - Searching label */
+"tracePath.searching" = "Пошук шляху...";
+
+/* Location: TracePathView.swift - No route found */
+"tracePath.noRoute" = "Маршрут не знайдено";
+
+/* Location: TracePathView.swift - Hops label */
+"tracePath.hops" = "Переходи:";
+
+/* Location: TracePathView.swift - Latency label */
+"tracePath.latency" = "Затримка:";
+
+/* Location: TracePathView.swift - Start button */
+"tracePath.start" = "Почати трасування";
+
+/* Location: TracePathView.swift - Stop button */
+"tracePath.stop" = "Зупинити";
+
+/* Location: TracePathView.swift - Retry button */
+"tracePath.retry" = "Повторити трасування";
+
+/* Location: TracePathView.swift - Status: Sending request */
+"tracePath.status.sending" = "Надсилання запиту...";
+
+/* Location: TracePathView.swift - Status: Waiting for response */
+"tracePath.status.waiting" = "Очікування відповіді...";
+
+/* Location: TracePathView.swift - Status: Route found */
+"tracePath.status.found" = "Маршрут знайдено";
+
+/* Location: TracePathView.swift - Status: Timed out */
+"tracePath.status.timeout" = "Час очікування вичерпано";
+
+/* Location: TracePathView.swift - Trace path empty state title */
+"tracePath.emptyState.title" = "Трасування шляху";
+
+/* Location: TracePathView.swift - Trace path empty state description */
+"tracePath.emptyState.description" = "Простежте шлях, яким ваші повідомлення проходять через мережу mesh.";
+
+/* Location: TracePathView.swift - Trace path button text */
+"tracePath.button" = "Шлях";
+
+/* Location: TracePathView.swift - Completed status when path found */
+"tracePath.status.completed" = "Завершено";
+
+/* Location: TracePathView.swift - Responded via direct label */
+"tracePath.respondedViaDirect" = "Відповіли прямим маршрутом";
+
+/* Location: TracePathView.swift - Responded via flood label */
+"tracePath.respondedViaFlood" = "Відповіли через розсилку";
+
+/* Location: TracePathView.swift - Ack received label */
+"tracePath.ackReceived" = "Підтвердження отримано від";
+
+/* Location: TracePathView.swift - Milliseconds unit */
+"tracePath.ms" = "мс";
+
+/* Location: TracePathView.swift - Round trip time label */
+"tracePath.roundTrip" = "Час туди-назад:";
+
+/* Location: TracePathView.swift - No response label */
+"tracePath.noResponse" = "Немає відповіді";

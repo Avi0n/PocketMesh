@@ -1,0 +1,518 @@
+/*
+  Contacts.strings
+  PocketMesh
+
+  Russian translation of strings for the Contacts feature.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Contact List View
+
+/* Location: ContactListView.swift - Navigation title */
+"contacts.title" = "Контакты";
+
+/* Location: ContactListView.swift - Search placeholder */
+"contacts.search" = "Поиск контактов";
+
+/* Location: ContactListView.swift - Section header for favorite contacts */
+"contacts.section.favorites" = "Избранные";
+
+/* Location: ContactListView.swift - Section header for online contacts */
+"contacts.section.online" = "В сети";
+
+/* Location: ContactListView.swift - Section header for offline contacts */
+"contacts.section.offline" = "Не в сети";
+
+/* Location: ContactListView.swift - Section header for all contacts */
+"contacts.section.all" = "Все контакты";
+
+/* Location: ContactListView.swift - Section header for repeaters */
+"contacts.section.repeaters" = "Ретрансляторы";
+
+/* Location: ContactListView.swift - Section header for rooms */
+"contacts.section.rooms" = "Комнаты";
+
+// MARK: - Contact List Empty State
+
+/* Location: ContactListView.swift - Empty state title when no contacts */
+"contacts.emptyState.title" = "Нет контактов";
+
+/* Location: ContactListView.swift - Empty state description */
+"contacts.emptyState.description" = "Контакты появятся здесь при обнаружении их в сети mesh.";
+
+/* Location: ContactListView.swift - Empty state when searching */
+"contacts.emptyState.noResults" = "Нет результатов";
+
+/* Location: ContactListView.swift - Empty state description when searching */
+"contacts.emptyState.noResultsDescription" = "Не найдено контактов, соответствующих \"%@\"";
+
+// MARK: - Contact Row
+
+/* Location: ContactRow.swift - Online status */
+"contacts.row.online" = "В сети";
+
+/* Location: ContactRow.swift - Offline status */
+"contacts.row.offline" = "Не в сети";
+
+/* Location: ContactRow.swift - Last seen prefix, %@ is time */
+"contacts.row.lastSeen" = "Был(а) %@";
+
+/* Location: ContactRow.swift - Favorite indicator accessibility */
+"contacts.row.favorite" = "Избранный";
+
+/* Location: ContactRow.swift - Hop count accessibility, %lld is count */
+"contacts.row.hops" = "%lld переходов";
+
+/* Location: ContactRow.swift - Direct connection accessibility */
+"contacts.row.direct" = "Прямое подключение";
+
+/* Location: ContactRow.swift - Repeater type label */
+"contacts.row.repeater" = "Ретранслятор";
+
+/* Location: ContactRow.swift - Room type label */
+"contacts.row.room" = "Комната";
+
+// MARK: - Contact List Context Menu
+
+/* Location: ContactListView.swift - Context menu: Message */
+"contacts.contextMenu.message" = "Сообщение";
+
+/* Location: ContactListView.swift - Context menu: Add to favorites */
+"contacts.contextMenu.addFavorite" = "Добавить в избранное";
+
+/* Location: ContactListView.swift - Context menu: Remove from favorites */
+"contacts.contextMenu.removeFavorite" = "Удалить из избранного";
+
+/* Location: ContactListView.swift - Context menu: View on map */
+"contacts.contextMenu.viewOnMap" = "Показать на карте";
+
+/* Location: ContactListView.swift - Context menu: Share contact */
+"contacts.contextMenu.share" = "Поделиться контактом";
+
+/* Location: ContactListView.swift - Context menu: Delete contact */
+"contacts.contextMenu.delete" = "Удалить контакт";
+
+/* Location: ContactListView.swift - Context menu: Block contact */
+"contacts.contextMenu.block" = "Заблокировать";
+
+/* Location: ContactListView.swift - Context menu: Unblock contact */
+"contacts.contextMenu.unblock" = "Разблокировать";
+
+// MARK: - Contact Detail View
+
+/* Location: ContactDetailView.swift - Navigation title */
+"contactDetail.title" = "Профиль";
+
+/* Location: ContactDetailView.swift - Section header: Contact info */
+"contactDetail.section.info" = "Информация о контакте";
+
+/* Location: ContactDetailView.swift - Name field label */
+"contactDetail.name" = "Имя";
+
+/* Location: ContactDetailView.swift - Status field label */
+"contactDetail.status" = "Статус";
+
+/* Location: ContactDetailView.swift - Last seen field label */
+"contactDetail.lastSeen" = "Последний раз в сети";
+
+/* Location: ContactDetailView.swift - Distance field label */
+"contactDetail.distance" = "Расстояние";
+
+/* Location: ContactDetailView.swift - Hops field label */
+"contactDetail.hops" = "Переходы";
+
+/* Location: ContactDetailView.swift - Public key field label */
+"contactDetail.publicKey" = "Публичный ключ";
+
+/* Location: ContactDetailView.swift - Section header: Location */
+"contactDetail.section.location" = "Местоположение";
+
+/* Location: ContactDetailView.swift - Latitude field label */
+"contactDetail.latitude" = "Широта";
+
+/* Location: ContactDetailView.swift - Longitude field label */
+"contactDetail.longitude" = "Долгота";
+
+/* Location: ContactDetailView.swift - Altitude field label */
+"contactDetail.altitude" = "Высота";
+
+/* Location: ContactDetailView.swift - Section header: Actions */
+"contactDetail.section.actions" = "Действия";
+
+/* Location: ContactDetailView.swift - Send message button */
+"contactDetail.sendMessage" = "Отправить сообщение";
+
+/* Location: ContactDetailView.swift - View on map button */
+"contactDetail.viewOnMap" = "Показать на карте";
+
+/* Location: ContactDetailView.swift - Share contact button */
+"contactDetail.shareContact" = "Поделиться контактом";
+
+/* Location: ContactDetailView.swift - Section header: Settings */
+"contactDetail.section.settings" = "Настройки";
+
+/* Location: ContactDetailView.swift - Notifications toggle */
+"contactDetail.notifications" = "Уведомления";
+
+/* Location: ContactDetailView.swift - Block contact button */
+"contactDetail.block" = "Заблокировать контакт";
+
+/* Location: ContactDetailView.swift - Unblock contact button */
+"contactDetail.unblock" = "Разблокировать контакт";
+
+/* Location: ContactDetailView.swift - Delete contact button */
+"contactDetail.delete" = "Удалить контакт";
+
+// MARK: - Contact Detail Formatting
+
+/* Location: ContactDetailView.swift - Online now status */
+"contactDetail.onlineNow" = "Сейчас в сети";
+
+/* Location: ContactDetailView.swift - Direct route display */
+"contactDetail.directRoute" = "Прямой (0 переходов)";
+
+/* Location: ContactDetailView.swift - Hop count display, %lld is count */
+"contactDetail.hopCount" = "%lld переходов";
+
+/* Location: ContactDetailView.swift - Unknown location */
+"contactDetail.unknownLocation" = "Неизвестно";
+
+/* Location: ContactDetailView.swift - Copy button */
+"contactDetail.copy" = "Копировать";
+
+/* Location: ContactDetailView.swift - Copied confirmation */
+"contactDetail.copied" = "Скопировано";
+
+// MARK: - Add Contact View
+
+/* Location: AddContactView.swift - Navigation title */
+"addContact.title" = "Добавить контакт";
+
+/* Location: AddContactView.swift - Name field placeholder */
+"addContact.namePlaceholder" = "Имя";
+
+/* Location: AddContactView.swift - Public key field placeholder */
+"addContact.publicKeyPlaceholder" = "Публичный ключ";
+
+/* Location: AddContactView.swift - Scan QR code button */
+"addContact.scanQR" = "Сканировать QR-код";
+
+/* Location: AddContactView.swift - Add button */
+"addContact.add" = "Добавить";
+
+/* Location: AddContactView.swift - Cancel button */
+"addContact.cancel" = "Отмена";
+
+/* Location: AddContactView.swift - Invalid public key error */
+"addContact.error.invalidKey" = "Неверный публичный ключ";
+
+/* Location: AddContactView.swift - Contact exists error */
+"addContact.error.exists" = "Контакт уже существует";
+
+// MARK: - Edit Contact View
+
+/* Location: EditContactView.swift - Navigation title */
+"editContact.title" = "Редактировать контакт";
+
+/* Location: EditContactView.swift - Name field label */
+"editContact.name" = "Имя";
+
+/* Location: EditContactView.swift - Nickname field label */
+"editContact.nickname" = "Псевдоним";
+
+/* Location: EditContactView.swift - Nickname field placeholder */
+"editContact.nicknamePlaceholder" = "Введите псевдоним";
+
+/* Location: EditContactView.swift - Notes field label */
+"editContact.notes" = "Заметки";
+
+/* Location: EditContactView.swift - Notes field placeholder */
+"editContact.notesPlaceholder" = "Добавить заметки об этом контакте";
+
+/* Location: EditContactView.swift - Save button */
+"editContact.save" = "Сохранить";
+
+/* Location: EditContactView.swift - Cancel button */
+"editContact.cancel" = "Отмена";
+
+// MARK: - Delete Contact Confirmation
+
+/* Location: ContactDetailView.swift - Delete confirmation title */
+"contacts.delete.title" = "Удалить контакт?";
+
+/* Location: ContactDetailView.swift - Delete confirmation message */
+"contacts.delete.message" = "Это удалит контакт и всю историю чата.";
+
+/* Location: ContactDetailView.swift - Delete button */
+"contacts.delete.confirm" = "Удалить";
+
+/* Location: ContactDetailView.swift - Cancel button */
+"contacts.delete.cancel" = "Отмена";
+
+// MARK: - Block Contact Confirmation
+
+/* Location: ContactDetailView.swift - Block confirmation title */
+"contacts.block.title" = "Заблокировать контакт?";
+
+/* Location: ContactDetailView.swift - Block confirmation message */
+"contacts.block.message" = "Вы больше не будете получать сообщения от этого контакта.";
+
+/* Location: ContactDetailView.swift - Block button */
+"contacts.block.confirm" = "Заблокировать";
+
+/* Location: ContactDetailView.swift - Cancel button */
+"contacts.block.cancel" = "Отмена";
+
+// MARK: - QR Code Scanner
+
+/* Location: QRScannerView.swift - Navigation title */
+"qrScanner.title" = "Сканировать QR-код";
+
+/* Location: QRScannerView.swift - Instructions */
+"qrScanner.instructions" = "Наведите камеру на QR-код, чтобы добавить контакт";
+
+/* Location: QRScannerView.swift - Camera permission denied title */
+"qrScanner.permissionDenied.title" = "Требуется доступ к камере";
+
+/* Location: QRScannerView.swift - Camera permission denied message */
+"qrScanner.permissionDenied.message" = "Пожалуйста, предоставьте доступ к камере в Настройках для сканирования QR-кодов.";
+
+/* Location: QRScannerView.swift - Open settings button */
+"qrScanner.openSettings" = "Открыть настройки";
+
+/* Location: QRScannerView.swift - Invalid QR code error */
+"qrScanner.error.invalid" = "Неверный QR-код";
+
+/* Location: QRScannerView.swift - Success message */
+"qrScanner.success" = "Контакт добавлен";
+
+// MARK: - Share Contact
+
+/* Location: ShareContactView.swift - Navigation title */
+"shareContact.title" = "Поделиться контактом";
+
+/* Location: ShareContactView.swift - QR code section header */
+"shareContact.qrCode" = "QR-код";
+
+/* Location: ShareContactView.swift - QR code instructions */
+"shareContact.qrInstructions" = "Другие могут сканировать этот код, чтобы добавить вас в контакты.";
+
+/* Location: ShareContactView.swift - Public key section header */
+"shareContact.publicKey" = "Публичный ключ";
+
+/* Location: ShareContactView.swift - Copy key button */
+"shareContact.copyKey" = "Копировать ключ";
+
+/* Location: ShareContactView.swift - Share button */
+"shareContact.share" = "Поделиться";
+
+/* Location: ShareContactView.swift - Copied confirmation */
+"shareContact.copied" = "Скопировано в буфер обмена";
+
+// MARK: - Contact Types
+
+/* Location: Multiple files - Chat contact type */
+"contactType.chat" = "Контакт чата";
+
+/* Location: Multiple files - Repeater type */
+"contactType.repeater" = "Ретранслятор";
+
+/* Location: Multiple files - Room type */
+"contactType.room" = "Комната";
+
+/* Location: Multiple files - Unknown type */
+"contactType.unknown" = "Неизвестно";
+
+// MARK: - Contact Filters
+
+/* Location: ContactListView.swift - Filter: All */
+"contacts.filter.all" = "Все";
+
+/* Location: ContactListView.swift - Filter: Online */
+"contacts.filter.online" = "В сети";
+
+/* Location: ContactListView.swift - Filter: Favorites */
+"contacts.filter.favorites" = "Избранные";
+
+/* Location: ContactListView.swift - Filter: Nearby */
+"contacts.filter.nearby" = "Рядом";
+
+/* Location: ContactListView.swift - Filter: Repeaters */
+"contacts.filter.repeaters" = "Ретрансляторы";
+
+/* Location: ContactListView.swift - Filter: Rooms */
+"contacts.filter.rooms" = "Комнаты";
+
+// MARK: - Contact Sorting
+
+/* Location: ContactListView.swift - Sort by name */
+"contacts.sort.name" = "Имя";
+
+/* Location: ContactListView.swift - Sort by last seen */
+"contacts.sort.lastSeen" = "Последний раз в сети";
+
+/* Location: ContactListView.swift - Sort by distance */
+"contacts.sort.distance" = "Расстояние";
+
+/* Location: ContactListView.swift - Sort by hops */
+"contacts.sort.hops" = "Переходы";
+
+// MARK: - Contact Errors
+
+/* Location: ContactError.swift - Failed to load contacts */
+"contacts.error.loadFailed" = "Не удалось загрузить контакты";
+
+/* Location: ContactError.swift - Failed to add contact */
+"contacts.error.addFailed" = "Не удалось добавить контакт";
+
+/* Location: ContactError.swift - Failed to update contact */
+"contacts.error.updateFailed" = "Не удалось обновить контакт";
+
+/* Location: ContactError.swift - Failed to delete contact */
+"contacts.error.deleteFailed" = "Не удалось удалить контакт";
+
+/* Location: ContactError.swift - Contact not found */
+"contacts.error.notFound" = "Контакт не найден";
+
+// MARK: - Repeater Details
+
+/* Location: RepeaterDetailView.swift - Section header: Repeater info */
+"repeaterDetail.section.info" = "Информация о ретрансляторе";
+
+/* Location: RepeaterDetailView.swift - Firmware version */
+"repeaterDetail.firmware" = "Прошивка";
+
+/* Location: RepeaterDetailView.swift - Uptime */
+"repeaterDetail.uptime" = "Время работы";
+
+/* Location: RepeaterDetailView.swift - Section header: Statistics */
+"repeaterDetail.section.stats" = "Статистика";
+
+/* Location: RepeaterDetailView.swift - Packets relayed */
+"repeaterDetail.packetsRelayed" = "Пакетов ретранслировано";
+
+/* Location: RepeaterDetailView.swift - Active connections */
+"repeaterDetail.activeConnections" = "Активные подключения";
+
+/* Location: RepeaterDetailView.swift - Section header: Configuration */
+"repeaterDetail.section.config" = "Конфигурация";
+
+/* Location: RepeaterDetailView.swift - Frequency */
+"repeaterDetail.frequency" = "Частота";
+
+/* Location: RepeaterDetailView.swift - Bandwidth */
+"repeaterDetail.bandwidth" = "Полоса пропускания";
+
+/* Location: RepeaterDetailView.swift - Spreading factor */
+"repeaterDetail.spreadingFactor" = "Фактор расширения";
+
+/* Location: RepeaterDetailView.swift - TX power */
+"repeaterDetail.txPower" = "Мощность передачи";
+
+// MARK: - Room Details
+
+/* Location: RoomDetailView.swift - Section header: Room info */
+"roomDetail.section.info" = "Информация о комнате";
+
+/* Location: RoomDetailView.swift - Member count */
+"roomDetail.memberCount" = "Участников";
+
+/* Location: RoomDetailView.swift - Created date */
+"roomDetail.created" = "Создана";
+
+/* Location: RoomDetailView.swift - Section header: Members */
+"roomDetail.section.members" = "Участники";
+
+/* Location: RoomDetailView.swift - Join room button */
+"roomDetail.join" = "Присоединиться к комнате";
+
+/* Location: RoomDetailView.swift - Leave room button */
+"roomDetail.leave" = "Покинуть комнату";
+
+/* Location: RoomDetailView.swift - Admin badge */
+"roomDetail.admin" = "Администратор";
+
+/* Location: RoomDetailView.swift - Owner badge */
+"roomDetail.owner" = "Владелец";
+
+// MARK: - Identity Section
+
+/* Location: Multiple files - Section header for identification */
+"contacts.section.identity" = "Идентификация";
+
+/* Location: Multiple files - Public key label */
+"contacts.identity.publicKey" = "Публичный ключ";
+
+/* Location: Multiple files - First discovered label */
+"contacts.identity.firstDiscovered" = "Первое обнаружение";
+
+/* Location: Multiple files - Tap to copy hint */
+"contacts.identity.tapToCopy" = "Нажмите, чтобы скопировать";
+
+// MARK: - Network Section
+
+/* Location: Multiple files - Section header for network info */
+"contacts.section.network" = "Сеть";
+
+/* Location: Multiple files - Routing type */
+"contacts.network.routing" = "Маршрутизация";
+
+/* Location: Multiple files - Routing type: Direct */
+"contacts.network.direct" = "Прямая";
+
+/* Location: Multiple files - Routing type: Flood */
+"contacts.network.flood" = "Рассылка";
+
+/* Location: Multiple files - Path length */
+"contacts.network.pathLength" = "Длина пути";
+
+/* Location: Multiple files - Last advertisement */
+"contacts.network.lastAdvert" = "Последнее объявление";
+
+/* Location: Multiple files - Signal strength */
+"contacts.network.signalStrength" = "Уровень сигнала";
+
+// MARK: - Actions Section
+
+/* Location: Multiple files - Message action */
+"contacts.actions.message" = "Сообщение";
+
+/* Location: Multiple files - Trace path action */
+"contacts.actions.tracePath" = "Трассировка пути";
+
+/* Location: Multiple files - View on map action */
+"contacts.actions.viewOnMap" = "Показать на карте";
+
+/* Location: Multiple files - Share action */
+"contacts.actions.share" = "Поделиться";
+
+// MARK: - Settings Section
+
+/* Location: Multiple files - Favorite toggle */
+"contacts.settings.favorite" = "Избранное";
+
+/* Location: Multiple files - Mute toggle */
+"contacts.settings.mute" = "Отключить звук";
+
+/* Location: Multiple files - Custom name field */
+"contacts.settings.customName" = "Произвольное имя";
+
+/* Location: Multiple files - Custom name placeholder */
+"contacts.settings.customNamePlaceholder" = "Введите произвольное имя";
+
+// MARK: - Danger Zone
+
+/* Location: Multiple files - Section header for dangerous actions */
+"contacts.section.dangerZone" = "Опасная зона";
+
+/* Location: Multiple files - Delete contact action */
+"contacts.dangerZone.delete" = "Удалить контакт";
+
+/* Location: Multiple files - Delete contact description */
+"contacts.dangerZone.deleteDescription" = "Контакт будет удалён при следующем объявлении в сети";
+
+/* Location: Multiple files - Block contact action */
+"contacts.dangerZone.block" = "Заблокировать контакт";
+
+/* Location: Multiple files - Block contact description */
+"contacts.dangerZone.blockDescription" = "Сообщения от этого контакта будут заблокированы";
