@@ -17,31 +17,31 @@ struct DeviceInfoView: View {
                 Section {
                     DeviceIdentityHeader(device: device)
                 } header: {
-                    Text("Device")
+                    Text(L10n.Settings.Device.header)
                 }
 
                 // Connection status
                 Section {
                     HStack {
-                        Label("Status", systemImage: "antenna.radiowaves.left.and.right")
+                        Label(L10n.Settings.DeviceInfo.Connection.status, systemImage: "antenna.radiowaves.left.and.right")
                         Spacer()
                         HStack(spacing: 4) {
                             Circle()
                                 .fill(.green)
                                 .frame(width: 8, height: 8)
-                            Text("Connected")
+                            Text(L10n.Settings.Device.connected)
                                 .foregroundStyle(.secondary)
                         }
                     }
                 } header: {
-                    Text("Connection")
+                    Text(L10n.Settings.DeviceInfo.Connection.header)
                 }
 
                 // Battery and storage
                 Section {
                     if let battery = appState.deviceBattery {
                         HStack {
-                            Label("Battery", systemImage: battery.iconName(using: appState.activeBatteryOCVArray))
+                            Label(L10n.Settings.DeviceInfo.battery, systemImage: battery.iconName(using: appState.activeBatteryOCVArray))
                                 .symbolRenderingMode(.multicolor)
                             Spacer()
                             Text("\(battery.percentage(using: appState.activeBatteryOCVArray))%")
@@ -52,7 +52,7 @@ struct DeviceInfoView: View {
                         }
 
                         HStack {
-                            Label("Storage Used", systemImage: "internaldrive")
+                            Label(L10n.Settings.DeviceInfo.storageUsed, systemImage: "internaldrive")
                             Spacer()
                             Text(formatStorage(used: battery.usedStorageKB ?? 0, total: battery.totalStorageKB ?? 0))
                                 .foregroundStyle(.secondary)
@@ -61,65 +61,65 @@ struct DeviceInfoView: View {
                         StorageBar(used: battery.usedStorageKB ?? 0, total: battery.totalStorageKB ?? 0)
                     } else {
                         HStack {
-                            Label("Battery & Storage", systemImage: "battery.100")
+                            Label(L10n.Settings.DeviceInfo.batteryAndStorage, systemImage: "battery.100")
                             Spacer()
                             ProgressView()
                         }
                     }
                 } header: {
-                    Text("Power & Storage")
+                    Text(L10n.Settings.DeviceInfo.PowerStorage.header)
                 }
 
                 // Firmware info
                 Section {
                     HStack {
-                        Label("Firmware Version", systemImage: "memorychip")
+                        Label(L10n.Settings.DeviceInfo.firmwareVersion, systemImage: "memorychip")
                         Spacer()
                         Text(device.firmwareVersionString.isEmpty ? "v\(device.firmwareVersion)" : device.firmwareVersionString)
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Label("Build Date", systemImage: "calendar")
+                        Label(L10n.Settings.DeviceInfo.buildDate, systemImage: "calendar")
                         Spacer()
-                        Text(device.buildDate.isEmpty ? "Unknown" : device.buildDate)
+                        Text(device.buildDate.isEmpty ? L10n.Settings.DeviceInfo.unknown : device.buildDate)
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Label("Manufacturer", systemImage: "building.2")
+                        Label(L10n.Settings.DeviceInfo.manufacturer, systemImage: "building.2")
                         Spacer()
-                        Text(device.manufacturerName.isEmpty ? "Unknown" : device.manufacturerName)
+                        Text(device.manufacturerName.isEmpty ? L10n.Settings.DeviceInfo.unknown : device.manufacturerName)
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Firmware")
+                    Text(L10n.Settings.DeviceInfo.Firmware.header)
                 }
 
                 // Capabilities
                 Section {
                     HStack {
-                        Label("Max Contacts", systemImage: "person.2")
+                        Label(L10n.Settings.DeviceInfo.maxContacts, systemImage: "person.2")
                         Spacer()
                         Text("\(device.maxContacts)")
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Label("Max Channels", systemImage: "person.3")
+                        Label(L10n.Settings.DeviceInfo.maxChannels, systemImage: "person.3")
                         Spacer()
                         Text("\(device.maxChannels)")
                             .foregroundStyle(.secondary)
                     }
 
                     HStack {
-                        Label("Max TX Power", systemImage: "bolt")
+                        Label(L10n.Settings.DeviceInfo.maxTxPower, systemImage: "bolt")
                         Spacer()
-                        Text("\(device.maxTxPower) dBm")
+                        Text(L10n.Settings.DeviceInfo.txPowerFormat(device.maxTxPower))
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Capabilities")
+                    Text(L10n.Settings.DeviceInfo.Capabilities.header)
                 }
 
                 // Identity
@@ -127,27 +127,27 @@ struct DeviceInfoView: View {
                     NavigationLink {
                         PublicKeyView(publicKey: device.publicKey)
                     } label: {
-                        Label("Public Key", systemImage: "key")
+                        Label(L10n.Settings.DeviceInfo.publicKey, systemImage: "key")
                     }
 
                     Button {
                         showShareSheet = true
                     } label: {
-                        Label("Share My Contact", systemImage: "square.and.arrow.up")
+                        Label(L10n.Settings.DeviceInfo.shareContact, systemImage: "square.and.arrow.up")
                     }
                 } header: {
-                    Text("Identity")
+                    Text(L10n.Settings.DeviceInfo.Identity.header)
                 }
 
             } else {
                 ContentUnavailableView(
-                    "No Device Connected",
+                    L10n.Settings.DeviceInfo.NoDevice.title,
                     systemImage: "antenna.radiowaves.left.and.right.slash",
-                    description: Text("Connect to a MeshCore device to view its information")
+                    description: Text(L10n.Settings.DeviceInfo.NoDevice.description)
                 )
             }
         }
-        .navigationTitle("Device Info")
+        .navigationTitle(L10n.Settings.DeviceInfo.title)
         .refreshable {
             await appState.fetchDeviceBattery()
         }
@@ -189,7 +189,7 @@ private struct DeviceIdentityHeader: View {
                     .font(.title2)
                     .bold()
 
-                Text(device.manufacturerName.isEmpty ? "MeshCore Device" : device.manufacturerName)
+                Text(device.manufacturerName.isEmpty ? L10n.Settings.DeviceInfo.defaultManufacturer : device.manufacturerName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -248,9 +248,9 @@ private struct PublicKeyView: View {
                     .font(.system(.body, design: .monospaced))
                     .textSelection(.enabled)
             } header: {
-                Text("32-byte Ed25519 Public Key")
+                Text(L10n.Settings.PublicKey.header)
             } footer: {
-                Text("This key uniquely identifies your device on the mesh network")
+                Text(L10n.Settings.PublicKey.footer)
             }
 
             Section {
@@ -258,7 +258,7 @@ private struct PublicKeyView: View {
                     copyHapticTrigger += 1
                     UIPasteboard.general.string = publicKey.hexString()
                 } label: {
-                    Label("Copy to Clipboard", systemImage: "doc.on.doc")
+                    Label(L10n.Settings.PublicKey.copy, systemImage: "doc.on.doc")
                 }
 
                 // Base64 representation
@@ -267,10 +267,10 @@ private struct PublicKeyView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             } header: {
-                Text("Base64")
+                Text(L10n.Settings.PublicKey.Base64.header)
             }
         }
-        .navigationTitle("Public Key")
+        .navigationTitle(L10n.Settings.PublicKey.title)
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 }

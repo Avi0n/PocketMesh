@@ -48,9 +48,9 @@ struct BatteryCurveChart: View {
             AxisMarks(values: [0, 25, 50, 75, 100])
         }
         .chartYScale(domain: yAxisMin...yAxisMax)
-        .chartXAxisLabel("Percent")
-        .chartYAxisLabel("Voltage (V)")
-        .accessibilityLabel("Battery discharge curve showing voltage at each percentage level")
+        .chartXAxisLabel(L10n.Settings.Chart.percent)
+        .chartYAxisLabel(L10n.Settings.Chart.voltage)
+        .accessibilityLabel(L10n.Settings.Chart.accessibility)
         .frame(height: 150)
     }
 }

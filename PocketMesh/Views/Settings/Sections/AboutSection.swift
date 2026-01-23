@@ -7,7 +7,7 @@ struct AboutSection: View {
             Link(destination: URL(string: "https://meshcore.co.uk")!) {
                 HStack {
                     Label {
-                        Text("MeshCore Website")
+                        Text(L10n.Settings.About.website)
                     } icon: {
                         Image(systemName: "globe")
                             .foregroundStyle(.tint)
@@ -23,7 +23,7 @@ struct AboutSection: View {
             Link(destination: URL(string: "https://map.meshcore.dev")!) {
                 HStack {
                     Label {
-                        Text("MeshCore Online Map")
+                        Text(L10n.Settings.About.onlineMap)
                     } icon: {
                         Image(systemName: "map")
                             .foregroundStyle(.tint)
@@ -39,7 +39,7 @@ struct AboutSection: View {
             Link(destination: URL(string: "https://github.com/Avi0n/PocketMesh")!) {
                 HStack {
                     Label {
-                        Text("GitHub")
+                        Text(L10n.Settings.About.github)
                     } icon: {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .foregroundStyle(.tint)
@@ -54,7 +54,7 @@ struct AboutSection: View {
 
 
         } header: {
-            Text("About")
+            Text(L10n.Settings.About.header)
         }
     }
 }

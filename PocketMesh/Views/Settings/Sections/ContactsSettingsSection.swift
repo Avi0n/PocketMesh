@@ -15,15 +15,15 @@ struct ContactsSettingsSection: View {
         Section {
             Toggle(isOn: autoAddNodesBinding) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Auto-Add Nodes")
-                    Text("Automatically add nodes from received advertisements")
+                    Text(L10n.Settings.Contacts.autoAdd)
+                    Text(L10n.Settings.Contacts.autoAddDescription)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             .radioDisabled(for: appState.connectionState, or: isSaving)
         } header: {
-            Text("Nodes")
+            Text(L10n.Settings.Contacts.header)
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)

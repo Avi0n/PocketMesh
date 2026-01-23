@@ -24,8 +24,8 @@ struct AdvancedSettingsView: View {
                 // Battery Curve
                 BatteryCurveSection(
                     availablePresets: OCVPreset.selectablePresets,
-                    headerText: "Battery Curve",
-                    footerText: "Configure the voltage-to-percentage curve for your device's battery.",
+                    headerText: L10n.Settings.BatteryCurve.header,
+                    footerText: L10n.Settings.BatteryCurve.footer,
                     selectedPreset: $selectedOCVPreset,
                     voltageValues: $ocvValues,
                     onSave: saveOCVToDevice,
@@ -36,15 +36,15 @@ struct AdvancedSettingsView: View {
                 DangerZoneSection()
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Advanced Settings")
+            .navigationTitle(L10n.Settings.AdvancedSettings.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.Localizable.Common.done) { dismiss() }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L10n.Localizable.Common.done) {
                         UIApplication.shared.sendAction(
                             #selector(UIResponder.resignFirstResponder),
                             to: nil,
