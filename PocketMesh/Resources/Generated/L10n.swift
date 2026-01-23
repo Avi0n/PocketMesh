@@ -87,7 +87,193 @@ public enum L10n {
   public enum Map {
     }
   public enum Onboarding {
+    public enum DeviceScan {
+      /// Location: DeviceScanView.swift - Button to add a new device
+      public static let addDevice = L10n.tr("Onboarding", "deviceScan.addDevice", fallback: "Add Device")
+      /// Location: DeviceScanView.swift - Message shown when device is already paired
+      public static let alreadyPaired = L10n.tr("Onboarding", "deviceScan.alreadyPaired", fallback: "Your device is already paired")
+      /// Location: DeviceScanView.swift - Button label while connecting
+      public static let connecting = L10n.tr("Onboarding", "deviceScan.connecting", fallback: "Connecting...")
+      /// Location: DeviceScanView.swift - Button to connect simulator (debug)
+      public static let connectSimulator = L10n.tr("Onboarding", "deviceScan.connectSimulator", fallback: "Connect Simulator")
+      /// Location: DeviceScanView.swift - Button to connect via WiFi
+      public static let connectViaWifi = L10n.tr("Onboarding", "deviceScan.connectViaWifi", fallback: "Connect via WiFi")
+      /// Location: DeviceScanView.swift - Button to continue after pairing
+      public static let `continue` = L10n.tr("Onboarding", "deviceScan.continue", fallback: "Continue")
+      /// Location: DeviceScanView.swift - Button to continue in demo mode
+      public static let continueDemo = L10n.tr("Onboarding", "deviceScan.continueDemo", fallback: "Continue in Demo Mode")
+      /// Location: DeviceScanView.swift - Button for troubleshooting
+      public static let deviceNotAppearing = L10n.tr("Onboarding", "deviceScan.deviceNotAppearing", fallback: "Device not appearing?")
+      /// Location: DeviceScanView.swift - Subtitle with pairing instructions
+      public static let subtitle = L10n.tr("Onboarding", "deviceScan.subtitle", fallback: "Make sure your MeshCore device is powered on and nearby")
+      /// Location: DeviceScanView.swift - Screen title for device pairing
+      public static let title = L10n.tr("Onboarding", "deviceScan.title", fallback: "Pair Your Device")
+      public enum DemoModeAlert {
+        /// Location: DeviceScanView.swift - Alert message for demo mode
+        public static let message = L10n.tr("Onboarding", "deviceScan.demoModeAlert.message", fallback: "You can now continue without a device. Toggle demo mode in Settings anytime.")
+        /// Location: DeviceScanView.swift - Alert title when demo mode is unlocked
+        public static let title = L10n.tr("Onboarding", "deviceScan.demoModeAlert.title", fallback: "Demo Mode Unlocked")
+      }
+      public enum Instruction {
+        /// Location: DeviceScanView.swift - Instruction step 4
+        public static let enterPin = L10n.tr("Onboarding", "deviceScan.instruction.enterPin", fallback: "Enter the PIN when prompted")
+        /// Location: DeviceScanView.swift - Instruction step 1
+        public static let powerOn = L10n.tr("Onboarding", "deviceScan.instruction.powerOn", fallback: "Power on your MeshCore device")
+        /// Location: DeviceScanView.swift - Instruction step 3
+        public static let selectDevice = L10n.tr("Onboarding", "deviceScan.instruction.selectDevice", fallback: "Select your device from the list")
+        /// Location: DeviceScanView.swift - Instruction step 2
+        public static let tapAdd = L10n.tr("Onboarding", "deviceScan.instruction.tapAdd", fallback: "Tap \"Add Device\" below")
+      }
     }
+    public enum MeshAnimation {
+      /// Location: MeshAnimationView.swift - Accessibility label for mesh visualization
+      public static let accessibilityLabel = L10n.tr("Onboarding", "meshAnimation.accessibilityLabel", fallback: "Mesh network visualization")
+    }
+    public enum Permissions {
+      /// Location: PermissionsView.swift - Button to allow a permission
+      public static let allow = L10n.tr("Onboarding", "permissions.allow", fallback: "Allow")
+      /// Location: PermissionsView.swift - Button to go back
+      public static let back = L10n.tr("Onboarding", "permissions.back", fallback: "Back")
+      /// Location: PermissionsView.swift - Button when all permissions granted
+      public static let `continue` = L10n.tr("Onboarding", "permissions.continue", fallback: "Continue")
+      /// Location: PermissionsView.swift - Button to open system settings
+      public static let openSettings = L10n.tr("Onboarding", "permissions.openSettings", fallback: "Settings")
+      /// Location: PermissionsView.swift - Badge shown for optional permissions
+      public static let `optional` = L10n.tr("Onboarding", "permissions.optional", fallback: "Optional")
+      /// Location: PermissionsView.swift - Button when some permissions skipped
+      public static let skipForNow = L10n.tr("Onboarding", "permissions.skipForNow", fallback: "Skip for Now")
+      /// Location: PermissionsView.swift - Subtitle encouraging notification permission
+      public static let subtitle = L10n.tr("Onboarding", "permissions.subtitle", fallback: "Allow Notifications for the best experience")
+      /// Location: PermissionsView.swift - Screen title for permissions
+      public static let title = L10n.tr("Onboarding", "permissions.title", fallback: "Permissions")
+      public enum Location {
+        /// Location: PermissionsView.swift - Permission card description for location
+        public static let description = L10n.tr("Onboarding", "permissions.location.description", fallback: "See your location on the map")
+        /// Location: PermissionsView.swift - Permission card title for location
+        public static let title = L10n.tr("Onboarding", "permissions.location.title", fallback: "Location")
+      }
+      public enum LocationAlert {
+        /// Location: PermissionsView.swift - Alert message explaining denied location permission
+        public static let message = L10n.tr("Onboarding", "permissions.locationAlert.message", fallback: "Location permission was previously denied. Please enable it in Settings to share your location with mesh contacts.")
+        /// Location: PermissionsView.swift - Alert button to open settings
+        public static let openSettings = L10n.tr("Onboarding", "permissions.locationAlert.openSettings", fallback: "Open Settings")
+        /// Location: PermissionsView.swift - Alert title for location permission
+        public static let title = L10n.tr("Onboarding", "permissions.locationAlert.title", fallback: "Location Permission")
+      }
+      public enum Notifications {
+        /// Location: PermissionsView.swift - Permission card description for notifications
+        public static let description = L10n.tr("Onboarding", "permissions.notifications.description", fallback: "Receive alerts for new messages")
+        /// Location: PermissionsView.swift - Permission card title for notifications
+        public static let title = L10n.tr("Onboarding", "permissions.notifications.title", fallback: "Notifications")
+      }
+    }
+    public enum RadioPreset {
+      /// Location: RadioPresetOnboardingView.swift - Button to apply selected preset
+      public static let apply = L10n.tr("Onboarding", "radioPreset.apply", fallback: "Apply")
+      /// Location: RadioPresetOnboardingView.swift - Button label while applying preset
+      public static let applying = L10n.tr("Onboarding", "radioPreset.applying", fallback: "Applying...")
+      /// Location: RadioPresetOnboardingView.swift - Button to continue
+      public static let `continue` = L10n.tr("Onboarding", "radioPreset.continue", fallback: "Continue")
+      /// Location: RadioPresetOnboardingView.swift - Label for custom (non-preset) radio settings
+      public static let custom = L10n.tr("Onboarding", "radioPreset.custom", fallback: "Custom")
+      /// Location: RadioPresetOnboardingView.swift - Button to skip radio setup
+      public static let skip = L10n.tr("Onboarding", "radioPreset.skip", fallback: "Skip")
+      /// Location: RadioPresetOnboardingView.swift - Subtitle with instructions and Discord link
+      public static let subtitle = L10n.tr("Onboarding", "radioPreset.subtitle", fallback: "You can change these settings at any time in PocketMesh's Settings. If you're not sure which preset to use, ask in the [MeshCore Discord](https://meshcore.co.uk/contact.html)")
+      /// Location: RadioPresetOnboardingView.swift - Screen title for radio settings
+      public static let title = L10n.tr("Onboarding", "radioPreset.title", fallback: "Radio Settings")
+    }
+    public enum Troubleshooting {
+      /// Location: DeviceScanView.swift - Navigation title for troubleshooting sheet
+      public static let title = L10n.tr("Onboarding", "troubleshooting.title", fallback: "Troubleshooting")
+      public enum BasicChecks {
+        /// Location: DeviceScanView.swift - Section header for basic checks
+        public static let header = L10n.tr("Onboarding", "troubleshooting.basicChecks.header", fallback: "Basic Checks")
+        /// Location: DeviceScanView.swift - Check to move device closer
+        public static let moveCloser = L10n.tr("Onboarding", "troubleshooting.basicChecks.moveCloser", fallback: "Move the device closer to your phone")
+        /// Location: DeviceScanView.swift - Check to ensure device is powered on
+        public static let powerOn = L10n.tr("Onboarding", "troubleshooting.basicChecks.powerOn", fallback: "Make sure your device is powered on")
+        /// Location: DeviceScanView.swift - Check to restart the device
+        public static let restart = L10n.tr("Onboarding", "troubleshooting.basicChecks.restart", fallback: "Restart the MeshCore device")
+      }
+      public enum FactoryReset {
+        /// Location: DeviceScanView.swift - Button to clear previous pairing
+        public static let clearPairing = L10n.tr("Onboarding", "troubleshooting.factoryReset.clearPairing", fallback: "Clear Previous Pairing")
+        /// Location: DeviceScanView.swift - Additional explanation about removal confirmation
+        public static let confirmationNote = L10n.tr("Onboarding", "troubleshooting.factoryReset.confirmationNote", fallback: "Tapping below will ask you to confirm removing the old pairing. This is normal — it allows your reset device to appear again.")
+        /// Location: DeviceScanView.swift - Explanation about stale pairings
+        public static let explanation = L10n.tr("Onboarding", "troubleshooting.factoryReset.explanation", fallback: "If you factory-reset your MeshCore device, iOS may still have the old pairing stored. Clearing this in system Settings allows the device to appear again.")
+        /// Location: DeviceScanView.swift - Section header for factory reset help
+        public static let header = L10n.tr("Onboarding", "troubleshooting.factoryReset.header", fallback: "Factory Reset Device?")
+        /// Location: DeviceScanView.swift - Footer when no pairings found
+        public static let noPairings = L10n.tr("Onboarding", "troubleshooting.factoryReset.noPairings", fallback: "No previous pairings found.")
+        /// Location: DeviceScanView.swift - Footer showing pairing count - uses stringsdict
+        public static func pairingsFound(_ p1: Int) -> String {
+          return L10n.tr("Onboarding", "troubleshooting.factoryReset.pairingsFound", p1, fallback: "Found %d previous pairing(s).")
+        }
+      }
+      public enum SystemSettings {
+        /// Location: DeviceScanView.swift - Section header for system settings info
+        public static let header = L10n.tr("Onboarding", "troubleshooting.systemSettings.header", fallback: "System Settings")
+        /// Location: DeviceScanView.swift - Info about managing accessories
+        public static let manageAccessories = L10n.tr("Onboarding", "troubleshooting.systemSettings.manageAccessories", fallback: "You can also manage Bluetooth accessories in:")
+        /// Location: DeviceScanView.swift - Path to accessories in settings
+        public static let path = L10n.tr("Onboarding", "troubleshooting.systemSettings.path", fallback: "Settings → Privacy & Security → Accessories")
+      }
+    }
+    public enum Welcome {
+      /// Location: WelcomeView.swift - Button to proceed to next onboarding step
+      public static let getStarted = L10n.tr("Onboarding", "welcome.getStarted", fallback: "Get Started")
+      /// Location: WelcomeView.swift - Subtitle describing the app
+      public static let subtitle = L10n.tr("Onboarding", "welcome.subtitle", fallback: "Unofficial MeshCore client for iOS")
+      /// Location: WelcomeView.swift - App title displayed on welcome screen
+      public static let title = L10n.tr("Onboarding", "welcome.title", fallback: "PocketMesh")
+      public enum Feature {
+        public enum Community {
+          /// Location: WelcomeView.swift - Feature description for community network
+          public static let description = L10n.tr("Onboarding", "welcome.feature.community.description", fallback: "Network built by users like you")
+          /// Location: WelcomeView.swift - Feature title for community network
+          public static let title = L10n.tr("Onboarding", "welcome.feature.community.title", fallback: "Community Network")
+        }
+        public enum MultiHop {
+          /// Location: WelcomeView.swift - Feature description for multi-hop routing
+          public static let description = L10n.tr("Onboarding", "welcome.feature.multiHop.description", fallback: "Your message finds a path across the mesh")
+          /// Location: WelcomeView.swift - Feature title for multi-hop routing
+          public static let title = L10n.tr("Onboarding", "welcome.feature.multiHop.title", fallback: "Multi-Hop Routing")
+        }
+      }
+    }
+    public enum WifiConnection {
+      /// Location: WiFiConnectionSheet.swift - Button to initiate connection
+      public static let connect = L10n.tr("Onboarding", "wifiConnection.connect", fallback: "Connect")
+      /// Location: WiFiConnectionSheet.swift - Button label while connecting
+      public static let connecting = L10n.tr("Onboarding", "wifiConnection.connecting", fallback: "Connecting...")
+      /// Location: WiFiConnectionSheet.swift - Navigation title
+      public static let title = L10n.tr("Onboarding", "wifiConnection.title", fallback: "Connect via WiFi")
+      public enum ConnectionDetails {
+        /// Location: WiFiConnectionSheet.swift - Footer explaining connection details
+        public static let footer = L10n.tr("Onboarding", "wifiConnection.connectionDetails.footer", fallback: "Enter your MeshCore device's local network address. The default port is 5000.")
+        /// Location: WiFiConnectionSheet.swift - Section header for connection details
+        public static let header = L10n.tr("Onboarding", "wifiConnection.connectionDetails.header", fallback: "Connection Details")
+      }
+      public enum Error {
+        /// Location: WiFiConnectionSheet.swift - Error message for invalid port
+        public static let invalidPort = L10n.tr("Onboarding", "wifiConnection.error.invalidPort", fallback: "Invalid port number")
+      }
+      public enum IpAddress {
+        /// Location: WiFiConnectionSheet.swift - Accessibility label for clear IP button
+        public static let clearAccessibility = L10n.tr("Onboarding", "wifiConnection.ipAddress.clearAccessibility", fallback: "Clear IP address")
+        /// Location: WiFiConnectionSheet.swift - Placeholder for IP address field
+        public static let placeholder = L10n.tr("Onboarding", "wifiConnection.ipAddress.placeholder", fallback: "IP Address")
+      }
+      public enum Port {
+        /// Location: WiFiConnectionSheet.swift - Accessibility label for clear port button
+        public static let clearAccessibility = L10n.tr("Onboarding", "wifiConnection.port.clearAccessibility", fallback: "Clear port")
+        /// Location: WiFiConnectionSheet.swift - Placeholder for port field
+        public static let placeholder = L10n.tr("Onboarding", "wifiConnection.port.placeholder", fallback: "Port")
+      }
+    }
+  }
   public enum RemoteNodes {
     }
   public enum Settings {

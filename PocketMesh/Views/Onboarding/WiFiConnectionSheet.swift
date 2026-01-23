@@ -93,7 +93,7 @@ struct WiFiConnectionSheet: View {
             Form {
                 Section {
                     HStack {
-                        TextField("IP Address", text: $ipAddress)
+                        TextField(L10n.Onboarding.WifiConnection.IpAddress.placeholder, text: $ipAddress)
                             .keyboardType(.decimalPad)
                             .textContentType(.none)
                             .autocorrectionDisabled()
@@ -107,12 +107,12 @@ struct WiFiConnectionSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Clear IP address")
+                            .accessibilityLabel(L10n.Onboarding.WifiConnection.IpAddress.clearAccessibility)
                         }
                     }
 
                     HStack {
-                        TextField("Port", text: $port)
+                        TextField(L10n.Onboarding.WifiConnection.Port.placeholder, text: $port)
                             .keyboardType(.numberPad)
                             .focused($focusedField, equals: .port)
 
@@ -124,13 +124,13 @@ struct WiFiConnectionSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Clear port")
+                            .accessibilityLabel(L10n.Onboarding.WifiConnection.Port.clearAccessibility)
                         }
                     }
                 } header: {
-                    Text("Connection Details")
+                    Text(L10n.Onboarding.WifiConnection.ConnectionDetails.header)
                 } footer: {
-                    Text("Enter your MeshCore device's local network address. The default port is 5000.")
+                    Text(L10n.Onboarding.WifiConnection.ConnectionDetails.footer)
                 }
 
                 if let errorMessage {
@@ -149,9 +149,9 @@ struct WiFiConnectionSheet: View {
                             if isConnecting {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Connecting...")
+                                Text(L10n.Onboarding.WifiConnection.connecting)
                             } else {
-                                Text("Connect")
+                                Text(L10n.Onboarding.WifiConnection.connect)
                             }
                             Spacer()
                         }
@@ -159,18 +159,18 @@ struct WiFiConnectionSheet: View {
                     .disabled(!isValidInput || isConnecting)
                 }
             }
-            .navigationTitle("Connect via WiFi")
+            .navigationTitle(L10n.Onboarding.WifiConnection.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Localizable.Common.cancel) {
                         dismiss()
                     }
                     .disabled(isConnecting)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L10n.Localizable.Common.done) {
                         focusedField = nil
                     }
                 }
@@ -186,7 +186,7 @@ struct WiFiConnectionSheet: View {
 
     private func connect() {
         guard let portNumber = UInt16(port) else {
-            errorMessage = "Invalid port number"
+            errorMessage = L10n.Onboarding.WifiConnection.Error.invalidPort
             return
         }
 

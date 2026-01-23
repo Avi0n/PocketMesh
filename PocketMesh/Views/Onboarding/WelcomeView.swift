@@ -14,11 +14,11 @@ struct WelcomeView: View {
 
             // App title
             VStack(spacing: 16) {
-                Text("PocketMesh")
+                Text(L10n.Onboarding.Welcome.title)
                     .font(.largeTitle)
                     .bold()
 
-                Text("Unofficial MeshCore client for iOS")
+                Text(L10n.Onboarding.Welcome.subtitle)
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -29,14 +29,14 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: 20) {
                 FeatureRow(
                     icon: "arrow.trianglehead.branch",
-                    title: "Multi-Hop Routing",
-                    description: "Your message finds a path across the mesh"
+                    title: L10n.Onboarding.Welcome.Feature.MultiHop.title,
+                    description: L10n.Onboarding.Welcome.Feature.MultiHop.description
                 )
 
                 FeatureRow(
                     icon: "person.3.fill",
-                    title: "Community Network",
-                    description: "Network built by users like you"
+                    title: L10n.Onboarding.Welcome.Feature.Community.title,
+                    description: L10n.Onboarding.Welcome.Feature.Community.description
                 )
             }
             .padding(.horizontal)
@@ -47,7 +47,7 @@ struct WelcomeView: View {
             Button {
                 appState.onboardingPath.append(.permissions)
             } label: {
-                Text("Get Started")
+                Text(L10n.Onboarding.Welcome.getStarted)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding()

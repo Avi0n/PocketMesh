@@ -35,11 +35,11 @@ struct RadioPresetOnboardingView: View {
                     .foregroundStyle(.tint)
                     .symbolEffect(.pulse.wholeSymbol, options: .repeating)
 
-                Text("Radio Settings")
+                Text(L10n.Onboarding.RadioPreset.title)
                     .font(.largeTitle)
                     .bold()
 
-                Text("You can change these settings at any time in PocketMesh's Settings. If you're not sure which preset to use, ask in the [MeshCore Discord](https://meshcore.co.uk/contact.html)")
+                Text(.init(L10n.Onboarding.RadioPreset.subtitle))
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -77,7 +77,7 @@ struct RadioPresetOnboardingView: View {
                             ProgressView()
                                 .tint(.white)
                         }
-                        Text(isApplying ? "Applying..." : "Apply")
+                        Text(isApplying ? L10n.Onboarding.RadioPreset.applying : L10n.Onboarding.RadioPreset.apply)
                     }
                     .font(.subheadline.weight(.medium))
                     .padding(.horizontal, 24)
@@ -95,7 +95,7 @@ struct RadioPresetOnboardingView: View {
                 Button {
                     completeOnboarding()
                 } label: {
-                    Text("Continue")
+                    Text(L10n.Onboarding.RadioPreset.continue)
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -106,7 +106,7 @@ struct RadioPresetOnboardingView: View {
                 Button {
                     completeOnboarding()
                 } label: {
-                    Text("Skip")
+                    Text(L10n.Onboarding.RadioPreset.skip)
                         .font(.subheadline)
                 }
                 .buttonStyle(.plain)
@@ -216,7 +216,7 @@ private struct PresetCard: View {
             Spacer()
 
             // Preset name
-            Text(preset?.name ?? "Custom")
+            Text(preset?.name ?? L10n.Onboarding.RadioPreset.custom)
                 .font(.headline)
                 .lineLimit(1)
 
