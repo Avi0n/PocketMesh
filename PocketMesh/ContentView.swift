@@ -21,44 +21,44 @@ struct ContentView: View {
                 appState.handleBecameActive()
             }
         }
-        .alert("Connection Failed", isPresented: $appState.showingConnectionFailedAlert) {
+        .alert(L10n.Localizable.Alert.ConnectionFailed.title, isPresented: $appState.showingConnectionFailedAlert) {
             if appState.failedPairingDeviceID != nil {
                 // Wrong PIN scenario - offer to remove and retry
-                Button("Remove & Try Again") {
+                Button(L10n.Localizable.Alert.ConnectionFailed.removeAndRetry) {
                     appState.removeFailedPairingAndRetry()
                 }
-                Button("Cancel", role: .cancel) {
+                Button(L10n.Localizable.Common.cancel, role: .cancel) {
                     appState.failedPairingDeviceID = nil
                 }
             } else if appState.pendingReconnectDeviceID != nil {
-                Button("Try Again") {
+                Button(L10n.Localizable.Common.tryAgain) {
                     Task {
                         if let deviceID = appState.pendingReconnectDeviceID {
                             try? await appState.connectionManager.connect(to: deviceID)
                         }
                     }
                 }
-                Button("Cancel", role: .cancel) {
+                Button(L10n.Localizable.Common.cancel, role: .cancel) {
                     appState.pendingReconnectDeviceID = nil
                 }
             } else {
-                Button("OK", role: .cancel) { }
+                Button(L10n.Localizable.Common.ok, role: .cancel) { }
             }
         } message: {
-            Text(appState.connectionFailedMessage ?? "Unable to connect to device.")
+            Text(appState.connectionFailedMessage ?? L10n.Localizable.Alert.ConnectionFailed.defaultMessage)
         }
         .alert(
-            "Could Not Connect",
+            L10n.Localizable.Alert.CouldNotConnect.title,
             isPresented: Binding(
                 get: { appState.otherAppWarningDeviceID != nil },
                 set: { if !$0 { appState.otherAppWarningDeviceID = nil } }
             )
         ) {
-            Button("OK") {
+            Button(L10n.Localizable.Common.ok) {
                 appState.cancelOtherAppWarning()
             }
         } message: {
-            Text("Ensure no other app is connected to the device, then try again.")
+            Text(L10n.Localizable.Alert.CouldNotConnect.otherAppMessage)
         }
     }
 }
@@ -120,24 +120,24 @@ struct MainTabView: View {
 
         ZStack(alignment: .top) {
             TabView(selection: $appState.selectedTab) {
-            Tab("Chats", systemImage: "message.fill", value: 0) {
+            Tab(L10n.Localizable.Tabs.chats, systemImage: "message.fill", value: 0) {
                 ChatsView()
             }
             .badge(appState.services?.notificationService.badgeCount ?? 0)
 
-            Tab("Nodes", systemImage: "flipphone", value: 1) {
+            Tab(L10n.Localizable.Tabs.nodes, systemImage: "flipphone", value: 1) {
                 ContactsListView()
             }
 
-            Tab("Map", systemImage: "map.fill", value: 2) {
+            Tab(L10n.Localizable.Tabs.map, systemImage: "map.fill", value: 2) {
                 MapView()
             }
 
-            Tab("Tools", systemImage: "wrench.and.screwdriver", value: 3) {
+            Tab(L10n.Localizable.Tabs.tools, systemImage: "wrench.and.screwdriver", value: 3) {
                 ToolsView()
             }
 
-            Tab("Settings", systemImage: "gear", value: 4) {
+            Tab(L10n.Localizable.Tabs.settings, systemImage: "gear", value: 4) {
                 SettingsView()
             }
         }
