@@ -27,13 +27,20 @@ enum PathDiscoveryResult: Equatable {
     var description: String {
         switch self {
         case .success(let hopCount, let fromCache):
-            let pathType = hopCount == 0 ? "Direct" : "\(hopCount) hop\(hopCount > 1 ? "s" : "")"
-            let source = fromCache ? ". Using cached info from advertisement. Node may have telemetry disabled." : ""
+            let pathType: String
+            if hopCount == 0 {
+                pathType = L10n.Contacts.Contacts.PathDiscovery.direct
+            } else if hopCount == 1 {
+                pathType = L10n.Contacts.Contacts.PathDiscovery.Hops.singular
+            } else {
+                pathType = L10n.Contacts.Contacts.PathDiscovery.Hops.plural(hopCount)
+            }
+            let source = fromCache ? L10n.Contacts.Contacts.PathDiscovery.cachedSuffix : ""
             return "\(pathType)\(source)"
         case .noPathFound:
-            return "Remote node did not respond. Nodes must have telemetry requests enabled to respond to path discovery."
+            return L10n.Contacts.Contacts.PathDiscovery.noResponse
         case .failed(let message):
-            return "Failed: \(message)"
+            return L10n.Contacts.Contacts.PathDiscovery.failed(message)
         }
     }
 }
@@ -167,7 +174,7 @@ final class PathManagementViewModel {
             )
             onContactNeedsRefresh?()
         } catch {
-            errorMessage = "Save path failed: \(error.localizedDescription)"
+            errorMessage = L10n.Contacts.Contacts.PathManagement.Error.saveFailed(error.localizedDescription)
             showError = true
         }
 
@@ -305,7 +312,7 @@ final class PathManagementViewModel {
             )
             onContactNeedsRefresh?()
         } catch {
-            errorMessage = "Reset path failed: \(error.localizedDescription)"
+            errorMessage = L10n.Contacts.Contacts.PathManagement.Error.resetFailed(error.localizedDescription)
             showError = true
         }
 
@@ -329,7 +336,7 @@ final class PathManagementViewModel {
             )
             onContactNeedsRefresh?()
         } catch {
-            errorMessage = "Set path failed: \(error.localizedDescription)"
+            errorMessage = L10n.Contacts.Contacts.PathManagement.Error.setFailed(error.localizedDescription)
             showError = true
         }
 

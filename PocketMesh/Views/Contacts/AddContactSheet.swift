@@ -51,17 +51,17 @@ struct AddContactSheet: View {
                     ErrorSection(message: errorMessage)
                 }
             }
-            .navigationTitle("Add Contact")
+            .navigationTitle(L10n.Contacts.Contacts.Add.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Contacts.Contacts.Common.cancel) {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(L10n.Contacts.Contacts.Add.add) {
                         Task {
                             await handleAdd()
                         }
@@ -88,19 +88,19 @@ struct AddContactSheet: View {
         guard let services = appState.services,
               let deviceID = appState.connectedDevice?.id else {
             logger.error("Services or device not available")
-            errorMessage = "Not connected to device"
+            errorMessage = L10n.Contacts.Contacts.Add.Error.notConnected
             return
         }
 
         guard let publicKeyData = Data(hexString: normalizedPublicKeyHex) else {
             logger.error("Failed to convert hex string to data: \(normalizedPublicKeyHex)")
-            errorMessage = "Invalid public key format"
+            errorMessage = L10n.Contacts.Contacts.Add.Error.invalidFormat
             return
         }
 
         guard publicKeyData.count == ProtocolLimits.publicKeySize else {
             logger.error("Public key is not \(ProtocolLimits.publicKeySize) bytes: \(publicKeyData.count)")
-            errorMessage = "Public key must be \(ProtocolLimits.publicKeySize) bytes (\(Constants.publicKeyHexLength) hex characters)"
+            errorMessage = L10n.Contacts.Contacts.Add.Error.invalidSize(ProtocolLimits.publicKeySize, Constants.publicKeyHexLength)
             return
         }
 
@@ -130,11 +130,11 @@ struct AddContactSheet: View {
             dismiss()
         } catch ContactServiceError.contactTableFull {
             logger.error("Contact table is full")
-            errorMessage = "Contact table is full (max \(ProtocolLimits.maxContacts) contacts)"
+            errorMessage = L10n.Contacts.Contacts.Add.Error.tableFull(ProtocolLimits.maxContacts)
             isSubmitting = false
         } catch {
             logger.error("Failed to add contact: \(error.localizedDescription)")
-            errorMessage = "Failed to add contact: \(error.localizedDescription)"
+            errorMessage = "\(L10n.Contacts.Contacts.Common.error): \(error.localizedDescription)"
             isSubmitting = false
         }
     }
@@ -156,7 +156,7 @@ private struct ScannerSection: View {
             Button {
                 showScanner = true
             } label: {
-                Label("Scan QR Code", systemImage: "camera")
+                Label(L10n.Contacts.Contacts.Add.scanQR, systemImage: "camera")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -171,14 +171,14 @@ private struct TypePickerSection: View {
 
     var body: some View {
         Section {
-            Picker("Type", selection: $selectedType) {
-                Text("Chat").tag(ContactType.chat)
-                Text("Repeater").tag(ContactType.repeater)
-                Text("Room").tag(ContactType.room)
+            Picker(L10n.Contacts.Contacts.Add.type, selection: $selectedType) {
+                Text(L10n.Contacts.Contacts.Type.chat).tag(ContactType.chat)
+                Text(L10n.Contacts.Contacts.Type.repeater).tag(ContactType.repeater)
+                Text(L10n.Contacts.Contacts.Type.room).tag(ContactType.room)
             }
             .pickerStyle(.segmented)
         } header: {
-            Text("Type")
+            Text(L10n.Contacts.Contacts.Add.type)
         }
     }
 }
@@ -190,11 +190,11 @@ private struct NameInputSection: View {
 
     var body: some View {
         Section {
-            TextField("Contact Name", text: $contactName)
+            TextField(L10n.Contacts.Contacts.Add.contactName, text: $contactName)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
         } header: {
-            Text("Name")
+            Text(L10n.Contacts.Contacts.Add.name)
         }
     }
 }
@@ -208,7 +208,7 @@ private struct PublicKeyInputSection: View {
 
     var body: some View {
         Section {
-            TextField("\(Constants.publicKeyHexLength) hex characters", text: $publicKeyHex)
+            TextField(L10n.Contacts.Contacts.Add.hexPlaceholder(Constants.publicKeyHexLength), text: $publicKeyHex)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.asciiCapable)
@@ -224,19 +224,19 @@ private struct PublicKeyInputSection: View {
             if !publicKeyHex.isEmpty {
                 HStack {
                     if isValid {
-                        Label("Valid", systemImage: "checkmark.circle.fill")
+                        Label(L10n.Contacts.Contacts.Add.valid, systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                     } else {
-                        Label("\(normalizedCount)/\(Constants.publicKeyHexLength) characters", systemImage: "exclamationmark.triangle.fill")
+                        Label(L10n.Contacts.Contacts.Add.characterCount(normalizedCount, Constants.publicKeyHexLength), systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                     }
                 }
                 .font(.caption)
             }
         } header: {
-            Text("Public Key")
+            Text(L10n.Contacts.Contacts.Add.publicKey)
         } footer: {
-            Text("Enter the \(Constants.publicKeyHexLength)-character hexadecimal public key of the contact")
+            Text(L10n.Contacts.Contacts.Add.publicKeyFooter(Constants.publicKeyHexLength))
         }
     }
 }

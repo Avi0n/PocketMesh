@@ -8,8 +8,8 @@ enum TracePathViewMode: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .list: "List"
-        case .map: "Map"
+        case .list: L10n.Contacts.Contacts.Trace.Mode.list
+        case .map: L10n.Contacts.Contacts.Trace.Mode.map
         }
     }
 }
@@ -45,7 +45,7 @@ struct TracePathView: View {
                 TracePathMapView(traceViewModel: viewModel)
             }
         }
-        .navigationTitle("Trace Path")
+        .navigationTitle(L10n.Contacts.Contacts.Trace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -58,7 +58,7 @@ struct TracePathView: View {
                 .fixedSize()
             }
             ToolbarItem(placement: .primaryAction) {
-                Button("Saved", systemImage: "bookmark") {
+                Button(L10n.Contacts.Contacts.Trace.saved, systemImage: "bookmark") {
                     showingSavedPaths = true
                 }
             }
@@ -91,21 +91,21 @@ struct TracePathView: View {
                 .presentationDragIndicator(.visible)
         }
         .confirmationDialog(
-            "Clear Path",
+            L10n.Contacts.Contacts.Trace.clearPath,
             isPresented: $showingClearConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Clear Path", role: .destructive) {
+            Button(L10n.Contacts.Contacts.Trace.clearPath, role: .destructive) {
                 viewModel.clearPath()
             }
         } message: {
-            Text("Remove all repeaters from the path?")
+            Text(L10n.Contacts.Contacts.Trace.clearPathMessage)
         }
-        .alert("Trace Failed", isPresented: Binding(
+        .alert(L10n.Contacts.Contacts.Trace.failed, isPresented: Binding(
             get: { viewModel.errorMessage != nil },
             set: { if !$0 { viewModel.clearError() } }
         )) {
-            Button("OK") {
+            Button(L10n.Contacts.Contacts.Common.ok) {
                 viewModel.clearError()
             }
         } message: {
@@ -185,7 +185,7 @@ private struct JumpToPathButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            Label("Run Below", systemImage: "arrow.down")
+            Label(L10n.Contacts.Contacts.Trace.runBelow, systemImage: "arrow.down")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
@@ -199,8 +199,8 @@ private struct JumpToPathButton: View {
         .scaleEffect(isVisible ? 1 : 0.8)
         .allowsHitTesting(isVisible)
         .animation(.snappy(duration: 0.2), value: isVisible)
-        .accessibilityLabel("Jump to Run Trace button")
-        .accessibilityHint("Double tap to scroll to the bottom of the path")
+        .accessibilityLabel(L10n.Contacts.Contacts.Trace.jumpLabel)
+        .accessibilityHint(L10n.Contacts.Contacts.Trace.jumpHint)
         .accessibilityHidden(!isVisible)
     }
 }

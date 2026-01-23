@@ -679,7 +679,779 @@ public enum L10n {
     }
   }
   public enum Contacts {
+    public enum Contacts {
+      public enum Add {
+        /// Location: AddContactSheet.swift - Purpose: Add button
+        public static let add = L10n.tr("Contacts", "contacts.add.add", fallback: "Add")
+        /// Location: AddContactSheet.swift - Purpose: Character count status
+        public static func characterCount(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.add.characterCount", p1, p2, fallback: "%d/%d characters")
+        }
+        /// Location: AddContactSheet.swift - Purpose: Contact name placeholder
+        public static let contactName = L10n.tr("Contacts", "contacts.add.contactName", fallback: "Contact Name")
+        /// Location: AddContactSheet.swift - Purpose: Public key placeholder
+        public static func hexPlaceholder(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.add.hexPlaceholder", p1, fallback: "%d hex characters")
+        }
+        /// Location: AddContactSheet.swift - Purpose: Name section header
+        public static let name = L10n.tr("Contacts", "contacts.add.name", fallback: "Name")
+        /// Location: AddContactSheet.swift - Purpose: Public key section header
+        public static let publicKey = L10n.tr("Contacts", "contacts.add.publicKey", fallback: "Public Key")
+        /// Location: AddContactSheet.swift - Purpose: Public key footer
+        public static func publicKeyFooter(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.add.publicKeyFooter", p1, fallback: "Enter the %d-character hexadecimal public key of the contact")
+        }
+        /// Location: AddContactSheet.swift - Purpose: Scan QR button label
+        public static let scanQR = L10n.tr("Contacts", "contacts.add.scanQR", fallback: "Scan QR Code")
+        /// Location: AddContactSheet.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.add.title", fallback: "Add Contact")
+        /// Location: AddContactSheet.swift - Purpose: Type section header
+        public static let type = L10n.tr("Contacts", "contacts.add.type", fallback: "Type")
+        /// Location: AddContactSheet.swift - Purpose: Valid key status
+        public static let valid = L10n.tr("Contacts", "contacts.add.valid", fallback: "Valid")
+        public enum Error {
+          /// Location: AddContactSheet.swift - Purpose: Invalid public key format error
+          public static let invalidFormat = L10n.tr("Contacts", "contacts.add.error.invalidFormat", fallback: "Invalid public key format")
+          /// Location: AddContactSheet.swift - Purpose: Invalid public key size error
+          public static func invalidSize(_ p1: Int, _ p2: Int) -> String {
+            return L10n.tr("Contacts", "contacts.add.error.invalidSize", p1, p2, fallback: "Public key must be %d bytes (%d hex characters)")
+          }
+          /// Location: AddContactSheet.swift - Purpose: Not connected error
+          public static let notConnected = L10n.tr("Contacts", "contacts.add.error.notConnected", fallback: "Not connected to device")
+          /// Location: AddContactSheet.swift - Purpose: Contact table full error
+          public static func tableFull(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.add.error.tableFull", p1, fallback: "Contact table is full (max %d contacts)")
+          }
+        }
+      }
+      public enum Blocked {
+        /// Location: BlockedContactsView.swift - Purpose: Loading progress
+        public static let loading = L10n.tr("Contacts", "contacts.blocked.loading", fallback: "Loading...")
+        /// Location: BlockedContactsView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.blocked.title", fallback: "Blocked Contacts")
+        public enum Empty {
+          /// Location: BlockedContactsView.swift - Purpose: Empty state description
+          public static let description = L10n.tr("Contacts", "contacts.blocked.empty.description", fallback: "Contacts you block will appear here.")
+          /// Location: BlockedContactsView.swift - Purpose: Empty state title
+          public static let title = L10n.tr("Contacts", "contacts.blocked.empty.title", fallback: "No Blocked Contacts")
+        }
+      }
+      public enum CodeInput {
+        public enum Error {
+          /// Location: TracePathViewModel.swift - Purpose: Already in path error
+          public static func alreadyInPath(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.codeInput.error.alreadyInPath", String(describing: p1), fallback: "%@ already in path")
+          }
+          /// Location: TracePathViewModel.swift - Purpose: Invalid format error
+          public static func invalidFormat(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.codeInput.error.invalidFormat", String(describing: p1), fallback: "Invalid format: %@")
+          }
+          /// Location: TracePathViewModel.swift - Purpose: Not found error
+          public static func notFound(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.codeInput.error.notFound", String(describing: p1), fallback: "%@ not found")
+          }
+        }
+      }
+      public enum Common {
+        /// Location: Multiple files - Purpose: Generic Cancel button
+        public static let cancel = L10n.tr("Contacts", "contacts.common.cancel", fallback: "Cancel")
+        /// Location: Multiple files - Purpose: Generic Delete button
+        public static let delete = L10n.tr("Contacts", "contacts.common.delete", fallback: "Delete")
+        /// Location: Multiple files - Purpose: Generic Done button
+        public static let done = L10n.tr("Contacts", "contacts.common.done", fallback: "Done")
+        /// Location: Multiple files - Purpose: Generic Edit button
+        public static let edit = L10n.tr("Contacts", "contacts.common.edit", fallback: "Edit")
+        /// Location: Multiple files - Purpose: Generic Error alert title
+        public static let error = L10n.tr("Contacts", "contacts.common.error", fallback: "Error")
+        /// Location: Multiple files - Purpose: Fallback error message
+        public static let errorOccurred = L10n.tr("Contacts", "contacts.common.errorOccurred", fallback: "An error occurred")
+        /// Location: Multiple files - Purpose: Generic OK button
+        public static let ok = L10n.tr("Contacts", "contacts.common.ok", fallback: "OK")
+        /// Location: Multiple files - Purpose: Generic Save button
+        public static let save = L10n.tr("Contacts", "contacts.common.save", fallback: "Save")
+      }
+      public enum Detail {
+        /// Location: ContactDetailView.swift - Purpose: Add to favorites button
+        public static let addToFavorites = L10n.tr("Contacts", "contacts.detail.addToFavorites", fallback: "Add to Favorites")
+        /// Location: ContactDetailView.swift - Purpose: Admin access button
+        public static let adminAccess = L10n.tr("Contacts", "contacts.detail.adminAccess", fallback: "Admin Access")
+        /// Location: ContactDetailView.swift - Purpose: Block contact button
+        public static let blockContact = L10n.tr("Contacts", "contacts.detail.blockContact", fallback: "Block Contact")
+        /// Location: ContactDetailView.swift - Purpose: Blocked status indicator
+        public static let blocked = L10n.tr("Contacts", "contacts.detail.blocked", fallback: "Blocked")
+        /// Location: ContactDetailView.swift - Purpose: Coordinates label
+        public static let coordinates = L10n.tr("Contacts", "contacts.detail.coordinates", fallback: "Coordinates")
+        /// Location: ContactDetailView.swift - Purpose: Danger zone section header
+        public static let dangerZone = L10n.tr("Contacts", "contacts.detail.dangerZone", fallback: "Danger Zone")
+        /// Location: ContactDetailView.swift - Purpose: Delete button with type
+        public static func deleteType(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.detail.deleteType", String(describing: p1), fallback: "Delete %@")
+        }
+        /// Location: ContactDetailView.swift - Purpose: Path discovery in progress
+        public static let discoveringPath = L10n.tr("Contacts", "contacts.detail.discoveringPath", fallback: "Discovering path...")
+        /// Location: ContactDetailView.swift - Purpose: Discover path button
+        public static let discoverPath = L10n.tr("Contacts", "contacts.detail.discoverPath", fallback: "Discover Path")
+        /// Location: ContactDetailView.swift - Purpose: Edit path button
+        public static let editPath = L10n.tr("Contacts", "contacts.detail.editPath", fallback: "Edit Path")
+        /// Location: ContactDetailView.swift - Purpose: Favorite status indicator
+        public static let favorite = L10n.tr("Contacts", "contacts.detail.favorite", fallback: "Favorite")
+        /// Location: ContactDetailView.swift - Purpose: Footer for flood routing
+        public static let floodFooter = L10n.tr("Contacts", "contacts.detail.floodFooter", fallback: "Messages are broadcast to all nodes. Discover Path to find an optimal route.")
+        /// Location: ContactDetailView.swift - Purpose: Has location status indicator
+        public static let hasLocation = L10n.tr("Contacts", "contacts.detail.hasLocation", fallback: "Has Location")
+        /// Location: ContactDetailView.swift - Purpose: Hops away label
+        public static let hopsAway = L10n.tr("Contacts", "contacts.detail.hopsAway", fallback: "Hops Away")
+        /// Location: ContactDetailView.swift - Purpose: Info section header
+        public static let info = L10n.tr("Contacts", "contacts.detail.info", fallback: "Info")
+        /// Location: ContactDetailView.swift - Purpose: Join room button
+        public static let joinRoom = L10n.tr("Contacts", "contacts.detail.joinRoom", fallback: "Join Room")
+        /// Location: ContactDetailView.swift - Purpose: Last advert label
+        public static let lastAdvert = L10n.tr("Contacts", "contacts.detail.lastAdvert", fallback: "Last Advert")
+        /// Location: ContactDetailView.swift - Purpose: Location section header
+        public static let location = L10n.tr("Contacts", "contacts.detail.location", fallback: "Location")
+        /// Location: ContactDetailView.swift - Purpose: Name label
+        public static let name = L10n.tr("Contacts", "contacts.detail.name", fallback: "Name")
+        /// Location: ContactDetailView.swift - Purpose: Network path section header
+        public static let networkPath = L10n.tr("Contacts", "contacts.detail.networkPath", fallback: "Network Path")
+        /// Location: ContactDetailView.swift - Purpose: Nickname label
+        public static let nickname = L10n.tr("Contacts", "contacts.detail.nickname", fallback: "Nickname")
+        /// Location: ContactDetailView.swift - Purpose: No nickname placeholder
+        public static let nicknameNone = L10n.tr("Contacts", "contacts.detail.nicknameNone", fallback: "None")
+        /// Location: ContactDetailView.swift - Purpose: Open in Maps button
+        public static let openInMaps = L10n.tr("Contacts", "contacts.detail.openInMaps", fallback: "Open in Maps")
+        /// Location: ContactDetailView.swift - Purpose: Footer for path routing
+        public static let pathFooter = L10n.tr("Contacts", "contacts.detail.pathFooter", fallback: "Messages route through the path shown. Reset Path to use flood routing instead.")
+        /// Location: ContactDetailView.swift - Purpose: Public key label
+        public static let publicKey = L10n.tr("Contacts", "contacts.detail.publicKey", fallback: "Public Key")
+        /// Location: ContactDetailView.swift - Purpose: Remove from favorites button
+        public static let removeFromFavorites = L10n.tr("Contacts", "contacts.detail.removeFromFavorites", fallback: "Remove from Favorites")
+        /// Location: ContactDetailView.swift - Purpose: Reset path button
+        public static let resetPath = L10n.tr("Contacts", "contacts.detail.resetPath", fallback: "Reset Path")
+        /// Location: ContactDetailView.swift - Purpose: Route label
+        public static let route = L10n.tr("Contacts", "contacts.detail.route", fallback: "Route")
+        /// Location: ContactDetailView.swift - Purpose: Accessibility label for direct route
+        public static let routeDirect = L10n.tr("Contacts", "contacts.detail.routeDirect", fallback: "Route: Direct")
+        /// Location: ContactDetailView.swift - Purpose: Accessibility label for flood route
+        public static let routeFlood = L10n.tr("Contacts", "contacts.detail.routeFlood", fallback: "Route: Flood")
+        /// Location: ContactDetailView.swift - Purpose: Accessibility label prefix for route
+        public static func routePrefix(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.detail.routePrefix", String(describing: p1), fallback: "Route: %@")
+        }
+        /// Location: ContactDetailView.swift - Purpose: Discovery countdown
+        public static func secondsRemaining(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.detail.secondsRemaining", p1, fallback: "Up to %d seconds remaining")
+        }
+        /// Location: ContactDetailView.swift - Purpose: Send message button
+        public static let sendMessage = L10n.tr("Contacts", "contacts.detail.sendMessage", fallback: "Send Message")
+        /// Location: ContactDetailView.swift - Purpose: Share contact button
+        public static let shareContact = L10n.tr("Contacts", "contacts.detail.shareContact", fallback: "Share Contact")
+        /// Location: ContactDetailView.swift - Purpose: Share via advert button
+        public static let shareViaAdvert = L10n.tr("Contacts", "contacts.detail.shareViaAdvert", fallback: "Share Contact via Advert")
+        /// Location: ContactDetailView.swift - Purpose: Technical section header
+        public static let technical = L10n.tr("Contacts", "contacts.detail.technical", fallback: "Technical")
+        /// Location: ContactDetailView.swift - Purpose: Telemetry button
+        public static let telemetry = L10n.tr("Contacts", "contacts.detail.telemetry", fallback: "Telemetry")
+        /// Location: ContactDetailView.swift - Purpose: Telemetry access sheet title
+        public static let telemetryAccess = L10n.tr("Contacts", "contacts.detail.telemetryAccess", fallback: "Telemetry Access")
+        /// Location: ContactDetailView.swift - Purpose: Type label
+        public static let type = L10n.tr("Contacts", "contacts.detail.type", fallback: "Type")
+        /// Location: ContactDetailView.swift - Purpose: Unblock contact button
+        public static let unblockContact = L10n.tr("Contacts", "contacts.detail.unblockContact", fallback: "Unblock Contact")
+        /// Location: ContactDetailView.swift - Purpose: Unread messages label
+        public static let unreadMessages = L10n.tr("Contacts", "contacts.detail.unreadMessages", fallback: "Unread Messages")
+        public enum Alert {
+          /// Location: ContactDetailView.swift - Purpose: Path discovery alert title
+          public static let pathDiscovery = L10n.tr("Contacts", "contacts.detail.alert.pathDiscovery", fallback: "Path Discovery")
+          /// Location: ContactDetailView.swift - Purpose: Path error alert title
+          public static let pathError = L10n.tr("Contacts", "contacts.detail.alert.pathError", fallback: "Path Error")
+          public enum Block {
+            /// Location: ContactDetailView.swift - Purpose: Block contact alert message
+            public static func message(_ p1: Any) -> String {
+              return L10n.tr("Contacts", "contacts.detail.alert.block.message", String(describing: p1), fallback: "You won't receive messages from %@. Conversations from this user will be hidden from your Chats list, and their channel messages will not appear. Unblocking will reverse these actions and make visible any messages they have sent.")
+            }
+            /// Location: ContactDetailView.swift - Purpose: Block contact alert title
+            public static let title = L10n.tr("Contacts", "contacts.detail.alert.block.title", fallback: "Block Contact")
+          }
+          public enum Delete {
+            /// Location: ContactDetailView.swift - Purpose: Delete contact alert message
+            public static func message(_ p1: Any) -> String {
+              return L10n.tr("Contacts", "contacts.detail.alert.delete.message", String(describing: p1), fallback: "This will remove %@ and delete all associated data. This action cannot be undone.")
+            }
+            /// Location: ContactDetailView.swift - Purpose: Delete contact alert title
+            public static func title(_ p1: Any) -> String {
+              return L10n.tr("Contacts", "contacts.detail.alert.delete.title", String(describing: p1), fallback: "Delete %@")
+            }
+          }
+        }
+      }
+      public enum Discovery {
+        /// Location: DiscoveryView.swift - Purpose: Add button
+        public static let add = L10n.tr("Contacts", "contacts.discovery.add", fallback: "Add")
+        /// Location: DiscoveryView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.discovery.title", fallback: "Discover")
+        public enum Empty {
+          /// Location: DiscoveryView.swift - Purpose: Empty state description
+          public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
+          /// Location: DiscoveryView.swift - Purpose: Empty state title
+          public static let title = L10n.tr("Contacts", "contacts.discovery.empty.title", fallback: "No Discovered Nodes")
+        }
+        public enum Error {
+          /// Location: DiscoveryView.swift - Purpose: Services not available error
+          public static let servicesUnavailable = L10n.tr("Contacts", "contacts.discovery.error.servicesUnavailable", fallback: "Services not available")
+        }
+      }
+      public enum List {
+        /// Location: ContactsListView.swift - Purpose: Menu item to add contact
+        public static let addContact = L10n.tr("Contacts", "contacts.list.addContact", fallback: "Add Contact")
+        /// Location: ContactsListView.swift - Purpose: Menu item for blocked contacts
+        public static let blockedContacts = L10n.tr("Contacts", "contacts.list.blockedContacts", fallback: "Blocked Contacts")
+        /// Location: ContactsListView.swift - Purpose: Refresh alert title
+        public static let cannotRefresh = L10n.tr("Contacts", "contacts.list.cannotRefresh", fallback: "Cannot Refresh")
+        /// Location: ContactsListView.swift - Purpose: Refresh alert message
+        public static let connectToSync = L10n.tr("Contacts", "contacts.list.connectToSync", fallback: "Connect to your device to sync contacts.")
+        /// Location: ContactsListView.swift - Purpose: Menu item for discovery
+        public static let discover = L10n.tr("Contacts", "contacts.list.discover", fallback: "Discover")
+        /// Location: ContactsListView.swift - Purpose: Location alert message
+        public static let distanceRequiresLocation = L10n.tr("Contacts", "contacts.list.distanceRequiresLocation", fallback: "Distance sorting requires location access.")
+        /// Location: ContactsListView.swift - Purpose: Location alert title
+        public static let locationUnavailable = L10n.tr("Contacts", "contacts.list.locationUnavailable", fallback: "Location Unavailable")
+        /// Location: ContactsListView.swift - Purpose: VoiceOver offline announcement
+        public static let offlineAnnouncement = L10n.tr("Contacts", "contacts.list.offlineAnnouncement", fallback: "Viewing cached contacts. Connect to device for updates.")
+        /// Location: ContactsListView.swift - Purpose: Location settings button
+        public static let openSettings = L10n.tr("Contacts", "contacts.list.openSettings", fallback: "Open Settings")
+        /// Location: ContactsListView.swift - Purpose: Options menu label
+        public static let options = L10n.tr("Contacts", "contacts.list.options", fallback: "Options")
+        /// Location: ContactsListView.swift - Purpose: Search prompt
+        public static let searchPrompt = L10n.tr("Contacts", "contacts.list.searchPrompt", fallback: "Search nodes")
+        /// Location: ContactsListView.swift - Purpose: Empty state for split view
+        public static let selectNode = L10n.tr("Contacts", "contacts.list.selectNode", fallback: "Select a node")
+        /// Location: ContactsListView.swift - Purpose: Menu item to share own contact
+        public static let shareMyContact = L10n.tr("Contacts", "contacts.list.shareMyContact", fallback: "Share My Contact")
+        /// Location: ContactsListView.swift - Purpose: Sort menu label
+        public static let sort = L10n.tr("Contacts", "contacts.list.sort", fallback: "Sort")
+        /// Location: ContactsListView.swift - Purpose: Menu item to sync nodes
+        public static let syncNodes = L10n.tr("Contacts", "contacts.list.syncNodes", fallback: "Sync Nodes")
+        /// Location: ContactsListView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.list.title", fallback: "Nodes")
+        public enum Empty {
+          public enum Contacts {
+            /// Location: ContactsListView.swift - Purpose: No contacts empty description
+            public static let description = L10n.tr("Contacts", "contacts.list.empty.contacts.description", fallback: "Contacts appear when discovered on the mesh network. If auto-add contacts is off, check Discovery in the top right menu.")
+            /// Location: ContactsListView.swift - Purpose: No contacts empty title
+            public static let title = L10n.tr("Contacts", "contacts.list.empty.contacts.title", fallback: "No Contacts")
+          }
+          public enum Favorites {
+            /// Location: ContactsListView.swift - Purpose: No favorites empty description
+            public static let description = L10n.tr("Contacts", "contacts.list.empty.favorites.description", fallback: "Swipe right on any node to add it to your favorites.")
+            /// Location: ContactsListView.swift - Purpose: No favorites empty title
+            public static let title = L10n.tr("Contacts", "contacts.list.empty.favorites.title", fallback: "No Favorites Yet")
+          }
+          public enum Network {
+            /// Location: ContactsListView.swift - Purpose: No network nodes empty description
+            public static let description = L10n.tr("Contacts", "contacts.list.empty.network.description", fallback: "Repeaters and room servers will appear when discovered on the mesh.")
+            /// Location: ContactsListView.swift - Purpose: No network nodes empty title
+            public static let title = L10n.tr("Contacts", "contacts.list.empty.network.title", fallback: "No Network Nodes")
+          }
+          public enum Search {
+            /// Location: ContactsListView.swift - Purpose: No search results description
+            public static func description(_ p1: Any) -> String {
+              return L10n.tr("Contacts", "contacts.list.empty.search.description", String(describing: p1), fallback: "No nodes match '%@'")
+            }
+            /// Location: ContactsListView.swift - Purpose: No search results title
+            public static let title = L10n.tr("Contacts", "contacts.list.empty.search.title", fallback: "No Results")
+          }
+        }
+      }
+      public enum PathDetail {
+        /// Location: SavedPathDetailView.swift - Purpose: Average stat label
+        public static let avg = L10n.tr("Contacts", "contacts.pathDetail.avg", fallback: "Avg")
+        /// Location: SavedPathDetailView.swift - Purpose: Best stat label
+        public static let best = L10n.tr("Contacts", "contacts.pathDetail.best", fallback: "Best")
+        /// Location: SavedPathDetailView.swift - Purpose: Date label
+        public static let date = L10n.tr("Contacts", "contacts.pathDetail.date", fallback: "Date")
+        /// Location: SavedPathDetailView.swift - Purpose: Failed status
+        public static let failed = L10n.tr("Contacts", "contacts.pathDetail.failed", fallback: "Failed")
+        /// Location: SavedPathDetailView.swift - Purpose: History section header
+        public static let history = L10n.tr("Contacts", "contacts.pathDetail.history", fallback: "History")
+        /// Location: SavedPathDetailView.swift - Purpose: Hop label
+        public static func hop(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.pathDetail.hop", p1, fallback: "Hop %d")
+        }
+        /// Location: SavedPathDetailView.swift - Purpose: Overview section header
+        public static let overview = L10n.tr("Contacts", "contacts.pathDetail.overview", fallback: "Overview")
+        /// Location: SavedPathDetailView.swift - Purpose: Path section header
+        public static let path = L10n.tr("Contacts", "contacts.pathDetail.path", fallback: "Path")
+        /// Location: SavedPathDetailView.swift - Purpose: Performance section header
+        public static let performance = L10n.tr("Contacts", "contacts.pathDetail.performance", fallback: "Performance")
+        /// Location: SavedPathDetailView.swift - Purpose: Per-hop SNR section header
+        public static let perHopSNR = L10n.tr("Contacts", "contacts.pathDetail.perHopSNR", fallback: "Per-Hop SNR")
+        /// Location: SavedPathDetailView.swift - Purpose: Round trip label
+        public static let roundTrip = L10n.tr("Contacts", "contacts.pathDetail.roundTrip", fallback: "Round Trip")
+        /// Location: SavedPathDetailView.swift - Purpose: Chart Y axis label
+        public static let roundTripMs = L10n.tr("Contacts", "contacts.pathDetail.roundTripMs", fallback: "Round Trip (ms)")
+        /// Location: SavedPathDetailView.swift - Purpose: Run details navigation title
+        public static let runDetails = L10n.tr("Contacts", "contacts.pathDetail.runDetails", fallback: "Run Details")
+        /// Location: SavedPathDetailView.swift - Purpose: Status label
+        public static let status = L10n.tr("Contacts", "contacts.pathDetail.status", fallback: "Status")
+        /// Location: SavedPathDetailView.swift - Purpose: Success stat label
+        public static let success = L10n.tr("Contacts", "contacts.pathDetail.success", fallback: "Success")
+      }
+      public enum PathDiscovery {
+        /// Location: PathManagementViewModel.swift - Purpose: Cached path suffix
+        public static let cachedSuffix = L10n.tr("Contacts", "contacts.pathDiscovery.cachedSuffix", fallback: ". Using cached info from advertisement. Node may have telemetry disabled.")
+        /// Location: PathManagementViewModel.swift - Purpose: Direct path result
+        public static let direct = L10n.tr("Contacts", "contacts.pathDiscovery.direct", fallback: "Direct")
+        /// Location: PathManagementViewModel.swift - Purpose: Failed prefix
+        public static func failed(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathDiscovery.failed", String(describing: p1), fallback: "Failed: %@")
+        }
+        /// Location: PathManagementViewModel.swift - Purpose: No response message
+        public static let noResponse = L10n.tr("Contacts", "contacts.pathDiscovery.noResponse", fallback: "Remote node did not respond. Nodes must have telemetry requests enabled to respond to path discovery.")
+        public enum Hops {
+          /// Location: PathManagementViewModel.swift - Purpose: Hop count result plural
+          public static func plural(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.pathDiscovery.hops.plural", p1, fallback: "%d hops")
+          }
+          /// Location: PathManagementViewModel.swift - Purpose: Hop count result singular
+          public static let singular = L10n.tr("Contacts", "contacts.pathDiscovery.hops.singular", fallback: "1 hop")
+        }
+      }
+      public enum PathEdit {
+        /// Location: PathEditingSheet.swift - Purpose: Add repeater footer
+        public static let addFooter = L10n.tr("Contacts", "contacts.pathEdit.addFooter", fallback: "Tap a repeater to add it to the path.")
+        /// Location: PathEditingSheet.swift - Purpose: Add repeater section header
+        public static let addRepeater = L10n.tr("Contacts", "contacts.pathEdit.addRepeater", fallback: "Add Repeater")
+        /// Location: PathEditingSheet.swift - Purpose: Add to path accessibility label
+        public static func addToPath(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathEdit.addToPath", String(describing: p1), fallback: "Add %@ to path")
+        }
+        /// Location: PathEditingSheet.swift - Purpose: Current path section header
+        public static let currentPath = L10n.tr("Contacts", "contacts.pathEdit.currentPath", fallback: "Current Path")
+        /// Location: PathEditingSheet.swift - Purpose: Description with contact name
+        public static func description(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathEdit.description", String(describing: p1), fallback: "Customize the route messages take to reach %@.")
+        }
+        /// Location: PathEditingSheet.swift - Purpose: Empty path footer
+        public static let emptyFooter = L10n.tr("Contacts", "contacts.pathEdit.emptyFooter", fallback: "No path set (direct or flood routing)")
+        /// Location: PathEditingSheet.swift - Purpose: Hop accessibility with hex
+        public static func hopWithHex(_ p1: Int, _ p2: Int, _ p3: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathEdit.hopWithHex", p1, p2, String(describing: p3), fallback: "Hop %d of %d: repeater %@")
+        }
+        /// Location: PathEditingSheet.swift - Purpose: Hop accessibility with name
+        public static func hopWithName(_ p1: Int, _ p2: Int, _ p3: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathEdit.hopWithName", p1, p2, String(describing: p3), fallback: "Hop %d of %d: %@")
+        }
+        /// Location: PathEditingSheet.swift - Purpose: Path instructions footer
+        public static let instructionsFooter = L10n.tr("Contacts", "contacts.pathEdit.instructionsFooter", fallback: "Drag to reorder. Tap to remove.")
+        /// Location: PathEditingSheet.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.pathEdit.title", fallback: "Edit Path")
+        public enum NoRepeaters {
+          /// Location: PathEditingSheet.swift - Purpose: No repeaters empty description
+          public static let description = L10n.tr("Contacts", "contacts.pathEdit.noRepeaters.description", fallback: "Repeaters appear here once they're discovered in your mesh network.")
+          /// Location: PathEditingSheet.swift - Purpose: No repeaters empty title
+          public static let title = L10n.tr("Contacts", "contacts.pathEdit.noRepeaters.title", fallback: "No Repeaters Available")
+        }
+      }
+      public enum PathManagement {
+        public enum Error {
+          /// Location: PathManagementViewModel.swift - Purpose: Reset path error prefix
+          public static func resetFailed(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.pathManagement.error.resetFailed", String(describing: p1), fallback: "Reset path failed: %@")
+          }
+          /// Location: PathManagementViewModel.swift - Purpose: Save path error prefix
+          public static func saveFailed(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.pathManagement.error.saveFailed", String(describing: p1), fallback: "Save path failed: %@")
+          }
+          /// Location: PathManagementViewModel.swift - Purpose: Set path error prefix
+          public static func setFailed(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.pathManagement.error.setFailed", String(describing: p1), fallback: "Set path failed: %@")
+          }
+        }
+      }
+      public enum PathName {
+        /// Location: TracePathViewModel.swift - Purpose: Path name with multiple endpoints (abbreviated)
+        public static func multipleEndpoints(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathName.multipleEndpoints", String(describing: p1), String(describing: p2), fallback: "%@ → ... → %@")
+        }
+        /// Location: TracePathViewModel.swift - Purpose: Default path name prefix for hash-only paths
+        public static func `prefix`(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathName.prefix", String(describing: p1), fallback: "Path %@")
+        }
+        /// Location: TracePathViewModel.swift - Purpose: Path name with two endpoints
+        public static func twoEndpoints(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Contacts", "contacts.pathName.twoEndpoints", String(describing: p1), String(describing: p2), fallback: "%@ → %@")
+        }
+      }
+      public enum Qr {
+        /// Location: ContactQRShareSheet.swift - Purpose: Copy button when copied
+        public static let copied = L10n.tr("Contacts", "contacts.qr.copied", fallback: "Copied!")
+        /// Location: ContactQRShareSheet.swift - Purpose: Copy button when not copied
+        public static let copy = L10n.tr("Contacts", "contacts.qr.copy", fallback: "Copy")
+        /// Location: ContactQRShareSheet.swift - Purpose: Share button
+        public static let share = L10n.tr("Contacts", "contacts.qr.share", fallback: "Share")
+        /// Location: ContactQRShareSheet.swift - Purpose: Share subject
+        public static let shareSubject = L10n.tr("Contacts", "contacts.qr.shareSubject", fallback: "PocketMesh Contact")
+        /// Location: ContactQRShareSheet.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.qr.title", fallback: "Share Contact")
+      }
+      public enum Results {
+        /// Location: TraceResultsSheet.swift - Purpose: Average round trip label
+        public static let avgRoundTrip = L10n.tr("Contacts", "contacts.results.avgRoundTrip", fallback: "Avg Round Trip")
+        /// Location: TraceResultsSheet.swift - Purpose: Average RTT accessibility
+        public static func avgRTTLabel(_ p1: Int, _ p2: Int, _ p3: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.avgRTTLabel", p1, p2, p3, fallback: "Average round trip: %d milliseconds, range %d to %d")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Batch complete accessibility
+        public static func batchCompleteLabel(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.batchCompleteLabel", p1, p2, fallback: "Batch complete: %d of %d traces successful")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Batch progress
+        public static func batchProgress(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.batchProgress", p1, p2, fallback: "Running Trace %d of %d...")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Batch progress accessibility
+        public static func batchProgressLabel(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.batchProgressLabel", p1, p2, fallback: "Batch progress: trace %d of %d")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Batch success count
+        public static func batchSuccess(_ p1: Int, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.batchSuccess", p1, p2, fallback: "%d of %d successful")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Comparison text
+        public static func comparison(_ p1: Int, _ p2: Any) -> String {
+          return L10n.tr("Contacts", "contacts.results.comparison", p1, String(describing: p2), fallback: "vs. %d ms on %@")
+        }
+        /// Location: TraceResultsSheet.swift - Purpose: Dismiss button
+        public static let dismiss = L10n.tr("Contacts", "contacts.results.dismiss", fallback: "Dismiss")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance error message
+        public static let distanceError = L10n.tr("Contacts", "contacts.results.distanceError", fallback: "Distance cannot be calculated. All repeaters have coordinates but an error occurred.")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance info button accessibility
+        public static let distanceInfo = L10n.tr("Contacts", "contacts.results.distanceInfo", fallback: "Distance info")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance info hint
+        public static let distanceInfoHint = L10n.tr("Contacts", "contacts.results.distanceInfoHint", fallback: "Double tap for details about missing locations")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance info navigation title
+        public static let distanceInfoTitle = L10n.tr("Contacts", "contacts.results.distanceInfoTitle", fallback: "Distance Unavailable")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance unavailable accessibility
+        public static let distanceUnavailableLabel = L10n.tr("Contacts", "contacts.results.distanceUnavailableLabel", fallback: "Distance unavailable")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance missing locations message
+        public static let missingLocations = L10n.tr("Contacts", "contacts.results.missingLocations", fallback: "Distance cannot be calculated because the following repeaters don't have location coordinates set.")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message
+        public static let needsRepeaters = L10n.tr("Contacts", "contacts.results.needsRepeaters", fallback: "Distance calculation requires at least 2 repeaters in the path.")
+        /// Location: TraceResultsSheet.swift - Purpose: Repeaters without locations section
+        public static let repeatersWithoutLocations = L10n.tr("Contacts", "contacts.results.repeatersWithoutLocations", fallback: "Repeaters Without Locations")
+        /// Location: TraceResultsSheet.swift - Purpose: Save path button
+        public static let savePath = L10n.tr("Contacts", "contacts.results.savePath", fallback: "Save Path")
+        /// Location: TraceResultsSheet.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.results.title", fallback: "Trace Results")
+        /// Location: TraceResultsSheet.swift - Purpose: Total distance label
+        public static let totalDistance = L10n.tr("Contacts", "contacts.results.totalDistance", fallback: "Total Distance")
+        /// Location: TraceResultsSheet.swift - Purpose: Distance unavailable
+        public static let unavailable = L10n.tr("Contacts", "contacts.results.unavailable", fallback: "Unavailable")
+        /// Location: TraceResultsSheet.swift - Purpose: View runs link
+        public static func viewRuns(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.results.viewRuns", p1, fallback: "View %d runs")
+        }
+        public enum Hop {
+          /// Location: TraceResultsSheet.swift - Purpose: Average SNR display
+          public static func avgSNR(_ p1: Any, _ p2: Any, _ p3: Any) -> String {
+            return L10n.tr("Contacts", "contacts.results.hop.avgSNR", String(describing: p1), String(describing: p2), String(describing: p3), fallback: "Avg SNR: %@ dB (%@ – %@)")
+          }
+          /// Location: TraceResultsSheet.swift - Purpose: Average SNR accessibility
+          public static func avgSNRLabel(_ p1: Any, _ p2: Any, _ p3: Any) -> String {
+            return L10n.tr("Contacts", "contacts.results.hop.avgSNRLabel", String(describing: p1), String(describing: p2), String(describing: p3), fallback: "Average signal to noise ratio: %@ decibels, range %@ to %@")
+          }
+          /// Location: TraceResultsSheet.swift - Purpose: My Device placeholder
+          public static let myDevice = L10n.tr("Contacts", "contacts.results.hop.myDevice", fallback: "My Device")
+          /// Location: TraceResultsSheet.swift - Purpose: Received response label
+          public static let received = L10n.tr("Contacts", "contacts.results.hop.received", fallback: "Received response")
+          /// Location: TraceResultsSheet.swift - Purpose: Repeated label
+          public static let repeated = L10n.tr("Contacts", "contacts.results.hop.repeated", fallback: "Repeated")
+          /// Location: TraceResultsSheet.swift - Purpose: SNR display
+          public static func snr(_ p1: Any) -> String {
+            return L10n.tr("Contacts", "contacts.results.hop.snr", String(describing: p1), fallback: "SNR: %@ dB")
+          }
+          /// Location: TraceResultsSheet.swift - Purpose: Started trace label
+          public static let started = L10n.tr("Contacts", "contacts.results.hop.started", fallback: "Started trace")
+        }
+      }
+      public enum Route {
+        /// Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Direct routing label
+        public static let direct = L10n.tr("Contacts", "contacts.route.direct", fallback: "Direct")
+        /// Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Flood routing label
+        public static let flood = L10n.tr("Contacts", "contacts.route.flood", fallback: "Flood")
+        /// Location: ContactRowView.swift - Purpose: Hops count display
+        public static func hops(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.route.hops", p1, fallback: "%d hops")
+        }
+      }
+      public enum Row {
+        /// Location: ContactRowView.swift - Purpose: Distance suffix
+        public static func away(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.row.away", String(describing: p1), fallback: "%@ away")
+        }
+        /// Location: ContactRowView.swift - Purpose: Blocked status accessibility label
+        public static let blocked = L10n.tr("Contacts", "contacts.row.blocked", fallback: "Blocked")
+        /// Location: ContactRowView.swift - Purpose: Favorite status accessibility label
+        public static let favorite = L10n.tr("Contacts", "contacts.row.favorite", fallback: "Favorite")
+        /// Location: ContactRowView.swift - Purpose: Location indicator accessibility label
+        public static let location = L10n.tr("Contacts", "contacts.row.location", fallback: "Location")
+      }
+      public enum SavedPaths {
+        /// Location: SavedPathsSheet.swift - Purpose: Delete dialog message
+        public static func deleteMessage(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.savedPaths.deleteMessage", String(describing: p1), fallback: "Delete \"%@\"? This will remove the path and all run history.")
+        }
+        /// Location: SavedPathsSheet.swift - Purpose: Delete dialog title
+        public static let deleteTitle = L10n.tr("Contacts", "contacts.savedPaths.deleteTitle", fallback: "Delete Path")
+        /// Location: SavedPathsSheet.swift - Purpose: Health accessibility label
+        public static func healthLabel(_ p1: Any, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.savedPaths.healthLabel", String(describing: p1), p2, fallback: "Path health: %@, %d%% success rate")
+        }
+        /// Location: SavedPathsSheet.swift - Purpose: Last run label
+        public static func lastRun(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.savedPaths.lastRun", String(describing: p1), fallback: "Last: %@")
+        }
+        /// Location: SavedPathsSheet.swift - Purpose: No response data accessibility
+        public static let noResponseData = L10n.tr("Contacts", "contacts.savedPaths.noResponseData", fallback: "No response time data")
+        /// Location: SavedPathsSheet.swift - Purpose: Rename context menu
+        public static let rename = L10n.tr("Contacts", "contacts.savedPaths.rename", fallback: "Rename")
+        /// Location: SavedPathsSheet.swift - Purpose: Rename alert title
+        public static let renameTitle = L10n.tr("Contacts", "contacts.savedPaths.renameTitle", fallback: "Rename Path")
+        /// Location: SavedPathsSheet.swift - Purpose: Response times accessibility
+        public static func responseTimes(_ p1: Int, _ p2: Any) -> String {
+          return L10n.tr("Contacts", "contacts.savedPaths.responseTimes", p1, String(describing: p2), fallback: "Response times: average %dms, %@")
+        }
+        /// Location: SavedPathsSheet.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.savedPaths.title", fallback: "Saved Paths")
+        public enum Empty {
+          /// Location: SavedPathsSheet.swift - Purpose: Empty state description
+          public static let description = L10n.tr("Contacts", "contacts.savedPaths.empty.description", fallback: "Save paths after running traces to quickly re-run them later.")
+          /// Location: SavedPathsSheet.swift - Purpose: Empty state title
+          public static let title = L10n.tr("Contacts", "contacts.savedPaths.empty.title", fallback: "No Saved Paths")
+        }
+        public enum Health {
+          /// Location: SavedPathsSheet.swift - Purpose: Degraded status accessibility
+          public static let degraded = L10n.tr("Contacts", "contacts.savedPaths.health.degraded", fallback: "degraded")
+          /// Location: SavedPathsSheet.swift - Purpose: Healthy status accessibility
+          public static let healthy = L10n.tr("Contacts", "contacts.savedPaths.health.healthy", fallback: "healthy")
+          /// Location: SavedPathsSheet.swift - Purpose: Poor status accessibility
+          public static let poor = L10n.tr("Contacts", "contacts.savedPaths.health.poor", fallback: "poor")
+        }
+        public enum Runs {
+          /// Location: SavedPathsSheet.swift - Purpose: Run count plural
+          public static func plural(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.savedPaths.runs.plural", p1, fallback: "%d runs")
+          }
+          /// Location: SavedPathsSheet.swift - Purpose: Run count singular
+          public static let singular = L10n.tr("Contacts", "contacts.savedPaths.runs.singular", fallback: "1 run")
+        }
+        public enum Trend {
+          /// Location: SavedPathsSheet.swift - Purpose: Trend decreasing
+          public static let decreasing = L10n.tr("Contacts", "contacts.savedPaths.trend.decreasing", fallback: "decreasing")
+          /// Location: SavedPathsSheet.swift - Purpose: Trend increasing
+          public static let increasing = L10n.tr("Contacts", "contacts.savedPaths.trend.increasing", fallback: "increasing")
+          /// Location: SavedPathsSheet.swift - Purpose: Trend stable
+          public static let stable = L10n.tr("Contacts", "contacts.savedPaths.trend.stable", fallback: "stable")
+        }
+      }
+      public enum Scan {
+        /// Location: ScanContactQRView.swift - Purpose: Importing progress
+        public static let importing = L10n.tr("Contacts", "contacts.scan.importing", fallback: "Importing contact...")
+        /// Location: ScanContactQRView.swift - Purpose: Scan instruction
+        public static let instruction = L10n.tr("Contacts", "contacts.scan.instruction", fallback: "Point your camera at a contact QR code")
+        /// Location: ScanContactQRView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.scan.title", fallback: "Scan QR Code")
+        public enum Error {
+          /// Location: ScanContactQRView.swift - Purpose: Invalid QR format error
+          public static let invalidFormat = L10n.tr("Contacts", "contacts.scan.error.invalidFormat", fallback: "Invalid QR code format")
+          /// Location: ScanContactQRView.swift - Purpose: Invalid public key error
+          public static let invalidKey = L10n.tr("Contacts", "contacts.scan.error.invalidKey", fallback: "Invalid QR code: invalid public key")
+          /// Location: ScanContactQRView.swift - Purpose: Missing name error
+          public static let missingName = L10n.tr("Contacts", "contacts.scan.error.missingName", fallback: "Invalid QR code: missing name")
+        }
+        public enum Permission {
+          /// Location: ScanContactQRView.swift - Purpose: Camera permission description
+          public static let description = L10n.tr("Contacts", "contacts.scan.permission.description", fallback: "Please enable camera access in Settings to scan QR codes.")
+          /// Location: ScanContactQRView.swift - Purpose: Camera permission title
+          public static let title = L10n.tr("Contacts", "contacts.scan.permission.title", fallback: "Camera Access Required")
+        }
+        public enum Unavailable {
+          /// Location: ScanContactQRView.swift - Purpose: Scanner not available description
+          public static let description = L10n.tr("Contacts", "contacts.scan.unavailable.description", fallback: "QR scanning is not supported on this device")
+          /// Location: ScanContactQRView.swift - Purpose: Scanner not available title
+          public static let title = L10n.tr("Contacts", "contacts.scan.unavailable.title", fallback: "Scanner Not Available")
+        }
+      }
+      public enum Segment {
+        /// Location: ContactsViewModel.swift - Purpose: Contacts segment
+        public static let contacts = L10n.tr("Contacts", "contacts.segment.contacts", fallback: "Contacts")
+        /// Location: ContactsViewModel.swift - Purpose: Favorites segment
+        public static let favorites = L10n.tr("Contacts", "contacts.segment.favorites", fallback: "Favorites")
+        /// Location: ContactsViewModel.swift - Purpose: Network segment
+        public static let network = L10n.tr("Contacts", "contacts.segment.network", fallback: "Network")
+      }
+      public enum Sort {
+        /// Location: ContactsViewModel.swift - Purpose: Distance sort option
+        public static let distance = L10n.tr("Contacts", "contacts.sort.distance", fallback: "Distance")
+        /// Location: ContactsViewModel.swift - Purpose: Last heard sort option
+        public static let lastHeard = L10n.tr("Contacts", "contacts.sort.lastHeard", fallback: "Last Heard")
+        /// Location: ContactsViewModel.swift - Purpose: Name sort option
+        public static let name = L10n.tr("Contacts", "contacts.sort.name", fallback: "Name")
+      }
+      public enum StatsBadge {
+        /// Location: StatsBadgeView.swift - Purpose: Distance and signal accessibility
+        public static func accessibility(_ p1: Any, _ p2: Int) -> String {
+          return L10n.tr("Contacts", "contacts.statsBadge.accessibility", String(describing: p1), p2, fallback: "Distance: %@, Signal: %d decibels")
+        }
+      }
+      public enum Swipe {
+        /// Location: ContactSwipeActionsModifier - Purpose: Block swipe action
+        public static let block = L10n.tr("Contacts", "contacts.swipe.block", fallback: "Block")
+        /// Location: ContactSwipeActionsModifier - Purpose: Unblock swipe action
+        public static let unblock = L10n.tr("Contacts", "contacts.swipe.unblock", fallback: "Unblock")
+        /// Location: ContactSwipeActionsModifier - Purpose: Unfavorite swipe action
+        public static let unfavorite = L10n.tr("Contacts", "contacts.swipe.unfavorite", fallback: "Unfavorite")
+      }
+      public enum Trace {
+        /// Location: TracePathView.swift - Purpose: Clear path dialog title
+        public static let clearPath = L10n.tr("Contacts", "contacts.trace.clearPath", fallback: "Clear Path")
+        /// Location: TracePathView.swift - Purpose: Clear path dialog message
+        public static let clearPathMessage = L10n.tr("Contacts", "contacts.trace.clearPathMessage", fallback: "Remove all repeaters from the path?")
+        /// Location: TracePathView.swift - Purpose: Trace failed alert title
+        public static let failed = L10n.tr("Contacts", "contacts.trace.failed", fallback: "Trace Failed")
+        /// Location: TracePathView.swift - Purpose: Jump button accessibility hint
+        public static let jumpHint = L10n.tr("Contacts", "contacts.trace.jumpHint", fallback: "Double tap to scroll to the bottom of the path")
+        /// Location: TracePathView.swift - Purpose: Jump button accessibility label
+        public static let jumpLabel = L10n.tr("Contacts", "contacts.trace.jumpLabel", fallback: "Jump to Run Trace button")
+        /// Location: TracePathView.swift - Purpose: Jump button label
+        public static let runBelow = L10n.tr("Contacts", "contacts.trace.runBelow", fallback: "Run Below")
+        /// Location: TracePathView.swift - Purpose: Saved toolbar button
+        public static let saved = L10n.tr("Contacts", "contacts.trace.saved", fallback: "Saved")
+        /// Location: TracePathView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Contacts", "contacts.trace.title", fallback: "Trace Path")
+        public enum Error {
+          /// Location: TracePathViewModel.swift - Purpose: All traces failed error
+          public static func allFailed(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.trace.error.allFailed", p1, fallback: "All %d traces failed")
+          }
+          /// Location: TracePathViewModel.swift - Purpose: No response error
+          public static let noResponse = L10n.tr("Contacts", "contacts.trace.error.noResponse", fallback: "No response received")
+          /// Location: TracePathViewModel.swift - Purpose: Send failed error
+          public static let sendFailed = L10n.tr("Contacts", "contacts.trace.error.sendFailed", fallback: "Failed to send trace packet")
+        }
+        public enum List {
+          /// Location: TracePathListView.swift - Purpose: Auto return toggle label
+          public static let autoReturn = L10n.tr("Contacts", "contacts.trace.list.autoReturn", fallback: "Auto Return Path")
+          /// Location: TracePathListView.swift - Purpose: Auto return toggle description
+          public static let autoReturnDescription = L10n.tr("Contacts", "contacts.trace.list.autoReturnDescription", fallback: "Mirror outbound path for the return journey")
+          /// Location: TracePathListView.swift - Purpose: Batch run accessibility hint
+          public static func batchHint(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.trace.list.batchHint", p1, fallback: "Double tap to run %d traces")
+          }
+          /// Location: TracePathListView.swift - Purpose: Batch trace toggle label
+          public static let batchTrace = L10n.tr("Contacts", "contacts.trace.list.batchTrace", fallback: "Batch Trace")
+          /// Location: TracePathListView.swift - Purpose: Batch trace toggle description
+          public static let batchTraceDescription = L10n.tr("Contacts", "contacts.trace.list.batchTraceDescription", fallback: "Run multiple traces and average the results")
+          /// Location: TracePathListView.swift - Purpose: Code input footer
+          public static let codeFooter = L10n.tr("Contacts", "contacts.trace.list.codeFooter", fallback: "Press Return to add repeaters")
+          /// Location: TracePathListView.swift - Purpose: Code input placeholder
+          public static let codePlaceholder = L10n.tr("Contacts", "contacts.trace.list.codePlaceholder", fallback: "Example: A1, 2B, 9S")
+          /// Location: TracePathListView.swift - Purpose: Copy path button
+          public static let copyPath = L10n.tr("Contacts", "contacts.trace.list.copyPath", fallback: "Copy Path")
+          /// Location: TracePathListView.swift - Purpose: Empty path instruction
+          public static let emptyPath = L10n.tr("Contacts", "contacts.trace.list.emptyPath", fallback: "Tap a repeater above to start building your path")
+          /// Location: TracePathListView.swift - Purpose: Hop row accessibility hint
+          public static let hopHint = L10n.tr("Contacts", "contacts.trace.list.hopHint", fallback: "Swipe left to delete, use drag handle to reorder")
+          /// Location: TracePathListView.swift - Purpose: Hop row accessibility label
+          public static func hopLabel(_ p1: Int, _ p2: Any) -> String {
+            return L10n.tr("Contacts", "contacts.trace.list.hopLabel", p1, String(describing: p2), fallback: "Hop %d: %@")
+          }
+          /// Location: TracePathListView.swift - Purpose: Outbound path section header
+          public static let outboundPath = L10n.tr("Contacts", "contacts.trace.list.outboundPath", fallback: "Outbound Path")
+          /// Location: TracePathListView.swift - Purpose: Paste button
+          public static let paste = L10n.tr("Contacts", "contacts.trace.list.paste", fallback: "Paste from clipboard")
+          /// Location: TracePathListView.swift - Purpose: Range warning footer
+          public static let rangeWarning = L10n.tr("Contacts", "contacts.trace.list.rangeWarning", fallback: "You must be within range of the last repeater to receive a response.")
+          /// Location: TracePathListView.swift - Purpose: Repeaters section label
+          public static let repeaters = L10n.tr("Contacts", "contacts.trace.list.repeaters", fallback: "Repeaters")
+          /// Location: TracePathListView.swift - Purpose: Running trace with batch count
+          public static func runningBatch(_ p1: Int, _ p2: Int) -> String {
+            return L10n.tr("Contacts", "contacts.trace.list.runningBatch", p1, p2, fallback: "Running Trace %d of %d")
+          }
+          /// Location: TracePathListView.swift - Purpose: Running batch accessibility label
+          public static func runningBatchLabel(_ p1: Int, _ p2: Int) -> String {
+            return L10n.tr("Contacts", "contacts.trace.list.runningBatchLabel", p1, p2, fallback: "Running trace %d of %d")
+          }
+          /// Location: TracePathListView.swift - Purpose: Running accessibility label
+          public static let runningLabel = L10n.tr("Contacts", "contacts.trace.list.runningLabel", fallback: "Running trace, please wait")
+          /// Location: TracePathListView.swift - Purpose: Running trace progress
+          public static let runningTrace = L10n.tr("Contacts", "contacts.trace.list.runningTrace", fallback: "Running Trace")
+          /// Location: TracePathListView.swift - Purpose: Run trace button
+          public static let runTrace = L10n.tr("Contacts", "contacts.trace.list.runTrace", fallback: "Run Trace")
+          /// Location: TracePathListView.swift - Purpose: Run trace accessibility label
+          public static let runTraceLabel = L10n.tr("Contacts", "contacts.trace.list.runTraceLabel", fallback: "Run trace")
+          /// Location: TracePathListView.swift - Purpose: Single run accessibility hint
+          public static let singleHint = L10n.tr("Contacts", "contacts.trace.list.singleHint", fallback: "Double tap to trace the path")
+          /// Location: TracePathListView.swift - Purpose: Traces count label
+          public static let traces = L10n.tr("Contacts", "contacts.trace.list.traces", fallback: "Traces:")
+        }
+        public enum Map {
+          /// Location: TracePathMapView.swift - Purpose: Clear button
+          public static let clear = L10n.tr("Contacts", "contacts.trace.map.clear", fallback: "Clear")
+          /// Location: TracePathMapView.swift - Purpose: Hide labels accessibility
+          public static let hideLabels = L10n.tr("Contacts", "contacts.trace.map.hideLabels", fallback: "Hide labels")
+          /// Location: TracePathMapView.swift - Purpose: Hops count in results banner
+          public static func hops(_ p1: Int) -> String {
+            return L10n.tr("Contacts", "contacts.trace.map.hops", p1, fallback: "%d hops")
+          }
+          /// Location: TracePathMapView.swift - Purpose: Path name placeholder
+          public static let pathName = L10n.tr("Contacts", "contacts.trace.map.pathName", fallback: "Path name")
+          /// Location: TracePathMapView.swift - Purpose: Path saved alert message
+          public static let savedMessage = L10n.tr("Contacts", "contacts.trace.map.savedMessage", fallback: "The path has been saved successfully.")
+          /// Location: TracePathMapView.swift - Purpose: Path saved alert title
+          public static let savedTitle = L10n.tr("Contacts", "contacts.trace.map.savedTitle", fallback: "Path Saved")
+          /// Location: TracePathMapView.swift - Purpose: Save failed alert message
+          public static let saveFailedMessage = L10n.tr("Contacts", "contacts.trace.map.saveFailedMessage", fallback: "Failed to save the path. Please try again.")
+          /// Location: TracePathMapView.swift - Purpose: Save failed alert title
+          public static let saveFailedTitle = L10n.tr("Contacts", "contacts.trace.map.saveFailedTitle", fallback: "Save Failed")
+          /// Location: TracePathMapView.swift - Purpose: Save path alert message
+          public static let saveMessage = L10n.tr("Contacts", "contacts.trace.map.saveMessage", fallback: "Enter a name for this path")
+          /// Location: TracePathMapView.swift - Purpose: Save path alert title
+          public static let saveTitle = L10n.tr("Contacts", "contacts.trace.map.saveTitle", fallback: "Save Path")
+          /// Location: TracePathMapView.swift - Purpose: Show labels accessibility
+          public static let showLabels = L10n.tr("Contacts", "contacts.trace.map.showLabels", fallback: "Show labels")
+          public enum Empty {
+            /// Location: TracePathMapView.swift - Purpose: Empty state description
+            public static let description = L10n.tr("Contacts", "contacts.trace.map.empty.description", fallback: "Use List view to build paths with repeaters that don't have location data.")
+            /// Location: TracePathMapView.swift - Purpose: Empty state title
+            public static let title = L10n.tr("Contacts", "contacts.trace.map.empty.title", fallback: "No Repeaters with Location")
+          }
+        }
+        public enum Mode {
+          /// Location: TracePathView.swift - Purpose: List view mode
+          public static let list = L10n.tr("Contacts", "contacts.trace.mode.list", fallback: "List")
+          /// Location: TracePathView.swift - Purpose: Map view mode
+          public static let map = L10n.tr("Contacts", "contacts.trace.mode.map", fallback: "Map")
+        }
+      }
+      public enum `Type` {
+        /// Location: Multiple files - Purpose: Chat contact type label
+        public static let chat = L10n.tr("Contacts", "contacts.type.chat", fallback: "Chat")
+        /// Location: Multiple files - Purpose: Chat contact full label
+        public static let chatContact = L10n.tr("Contacts", "contacts.type.chatContact", fallback: "Chat Contact")
+        /// Location: ContactsListView.swift - Purpose: Contact label in search results
+        public static let contact = L10n.tr("Contacts", "contacts.type.contact", fallback: "Contact")
+        /// Location: Multiple files - Purpose: Repeater contact type label
+        public static let repeater = L10n.tr("Contacts", "contacts.type.repeater", fallback: "Repeater")
+        /// Location: Multiple files - Purpose: Room contact type label
+        public static let room = L10n.tr("Contacts", "contacts.type.room", fallback: "Room")
+      }
+      public enum ViewModel {
+        /// Location: ContactsViewModel.swift - Purpose: Delete requires connection error
+        public static let connectToDelete = L10n.tr("Contacts", "contacts.viewModel.connectToDelete", fallback: "Connect to a radio to delete nodes")
+      }
     }
+  }
   public enum Localizable {
     public enum Accessibility {
       /// VoiceOver announcement when viewing cached data while disconnected from device

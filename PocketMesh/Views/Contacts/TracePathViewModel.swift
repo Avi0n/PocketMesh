@@ -72,7 +72,7 @@ struct TraceResult: Identifiable {
 
     static func timeout(attemptedPath: [UInt8]) -> TraceResult {
         TraceResult(hops: [], durationMs: 0, success: false,
-                    errorMessage: "No response received", tracedPathBytes: attemptedPath)
+                    errorMessage: L10n.Contacts.Contacts.Trace.Error.noResponse, tracedPathBytes: attemptedPath)
     }
 
     static func sendFailed(_ message: String, attemptedPath: [UInt8]) -> TraceResult {
@@ -98,13 +98,13 @@ struct CodeInputResult {
         var parts: [String] = []
 
         if !invalidFormat.isEmpty {
-            parts.append("Invalid format: \(invalidFormat.joined(separator: ", "))")
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.invalidFormat(invalidFormat.joined(separator: ", ")))
         }
         if !notFound.isEmpty {
-            parts.append("\(notFound.joined(separator: ", ")) not found")
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.notFound(notFound.joined(separator: ", ")))
         }
         if !alreadyInPath.isEmpty {
-            parts.append("\(alreadyInPath.joined(separator: ", ")) already in path")
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.alreadyInPath(alreadyInPath.joined(separator: ", ")))
         }
 
         return parts.joined(separator: " · ")
@@ -512,13 +512,13 @@ final class TracePathViewModel {
         let names = outboundPath.compactMap { $0.resolvedName }
         switch names.count {
         case 0:
-            return "Path \(fullPathString.prefix(8))"
+            return L10n.Contacts.Contacts.PathName.prefix(String(fullPathString.prefix(8)))
         case 1:
             return names[0]
         case 2:
-            return "\(names[0]) → \(names[1])"
+            return L10n.Contacts.Contacts.PathName.twoEndpoints(names[0], names[1])
         default:
-            return "\(names[0]) → ... → \(names[names.count - 1])"
+            return L10n.Contacts.Contacts.PathName.multipleEndpoints(names[0], names[names.count - 1])
         }
     }
 
@@ -729,7 +729,7 @@ final class TracePathViewModel {
             logger.info("Sent trace with tag \(tag), path: \(self.fullPathString), timeout: \(timeoutSeconds)s")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
-            setError("Failed to send trace packet")
+            setError(L10n.Contacts.Contacts.Trace.Error.sendFailed)
             pendingPathHash = nil
 
             // Record failed run for saved paths
@@ -768,7 +768,7 @@ final class TracePathViewModel {
                 // Timeout - no response received
                 if !Task.isCancelled && pendingTag == tag {
                     logger.warning("Trace timeout for tag \(tag) after \(timeoutSeconds)s")
-                    setError("No response received")
+                    setError(L10n.Contacts.Contacts.Trace.Error.noResponse)
                     pendingPathHash = nil
 
                     // Record failed run for saved paths
@@ -868,7 +868,7 @@ final class TracePathViewModel {
 
         // If batch completed but all traces failed, show error
         if isBatchComplete && successCount == 0 {
-            setError("All \(batchSize) traces failed")
+            setError(L10n.Contacts.Contacts.Trace.Error.allFailed(batchSize))
         }
     }
 
@@ -897,7 +897,7 @@ final class TracePathViewModel {
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
             let failedResult = TraceResult.sendFailed(
-                "Failed to send trace packet",
+                L10n.Contacts.Contacts.Trace.Error.sendFailed,
                 attemptedPath: pendingPathHash ?? []
             )
             completedResults.append(failedResult)
@@ -1018,7 +1018,7 @@ final class TracePathViewModel {
         // Each node's SNR shows what it measured when receiving.
         // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
-        let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
+        let deviceName = appState?.connectedDevice?.nodeName ?? L10n.Contacts.Contacts.Results.Hop.myDevice
         let deviceLocation = appState?.locationService.currentLocation
         let path = traceInfo.path
 

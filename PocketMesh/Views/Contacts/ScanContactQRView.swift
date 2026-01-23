@@ -35,7 +35,7 @@ struct ScanContactQRView: View {
                 scannerView
             }
         }
-        .navigationTitle("Scan QR Code")
+        .navigationTitle(L10n.Contacts.Contacts.Scan.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -52,9 +52,9 @@ struct ScanContactQRView: View {
             } else {
                 // Fallback for unsupported devices
                 ContentUnavailableView(
-                    "Scanner Not Available",
+                    L10n.Contacts.Contacts.Scan.Unavailable.title,
                     systemImage: "qrcode.viewfinder",
-                    description: Text("QR scanning is not supported on this device")
+                    description: Text(L10n.Contacts.Contacts.Scan.Unavailable.description)
                 )
             }
 
@@ -71,7 +71,7 @@ struct ScanContactQRView: View {
                 if isImporting {
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text("Importing contact...")
+                        Text(L10n.Contacts.Contacts.Scan.importing)
                     }
                     .font(.subheadline)
                     .foregroundStyle(.white)
@@ -91,7 +91,7 @@ struct ScanContactQRView: View {
                     .buttonStyle(.plain)
                     .padding(.bottom, Constants.bottomPadding)
                 } else {
-                    Text("Point your camera at a contact QR code")
+                    Text(L10n.Contacts.Contacts.Scan.instruction)
                         .font(.subheadline)
                         .foregroundStyle(.white)
                         .padding()
@@ -112,17 +112,17 @@ struct ScanContactQRView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.secondary)
 
-            Text("Camera Access Required")
+            Text(L10n.Contacts.Contacts.Scan.Permission.title)
                 .font(.title2)
                 .bold()
 
-            Text("Please enable camera access in Settings to scan QR codes.")
+            Text(L10n.Contacts.Contacts.Scan.Permission.description)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            Button("Open Settings") {
+            Button(L10n.Contacts.Contacts.List.openSettings) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
                 }
@@ -153,7 +153,7 @@ struct ScanContactQRView: View {
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             logger.error("Invalid QR code format: \(result)")
-            errorMessage = "Invalid QR code format"
+            errorMessage = L10n.Contacts.Contacts.Scan.Error.invalidFormat
             return
         }
 
@@ -162,7 +162,7 @@ struct ScanContactQRView: View {
         guard let rawName = queryItems.first(where: { $0.name == "name" })?.value,
               !rawName.isEmpty else {
             logger.error("Missing or empty name parameter")
-            errorMessage = "Invalid QR code: missing name"
+            errorMessage = L10n.Contacts.Contacts.Scan.Error.missingName
             return
         }
         let name = rawName.replacing("+", with: " ")
@@ -171,7 +171,7 @@ struct ScanContactQRView: View {
               let publicKey = Data(hexString: publicKeyHex),
               publicKey.count == ProtocolLimits.publicKeySize else {
             logger.error("Invalid or missing public_key parameter")
-            errorMessage = "Invalid QR code: invalid public key"
+            errorMessage = L10n.Contacts.Contacts.Scan.Error.invalidKey
             return
         }
 
@@ -193,7 +193,7 @@ struct ScanContactQRView: View {
         guard let services = appState.services,
               let deviceID = appState.connectedDevice?.id else {
             logger.error("Services or device not available")
-            errorMessage = "Not connected to device"
+            errorMessage = L10n.Contacts.Contacts.Add.Error.notConnected
             return
         }
 
