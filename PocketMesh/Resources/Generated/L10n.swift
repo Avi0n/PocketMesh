@@ -1523,7 +1523,119 @@ public enum L10n {
     }
   }
   public enum Map {
+    public enum Map {
+      public enum Annotation {
+        /// Location: ContactAnnotation.swift - Purpose: Subtitle for favorite contacts
+        public static let favorite = L10n.tr("Map", "map.annotation.favorite", fallback: "Favorite")
+        /// Location: ContactAnnotation.swift - Purpose: Subtitle for repeater nodes
+        public static let repeater = L10n.tr("Map", "map.annotation.repeater", fallback: "Repeater")
+        /// Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes
+        public static let room = L10n.tr("Map", "map.annotation.room", fallback: "Room")
+      }
+      public enum Callout {
+        /// Location: ContactCalloutContent.swift - Purpose: Button to view contact details
+        public static let details = L10n.tr("Map", "map.callout.details", fallback: "Details")
+        /// Location: ContactCalloutContent.swift - Purpose: Button to send message from callout
+        public static let message = L10n.tr("Map", "map.callout.message", fallback: "Message")
+        public enum `Type` {
+          /// Location: ContactCalloutContent.swift - Purpose: Display name for contact in callout
+          public static let contact = L10n.tr("Map", "map.callout.type.contact", fallback: "Contact")
+          /// Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout
+          public static let repeater = L10n.tr("Map", "map.callout.type.repeater", fallback: "Repeater")
+          /// Location: ContactCalloutContent.swift - Purpose: Display name for room in callout
+          public static let room = L10n.tr("Map", "map.callout.type.room", fallback: "Room")
+        }
+      }
+      public enum Common {
+        /// Location: MapView.swift - Purpose: Done button for sheets
+        public static let done = L10n.tr("Map", "map.common.done", fallback: "Done")
+        /// Location: MapView.swift - Purpose: Refresh button label
+        public static let refresh = L10n.tr("Map", "map.common.refresh", fallback: "Refresh")
+      }
+      public enum Controls {
+        /// Location: MapView.swift - Purpose: Accessibility label for center on all contacts button
+        public static let centerAll = L10n.tr("Map", "map.controls.centerAll", fallback: "Center on all contacts")
+        /// Location: MapControlsToolbar.swift - Purpose: Accessibility label for user location button
+        public static let centerOnMyLocation = L10n.tr("Map", "map.controls.centerOnMyLocation", fallback: "Center on my location")
+        /// Location: MapView.swift - Purpose: Accessibility label when labels are visible
+        public static let hideLabels = L10n.tr("Map", "map.controls.hideLabels", fallback: "Hide labels")
+        /// Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button
+        public static let layers = L10n.tr("Map", "map.controls.layers", fallback: "Map layers")
+        /// Location: MapView.swift - Purpose: Accessibility label when labels are hidden
+        public static let showLabels = L10n.tr("Map", "map.controls.showLabels", fallback: "Show labels")
+      }
+      public enum Detail {
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Value showing contact is favorited
+        public static let favorite = L10n.tr("Map", "map.detail.favorite", fallback: "Favorite")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Path length value with hop count
+        public static func hops(_ p1: Int) -> String {
+          return L10n.tr("Map", "map.detail.hops", p1, fallback: "%d hops")
+        }
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Path length value for single hop
+        public static let hopSingular = L10n.tr("Map", "map.detail.hopSingular", fallback: "1 hop")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for last advertisement timestamp
+        public static let lastAdvert = L10n.tr("Map", "map.detail.lastAdvert", fallback: "Last Advert")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for latitude coordinate
+        public static let latitude = L10n.tr("Map", "map.detail.latitude", fallback: "Latitude")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for longitude coordinate
+        public static let longitude = L10n.tr("Map", "map.detail.longitude", fallback: "Longitude")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for contact name
+        public static let name = L10n.tr("Map", "map.detail.name", fallback: "Name")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for path length
+        public static let pathLength = L10n.tr("Map", "map.detail.pathLength", fallback: "Path Length")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for routing type
+        public static let routing = L10n.tr("Map", "map.detail.routing", fallback: "Routing")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Flood routing type value
+        public static let routingFlood = L10n.tr("Map", "map.detail.routingFlood", fallback: "Flood")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for favorite status
+        public static let status = L10n.tr("Map", "map.detail.status", fallback: "Status")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Label for contact type
+        public static let type = L10n.tr("Map", "map.detail.type", fallback: "Type")
+        public enum Action {
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Button to access repeater admin settings
+          public static let adminAccess = L10n.tr("Map", "map.detail.action.adminAccess", fallback: "Admin Access")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Button to join a room
+          public static let joinRoom = L10n.tr("Map", "map.detail.action.joinRoom", fallback: "Join Room")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Button to send a message
+          public static let sendMessage = L10n.tr("Map", "map.detail.action.sendMessage", fallback: "Send Message")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry
+          public static let telemetry = L10n.tr("Map", "map.detail.action.telemetry", fallback: "Telemetry")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Sheet title for telemetry authentication
+          public static let telemetryAccessTitle = L10n.tr("Map", "map.detail.action.telemetryAccessTitle", fallback: "Telemetry Access")
+        }
+        public enum Section {
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Section header for contact information
+          public static let contactInfo = L10n.tr("Map", "map.detail.section.contactInfo", fallback: "Contact Info")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Section header for location coordinates
+          public static let location = L10n.tr("Map", "map.detail.section.location", fallback: "Location")
+          /// Location: MapView.swift ContactDetailSheet - Purpose: Section header for network path info
+          public static let networkPath = L10n.tr("Map", "map.detail.section.networkPath", fallback: "Network Path")
+        }
+      }
+      public enum EmptyState {
+        /// Location: MapView.swift - Purpose: Empty state description
+        public static let description = L10n.tr("Map", "map.emptyState.description", fallback: "Contacts with location data will appear here once discovered on the mesh network.")
+        /// Location: MapView.swift - Purpose: Empty state title when no contacts have location
+        public static let title = L10n.tr("Map", "map.emptyState.title", fallback: "No Contacts on Map")
+      }
+      public enum Style {
+        /// Location: MapStyleSelection.swift - Purpose: Hybrid map style option
+        public static let hybrid = L10n.tr("Map", "map.style.hybrid", fallback: "Hybrid")
+        /// Location: MapStyleSelection.swift - Purpose: Satellite map style option
+        public static let satellite = L10n.tr("Map", "map.style.satellite", fallback: "Satellite")
+        /// Location: MapStyleSelection.swift - Purpose: Standard map style option
+        public static let standard = L10n.tr("Map", "map.style.standard", fallback: "Standard")
+      }
+      public enum `Type` {
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type
+        public static let chatContact = L10n.tr("Map", "map.type.chatContact", fallback: "Chat Contact")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type
+        public static let repeater = L10n.tr("Map", "map.type.repeater", fallback: "Repeater")
+        /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type
+        public static let room = L10n.tr("Map", "map.type.room", fallback: "Room")
+      }
     }
+  }
   public enum Onboarding {
     public enum DeviceScan {
       /// Location: DeviceScanView.swift - Button to add a new device

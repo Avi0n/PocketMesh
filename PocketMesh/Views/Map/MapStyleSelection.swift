@@ -17,9 +17,9 @@ enum MapStyleSelection: String, CaseIterable, Hashable {
 
     var label: String {
         switch self {
-        case .standard: "Standard"
-        case .satellite: "Satellite"
-        case .hybrid: "Hybrid"
+        case .standard: L10n.Map.Map.Style.standard
+        case .satellite: L10n.Map.Map.Style.satellite
+        case .hybrid: L10n.Map.Map.Style.hybrid
         }
     }
 

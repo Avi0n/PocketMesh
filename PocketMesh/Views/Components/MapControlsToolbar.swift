@@ -51,7 +51,7 @@ struct MapControlsToolbar<CustomContent: View>: View {
                     .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Center on my location")
+            .accessibilityLabel(L10n.Map.Map.Controls.centerOnMyLocation)
         }
     }
 
@@ -70,7 +70,7 @@ struct MapControlsToolbar<CustomContent: View>: View {
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Map layers")
+        .accessibilityLabel(L10n.Map.Map.Controls.layers)
     }
 }
 
