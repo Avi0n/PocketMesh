@@ -9,12 +9,13 @@ enum AppColors {
 
     // MARK: - Identity Palettes
 
-    /// Colors for sender names in channel messages.
+    /// Colors for identifying users by name.
     ///
+    /// Used for sender names in messages, contact avatars, and mentions.
     /// The standard palette uses muted earth tones designed for visual harmony.
     /// For users with increased contrast enabled, use `paletteHighContrast` which
     /// meets WCAG AA 4.5:1 contrast ratio against white backgrounds.
-    enum SenderName {
+    enum NameColor {
         /// Standard palette with distinct hues spread across the color wheel.
         static let palette: [Color] = [
             Color(hex: 0xc97d5d), // coral (orange-red)
@@ -57,29 +58,6 @@ enum AppColors {
             let colors = highContrast ? paletteHighContrast : palette
             let hash = name.utf8.reduce(0) { $0 ^ Int($1) }
             return colors[abs(hash) % colors.count]
-        }
-    }
-
-    /// Colors for contact avatars in direct message lists.
-    enum ContactAvatar {
-        /// Uses a subset of SenderName palette for visual consistency.
-        static let palette: [Color] = [
-            SenderName.palette[0], // coral
-            SenderName.palette[1], // slate teal
-            SenderName.palette[2], // dusty violet
-            SenderName.palette[3], // sage
-        ]
-
-        /// Returns a color for the given contact.
-        ///
-        /// Uses XOR hashing on public key prefix for deterministic coloring.
-        /// If publicKey is empty, returns the first palette color.
-        ///
-        /// - Parameter publicKey: The contact's public key.
-        /// - Returns: A color from the palette.
-        static func color(for publicKey: Data) -> Color {
-            let hash = publicKey.prefix(4).reduce(0) { $0 ^ Int($1) }
-            return palette[abs(hash) % palette.count]
         }
     }
 

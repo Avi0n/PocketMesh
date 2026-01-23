@@ -49,7 +49,7 @@ struct RoomMessageBubble: View {
                 Text(message.authorDisplayName)
                     .font(.footnote)
                     .bold()
-                    .foregroundStyle(AppColors.SenderName.color(for: message.authorDisplayName, highContrast: colorSchemeContrast == .increased))
+                    .foregroundStyle(AppColors.NameColor.color(for: message.authorDisplayName, highContrast: colorSchemeContrast == .increased))
                     .padding(.horizontal, 12)
             }
 

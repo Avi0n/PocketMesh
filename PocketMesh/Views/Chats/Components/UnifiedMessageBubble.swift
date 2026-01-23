@@ -259,7 +259,7 @@ struct UnifiedMessageBubble: View {
     }
 
     private var senderColor: Color {
-        AppColors.SenderName.color(for: senderName, highContrast: colorSchemeContrast == .increased)
+        AppColors.NameColor.color(for: senderName, highContrast: colorSchemeContrast == .increased)
     }
 
     private var detectedURL: URL? {

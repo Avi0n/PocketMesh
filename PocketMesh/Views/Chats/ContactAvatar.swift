@@ -23,11 +23,6 @@ struct ContactAvatar: View {
     }
 
     private var avatarColor: Color {
-        // Synthetic contacts (channel senders not in contacts) have empty publicKey.
-        // Use name-based coloring for consistency with message thread sender colors.
-        if contact.publicKey.isEmpty {
-            return AppColors.SenderName.color(for: contact.name)
-        }
-        return AppColors.ContactAvatar.color(for: contact.publicKey)
+        AppColors.NameColor.color(for: contact.displayName)
     }
 }

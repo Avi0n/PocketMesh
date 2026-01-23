@@ -74,7 +74,7 @@ struct MessageText: View {
                 }
             } else {
                 // On light bubbles: use sender color for the mentioned name
-                let mentionColor = AppColors.SenderName.color(
+                let mentionColor = AppColors.NameColor.color(
                     for: name,
                     highContrast: colorSchemeContrast == .increased
                 )
