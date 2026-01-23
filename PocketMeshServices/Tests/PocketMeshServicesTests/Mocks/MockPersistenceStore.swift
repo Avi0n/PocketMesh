@@ -252,7 +252,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         if let message = messages[id] {
             messages[id] = MessageDTO(
                 id: message.id,
@@ -807,7 +807,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         if let channelIndex {
             // Channel message: match by channelHash and senderTimestamp
             return mockRxLogEntries.first { entry in

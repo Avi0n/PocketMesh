@@ -875,7 +875,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         let targetID = id
         let predicate = #Predicate<Message> { message in
             message.id == targetID
@@ -1118,6 +1118,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Sets the notification level for a channel
+    public func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.channelNotFound
+        }
+
+        channel.notificationLevel = level
+        try modelContext.save()
+    }
+
     /// Sets the favorite state for a channel
     public func setChannelFavorite(_ channelID: UUID, isFavorite: Bool) throws {
         let targetID = channelID
@@ -1149,18 +1164,27 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
 
-        // Only fetch channels with unread messages for this device
+        // Channels: exclude muted, include if unreadCount > 0 OR unreadMentionCount > 0
         let mutedRawValue = NotificationLevel.muted.rawValue
         let channelPredicate = #Predicate<Channel> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && $0.notificationLevelRawValue != mutedRawValue
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            ($0.unreadCount > 0 || $0.unreadMentionCount > 0)
         }
         let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
         let channelsWithUnread = try modelContext.fetch(channelDescriptor)
-        let channelTotal = channelsWithUnread.reduce(0) { $0 + $1.unreadCount }
+        let channelTotal = channelsWithUnread.reduce(0) { total, channel in
+            if channel.notificationLevel == .mentionsOnly {
+                return total + channel.unreadMentionCount
+            }
+            return total + channel.unreadCount
+        }
 
-        // Only fetch room sessions with unread messages for this device
+        // Rooms: exclude muted (no mention tracking for rooms)
         let roomPredicate = #Predicate<RemoteNodeSession> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && $0.notificationLevelRawValue != mutedRawValue
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            $0.unreadCount > 0
         }
         let roomDescriptor = FetchDescriptor<RemoteNodeSession>(predicate: roomPredicate)
         let roomsWithUnread = try modelContext.fetch(roomDescriptor)
@@ -1510,6 +1534,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
+    /// Sets the notification level for a remote node session
+    public func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { $0.id == targetID }
+        var descriptor = FetchDescriptor<RemoteNodeSession>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.remoteNodeSessionNotFound
+        }
+
+        session.notificationLevel = level
+        try modelContext.save()
+    }
+
     /// Sets the favorite state for a remote node session
     public func setSessionFavorite(_ sessionID: UUID, isFavorite: Bool) throws {
         let targetID = sessionID
@@ -1774,7 +1813,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {
