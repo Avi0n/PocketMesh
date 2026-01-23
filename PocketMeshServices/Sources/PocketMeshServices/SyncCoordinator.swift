@@ -554,6 +554,13 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
+            // Correct invalid timestamps (sender clock wrong)
+            let receiveTime = Date()
+            let (finalTimestamp, timestampCorrected) = Self.correctTimestampIfNeeded(timestamp, receiveTime: receiveTime)
+            if timestampCorrected {
+                self.logger.debug("Corrected invalid direct message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
+            }
+
             // Look up path data from RxLogEntry (for direct messages, channelIndex is nil)
             var pathNodes: Data?
             var pathLength = message.pathLength
@@ -584,8 +591,8 @@ public actor SyncCoordinator {
                 contactID: contact?.id,
                 channelIndex: nil,
                 text: message.text,
-                timestamp: timestamp,
-                createdAt: Date(),
+                timestamp: finalTimestamp,
+                createdAt: receiveTime,
                 direction: .incoming,
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
@@ -602,7 +609,8 @@ public actor SyncCoordinator {
                 retryAttempt: 0,
                 maxRetryAttempts: 0,
                 containsSelfMention: hasSelfMention,
-                mentionSeen: false
+                mentionSeen: false,
+                timestampCorrected: timestampCorrected
             )
 
             // Check for duplicate before saving
@@ -667,6 +675,13 @@ public actor SyncCoordinator {
 
             let timestamp = UInt32(message.senderTimestamp.timeIntervalSince1970)
 
+            // Correct invalid timestamps (sender clock wrong)
+            let receiveTime = Date()
+            let (finalTimestamp, timestampCorrected) = Self.correctTimestampIfNeeded(timestamp, receiveTime: receiveTime)
+            if timestampCorrected {
+                self.logger.debug("Corrected invalid channel message timestamp from \(Date(timeIntervalSince1970: TimeInterval(timestamp))) to \(receiveTime)")
+            }
+
             // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
             var pathNodes: Data?
             var pathLength = message.pathLength
@@ -699,8 +714,8 @@ public actor SyncCoordinator {
                 contactID: nil,
                 channelIndex: message.channelIndex,
                 text: messageText,
-                timestamp: timestamp,
-                createdAt: Date(),
+                timestamp: finalTimestamp,
+                createdAt: receiveTime,
                 direction: .incoming,
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
@@ -717,7 +732,8 @@ public actor SyncCoordinator {
                 retryAttempt: 0,
                 maxRetryAttempts: 0,
                 containsSelfMention: hasSelfMention,
-                mentionSeen: false
+                mentionSeen: false,
+                timestampCorrected: timestampCorrected
             )
 
             // Check for duplicate before saving
@@ -874,5 +890,45 @@ public actor SyncCoordinator {
             return (senderName, messageText)
         }
         return (nil, text)
+    }
+
+    // MARK: - Timestamp Correction
+
+    /// Maximum acceptable time in the future for a sender timestamp (5 minutes)
+    private static let timestampToleranceFuture: TimeInterval = 5 * 60
+
+    /// Maximum acceptable time in the past for a sender timestamp (6 months)
+    private static let timestampTolerancePast: TimeInterval = 6 * 30 * 24 * 60 * 60
+
+    /// Corrects invalid timestamps from senders with broken clocks.
+    ///
+    /// MeshCore protocol does not specify timestamp validation. This is a client-side
+    /// policy to prevent timeline corruption when devices have severely incorrect clocks
+    /// (a common issue per MeshCore FAQ 6.1, 6.2). Original timestamps are preserved
+    /// for ACK deduplication (per payloads.md:65).
+    ///
+    /// Returns the corrected timestamp and whether correction was applied.
+    /// Timestamps are considered invalid if:
+    /// - More than 5 minutes in the future (relative to receive time)
+    /// - More than 6 months in the past (relative to receive time)
+    ///
+    /// - Parameters:
+    ///   - timestamp: The sender's claimed timestamp
+    ///   - receiveTime: When the message was received (defaults to now)
+    /// - Returns: Tuple of (corrected timestamp, was corrected flag)
+    nonisolated static func correctTimestampIfNeeded(
+        _ timestamp: UInt32,
+        receiveTime: Date = Date()
+    ) -> (correctedTimestamp: UInt32, wasCorrected: Bool) {
+        let receiveSeconds = receiveTime.timeIntervalSince1970
+        let timestampSeconds = TimeInterval(timestamp)
+
+        let isTooFarInFuture = timestampSeconds > receiveSeconds + timestampToleranceFuture
+        let isTooFarInPast = timestampSeconds < receiveSeconds - timestampTolerancePast
+
+        if isTooFarInFuture || isTooFarInPast {
+            return (UInt32(receiveSeconds), true)
+        }
+        return (timestamp, false)
     }
 }

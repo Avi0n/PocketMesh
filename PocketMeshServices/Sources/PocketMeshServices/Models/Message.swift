@@ -121,6 +121,9 @@ public final class Message {
     /// Whether the user has scrolled to see this mention (for tracking unread mentions)
     public var mentionSeen: Bool = false
 
+    /// Whether the timestamp was corrected due to sender clock being invalid
+    public var timestampCorrected: Bool = false
+
     /// Heard repeats for this message (cascade delete)
     @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)
     public var repeats: [MessageRepeat]?
@@ -156,7 +159,8 @@ public final class Message {
         linkPreviewIconData: Data? = nil,
         linkPreviewFetched: Bool = false,
         containsSelfMention: Bool = false,
-        mentionSeen: Bool = false
+        mentionSeen: Bool = false,
+        timestampCorrected: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -189,6 +193,7 @@ public final class Message {
         self.linkPreviewFetched = linkPreviewFetched
         self.containsSelfMention = containsSelfMention
         self.mentionSeen = mentionSeen
+        self.timestampCorrected = timestampCorrected
     }
 }
 
@@ -272,6 +277,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let linkPreviewFetched: Bool
     public let containsSelfMention: Bool
     public let mentionSeen: Bool
+    public let timestampCorrected: Bool
 
     public init(from message: Message) {
         self.id = message.id
@@ -305,6 +311,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewFetched = message.linkPreviewFetched
         self.containsSelfMention = message.containsSelfMention
         self.mentionSeen = message.mentionSeen
+        self.timestampCorrected = message.timestampCorrected
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -339,7 +346,8 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         linkPreviewIconData: Data? = nil,
         linkPreviewFetched: Bool = false,
         containsSelfMention: Bool = false,
-        mentionSeen: Bool = false
+        mentionSeen: Bool = false,
+        timestampCorrected: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -372,6 +380,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewFetched = linkPreviewFetched
         self.containsSelfMention = containsSelfMention
         self.mentionSeen = mentionSeen
+        self.timestampCorrected = timestampCorrected
     }
 
     public var isOutgoing: Bool {

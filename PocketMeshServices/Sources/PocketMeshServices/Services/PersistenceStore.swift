@@ -801,7 +801,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             maxRetryAttempts: dto.maxRetryAttempts,
             deduplicationKey: nil,
             containsSelfMention: dto.containsSelfMention,
-            mentionSeen: dto.mentionSeen
+            mentionSeen: dto.mentionSeen,
+            timestampCorrected: dto.timestampCorrected
         )
         modelContext.insert(message)
         try modelContext.save()
