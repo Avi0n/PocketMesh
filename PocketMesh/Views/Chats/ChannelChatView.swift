@@ -76,9 +76,10 @@ struct ChannelChatView: View {
         .task(id: appState.servicesVersion) {
             logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
+            // Load contacts first so contactNameSet is populated before buildChannelSenders runs
+            await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
-            await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await loadUnseenMentions()
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
@@ -397,7 +398,8 @@ struct ChannelChatView: View {
         guard let query = MentionUtilities.detectActiveMention(in: viewModel.composingText) else {
             return []
         }
-        return MentionUtilities.filterContacts(viewModel.allContacts, query: query)
+        let combined = viewModel.allContacts + viewModel.channelSenders
+        return MentionUtilities.filterContacts(combined, query: query)
     }
 
     @ViewBuilder

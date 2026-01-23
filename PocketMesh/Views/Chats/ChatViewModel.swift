@@ -17,6 +17,15 @@ final class ChatViewModel {
     /// All contacts for mention autocomplete (includes contacts without messages)
     var allContacts: [ContactDTO] = []
 
+    /// Synthetic contacts for channel senders not in contacts
+    var channelSenders: [ContactDTO] = []
+
+    /// O(1) lookup for channel sender names
+    private var channelSenderNames: Set<String> = []
+
+    /// O(1) lookup for contact names
+    private var contactNameSet: Set<String> = []
+
     /// Current channels with messages
     var channels: [ChannelDTO] = []
 
@@ -445,6 +454,7 @@ final class ChatViewModel {
 
         do {
             allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+            contactNameSet = Set(allContacts.map(\.name))
         } catch {
             logger.warning("Failed to load contacts for mentions: \(error.localizedDescription)")
         }
@@ -551,6 +561,12 @@ final class ChatViewModel {
         let text = message.text
         Task {
             await updateURLForDisplayItem(messageID: messageID, text: text)
+        }
+
+        // Add sender to channelSenders if new (for channel messages)
+        if let senderName = message.senderNodeName,
+           let deviceID = currentChannel?.deviceID {
+            addChannelSenderIfNew(senderName, deviceID: deviceID)
         }
     }
 
@@ -674,6 +690,7 @@ final class ChatViewModel {
             }
 
             messages = fetchedMessages
+            buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
@@ -721,6 +738,73 @@ final class ChatViewModel {
             // Restore the text so user can retry
             composingText = text
         }
+    }
+
+    // MARK: - Channel Sender Tracking
+
+    /// Build synthetic contacts from channel message senders not in contacts.
+    /// Called after loading channel messages to populate mention picker.
+    /// Builds into local collections first to avoid multiple @Observable updates.
+    private func buildChannelSenders(deviceID: UUID) {
+        var localNames: Set<String> = []
+        var localSenders: [ContactDTO] = []
+
+        for message in messages {
+            if let name = message.senderNodeName {
+                let trimmed = name.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty,
+                      trimmed.count <= 128,
+                      !contactNameSet.contains(trimmed),
+                      !localNames.contains(trimmed) else { continue }
+
+                localNames.insert(trimmed)
+                localSenders.append(makeSyntheticContact(name: trimmed, deviceID: deviceID))
+            }
+        }
+
+        // Assign once to minimize observation updates
+        channelSenderNames = localNames
+        channelSenders = localSenders
+
+        logger.info("Built \(self.channelSenders.count) synthetic contacts from channel senders")
+    }
+
+    /// Add a channel sender as a synthetic contact if not already tracked.
+    /// Used for incremental additions when new messages arrive.
+    private func addChannelSenderIfNew(_ name: String, deviceID: UUID) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty,
+              trimmed.count <= 128,
+              !contactNameSet.contains(trimmed),
+              !channelSenderNames.contains(trimmed) else { return }
+
+        channelSenderNames.insert(trimmed)
+        channelSenders.append(makeSyntheticContact(name: trimmed, deviceID: deviceID))
+    }
+
+    /// Create a synthetic ContactDTO for a channel sender not in contacts.
+    private func makeSyntheticContact(name: String, deviceID: UUID) -> ContactDTO {
+        ContactDTO(
+            id: name.stableUUID,
+            deviceID: deviceID,
+            publicKey: Data(),
+            name: name,
+            typeRawValue: ContactType.chat.rawValue,
+            flags: 0,
+            outPathLength: -1,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0.0,
+            longitude: 0.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
     }
 
     /// Get the last message preview for a contact

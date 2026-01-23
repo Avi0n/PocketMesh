@@ -19,6 +19,8 @@ struct MentionSuggestionRow: View {
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Mention \(contact.displayName)")
-        .accessibilityHint("Double tap to insert")
+        .accessibilityHint(contact.publicKey.isEmpty
+            ? "Channel sender. Double tap to mention"
+            : "Saved contact. Double tap to mention")
     }
 }
