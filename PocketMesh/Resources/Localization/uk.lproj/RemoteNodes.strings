@@ -45,19 +45,19 @@
 "remoteNodes.auth.errorPrefix" = "Помилка: %@";
 
 /* Location: NodeAuthenticationSheet.swift - Password too long warning for repeaters */
-"remoteNodes.auth.passwordTooLongRepeaters" = "Ретранслятори MeshCore приймають паролі до %d символів. Зайві символи будуть проігноровані.";
+"remoteNodes.auth.passwordTooLongRepeaters" = "Ретранслятори MeshCore приймають паролі до %d символів. Зайві символи буде проігноровано.";
 
 /* Location: NodeAuthenticationSheet.swift - Password too long warning for rooms */
-"remoteNodes.auth.passwordTooLongRooms" = "Кімнати MeshCore приймають паролі до %d символів. Зайві символи будуть проігноровані.";
+"remoteNodes.auth.passwordTooLongRooms" = "Кімнати MeshCore приймають паролі до %d символів. Зайві символи буде проігноровано.";
 
 /* Location: NodeAuthenticationSheet.swift - Countdown text showing seconds remaining */
-"remoteNodes.auth.secondsRemaining" = "До %d секунд залишилося";
+"remoteNodes.auth.secondsRemaining" = "Залишилося %d с";
 
 /* Location: NodeAuthenticationSheet.swift - Connect button */
 "remoteNodes.auth.connect" = "Підключитися";
 
 /* Location: NodeAuthenticationSheet.swift - Accessibility announcement for countdown */
-"remoteNodes.auth.secondsRemainingAnnouncement" = "%d секунд залишилося";
+"remoteNodes.auth.secondsRemainingAnnouncement" = "Залишилося %d секунд";
 
 // MARK: - Repeater Settings
 
@@ -185,7 +185,7 @@
 "remoteNodes.settings.newPassword" = "Новий пароль";
 
 /* Location: RepeaterSettingsView.swift - Confirm password placeholder */
-"remoteNodes.settings.confirmPassword" = "Підтвердіть пароль";
+"remoteNodes.settings.confirmPassword" = "Підтвердження пароля";
 
 /* Location: RepeaterSettingsView.swift - Change password button */
 "remoteNodes.settings.changePassword" = "Змінити пароль";
@@ -223,7 +223,7 @@
 "remoteNodes.settings.radioNotLoaded" = "Налаштування радіо не завантажено";
 
 /* Location: RepeaterSettingsViewModel.swift - Radio applied success */
-"remoteNodes.settings.radioAppliedSuccess" = "Налаштування радіо застосовано. Перезапустіть пристрій для набуття чинності.";
+"remoteNodes.settings.radioAppliedSuccess" = "Налаштування радіо застосовано. Перезапусти пристрій, щоб зміни набули чинності.";
 
 /* Location: RepeaterSettingsViewModel.swift - Radio apply partial failure */
 "remoteNodes.settings.radioApplyFailed" = "Деякі налаштування радіо не вдалося застосувати";
@@ -253,7 +253,7 @@
 "remoteNodes.settings.timeSynced" = "Час синхронізовано";
 
 /* Location: RepeaterSettingsViewModel.swift - Clock ahead error */
-"remoteNodes.settings.clockAheadError" = "Годинник ретранслятора випереджає час телефону. Якщо занадто далеко вперед, перезавантажте ретранслятор і знову синхронізуйте час.";
+"remoteNodes.settings.clockAheadError" = "Годинник ретранслятора випереджає час телефону. Якщо різниця значна, перезавантаж ретранслятор і синхронізуй час знову.";
 
 /* Location: RepeaterSettingsViewModel.swift - Sync time failure */
 "remoteNodes.settings.syncTimeFailed" = "Не вдалося синхронізувати час";
@@ -271,13 +271,13 @@
 "remoteNodes.settings.noService" = "Сервіс ретранслятора недоступний";
 
 /* Location: RepeaterSettingsViewModel.swift - Advert interval validation error */
-"remoteNodes.settings.advertIntervalValidation" = "Приймає 0 (вимкнено) або 60-240 хв";
+"remoteNodes.settings.advertIntervalValidation" = "Допустимі значення: 0 (вимкнено) або 60–240 хв";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood interval validation error */
-"remoteNodes.settings.floodIntervalValidation" = "Приймає 3-48 годин";
+"remoteNodes.settings.floodIntervalValidation" = "Допустимі значення: 3–48 годин";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood max hops validation error */
-"remoteNodes.settings.floodMaxValidation" = "Приймає 0-64 переходів";
+"remoteNodes.settings.floodMaxValidation" = "Допустимі значення: 0–64 переходів";
 
 // MARK: - Repeater Status
 
@@ -330,16 +330,16 @@
 "remoteNodes.status.unknown" = "Невідомо";
 
 /* Location: RepeaterStatusView.swift - Seconds ago format */
-"remoteNodes.status.secondsAgo" = "%dс тому";
+"remoteNodes.status.secondsAgo" = "%d с тому";
 
 /* Location: RepeaterStatusView.swift - Minutes ago format */
-"remoteNodes.status.minutesAgo" = "%dхв тому";
+"remoteNodes.status.minutesAgo" = "%d хв тому";
 
 /* Location: RepeaterStatusView.swift - Hours ago format */
-"remoteNodes.status.hoursAgo" = "%dгод тому";
+"remoteNodes.status.hoursAgo" = "%d год тому";
 
 /* Location: RepeaterStatusView.swift - SNR display format */
-"remoteNodes.status.snrFormat" = "SNR %@дБ";
+"remoteNodes.status.snrFormat" = "SNR %@ дБ";
 
 // MARK: - Repeater Status ViewModel Messages
 
@@ -347,16 +347,16 @@
 "remoteNodes.status.requestTimedOut" = "Час очікування запиту вичерпано";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
-"remoteNodes.status.uptime1Day" = "1 день %dгод %dхв";
+"remoteNodes.status.uptime1Day" = "1 день %d год %d хв";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime multiple days format */
-"remoteNodes.status.uptimeDays" = "%d днів %dгод %dхв";
+"remoteNodes.status.uptimeDays" = "%d днів %d год %d хв";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime hours format */
-"remoteNodes.status.uptimeHours" = "%dгод %dхв";
+"remoteNodes.status.uptimeHours" = "%d год %d хв";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime minutes format */
-"remoteNodes.status.uptimeMinutes" = "%dхв";
+"remoteNodes.status.uptimeMinutes" = "%d хв";
 
 /* Location: RepeaterStatusViewModel.swift - Failed to load OCV settings */
 "remoteNodes.status.ocvLoadFailed" = "Не вдалося завантажити налаштування кривої батареї";
@@ -376,13 +376,13 @@
 "remoteNodes.room.noMessagesYet" = "Ще немає публічних повідомлень";
 
 /* Location: RoomConversationView.swift - Empty state hint */
-"remoteNodes.room.beFirstToPost" = "Будьте першим, хто напише";
+"remoteNodes.room.beFirstToPost" = "Будь першим, хто напише";
 
 /* Location: RoomConversationView.swift - Input placeholder */
 "remoteNodes.room.publicMessage" = "Публічне повідомлення";
 
 /* Location: RoomConversationView.swift - Read-only banner */
-"remoteNodes.room.viewOnlyBanner" = "Лише перегляд — приєднайтесь як учасник, щоб писати";
+"remoteNodes.room.viewOnlyBanner" = "Лише перегляд — приєднайся як учасник, щоб писати";
 
 /* Location: RoomConversationView.swift - Room info sheet title */
 "remoteNodes.room.infoTitle" = "Інформація про кімнату";

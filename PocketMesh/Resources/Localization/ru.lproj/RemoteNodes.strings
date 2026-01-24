@@ -51,13 +51,13 @@
 "remoteNodes.auth.passwordTooLongRooms" = "Комнаты MeshCore принимают пароли до %d символов. Лишние символы будут проигнорированы.";
 
 /* Location: NodeAuthenticationSheet.swift - Countdown text showing seconds remaining */
-"remoteNodes.auth.secondsRemaining" = "До %d секунд осталось";
+"remoteNodes.auth.secondsRemaining" = "Осталось %d секунд";
 
 /* Location: NodeAuthenticationSheet.swift - Connect button */
 "remoteNodes.auth.connect" = "Подключиться";
 
 /* Location: NodeAuthenticationSheet.swift - Accessibility announcement for countdown */
-"remoteNodes.auth.secondsRemainingAnnouncement" = "%d секунд осталось";
+"remoteNodes.auth.secondsRemainingAnnouncement" = "Осталось %d секунд";
 
 // MARK: - Repeater Settings
 
@@ -110,13 +110,13 @@
 "remoteNodes.settings.bandwidthHint" = "Меньшие значения увеличивают дальность, но уменьшают скорость";
 
 /* Location: RepeaterSettingsView.swift - Spreading factor label */
-"remoteNodes.settings.spreadingFactor" = "Фактор расширения";
+"remoteNodes.settings.spreadingFactor" = "Коэффициент расширения";
 
 /* Location: RepeaterSettingsView.swift - Spreading factor accessibility hint */
 "remoteNodes.settings.spreadingFactorHint" = "Большие значения увеличивают дальность, но уменьшают скорость";
 
 /* Location: RepeaterSettingsView.swift - Coding rate label */
-"remoteNodes.settings.codingRate" = "Скорость кодирования";
+"remoteNodes.settings.codingRate" = "Коэффициент кодирования";
 
 /* Location: RepeaterSettingsView.swift - Coding rate accessibility hint */
 "remoteNodes.settings.codingRateHint" = "Большие значения добавляют коррекцию ошибок, но уменьшают скорость";
@@ -158,7 +158,7 @@
 "remoteNodes.settings.repeaterMode" = "Режим ретранслятора";
 
 /* Location: RepeaterSettingsView.swift - Advert interval (0-hop) label */
-"remoteNodes.settings.advertInterval0Hop" = "Интервал объявлений (0-переход)";
+"remoteNodes.settings.advertInterval0Hop" = "Интервал объявлений (0 переходов)";
 
 /* Location: RepeaterSettingsView.swift - Minutes unit */
 "remoteNodes.settings.min" = "мин";
@@ -170,7 +170,7 @@
 "remoteNodes.settings.hrs" = "ч.";
 
 /* Location: RepeaterSettingsView.swift - Max flood hops label */
-"remoteNodes.settings.maxFloodHops" = "Макс. переходов рассылки";
+"remoteNodes.settings.maxFloodHops" = "Макс. число переходов рассылки";
 
 /* Location: RepeaterSettingsView.swift - Hops unit */
 "remoteNodes.settings.hops" = "переходов";
@@ -185,7 +185,7 @@
 "remoteNodes.settings.newPassword" = "Новый пароль";
 
 /* Location: RepeaterSettingsView.swift - Confirm password placeholder */
-"remoteNodes.settings.confirmPassword" = "Подтвердите пароль";
+"remoteNodes.settings.confirmPassword" = "Подтверди пароль";
 
 /* Location: RepeaterSettingsView.swift - Change password button */
 "remoteNodes.settings.changePassword" = "Изменить пароль";
@@ -223,7 +223,7 @@
 "remoteNodes.settings.radioNotLoaded" = "Настройки радио не загружены";
 
 /* Location: RepeaterSettingsViewModel.swift - Radio applied success */
-"remoteNodes.settings.radioAppliedSuccess" = "Настройки радио применены. Перезапустите устройство для вступления в силу.";
+"remoteNodes.settings.radioAppliedSuccess" = "Настройки радио применены. Перезапусти устройство для вступления в силу.";
 
 /* Location: RepeaterSettingsViewModel.swift - Radio apply partial failure */
 "remoteNodes.settings.radioApplyFailed" = "Некоторые настройки радио не удалось применить";
@@ -253,7 +253,7 @@
 "remoteNodes.settings.timeSynced" = "Время синхронизировано";
 
 /* Location: RepeaterSettingsViewModel.swift - Clock ahead error */
-"remoteNodes.settings.clockAheadError" = "Часы ретранслятора опережают время телефона. Если слишком далеко вперёд, перезагрузите ретранслятор и снова синхронизируйте время.";
+"remoteNodes.settings.clockAheadError" = "Часы ретранслятора опережают время телефона. При значительном расхождении перезагрузи ретранслятор и снова синхронизируй время.";
 
 /* Location: RepeaterSettingsViewModel.swift - Sync time failure */
 "remoteNodes.settings.syncTimeFailed" = "Не удалось синхронизировать время";
@@ -271,13 +271,13 @@
 "remoteNodes.settings.noService" = "Сервис ретранслятора недоступен";
 
 /* Location: RepeaterSettingsViewModel.swift - Advert interval validation error */
-"remoteNodes.settings.advertIntervalValidation" = "Принимает 0 (отключено) или 60-240 мин";
+"remoteNodes.settings.advertIntervalValidation" = "Допустимые значения: 0 (отключено) или 60-240 мин";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood interval validation error */
-"remoteNodes.settings.floodIntervalValidation" = "Принимает 3-48 часов";
+"remoteNodes.settings.floodIntervalValidation" = "Допустимые значения: 3-48 часов";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood max hops validation error */
-"remoteNodes.settings.floodMaxValidation" = "Принимает 0-64 переходов";
+"remoteNodes.settings.floodMaxValidation" = "Допустимые значения: 0-64 переходов";
 
 // MARK: - Repeater Status
 
@@ -376,13 +376,13 @@
 "remoteNodes.room.noMessagesYet" = "Пока нет публичных сообщений";
 
 /* Location: RoomConversationView.swift - Empty state hint */
-"remoteNodes.room.beFirstToPost" = "Будьте первым, кто напишет";
+"remoteNodes.room.beFirstToPost" = "Будь первым, кто напишет";
 
 /* Location: RoomConversationView.swift - Input placeholder */
 "remoteNodes.room.publicMessage" = "Публичное сообщение";
 
 /* Location: RoomConversationView.swift - Read-only banner */
-"remoteNodes.room.viewOnlyBanner" = "Только просмотр — присоединитесь как участник, чтобы писать";
+"remoteNodes.room.viewOnlyBanner" = "Только просмотр — присоединись как участник, чтобы писать";
 
 /* Location: RoomConversationView.swift - Room info sheet title */
 "remoteNodes.room.infoTitle" = "Информация о комнате";

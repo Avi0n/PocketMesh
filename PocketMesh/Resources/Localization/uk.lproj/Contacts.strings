@@ -6,513 +6,932 @@
   AI-translated - please verify with native speakers.
 */
 
-// MARK: - Contact List View
+// MARK: - Common
 
-/* Location: ContactListView.swift - Navigation title */
-"contacts.title" = "Контакти";
+/* Location: Multiple files - Purpose: Generic OK button */
+"contacts.common.ok" = "OK";
 
-/* Location: ContactListView.swift - Search placeholder */
-"contacts.search" = "Пошук контактів";
+/* Location: Multiple files - Purpose: Generic Cancel button */
+"contacts.common.cancel" = "Скасувати";
 
-/* Location: ContactListView.swift - Section header for favorite contacts */
-"contacts.section.favorites" = "Обрані";
+/* Location: Multiple files - Purpose: Generic Save button */
+"contacts.common.save" = "Зберегти";
 
-/* Location: ContactListView.swift - Section header for online contacts */
-"contacts.section.online" = "В мережі";
+/* Location: Multiple files - Purpose: Generic Done button */
+"contacts.common.done" = "Готово";
 
-/* Location: ContactListView.swift - Section header for offline contacts */
-"contacts.section.offline" = "Не в мережі";
+/* Location: Multiple files - Purpose: Generic Delete button */
+"contacts.common.delete" = "Видалити";
 
-/* Location: ContactListView.swift - Section header for all contacts */
-"contacts.section.all" = "Усі контакти";
+/* Location: Multiple files - Purpose: Generic Edit button */
+"contacts.common.edit" = "Редагувати";
 
-/* Location: ContactListView.swift - Section header for repeaters */
-"contacts.section.repeaters" = "Ретранслятори";
+/* Location: Multiple files - Purpose: Generic Error alert title */
+"contacts.common.error" = "Помилка";
 
-/* Location: ContactListView.swift - Section header for rooms */
-"contacts.section.rooms" = "Кімнати";
-
-// MARK: - Contact List Empty State
-
-/* Location: ContactListView.swift - Empty state title when no contacts */
-"contacts.emptyState.title" = "Немає контактів";
-
-/* Location: ContactListView.swift - Empty state description */
-"contacts.emptyState.description" = "Контакти з'являться тут при виявленні їх у мережі mesh.";
-
-/* Location: ContactListView.swift - Empty state when searching */
-"contacts.emptyState.noResults" = "Немає результатів";
-
-/* Location: ContactListView.swift - Empty state description when searching */
-"contacts.emptyState.noResultsDescription" = "Не знайдено контактів, що відповідають \"%@\"";
-
-// MARK: - Contact Row
-
-/* Location: ContactRow.swift - Online status */
-"contacts.row.online" = "В мережі";
-
-/* Location: ContactRow.swift - Offline status */
-"contacts.row.offline" = "Не в мережі";
-
-/* Location: ContactRow.swift - Last seen prefix, %@ is time */
-"contacts.row.lastSeen" = "Був(ла) %@";
-
-/* Location: ContactRow.swift - Favorite indicator accessibility */
-"contacts.row.favorite" = "Обраний";
-
-/* Location: ContactRow.swift - Hop count accessibility, %lld is count */
-"contacts.row.hops" = "%lld переходів";
-
-/* Location: ContactRow.swift - Direct connection accessibility */
-"contacts.row.direct" = "Пряме з'єднання";
-
-/* Location: ContactRow.swift - Repeater type label */
-"contacts.row.repeater" = "Ретранслятор";
-
-/* Location: ContactRow.swift - Room type label */
-"contacts.row.room" = "Кімната";
-
-// MARK: - Contact List Context Menu
-
-/* Location: ContactListView.swift - Context menu: Message */
-"contacts.contextMenu.message" = "Повідомлення";
-
-/* Location: ContactListView.swift - Context menu: Add to favorites */
-"contacts.contextMenu.addFavorite" = "Додати до обраних";
-
-/* Location: ContactListView.swift - Context menu: Remove from favorites */
-"contacts.contextMenu.removeFavorite" = "Видалити з обраних";
-
-/* Location: ContactListView.swift - Context menu: View on map */
-"contacts.contextMenu.viewOnMap" = "Показати на карті";
-
-/* Location: ContactListView.swift - Context menu: Share contact */
-"contacts.contextMenu.share" = "Поділитися контактом";
-
-/* Location: ContactListView.swift - Context menu: Delete contact */
-"contacts.contextMenu.delete" = "Видалити контакт";
-
-/* Location: ContactListView.swift - Context menu: Block contact */
-"contacts.contextMenu.block" = "Заблокувати";
-
-/* Location: ContactListView.swift - Context menu: Unblock contact */
-"contacts.contextMenu.unblock" = "Розблокувати";
-
-// MARK: - Contact Detail View
-
-/* Location: ContactDetailView.swift - Navigation title */
-"contactDetail.title" = "Профіль";
-
-/* Location: ContactDetailView.swift - Section header: Contact info */
-"contactDetail.section.info" = "Інформація про контакт";
-
-/* Location: ContactDetailView.swift - Name field label */
-"contactDetail.name" = "Ім'я";
-
-/* Location: ContactDetailView.swift - Status field label */
-"contactDetail.status" = "Статус";
-
-/* Location: ContactDetailView.swift - Last seen field label */
-"contactDetail.lastSeen" = "Востаннє в мережі";
-
-/* Location: ContactDetailView.swift - Distance field label */
-"contactDetail.distance" = "Відстань";
-
-/* Location: ContactDetailView.swift - Hops field label */
-"contactDetail.hops" = "Переходи";
-
-/* Location: ContactDetailView.swift - Public key field label */
-"contactDetail.publicKey" = "Публічний ключ";
-
-/* Location: ContactDetailView.swift - Section header: Location */
-"contactDetail.section.location" = "Місцезнаходження";
-
-/* Location: ContactDetailView.swift - Latitude field label */
-"contactDetail.latitude" = "Широта";
-
-/* Location: ContactDetailView.swift - Longitude field label */
-"contactDetail.longitude" = "Довгота";
-
-/* Location: ContactDetailView.swift - Altitude field label */
-"contactDetail.altitude" = "Висота";
-
-/* Location: ContactDetailView.swift - Section header: Actions */
-"contactDetail.section.actions" = "Дії";
-
-/* Location: ContactDetailView.swift - Send message button */
-"contactDetail.sendMessage" = "Надіслати повідомлення";
-
-/* Location: ContactDetailView.swift - View on map button */
-"contactDetail.viewOnMap" = "Показати на карті";
-
-/* Location: ContactDetailView.swift - Share contact button */
-"contactDetail.shareContact" = "Поділитися контактом";
-
-/* Location: ContactDetailView.swift - Section header: Settings */
-"contactDetail.section.settings" = "Налаштування";
-
-/* Location: ContactDetailView.swift - Notifications toggle */
-"contactDetail.notifications" = "Сповіщення";
-
-/* Location: ContactDetailView.swift - Block contact button */
-"contactDetail.block" = "Заблокувати контакт";
-
-/* Location: ContactDetailView.swift - Unblock contact button */
-"contactDetail.unblock" = "Розблокувати контакт";
-
-/* Location: ContactDetailView.swift - Delete contact button */
-"contactDetail.delete" = "Видалити контакт";
-
-// MARK: - Contact Detail Formatting
-
-/* Location: ContactDetailView.swift - Online now status */
-"contactDetail.onlineNow" = "Зараз в мережі";
-
-/* Location: ContactDetailView.swift - Direct route display */
-"contactDetail.directRoute" = "Прямий (0 переходів)";
-
-/* Location: ContactDetailView.swift - Hop count display, %lld is count */
-"contactDetail.hopCount" = "%lld переходів";
-
-/* Location: ContactDetailView.swift - Unknown location */
-"contactDetail.unknownLocation" = "Невідомо";
-
-/* Location: ContactDetailView.swift - Copy button */
-"contactDetail.copy" = "Копіювати";
-
-/* Location: ContactDetailView.swift - Copied confirmation */
-"contactDetail.copied" = "Скопійовано";
-
-// MARK: - Add Contact View
-
-/* Location: AddContactView.swift - Navigation title */
-"addContact.title" = "Додати контакт";
-
-/* Location: AddContactView.swift - Name field placeholder */
-"addContact.namePlaceholder" = "Ім'я";
-
-/* Location: AddContactView.swift - Public key field placeholder */
-"addContact.publicKeyPlaceholder" = "Публічний ключ";
-
-/* Location: AddContactView.swift - Scan QR code button */
-"addContact.scanQR" = "Сканувати QR-код";
-
-/* Location: AddContactView.swift - Add button */
-"addContact.add" = "Додати";
-
-/* Location: AddContactView.swift - Cancel button */
-"addContact.cancel" = "Скасувати";
-
-/* Location: AddContactView.swift - Invalid public key error */
-"addContact.error.invalidKey" = "Невірний публічний ключ";
-
-/* Location: AddContactView.swift - Contact exists error */
-"addContact.error.exists" = "Контакт вже існує";
-
-// MARK: - Edit Contact View
-
-/* Location: EditContactView.swift - Navigation title */
-"editContact.title" = "Редагувати контакт";
-
-/* Location: EditContactView.swift - Name field label */
-"editContact.name" = "Ім'я";
-
-/* Location: EditContactView.swift - Nickname field label */
-"editContact.nickname" = "Псевдонім";
-
-/* Location: EditContactView.swift - Nickname field placeholder */
-"editContact.nicknamePlaceholder" = "Введіть псевдонім";
-
-/* Location: EditContactView.swift - Notes field label */
-"editContact.notes" = "Нотатки";
-
-/* Location: EditContactView.swift - Notes field placeholder */
-"editContact.notesPlaceholder" = "Додати нотатки про цей контакт";
-
-/* Location: EditContactView.swift - Save button */
-"editContact.save" = "Зберегти";
-
-/* Location: EditContactView.swift - Cancel button */
-"editContact.cancel" = "Скасувати";
-
-// MARK: - Delete Contact Confirmation
-
-/* Location: ContactDetailView.swift - Delete confirmation title */
-"contacts.delete.title" = "Видалити контакт?";
-
-/* Location: ContactDetailView.swift - Delete confirmation message */
-"contacts.delete.message" = "Це видалить контакт та всю історію чату.";
-
-/* Location: ContactDetailView.swift - Delete button */
-"contacts.delete.confirm" = "Видалити";
-
-/* Location: ContactDetailView.swift - Cancel button */
-"contacts.delete.cancel" = "Скасувати";
-
-// MARK: - Block Contact Confirmation
-
-/* Location: ContactDetailView.swift - Block confirmation title */
-"contacts.block.title" = "Заблокувати контакт?";
-
-/* Location: ContactDetailView.swift - Block confirmation message */
-"contacts.block.message" = "Ви більше не отримуватимете повідомлення від цього контакту.";
-
-/* Location: ContactDetailView.swift - Block button */
-"contacts.block.confirm" = "Заблокувати";
-
-/* Location: ContactDetailView.swift - Cancel button */
-"contacts.block.cancel" = "Скасувати";
-
-// MARK: - QR Code Scanner
-
-/* Location: QRScannerView.swift - Navigation title */
-"qrScanner.title" = "Сканувати QR-код";
-
-/* Location: QRScannerView.swift - Instructions */
-"qrScanner.instructions" = "Наведіть камеру на QR-код, щоб додати контакт";
-
-/* Location: QRScannerView.swift - Camera permission denied title */
-"qrScanner.permissionDenied.title" = "Потрібен доступ до камери";
-
-/* Location: QRScannerView.swift - Camera permission denied message */
-"qrScanner.permissionDenied.message" = "Будь ласка, надайте доступ до камери в Налаштуваннях для сканування QR-кодів.";
-
-/* Location: QRScannerView.swift - Open settings button */
-"qrScanner.openSettings" = "Відкрити налаштування";
-
-/* Location: QRScannerView.swift - Invalid QR code error */
-"qrScanner.error.invalid" = "Невірний QR-код";
-
-/* Location: QRScannerView.swift - Success message */
-"qrScanner.success" = "Контакт додано";
-
-// MARK: - Share Contact
-
-/* Location: ShareContactView.swift - Navigation title */
-"shareContact.title" = "Поділитися контактом";
-
-/* Location: ShareContactView.swift - QR code section header */
-"shareContact.qrCode" = "QR-код";
-
-/* Location: ShareContactView.swift - QR code instructions */
-"shareContact.qrInstructions" = "Інші можуть сканувати цей код, щоб додати вас до контактів.";
-
-/* Location: ShareContactView.swift - Public key section header */
-"shareContact.publicKey" = "Публічний ключ";
-
-/* Location: ShareContactView.swift - Copy key button */
-"shareContact.copyKey" = "Копіювати ключ";
-
-/* Location: ShareContactView.swift - Share button */
-"shareContact.share" = "Поділитися";
-
-/* Location: ShareContactView.swift - Copied confirmation */
-"shareContact.copied" = "Скопійовано в буфер обміну";
+/* Location: Multiple files - Purpose: Fallback error message */
+"contacts.common.errorOccurred" = "Сталася помилка";
 
 // MARK: - Contact Types
 
-/* Location: Multiple files - Chat contact type */
-"contactType.chat" = "Контакт чату";
+/* Location: Multiple files - Purpose: Chat contact type label */
+"contacts.nodeKind.chat" = "Чат";
 
-/* Location: Multiple files - Repeater type */
-"contactType.repeater" = "Ретранслятор";
+/* Location: Multiple files - Purpose: Chat contact full label */
+"contacts.nodeKind.chatContact" = "Контакт чату";
 
-/* Location: Multiple files - Room type */
-"contactType.room" = "Кімната";
+/* Location: Multiple files - Purpose: Repeater contact type label */
+"contacts.nodeKind.repeater" = "Ретранслятор";
 
-/* Location: Multiple files - Unknown type */
-"contactType.unknown" = "Невідомо";
+/* Location: Multiple files - Purpose: Room contact type label */
+"contacts.nodeKind.room" = "Кімната";
 
-// MARK: - Contact Filters
+/* Location: ContactsListView.swift - Purpose: Contact label in search results */
+"contacts.nodeKind.contact" = "Контакт";
 
-/* Location: ContactListView.swift - Filter: All */
-"contacts.filter.all" = "Усі";
+// MARK: - Route Types
 
-/* Location: ContactListView.swift - Filter: Online */
-"contacts.filter.online" = "В мережі";
+/* Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Flood routing label */
+"contacts.route.flood" = "Розсилка";
 
-/* Location: ContactListView.swift - Filter: Favorites */
-"contacts.filter.favorites" = "Обрані";
+/* Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Direct routing label */
+"contacts.route.direct" = "Прямий";
 
-/* Location: ContactListView.swift - Filter: Nearby */
-"contacts.filter.nearby" = "Поблизу";
+/* Location: ContactRowView.swift - Purpose: Hops count display */
+"contacts.route.hops" = "%d переходів";
 
-/* Location: ContactListView.swift - Filter: Repeaters */
-"contacts.filter.repeaters" = "Ретранслятори";
+// MARK: - Node Segments
 
-/* Location: ContactListView.swift - Filter: Rooms */
-"contacts.filter.rooms" = "Кімнати";
+/* Location: ContactsViewModel.swift - Purpose: Favorites segment */
+"contacts.segment.favorites" = "Обрані";
 
-// MARK: - Contact Sorting
+/* Location: ContactsViewModel.swift - Purpose: Contacts segment */
+"contacts.segment.contacts" = "Контакти";
 
-/* Location: ContactListView.swift - Sort by name */
+/* Location: ContactsViewModel.swift - Purpose: Network segment */
+"contacts.segment.network" = "Мережа";
+
+// MARK: - Sort Order
+
+/* Location: ContactsViewModel.swift - Purpose: Last heard sort option */
+"contacts.sort.lastHeard" = "Останній зв'язок";
+
+/* Location: ContactsViewModel.swift - Purpose: Name sort option */
 "contacts.sort.name" = "Ім'я";
 
-/* Location: ContactListView.swift - Sort by last seen */
-"contacts.sort.lastSeen" = "Востаннє в мережі";
-
-/* Location: ContactListView.swift - Sort by distance */
+/* Location: ContactsViewModel.swift - Purpose: Distance sort option */
 "contacts.sort.distance" = "Відстань";
 
-/* Location: ContactListView.swift - Sort by hops */
-"contacts.sort.hops" = "Переходи";
+// MARK: - Contacts List
 
-// MARK: - Contact Errors
+/* Location: ContactsListView.swift - Purpose: Navigation title */
+"contacts.list.title" = "Вузли";
 
-/* Location: ContactError.swift - Failed to load contacts */
-"contacts.error.loadFailed" = "Не вдалося завантажити контакти";
+/* Location: ContactsListView.swift - Purpose: Search prompt */
+"contacts.list.searchPrompt" = "Пошук вузлів";
 
-/* Location: ContactError.swift - Failed to add contact */
-"contacts.error.addFailed" = "Не вдалося додати контакт";
+/* Location: ContactsListView.swift - Purpose: Sort menu label */
+"contacts.list.sort" = "Сортування";
 
-/* Location: ContactError.swift - Failed to update contact */
-"contacts.error.updateFailed" = "Не вдалося оновити контакт";
+/* Location: ContactsListView.swift - Purpose: Options menu label */
+"contacts.list.options" = "Параметри";
 
-/* Location: ContactError.swift - Failed to delete contact */
-"contacts.error.deleteFailed" = "Не вдалося видалити контакт";
+/* Location: ContactsListView.swift - Purpose: Menu item for blocked contacts */
+"contacts.list.blockedContacts" = "Заблоковані контакти";
 
-/* Location: ContactError.swift - Contact not found */
-"contacts.error.notFound" = "Контакт не знайдено";
+/* Location: ContactsListView.swift - Purpose: Menu item to share own contact */
+"contacts.list.shareMyContact" = "Поділитися моїм контактом";
 
-// MARK: - Repeater Details
+/* Location: ContactsListView.swift - Purpose: Menu item to add contact */
+"contacts.list.addContact" = "Додати контакт";
 
-/* Location: RepeaterDetailView.swift - Section header: Repeater info */
-"repeaterDetail.section.info" = "Інформація про ретранслятор";
+/* Location: ContactsListView.swift - Purpose: Menu item for discovery */
+"contacts.list.discover" = "Виявлення";
 
-/* Location: RepeaterDetailView.swift - Firmware version */
-"repeaterDetail.firmware" = "Прошивка";
+/* Location: ContactsListView.swift - Purpose: Menu item to sync nodes */
+"contacts.list.syncNodes" = "Синхронізувати вузли";
 
-/* Location: RepeaterDetailView.swift - Uptime */
-"repeaterDetail.uptime" = "Час роботи";
+/* Location: ContactsListView.swift - Purpose: Empty state for split view */
+"contacts.list.selectNode" = "Вибери вузол";
 
-/* Location: RepeaterDetailView.swift - Section header: Statistics */
-"repeaterDetail.section.stats" = "Статистика";
+/* Location: ContactsListView.swift - Purpose: Refresh alert title */
+"contacts.list.cannotRefresh" = "Неможливо оновити";
 
-/* Location: RepeaterDetailView.swift - Packets relayed */
-"repeaterDetail.packetsRelayed" = "Пакетів ретрансльовано";
+/* Location: ContactsListView.swift - Purpose: Refresh alert message */
+"contacts.list.connectToSync" = "Підключись до пристрою для синхронізації контактів.";
 
-/* Location: RepeaterDetailView.swift - Active connections */
-"repeaterDetail.activeConnections" = "Активні з'єднання";
+/* Location: ContactsListView.swift - Purpose: Location alert title */
+"contacts.list.locationUnavailable" = "Місцезнаходження недоступне";
 
-/* Location: RepeaterDetailView.swift - Section header: Configuration */
-"repeaterDetail.section.config" = "Конфігурація";
+/* Location: ContactsListView.swift - Purpose: Location settings button */
+"contacts.list.openSettings" = "Відкрити налаштування";
 
-/* Location: RepeaterDetailView.swift - Frequency */
-"repeaterDetail.frequency" = "Частота";
+/* Location: ContactsListView.swift - Purpose: Location alert message */
+"contacts.list.distanceRequiresLocation" = "Сортування за відстанню потребує доступу до місцезнаходження.";
 
-/* Location: RepeaterDetailView.swift - Bandwidth */
-"repeaterDetail.bandwidth" = "Смуга пропускання";
+/* Location: ContactsListView.swift - Purpose: VoiceOver offline announcement */
+"contacts.list.offlineAnnouncement" = "Перегляд кешованих контактів. Підключись до пристрою для оновлень.";
 
-/* Location: RepeaterDetailView.swift - Spreading factor */
-"repeaterDetail.spreadingFactor" = "Фактор розширення";
+// MARK: - Contacts List Empty States
 
-/* Location: RepeaterDetailView.swift - TX power */
-"repeaterDetail.txPower" = "Потужність передачі";
+/* Location: ContactsListView.swift - Purpose: No favorites empty title */
+"contacts.list.empty.favorites.title" = "Обраних ще немає";
 
-// MARK: - Room Details
+/* Location: ContactsListView.swift - Purpose: No favorites empty description */
+"contacts.list.empty.favorites.description" = "Проведи вправо по будь-якому вузлу, щоб додати його до обраних.";
 
-/* Location: RoomDetailView.swift - Section header: Room info */
-"roomDetail.section.info" = "Інформація про кімнату";
+/* Location: ContactsListView.swift - Purpose: No contacts empty title */
+"contacts.list.empty.contacts.title" = "Немає контактів";
 
-/* Location: RoomDetailView.swift - Member count */
-"roomDetail.memberCount" = "Учасників";
+/* Location: ContactsListView.swift - Purpose: No contacts empty description */
+"contacts.list.empty.contacts.description" = "Контакти з'являються при виявленні в mesh-мережі. Якщо автоматичне додавання контактів вимкнено, перевір розділ Виявлення у меню праворуч вгорі.";
 
-/* Location: RoomDetailView.swift - Created date */
-"roomDetail.created" = "Створено";
+/* Location: ContactsListView.swift - Purpose: No network nodes empty title */
+"contacts.list.empty.network.title" = "Немає мережевих вузлів";
 
-/* Location: RoomDetailView.swift - Section header: Members */
-"roomDetail.section.members" = "Учасники";
+/* Location: ContactsListView.swift - Purpose: No network nodes empty description */
+"contacts.list.empty.network.description" = "Ретранслятори та сервери кімнат з'являться при виявленні в mesh-мережі.";
 
-/* Location: RoomDetailView.swift - Join room button */
-"roomDetail.join" = "Приєднатися до кімнати";
+/* Location: ContactsListView.swift - Purpose: No search results title */
+"contacts.list.empty.search.title" = "Немає результатів";
 
-/* Location: RoomDetailView.swift - Leave room button */
-"roomDetail.leave" = "Покинути кімнату";
+/* Location: ContactsListView.swift - Purpose: No search results description */
+"contacts.list.empty.search.description" = "Жодні вузли не відповідають '%@'";
 
-/* Location: RoomDetailView.swift - Admin badge */
-"roomDetail.admin" = "Адміністратор";
+// MARK: - Contacts List Row
 
-/* Location: RoomDetailView.swift - Owner badge */
-"roomDetail.owner" = "Власник";
+/* Location: ContactRowView.swift - Purpose: Blocked status accessibility label */
+"contacts.row.blocked" = "Заблоковано";
 
-// MARK: - Identity Section
+/* Location: ContactRowView.swift - Purpose: Favorite status accessibility label */
+"contacts.row.favorite" = "Обраний";
 
-/* Location: Multiple files - Section header for identification */
-"contacts.section.identity" = "Ідентифікація";
+/* Location: ContactRowView.swift - Purpose: Location indicator accessibility label */
+"contacts.row.location" = "Місцезнаходження";
 
-/* Location: Multiple files - Public key label */
-"contacts.identity.publicKey" = "Публічний ключ";
+/* Location: ContactRowView.swift - Purpose: Distance suffix */
+"contacts.row.away" = "%@ звідси";
 
-/* Location: Multiple files - First discovered label */
-"contacts.identity.firstDiscovered" = "Перше виявлення";
+// MARK: - Contacts List Swipe Actions
 
-/* Location: Multiple files - Tap to copy hint */
-"contacts.identity.tapToCopy" = "Натисніть, щоб скопіювати";
+/* Location: ContactSwipeActionsModifier - Purpose: Unfavorite swipe action */
+"contacts.swipe.unfavorite" = "Прибрати з обраних";
 
-// MARK: - Network Section
+/* Location: ContactSwipeActionsModifier - Purpose: Block swipe action */
+"contacts.swipe.block" = "Заблокувати";
 
-/* Location: Multiple files - Section header for network info */
-"contacts.section.network" = "Мережа";
+/* Location: ContactSwipeActionsModifier - Purpose: Unblock swipe action */
+"contacts.swipe.unblock" = "Розблокувати";
 
-/* Location: Multiple files - Routing type */
-"contacts.network.routing" = "Маршрутизація";
+// MARK: - Contact Detail
 
-/* Location: Multiple files - Routing type: Direct */
-"contacts.network.direct" = "Пряма";
+/* Location: ContactDetailView.swift - Purpose: Favorite status indicator */
+"contacts.detail.favorite" = "Обраний";
 
-/* Location: Multiple files - Routing type: Flood */
-"contacts.network.flood" = "Розсилка";
+/* Location: ContactDetailView.swift - Purpose: Blocked status indicator */
+"contacts.detail.blocked" = "Заблокований";
 
-/* Location: Multiple files - Path length */
-"contacts.network.pathLength" = "Довжина шляху";
+/* Location: ContactDetailView.swift - Purpose: Has location status indicator */
+"contacts.detail.hasLocation" = "Має місцезнаходження";
 
-/* Location: Multiple files - Last advertisement */
-"contacts.network.lastAdvert" = "Останнє оголошення";
+/* Location: ContactDetailView.swift - Purpose: Join room button */
+"contacts.detail.joinRoom" = "Приєднатися до кімнати";
 
-/* Location: Multiple files - Signal strength */
-"contacts.network.signalStrength" = "Рівень сигналу";
+/* Location: ContactDetailView.swift - Purpose: Telemetry button */
+"contacts.detail.telemetry" = "Телеметрія";
 
-// MARK: - Actions Section
+/* Location: ContactDetailView.swift - Purpose: Telemetry access sheet title */
+"contacts.detail.telemetryAccess" = "Доступ до телеметрії";
 
-/* Location: Multiple files - Message action */
-"contacts.actions.message" = "Повідомлення";
+/* Location: ContactDetailView.swift - Purpose: Admin access button */
+"contacts.detail.adminAccess" = "Адміністративний доступ";
 
-/* Location: Multiple files - Trace path action */
-"contacts.actions.tracePath" = "Трасування шляху";
+/* Location: ContactDetailView.swift - Purpose: Send message button */
+"contacts.detail.sendMessage" = "Надіслати повідомлення";
 
-/* Location: Multiple files - View on map action */
-"contacts.actions.viewOnMap" = "Показати на карті";
+/* Location: ContactDetailView.swift - Purpose: Add to favorites button */
+"contacts.detail.addToFavorites" = "Додати до обраних";
 
-/* Location: Multiple files - Share action */
-"contacts.actions.share" = "Поділитися";
+/* Location: ContactDetailView.swift - Purpose: Remove from favorites button */
+"contacts.detail.removeFromFavorites" = "Прибрати з обраних";
 
-// MARK: - Settings Section
+/* Location: ContactDetailView.swift - Purpose: Share contact button */
+"contacts.detail.shareContact" = "Поділитися контактом";
 
-/* Location: Multiple files - Favorite toggle */
-"contacts.settings.favorite" = "Обраний";
+/* Location: ContactDetailView.swift - Purpose: Share via advert button */
+"contacts.detail.shareViaAdvert" = "Поділитися контактом через оголошення";
 
-/* Location: Multiple files - Mute toggle */
-"contacts.settings.mute" = "Вимкнути звук";
+// MARK: - Contact Detail Info Section
 
-/* Location: Multiple files - Custom name field */
-"contacts.settings.customName" = "Власне ім'я";
+/* Location: ContactDetailView.swift - Purpose: Info section header */
+"contacts.detail.info" = "Інформація";
 
-/* Location: Multiple files - Custom name placeholder */
-"contacts.settings.customNamePlaceholder" = "Введіть власне ім'я";
+/* Location: ContactDetailView.swift - Purpose: Nickname label */
+"contacts.detail.nickname" = "Псевдонім";
 
-// MARK: - Danger Zone
+/* Location: ContactDetailView.swift - Purpose: No nickname placeholder */
+"contacts.detail.nicknameNone" = "Немає";
 
-/* Location: Multiple files - Section header for dangerous actions */
-"contacts.section.dangerZone" = "Небезпечна зона";
+/* Location: ContactDetailView.swift - Purpose: Name label */
+"contacts.detail.name" = "Ім'я";
 
-/* Location: Multiple files - Delete contact action */
-"contacts.dangerZone.delete" = "Видалити контакт";
+/* Location: ContactDetailView.swift - Purpose: Last advert label */
+"contacts.detail.lastAdvert" = "Останнє оголошення";
 
-/* Location: Multiple files - Delete contact description */
-"contacts.dangerZone.deleteDescription" = "Контакт буде видалено при наступному оголошенні в мережі";
+/* Location: ContactDetailView.swift - Purpose: Unread messages label */
+"contacts.detail.unreadMessages" = "Непрочитані повідомлення";
 
-/* Location: Multiple files - Block contact action */
-"contacts.dangerZone.block" = "Заблокувати контакт";
+// MARK: - Contact Detail Location Section
 
-/* Location: Multiple files - Block contact description */
-"contacts.dangerZone.blockDescription" = "Повідомлення від цього контакту будуть заблоковані";
+/* Location: ContactDetailView.swift - Purpose: Location section header */
+"contacts.detail.location" = "Місцезнаходження";
+
+/* Location: ContactDetailView.swift - Purpose: Coordinates label */
+"contacts.detail.coordinates" = "Координати";
+
+/* Location: ContactDetailView.swift - Purpose: Open in Maps button */
+"contacts.detail.openInMaps" = "Відкрити в Картах";
+
+// MARK: - Contact Detail Network Path Section
+
+/* Location: ContactDetailView.swift - Purpose: Network path section header */
+"contacts.detail.networkPath" = "Мережевий шлях";
+
+/* Location: ContactDetailView.swift - Purpose: Route label */
+"contacts.detail.route" = "Маршрут";
+
+/* Location: ContactDetailView.swift - Purpose: Hops away label */
+"contacts.detail.hopsAway" = "Переходів";
+
+/* Location: ContactDetailView.swift - Purpose: Path discovery in progress */
+"contacts.detail.discoveringPath" = "Пошук шляху...";
+
+/* Location: ContactDetailView.swift - Purpose: Discovery countdown */
+"contacts.detail.secondsRemaining" = "Залишилося до %d секунд";
+
+/* Location: ContactDetailView.swift - Purpose: Discover path button */
+"contacts.detail.discoverPath" = "Знайти шлях";
+
+/* Location: ContactDetailView.swift - Purpose: Edit path button */
+"contacts.detail.editPath" = "Редагувати шлях";
+
+/* Location: ContactDetailView.swift - Purpose: Reset path button */
+"contacts.detail.resetPath" = "Скинути шлях";
+
+/* Location: ContactDetailView.swift - Purpose: Footer for flood routing */
+"contacts.detail.floodFooter" = "Повідомлення транслюються на всі вузли. Знайдіть шлях для оптимального маршруту.";
+
+/* Location: ContactDetailView.swift - Purpose: Footer for path routing */
+"contacts.detail.pathFooter" = "Повідомлення передаються через показаний шлях. Скиньте шлях для маршрутизації розсилкою.";
+
+/* Location: ContactDetailView.swift - Purpose: Accessibility label for flood route */
+"contacts.detail.routeFlood" = "Маршрут: Розсилка";
+
+/* Location: ContactDetailView.swift - Purpose: Accessibility label for direct route */
+"contacts.detail.routeDirect" = "Маршрут: Прямий";
+
+/* Location: ContactDetailView.swift - Purpose: Accessibility label prefix for route */
+"contacts.detail.routePrefix" = "Маршрут: %@";
+
+// MARK: - Contact Detail Technical Section
+
+/* Location: ContactDetailView.swift - Purpose: Technical section header */
+"contacts.detail.technical" = "Технічні дані";
+
+/* Location: ContactDetailView.swift - Purpose: Public key label */
+"contacts.detail.publicKey" = "Публічний ключ";
+
+/* Location: ContactDetailView.swift - Purpose: Type label */
+"contacts.detail.type" = "Тип";
+
+// MARK: - Contact Detail Danger Section
+
+/* Location: ContactDetailView.swift - Purpose: Danger zone section header */
+"contacts.detail.dangerZone" = "Небезпечна зона";
+
+/* Location: ContactDetailView.swift - Purpose: Block contact button */
+"contacts.detail.blockContact" = "Заблокувати контакт";
+
+/* Location: ContactDetailView.swift - Purpose: Unblock contact button */
+"contacts.detail.unblockContact" = "Розблокувати контакт";
+
+/* Location: ContactDetailView.swift - Purpose: Delete button with type */
+"contacts.detail.deleteType" = "Видалити %@";
+
+// MARK: - Contact Detail Alerts
+
+/* Location: ContactDetailView.swift - Purpose: Block contact alert title */
+"contacts.detail.alert.block.title" = "Заблокувати контакт";
+
+/* Location: ContactDetailView.swift - Purpose: Block contact alert message */
+"contacts.detail.alert.block.message" = "Ти не отримуватимеш повідомлення від %@. Розмови з цим користувачем будуть приховані зі списку чатів, а їхні повідомлення в каналах не відображатимуться. Розблокування скасує ці дії та зробить видимими всі надіслані ними повідомлення.";
+
+/* Location: ContactDetailView.swift - Purpose: Delete contact alert title */
+"contacts.detail.alert.delete.title" = "Видалити %@";
+
+/* Location: ContactDetailView.swift - Purpose: Delete contact alert message */
+"contacts.detail.alert.delete.message" = "Це видалить %@ та всі пов'язані дані. Цю дію неможливо скасувати.";
+
+/* Location: ContactDetailView.swift - Purpose: Path error alert title */
+"contacts.detail.alert.pathError" = "Помилка шляху";
+
+/* Location: ContactDetailView.swift - Purpose: Path discovery alert title */
+"contacts.detail.alert.pathDiscovery" = "Пошук шляху";
+
+// MARK: - Blocked Contacts
+
+/* Location: BlockedContactsView.swift - Purpose: Navigation title */
+"contacts.blocked.title" = "Заблоковані контакти";
+
+/* Location: BlockedContactsView.swift - Purpose: Loading progress */
+"contacts.blocked.loading" = "Завантаження...";
+
+/* Location: BlockedContactsView.swift - Purpose: Empty state title */
+"contacts.blocked.empty.title" = "Немає заблокованих контактів";
+
+/* Location: BlockedContactsView.swift - Purpose: Empty state description */
+"contacts.blocked.empty.description" = "Контакти, яких ви заблокуєте, з'являться тут.";
+
+// MARK: - Add Contact Sheet
+
+/* Location: AddContactSheet.swift - Purpose: Navigation title */
+"contacts.add.title" = "Додати контакт";
+
+/* Location: AddContactSheet.swift - Purpose: Add button */
+"contacts.add.add" = "Додати";
+
+/* Location: AddContactSheet.swift - Purpose: Scan QR button label */
+"contacts.add.scanQR" = "Сканувати QR-код";
+
+/* Location: AddContactSheet.swift - Purpose: Type section header */
+"contacts.add.type" = "Тип";
+
+/* Location: AddContactSheet.swift - Purpose: Name section header */
+"contacts.add.name" = "Ім'я";
+
+/* Location: AddContactSheet.swift - Purpose: Contact name placeholder */
+"contacts.add.contactName" = "Ім'я контакту";
+
+/* Location: AddContactSheet.swift - Purpose: Public key section header */
+"contacts.add.publicKey" = "Публічний ключ";
+
+/* Location: AddContactSheet.swift - Purpose: Public key placeholder */
+"contacts.add.hexPlaceholder" = "%d шістнадцяткових символів";
+
+/* Location: AddContactSheet.swift - Purpose: Valid key status */
+"contacts.add.valid" = "Дійсний";
+
+/* Location: AddContactSheet.swift - Purpose: Character count status */
+"contacts.add.characterCount" = "%d/%d символів";
+
+/* Location: AddContactSheet.swift - Purpose: Public key footer */
+"contacts.add.publicKeyFooter" = "Введи %d-символьний шістнадцятковий публічний ключ контакту";
+
+/* Location: AddContactSheet.swift - Purpose: Not connected error */
+"contacts.add.error.notConnected" = "Не підключено до пристрою";
+
+/* Location: AddContactSheet.swift - Purpose: Invalid public key format error */
+"contacts.add.error.invalidFormat" = "Недійсний формат публічного ключа";
+
+/* Location: AddContactSheet.swift - Purpose: Invalid public key size error */
+"contacts.add.error.invalidSize" = "Публічний ключ повинен бути %d байт (%d шістнадцяткових символів)";
+
+/* Location: AddContactSheet.swift - Purpose: Node list full error */
+"contacts.add.error.nodeListFull" = "Список вузлів заповнений (макс. %d вузлів)";
+
+// MARK: - Contact QR Share Sheet
+
+/* Location: ContactQRShareSheet.swift - Purpose: Navigation title */
+"contacts.qr.title" = "Поділитися контактом";
+
+/* Location: ContactQRShareSheet.swift - Purpose: Share subject */
+"contacts.qr.shareSubject" = "Контакт PocketMesh";
+
+/* Location: ContactQRShareSheet.swift - Purpose: Copy button when not copied */
+"contacts.qr.copy" = "Копіювати";
+
+/* Location: ContactQRShareSheet.swift - Purpose: Copy button when copied */
+"contacts.qr.copied" = "Скопійовано!";
+
+/* Location: ContactQRShareSheet.swift - Purpose: Share button */
+"contacts.qr.share" = "Поділитися";
+
+// MARK: - Scan Contact QR
+
+/* Location: ScanContactQRView.swift - Purpose: Navigation title */
+"contacts.scan.title" = "Сканувати QR-код";
+
+/* Location: ScanContactQRView.swift - Purpose: Scanner not available title */
+"contacts.scan.unavailable.title" = "Сканер недоступний";
+
+/* Location: ScanContactQRView.swift - Purpose: Scanner not available description */
+"contacts.scan.unavailable.description" = "Сканування QR-кодів не підтримується на цьому пристрої";
+
+/* Location: ScanContactQRView.swift - Purpose: Importing progress */
+"contacts.scan.importing" = "Імпорт контакту...";
+
+/* Location: ScanContactQRView.swift - Purpose: Scan instruction */
+"contacts.scan.instruction" = "Наведи камеру на QR-код контакту";
+
+/* Location: ScanContactQRView.swift - Purpose: Camera permission title */
+"contacts.scan.permission.title" = "Потрібен доступ до камери";
+
+/* Location: ScanContactQRView.swift - Purpose: Camera permission description */
+"contacts.scan.permission.description" = "Увімкни доступ до камери в Налаштуваннях для сканування QR-кодів.";
+
+/* Location: ScanContactQRView.swift - Purpose: Invalid QR format error */
+"contacts.scan.error.invalidFormat" = "Недійсний формат QR-коду";
+
+/* Location: ScanContactQRView.swift - Purpose: Missing name error */
+"contacts.scan.error.missingName" = "Недійсний QR-код: відсутнє ім'я";
+
+/* Location: ScanContactQRView.swift - Purpose: Invalid public key error */
+"contacts.scan.error.invalidKey" = "Недійсний QR-код: недійсний публічний ключ";
+
+// MARK: - Discovery View
+
+/* Location: DiscoveryView.swift - Purpose: Navigation title */
+"contacts.discovery.title" = "Виявлення";
+
+/* Location: DiscoveryView.swift - Purpose: Empty state title */
+"contacts.discovery.empty.title" = "Немає виявлених вузлів";
+
+/* Location: DiscoveryView.swift - Purpose: Empty state description */
+"contacts.discovery.empty.description" = "Коли автоматичне додавання вузлів вимкнено, нововиявлені вузли з'являтимуться тут для додавання вручну.";
+
+/* Location: DiscoveryView.swift - Purpose: Add button */
+"contacts.discovery.add" = "Додати";
+
+/* Location: DiscoveryView.swift - Purpose: Services not available error */
+"contacts.discovery.error.servicesUnavailable" = "Сервіси недоступні";
+
+// MARK: - Path Editing Sheet
+
+/* Location: PathEditingSheet.swift - Purpose: Navigation title */
+"contacts.pathEdit.title" = "Редагувати шлях";
+
+/* Location: PathEditingSheet.swift - Purpose: Description with contact name */
+"contacts.pathEdit.description" = "Налаштуй маршрут повідомлень до %@.";
+
+/* Location: PathEditingSheet.swift - Purpose: Current path section header */
+"contacts.pathEdit.currentPath" = "Поточний шлях";
+
+/* Location: PathEditingSheet.swift - Purpose: Empty path footer */
+"contacts.pathEdit.emptyFooter" = "Шлях не встановлено (пряма маршрутизація або розсилка)";
+
+/* Location: PathEditingSheet.swift - Purpose: Path instructions footer */
+"contacts.pathEdit.instructionsFooter" = "Перетягни для зміни порядку. Торкнись для видалення.";
+
+/* Location: PathEditingSheet.swift - Purpose: Add repeater section header */
+"contacts.pathEdit.addRepeater" = "Додати ретранслятор";
+
+/* Location: PathEditingSheet.swift - Purpose: No repeaters empty title */
+"contacts.pathEdit.noRepeaters.title" = "Немає доступних ретрансляторів";
+
+/* Location: PathEditingSheet.swift - Purpose: No repeaters empty description */
+"contacts.pathEdit.noRepeaters.description" = "Ретранслятори з'являться тут після виявлення у вашій mesh-мережі.";
+
+/* Location: PathEditingSheet.swift - Purpose: Add repeater footer */
+"contacts.pathEdit.addFooter" = "Торкнись ретранслятора, щоб додати його до шляху.";
+
+/* Location: PathEditingSheet.swift - Purpose: Add to path accessibility label */
+"contacts.pathEdit.addToPath" = "Додати %@ до шляху";
+
+/* Location: PathEditingSheet.swift - Purpose: Hop accessibility with name */
+"contacts.pathEdit.hopWithName" = "Перехід %d з %d: %@";
+
+/* Location: PathEditingSheet.swift - Purpose: Hop accessibility with hex */
+"contacts.pathEdit.hopWithHex" = "Перехід %d з %d: ретранслятор %@";
+
+// MARK: - Path Discovery Results
+
+/* Location: PathManagementViewModel.swift - Purpose: Direct path result */
+"contacts.pathDiscovery.direct" = "Прямий";
+
+/* Location: PathManagementViewModel.swift - Purpose: Hop count result singular */
+"contacts.pathDiscovery.hops.singular" = "1 перехід";
+
+/* Location: PathManagementViewModel.swift - Purpose: Hop count result plural */
+"contacts.pathDiscovery.hops.plural" = "%d переходів";
+
+/* Location: PathManagementViewModel.swift - Purpose: Cached path suffix */
+"contacts.pathDiscovery.cachedSuffix" = ". Використовується кешована інформація з оголошення. Вузол може мати вимкнену телеметрію.";
+
+/* Location: PathManagementViewModel.swift - Purpose: No response message */
+"contacts.pathDiscovery.noResponse" = "Віддалений вузол не відповів. Вузли повинні мати увімкнені запити телеметрії для відповіді на пошук шляху.";
+
+/* Location: PathManagementViewModel.swift - Purpose: Failed prefix */
+"contacts.pathDiscovery.failed" = "Помилка: %@";
+
+// MARK: - Saved Paths Sheet
+
+/* Location: SavedPathsSheet.swift - Purpose: Navigation title */
+"contacts.savedPaths.title" = "Збережені шляхи";
+
+/* Location: SavedPathsSheet.swift - Purpose: Delete dialog title */
+"contacts.savedPaths.deleteTitle" = "Видалити шлях";
+
+/* Location: SavedPathsSheet.swift - Purpose: Delete dialog message */
+"contacts.savedPaths.deleteMessage" = "Видалити \"%@\"? Це видалить шлях та всю історію запусків.";
+
+/* Location: SavedPathsSheet.swift - Purpose: Rename alert title */
+"contacts.savedPaths.renameTitle" = "Перейменувати шлях";
+
+/* Location: SavedPathsSheet.swift - Purpose: Rename context menu */
+"contacts.savedPaths.rename" = "Перейменувати";
+
+/* Location: SavedPathsSheet.swift - Purpose: Empty state title */
+"contacts.savedPaths.empty.title" = "Немає збережених шляхів";
+
+/* Location: SavedPathsSheet.swift - Purpose: Empty state description */
+"contacts.savedPaths.empty.description" = "Збережи шляхи після трасування для швидкого повторного запуску.";
+
+/* Location: SavedPathsSheet.swift - Purpose: Run count singular */
+"contacts.savedPaths.runs.singular" = "1 запуск";
+
+/* Location: SavedPathsSheet.swift - Purpose: Run count plural */
+"contacts.savedPaths.runs.plural" = "%d запусків";
+
+/* Location: SavedPathsSheet.swift - Purpose: Last run label */
+"contacts.savedPaths.lastRun" = "Останній: %@";
+
+/* Location: SavedPathsSheet.swift - Purpose: Healthy status accessibility */
+"contacts.savedPaths.health.healthy" = "справний";
+
+/* Location: SavedPathsSheet.swift - Purpose: Degraded status accessibility */
+"contacts.savedPaths.health.degraded" = "погіршений";
+
+/* Location: SavedPathsSheet.swift - Purpose: Poor status accessibility */
+"contacts.savedPaths.health.poor" = "поганий";
+
+/* Location: SavedPathsSheet.swift - Purpose: Health accessibility label */
+"contacts.savedPaths.healthLabel" = "Стан шляху: %@, %d%% успішних";
+
+/* Location: SavedPathsSheet.swift - Purpose: Response times accessibility */
+"contacts.savedPaths.responseTimes" = "Час відповіді: середній %dмс, %@";
+
+/* Location: SavedPathsSheet.swift - Purpose: No response data accessibility */
+"contacts.savedPaths.noResponseData" = "Немає даних про час відповіді";
+
+/* Location: SavedPathsSheet.swift - Purpose: Trend increasing */
+"contacts.savedPaths.trend.increasing" = "зростає";
+
+/* Location: SavedPathsSheet.swift - Purpose: Trend decreasing */
+"contacts.savedPaths.trend.decreasing" = "знижується";
+
+/* Location: SavedPathsSheet.swift - Purpose: Trend stable */
+"contacts.savedPaths.trend.stable" = "стабільний";
+
+// MARK: - Saved Path Detail
+
+/* Location: SavedPathDetailView.swift - Purpose: Path section header */
+"contacts.pathDetail.path" = "Шлях";
+
+/* Location: SavedPathDetailView.swift - Purpose: Performance section header */
+"contacts.pathDetail.performance" = "Продуктивність";
+
+/* Location: SavedPathDetailView.swift - Purpose: Chart Y axis label */
+"contacts.pathDetail.roundTripMs" = "Повний цикл (мс)";
+
+/* Location: SavedPathDetailView.swift - Purpose: Average stat label */
+"contacts.pathDetail.avg" = "Сер.";
+
+/* Location: SavedPathDetailView.swift - Purpose: Best stat label */
+"contacts.pathDetail.best" = "Найкр.";
+
+/* Location: SavedPathDetailView.swift - Purpose: Success stat label */
+"contacts.pathDetail.success" = "Успіх";
+
+/* Location: SavedPathDetailView.swift - Purpose: History section header */
+"contacts.pathDetail.history" = "Історія";
+
+/* Location: SavedPathDetailView.swift - Purpose: Failed status */
+"contacts.pathDetail.failed" = "Невдача";
+
+/* Location: SavedPathDetailView.swift - Purpose: Run details navigation title */
+"contacts.pathDetail.runDetails" = "Деталі запуску";
+
+/* Location: SavedPathDetailView.swift - Purpose: Overview section header */
+"contacts.pathDetail.overview" = "Огляд";
+
+/* Location: SavedPathDetailView.swift - Purpose: Date label */
+"contacts.pathDetail.date" = "Дата";
+
+/* Location: SavedPathDetailView.swift - Purpose: Round trip label */
+"contacts.pathDetail.roundTrip" = "Повний цикл";
+
+/* Location: SavedPathDetailView.swift - Purpose: Status label */
+"contacts.pathDetail.status" = "Статус";
+
+/* Location: SavedPathDetailView.swift - Purpose: Per-hop SNR section header */
+"contacts.pathDetail.perHopSNR" = "SNR по переходах";
+
+/* Location: SavedPathDetailView.swift - Purpose: Hop label */
+"contacts.pathDetail.hop" = "Перехід %d";
+
+// MARK: - Trace Path View
+
+/* Location: TracePathView.swift - Purpose: Navigation title */
+"contacts.trace.title" = "Трасування шляху";
+
+/* Location: TracePathView.swift - Purpose: List view mode */
+"contacts.trace.mode.list" = "Список";
+
+/* Location: TracePathView.swift - Purpose: Map view mode */
+"contacts.trace.mode.map" = "Карта";
+
+/* Location: TracePathView.swift - Purpose: Saved toolbar button */
+"contacts.trace.saved" = "Збережені";
+
+/* Location: TracePathView.swift - Purpose: Clear path dialog title */
+"contacts.trace.clearPath" = "Очистити шлях";
+
+/* Location: TracePathView.swift - Purpose: Clear path dialog message */
+"contacts.trace.clearPathMessage" = "Видалити всі ретранслятори зі шляху?";
+
+/* Location: TracePathView.swift - Purpose: Trace failed alert title */
+"contacts.trace.failed" = "Трасування не вдалося";
+
+/* Location: TracePathView.swift - Purpose: Jump button label */
+"contacts.trace.runBelow" = "Запуск нижче";
+
+/* Location: TracePathView.swift - Purpose: Jump button accessibility label */
+"contacts.trace.jumpLabel" = "Перейти до кнопки Запустити трасування";
+
+/* Location: TracePathView.swift - Purpose: Jump button accessibility hint */
+"contacts.trace.jumpHint" = "Двічі торкнись, щоб прокрутити до низу шляху";
+
+// MARK: - Trace Path List View
+
+/* Location: TracePathListView.swift - Purpose: Code input placeholder */
+"contacts.trace.list.codePlaceholder" = "Приклад: A1, 2B, 9S";
+
+/* Location: TracePathListView.swift - Purpose: Paste button */
+"contacts.trace.list.paste" = "Вставити з буфера обміну";
+
+/* Location: TracePathListView.swift - Purpose: Code input footer */
+"contacts.trace.list.codeFooter" = "Натисни Enter для додавання ретрансляторів";
+
+/* Location: TracePathListView.swift - Purpose: Repeaters section label */
+"contacts.trace.list.repeaters" = "Ретранслятори";
+
+/* Location: TracePathListView.swift - Purpose: Empty path instruction */
+"contacts.trace.list.emptyPath" = "Торкнись ретранслятора вище, щоб почати будувати шлях";
+
+/* Location: TracePathListView.swift - Purpose: Outbound path section header */
+"contacts.trace.list.outboundPath" = "Вихідний шлях";
+
+/* Location: TracePathListView.swift - Purpose: Auto return toggle label */
+"contacts.trace.list.autoReturn" = "Автоматичний зворотний шлях";
+
+/* Location: TracePathListView.swift - Purpose: Auto return toggle description */
+"contacts.trace.list.autoReturnDescription" = "Дзеркально відобразити вихідний шлях для зворотного маршруту";
+
+/* Location: TracePathListView.swift - Purpose: Batch trace toggle label */
+"contacts.trace.list.batchTrace" = "Пакетне трасування";
+
+/* Location: TracePathListView.swift - Purpose: Batch trace toggle description */
+"contacts.trace.list.batchTraceDescription" = "Запустити кілька трасувань та усереднити результати";
+
+/* Location: TracePathListView.swift - Purpose: Traces count label */
+"contacts.trace.list.traces" = "Трасувань:";
+
+/* Location: TracePathListView.swift - Purpose: Copy path button */
+"contacts.trace.list.copyPath" = "Копіювати шлях";
+
+/* Location: TracePathListView.swift - Purpose: Range warning footer */
+"contacts.trace.list.rangeWarning" = "Ти маєш бути в зоні досяжності останнього ретранслятора для отримання відповіді.";
+
+/* Location: TracePathListView.swift - Purpose: Running trace progress */
+"contacts.trace.list.runningTrace" = "Виконується трасування";
+
+/* Location: TracePathListView.swift - Purpose: Running trace with batch count */
+"contacts.trace.list.runningBatch" = "Трасування %d з %d";
+
+/* Location: TracePathListView.swift - Purpose: Run trace button */
+"contacts.trace.list.runTrace" = "Запустити трасування";
+
+/* Location: TracePathListView.swift - Purpose: Run trace accessibility label */
+"contacts.trace.list.runTraceLabel" = "Запустити трасування";
+
+/* Location: TracePathListView.swift - Purpose: Batch run accessibility hint */
+"contacts.trace.list.batchHint" = "Двічі торкнись, щоб запустити %d трасувань";
+
+/* Location: TracePathListView.swift - Purpose: Single run accessibility hint */
+"contacts.trace.list.singleHint" = "Двічі торкнись для трасування шляху";
+
+/* Location: TracePathListView.swift - Purpose: Running accessibility label */
+"contacts.trace.list.runningLabel" = "Виконується трасування, зачекай";
+
+/* Location: TracePathListView.swift - Purpose: Running batch accessibility label */
+"contacts.trace.list.runningBatchLabel" = "Виконується трасування %d з %d";
+
+/* Location: TracePathListView.swift - Purpose: Hop row accessibility label */
+"contacts.trace.list.hopLabel" = "Перехід %d: %@";
+
+/* Location: TracePathListView.swift - Purpose: Hop row accessibility hint */
+"contacts.trace.list.hopHint" = "Проведи вліво для видалення, використовуй маркер перетягування для зміни порядку";
+
+// MARK: - Trace Path Map View
+
+/* Location: TracePathMapView.swift - Purpose: Hops count in results banner */
+"contacts.trace.map.hops" = "%d переходів";
+
+/* Location: TracePathMapView.swift - Purpose: Empty state title */
+"contacts.trace.map.empty.title" = "Немає ретрансляторів з місцезнаходженням";
+
+/* Location: TracePathMapView.swift - Purpose: Empty state description */
+"contacts.trace.map.empty.description" = "Використовуй режим Список для побудови шляхів з ретрансляторами без даних про місцезнаходження.";
+
+/* Location: TracePathMapView.swift - Purpose: Clear button */
+"contacts.trace.map.clear" = "Очистити";
+
+/* Location: TracePathMapView.swift - Purpose: Hide labels accessibility */
+"contacts.trace.map.hideLabels" = "Приховати підписи";
+
+/* Location: TracePathMapView.swift - Purpose: Show labels accessibility */
+"contacts.trace.map.showLabels" = "Показати підписи";
+
+/* Location: TracePathMapView.swift - Purpose: Save path alert title */
+"contacts.trace.map.saveTitle" = "Зберегти шлях";
+
+/* Location: TracePathMapView.swift - Purpose: Save path alert message */
+"contacts.trace.map.saveMessage" = "Введи назву для цього шляху";
+
+/* Location: TracePathMapView.swift - Purpose: Path name placeholder */
+"contacts.trace.map.pathName" = "Назва шляху";
+
+/* Location: TracePathMapView.swift - Purpose: Path saved alert title */
+"contacts.trace.map.savedTitle" = "Шлях збережено";
+
+/* Location: TracePathMapView.swift - Purpose: Path saved alert message */
+"contacts.trace.map.savedMessage" = "Шлях успішно збережено.";
+
+/* Location: TracePathMapView.swift - Purpose: Save failed alert title */
+"contacts.trace.map.saveFailedTitle" = "Помилка збереження";
+
+/* Location: TracePathMapView.swift - Purpose: Save failed alert message */
+"contacts.trace.map.saveFailedMessage" = "Не вдалося зберегти шлях. Спробуй ще раз.";
+
+// MARK: - Trace Results Sheet
+
+/* Location: TraceResultsSheet.swift - Purpose: Navigation title */
+"contacts.results.title" = "Результати трасування";
+
+/* Location: TraceResultsSheet.swift - Purpose: Dismiss button */
+"contacts.results.dismiss" = "Закрити";
+
+/* Location: TraceResultsSheet.swift - Purpose: Batch success count */
+"contacts.results.batchSuccess" = "%d з %d успішних";
+
+/* Location: TraceResultsSheet.swift - Purpose: Batch progress */
+"contacts.results.batchProgress" = "Трасування %d з %d...";
+
+/* Location: TraceResultsSheet.swift - Purpose: Batch complete accessibility */
+"contacts.results.batchCompleteLabel" = "Пакет завершено: %d з %d трасувань успішні";
+
+/* Location: TraceResultsSheet.swift - Purpose: Batch progress accessibility */
+"contacts.results.batchProgressLabel" = "Прогрес пакету: трасування %d з %d";
+
+/* Location: TraceResultsSheet.swift - Purpose: Average round trip label */
+"contacts.results.avgRoundTrip" = "Середній повний цикл";
+
+/* Location: TraceResultsSheet.swift - Purpose: Average RTT accessibility */
+"contacts.results.avgRTTLabel" = "Середній повний цикл: %d мілісекунд, діапазон від %d до %d";
+
+/* Location: TraceResultsSheet.swift - Purpose: Comparison text */
+"contacts.results.comparison" = "проти %d мс на %@";
+
+/* Location: TraceResultsSheet.swift - Purpose: View runs link */
+"contacts.results.viewRuns" = "Переглянути %d запусків";
+
+/* Location: TraceResultsSheet.swift - Purpose: Total distance label */
+"contacts.results.totalDistance" = "Загальна відстань";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance unavailable */
+"contacts.results.unavailable" = "Недоступно";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info button accessibility */
+"contacts.results.distanceInfo" = "Інформація про відстань";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance unavailable accessibility */
+"contacts.results.distanceUnavailableLabel" = "Відстань недоступна";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info hint */
+"contacts.results.distanceInfoHint" = "Двічі торкнись для деталей про відсутні місцезнаходження";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (unavailable) */
+"contacts.results.distanceInfoTitle" = "Відстань недоступна";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance info navigation title (partial) */
+"contacts.results.distanceInfoTitlePartial" = "Інформація про відстань";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
+"contacts.results.partialDistanceExplanation" = "Показана відстань лише між ретрансляторами. Відстань від вашого пристрою до першого ретранслятора не включена, оскільки місцезнаходження пристрою недоступне.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
+"contacts.results.partialDistanceHeader" = "Часткова відстань";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path tip */
+"contacts.results.fullPathTip" = "Увімкни служби місцезнаходження або встанови місцезнаходження для свого пристрою, щоб бачити повну відстань шляху.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Full path section header */
+"contacts.results.fullPathHeader" = "Для включення повного шляху";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility label */
+"contacts.results.partialDistanceLabel" = "Часткова відстань";
+
+/* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
+"contacts.results.partialDistanceHint" = "Двічі торкнись, щоб дізнатися, чому місцезнаходження пристрою виключено";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
+"contacts.results.needsRepeaters" = "Розрахунок відстані потребує щонайменше 2 ретрансляторів у шляху.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance error message */
+"contacts.results.distanceError" = "Неможливо розрахувати відстань. Усі ретранслятори мають координати, але сталася помилка.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Distance missing locations message */
+"contacts.results.missingLocations" = "Неможливо розрахувати відстань, оскільки наступні ретранслятори не мають встановлених координат місцезнаходження.";
+
+/* Location: TraceResultsSheet.swift - Purpose: Repeaters without locations section */
+"contacts.results.repeatersWithoutLocations" = "Ретранслятори без місцезнаходження";
+
+/* Location: TraceResultsSheet.swift - Purpose: Save path button */
+"contacts.results.savePath" = "Зберегти шлях";
+
+// MARK: - Trace Result Hop Row
+
+/* Location: TraceResultsSheet.swift - Purpose: My Device placeholder */
+"contacts.results.hop.myDevice" = "Мій пристрій";
+
+/* Location: TraceResultsSheet.swift - Purpose: Started trace label */
+"contacts.results.hop.started" = "Розпочато трасування";
+
+/* Location: TraceResultsSheet.swift - Purpose: Received response label */
+"contacts.results.hop.received" = "Отримано відповідь";
+
+/* Location: TraceResultsSheet.swift - Purpose: Repeated label */
+"contacts.results.hop.repeated" = "Ретрансльовано";
+
+/* Location: TraceResultsSheet.swift - Purpose: Average SNR display */
+"contacts.results.hop.avgSNR" = "Сер. SNR: %@ дБ (%@ – %@)";
+
+/* Location: TraceResultsSheet.swift - Purpose: SNR display */
+"contacts.results.hop.snr" = "SNR: %@ дБ";
+
+/* Location: TraceResultsSheet.swift - Purpose: Average SNR accessibility */
+"contacts.results.hop.avgSNRLabel" = "Середнє співвідношення сигнал/шум: %@ децибел, діапазон від %@ до %@";
+
+// MARK: - Trace ViewModel Error Messages
+
+/* Location: TracePathViewModel.swift - Purpose: No response error */
+"contacts.trace.error.noResponse" = "Відповідь не отримано";
+
+/* Location: TracePathViewModel.swift - Purpose: All traces failed error */
+"contacts.trace.error.allFailed" = "Усі %d трасувань не вдалися";
+
+/* Location: TracePathViewModel.swift - Purpose: Send failed error */
+"contacts.trace.error.sendFailed" = "Не вдалося надіслати пакет трасування";
+
+// MARK: - Stats Badge Accessibility
+
+/* Location: StatsBadgeView.swift - Purpose: Distance and signal accessibility */
+"contacts.statsBadge.accessibility" = "Відстань: %@, Сигнал: %d децибел";
+
+// MARK: - Contact ViewModel Errors
+
+/* Location: ContactsViewModel.swift - Purpose: Delete requires connection error */
+"contacts.viewModel.connectToDelete" = "Підключись до радіо для видалення вузлів";
+
+// MARK: - Path Management ViewModel Errors
+
+/* Location: PathManagementViewModel.swift - Purpose: Save path error prefix */
+"contacts.pathManagement.error.saveFailed" = "Помилка збереження шляху: %@";
+
+/* Location: PathManagementViewModel.swift - Purpose: Reset path error prefix */
+"contacts.pathManagement.error.resetFailed" = "Помилка скидання шляху: %@";
+
+/* Location: PathManagementViewModel.swift - Purpose: Set path error prefix */
+"contacts.pathManagement.error.setFailed" = "Помилка встановлення шляху: %@";
+
+// MARK: - Code Input Result
+
+/* Location: TracePathViewModel.swift - Purpose: Invalid format error */
+"contacts.codeInput.error.invalidFormat" = "Недійсний формат: %@";
+
+/* Location: TracePathViewModel.swift - Purpose: Not found error */
+"contacts.codeInput.error.notFound" = "%@ не знайдено";
+
+/* Location: TracePathViewModel.swift - Purpose: Already in path error */
+"contacts.codeInput.error.alreadyInPath" = "%@ вже в шляху";
+
+// MARK: - Path Name Generation
+
+/* Location: TracePathViewModel.swift - Purpose: Default path name prefix for hash-only paths */
+"contacts.pathName.prefix" = "Шлях %@";
+
+/* Location: TracePathViewModel.swift - Purpose: Path name with two endpoints */
+"contacts.pathName.twoEndpoints" = "%@ → %@";
+
+/* Location: TracePathViewModel.swift - Purpose: Path name with multiple endpoints (abbreviated) */
+"contacts.pathName.multipleEndpoints" = "%@ → ... → %@";

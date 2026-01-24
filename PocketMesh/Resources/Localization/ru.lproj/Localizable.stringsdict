@@ -11,16 +11,18 @@
 <plist version="1.0">
 <dict>
     <!-- Hop count pluralization for path display -->
-    <key>hops.count</key>
+    <key>common.hops</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%#@hops@</string>
-        <key>hops</key>
+        <string>%#@count@</string>
+        <key>count</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
+            <key>zero</key>
+            <string>%d переходов</string>
             <key>one</key>
             <string>%d переход</string>
             <key>few</key>

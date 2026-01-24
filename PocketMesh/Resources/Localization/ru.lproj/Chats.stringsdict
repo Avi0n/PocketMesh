@@ -10,17 +10,19 @@
 -->
 <plist version="1.0">
 <dict>
-    <!-- Unread mentions count for badge display -->
-    <key>chats.unreadMentions</key>
+    <!-- Unread mentions count for accessibility -->
+    <key>chats.unreadMentions.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%#@mentions@</string>
-        <key>mentions</key>
+        <string>%#@count@</string>
+        <key>count</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
+            <key>zero</key>
+            <string>Нет непрочитанных упоминаний</string>
             <key>one</key>
             <string>%d непрочитанное упоминание</string>
             <key>few</key>
@@ -32,17 +34,19 @@
         </dict>
     </dict>
 
-    <!-- Unread messages count for badge display -->
-    <key>chats.unreadMessages</key>
+    <!-- Unread messages count for accessibility -->
+    <key>chats.unreadMessages.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%#@messages@</string>
-        <key>messages</key>
+        <string>%#@count@</string>
+        <key>count</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
+            <key>zero</key>
+            <string>Нет непрочитанных сообщений</string>
             <key>one</key>
             <string>%d непрочитанное сообщение</string>
             <key>few</key>

@@ -2,154 +2,101 @@
   Localizable.strings
   PocketMesh
 
-  Russian translation of common strings used throughout the app.
-  AI-translated - please verify with native speakers.
+  Russian translation of common and shared strings used across the application.
 */
 
-// MARK: - Common Actions
 
-/* Location: Multiple files - Cancel button label */
+// MARK: - Generic Buttons
+
+/* Standard confirmation button for dialogs */
+"common.ok" = "ОК";
+
+/* Standard cancel button for dialogs and sheets */
 "common.cancel" = "Отмена";
 
-/* Location: Multiple files - Done button label */
+/* Standard done button for completing an action */
 "common.done" = "Готово";
 
-/* Location: Multiple files - OK button label */
-"common.ok" = "OK";
-
-/* Location: Multiple files - Save button label */
+/* Standard save button for persisting changes */
 "common.save" = "Сохранить";
 
-/* Location: Multiple files - Delete button label */
+/* Standard delete button for removing items */
 "common.delete" = "Удалить";
 
-/* Location: Multiple files - Edit button label */
+/* Standard edit button for entering edit mode */
 "common.edit" = "Изменить";
 
-/* Location: Multiple files - Close button label */
+/* Standard close button for dismissing views */
 "common.close" = "Закрыть";
 
-/* Location: Multiple files - Back button label */
-"common.back" = "Назад";
+/* Button to retry a failed operation */
+"common.tryAgain" = "Попробовать снова";
 
-/* Location: Multiple files - Next button label */
-"common.next" = "Далее";
+/* Standard remove button for removing items from a list or group */
+"common.remove" = "Удалить";
 
-/* Location: Multiple files - Continue button label */
-"common.continue" = "Продолжить";
 
-/* Location: Multiple files - Retry button label */
-"common.retry" = "Повторить";
+// MARK: - Tab Bar
 
-/* Location: Multiple files - Copy button label */
-"common.copy" = "Копировать";
+/* Tab bar title for the messaging/conversations screen */
+"tabs.chats" = "Чаты";
 
-/* Location: Multiple files - Share button label */
-"common.share" = "Поделиться";
+/* Tab bar title for the nodes/contacts list screen */
+"tabs.nodes" = "Узлы";
 
-// MARK: - Common Labels
+/* Tab bar title for the map screen showing node locations */
+"tabs.map" = "Карта";
 
-/* Location: Multiple files - Error alert title */
-"common.error" = "Ошибка";
+/* Tab bar title for the tools/utilities screen */
+"tabs.tools" = "Инструменты";
 
-/* Location: Multiple files - Success alert title */
-"common.success" = "Успешно";
+/* Tab bar title for the app settings screen */
+"tabs.settings" = "Настройки";
 
-/* Location: Multiple files - Warning alert title */
-"common.warning" = "Предупреждение";
 
-/* Location: Multiple files - Loading state indicator */
-"common.loading" = "Загрузка...";
+// MARK: - Connection Alerts
 
-/* Location: Multiple files - Name field label */
-"common.name" = "Имя";
+/* Alert title when device connection fails */
+"alert.connectionFailed.title" = "Ошибка подключения";
 
-/* Location: Multiple files - Description field label */
-"common.description" = "Описание";
+/* Alert title when connection cannot be established */
+"alert.couldNotConnect.title" = "Не удалось подключиться";
 
-/* Location: Multiple files - Status field label */
-"common.status" = "Статус";
+/* Default message when device connection fails */
+"alert.connectionFailed.defaultMessage" = "Не удалось подключиться к устройству.";
 
-/* Location: Multiple files - Type field label */
-"common.type" = "Тип";
+/* Message suggesting another app may be connected to the device */
+"alert.couldNotConnect.otherAppMessage" = "Убедись, что к устройству не подключено другое приложение, и попробуй снова.";
 
-/* Location: Multiple files - Date field label */
-"common.date" = "Дата";
+/* Button to remove failed pairing and retry connection */
+"alert.connectionFailed.removeAndRetry" = "Удалить и попробовать снова";
 
-/* Location: Multiple files - Time field label */
-"common.time" = "Время";
-
-// MARK: - Connection Status
-
-/* Location: Multiple files - Connected status */
-"connection.connected" = "Подключено";
-
-/* Location: Multiple files - Disconnected status */
-"connection.disconnected" = "Отключено";
-
-/* Location: Multiple files - Connecting status */
-"connection.connecting" = "Подключение...";
-
-/* Location: Multiple files - Reconnecting status */
-"connection.reconnecting" = "Переподключение...";
-
-// MARK: - Empty States
-
-/* Location: Multiple files - No results found message */
-"empty.noResults" = "Нет результатов";
-
-/* Location: Multiple files - No data available message */
-"empty.noData" = "Нет данных";
-
-// MARK: - Validation
-
-/* Location: Multiple files - Required field message */
-"validation.required" = "Это поле обязательно";
-
-/* Location: Multiple files - Invalid format message */
-"validation.invalidFormat" = "Неверный формат";
-
-// MARK: - Time Formats
-
-/* Location: Multiple files - Just now timestamp */
-"time.justNow" = "Только что";
-
-/* Location: Multiple files - Minutes ago timestamp, %lld is count */
-"time.minutesAgo" = "%lld мин. назад";
-
-/* Location: Multiple files - Hours ago timestamp, %lld is count */
-"time.hoursAgo" = "%lld ч. назад";
-
-/* Location: Multiple files - Days ago timestamp, %lld is count */
-"time.daysAgo" = "%lld дн. назад";
-
-/* Location: Multiple files - Yesterday timestamp */
-"time.yesterday" = "Вчера";
-
-// MARK: - Units
-
-/* Location: Multiple files - Meters unit abbreviation */
-"units.meters" = "м";
-
-/* Location: Multiple files - Kilometers unit abbreviation */
-"units.kilometers" = "км";
-
-/* Location: Multiple files - Feet unit abbreviation */
-"units.feet" = "фут";
-
-/* Location: Multiple files - Miles unit abbreviation */
-"units.miles" = "миль";
 
 // MARK: - Accessibility
 
-/* Location: Multiple files - Close button accessibility label */
-"accessibility.close" = "Закрыть";
+/* VoiceOver announcement when viewing cached data while disconnected from device */
+"accessibility.viewingCachedData" = "Просмотр кэшированных данных. Подключись к устройству для обновления.";
 
-/* Location: Multiple files - Menu button accessibility label */
-"accessibility.menu" = "Меню";
 
-/* Location: Multiple files - More options accessibility label */
-"accessibility.moreOptions" = "Дополнительные параметры";
+// MARK: - Node Types
 
-/* Location: Multiple files - Search accessibility label */
-"accessibility.search" = "Поиск";
+/* Node type for a person or contact */
+"nodeType.contact" = "Контакт";
+
+/* Node type for a mesh network repeater device */
+"nodeType.repeater" = "Ретранслятор";
+
+/* Node type for a group chat room */
+"nodeType.room" = "Комната";
+
+
+// MARK: - Permission Levels
+
+/* Permission level with limited access */
+"permission.guest" = "Гость";
+
+/* Permission level with standard access */
+"permission.member" = "Участник";
+
+/* Permission level with full administrative access */
+"permission.admin" = "Администратор";

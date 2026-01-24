@@ -20,7 +20,7 @@
 "map.emptyState.title" = "Немає контактів на карті";
 
 /* Location: MapView.swift - Purpose: Empty state description */
-"map.emptyState.description" = "Контакти з даними про місцезнаходження з'являться тут при виявленні в мережі mesh.";
+"map.emptyState.description" = "Контакти з даними про місцезнаходження з'являться тут при виявленні в mesh-мережі.";
 
 // MARK: - Map Controls
 
@@ -31,7 +31,7 @@
 "map.controls.showLabels" = "Показати мітки";
 
 /* Location: MapView.swift - Purpose: Accessibility label for center on all contacts button */
-"map.controls.centerAll" = "Центрувати всіх контактів";
+"map.controls.centerAll" = "Центрувати на всіх контактах";
 
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for user location button */
 "map.controls.centerOnMyLocation" = "Центрувати на моєму місцезнаходженні";

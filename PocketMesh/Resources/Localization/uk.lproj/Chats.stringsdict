@@ -11,7 +11,7 @@
 <plist version="1.0">
 <dict>
     <!-- Unread mentions count for badge display -->
-    <key>chats.unreadMentions</key>
+    <key>chats.unreadMentions.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
         <string>%#@mentions@</string>
@@ -21,6 +21,8 @@
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
+            <key>zero</key>
+            <string>Немає непрочитаних згадок</string>
             <key>one</key>
             <string>%d непрочитана згадка</string>
             <key>few</key>
@@ -33,7 +35,7 @@
     </dict>
 
     <!-- Unread messages count for badge display -->
-    <key>chats.unreadMessages</key>
+    <key>chats.unreadMessages.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
         <string>%#@messages@</string>
@@ -43,6 +45,8 @@
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
+            <key>zero</key>
+            <string>Немає непрочитаних повідомлень</string>
             <key>one</key>
             <string>%d непрочитане повідомлення</string>
             <key>few</key>

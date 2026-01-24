@@ -31,10 +31,10 @@
 "map.controls.showLabels" = "Показать метки";
 
 /* Location: MapView.swift - Purpose: Accessibility label for center on all contacts button */
-"map.controls.centerAll" = "Центрировать всех контактов";
+"map.controls.centerAll" = "Показать всех";
 
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for user location button */
-"map.controls.centerOnMyLocation" = "Центрировать на моём местоположении";
+"map.controls.centerOnMyLocation" = "Моё местоположение";
 
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
 "map.controls.layers" = "Слои карты";
@@ -65,10 +65,10 @@
 "map.detail.status" = "Статус";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Value showing contact is favorited */
-"map.detail.favorite" = "Избранный";
+"map.detail.favorite" = "В избранном";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Label for last advertisement timestamp */
-"map.detail.lastAdvert" = "Последнее объявление";
+"map.detail.lastAdvert" = "Последний сигнал";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Section header for location coordinates */
 "map.detail.section.location" = "Местоположение";
@@ -92,7 +92,7 @@
 "map.detail.pathLength" = "Длина пути";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Path length value with hop count */
-"map.detail.hops" = "%d переходов";
+"map.detail.hops" = "Переходов: %d";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Path length value for single hop */
 "map.detail.hopSingular" = "1 переход";
@@ -117,7 +117,7 @@
 // MARK: - Contact Type Names
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type */
-"map.nodeKind.chatContact" = "Контакт чата";
+"map.nodeKind.chatContact" = "Собеседник";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type */
 "map.nodeKind.repeater" = "Ретранслятор";
@@ -145,7 +145,7 @@
 // MARK: - Contact Annotation
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for favorite contacts */
-"map.annotation.favorite" = "Избранный";
+"map.annotation.favorite" = "В избранном";
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for repeater nodes */
 "map.annotation.repeater" = "Ретранслятор";
