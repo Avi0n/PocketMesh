@@ -349,7 +349,7 @@ struct UnifiedMessageBubble: View {
 
         // Incoming message path and details
         if !message.isOutgoing {
-            if message.pathNodes != nil {
+            if message.pathNodes != nil && message.pathLength != 0 && message.pathLength != 0xFF {
                 Button {
                     onShowPath?(message)
                 } label: {
@@ -357,7 +357,7 @@ struct UnifiedMessageBubble: View {
                 }
             }
 
-            Text(L10n.Chats.Chats.Message.Info.hops(hopCountFormatted(message.pathLength)))
+            Label(hopCountFormatted(message.pathLength), systemImage: "arrowshape.bounce.right")
 
             Menu {
                 Text(L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)) + (message.timestampCorrected ? " " + L10n.Chats.Chats.Message.Info.adjusted : ""))
