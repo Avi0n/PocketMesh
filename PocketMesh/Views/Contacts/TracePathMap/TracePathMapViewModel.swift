@@ -342,4 +342,77 @@ final class TracePathMapViewModel {
         cameraRegion = MKCoordinateRegion(center: center, span: span)
         hasInitiallyCenteredOnRepeaters = true
     }
+
+    /// Perform initial centering based on current state
+    /// Centers on path if one exists, otherwise centers on all repeaters
+    func performInitialCentering() {
+        if hasPath {
+            centerOnPathRepeaters()
+        } else {
+            centerOnAllRepeaters()
+        }
+    }
+
+    /// Center map on path repeaters directly (doesn't depend on overlays)
+    private func centerOnPathRepeaters() {
+        guard let traceViewModel else {
+            centerOnAllRepeaters()
+            return
+        }
+
+        var coordinates: [CLLocationCoordinate2D] = []
+
+        // Include user location if available
+        if let userLocation {
+            coordinates.append(userLocation.coordinate)
+        }
+
+        // Get coordinates from path repeaters
+        for hop in traceViewModel.outboundPath {
+            guard let repeater = traceViewModel.availableRepeaters.first(where: {
+                $0.publicKey[0] == hop.hashByte
+            }), repeater.hasLocation else {
+                continue
+            }
+
+            let coord = CLLocationCoordinate2D(
+                latitude: repeater.latitude,
+                longitude: repeater.longitude
+            )
+            if CLLocationCoordinate2DIsValid(coord) {
+                coordinates.append(coord)
+            }
+        }
+
+        guard !coordinates.isEmpty else {
+            centerOnAllRepeaters()
+            return
+        }
+
+        // Calculate bounding region
+        var minLat = coordinates[0].latitude
+        var maxLat = coordinates[0].latitude
+        var minLon = coordinates[0].longitude
+        var maxLon = coordinates[0].longitude
+
+        for coord in coordinates {
+            minLat = min(minLat, coord.latitude)
+            maxLat = max(maxLat, coord.latitude)
+            minLon = min(minLon, coord.longitude)
+            maxLon = max(maxLon, coord.longitude)
+        }
+
+        let center = CLLocationCoordinate2D(
+            latitude: (minLat + maxLat) / 2,
+            longitude: (minLon + maxLon) / 2
+        )
+
+        let span = MKCoordinateSpan(
+            latitudeDelta: min(180, (maxLat - minLat) * 1.5 + 0.01),
+            longitudeDelta: min(360, (maxLon - minLon) * 1.5 + 0.01)
+        )
+
+        cameraRegion = MKCoordinateRegion(center: center, span: span)
+        hasInitiallyCenteredOnRepeaters = true
+    }
 }

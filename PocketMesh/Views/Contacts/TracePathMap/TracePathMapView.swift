@@ -48,7 +48,7 @@ struct TracePathMapView: View {
                 userLocation: appState.locationService.currentLocation
             )
             mapViewModel.rebuildOverlays()
-            mapViewModel.centerOnAllRepeaters()
+            mapViewModel.performInitialCentering()
         }
         .onChange(of: appState.locationService.currentLocation) { _, newLocation in
             mapViewModel.updateUserLocation(newLocation)
@@ -56,7 +56,7 @@ struct TracePathMapView: View {
         .onChange(of: traceViewModel.availableRepeaters) { _, _ in
             // Re-center if initial centering hasn't happened yet and repeaters are now available
             if !mapViewModel.hasInitiallyCenteredOnRepeaters && !mapViewModel.repeatersWithLocation.isEmpty {
-                mapViewModel.centerOnAllRepeaters()
+                mapViewModel.performInitialCentering()
             }
         }
         .onChange(of: traceViewModel.resultID) { _, _ in
