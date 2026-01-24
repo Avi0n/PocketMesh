@@ -17,6 +17,9 @@ final class TracePathMapViewModel {
     var showLabels: Bool = true
     var showingLayersMenu: Bool = false
 
+    /// Tracks whether initial centering on repeaters has been performed
+    private(set) var hasInitiallyCenteredOnRepeaters = false
+
     /// MKMapType for UIKit map view
     var mapType: MKMapType {
         switch mapStyleSelection {
@@ -337,5 +340,6 @@ final class TracePathMapViewModel {
         let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
 
         cameraRegion = MKCoordinateRegion(center: center, span: span)
+        hasInitiallyCenteredOnRepeaters = true
     }
 }
