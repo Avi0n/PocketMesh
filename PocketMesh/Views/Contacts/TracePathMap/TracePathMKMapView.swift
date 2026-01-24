@@ -151,6 +151,10 @@ struct TracePathMKMapView: UIViewRepresentable {
         var hasPendingProgrammaticRegion = false
         var hasPendingUserGesture = false
 
+        /// Tracks whether the initial MKMapView region change has been received.
+        /// The first region change is from MKMapView initialization, not a user gesture.
+        private var hasReceivedInitialRegion = false
+
         /// Pending region update task for cancellation
         private var pendingRegionTask: Task<Void, Never>?
 
@@ -229,6 +233,15 @@ struct TracePathMKMapView: UIViewRepresentable {
 
             if hasPendingProgrammaticRegion {
                 hasPendingProgrammaticRegion = false
+                hasReceivedInitialRegion = true
+                lastAppliedRegion = mapView.region
+                return
+            }
+
+            // The first region change is from MKMapView initialization, not a user gesture.
+            // Don't block programmatic updates during this initial phase.
+            if !hasReceivedInitialRegion {
+                hasReceivedInitialRegion = true
                 lastAppliedRegion = mapView.region
                 return
             }
