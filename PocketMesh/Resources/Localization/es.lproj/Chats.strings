@@ -604,10 +604,10 @@
 "chats.signal.fair" = "Regular";
 
 /* Location: UnifiedMessageBubble.swift - SNR quality poor */
-"chats.signal.poor" = "Pobre";
+"chats.signal.poor" = "Débil";
 
 /* Location: UnifiedMessageBubble.swift - SNR quality very poor */
-"chats.signal.veryPoor" = "Muy pobre";
+"chats.signal.veryPoor" = "Muy débil";
 
 /* Location: UnifiedMessageBubble.swift - Hop count direct */
 "chats.message.hops.direct" = "Directo";

@@ -2,36 +2,40 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>chats.conversation.unreadMentions</key>
+    <key>chats.unreadMentions.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%#@mentions@</string>
-        <key>mentions</key>
+        <string>%#@count@</string>
+        <key>count</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
-            <string>lld</string>
+            <string>d</string>
+            <key>zero</key>
+            <string>Geen ongelezen vermeldingen</string>
             <key>one</key>
-            <string>%lld ongelezen vermelding</string>
+            <string>%d ongelezen vermelding</string>
             <key>other</key>
-            <string>%lld ongelezen vermeldingen</string>
+            <string>%d ongelezen vermeldingen</string>
         </dict>
     </dict>
-    <key>chats.conversation.unreadMessages</key>
+    <key>chats.unreadMessages.accessibilityValue</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%#@messages@</string>
-        <key>messages</key>
+        <string>%#@count@</string>
+        <key>count</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
             <string>NSStringPluralRuleType</string>
             <key>NSStringFormatValueTypeKey</key>
-            <string>lld</string>
+            <string>d</string>
+            <key>zero</key>
+            <string>Geen ongelezen berichten</string>
             <key>one</key>
-            <string>%lld ongelezen bericht</string>
+            <string>%d ongelezen bericht</string>
             <key>other</key>
-            <string>%lld ongelezen berichten</string>
+            <string>%d ongelezen berichten</string>
         </dict>
     </dict>
 </dict>

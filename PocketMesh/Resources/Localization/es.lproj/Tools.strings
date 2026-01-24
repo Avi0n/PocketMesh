@@ -212,7 +212,7 @@
 "tools.noiseFloor.quality.fair" = "Regular";
 
 /* Location: NoiseFloorViewModel.swift - Signal quality: poor */
-"tools.noiseFloor.quality.poor" = "Pobre";
+"tools.noiseFloor.quality.poor" = "Débil";
 
 /* Location: NoiseFloorViewModel.swift - Signal quality: unknown */
 "tools.noiseFloor.quality.unknown" = "Desconocido";

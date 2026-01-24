@@ -518,7 +518,7 @@
 "contacts.pathDiscovery.cachedSuffix" = ". Gebruik opgeslagen info van advertentie. Node heeft mogelijk telemetrie uitgeschakeld.";
 
 /* Location: PathManagementViewModel.swift - Purpose: No response message */
-"contacts.pathDiscovery.noResponse" = "Externe node reageerde niet. Nodes moeten telemetrieverzoeken ingeschakeld hebben om te reageren op padontwikkeling.";
+"contacts.pathDiscovery.noResponse" = "Externe node reageerde niet. Nodes moeten telemetrieverzoeken ingeschakeld hebben om te reageren op padontdekking.";
 
 /* Location: PathManagementViewModel.swift - Purpose: Failed prefix */
 "contacts.pathDiscovery.failed" = "Mislukt: %@";
@@ -827,13 +827,13 @@
 "contacts.results.distanceInfoTitlePartial" = "Afstandsinfo";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
-"contacts.results.partialDistanceExplanation" = "De weergegeven afstand is alleen tussen repeaters. De afstand van uw apparaat naar de eerste repeater is niet inbegrepen omdat de apparaatlocatie niet beschikbaar is.";
+"contacts.results.partialDistanceExplanation" = "De weergegeven afstand is alleen tussen repeaters. De afstand van je apparaat naar de eerste repeater is niet inbegrepen omdat de apparaatlocatie niet beschikbaar is.";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
 "contacts.results.partialDistanceHeader" = "Gedeeltelijke afstand";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path tip */
-"contacts.results.fullPathTip" = "Schakel locatiediensten in of stel een locatie in voor uw apparaat om de volledige padafstand te zien.";
+"contacts.results.fullPathTip" = "Schakel locatiediensten in of stel een locatie in voor je apparaat om de volledige padafstand te zien.";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path section header */
 "contacts.results.fullPathHeader" = "Voor volledig pad";

@@ -51,13 +51,13 @@
 "remoteNodes.auth.passwordTooLongRooms" = "Pokoje MeshCore akceptują hasła do %d znaków. Dodatkowe znaki zostaną zignorowane.";
 
 /* Location: NodeAuthenticationSheet.swift - Countdown text showing seconds remaining */
-"remoteNodes.auth.secondsRemaining" = "Do %d sekund pozostało";
+"remoteNodes.auth.secondsRemaining" = "Maksymalnie %d sekund";
 
 /* Location: NodeAuthenticationSheet.swift - Connect button */
 "remoteNodes.auth.connect" = "Połącz";
 
 /* Location: NodeAuthenticationSheet.swift - Accessibility announcement for countdown */
-"remoteNodes.auth.secondsRemainingAnnouncement" = "%d sekund pozostało";
+"remoteNodes.auth.secondsRemainingAnnouncement" = "Pozostało %d sekund";
 
 // MARK: - Repeater Settings
 

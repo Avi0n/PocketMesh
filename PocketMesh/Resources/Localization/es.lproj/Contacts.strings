@@ -261,7 +261,7 @@
 "contacts.detail.route" = "Ruta";
 
 /* Location: ContactDetailView.swift - Purpose: Hops away label */
-"contacts.detail.hopsAway" = "Saltos de distancia";
+"contacts.detail.hopsAway" = "Distancia en saltos";
 
 /* Location: ContactDetailView.swift - Purpose: Path discovery in progress */
 "contacts.detail.discoveringPath" = "Descubriendo ruta...";

@@ -267,7 +267,7 @@
 "contacts.detail.discoveringPath" = "Odkrywanie ścieżki...";
 
 /* Location: ContactDetailView.swift - Purpose: Discovery countdown */
-"contacts.detail.secondsRemaining" = "Do %d sekund pozostało";
+"contacts.detail.secondsRemaining" = "Maksymalnie %d sekund";
 
 /* Location: ContactDetailView.swift - Purpose: Discover path button */
 "contacts.detail.discoverPath" = "Odkryj ścieżkę";

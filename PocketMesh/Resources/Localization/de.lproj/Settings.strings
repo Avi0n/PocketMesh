@@ -247,7 +247,7 @@
 "advancedRadio.spreadingFactor" = "Spreizfaktor";
 
 /* Label for coding rate picker */
-"advancedRadio.codingRate" = "Codierrate";
+"advancedRadio.codingRate" = "Codierungsrate";
 
 /* Label for TX power input */
 "advancedRadio.txPower" = "Sendeleistung (dBm)";

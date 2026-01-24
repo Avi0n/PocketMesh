@@ -244,7 +244,7 @@
 "advancedRadio.bandwidth" = "Szerokość pasma (kHz)";
 
 /* Label for spreading factor picker */
-"advancedRadio.spreadingFactor" = "Współczynnik rozproszenia";
+"advancedRadio.spreadingFactor" = "Współczynnik rozpraszania";
 
 /* Label for coding rate picker */
 "advancedRadio.codingRate" = "Szybkość kodowania";

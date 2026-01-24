@@ -170,7 +170,7 @@
 "contacts.row.location" = "Position";
 
 /* Location: ContactRowView.swift - Purpose: Distance suffix */
-"contacts.row.away" = "à %@";
+"contacts.row.away" = "à %@ de distance";
 
 // MARK: - Contacts List Swipe Actions
 
@@ -842,7 +842,7 @@
 "contacts.results.partialDistanceLabel" = "Distance partielle";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance accessibility hint */
-"contacts.results.partialDistanceHint" = "Touchez deux fois pour savoir pourquoi la position de l'appareil est exclue";
+"contacts.results.partialDistanceHint" = "Appuyez deux fois pour savoir pourquoi la position de l'appareil est exclue";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
 "contacts.results.needsRepeaters" = "Le calcul de la distance nécessite au moins 2 répéteurs dans le chemin.";

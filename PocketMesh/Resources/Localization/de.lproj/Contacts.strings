@@ -827,13 +827,13 @@
 "contacts.results.distanceInfoTitlePartial" = "Entfernungsinfo";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
-"contacts.results.partialDistanceExplanation" = "Die angezeigte Entfernung umfasst nur die Strecke zwischen Repeatern. Die Entfernung von Ihrem Gerät zum ersten Repeater ist nicht enthalten, da der Gerätestandort nicht verfügbar ist.";
+"contacts.results.partialDistanceExplanation" = "Die angezeigte Entfernung umfasst nur die Strecke zwischen Repeatern. Die Entfernung von deinem Gerät zum ersten Repeater ist nicht enthalten, da der Gerätestandort nicht verfügbar ist.";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
 "contacts.results.partialDistanceHeader" = "Teilentfernung";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path tip */
-"contacts.results.fullPathTip" = "Aktivieren Sie Standortdienste oder legen Sie einen Standort für Ihr Gerät fest, um die vollständige Pfadentfernung zu sehen.";
+"contacts.results.fullPathTip" = "Aktiviere Standortdienste oder lege einen Standort für dein Gerät fest, um die vollständige Pfadentfernung zu sehen.";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path section header */
 "contacts.results.fullPathHeader" = "Für vollständigen Pfad";

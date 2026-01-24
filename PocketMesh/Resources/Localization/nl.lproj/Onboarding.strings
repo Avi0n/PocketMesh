@@ -154,7 +154,7 @@
 "troubleshooting.factoryReset.explanation" = "Als je je MeshCore-apparaat naar fabrieksinstellingen hebt teruggezet, heeft iOS mogelijk nog de oude koppeling opgeslagen. Door deze te wissen in systeeminstellingen kan het apparaat weer verschijnen.";
 
 /* Location: DeviceScanView.swift - Additional explanation about removal confirmation */
-"troubleshooting.factoryReset.confirmationNote" = "Door hieronder te tikken wordt je gevraagd om de oude koppeling te bevestigen. Dit is normaal — het zorgt ervoor dat je teruggezette apparaat weer verschijnt.";
+"troubleshooting.factoryReset.confirmationNote" = "Door hieronder te tikken wordt je gevraagd om het verwijderen van de oude koppeling te bevestigen. Dit is normaal — het zorgt ervoor dat je teruggezette apparaat weer verschijnt.";
 
 /* Location: DeviceScanView.swift - Button to clear previous pairing */
 "troubleshooting.factoryReset.clearPairing" = "Vorige koppeling wissen";
