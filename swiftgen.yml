@@ -1,0 +1,16 @@
+strings:
+  - inputs:
+      - PocketMesh/Resources/Localization/en.lproj/Localizable.strings
+      - PocketMesh/Resources/Localization/en.lproj/Chats.strings
+      - PocketMesh/Resources/Localization/en.lproj/Contacts.strings
+      - PocketMesh/Resources/Localization/en.lproj/Settings.strings
+      - PocketMesh/Resources/Localization/en.lproj/Map.strings
+      - PocketMesh/Resources/Localization/en.lproj/Tools.strings
+      - PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
+      - PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
+    outputs:
+      - templateName: structured-swift5
+        output: PocketMesh/Resources/Generated/L10n.swift
+        params:
+          enumName: L10n
+          publicAccess: true

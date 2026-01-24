@@ -25,7 +25,7 @@ struct DeviceInfoSection: View {
                             Circle()
                                 .fill(.green)
                                 .frame(width: 6, height: 6)
-                            Text("Connected")
+                            Text(L10n.Settings.Device.connected)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
 
@@ -43,7 +43,7 @@ struct DeviceInfoSection: View {
                 .padding(.vertical, 4)
             }
         } header: {
-            Text("Device")
+            Text(L10n.Settings.Device.header)
         }
     }
 }

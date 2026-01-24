@@ -30,7 +30,7 @@ struct MessageTimestampView: View {
             return date.formatted(date: .omitted, time: .shortened)
         } else if calendar.isDateInYesterday(date) {
             // Yesterday: "Yesterday 1:15 PM"
-            return "Yesterday " + date.formatted(date: .omitted, time: .shortened)
+            return L10n.Chats.Chats.Timestamp.yesterday + " " + date.formatted(date: .omitted, time: .shortened)
         } else if calendar.isDate(date, equalTo: now, toGranularity: .year) {
             // Same year: "Dec 1, 12:10 PM"
             return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())

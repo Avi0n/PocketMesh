@@ -28,9 +28,9 @@ struct NewChatView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if contacts.isEmpty {
                     ContentUnavailableView(
-                        "No Contacts",
+                        L10n.Chats.Chats.NewChat.EmptyState.title,
                         systemImage: "person.2",
-                        description: Text("Contacts will appear when discovered")
+                        description: Text(L10n.Chats.Chats.NewChat.EmptyState.description)
                     )
                 } else {
                     List(filteredContacts) { contact in
@@ -57,12 +57,12 @@ struct NewChatView: View {
                     }
                 }
             }
-            .navigationTitle("New Chat")
+            .navigationTitle(L10n.Chats.Chats.NewChat.title)
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText, prompt: "Search contacts")
+            .searchable(text: $searchText, prompt: L10n.Chats.Chats.NewChat.Search.placeholder)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Chats.Chats.Common.cancel) {
                         dismiss()
                     }
                 }
@@ -84,11 +84,11 @@ struct NewChatView: View {
     private func contactTypeLabel(for contact: ContactDTO) -> String {
         switch contact.type {
         case .chat:
-            return contact.isFloodRouted ? "Flood routing" : "Direct"
+            return contact.isFloodRouted ? L10n.Chats.Chats.ConnectionStatus.floodRouting : L10n.Chats.Chats.NewChat.ContactType.direct
         case .repeater:
-            return "Repeater"
+            return L10n.Chats.Chats.NewChat.ContactType.repeater
         case .room:
-            return "Room"
+            return L10n.Chats.Chats.NewChat.ContactType.room
         }
     }
 }

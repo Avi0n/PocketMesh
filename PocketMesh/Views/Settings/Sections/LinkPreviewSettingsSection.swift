@@ -9,17 +9,17 @@ struct LinkPreviewSettingsSection: View {
     var body: some View {
         Section {
             Toggle(isOn: $previewsEnabled) {
-                Label("Link Previews", systemImage: "link")
+                Label(L10n.Settings.LinkPreviews.toggle, systemImage: "link")
             }
 
             if previewsEnabled {
-                Toggle("Show in Direct Messages", isOn: $autoResolveDM)
-                Toggle("Show in Channels", isOn: $autoResolveChannels)
+                Toggle(L10n.Settings.LinkPreviews.showInDMs, isOn: $autoResolveDM)
+                Toggle(L10n.Settings.LinkPreviews.showInChannels, isOn: $autoResolveChannels)
             }
         } header: {
-            Text("Privacy")
+            Text(L10n.Settings.LinkPreviews.header)
         } footer: {
-            Text("Link previews fetch data from the web, which may reveal your IP address to the server hosting the link.")
+            Text(L10n.Settings.LinkPreviews.footer)
         }
     }
 }

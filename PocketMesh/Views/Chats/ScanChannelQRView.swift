@@ -37,7 +37,7 @@ struct ScanChannelQRView: View {
                 scannerView
             }
         }
-        .navigationTitle("Scan QR Code")
+        .navigationTitle(L10n.Chats.Chats.ScanQR.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -54,9 +54,9 @@ struct ScanChannelQRView: View {
             } else {
                 // Fallback for unsupported devices
                 ContentUnavailableView(
-                    "Scanner Not Available",
+                    L10n.Chats.Chats.ScanQR.NotAvailable.title,
                     systemImage: "qrcode.viewfinder",
-                    description: Text("QR scanning is not supported on this device")
+                    description: Text(L10n.Chats.Chats.ScanQR.NotAvailable.description)
                 )
             }
 
@@ -70,7 +70,7 @@ struct ScanChannelQRView: View {
 
                 Spacer()
 
-                Text("Point your camera at a channel QR code")
+                Text(L10n.Chats.Chats.ScanQR.instruction)
                     .font(.subheadline)
                     .foregroundStyle(.white)
                     .padding()
@@ -87,15 +87,15 @@ struct ScanChannelQRView: View {
         Form {
             if let channel = scannedChannel {
                 Section {
-                    LabeledContent("Channel Name", value: channel.name)
+                    LabeledContent(L10n.Chats.Chats.CreatePrivate.channelName, value: channel.name)
 
-                    LabeledContent("Secret Key") {
+                    LabeledContent(L10n.Chats.Chats.ChannelInfo.secretKey) {
                         Text(channel.secret.hexString())
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Channel Details")
+                    Text(L10n.Chats.Chats.CreatePrivate.Section.details)
                 }
 
                 if let errorMessage {
@@ -116,14 +116,14 @@ struct ScanChannelQRView: View {
                             if isJoining {
                                 ProgressView()
                             } else {
-                                Text("Join Channel")
+                                Text(L10n.Chats.Chats.JoinPrivate.joinButton)
                             }
                             Spacer()
                         }
                     }
                     .disabled(isJoining)
 
-                    Button("Scan Again") {
+                    Button(L10n.Chats.Chats.ScanQR.scanAgain) {
                         scannedChannel = nil
                         errorMessage = nil
                     }
@@ -141,17 +141,17 @@ struct ScanChannelQRView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.secondary)
 
-            Text("Camera Access Required")
+            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.title)
                 .font(.title2)
                 .bold()
 
-            Text("Please enable camera access in Settings to scan QR codes.")
+            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
-            Button("Open Settings") {
+            Button(L10n.Chats.Chats.ScanQR.openSettings) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
@@ -171,7 +171,7 @@ struct ScanChannelQRView: View {
               url.path == "/add",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
-            errorMessage = "Invalid QR code format"
+            errorMessage = L10n.Chats.Chats.ScanQR.Error.invalidFormat
             return
         }
 
@@ -179,7 +179,7 @@ struct ScanChannelQRView: View {
         let secretHex = queryItems.first(where: { $0.name == "secret" })?.value ?? ""
 
         guard !name.isEmpty, let secret = Data(hexString: secretHex), secret.count == 16 else {
-            errorMessage = "Invalid channel data in QR code"
+            errorMessage = L10n.Chats.Chats.ScanQR.Error.invalidData
             return
         }
 
@@ -189,7 +189,7 @@ struct ScanChannelQRView: View {
     private func joinChannel() async {
         guard let deviceID = appState.connectedDevice?.id,
               let channel = scannedChannel else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
@@ -198,7 +198,7 @@ struct ScanChannelQRView: View {
 
         do {
             guard let channelService = appState.services?.channelService else {
-                errorMessage = "Services not available"
+                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
                 return
             }
             try await channelService.setChannelWithSecret(

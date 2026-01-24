@@ -118,9 +118,9 @@ struct TerrainProfileCanvas: View {
 
     private var emptyState: some View {
         ContentUnavailableView(
-            "No Data",
+            L10n.Tools.Tools.LineOfSight.noData,
             systemImage: "chart.xyaxis.line",
-            description: Text("Select two points to analyze")
+            description: Text(L10n.Tools.Tools.LineOfSight.selectTwoPoints)
         )
         .frame(height: chartHeight)
     }
@@ -227,12 +227,12 @@ struct TerrainProfileCanvas: View {
 
     private var legendView: some View {
         HStack(spacing: 16) {
-            legendItem(color: terrainStroke, label: "Terrain")
-            legendItem(color: losLineColor, label: "LOS")
-            legendItem(color: fresnelOuter, label: "Clear")
-            legendItem(color: fresnelObstructed, label: "Obstructed")
+            legendItem(color: terrainStroke, label: L10n.Tools.Tools.LineOfSight.Legend.terrain)
+            legendItem(color: losLineColor, label: L10n.Tools.Tools.LineOfSight.Legend.los)
+            legendItem(color: fresnelOuter, label: L10n.Tools.Tools.LineOfSight.Legend.clear)
+            legendItem(color: fresnelObstructed, label: L10n.Tools.Tools.LineOfSight.Legend.obstructed)
             if repeaterPathFraction != nil {
-                legendItem(color: repeaterColor, label: "Repeater")
+                legendItem(color: repeaterColor, label: L10n.Tools.Tools.LineOfSight.repeater)
             }
         }
         .font(.caption2)
@@ -249,13 +249,13 @@ struct TerrainProfileCanvas: View {
     }
 
     private var indirectRouteLabel: some View {
-        Text("Indirect route via R · Relocate on map to adjust")
+        Text(L10n.Tools.Tools.LineOfSight.indirectRoute)
             .font(.caption2)
             .foregroundStyle(.secondary)
     }
 
     private var attributionText: some View {
-        Text("Elevation data: Copernicus DEM GLO-90 via Open-Meteo")
+        Text(L10n.Tools.Tools.LineOfSight.elevationAttribution)
             .font(.caption2)
             .foregroundStyle(.tertiary)
     }

@@ -52,7 +52,7 @@ struct WiFiEditSheet: View {
             Form {
                 Section {
                     HStack {
-                        TextField("IP Address", text: $ipAddress)
+                        TextField(L10n.Settings.WifiEdit.ipPlaceholder, text: $ipAddress)
                             .keyboardType(.decimalPad)
                             .textContentType(.none)
                             .autocorrectionDisabled()
@@ -66,12 +66,12 @@ struct WiFiEditSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Clear IP address")
+                            .accessibilityLabel(L10n.Settings.WifiEdit.clearIp)
                         }
                     }
 
                     HStack {
-                        TextField("Port", text: $port)
+                        TextField(L10n.Settings.WifiEdit.portPlaceholder, text: $port)
                             .keyboardType(.numberPad)
                             .focused($focusedField, equals: .port)
 
@@ -83,13 +83,13 @@ struct WiFiEditSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Clear port")
+                            .accessibilityLabel(L10n.Settings.WifiEdit.clearPort)
                         }
                     }
                 } header: {
-                    Text("Connection Details")
+                    Text(L10n.Settings.WifiEdit.connectionDetails)
                 } footer: {
-                    Text("Changing these values will disconnect and reconnect to the new address.")
+                    Text(L10n.Settings.WifiEdit.footer)
                 }
 
                 if let errorMessage {
@@ -108,9 +108,9 @@ struct WiFiEditSheet: View {
                             if isReconnecting {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Reconnecting...")
+                                Text(L10n.Settings.WifiEdit.reconnecting)
                             } else {
-                                Text("Save Changes")
+                                Text(L10n.Settings.WifiEdit.saveChanges)
                             }
                             Spacer()
                         }
@@ -118,18 +118,18 @@ struct WiFiEditSheet: View {
                     .disabled(!isValidInput || !hasChanges || isReconnecting)
                 }
             }
-            .navigationTitle("Edit WiFi Connection")
+            .navigationTitle(L10n.Settings.WifiEdit.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Localizable.Common.cancel) {
                         dismiss()
                     }
                     .disabled(isReconnecting)
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L10n.Localizable.Common.done) {
                         focusedField = nil
                     }
                 }
@@ -153,7 +153,7 @@ struct WiFiEditSheet: View {
 
     private func saveChanges() {
         guard let portNumber = UInt16(port) else {
-            errorMessage = "Invalid port number"
+            errorMessage = L10n.Settings.WifiEdit.Error.invalidPort
             return
         }
 

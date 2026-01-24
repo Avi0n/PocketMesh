@@ -43,14 +43,14 @@ struct TracePathListView: View {
     private var codeInputSection: some View {
         Section {
             HStack {
-                TextField("Example: A1, 2B, 9S", text: $codeInput)
+                TextField(L10n.Contacts.Contacts.Trace.List.codePlaceholder, text: $codeInput)
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .onSubmit {
                         processCodeInput()
                     }
 
-                Button("Paste from clipboard", systemImage: "doc.on.clipboard") {
+                Button(L10n.Contacts.Contacts.Trace.List.paste, systemImage: "doc.on.clipboard") {
                     pasteAndProcess()
                 }
                 .labelStyle(.iconOnly)
@@ -61,7 +61,7 @@ struct TracePathListView: View {
                 Text(error)
                     .foregroundStyle(.red)
             } else if !pastedSuccessfully {
-                Text("Press Return to add repeaters")
+                Text(L10n.Contacts.Contacts.Trace.List.codeFooter)
             }
         }
     }
@@ -99,9 +99,9 @@ struct TracePathListView: View {
             DisclosureGroup(isExpanded: $isRepeatersExpanded) {
                 if viewModel.availableRepeaters.isEmpty {
                     ContentUnavailableView(
-                        "No Repeaters Available",
+                        L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
                         systemImage: "antenna.radiowaves.left.and.right.slash",
-                        description: Text("Repeaters appear here once they're discovered in your mesh network.")
+                        description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
                     )
                 } else {
                     ForEach(viewModel.availableRepeaters) { repeater in
@@ -127,12 +127,12 @@ struct TracePathListView: View {
                         }
                         .id(repeater.id)
                         .foregroundStyle(.primary)
-                        .accessibilityLabel("Add \(repeater.displayName) to path")
+                        .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(repeater.displayName))
                     }
                 }
             } label: {
                 HStack {
-                    Text("Repeaters")
+                    Text(L10n.Contacts.Contacts.Trace.List.repeaters)
                     Spacer()
                     Text("\(viewModel.availableRepeaters.count)")
                         .foregroundStyle(.secondary)
@@ -146,11 +146,11 @@ struct TracePathListView: View {
     private var outboundPathSection: some View {
         Section {
             if viewModel.outboundPath.isEmpty {
-                Text("Tap a repeater above to start building your path")
+                Text(L10n.Contacts.Contacts.Trace.List.emptyPath)
                     .foregroundStyle(.secondary)
                     .frame(minHeight: 44)
             } else {
-                ForEach(Array(viewModel.outboundPath.enumerated()), id: \.element.id) { index, hop in
+                ForEach(viewModel.outboundPath.enumerated(), id: \.element.id) { index, hop in
                     TracePathHopRow(hop: hop, hopNumber: index + 1)
                 }
                 .onMove { source, destination in
@@ -164,7 +164,7 @@ struct TracePathListView: View {
                 }
             }
         } header: {
-            Text("Outbound Path")
+            Text(L10n.Contacts.Contacts.Trace.List.outboundPath)
         }
     }
 
@@ -175,8 +175,8 @@ struct TracePathListView: View {
             if !viewModel.outboundPath.isEmpty {
                 Toggle(isOn: $viewModel.autoReturnPath) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Auto Return Path")
-                        Text("Mirror outbound path for the return journey")
+                        Text(L10n.Contacts.Contacts.Trace.List.autoReturn)
+                        Text(L10n.Contacts.Contacts.Trace.List.autoReturnDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -184,8 +184,8 @@ struct TracePathListView: View {
 
                 Toggle(isOn: $viewModel.batchEnabled) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Batch Trace")
-                        Text("Run multiple traces and average the results")
+                        Text(L10n.Contacts.Contacts.Trace.List.batchTrace)
+                        Text(L10n.Contacts.Contacts.Trace.List.batchTraceDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -193,7 +193,7 @@ struct TracePathListView: View {
 
                 if viewModel.batchEnabled {
                     HStack(spacing: 12) {
-                        Text("Traces:")
+                        Text(L10n.Contacts.Contacts.Trace.List.traces)
                             .foregroundStyle(.secondary)
                         Spacer()
                         BatchSizeChip(size: 3, selectedSize: $viewModel.batchSize)
@@ -209,7 +209,7 @@ struct TracePathListView: View {
 
                     Spacer()
 
-                    Button("Copy Path", systemImage: "doc.on.doc") {
+                    Button(L10n.Contacts.Contacts.Trace.List.copyPath, systemImage: "doc.on.doc") {
                         copyHapticTrigger += 1
                         viewModel.copyPathToClipboard()
                     }
@@ -217,14 +217,14 @@ struct TracePathListView: View {
                     .buttonStyle(.borderless)
                 }
 
-                Button("Clear Path", systemImage: "trash", role: .destructive) {
+                Button(L10n.Contacts.Contacts.Trace.clearPath, systemImage: "trash", role: .destructive) {
                     showingClearConfirmation = true
                 }
                 .foregroundStyle(.red)
             }
         } footer: {
             if !viewModel.outboundPath.isEmpty {
-                Text("You must be within range of the last repeater to receive a response.")
+                Text(L10n.Contacts.Contacts.Trace.List.rangeWarning)
             }
         }
     }
@@ -240,9 +240,9 @@ struct TracePathListView: View {
                         ProgressView()
                             .controlSize(.small)
                         if viewModel.batchEnabled {
-                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
+                            Text(L10n.Contacts.Contacts.Trace.List.runningBatch(viewModel.currentTraceIndex, viewModel.batchSize))
                         } else {
-                            Text("Running Trace")
+                            Text(L10n.Contacts.Contacts.Trace.List.runningTrace)
                         }
                     }
                     .frame(minWidth: 160)
@@ -254,8 +254,8 @@ struct TracePathListView: View {
                             .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
                     }
                     .accessibilityLabel(viewModel.batchEnabled
-                        ? "Running trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
-                        : "Running trace, please wait")
+                        ? L10n.Contacts.Contacts.Trace.List.runningBatchLabel(viewModel.currentTraceIndex, viewModel.batchSize)
+                        : L10n.Contacts.Contacts.Trace.List.runningLabel)
                     .accessibilityHint("Trace is in progress")
                 } else {
                     Button {
@@ -267,16 +267,16 @@ struct TracePathListView: View {
                             }
                         }
                     } label: {
-                        Text("Run Trace")
+                        Text(L10n.Contacts.Contacts.Trace.List.runTrace)
                             .frame(minWidth: 160)
                             .padding(.vertical, 4)
                     }
                     .liquidGlassProminentButtonStyle()
                     .radioDisabled(for: appState.connectionState, or: !viewModel.canRunTraceWhenConnected)
-                    .accessibilityLabel("Run trace")
+                    .accessibilityLabel(L10n.Contacts.Contacts.Trace.List.runTraceLabel)
                     .accessibilityHint(viewModel.batchEnabled
-                        ? "Double tap to run \(viewModel.batchSize) traces"
-                        : "Double tap to trace the path")
+                        ? L10n.Contacts.Contacts.Trace.List.batchHint(viewModel.batchSize)
+                        : L10n.Contacts.Contacts.Trace.List.singleHint)
                 }
                 Spacer()
             }
@@ -318,8 +318,8 @@ struct TracePathHopRow: View {
         }
         .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Hop \(hopNumber): \(hop.resolvedName ?? hop.hashByte.hexString)")
-        .accessibilityHint("Swipe left to delete, use drag handle to reorder")
+        .accessibilityLabel(L10n.Contacts.Contacts.Trace.List.hopLabel(hopNumber, hop.resolvedName ?? hop.hashByte.hexString))
+        .accessibilityHint(L10n.Contacts.Contacts.Trace.List.hopHint)
     }
 }
 

@@ -24,9 +24,9 @@ struct RoomAuthenticationSheet: View {
                 )
             } else {
                 ContentUnavailableView(
-                    "Room Not Found",
+                    L10n.Chats.Chats.RoomAuth.NotFound.title,
                     systemImage: "exclamationmark.triangle",
-                    description: Text("Could not find the room contact")
+                    description: Text(L10n.Chats.Chats.RoomAuth.NotFound.description)
                 )
             }
         }

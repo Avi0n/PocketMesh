@@ -22,12 +22,12 @@ struct ContactCalloutContent: View {
 
             // Action buttons - same width
             VStack(spacing: 6) {
-                Button("Details", systemImage: "info.circle", action: onDetail)
+                Button(L10n.Map.Map.Callout.details, systemImage: "info.circle", action: onDetail)
                     .buttonStyle(.bordered)
                     .controlSize(.small)
 
                 if contact.type == .chat || contact.type == .room {
-                    Button("Message", systemImage: "message.fill", action: onMessage)
+                    Button(L10n.Map.Map.Callout.message, systemImage: "message.fill", action: onMessage)
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                 }
@@ -65,11 +65,11 @@ struct ContactCalloutContent: View {
     private var typeDisplayName: String {
         switch contact.type {
         case .chat:
-            "Contact"
+            L10n.Map.Map.Callout.NodeKind.contact
         case .repeater:
-            "Repeater"
+            L10n.Map.Map.Callout.NodeKind.repeater
         case .room:
-            "Room"
+            L10n.Map.Map.Callout.NodeKind.room
         }
     }
 }

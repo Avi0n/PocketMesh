@@ -9,12 +9,12 @@ struct NoDeviceSection: View {
             Button {
                 showingDeviceSelection = true
             } label: {
-                Label("Connect Device", systemImage: "antenna.radiowaves.left.and.right")
+                Label(L10n.Settings.Device.connect, systemImage: "antenna.radiowaves.left.and.right")
             }
         } header: {
-            Text("Device")
+            Text(L10n.Settings.Device.header)
         } footer: {
-            Text("No MeshCore device connected")
+            Text(L10n.Settings.Device.noDeviceConnected)
         }
     }
 }

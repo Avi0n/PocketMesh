@@ -42,8 +42,8 @@ struct RepeatRowView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Repeat from \(repeaterName)")
-        .accessibilityValue("\(signalQuality) signal, SNR \(repeatEntry.snrFormatted), RSSI \(repeatEntry.rssiFormatted)")
+        .accessibilityLabel(L10n.Chats.Chats.Repeats.Row.accessibility(repeaterName))
+        .accessibilityValue(L10n.Chats.Chats.Repeats.Row.accessibilityValue(signalQuality, repeatEntry.snrFormatted, repeatEntry.rssiFormatted))
     }
 
     // MARK: - Helpers
@@ -58,22 +58,22 @@ struct RepeatRowView: View {
 
     /// Signal quality description for accessibility
     private var signalQuality: String {
-        guard let snr = repeatEntry.snr else { return "Unknown" }
-        if snr > 10 { return "Excellent" }
-        if snr > 5 { return "Good" }
-        return "Poor"
+        guard let snr = repeatEntry.snr else { return L10n.Chats.Chats.Path.Hop.signalUnknown }
+        if snr > 10 { return L10n.Chats.Chats.Signal.excellent }
+        if snr > 5 { return L10n.Chats.Chats.Signal.good }
+        return L10n.Chats.Chats.Signal.poor
     }
 
     /// Hop count text with proper pluralization
     private var hopCountText: String {
         let count = repeatEntry.hopCount
-        return count == 1 ? "1 Hop" : "\(count) Hops"
+        return count == 1 ? L10n.Chats.Chats.Repeats.Hop.singular : L10n.Chats.Chats.Repeats.Hop.plural(count)
     }
 
     /// Resolve repeater name from contacts or show placeholder
     private var repeaterName: String {
         guard let repeaterByte = repeatEntry.repeaterByte else {
-            return "<unknown repeater>"
+            return L10n.Chats.Chats.Repeats.unknownRepeater
         }
 
         // Only match repeater-type contacts (contacts and rooms cannot repeat messages)
@@ -85,7 +85,7 @@ struct RepeatRowView: View {
             return repeater.displayName
         }
 
-        return "<unknown repeater>"
+        return L10n.Chats.Chats.Repeats.unknownRepeater
     }
 }
 

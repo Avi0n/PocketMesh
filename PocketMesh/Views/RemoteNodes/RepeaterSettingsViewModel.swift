@@ -337,7 +337,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            deviceInfoError = "Some settings failed to load"
+            deviceInfoError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
         }
 
         isLoadingDeviceInfo = false
@@ -390,7 +390,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            identityError = "Some settings failed to load"
+            identityError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
         }
 
         isLoadingIdentity = false
@@ -431,7 +431,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            radioError = "Some settings failed to load"
+            radioError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
         }
 
         isLoadingRadio = false
@@ -497,7 +497,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            behaviorError = "Some settings failed to load"
+            behaviorError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
         }
 
         isLoadingBehavior = false
@@ -516,7 +516,7 @@ final class RepeaterSettingsViewModel {
     /// Apply all radio settings including TX power (requires restart)
     func applyRadioSettings() async {
         guard let frequency, let bandwidth, let spreadingFactor, let codingRate, let txPower else {
-            errorMessage = "Radio settings not loaded"
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.radioNotLoaded
             return
         }
 
@@ -544,10 +544,10 @@ final class RepeaterSettingsViewModel {
 
             if allSucceeded {
                 radioSettingsModified = false
-                successMessage = "Radio settings applied. Restart device to take effect."
+                successMessage = L10n.RemoteNodes.RemoteNodes.Settings.radioAppliedSuccess
                 showSuccessAlert = true
             } else {
-                errorMessage = "Some radio settings failed to apply"
+                errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.radioApplyFailed
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -600,7 +600,7 @@ final class RepeaterSettingsViewModel {
                 withAnimation { identityApplySuccess = false }
                 return
             } else {
-                errorMessage = "Some settings failed to apply"
+                errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToApply
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -619,21 +619,21 @@ final class RepeaterSettingsViewModel {
         // Validate 0-hop interval: accepts 0 (disabled) or 60-240
         if let interval = advertIntervalMinutes {
             if interval != 0 && (interval < 60 || interval > 240) {
-                advertIntervalError = "Accepts 0 (disabled) or 60-240 min"
+                advertIntervalError = L10n.RemoteNodes.RemoteNodes.Settings.advertIntervalValidation
             }
         }
 
         // Validate flood interval: accepts 3-48
         if let interval = floodAdvertIntervalHours {
             if interval < 3 || interval > 48 {
-                floodAdvertIntervalError = "Accepts 3-48 hours"
+                floodAdvertIntervalError = L10n.RemoteNodes.RemoteNodes.Settings.floodIntervalValidation
             }
         }
 
         // Validate flood max hops: accepts 0-64
         if let hops = floodMaxHops {
             if hops < 0 || hops > 64 {
-                floodMaxHopsError = "Accepts 0-64 hops"
+                floodMaxHopsError = L10n.RemoteNodes.RemoteNodes.Settings.floodMaxValidation
             }
         }
 
@@ -693,7 +693,7 @@ final class RepeaterSettingsViewModel {
                 withAnimation { behaviorApplySuccess = false }
                 return
             } else {
-                errorMessage = "Some settings failed to apply"
+                errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToApply
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -713,11 +713,11 @@ final class RepeaterSettingsViewModel {
     /// Change admin password (requires explicit action due to security)
     func changePassword() async {
         guard !newPassword.isEmpty else {
-            errorMessage = "Password cannot be empty"
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordEmpty
             return
         }
         guard newPassword == confirmPassword else {
-            errorMessage = "Passwords do not match"
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordMismatch
             return
         }
 
@@ -727,12 +727,12 @@ final class RepeaterSettingsViewModel {
         do {
             let response = try await sendAndWait("password \(newPassword)")
             if case .ok = CLIResponse.parse(response) {
-                successMessage = "Password changed successfully"
+                successMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordChangedSuccess
                 showSuccessAlert = true
                 newPassword = ""
                 confirmPassword = ""
             } else {
-                errorMessage = "Failed to change password"
+                errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordChangeFailed
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -752,7 +752,7 @@ final class RepeaterSettingsViewModel {
 
         do {
             _ = try await service.sendCommand(sessionID: session.id, command: "reboot")
-            successMessage = "Reboot command sent"
+            successMessage = L10n.RemoteNodes.RemoteNodes.Settings.rebootSent
             showSuccessAlert = true
         } catch {
             errorMessage = error.localizedDescription
@@ -767,7 +767,7 @@ final class RepeaterSettingsViewModel {
 
         do {
             _ = try await service.sendCommand(sessionID: session.id, command: "advert")
-            successMessage = "Advertisement sent"
+            successMessage = L10n.RemoteNodes.RemoteNodes.Settings.advertSent
             showSuccessAlert = true
         } catch {
             errorMessage = error.localizedDescription
@@ -783,19 +783,19 @@ final class RepeaterSettingsViewModel {
             let response = try await sendAndWait("clock sync")
             switch CLIResponse.parse(response) {
             case .ok:
-                successMessage = "Time synced"
+                successMessage = L10n.RemoteNodes.RemoteNodes.Settings.timeSynced
                 showSuccessAlert = true
             case .error(let message):
                 // Extract message after "ERR: " prefix if present
                 if message.contains("clock cannot go backwards") {
-                    errorMessage = "Repeater clock is ahead of phone time. If it's too far forward, reboot the repeater then sync time again."
+                    errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.clockAheadError
                 } else {
                     let cleanMessage = message.replacing("ERR: ", with: "")
-                    errorMessage = cleanMessage.isEmpty ? "Failed to sync time" : cleanMessage
+                    errorMessage = cleanMessage.isEmpty ? L10n.RemoteNodes.RemoteNodes.Settings.syncTimeFailed : cleanMessage
                 }
                 showErrorAlert = true
             default:
-                errorMessage = "Unexpected response: \(response)"
+                errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.unexpectedResponse(response)
                 showErrorAlert = true
             }
         } catch {
@@ -816,9 +816,9 @@ enum RepeaterSettingsError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notConnected: return "Not connected to repeater"
-        case .timeout: return "Command timed out"
-        case .noService: return "Repeater service not available"
+        case .notConnected: return L10n.RemoteNodes.RemoteNodes.Settings.notConnected
+        case .timeout: return L10n.RemoteNodes.RemoteNodes.Settings.timeout
+        case .noService: return L10n.RemoteNodes.RemoteNodes.Settings.noService
         }
     }
 }

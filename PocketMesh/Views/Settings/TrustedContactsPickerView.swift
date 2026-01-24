@@ -11,9 +11,9 @@ struct TrustedContactsPickerView: View {
         List {
             if contacts.isEmpty {
                 ContentUnavailableView(
-                    "No Contacts",
+                    L10n.Settings.TrustedContacts.noContacts,
                     systemImage: "person.2.slash",
-                    description: Text("Add contacts to select trusted ones")
+                    description: Text(L10n.Settings.TrustedContacts.noContactsDescription)
                 )
             } else {
                 ForEach(contacts) { contact in
@@ -35,7 +35,7 @@ struct TrustedContactsPickerView: View {
                 }
             }
         }
-        .navigationTitle("Trusted Contacts")
+        .navigationTitle(L10n.Settings.TrustedContacts.title)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadContacts()

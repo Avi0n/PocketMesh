@@ -36,11 +36,11 @@ struct ContactQRShareSheet: View {
                     copyToClipboard: copyToClipboard
                 )
             }
-            .navigationTitle("Share Contact")
+            .navigationTitle(L10n.Contacts.Contacts.Qr.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(L10n.Contacts.Contacts.Common.done) {
                         dismiss()
                     }
                 }
@@ -136,7 +136,7 @@ private struct ContactInfoSection: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Public Key")
+                Text(L10n.Contacts.Contacts.Add.publicKey)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -164,7 +164,7 @@ private struct ActionsSection: View {
             } label: {
                 HStack {
                     Spacer()
-                    Label(showCopyFeedback ? "Copied!" : "Copy", systemImage: "doc.on.doc")
+                    Label(showCopyFeedback ? L10n.Contacts.Contacts.Qr.copied : L10n.Contacts.Contacts.Qr.copy, systemImage: "doc.on.doc")
                     Spacer()
                 }
             }
@@ -174,12 +174,12 @@ private struct ActionsSection: View {
             if let qrImage {
                 ShareLink(
                     item: shareText,
-                    subject: Text("PocketMesh Contact"),
+                    subject: Text(L10n.Contacts.Contacts.Qr.shareSubject),
                     preview: SharePreview(contactName, image: Image(uiImage: qrImage))
                 ) {
                     HStack {
                         Spacer()
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label(L10n.Contacts.Contacts.Qr.share, systemImage: "square.and.arrow.up")
                         Spacer()
                     }
                 }

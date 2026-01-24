@@ -21,7 +21,7 @@ struct DiscoveryView: View {
                 contactsList
             }
         }
-        .navigationTitle("Discover")
+        .navigationTitle(L10n.Contacts.Contacts.Discovery.title)
         .task {
             await loadDiscoveredContacts()
         }
@@ -30,8 +30,8 @@ struct DiscoveryView: View {
                 await loadDiscoveredContacts()
             }
         }
-        .alert("Error", isPresented: .constant(errorMessage != nil)) {
-            Button("OK") { errorMessage = nil }
+        .alert(L10n.Contacts.Contacts.Common.error, isPresented: .constant(errorMessage != nil)) {
+            Button(L10n.Contacts.Contacts.Common.ok) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
         }
@@ -39,9 +39,9 @@ struct DiscoveryView: View {
 
     private var emptyView: some View {
         ContentUnavailableView(
-            "No Discovered Nodes",
+            L10n.Contacts.Contacts.Discovery.Empty.title,
             systemImage: "antenna.radiowaves.left.and.right",
-            description: Text("When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
+            description: Text(L10n.Contacts.Contacts.Discovery.Empty.description)
         )
     }
 
@@ -79,7 +79,7 @@ struct DiscoveryView: View {
                     ProgressView()
                         .frame(width: 60)
                 } else {
-                    Text("Add")
+                    Text(L10n.Contacts.Contacts.Discovery.add)
                         .frame(width: 60)
                 }
             }
@@ -103,9 +103,9 @@ struct DiscoveryView: View {
 
     private func contactTypeLabel(for contact: ContactDTO) -> String {
         switch contact.type {
-        case .chat: return "Chat"
-        case .repeater: return "Repeater"
-        case .room: return "Room"
+        case .chat: return L10n.Contacts.Contacts.NodeKind.chat
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 
@@ -126,7 +126,7 @@ struct DiscoveryView: View {
     private func addContact(_ contact: ContactDTO) async {
         guard let contactService = appState.services?.contactService,
               let dataStore = appState.services?.dataStore else {
-            errorMessage = "Services not available"
+            errorMessage = L10n.Contacts.Contacts.Discovery.Error.servicesUnavailable
             return
         }
 

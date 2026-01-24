@@ -32,13 +32,13 @@ struct ToolsView: View {
     private var detailTitle: String {
         switch selectedTool {
         case .tracePath:
-            "Trace Path"
+            L10n.Tools.Tools.tracePath
         case .rxLog:
-            "RX Log"
+            L10n.Tools.Tools.rxLog
         case .noiseFloor:
-            "Noise Floor"
+            L10n.Tools.Tools.noiseFloor
         case .lineOfSight, .none:
-            "Tools"
+            L10n.Tools.Tools.title
         }
     }
 
@@ -81,28 +81,28 @@ struct ToolsView: View {
                     NavigationLink {
                         TracePathView()
                     } label: {
-                        Label("Trace Path", systemImage: "point.3.connected.trianglepath.dotted")
+                        Label(L10n.Tools.Tools.tracePath, systemImage: "point.3.connected.trianglepath.dotted")
                     }
 
                     NavigationLink {
                         LineOfSightView()
                     } label: {
-                        Label("Line of Sight", systemImage: "eye")
+                        Label(L10n.Tools.Tools.lineOfSight, systemImage: "eye")
                     }
 
                     NavigationLink {
                         RxLogView()
                     } label: {
-                        Label("RX Log", systemImage: "waveform.badge.magnifyingglass")
+                        Label(L10n.Tools.Tools.rxLog, systemImage: "waveform.badge.magnifyingglass")
                     }
 
                     NavigationLink {
                         NoiseFloorView()
                     } label: {
-                        Label("Noise Floor", systemImage: "waveform.mid")
+                        Label(L10n.Tools.Tools.noiseFloor, systemImage: "waveform.mid")
                     }
                 }
-                .navigationTitle("Tools")
+                .navigationTitle(L10n.Tools.Tools.title)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         BLEStatusIndicatorView()
@@ -120,7 +120,7 @@ struct ToolsView: View {
                     isShowingLineOfSightPoints = false
                     sidebarPath = NavigationPath()
                 } label: {
-                    Label("Trace Path", systemImage: "point.3.connected.trianglepath.dotted")
+                    Label(L10n.Tools.Tools.tracePath, systemImage: "point.3.connected.trianglepath.dotted")
                 }
 
                 Button {
@@ -129,7 +129,7 @@ struct ToolsView: View {
                     sidebarPath = NavigationPath()
                     sidebarPath.append(SidebarDestination.lineOfSightPoints)
                 } label: {
-                    Label("Line of Sight", systemImage: "eye")
+                    Label(L10n.Tools.Tools.lineOfSight, systemImage: "eye")
                 }
 
                 Button {
@@ -137,7 +137,7 @@ struct ToolsView: View {
                     isShowingLineOfSightPoints = false
                     sidebarPath = NavigationPath()
                 } label: {
-                    Label("RX Log", systemImage: "waveform.badge.magnifyingglass")
+                    Label(L10n.Tools.Tools.rxLog, systemImage: "waveform.badge.magnifyingglass")
                 }
 
                 Button {
@@ -145,11 +145,11 @@ struct ToolsView: View {
                     isShowingLineOfSightPoints = false
                     sidebarPath = NavigationPath()
                 } label: {
-                    Label("Noise Floor", systemImage: "waveform.mid")
+                    Label(L10n.Tools.Tools.noiseFloor, systemImage: "waveform.mid")
                 }
             }
             .listStyle(.sidebar)
-            .navigationTitle("Tools")
+            .navigationTitle(L10n.Tools.Tools.title)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     BLEStatusIndicatorView()
@@ -159,7 +159,7 @@ struct ToolsView: View {
                 switch destination {
                 case .lineOfSightPoints:
                     LineOfSightView(viewModel: lineOfSightViewModel, layoutMode: .panel)
-                        .navigationTitle("Line of Sight")
+                        .navigationTitle(L10n.Tools.Tools.lineOfSight)
                         .navigationBarTitleDisplayMode(.inline)
                 }
             }
@@ -178,7 +178,7 @@ struct ToolsView: View {
         case .noiseFloor:
             NoiseFloorView()
         case .none:
-            ContentUnavailableView("Select a tool", systemImage: "wrench.and.screwdriver")
+            ContentUnavailableView(L10n.Tools.Tools.selectTool, systemImage: "wrench.and.screwdriver")
         }
     }
 }

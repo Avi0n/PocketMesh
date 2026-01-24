@@ -60,12 +60,12 @@ struct TracePathMapView: View {
         .onChange(of: traceViewModel.resultID) { _, _ in
             mapViewModel.updateOverlaysWithResults()
         }
-        .alert("Save Path", isPresented: $showingSavePrompt) {
-            TextField("Path name", text: $saveName)
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.Contacts.Contacts.Trace.Map.saveTitle, isPresented: $showingSavePrompt) {
+            TextField(L10n.Contacts.Contacts.Trace.Map.pathName, text: $saveName)
+            Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) {
                 saveName = ""
             }
-            Button("Save") {
+            Button(L10n.Contacts.Contacts.Common.save) {
                 Task {
                     let success = await mapViewModel.savePath(name: saveName)
                     saveName = ""
@@ -77,19 +77,19 @@ struct TracePathMapView: View {
                 }
             }
         } message: {
-            Text("Enter a name for this path")
+            Text(L10n.Contacts.Contacts.Trace.Map.saveMessage)
         }
         .sensoryFeedback(.impact(weight: .light), trigger: pinTapHaptic)
         .sensoryFeedback(.warning, trigger: rejectedTapHaptic)
-        .alert("Path Saved", isPresented: $showingSaveSuccess) {
-            Button("OK", role: .cancel) {}
+        .alert(L10n.Contacts.Contacts.Trace.Map.savedTitle, isPresented: $showingSaveSuccess) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) {}
         } message: {
-            Text("The path has been saved successfully.")
+            Text(L10n.Contacts.Contacts.Trace.Map.savedMessage)
         }
-        .alert("Save Failed", isPresented: $showingSaveError) {
-            Button("OK", role: .cancel) {}
+        .alert(L10n.Contacts.Contacts.Trace.Map.saveFailedTitle, isPresented: $showingSaveError) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) {}
         } message: {
-            Text("Failed to save the path. Please try again.")
+            Text(L10n.Contacts.Contacts.Trace.Map.saveFailedMessage)
         }
     }
 
@@ -132,7 +132,7 @@ struct TracePathMapView: View {
         VStack {
             HStack {
                 let hopCount = result.hops.count - 2
-                Text("\(hopCount) hops")
+                Text(L10n.Contacts.Contacts.Trace.Map.hops(hopCount))
 
                 if let distance = traceViewModel.totalPathDistance {
                     Text("•")
@@ -158,9 +158,9 @@ struct TracePathMapView: View {
         VStack {
             Spacer()
             ContentUnavailableView(
-                "No Repeaters with Location",
+                L10n.Contacts.Contacts.Trace.Map.Empty.title,
                 systemImage: "map",
-                description: Text("Use List view to build paths with repeaters that don't have location data.")
+                description: Text(L10n.Contacts.Contacts.Trace.Map.Empty.description)
             )
             Spacer()
         }
@@ -180,20 +180,20 @@ struct TracePathMapView: View {
                         Button {
                             showingClearConfirmation = true
                         } label: {
-                            Text("Clear")
+                            Text(L10n.Contacts.Contacts.Trace.Map.clear)
                         }
                         .liquidGlassButtonStyle()
                         .liquidGlassID("clear", in: buttonNamespace)
                         .confirmationDialog(
-                            "Clear Path",
+                            L10n.Contacts.Contacts.Trace.clearPath,
                             isPresented: $showingClearConfirmation,
                             titleVisibility: .visible
                         ) {
-                            Button("Clear Path", role: .destructive) {
+                            Button(L10n.Contacts.Contacts.Trace.clearPath, role: .destructive) {
                                 mapViewModel.clearPath()
                             }
                         } message: {
-                            Text("Remove all repeaters from the path?")
+                            Text(L10n.Contacts.Contacts.Trace.clearPathMessage)
                         }
 
                         // Run Trace button
@@ -206,10 +206,10 @@ struct TracePathMapView: View {
                                 HStack {
                                     ProgressView()
                                         .controlSize(.small)
-                                    Text("Running Trace")
+                                    Text(L10n.Contacts.Contacts.Trace.List.runningTrace)
                                 }
                             } else {
-                                Text("Run Trace")
+                                Text(L10n.Contacts.Contacts.Trace.List.runTrace)
                             }
                         }
                         .liquidGlassProminentButtonStyle()
@@ -252,7 +252,7 @@ struct TracePathMapView: View {
                             .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(mapViewModel.showLabels ? "Hide labels" : "Show labels")
+                    .accessibilityLabel(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels)
 
                     // Center on path
                     if mapViewModel.hasPath {

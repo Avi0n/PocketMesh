@@ -6,15 +6,31 @@ import PocketMeshServices
 @Observable
 final class RxLogViewModel {
     enum RouteFilter: String, CaseIterable {
-        case all = "All"
-        case floodOnly = "Flood Only"
-        case directOnly = "Direct Only"
+        case all
+        case floodOnly
+        case directOnly
+
+        var displayName: String {
+            switch self {
+            case .all: L10n.Tools.Tools.RxLog.Filter.all
+            case .floodOnly: L10n.Tools.Tools.RxLog.Filter.floodOnly
+            case .directOnly: L10n.Tools.Tools.RxLog.Filter.directOnly
+            }
+        }
     }
 
     enum DecryptFilter: String, CaseIterable {
-        case all = "All"
-        case decrypted = "Decrypted"
-        case failed = "Failed"
+        case all
+        case decrypted
+        case failed
+
+        var displayName: String {
+            switch self {
+            case .all: L10n.Tools.Tools.RxLog.Filter.all
+            case .decrypted: L10n.Tools.Tools.RxLog.Filter.decrypted
+            case .failed: L10n.Tools.Tools.RxLog.Filter.failed
+            }
+        }
     }
 
     private(set) var entries: [RxLogEntryDTO] = []

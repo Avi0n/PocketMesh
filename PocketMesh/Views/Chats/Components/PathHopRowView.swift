@@ -44,8 +44,8 @@ struct PathHopRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(hopLabel): \(nodeName)")
         .accessibilityValue(isLastHop && snr != nil
-            ? "Signal quality: \(signalQualityText), SNR \(snr!, format: .number.precision(.fractionLength(1))) dB"
-            : "Node ID: \(String(format: "%02X", hopByte))")
+            ? L10n.Chats.Chats.Path.Hop.signalQuality(signalQualityText, snr!.formatted(.number.precision(.fractionLength(1))))
+            : L10n.Chats.Chats.Path.Hop.nodeId(String(format: "%02X", hopByte)))
     }
 
     private var nodeName: String {
@@ -55,20 +55,20 @@ struct PathHopRowView: View {
         }) {
             return contact.displayName
         }
-        return "<unknown>"
+        return L10n.Chats.Chats.Path.Hop.unknown
     }
 
     private var hopLabel: String {
-        hopIndex == 0 ? "Sender" : "Hop \(hopIndex)"
+        hopIndex == 0 ? L10n.Chats.Chats.Path.Hop.sender : L10n.Chats.Chats.Path.Hop.number(hopIndex)
     }
 
     private var signalQualityText: String {
-        guard let snr else { return "Unknown" }
-        if snr > 10 { return "Excellent" }
-        if snr > 5 { return "Good" }
-        if snr > 0 { return "Fair" }
-        if snr > -10 { return "Poor" }
-        return "Very Poor"
+        guard let snr else { return L10n.Chats.Chats.Path.Hop.signalUnknown }
+        if snr > 10 { return L10n.Chats.Chats.Signal.excellent }
+        if snr > 5 { return L10n.Chats.Chats.Signal.good }
+        if snr > 0 { return L10n.Chats.Chats.Signal.fair }
+        if snr > -10 { return L10n.Chats.Chats.Signal.poor }
+        return L10n.Chats.Chats.Signal.veryPoor
     }
 
     private func snrLevel(_ snr: Double) -> Double {

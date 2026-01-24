@@ -43,16 +43,16 @@ struct AdvancedRadioSection: View {
                     .frame(maxWidth: .infinity)
             } else {
             HStack {
-                Text("Frequency (MHz)")
+                Text(L10n.Settings.AdvancedRadio.frequency)
                 Spacer()
-                TextField("MHz", value: $frequency, format: .number.precision(.fractionLength(3)))
+                TextField(L10n.Settings.AdvancedRadio.frequencyPlaceholder, value: $frequency, format: .number.precision(.fractionLength(3)))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 100)
                     .focused($focusedField, equals: .frequency)
             }
 
-            Picker("Bandwidth (kHz)", selection: $bandwidth) {
+            Picker(L10n.Settings.AdvancedRadio.bandwidth, selection: $bandwidth) {
                 ForEach(RadioOptions.bandwidthsHz, id: \.self) { bwHz in
                     Text(RadioOptions.formatBandwidth(bwHz))
                         .tag(bwHz as UInt32?)
@@ -63,7 +63,7 @@ struct AdvancedRadioSection: View {
             .tint(.primary)
             .accessibilityHint("Lower values increase range but decrease speed")
 
-            Picker("Spreading Factor", selection: $spreadingFactor) {
+            Picker(L10n.Settings.AdvancedRadio.spreadingFactor, selection: $spreadingFactor) {
                 ForEach(RadioOptions.spreadingFactors, id: \.self) { spreadFactorOption in
                     Text(spreadFactorOption, format: .number)
                         .tag(spreadFactorOption as Int?)
@@ -74,7 +74,7 @@ struct AdvancedRadioSection: View {
             .tint(.primary)
             .accessibilityHint("Higher values increase range but decrease speed")
 
-            Picker("Coding Rate", selection: $codingRate) {
+            Picker(L10n.Settings.AdvancedRadio.codingRate, selection: $codingRate) {
                 ForEach(RadioOptions.codingRates, id: \.self) { codeRateOption in
                     Text("\(codeRateOption)")
                         .tag(codeRateOption as Int?)
@@ -86,9 +86,9 @@ struct AdvancedRadioSection: View {
             .accessibilityHint("Higher values add error correction but decrease speed")
 
             HStack {
-                Text("TX Power (dBm)")
+                Text(L10n.Settings.AdvancedRadio.txPower)
                 Spacer()
-                TextField("dBm", value: $txPower, format: .number)
+                TextField(L10n.Settings.AdvancedRadio.txPowerPlaceholder, value: $txPower, format: .number)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
@@ -107,7 +107,7 @@ struct AdvancedRadioSection: View {
                             .foregroundStyle(.green)
                             .transition(.scale.combined(with: .opacity))
                     } else {
-                        Text("Apply Radio Settings")
+                        Text(L10n.Settings.AdvancedRadio.apply)
                             .transition(.opacity)
                     }
                     Spacer()
@@ -117,9 +117,9 @@ struct AdvancedRadioSection: View {
             .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess)
             }
         } header: {
-            Text("Radio Configuration")
+            Text(L10n.Settings.AdvancedRadio.header)
         } footer: {
-            Text("Warning: Incorrect settings may prevent communication with other mesh devices.")
+            Text(L10n.Settings.AdvancedRadio.footer)
         }
         .onAppear {
             loadCurrentSettings()
@@ -149,7 +149,7 @@ struct AdvancedRadioSection: View {
               let codeRate = codingRate,
               let power = txPower,
               let settingsService = appState.services?.settingsService else {
-            showError = "Invalid input values or device not connected"
+            showError = L10n.Settings.AdvancedRadio.invalidInput
             return
         }
 

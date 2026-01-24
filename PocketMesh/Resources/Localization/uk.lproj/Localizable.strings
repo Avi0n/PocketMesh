@@ -1,0 +1,224 @@
+/*
+  Localizable.strings
+  PocketMesh
+
+  Ukrainian translation of common strings used throughout the app.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Common Actions
+
+/* Location: Multiple files - Cancel button label */
+"common.cancel" = "Скасувати";
+
+/* Location: Multiple files - Done button label */
+"common.done" = "Готово";
+
+/* Location: Multiple files - OK button label */
+"common.ok" = "OK";
+
+/* Location: Multiple files - Save button label */
+"common.save" = "Зберегти";
+
+/* Location: Multiple files - Delete button label */
+"common.delete" = "Видалити";
+
+/* Location: Multiple files - Edit button label */
+"common.edit" = "Редагувати";
+
+/* Location: Multiple files - Close button label */
+"common.close" = "Закрити";
+
+/* Location: Multiple files - Back button label */
+"common.back" = "Назад";
+
+/* Location: Multiple files - Next button label */
+"common.next" = "Далі";
+
+/* Location: Multiple files - Continue button label */
+"common.continue" = "Продовжити";
+
+/* Location: Multiple files - Retry button label */
+"common.retry" = "Повторити";
+
+/* Location: Multiple files - Copy button label */
+"common.copy" = "Копіювати";
+
+/* Location: Multiple files - Share button label */
+"common.share" = "Поділитися";
+
+// MARK: - Common Labels
+
+/* Location: Multiple files - Error alert title */
+"common.error" = "Помилка";
+
+/* Location: Multiple files - Success alert title */
+"common.success" = "Успішно";
+
+/* Location: Multiple files - Warning alert title */
+"common.warning" = "Попередження";
+
+/* Location: Multiple files - Loading state indicator */
+"common.loading" = "Завантаження...";
+
+/* Location: Multiple files - Name field label */
+"common.name" = "Ім'я";
+
+/* Location: Multiple files - Description field label */
+"common.description" = "Опис";
+
+/* Location: Multiple files - Status field label */
+"common.status" = "Статус";
+
+/* Location: Multiple files - Type field label */
+"common.type" = "Тип";
+
+/* Location: Multiple files - Date field label */
+"common.date" = "Дата";
+
+/* Location: Multiple files - Time field label */
+"common.time" = "Час";
+
+// MARK: - Connection Status
+
+/* Location: Multiple files - Connected status */
+"connection.connected" = "Підключено";
+
+/* Location: Multiple files - Disconnected status */
+"connection.disconnected" = "Відключено";
+
+/* Location: Multiple files - Connecting status */
+"connection.connecting" = "Підключення...";
+
+/* Location: Multiple files - Reconnecting status */
+"connection.reconnecting" = "Перепідключення...";
+
+// MARK: - Empty States
+
+/* Location: Multiple files - No results found message */
+"empty.noResults" = "Немає результатів";
+
+/* Location: Multiple files - No data available message */
+"empty.noData" = "Немає даних";
+
+// MARK: - Validation
+
+/* Location: Multiple files - Required field message */
+"validation.required" = "Це поле обов'язкове";
+
+/* Location: Multiple files - Invalid format message */
+"validation.invalidFormat" = "Неправильний формат";
+
+// MARK: - Time Formats
+
+/* Location: Multiple files - Just now timestamp */
+"time.justNow" = "Щойно";
+
+/* Location: Multiple files - Minutes ago timestamp, %lld is count */
+"time.minutesAgo" = "%lld хв. тому";
+
+/* Location: Multiple files - Hours ago timestamp, %lld is count */
+"time.hoursAgo" = "%lld год. тому";
+
+/* Location: Multiple files - Days ago timestamp, %lld is count */
+"time.daysAgo" = "%lld дн. тому";
+
+/* Location: Multiple files - Yesterday timestamp */
+"time.yesterday" = "Вчора";
+
+// MARK: - Units
+
+/* Location: Multiple files - Meters unit abbreviation */
+"units.meters" = "м";
+
+/* Location: Multiple files - Kilometers unit abbreviation */
+"units.kilometers" = "км";
+
+/* Location: Multiple files - Feet unit abbreviation */
+"units.feet" = "фт";
+
+/* Location: Multiple files - Miles unit abbreviation */
+"units.miles" = "миля";
+
+// MARK: - Accessibility
+
+/* Location: Multiple files - Close button accessibility label */
+"accessibility.close" = "Закрити";
+
+/* Location: Multiple files - Menu button accessibility label */
+"accessibility.menu" = "Меню";
+
+/* Location: Multiple files - More options accessibility label */
+"accessibility.moreOptions" = "Більше опцій";
+
+/* Location: Multiple files - Search accessibility label */
+"accessibility.search" = "Пошук";
+
+// MARK: - Tab Bar (from English source)
+
+/* Tab bar title for the messaging/conversations screen */
+"tabs.chats" = "Чати";
+
+/* Tab bar title for the nodes/contacts list screen */
+"tabs.nodes" = "Вузли";
+
+/* Tab bar title for the map screen showing node locations */
+"tabs.map" = "Карта";
+
+/* Tab bar title for the tools/utilities screen */
+"tabs.tools" = "Інструменти";
+
+/* Tab bar title for the app settings screen */
+"tabs.settings" = "Налаштування";
+
+// MARK: - Connection Alerts (from English source)
+
+/* Alert title when device connection fails */
+"alert.connectionFailed.title" = "Помилка підключення";
+
+/* Alert title when connection cannot be established */
+"alert.couldNotConnect.title" = "Не вдалося підключитися";
+
+/* Default message when device connection fails */
+"alert.connectionFailed.defaultMessage" = "Не вдалося підключитися до пристрою.";
+
+/* Message suggesting another app may be connected to the device */
+"alert.couldNotConnect.otherAppMessage" = "Переконайся, що жоден інший застосунок не підключений до пристрою, і спробуй знову.";
+
+/* Button to remove failed pairing and retry connection */
+"alert.connectionFailed.removeAndRetry" = "Видалити та спробувати знову";
+
+// MARK: - Accessibility (from English source)
+
+/* VoiceOver announcement when viewing cached data while disconnected from device */
+"accessibility.viewingCachedData" = "Перегляд кешованих даних. Підключись до пристрою для оновлень.";
+
+// MARK: - Node Types (from English source)
+
+/* Node type for a person or contact */
+"nodeType.contact" = "Контакт";
+
+/* Node type for a mesh network repeater device */
+"nodeType.repeater" = "Ретранслятор";
+
+/* Node type for a group chat room */
+"nodeType.room" = "Кімната";
+
+// MARK: - Permission Levels (from English source)
+
+/* Permission level with limited access */
+"permission.guest" = "Гість";
+
+/* Permission level with standard access */
+"permission.member" = "Учасник";
+
+/* Permission level with full administrative access */
+"permission.admin" = "Адміністратор";
+
+// MARK: - Common Actions (from English source)
+
+/* Button to retry a failed operation */
+"common.tryAgain" = "Спробувати знову";
+
+/* Standard remove button for removing items from a list or group */
+"common.remove" = "Видалити";

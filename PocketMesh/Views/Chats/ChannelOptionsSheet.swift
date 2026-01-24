@@ -31,16 +31,16 @@ struct ChannelOptionsSheet: View {
         NavigationStack {
             Group {
                 if isLoading {
-                    ProgressView("Loading channels...")
+                    ProgressView(L10n.Chats.Chats.ChannelOptions.loading)
                 } else {
                     optionsList
                 }
             }
-            .navigationTitle("New Channel")
+            .navigationTitle(L10n.Chats.Chats.ChannelOptions.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Chats.Chats.Common.cancel) {
                         dismiss()
                     }
                 }
@@ -88,8 +88,8 @@ struct ChannelOptionsSheet: View {
                     selectedOption = .createPrivate
                 } label: {
                     ChannelOptionRow(
-                        title: "Create a Private Channel",
-                        description: "Generate a secret key and QR code to share",
+                        title: L10n.Chats.Chats.ChannelOptions.CreatePrivate.title,
+                        description: L10n.Chats.Chats.ChannelOptions.CreatePrivate.description,
                         icon: "lock.fill",
                         iconColor: .blue
                     )
@@ -102,8 +102,8 @@ struct ChannelOptionsSheet: View {
                     selectedOption = .joinPrivate
                 } label: {
                     ChannelOptionRow(
-                        title: "Join a Private Channel",
-                        description: "Enter channel name and secret key",
+                        title: L10n.Chats.Chats.ChannelOptions.JoinPrivate.title,
+                        description: L10n.Chats.Chats.ChannelOptions.JoinPrivate.description,
                         icon: "key.fill",
                         iconColor: .orange
                     )
@@ -116,8 +116,8 @@ struct ChannelOptionsSheet: View {
                     selectedOption = .scanQR
                 } label: {
                     ChannelOptionRow(
-                        title: "Scan a QR Code",
-                        description: "Join a channel by scanning its QR code",
+                        title: L10n.Chats.Chats.ChannelOptions.ScanQR.title,
+                        description: L10n.Chats.Chats.ChannelOptions.ScanQR.description,
                         icon: "qrcode.viewfinder",
                         iconColor: .purple
                     )
@@ -125,7 +125,7 @@ struct ChannelOptionsSheet: View {
                 .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
             } header: {
-                Text("Private Channels")
+                Text(L10n.Chats.Chats.ChannelOptions.Section.`private`)
             }
 
             Section {
@@ -134,8 +134,8 @@ struct ChannelOptionsSheet: View {
                     selectedOption = .joinPublic
                 } label: {
                     ChannelOptionRow(
-                        title: "Join the Public Channel",
-                        description: "The default public channel",
+                        title: L10n.Chats.Chats.ChannelOptions.JoinPublic.title,
+                        description: L10n.Chats.Chats.ChannelOptions.JoinPublic.description,
                         icon: "globe",
                         iconColor: .green
                     )
@@ -148,8 +148,8 @@ struct ChannelOptionsSheet: View {
                     selectedOption = .joinHashtag
                 } label: {
                     ChannelOptionRow(
-                        title: "Join a Hashtag Channel",
-                        description: "Public channel anyone can join by name",
+                        title: L10n.Chats.Chats.ChannelOptions.JoinHashtag.title,
+                        description: L10n.Chats.Chats.ChannelOptions.JoinHashtag.description,
                         icon: "number",
                         iconColor: .cyan
                     )
@@ -157,12 +157,12 @@ struct ChannelOptionsSheet: View {
                 .buttonStyle(.plain)
                 .disabled(availableSlots.isEmpty)
             } header: {
-                Text("Public Channels")
+                Text(L10n.Chats.Chats.ChannelOptions.Section.public)
             } footer: {
                 if availableSlots.isEmpty {
-                    Text("All channel slots are in use. Delete an existing channel to add a new one.")
+                    Text(L10n.Chats.Chats.ChannelOptions.Footer.noSlots)
                 } else if hasPublicChannel {
-                    Text("The public channel is already configured on slot 0.")
+                    Text(L10n.Chats.Chats.ChannelOptions.Footer.hasPublic)
                 }
             }
         }

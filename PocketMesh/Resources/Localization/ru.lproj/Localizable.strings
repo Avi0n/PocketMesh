@@ -1,0 +1,102 @@
+/*
+  Localizable.strings
+  PocketMesh
+
+  Russian translation of common and shared strings used across the application.
+*/
+
+
+// MARK: - Generic Buttons
+
+/* Standard confirmation button for dialogs */
+"common.ok" = "ОК";
+
+/* Standard cancel button for dialogs and sheets */
+"common.cancel" = "Отмена";
+
+/* Standard done button for completing an action */
+"common.done" = "Готово";
+
+/* Standard save button for persisting changes */
+"common.save" = "Сохранить";
+
+/* Standard delete button for removing items */
+"common.delete" = "Удалить";
+
+/* Standard edit button for entering edit mode */
+"common.edit" = "Изменить";
+
+/* Standard close button for dismissing views */
+"common.close" = "Закрыть";
+
+/* Button to retry a failed operation */
+"common.tryAgain" = "Попробовать снова";
+
+/* Standard remove button for removing items from a list or group */
+"common.remove" = "Удалить";
+
+
+// MARK: - Tab Bar
+
+/* Tab bar title for the messaging/conversations screen */
+"tabs.chats" = "Чаты";
+
+/* Tab bar title for the nodes/contacts list screen */
+"tabs.nodes" = "Узлы";
+
+/* Tab bar title for the map screen showing node locations */
+"tabs.map" = "Карта";
+
+/* Tab bar title for the tools/utilities screen */
+"tabs.tools" = "Инструменты";
+
+/* Tab bar title for the app settings screen */
+"tabs.settings" = "Настройки";
+
+
+// MARK: - Connection Alerts
+
+/* Alert title when device connection fails */
+"alert.connectionFailed.title" = "Ошибка подключения";
+
+/* Alert title when connection cannot be established */
+"alert.couldNotConnect.title" = "Не удалось подключиться";
+
+/* Default message when device connection fails */
+"alert.connectionFailed.defaultMessage" = "Не удалось подключиться к устройству.";
+
+/* Message suggesting another app may be connected to the device */
+"alert.couldNotConnect.otherAppMessage" = "Убедись, что к устройству не подключено другое приложение, и попробуй снова.";
+
+/* Button to remove failed pairing and retry connection */
+"alert.connectionFailed.removeAndRetry" = "Удалить и попробовать снова";
+
+
+// MARK: - Accessibility
+
+/* VoiceOver announcement when viewing cached data while disconnected from device */
+"accessibility.viewingCachedData" = "Просмотр кэшированных данных. Подключись к устройству для обновления.";
+
+
+// MARK: - Node Types
+
+/* Node type for a person or contact */
+"nodeType.contact" = "Контакт";
+
+/* Node type for a mesh network repeater device */
+"nodeType.repeater" = "Ретранслятор";
+
+/* Node type for a group chat room */
+"nodeType.room" = "Комната";
+
+
+// MARK: - Permission Levels
+
+/* Permission level with limited access */
+"permission.guest" = "Гость";
+
+/* Permission level with standard access */
+"permission.member" = "Участник";
+
+/* Permission level with full administrative access */
+"permission.admin" = "Администратор";

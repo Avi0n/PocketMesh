@@ -34,11 +34,11 @@ enum SignalQuality: Equatable {
 
     var label: String {
         switch self {
-        case .excellent: "Excellent"
-        case .good: "Good"
-        case .fair: "Fair"
-        case .poor: "Poor"
-        case .unknown: "Unknown"
+        case .excellent: L10n.Tools.Tools.NoiseFloor.Quality.excellent
+        case .good: L10n.Tools.Tools.NoiseFloor.Quality.good
+        case .fair: L10n.Tools.Tools.NoiseFloor.Quality.fair
+        case .poor: L10n.Tools.Tools.NoiseFloor.Quality.poor
+        case .unknown: L10n.Tools.Tools.NoiseFloor.Quality.unknown
         }
     }
 
@@ -132,7 +132,7 @@ final class NoiseFloorViewModel {
 
     private func fetchReading() async {
         guard let session = appState?.services?.session else {
-            error = "Device disconnected"
+            error = L10n.Tools.Tools.NoiseFloor.Error.disconnected
             return
         }
 
@@ -147,7 +147,7 @@ final class NoiseFloorViewModel {
             )
             appendReading(reading)
         } catch {
-            self.error = "Unable to read radio stats"
+            self.error = L10n.Tools.Tools.NoiseFloor.Error.unableToRead
         }
     }
 }

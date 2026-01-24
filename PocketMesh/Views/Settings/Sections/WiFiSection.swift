@@ -13,17 +13,17 @@ struct WiFiSection: View {
     var body: some View {
         Section {
             if case .wifi(let host, let port, _) = currentConnection {
-                LabeledContent("Address", value: host)
-                LabeledContent("Port", value: "\(port)")
+                LabeledContent(L10n.Settings.Wifi.address, value: host)
+                LabeledContent(L10n.Settings.Wifi.port, value: "\(port)")
             }
 
-            Button("Edit Connection") {
+            Button(L10n.Settings.Wifi.editConnection) {
                 showingEditSheet = true
             }
         } header: {
-            Text("WiFi")
+            Text(L10n.Settings.Wifi.header)
         } footer: {
-            Text("Your device's local network address")
+            Text(L10n.Settings.Wifi.footer)
         }
     }
 }

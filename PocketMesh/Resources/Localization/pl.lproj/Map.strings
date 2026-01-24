@@ -1,0 +1,154 @@
+/*
+  Map.strings
+  PocketMesh
+
+  Polish translation of strings for the Map feature.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Common
+
+/* Location: MapView.swift - Purpose: Done button for sheets */
+"map.common.done" = "Gotowe";
+
+/* Location: MapView.swift - Purpose: Refresh button label */
+"map.common.refresh" = "Odśwież";
+
+// MARK: - Map View Empty State
+
+/* Location: MapView.swift - Purpose: Empty state title when no contacts have location */
+"map.emptyState.title" = "Brak kontaktów na mapie";
+
+/* Location: MapView.swift - Purpose: Empty state description */
+"map.emptyState.description" = "Kontakty z danymi lokalizacji pojawią się tutaj, gdy zostaną odkryte w sieci mesh.";
+
+// MARK: - Map Controls
+
+/* Location: MapView.swift - Purpose: Accessibility label when labels are visible */
+"map.controls.hideLabels" = "Ukryj etykiety";
+
+/* Location: MapView.swift - Purpose: Accessibility label when labels are hidden */
+"map.controls.showLabels" = "Pokaż etykiety";
+
+/* Location: MapView.swift - Purpose: Accessibility label for center on all contacts button */
+"map.controls.centerAll" = "Wyśrodkuj wszystkie kontakty";
+
+/* Location: MapControlsToolbar.swift - Purpose: Accessibility label for user location button */
+"map.controls.centerOnMyLocation" = "Wyśrodkuj na mojej lokalizacji";
+
+/* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
+"map.controls.layers" = "Warstwy mapy";
+
+// MARK: - Map Style Selection
+
+/* Location: MapStyleSelection.swift - Purpose: Standard map style option */
+"map.style.standard" = "Standardowa";
+
+/* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
+"map.style.satellite" = "Satelitarna";
+
+/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
+"map.style.hybrid" = "Hybrydowa";
+
+// MARK: - Contact Detail Sheet
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for contact information */
+"map.detail.section.contactInfo" = "Informacje o kontakcie";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for contact name */
+"map.detail.name" = "Nazwa";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for contact type */
+"map.detail.type" = "Typ";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for favorite status */
+"map.detail.status" = "Status";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Value showing contact is favorited */
+"map.detail.favorite" = "Ulubiony";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for last advertisement timestamp */
+"map.detail.lastAdvert" = "Ostatnie ogłoszenie";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for location coordinates */
+"map.detail.section.location" = "Lokalizacja";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for latitude coordinate */
+"map.detail.latitude" = "Szerokość geograficzna";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for longitude coordinate */
+"map.detail.longitude" = "Długość geograficzna";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for network path info */
+"map.detail.section.networkPath" = "Ścieżka sieciowa";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for routing type */
+"map.detail.routing" = "Routing";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Flood routing type value */
+"map.detail.routingFlood" = "Rozproszony";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for path length */
+"map.detail.pathLength" = "Długość ścieżki";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Path length value with hop count */
+"map.detail.hops" = "%d skoków";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Path length value for single hop */
+"map.detail.hopSingular" = "1 skok";
+
+// MARK: - Contact Detail Sheet Actions
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry */
+"map.detail.action.telemetry" = "Telemetria";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Sheet title for telemetry authentication */
+"map.detail.action.telemetryAccessTitle" = "Dostęp do telemetrii";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to access repeater admin settings */
+"map.detail.action.adminAccess" = "Dostęp administratora";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to join a room */
+"map.detail.action.joinRoom" = "Dołącz do pokoju";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to send a message */
+"map.detail.action.sendMessage" = "Wyślij wiadomość";
+
+// MARK: - Contact Type Names
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type */
+"map.nodeKind.chatContact" = "Kontakt czatu";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type */
+"map.nodeKind.repeater" = "Przekaźnik";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type */
+"map.nodeKind.room" = "Pokój";
+
+// MARK: - Contact Callout
+
+/* Location: ContactCalloutContent.swift - Purpose: Button to view contact details */
+"map.callout.details" = "Szczegóły";
+
+/* Location: ContactCalloutContent.swift - Purpose: Button to send message from callout */
+"map.callout.message" = "Wiadomość";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for contact in callout */
+"map.callout.nodeKind.contact" = "Kontakt";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout */
+"map.callout.nodeKind.repeater" = "Przekaźnik";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for room in callout */
+"map.callout.nodeKind.room" = "Pokój";
+
+// MARK: - Contact Annotation
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for favorite contacts */
+"map.annotation.favorite" = "Ulubiony";
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for repeater nodes */
+"map.annotation.repeater" = "Przekaźnik";
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
+"map.annotation.room" = "Pokój";

@@ -79,7 +79,7 @@ struct SelectedPoint: Identifiable, Equatable {
     }
 
     var displayName: String {
-        contact?.displayName ?? "Dropped pin"
+        contact?.displayName ?? L10n.Tools.Tools.LineOfSight.droppedPin
     }
 
     var isLoadingElevation: Bool {

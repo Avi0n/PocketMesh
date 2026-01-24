@@ -1,0 +1,744 @@
+/*
+  Chats.strings
+  PocketMesh
+
+  French translation of strings for the Chats feature.
+  AI-translated - please verify with native speakers.
+*/
+
+// MARK: - Navigation & Titles
+
+/* Location: ChatsView.swift - Navigation title for main chat list */
+"chats.title" = "Messages";
+
+/* Location: ChatsView.swift - Search placeholder */
+"chats.search.placeholder" = "Rechercher des conversations";
+
+/* Location: ChatsView.swift - Filter option for all conversations */
+"chats.filter.all" = "Tous";
+
+/* Location: ChatsView.swift - Filter menu title */
+"chats.filter.title" = "Filtrer";
+
+/* Location: ChatsView.swift - Accessibility label when no filter is active */
+"chats.filter.accessibilityLabel" = "Filtrer les conversations";
+
+/* Location: ChatsView.swift - Accessibility label format when filter is active - %@ is the filter name */
+"chats.filter.accessibilityLabelActive" = "Filtrer les conversations, affichage actuel %@";
+
+/* Location: ChatsView.swift - Button to clear active filter */
+"chats.filter.clear" = "Effacer le filtre";
+
+// MARK: - Compose Menu
+
+/* Location: ChatsView.swift - Button to start a new direct chat */
+"chats.compose.newChat" = "Nouvelle discussion";
+
+/* Location: ChatsView.swift - Button to create or join a channel */
+"chats.compose.newChannel" = "Nouveau canal";
+
+/* Location: ChatsView.swift - Menu label for new message options */
+"chats.compose.newMessage" = "Nouveau message";
+
+// MARK: - Empty States
+
+/* Location: ChatsView.swift - Title when no conversations exist */
+"chats.emptyState.noConversations.title" = "Aucune conversation";
+
+/* Location: ChatsView.swift - Description when no conversations exist */
+"chats.emptyState.noConversations.description" = "Démarrez une conversation depuis les Contacts";
+
+/* Location: ChatsView.swift - Title when no unread messages */
+"chats.emptyState.noUnread.title" = "Aucun message non lu";
+
+/* Location: ChatsView.swift - Description when no unread messages */
+"chats.emptyState.noUnread.description" = "Vous êtes à jour";
+
+/* Location: ChatsView.swift - Title when no direct messages */
+"chats.emptyState.noDirectMessages.title" = "Aucun message direct";
+
+/* Location: ChatsView.swift - Description when no direct messages */
+"chats.emptyState.noDirectMessages.description" = "Démarrez une discussion depuis les Contacts";
+
+/* Location: ChatsView.swift - Title when no channels */
+"chats.emptyState.noChannels.title" = "Aucun canal";
+
+/* Location: ChatsView.swift - Description when no channels */
+"chats.emptyState.noChannels.description" = "Rejoignez ou créez un canal";
+
+/* Location: ChatsView.swift - Title when no favorites */
+"chats.emptyState.noFavorites.title" = "Aucun favori";
+
+/* Location: ChatsView.swift - Description when no favorites */
+"chats.emptyState.noFavorites.description" = "Marquez des contacts comme favoris pour les voir ici";
+
+/* Location: ChatsView.swift - Split view placeholder when no conversation selected */
+"chats.emptyState.selectConversation" = "Sélectionnez une conversation";
+
+// MARK: - Refresh & Offline Alerts
+
+/* Location: ChatsView.swift - Alert title when offline refresh attempted */
+"chats.alert.cannotRefresh.title" = "Actualisation impossible";
+
+/* Location: ChatsView.swift - Alert message for offline refresh */
+"chats.alert.cannotRefresh.message" = "Connectez-vous à votre appareil pour obtenir les derniers messages.";
+
+/* Location: ChatsView.swift - VoiceOver announcement when viewing cached data offline */
+"chats.accessibility.offlineAnnouncement" = "Affichage des données en cache. Connectez-vous à l'appareil pour les mises à jour.";
+
+// MARK: - Room Deletion
+
+/* Location: ChatsView.swift - Alert title for leaving a room */
+"chats.alert.leaveRoom.title" = "Quitter le salon";
+
+/* Location: ChatsView.swift - Button to confirm leaving a room */
+"chats.alert.leaveRoom.confirm" = "Quitter";
+
+/* Location: ChatsView.swift - Alert message explaining what leaving a room does */
+"chats.alert.leaveRoom.message" = "Cela supprimera le salon de votre liste de discussions, effacera tous les messages du salon et supprimera le contact associé.";
+
+// MARK: - Message Timestamps
+
+/* Location: MessageTimestampView.swift - Prefix for yesterday's date */
+"chats.timestamp.yesterday" = "Hier";
+
+// MARK: - Floating Action Buttons
+
+/* Location: ScrollToMentionFAB.swift - Accessibility label for scroll to mention button */
+"chats.fab.scrollToMention.accessibilityLabel" = "Aller à votre plus ancienne mention non lue";
+
+/* Location: ScrollToMentionFAB.swift - Accessibility hint for scroll to mention button */
+"chats.fab.scrollToMention.accessibilityHint" = "Appuyez deux fois pour accéder au message";
+
+/* Location: ScrollToBottomFAB.swift - Accessibility label for scroll to bottom button */
+"chats.fab.scrollToBottom.accessibilityLabel" = "Aller au dernier message";
+
+/* Location: ScrollToMentionFAB.swift, ScrollToBottomFAB.swift - Badge text for 99+ unread */
+"chats.fab.badge.overflow" = "99+";
+
+// MARK: - Chat View (Direct Messages)
+
+/* Location: ChatView.swift - Alert title when message send fails */
+"chats.alert.unableToSend.title" = "Envoi impossible";
+
+/* Location: ChatView.swift - Alert message when message send fails */
+"chats.alert.unableToSend.message" = "Veuillez vous assurer que votre appareil est connecté et réessayez.";
+
+/* Location: ChatView.swift - Connection status for flood routed contacts */
+"chats.connectionStatus.floodRouting" = "Routage par inondation";
+
+/* Location: ChatView.swift - Connection status format for direct path - %d is hop count */
+"chats.connectionStatus.direct" = "Direct • %d sauts";
+
+/* Location: ChatView.swift - Connection status when route is unknown */
+"chats.connectionStatus.unknown" = "Route inconnue";
+
+/* Location: ChatView.swift - Placeholder when message data is unavailable */
+"chats.message.unavailable" = "Message non disponible";
+
+/* Location: ChatView.swift - Accessibility label for unavailable message */
+"chats.message.unavailableAccessibility" = "Le message n'a pas pu être chargé";
+
+/* Location: ChatView.swift - Empty state text prompting user to start chatting */
+"chats.emptyState.startConversation" = "Démarrer une conversation";
+
+/* Location: ChatView.swift - Label showing contact has location */
+"chats.contactInfo.hasLocation" = "A une position";
+
+/* Location: ChatView.swift - Input bar placeholder for direct messages */
+"chats.input.placeholder.directMessage" = "Message privé";
+
+// MARK: - Channel Chat View
+
+/* Location: ChannelChatView.swift - Fallback channel name format - %d is channel index */
+"chats.channel.defaultName" = "Canal %d";
+
+/* Location: ChannelChatView.swift - Header subtitle for public channels */
+"chats.channel.typePublic" = "Canal public";
+
+/* Location: ChannelChatView.swift - Header subtitle for private channels */
+"chats.channel.typePrivate" = "Canal privé";
+
+/* Location: ChannelChatView.swift - Empty state message */
+"chats.channel.emptyState.noMessages" = "Aucun message pour l'instant";
+
+/* Location: ChannelChatView.swift - Empty state description for public channel */
+"chats.channel.emptyState.publicDescription" = "Ceci est un canal de diffusion public";
+
+/* Location: ChannelChatView.swift - Empty state description for private channel */
+"chats.channel.emptyState.privateDescription" = "Ceci est un canal privé";
+
+// MARK: - Channel Info Sheet
+
+/* Location: ChannelInfoSheet.swift - Navigation title */
+"chats.channelInfo.title" = "Infos du canal";
+
+/* Location: ChannelInfoSheet.swift - Confirmation dialog title */
+"chats.channelInfo.deleteConfirm.title" = "Supprimer le canal";
+
+/* Location: ChannelInfoSheet.swift - Confirmation dialog message */
+"chats.channelInfo.deleteConfirm.message" = "Cela supprimera le canal de votre appareil et effacera tous les messages locaux. Cette action est irréversible.";
+
+/* Location: ChannelInfoSheet.swift - Channel type label for public channel */
+"chats.channelInfo.channelType.public" = "Canal public • Emplacement 0";
+
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
+"chats.channelInfo.channelType.hashtag" = "Canal hashtag • Emplacement %d";
+
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
+"chats.channelInfo.channelType.private" = "Canal privé • Emplacement %d";
+
+/* Location: ChannelInfoSheet.swift - Label for channel slot */
+"chats.channelInfo.slot" = "Emplacement";
+
+/* Location: ChannelInfoSheet.swift - Label for last message date */
+"chats.channelInfo.lastMessage" = "Dernier message";
+
+/* Location: ChannelInfoSheet.swift - QR code instruction text */
+"chats.channelInfo.scanToJoin" = "Scannez pour rejoindre ce canal";
+
+/* Location: ChannelInfoSheet.swift - Section header for QR sharing */
+"chats.channelInfo.shareChannel" = "Partager le canal";
+
+/* Location: ChannelInfoSheet.swift - Label for secret key */
+"chats.channelInfo.secretKey" = "Clé secrète";
+
+/* Location: ChannelInfoSheet.swift - Button to copy secret key */
+"chats.channelInfo.copy" = "Copier";
+
+/* Location: ChannelInfoSheet.swift - Section header for manual sharing */
+"chats.channelInfo.manualSharing" = "Partage manuel";
+
+/* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
+"chats.channelInfo.manualSharingFooter" = "Partagez le nom du canal et cette clé secrète pour que d'autres puissent le rejoindre manuellement.";
+
+/* Location: ChannelInfoSheet.swift - Delete channel button */
+"chats.channelInfo.deleteButton" = "Supprimer le canal";
+
+/* Location: ChannelInfoSheet.swift - Footer explaining delete action */
+"chats.channelInfo.deleteFooter" = "La suppression retire ce canal de votre appareil. Vous pourrez le rejoindre plus tard si vous avez la clé secrète.";
+
+/* Location: ChannelInfoSheet.swift - Error when device not connected */
+"chats.error.noDeviceConnected" = "Aucun appareil connecté";
+
+/* Location: ChannelInfoSheet.swift - Error when services unavailable */
+"chats.error.servicesUnavailable" = "Services non disponibles";
+
+// MARK: - Channel Options Sheet
+
+/* Location: ChannelOptionsSheet.swift - Loading indicator text */
+"chats.channelOptions.loading" = "Chargement des canaux...";
+
+/* Location: ChannelOptionsSheet.swift - Navigation title */
+"chats.channelOptions.title" = "Nouveau canal";
+
+/* Location: ChannelOptionsSheet.swift - Create private channel option title */
+"chats.channelOptions.createPrivate.title" = "Créer un canal privé";
+
+/* Location: ChannelOptionsSheet.swift - Create private channel option description */
+"chats.channelOptions.createPrivate.description" = "Générer une clé secrète et un code QR à partager";
+
+/* Location: ChannelOptionsSheet.swift - Join private channel option title */
+"chats.channelOptions.joinPrivate.title" = "Rejoindre un canal privé";
+
+/* Location: ChannelOptionsSheet.swift - Join private channel option description */
+"chats.channelOptions.joinPrivate.description" = "Entrez le nom du canal et la clé secrète";
+
+/* Location: ChannelOptionsSheet.swift - Scan QR code option title */
+"chats.channelOptions.scanQR.title" = "Scanner un code QR";
+
+/* Location: ChannelOptionsSheet.swift - Scan QR code option description */
+"chats.channelOptions.scanQR.description" = "Rejoindre un canal en scannant son code QR";
+
+/* Location: ChannelOptionsSheet.swift - Section header for private channels */
+"chats.channelOptions.section.private" = "Canaux privés";
+
+/* Location: ChannelOptionsSheet.swift - Join public channel option title */
+"chats.channelOptions.joinPublic.title" = "Rejoindre le canal public";
+
+/* Location: ChannelOptionsSheet.swift - Join public channel option description */
+"chats.channelOptions.joinPublic.description" = "Le canal public par défaut";
+
+/* Location: ChannelOptionsSheet.swift - Join hashtag channel option title */
+"chats.channelOptions.joinHashtag.title" = "Rejoindre un canal hashtag";
+
+/* Location: ChannelOptionsSheet.swift - Join hashtag channel option description */
+"chats.channelOptions.joinHashtag.description" = "Canal public que tout le monde peut rejoindre par son nom";
+
+/* Location: ChannelOptionsSheet.swift - Section header for public channels */
+"chats.channelOptions.section.public" = "Canaux publics";
+
+/* Location: ChannelOptionsSheet.swift - Footer when all slots are in use */
+"chats.channelOptions.footer.noSlots" = "Tous les emplacements de canaux sont utilisés. Supprimez un canal existant pour en ajouter un nouveau.";
+
+/* Location: ChannelOptionsSheet.swift - Footer when public channel already exists */
+"chats.channelOptions.footer.hasPublic" = "Le canal public est déjà configuré sur l'emplacement 0.";
+
+// MARK: - New Chat View
+
+/* Location: NewChatView.swift - Empty state title */
+"chats.newChat.emptyState.title" = "Aucun contact";
+
+/* Location: NewChatView.swift - Empty state description */
+"chats.newChat.emptyState.description" = "Les contacts apparaîtront une fois découverts";
+
+/* Location: NewChatView.swift - Navigation title */
+"chats.newChat.title" = "Nouvelle discussion";
+
+/* Location: NewChatView.swift - Search placeholder */
+"chats.newChat.search.placeholder" = "Rechercher des contacts";
+
+/* Location: NewChatView.swift - Contact type label for direct contacts */
+"chats.newChat.contactType.direct" = "Direct";
+
+/* Location: NewChatView.swift - Contact type label for repeaters */
+"chats.newChat.contactType.repeater" = "Répéteur";
+
+/* Location: NewChatView.swift - Contact type label for rooms */
+"chats.newChat.contactType.room" = "Salon";
+
+// MARK: - Conversation Row
+
+/* Location: ConversationRow.swift, ChannelConversationRow.swift, RoomConversationRow.swift - Accessibility label for favorite indicator */
+"chats.row.favorite" = "Favori";
+
+/* Location: ConversationRow.swift, ChannelConversationRow.swift - Default text when no messages exist */
+"chats.row.noMessages" = "Aucun message pour l'instant";
+
+/* Location: MutedIndicator.swift - Accessibility label for muted indicator */
+"chats.row.muted" = "En sourdine";
+
+// MARK: - Swipe Actions
+
+/* Location: ConversationSwipeActionsModifier.swift - Swipe action to delete */
+"chats.swipeAction.delete" = "Supprimer";
+
+/* Location: ConversationSwipeActionsModifier.swift - Swipe action to unmute */
+"chats.swipeAction.unmute" = "Réactiver";
+
+/* Location: ConversationSwipeActionsModifier.swift - Swipe action to mute */
+"chats.swipeAction.mute" = "Sourdine";
+
+/* Location: ConversationSwipeActionsModifier.swift - Swipe action to remove from favorites */
+"chats.swipeAction.unfavorite" = "Retirer des favoris";
+
+/* Location: ConversationSwipeActionsModifier.swift - Swipe action to add to favorites */
+"chats.swipeAction.favorite" = "Favori";
+
+// MARK: - Room Conversation Row
+
+/* Location: RoomConversationRow.swift - Status when room is connected */
+"chats.room.connected" = "Connecté";
+
+/* Location: RoomConversationRow.swift - Prompt to reconnect to room */
+"chats.room.tapToReconnect" = "Appuyez pour vous reconnecter";
+
+// MARK: - Room Authentication Sheet
+
+/* Location: RoomAuthenticationSheet.swift - Error title when room not found */
+"chats.roomAuth.notFound.title" = "Salon introuvable";
+
+/* Location: RoomAuthenticationSheet.swift - Error description when room not found */
+"chats.roomAuth.notFound.description" = "Impossible de trouver le contact du salon";
+
+// MARK: - Conversation List Sections
+
+/* Location: ConversationListContent.swift - Section accessibility label for favorites */
+"chats.section.favorites" = "Favoris";
+
+/* Location: ConversationListContent.swift - Section accessibility label for other conversations */
+"chats.section.conversations" = "Conversations";
+
+// MARK: - Create Private Channel View
+
+/* Location: CreatePrivateChannelView.swift - Title when sharing created channel */
+"chats.createPrivate.titleShare" = "Partager le canal privé";
+
+/* Location: CreatePrivateChannelView.swift - Title when creating channel */
+"chats.createPrivate.titleCreate" = "Créer un canal privé";
+
+/* Location: CreatePrivateChannelView.swift - Text field placeholder for channel name */
+"chats.createPrivate.channelName" = "Nom du canal";
+
+/* Location: CreatePrivateChannelView.swift - Section header for channel details */
+"chats.createPrivate.section.details" = "Détails du canal";
+
+/* Location: CreatePrivateChannelView.swift - Section header for generated secret */
+"chats.createPrivate.section.secret" = "Secret généré";
+
+/* Location: CreatePrivateChannelView.swift - Footer explaining generated secret */
+"chats.createPrivate.secretFooter" = "Une clé secrète aléatoire a été générée. Vous pourrez la partager via code QR après avoir créé le canal.";
+
+/* Location: CreatePrivateChannelView.swift - Button to create channel */
+"chats.createPrivate.createButton" = "Créer le canal";
+
+/* Location: CreatePrivateChannelView.swift - Section header for manual sharing */
+"chats.createPrivate.section.shareManually" = "Partager manuellement";
+
+/* Location: CreatePrivateChannelView.swift - Footer explaining manual sharing */
+"chats.createPrivate.shareManuallyFooter" = "Partagez le nom du canal et cette clé secrète avec d'autres. Ils auront besoin des deux pour rejoindre.";
+
+// MARK: - Join Private Channel View
+
+/* Location: JoinPrivateChannelView.swift - Text field placeholder for secret key */
+"chats.joinPrivate.secretKeyPlaceholder" = "Clé secrète (32 caractères hexadécimaux)";
+
+/* Location: JoinPrivateChannelView.swift - Validation error for invalid secret */
+"chats.joinPrivate.error.invalidSecret" = "La clé secrète doit contenir exactement 32 caractères hexadécimaux (0-9, A-F)";
+
+/* Location: JoinPrivateChannelView.swift - Footer explaining how to join */
+"chats.joinPrivate.footer" = "Entrez le nom du canal et la clé secrète partagés par le créateur du canal.";
+
+/* Location: JoinPrivateChannelView.swift - Button to join channel */
+"chats.joinPrivate.joinButton" = "Rejoindre le canal";
+
+/* Location: JoinPrivateChannelView.swift - Navigation title */
+"chats.joinPrivate.title" = "Rejoindre un canal privé";
+
+/* Location: JoinPrivateChannelView.swift - Error for invalid secret key format */
+"chats.joinPrivate.error.invalidFormat" = "Format de clé secrète invalide";
+
+// MARK: - Join Public Channel View
+
+/* Location: JoinPublicChannelView.swift - Channel name displayed */
+"chats.joinPublic.channelName" = "Canal public";
+
+/* Location: JoinPublicChannelView.swift - Description of public channel */
+"chats.joinPublic.description" = "Le canal public est un canal de diffusion ouvert sur l'emplacement 0. Tous les appareils du réseau mesh peuvent envoyer et recevoir des messages sur ce canal.";
+
+/* Location: JoinPublicChannelView.swift - Button to add public channel */
+"chats.joinPublic.addButton" = "Ajouter le canal public";
+
+/* Location: JoinPublicChannelView.swift - Navigation title */
+"chats.joinPublic.title" = "Rejoindre le canal public";
+
+// MARK: - Join Hashtag Channel View
+
+/* Location: JoinHashtagChannelView.swift - Text field placeholder */
+"chats.joinHashtag.placeholder" = "nom-du-canal";
+
+/* Location: JoinHashtagChannelView.swift - Section header */
+"chats.joinHashtag.section.header" = "Canal hashtag";
+
+/* Location: JoinHashtagChannelView.swift - Footer explaining hashtag channels */
+"chats.joinHashtag.footer" = "Les canaux hashtag sont publics. Tout le monde peut les rejoindre en entrant le même nom. Seules les lettres minuscules, les chiffres et les tirets sont autorisés.";
+
+/* Location: JoinHashtagChannelView.swift - Description about encryption */
+"chats.joinHashtag.encryptionDescription" = "Le nom du canal est utilisé pour générer la clé de chiffrement. Toute personne avec le même nom peut lire les messages.";
+
+/* Location: JoinHashtagChannelView.swift - Button format for existing channel - %@ is channel name */
+"chats.joinHashtag.goToButton" = "Aller à #%@";
+
+/* Location: JoinHashtagChannelView.swift - Button format for new channel - %@ is channel name */
+"chats.joinHashtag.joinButton" = "Rejoindre #%@";
+
+/* Location: JoinHashtagChannelView.swift - Accessibility hint for existing channel */
+"chats.joinHashtag.existingHint" = "Ouvre le canal que vous avez déjà rejoint";
+
+/* Location: JoinHashtagChannelView.swift - Accessibility hint for new channel */
+"chats.joinHashtag.newHint" = "Crée et rejoint ce canal hashtag";
+
+/* Location: JoinHashtagChannelView.swift - Footer label when channel already joined */
+"chats.joinHashtag.alreadyJoined" = "Déjà rejoint";
+
+/* Location: JoinHashtagChannelView.swift - Accessibility label for already joined */
+"chats.joinHashtag.alreadyJoinedAccessibility" = "Canal déjà rejoint";
+
+/* Location: JoinHashtagChannelView.swift - Navigation title */
+"chats.joinHashtag.title" = "Rejoindre un canal hashtag";
+
+// MARK: - Join Hashtag From Message View
+
+/* Location: JoinHashtagFromMessageView.swift - Loading text */
+"chats.joinFromMessage.loading" = "Chargement...";
+
+/* Location: JoinHashtagFromMessageView.swift - Navigation title */
+"chats.joinFromMessage.title" = "Rejoindre le canal";
+
+/* Location: JoinHashtagFromMessageView.swift - No device connected title */
+"chats.joinFromMessage.noDevice.title" = "Aucun appareil connecté";
+
+/* Location: JoinHashtagFromMessageView.swift - No device connected description - %@ is channel name */
+"chats.joinFromMessage.noDevice.description" = "Connectez un appareil pour rejoindre %@.";
+
+/* Location: JoinHashtagFromMessageView.swift - No slots available title */
+"chats.joinFromMessage.noSlots.title" = "Aucun emplacement disponible";
+
+/* Location: JoinHashtagFromMessageView.swift - No slots available description - %@ is channel name */
+"chats.joinFromMessage.noSlots.description" = "Tous les emplacements de canaux sont pleins. Supprimez un canal existant pour rejoindre %@.";
+
+/* Location: JoinHashtagFromMessageView.swift - Description of hashtag channels */
+"chats.joinFromMessage.description" = "Les canaux hashtag sont publics. Tout le monde peut les rejoindre en entrant le même nom.";
+
+/* Location: JoinHashtagFromMessageView.swift - Button to join channel - %@ is channel name */
+"chats.joinFromMessage.joinButton" = "Rejoindre %@";
+
+/* Location: JoinHashtagFromMessageView.swift - Error for no available slots */
+"chats.joinFromMessage.error.noSlots" = "Aucun emplacement disponible.";
+
+/* Location: JoinHashtagFromMessageView.swift - Error for invalid channel name */
+"chats.joinFromMessage.error.invalidName" = "Format de nom de canal invalide.";
+
+/* Location: JoinHashtagFromMessageView.swift - Error when channel created but couldn't be loaded */
+"chats.joinFromMessage.error.loadFailed" = "Le canal a été créé mais n'a pas pu être chargé.";
+
+// MARK: - Scan Channel QR View
+
+/* Location: ScanChannelQRView.swift - Navigation title */
+"chats.scanQR.title" = "Scanner le code QR";
+
+/* Location: ScanChannelQRView.swift - Error when scanner not available */
+"chats.scanQR.notAvailable.title" = "Scanner non disponible";
+
+/* Location: ScanChannelQRView.swift - Error description when scanner not available */
+"chats.scanQR.notAvailable.description" = "Le scan de code QR n'est pas pris en charge sur cet appareil";
+
+/* Location: ScanChannelQRView.swift - Instruction to point camera */
+"chats.scanQR.instruction" = "Pointez votre caméra vers un code QR de canal";
+
+/* Location: ScanChannelQRView.swift - Button to scan again */
+"chats.scanQR.scanAgain" = "Scanner à nouveau";
+
+/* Location: ScanChannelQRView.swift - Camera permission denied title */
+"chats.scanQR.permissionDenied.title" = "Accès à la caméra requis";
+
+/* Location: ScanChannelQRView.swift - Camera permission denied message */
+"chats.scanQR.permissionDenied.message" = "Veuillez activer l'accès à la caméra dans les Réglages pour scanner les codes QR.";
+
+/* Location: ScanChannelQRView.swift - Button to open settings */
+"chats.scanQR.openSettings" = "Ouvrir les Réglages";
+
+/* Location: ScanChannelQRView.swift - Error for invalid QR format */
+"chats.scanQR.error.invalidFormat" = "Format de code QR invalide";
+
+/* Location: ScanChannelQRView.swift - Error for invalid channel data */
+"chats.scanQR.error.invalidData" = "Données de canal invalides dans le code QR";
+
+// MARK: - Message Bubble
+
+/* Location: UnifiedMessageBubble.swift - Fallback sender name */
+"chats.message.sender.unknown" = "Inconnu";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to reply */
+"chats.message.action.reply" = "Répondre";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to copy */
+"chats.message.action.copy" = "Copier";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to view repeat details */
+"chats.message.action.repeatDetails" = "Détails des répétitions";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to send again */
+"chats.message.action.sendAgain" = "Renvoyer";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing heard repeats - %d is count, second %@ is "repeat" or "repeats" */
+"chats.message.info.heardRepeats" = "Reçu : %d %@";
+
+/* Location: UnifiedMessageBubble.swift - Singular form of repeat */
+"chats.message.repeat.singular" = "répétition";
+
+/* Location: UnifiedMessageBubble.swift - Plural form of repeats */
+"chats.message.repeat.plural" = "répétitions";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing sent time - %@ is formatted date */
+"chats.message.info.sent" = "Envoyé : %@";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing round trip time - %d is milliseconds */
+"chats.message.info.roundTrip" = "Aller-retour : %d ms";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to view path */
+"chats.message.action.viewPath" = "Voir le chemin";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing hop count - %@ is count or "Direct" */
+"chats.message.info.hops" = "Sauts : %@";
+
+/* Location: UnifiedMessageBubble.swift - Indicator that timestamp was adjusted */
+"chats.message.info.adjusted" = "(ajusté)";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility label for adjusted timestamp */
+"chats.message.info.adjustedAccessibility" = "Heure d'envoi ajustée en raison d'une erreur d'horloge de l'expéditeur";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility hint for adjusted timestamp */
+"chats.message.info.adjustedHint" = "L'horloge de l'expéditeur était incorrecte";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing received time - %@ is formatted date */
+"chats.message.info.received" = "Reçu : %@";
+
+/* Location: UnifiedMessageBubble.swift - Context menu text showing SNR - %@ is formatted value */
+"chats.message.info.snr" = "RSB : %@";
+
+/* Location: UnifiedMessageBubble.swift - Context menu submenu label */
+"chats.message.action.details" = "Détails";
+
+/* Location: UnifiedMessageBubble.swift - Context menu action to delete */
+"chats.message.action.delete" = "Supprimer";
+
+/* Location: UnifiedMessageBubble.swift - Status row retry button */
+"chats.message.status.retry" = "Réessayer";
+
+/* Location: UnifiedMessageBubble.swift - Message status sending */
+"chats.message.status.sending" = "Envoi...";
+
+/* Location: UnifiedMessageBubble.swift - Message status sent */
+"chats.message.status.sent" = "Envoyé";
+
+/* Location: UnifiedMessageBubble.swift - Message status sent multiple times - %d is count */
+"chats.message.status.sentMultiple" = "Envoyé %d fois";
+
+/* Location: UnifiedMessageBubble.swift - Message status delivered */
+"chats.message.status.delivered" = "Remis";
+
+/* Location: UnifiedMessageBubble.swift - Message status failed */
+"chats.message.status.failed" = "Échec";
+
+/* Location: UnifiedMessageBubble.swift - Message status retrying */
+"chats.message.status.retrying" = "Nouvelle tentative...";
+
+/* Location: UnifiedMessageBubble.swift - SNR quality excellent */
+"chats.signal.excellent" = "Excellent";
+
+/* Location: UnifiedMessageBubble.swift - SNR quality good */
+"chats.signal.good" = "Bon";
+
+/* Location: UnifiedMessageBubble.swift - SNR quality fair */
+"chats.signal.fair" = "Passable";
+
+/* Location: UnifiedMessageBubble.swift - SNR quality poor */
+"chats.signal.poor" = "Faible";
+
+/* Location: UnifiedMessageBubble.swift - SNR quality very poor */
+"chats.signal.veryPoor" = "Très faible";
+
+/* Location: UnifiedMessageBubble.swift - Hop count direct */
+"chats.message.hops.direct" = "Direct";
+
+// MARK: - Chat Input Bar
+
+/* Location: ChatInputBar.swift - Accessibility label for text input */
+"chats.input.accessibilityLabel" = "Saisie du message";
+
+/* Location: ChatInputBar.swift - Accessibility hint for text input */
+"chats.input.accessibilityHint" = "Tapez votre message ici";
+
+/* Location: ChatInputBar.swift - Accessibility label for character count - %d is current, %d is max */
+"chats.input.characterCount" = "%d sur %d caractères";
+
+/* Location: ChatInputBar.swift - Accessibility label when message too long */
+"chats.input.tooLong" = "Message trop long";
+
+/* Location: ChatInputBar.swift - Accessibility label for send button */
+"chats.input.sendMessage" = "Envoyer le message";
+
+/* Location: ChatInputBar.swift - Accessibility hint when over character limit - %d is characters to remove */
+"chats.input.removeCharacters" = "Supprimez %d caractères pour envoyer";
+
+/* Location: ChatInputBar.swift - Accessibility hint when not connected */
+"chats.input.requiresConnection" = "Nécessite une connexion radio";
+
+/* Location: ChatInputBar.swift - Accessibility hint when ready to send */
+"chats.input.tapToSend" = "Appuyez pour envoyer votre message";
+
+/* Location: ChatInputBar.swift - Accessibility hint when message is empty */
+"chats.input.typeFirst" = "Tapez d'abord un message";
+
+// MARK: - Message Path Sheet
+
+/* Location: MessagePathSheet.swift - Empty state title */
+"chats.path.unavailable.title" = "Chemin non disponible";
+
+/* Location: MessagePathSheet.swift - Empty state description */
+"chats.path.unavailable.description" = "Les données de chemin ne sont pas disponibles pour ce message";
+
+/* Location: MessagePathSheet.swift - Button to copy path */
+"chats.path.copyButton" = "Copier le chemin";
+
+/* Location: MessagePathSheet.swift - Accessibility label for copy button */
+"chats.path.copyAccessibility" = "Copier le chemin dans le presse-papiers";
+
+/* Location: MessagePathSheet.swift - Accessibility hint for copy button */
+"chats.path.copyHint" = "Copie les identifiants de nœuds en valeurs hexadécimales";
+
+/* Location: MessagePathSheet.swift - Section header for path */
+"chats.path.section.header" = "Chemin";
+
+/* Location: MessagePathSheet.swift - Navigation title */
+"chats.path.title" = "Chemin du message";
+
+// MARK: - Path Hop Row View
+
+/* Location: PathHopRowView.swift - Unknown node name */
+"chats.path.hop.unknown" = "<inconnu>";
+
+/* Location: PathHopRowView.swift - Label for sender (first hop) */
+"chats.path.hop.sender" = "Expéditeur";
+
+/* Location: PathHopRowView.swift - Label for intermediate hops - %d is hop number */
+"chats.path.hop.number" = "Saut %d";
+
+/* Location: PathHopRowView.swift - Accessibility value format for last hop - %@ is quality, %@ is SNR */
+"chats.path.hop.signalQuality" = "Qualité du signal : %@, RSB %@ dB";
+
+/* Location: PathHopRowView.swift - Accessibility value format for non-last hops - %@ is hex ID */
+"chats.path.hop.nodeId" = "ID du nœud : %@";
+
+/* Location: PathHopRowView.swift - Unknown signal quality */
+"chats.path.hop.signalUnknown" = "Inconnu";
+
+// MARK: - Repeat Details Sheet
+
+/* Location: RepeatDetailsSheet.swift - Empty state title */
+"chats.repeats.emptyState.title" = "Aucune répétition pour l'instant";
+
+/* Location: RepeatDetailsSheet.swift - Empty state description */
+"chats.repeats.emptyState.description" = "Les répétitions apparaîtront ici au fur et à mesure que votre message se propage dans le réseau mesh";
+
+/* Location: RepeatDetailsSheet.swift - Navigation title */
+"chats.repeats.title" = "Détails des répétitions";
+
+// MARK: - Repeat Row View
+
+/* Location: RepeatRowView.swift - Accessibility label format - %@ is repeater name */
+"chats.repeats.row.accessibility" = "Répétition depuis %@";
+
+/* Location: RepeatRowView.swift - Accessibility value format - %@ is quality, %@ is SNR, %@ is RSSI */
+"chats.repeats.row.accessibilityValue" = "Signal %@, RSB %@, RSSI %@";
+
+/* Location: RepeatRowView.swift - Singular hop label */
+"chats.repeats.hop.singular" = "1 saut";
+
+/* Location: RepeatRowView.swift - Plural hops label - %d is count */
+"chats.repeats.hop.plural" = "%d sauts";
+
+/* Location: RepeatRowView.swift - Unknown repeater name */
+"chats.repeats.unknownRepeater" = "<répéteur inconnu>";
+
+// MARK: - Tap to Load Preview
+
+/* Location: TapToLoadPreview.swift - Loading state text */
+"chats.preview.loading" = "Chargement de l'aperçu...";
+
+/* Location: TapToLoadPreview.swift - Idle state text */
+"chats.preview.tapToLoad" = "Appuyez pour charger l'aperçu";
+
+/* Location: TapToLoadPreview.swift - Loading accessibility label format - %@ is host */
+"chats.preview.loadingAccessibility" = "Chargement de l'aperçu pour %@";
+
+/* Location: TapToLoadPreview.swift - Idle accessibility label format - %@ is host */
+"chats.preview.tapAccessibility" = "Charger l'aperçu pour %@";
+
+/* Location: TapToLoadPreview.swift - Loading accessibility hint */
+"chats.preview.loadingHint" = "Veuillez patienter";
+
+/* Location: TapToLoadPreview.swift - Idle accessibility hint */
+"chats.preview.tapHint" = "Récupère le titre et l'image du site web";
+
+// MARK: - Common Buttons (using Localizable.strings common keys where possible)
+
+/* Location: Various - OK button (use L10n.Localizable.Common.ok) */
+"chats.common.ok" = "OK";
+
+/* Location: Various - Cancel button (use L10n.Localizable.Common.cancel) */
+"chats.common.cancel" = "Annuler";
+
+/* Location: Various - Done button (use L10n.Localizable.Common.done) */
+"chats.common.done" = "Terminé";

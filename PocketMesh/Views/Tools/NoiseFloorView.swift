@@ -36,17 +36,17 @@ struct NoiseFloorView: View {
 extension NoiseFloorView {
     private var disconnectedState: some View {
         ContentUnavailableView {
-            Label("Not Connected", systemImage: "antenna.radiowaves.left.and.right.slash")
+            Label(L10n.Tools.Tools.RxLog.notConnected, systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
-            Text("Connect to a mesh radio to measure noise floor.")
+            Text(L10n.Tools.Tools.NoiseFloor.notConnectedDescription)
         }
     }
 
     private var collectingState: some View {
         ContentUnavailableView {
-            Label("Collecting Data...", systemImage: "antenna.radiowaves.left.and.right")
+            Label(L10n.Tools.Tools.NoiseFloor.collectingData, systemImage: "antenna.radiowaves.left.and.right")
         } description: {
-            Text("Noise floor readings will appear as they are collected.")
+            Text(L10n.Tools.Tools.NoiseFloor.collectingDataDescription)
         }
     }
 }
@@ -117,7 +117,7 @@ private struct CurrentReadingSection: View {
                 .fontDesign(.rounded)
                 .monospacedDigit()
 
-            Text("dBm")
+            Text(L10n.Tools.Tools.NoiseFloor.dBm)
                 .font(.title3)
                 .foregroundStyle(.secondary)
 
@@ -151,10 +151,10 @@ private struct CurrentReadingSection: View {
 
     private var accessibilityLabel: String {
         guard let reading = viewModel.currentReading else {
-            return "No reading available"
+            return L10n.Tools.Tools.NoiseFloor.noReading
         }
         let quality = viewModel.qualityLevel
-        return "\(reading.noiseFloor) decibel-milliwatts, \(quality.label) signal quality"
+        return "\(reading.noiseFloor) \(L10n.Tools.Tools.NoiseFloor.dBm), \(quality.label)"
     }
 }
 
@@ -166,7 +166,7 @@ private struct ChartSection: View {
 
     private var trendDescription: String {
         let readings = viewModel.readings
-        guard readings.count >= 4 else { return "stable" }
+        guard readings.count >= 4 else { return L10n.Tools.Tools.NoiseFloor.trendStable }
 
         let halfCount = readings.count / 2
         let firstHalf = readings.prefix(halfCount)
@@ -176,20 +176,20 @@ private struct ChartSection: View {
         let secondAvg = secondHalf.map { Int($0.noiseFloor) }.reduce(0, +) / max(1, halfCount)
 
         if secondAvg > firstAvg + 3 {
-            return "increasing"
+            return L10n.Tools.Tools.NoiseFloor.trendIncreasing
         } else if secondAvg < firstAvg - 3 {
-            return "decreasing"
+            return L10n.Tools.Tools.NoiseFloor.trendDecreasing
         }
-        return "stable"
+        return L10n.Tools.Tools.NoiseFloor.trendStable
     }
 
     private var chartAccessibilityLabel: String {
         let count = viewModel.readings.count
         guard count > 0, let stats = viewModel.statistics else {
-            return "Noise floor history chart, no data"
+            return L10n.Tools.Tools.NoiseFloor.chartAccessibilityEmpty
         }
 
-        return "Noise floor history: \(count) readings, minimum \(stats.min) dBm, maximum \(stats.max) dBm, average \(Int(stats.average)) dBm, trend \(trendDescription)"
+        return L10n.Tools.Tools.NoiseFloor.chartAccessibility(count, Int(stats.min), Int(stats.max), Int(stats.average), trendDescription)
     }
 
     private var chartDomain: ClosedRange<Double> {
@@ -205,7 +205,7 @@ private struct ChartSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Noise Floor")
+            Text(L10n.Tools.Tools.noiseFloor)
                 .font(.headline)
 
             Chart(viewModel.readings) { reading in
@@ -256,21 +256,21 @@ private struct StatisticsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Statistics")
+            Text(L10n.Tools.Tools.NoiseFloor.statistics)
                 .font(.headline)
 
             if let stats = viewModel.statistics {
                 Grid(alignment: .leading, verticalSpacing: 6) {
-                    statRow(label: "Minimum", value: Int(stats.min), unit: "dBm")
-                    statRow(label: "Average", value: stats.average, unit: "dBm", precision: 1)
-                    statRow(label: "Maximum", value: Int(stats.max), unit: "dBm")
+                    statRow(label: L10n.Tools.Tools.NoiseFloor.minimum, value: Int(stats.min), unit: L10n.Tools.Tools.NoiseFloor.dBm)
+                    statRow(label: L10n.Tools.Tools.NoiseFloor.average, value: stats.average, unit: L10n.Tools.Tools.NoiseFloor.dBm, precision: 1)
+                    statRow(label: L10n.Tools.Tools.NoiseFloor.maximum, value: Int(stats.max), unit: L10n.Tools.Tools.NoiseFloor.dBm)
 
                     Divider()
                         .gridCellColumns(4)
 
                     if let reading = viewModel.currentReading {
-                        statRow(label: "Last RSSI", value: Int(reading.lastRSSI), unit: "dBm")
-                        statRow(label: "Last SNR", value: reading.lastSNR, unit: "dB", precision: 1)
+                        statRow(label: L10n.Tools.Tools.NoiseFloor.lastRssi, value: Int(reading.lastRSSI), unit: L10n.Tools.Tools.NoiseFloor.dBm)
+                        statRow(label: L10n.Tools.Tools.NoiseFloor.lastSnr, value: reading.lastSNR, unit: L10n.Tools.Tools.NoiseFloor.db, precision: 1)
                     }
                 }
                 .font(.subheadline)

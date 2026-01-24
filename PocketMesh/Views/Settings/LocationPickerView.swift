@@ -34,7 +34,7 @@ struct LocationPickerView: View {
                 MapReader { proxy in
                     Map(position: $position, interactionModes: [.pan, .zoom]) {
                         if let coord = selectedCoordinate {
-                            Marker("Node Location", coordinate: coord)
+                            Marker(L10n.Settings.LocationPicker.markerTitle, coordinate: coord)
                                 .tint(.blue)
                         }
                     }
@@ -92,14 +92,14 @@ struct LocationPickerView: View {
                     .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("Set Location")
+            .navigationTitle(L10n.Settings.LocationPicker.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Localizable.Common.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveLocation() }
+                    Button(L10n.Localizable.Common.save) { saveLocation() }
                         .radioDisabled(for: appState.connectionState, or: isSaving)
                 }
             }
@@ -177,13 +177,13 @@ struct LocationPickerView: View {
     private var buttonContent: some View {
         HStack(spacing: 12) {
             if selectedCoordinate != nil {
-                Button("Clear Location", role: .destructive) {
+                Button(L10n.Settings.LocationPicker.clearLocation, role: .destructive) {
                     selectedCoordinate = nil
                 }
                 .modifier(GlassButtonModifier(isProminent: false))
             }
 
-            Button("Drop Pin at Center") {
+            Button(L10n.Settings.LocationPicker.dropPin) {
                 dropPinAtCenter()
             }
             .modifier(GlassButtonModifier(isProminent: true))

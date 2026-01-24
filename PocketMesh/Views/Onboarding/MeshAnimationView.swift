@@ -71,7 +71,7 @@ struct MeshAnimationView: View {
             }
         }
         .frame(height: 150)
-        .accessibilityLabel("Mesh network visualization")
+        .accessibilityLabel(L10n.Onboarding.MeshAnimation.accessibilityLabel)
         .accessibilityAddTraits(.isImage)
     }
 

@@ -42,7 +42,7 @@ struct ChannelChatView: View {
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
-            .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+            .navigationTitle(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -149,10 +149,10 @@ struct ChannelChatView: View {
                 break
             }
         }
-        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {
+            Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
         } message: {
-            Text("Please ensure your device is connected and try again.")
+            Text(L10n.Chats.Chats.Alert.UnableToSend.message)
         }
     }
 
@@ -160,10 +160,10 @@ struct ChannelChatView: View {
 
     private var headerView: some View {
         VStack(spacing: 0) {
-            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+            Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                 .font(.headline)
 
-            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel")
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
@@ -276,8 +276,8 @@ struct ChannelChatView: View {
         if let message = viewModel.message(for: item) {
             UnifiedMessageBubble(
                 message: message,
-                contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
-                contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                contactName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
+                contactNodeName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .channel(
                     isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
@@ -313,10 +313,10 @@ struct ChannelChatView: View {
             )
         } else {
             // ViewModel logs the warning for data inconsistency
-            Text("Message unavailable")
+            Text(L10n.Chats.Chats.Message.unavailable)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Message could not be loaded")
+                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
         }
     }
 
@@ -324,14 +324,14 @@ struct ChannelChatView: View {
         VStack(spacing: 16) {
             ChannelAvatar(channel: channel, size: 80)
 
-            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+            Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                 .font(.title2)
                 .bold()
 
-            Text("No messages yet")
+            Text(L10n.Chats.Chats.Channel.EmptyState.noMessages)
                 .foregroundStyle(.secondary)
 
-            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "This is a public broadcast channel" : "This is a private channel")
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.EmptyState.publicDescription : L10n.Chats.Chats.Channel.EmptyState.privateDescription)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -381,7 +381,7 @@ struct ChannelChatView: View {
         MentionInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
+            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate,
             maxCharacters: maxChannelMessageLength,
             contacts: viewModel.allContacts
         ) {

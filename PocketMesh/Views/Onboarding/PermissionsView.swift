@@ -86,11 +86,11 @@ struct PermissionsView: View {
                     .font(.system(size: 60))
                     .foregroundStyle(.tint)
 
-                Text("Permissions")
+                Text(L10n.Onboarding.Permissions.title)
                     .font(.largeTitle)
                     .bold()
 
-                Text("Allow Notifications for the best experience")
+                Text(L10n.Onboarding.Permissions.subtitle)
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -105,8 +105,8 @@ struct PermissionsView: View {
                 VStack(spacing: 16) {
                     PermissionCard(
                         icon: "bell.fill",
-                        title: "Notifications",
-                        description: "Receive alerts for new messages",
+                        title: L10n.Onboarding.Permissions.Notifications.title,
+                        description: L10n.Onboarding.Permissions.Notifications.description,
                         isGranted: coordinator.notificationAuthorization == .authorized,
                         isDenied: coordinator.notificationAuthorization == .denied,
                         action: coordinator.requestNotifications
@@ -114,8 +114,8 @@ struct PermissionsView: View {
 
                     PermissionCard(
                         icon: "location.fill",
-                        title: "Location",
-                        description: "See your location on the map",
+                        title: L10n.Onboarding.Permissions.Location.title,
+                        description: L10n.Onboarding.Permissions.Location.description,
                         isGranted: coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways,
                         isDenied: coordinator.locationAuthorization == .denied,
                         action: {
@@ -137,7 +137,7 @@ struct PermissionsView: View {
                 Button {
                     appState.onboardingPath.append(.deviceScan)
                 } label: {
-                    Text(allPermissionsGranted ? "Continue" : "Skip for Now")
+                    Text(allPermissionsGranted ? L10n.Onboarding.Permissions.continue : L10n.Onboarding.Permissions.skipForNow)
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -147,7 +147,7 @@ struct PermissionsView: View {
                 Button {
                     appState.onboardingPath.removeLast()
                 } label: {
-                    Text("Back")
+                    Text(L10n.Onboarding.Permissions.back)
                         .font(.subheadline)
                 }
                 .buttonStyle(.plain)
@@ -161,15 +161,15 @@ struct PermissionsView: View {
                 coordinator.checkPermissions()
             }
         }
-        .alert("Location Permission", isPresented: $showingLocationAlert) {
-            Button("Open Settings") {
+        .alert(L10n.Onboarding.Permissions.LocationAlert.title, isPresented: $showingLocationAlert) {
+            Button(L10n.Onboarding.Permissions.LocationAlert.openSettings) {
                 if let url = URL(string: "app-settings:") {
                     openURL(url)
                 }
             }
-            Button("Cancel", role: .cancel) { }
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
         } message: {
-            Text("Location permission was previously denied. Please enable it in Settings to share your location with mesh contacts.")
+            Text(L10n.Onboarding.Permissions.LocationAlert.message)
         }
     }
 
@@ -209,7 +209,7 @@ private struct PermissionCard: View {
                         .font(.headline)
 
                     if isOptional {
-                        Text("Optional")
+                        Text(L10n.Onboarding.Permissions.optional)
                             .font(.caption)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -231,7 +231,7 @@ private struct PermissionCard: View {
                     .font(.title2)
                     .foregroundStyle(.green)
             } else if isDenied {
-                Button("Settings") {
+                Button(L10n.Onboarding.Permissions.openSettings) {
                     if let url = URL(string: "app-settings:") {
                         openURL(url)
                     }
@@ -239,7 +239,7 @@ private struct PermissionCard: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             } else {
-                Button("Allow") {
+                Button(L10n.Onboarding.Permissions.allow) {
                     action()
                 }
                 .buttonStyle(.borderedProminent)

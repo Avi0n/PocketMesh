@@ -11,12 +11,12 @@ struct BlockedContactsView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading...")
+                ProgressView(L10n.Contacts.Contacts.Blocked.loading)
             } else if contacts.isEmpty {
                 ContentUnavailableView(
-                    "No Blocked Contacts",
+                    L10n.Contacts.Contacts.Blocked.Empty.title,
                     systemImage: "hand.raised.slash",
-                    description: Text("Contacts you block will appear here.")
+                    description: Text(L10n.Contacts.Contacts.Blocked.Empty.description)
                 )
             } else {
                 List(contacts) { contact in
@@ -28,7 +28,7 @@ struct BlockedContactsView: View {
                 }
             }
         }
-        .navigationTitle("Blocked Contacts")
+        .navigationTitle(L10n.Contacts.Contacts.Blocked.title)
         .task {
             await loadBlockedContacts()
         }
