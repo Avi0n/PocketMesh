@@ -33,6 +33,7 @@ targets:
     preBuildScripts:
       - name: SwiftGen
         script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
           if ! command -v swiftgen &> /dev/null; then
               echo "error: SwiftGen not installed. Install with: brew install swiftgen"
               exit 1
