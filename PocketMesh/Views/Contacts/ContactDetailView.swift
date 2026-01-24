@@ -76,7 +76,7 @@ struct ContactDetailView: View {
             // Danger zone
             dangerSection
         }
-        .navigationTitle(currentContact.type.displayName)
+        .navigationTitle(contactTypeLabel)
         .navigationBarTitleDisplayMode(.inline)
         .alert(L10n.Contacts.Contacts.Detail.Alert.Block.title, isPresented: $showingBlockAlert) {
             Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
@@ -88,7 +88,7 @@ struct ContactDetailView: View {
         } message: {
             Text(L10n.Contacts.Contacts.Detail.Alert.Block.message(currentContact.displayName))
         }
-        .alert(L10n.Contacts.Contacts.Detail.Alert.Delete.title(currentContact.type.displayName), isPresented: $showingDeleteAlert) {
+        .alert(L10n.Contacts.Contacts.Detail.Alert.Delete.title(contactTypeLabel), isPresented: $showingDeleteAlert) {
             Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
             Button(L10n.Contacts.Contacts.Common.delete, role: .destructive) {
                 Task {
@@ -718,7 +718,7 @@ struct ContactDetailView: View {
             Button(role: .destructive) {
                 showingDeleteAlert = true
             } label: {
-                Label(L10n.Contacts.Contacts.Detail.deleteType(currentContact.type.displayName), systemImage: "trash")
+                Label(L10n.Contacts.Contacts.Detail.deleteType(contactTypeLabel), systemImage: "trash")
             }
             .radioDisabled(for: appState.connectionState)
         } header: {
@@ -730,7 +730,7 @@ struct ContactDetailView: View {
 
     private var contactTypeLabel: String {
         switch currentContact.type {
-        case .chat: return L10n.Contacts.Contacts.NodeKind.chatContact
+        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
         case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
         case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
