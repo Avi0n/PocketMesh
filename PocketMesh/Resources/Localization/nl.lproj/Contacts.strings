@@ -773,6 +773,9 @@
 /* Location: TracePathMapView.swift - Purpose: Save failed alert message */
 "contacts.trace.map.saveFailedMessage" = "Kon het pad niet opslaan. Probeer het opnieuw.";
 
+/* Location: TracePathMapView.swift - Purpose: View results button */
+"contacts.trace.map.viewResults" = "Resultaten";
+
 // MARK: - Trace Results Sheet
 
 /* Location: TraceResultsSheet.swift - Purpose: Navigation title */

@@ -9,6 +9,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePathMap
 struct TracePathMapView: View {
     @Environment(\.appState) private var appState
     @Bindable var traceViewModel: TracePathViewModel
+    @Binding var presentedResult: TraceResult?
     @State private var mapViewModel = TracePathMapViewModel()
 
     @State private var showingSavePrompt = false
@@ -120,6 +121,8 @@ struct TracePathMapView: View {
                         center: location.coordinate,
                         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                     )
+                } else {
+                    appState.locationService.requestLocation()
                 }
             }
         )
@@ -215,10 +218,22 @@ struct TracePathMapView: View {
                         .liquidGlassProminentButtonStyle()
                         .liquidGlassID("trace", in: buttonNamespace)
                         .disabled(!mapViewModel.canRunTrace)
+
+                        // View Results button
+                        if let result = mapViewModel.result, result.success {
+                            Button {
+                                presentedResult = result
+                            } label: {
+                                Text(L10n.Contacts.Contacts.Trace.Map.viewResults)
+                            }
+                            .liquidGlassButtonStyle()
+                            .liquidGlassID("viewResults", in: buttonNamespace)
+                        }
                     }
                 }
             }
             .animation(.spring(response: 0.3), value: mapViewModel.hasPath)
+            .animation(.spring(response: 0.3), value: mapViewModel.result?.id)
             .padding(.bottom, 24)
         }
     }
@@ -237,6 +252,8 @@ struct TracePathMapView: View {
                                 center: location.coordinate,
                                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                             )
+                        } else {
+                            appState.locationService.requestLocation()
                         }
                     },
                     showingLayersMenu: $mapViewModel.showingLayersMenu

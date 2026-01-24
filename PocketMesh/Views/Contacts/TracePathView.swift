@@ -42,7 +42,7 @@ struct TracePathView: View {
             case .list:
                 listView
             case .map:
-                TracePathMapView(traceViewModel: viewModel)
+                TracePathMapView(traceViewModel: viewModel, presentedResult: $presentedResult)
             }
         }
         .navigationTitle(L10n.Contacts.Contacts.Trace.title)
@@ -78,7 +78,9 @@ struct TracePathView: View {
         .onChange(of: viewModel.resultID) { _, newID in
             guard newID != nil else { return }
             if let result = viewModel.result, result.success {
-                presentedResult = result
+                if viewMode == .list {
+                    presentedResult = result
+                }
             }
         }
         .sheet(item: $presentedResult, onDismiss: {

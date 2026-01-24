@@ -1446,6 +1446,8 @@ public enum L10n {
           public static let saveTitle = L10n.tr("Contacts", "contacts.trace.map.saveTitle", fallback: "Save Path")
           /// Location: TracePathMapView.swift - Purpose: Show labels accessibility
           public static let showLabels = L10n.tr("Contacts", "contacts.trace.map.showLabels", fallback: "Show labels")
+          /// Location: TracePathMapView.swift - Purpose: View results button
+          public static let viewResults = L10n.tr("Contacts", "contacts.trace.map.viewResults", fallback: "Results")
           public enum Empty {
             /// Location: TracePathMapView.swift - Purpose: Empty state description
             public static let description = L10n.tr("Contacts", "contacts.trace.map.empty.description", fallback: "Use List view to build paths with repeaters that don't have location data.")

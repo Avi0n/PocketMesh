@@ -773,6 +773,9 @@
 /* Location: TracePathMapView.swift - Purpose: Save failed alert message */
 "contacts.trace.map.saveFailedMessage" = "Не удалось сохранить путь. Пожалуйста, попробуй снова.";
 
+/* Location: TracePathMapView.swift - Purpose: View results button */
+"contacts.trace.map.viewResults" = "Результаты";
+
 // MARK: - Trace Results Sheet
 
 /* Location: TraceResultsSheet.swift - Purpose: Navigation title */

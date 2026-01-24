@@ -773,6 +773,9 @@
 /* Location: TracePathMapView.swift - Purpose: Save failed alert message */
 "contacts.trace.map.saveFailedMessage" = "Der Pfad konnte nicht gespeichert werden. Bitte versuche es erneut.";
 
+/* Location: TracePathMapView.swift - Purpose: View results button */
+"contacts.trace.map.viewResults" = "Ergebnisse";
+
 // MARK: - Trace Results Sheet
 
 /* Location: TraceResultsSheet.swift - Purpose: Navigation title */
