@@ -455,7 +455,7 @@ public final class NotificationService: NSObject {
 
         let content = UNMutableNotificationContent()
         content.title = "Message Not Sent"
-        content.body = "Your reply to \(contactName) couldn't be sent. Device is disconnected."
+        content.body = "Your reply to \(contactName) couldn't be sent."
         content.sound = .default
         content.categoryIdentifier = NotificationCategory.directMessage.rawValue
         content.userInfo = [
@@ -486,7 +486,7 @@ public final class NotificationService: NSObject {
 
         let content = UNMutableNotificationContent()
         content.title = "Message Not Sent"
-        content.body = "Your reply to \(channelName) couldn't be sent. Device is disconnected."
+        content.body = "Your reply to \(channelName) couldn't be sent."
         content.sound = .default
         content.userInfo = [
             "channelIndex": Int(channelIndex),
