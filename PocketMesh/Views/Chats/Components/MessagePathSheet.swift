@@ -26,46 +26,65 @@ struct MessagePathSheet: View {
                             Spacer()
                         }
                     }
-                } else if pathBytes.isEmpty {
+                } else if !hasPathData {
                     Section {
                         ContentUnavailableView(
                             L10n.Chats.Chats.Path.Unavailable.title,
                             systemImage: "point.topleft.down.to.point.bottomright.curvepath",
-                            description: Text(emptyStateDescription)
+                            description: Text(L10n.Chats.Chats.Path.Unavailable.description)
                         )
                     }
                 } else {
                     Section {
+                        // Sender row
+                        PathHopRowView(
+                            hopType: .sender,
+                            nodeName: senderName,
+                            nodeID: senderNodeID,
+                            snr: nil
+                        )
+
+                        // Intermediate hops
                         ForEach(Array(pathBytes.enumerated()), id: \.offset) { index, byte in
                             PathHopRowView(
-                                hopByte: byte,
-                                hopIndex: index,
-                                isLastHop: index == pathBytes.count - 1,
-                                snr: index == pathBytes.count - 1 ? message.snr : nil,
-                                contacts: contacts
+                                hopType: .intermediate(index + 1),
+                                nodeName: contactName(for: byte),
+                                nodeID: String(format: "%02X", byte),
+                                snr: nil
                             )
                         }
+
+                        // Receiver row (You)
+                        PathHopRowView(
+                            hopType: .receiver,
+                            nodeName: receiverName,
+                            nodeID: nil,
+                            snr: message.snr
+                        )
                     }
 
-                    Section {
-                        HStack {
-                            Text(message.pathString)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(.secondary)
+                    // Only show raw path section if there are intermediate hops
+                    if !pathBytes.isEmpty {
+                        Section {
+                            HStack {
+                                Text(message.pathString)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
 
-                            Spacer()
+                                Spacer()
 
-                            Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
-                                copyHapticTrigger += 1
-                                UIPasteboard.general.string = message.pathStringForClipboard
+                                Button(L10n.Chats.Chats.Path.copyButton, systemImage: "doc.on.doc") {
+                                    copyHapticTrigger += 1
+                                    UIPasteboard.general.string = message.pathStringForClipboard
+                                }
+                                .labelStyle(.iconOnly)
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel(L10n.Chats.Chats.Path.copyAccessibility)
+                                .accessibilityHint(L10n.Chats.Chats.Path.copyHint)
                             }
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel(L10n.Chats.Chats.Path.copyAccessibility)
-                            .accessibilityHint(L10n.Chats.Chats.Path.copyHint)
+                        } header: {
+                            Text(L10n.Chats.Chats.Path.Section.header)
                         }
-                    } header: {
-                        Text(L10n.Chats.Chats.Path.Section.header)
                     }
                 }
             }
@@ -83,13 +102,47 @@ struct MessagePathSheet: View {
         return Array(pathNodes)
     }
 
-    private var emptyStateDescription: String {
-        if message.pathNodes == nil {
-            // Path nodes come from RX log correlation, which may not be available
-            // for all messages (firmware limitation for direct messages)
-            return L10n.Chats.Chats.Path.Unavailable.description
+    /// Whether we have enough data to display the path (pathNodes must exist)
+    private var hasPathData: Bool {
+        message.pathNodes != nil
+    }
+
+    /// Sender display name: node name for channels, contact lookup for DMs
+    private var senderName: String {
+        // For channel messages, use senderNodeName if available
+        if message.isChannelMessage, let nodeName = message.senderNodeName {
+            return nodeName
         }
-        return ""
+
+        // For direct messages, look up contact by senderKeyPrefix
+        if let keyPrefix = message.senderKeyPrefix,
+           let firstByte = keyPrefix.first,
+           let contact = contacts.first(where: { $0.publicKey.first == firstByte }) {
+            return contact.displayName
+        }
+
+        return L10n.Chats.Chats.Path.Hop.unknown
+    }
+
+    /// Sender node ID (first byte of key prefix as hex)
+    private var senderNodeID: String? {
+        guard let keyPrefix = message.senderKeyPrefix, let firstByte = keyPrefix.first else {
+            return nil
+        }
+        return String(format: "%02X", firstByte)
+    }
+
+    /// Receiver display name: device node name or "You"
+    private var receiverName: String {
+        appState.connectedDevice?.nodeName ?? L10n.Chats.Chats.Path.Receiver.you
+    }
+
+    /// Look up contact name by node ID byte
+    private func contactName(for byte: UInt8) -> String {
+        if let contact = contacts.first(where: { $0.publicKey.first == byte }) {
+            return contact.displayName
+        }
+        return L10n.Chats.Chats.Path.Hop.unknown
     }
 
     private func loadContacts() async {
@@ -108,7 +161,7 @@ struct MessagePathSheet: View {
     }
 }
 
-#Preview("With Path") {
+#Preview("Channel With Hops") {
     MessagePathSheet(
         message: MessageDTO(
             id: UUID(),
@@ -124,9 +177,9 @@ struct MessagePathSheet: View {
             ackCode: nil,
             pathLength: 3,
             snr: 6.2,
-            pathNodes: Data([0xA3, 0x7F, 0x42]),
-            senderKeyPrefix: nil,
-            senderNodeName: "TestNode",
+            pathNodes: Data([0x7F, 0x42]),
+            senderKeyPrefix: Data([0xA3, 0x00, 0x00, 0x00, 0x00, 0x00]),
+            senderNodeName: "AlphaNode",
             isRead: true,
             replyToID: nil,
             roundTripTime: nil,
@@ -138,7 +191,37 @@ struct MessagePathSheet: View {
     .environment(AppState())
 }
 
-#Preview("Direct Message") {
+#Preview("Direct Transmission") {
+    MessagePathSheet(
+        message: MessageDTO(
+            id: UUID(),
+            deviceID: UUID(),
+            contactID: nil,
+            channelIndex: 0,
+            text: "Test message",
+            timestamp: UInt32(Date().timeIntervalSince1970),
+            createdAt: Date(),
+            direction: .incoming,
+            status: .delivered,
+            textType: .plain,
+            ackCode: nil,
+            pathLength: 0,
+            snr: 8.5,
+            pathNodes: Data(),
+            senderKeyPrefix: Data([0xB2, 0x00, 0x00, 0x00, 0x00, 0x00]),
+            senderNodeName: "BravoNode",
+            isRead: true,
+            replyToID: nil,
+            roundTripTime: nil,
+            heardRepeats: 0,
+            retryAttempt: 0,
+            maxRetryAttempts: 0
+        )
+    )
+    .environment(AppState())
+}
+
+#Preview("No Path Data") {
     MessagePathSheet(
         message: MessageDTO(
             id: UUID(),

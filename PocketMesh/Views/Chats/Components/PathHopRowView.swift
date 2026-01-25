@@ -2,13 +2,19 @@
 import SwiftUI
 import PocketMeshServices
 
+/// Type of hop in the message path.
+enum PathHopType {
+    case sender
+    case intermediate(Int)
+    case receiver
+}
+
 /// Row displaying a single hop in the message path.
 struct PathHopRowView: View {
-    let hopByte: UInt8
-    let hopIndex: Int
-    let isLastHop: Bool
+    let hopType: PathHopType
+    let nodeName: String
+    let nodeID: String?
     let snr: Double?
-    let contacts: [ContactDTO]
 
     var body: some View {
         HStack(alignment: .top) {
@@ -16,10 +22,12 @@ struct PathHopRowView: View {
                 Text(nodeName)
                     .font(.body)
 
-                Text(String(format: "%02X", hopByte))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospaced()
+                if let nodeID {
+                    Text(nodeID)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospaced()
+                }
 
                 Text(hopLabel)
                     .font(.caption)
@@ -28,8 +36,8 @@ struct PathHopRowView: View {
 
             Spacer()
 
-            // Show signal info only on last hop (where we have SNR)
-            if isLastHop, let snr {
+            // Show signal info only on receiver (where we have SNR)
+            if case .receiver = hopType, let snr {
                 VStack(alignment: .trailing, spacing: 2) {
                     Image(systemName: "cellularbars", variableValue: snrLevel(snr))
                         .foregroundStyle(signalColor(snr))
@@ -43,23 +51,29 @@ struct PathHopRowView: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(hopLabel): \(nodeName)")
-        .accessibilityValue(isLastHop && snr != nil
-            ? L10n.Chats.Chats.Path.Hop.signalQuality(signalQualityText, snr!.formatted(.number.precision(.fractionLength(1))))
-            : L10n.Chats.Chats.Path.Hop.nodeId(String(format: "%02X", hopByte)))
-    }
-
-    private var nodeName: String {
-        if let contact = contacts.first(where: { contact in
-            guard let firstByte = contact.publicKey.first else { return false }
-            return firstByte == hopByte
-        }) {
-            return contact.displayName
-        }
-        return L10n.Chats.Chats.Path.Hop.unknown
+        .accessibilityValue(accessibilityValueText)
     }
 
     private var hopLabel: String {
-        hopIndex == 0 ? L10n.Chats.Chats.Path.Hop.sender : L10n.Chats.Chats.Path.Hop.number(hopIndex)
+        switch hopType {
+        case .sender:
+            return L10n.Chats.Chats.Path.Hop.sender
+        case .intermediate(let index):
+            return L10n.Chats.Chats.Path.Hop.number(index)
+        case .receiver:
+            return L10n.Chats.Chats.Path.Receiver.label
+        }
+    }
+
+    private var accessibilityValueText: String {
+        if case .receiver = hopType, let snr {
+            let snrText = snr.formatted(.number.precision(.fractionLength(1)))
+            return L10n.Chats.Chats.Path.Hop.signalQuality(signalQualityText, snrText)
+        }
+        if let nodeID {
+            return L10n.Chats.Chats.Path.Hop.nodeId(nodeID)
+        }
+        return ""
     }
 
     private var signalQualityText: String {
@@ -88,8 +102,8 @@ struct PathHopRowView: View {
 
 #Preview {
     List {
-        PathHopRowView(hopByte: 0xA3, hopIndex: 0, isLastHop: false, snr: nil, contacts: [])
-        PathHopRowView(hopByte: 0x7F, hopIndex: 1, isLastHop: false, snr: nil, contacts: [])
-        PathHopRowView(hopByte: 0x42, hopIndex: 2, isLastHop: true, snr: 6.2, contacts: [])
+        PathHopRowView(hopType: .sender, nodeName: "AlphaNode", nodeID: "A3", snr: nil)
+        PathHopRowView(hopType: .intermediate(1), nodeName: "RelayNode", nodeID: "7F", snr: nil)
+        PathHopRowView(hopType: .receiver, nodeName: "MyDevice", nodeID: nil, snr: 6.2)
     }
 }

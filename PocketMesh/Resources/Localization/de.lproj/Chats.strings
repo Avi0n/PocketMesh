@@ -684,6 +684,12 @@
 /* Location: PathHopRowView.swift - Unknown signal quality */
 "chats.path.hop.signalUnknown" = "Unbekannt";
 
+/* Location: PathHopRowView.swift - Label for receiver (your device) */
+"chats.path.receiver.label" = "Empfänger";
+
+/* Location: MessagePathSheet.swift - Fallback name when device name unavailable */
+"chats.path.receiver.you" = "Du";
+
 // MARK: - Repeat Details Sheet
 
 /* Location: RepeatDetailsSheet.swift - Empty state title */

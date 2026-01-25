@@ -529,6 +529,12 @@ public enum L10n {
           /// Location: PathHopRowView.swift - Unknown node name
           public static let unknown = L10n.tr("Chats", "chats.path.hop.unknown", fallback: "<unknown>")
         }
+        public enum Receiver {
+          /// Location: PathHopRowView.swift - Label for receiver (your device)
+          public static let label = L10n.tr("Chats", "chats.path.receiver.label", fallback: "Receiver")
+          /// Location: MessagePathSheet.swift - Fallback name when device name unavailable
+          public static let you = L10n.tr("Chats", "chats.path.receiver.you", fallback: "You")
+        }
         public enum Section {
           /// Location: MessagePathSheet.swift - Section header for path
           public static let header = L10n.tr("Chats", "chats.path.section.header", fallback: "Path")
