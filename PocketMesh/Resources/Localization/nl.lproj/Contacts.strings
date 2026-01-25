@@ -732,6 +732,15 @@
 /* Location: TracePathListView.swift - Purpose: Hop row accessibility hint */
 "contacts.trace.list.hopHint" = "Veeg naar links om te verwijderen, gebruik sleepgreep om te ordenen";
 
+/* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
+"contacts.trace.list.favoritesOnly" = "Alleen favorieten";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
+"contacts.trace.list.noFavorites.title" = "Geen favoriete repeaters";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
+"contacts.trace.list.noFavorites.description" = "Markeer repeaters als favoriet in het tabblad Knooppunten om ze hier te zien.";
+
 // MARK: - Trace Path Map View
 
 /* Location: TracePathMapView.swift - Purpose: Hops count in results banner */

@@ -732,6 +732,15 @@
 /* Location: TracePathListView.swift - Purpose: Hop row accessibility hint */
 "contacts.trace.list.hopHint" = "Balayez vers la gauche pour supprimer, utilisez la poignée pour réorganiser";
 
+/* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
+"contacts.trace.list.favoritesOnly" = "Favoris uniquement";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
+"contacts.trace.list.noFavorites.title" = "Aucun répéteur favori";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
+"contacts.trace.list.noFavorites.description" = "Marquez les répéteurs comme favoris dans l'onglet Nœuds pour les voir ici.";
+
 // MARK: - Trace Path Map View
 
 /* Location: TracePathMapView.swift - Purpose: Hops count in results banner */

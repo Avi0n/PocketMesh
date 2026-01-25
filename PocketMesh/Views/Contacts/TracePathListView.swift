@@ -19,6 +19,13 @@ struct TracePathListView: View {
     @State private var codeInput = ""
     @State private var codeInputError: String?
     @State private var pastedSuccessfully = false
+    @AppStorage("tracePathShowOnlyFavorites") private var showOnlyFavorites = false
+
+    private var filteredRepeaters: [ContactDTO] {
+        showOnlyFavorites
+            ? viewModel.availableRepeaters.filter(\.isFavorite)
+            : viewModel.availableRepeaters
+    }
 
     var body: some View {
         List {
@@ -97,14 +104,24 @@ struct TracePathListView: View {
     private var availableRepeatersSection: some View {
         Section {
             DisclosureGroup(isExpanded: $isRepeatersExpanded) {
-                if viewModel.availableRepeaters.isEmpty {
-                    ContentUnavailableView(
-                        L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
-                        systemImage: "antenna.radiowaves.left.and.right.slash",
-                        description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
-                    )
+                Toggle(L10n.Contacts.Contacts.Trace.List.favoritesOnly, isOn: $showOnlyFavorites)
+
+                if filteredRepeaters.isEmpty {
+                    if showOnlyFavorites {
+                        ContentUnavailableView(
+                            L10n.Contacts.Contacts.Trace.List.NoFavorites.title,
+                            systemImage: "star.slash",
+                            description: Text(L10n.Contacts.Contacts.Trace.List.NoFavorites.description)
+                        )
+                    } else {
+                        ContentUnavailableView(
+                            L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
+                            systemImage: "antenna.radiowaves.left.and.right.slash",
+                            description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
+                        )
+                    }
                 } else {
-                    ForEach(viewModel.availableRepeaters) { repeater in
+                    ForEach(filteredRepeaters) { repeater in
                         Button {
                             recentlyAddedRepeaterID = repeater.id
                             addHapticTrigger += 1
@@ -134,7 +151,7 @@ struct TracePathListView: View {
                 HStack {
                     Text(L10n.Contacts.Contacts.Trace.List.repeaters)
                     Spacer()
-                    Text("\(viewModel.availableRepeaters.count)")
+                    Text("\(filteredRepeaters.count)")
                         .foregroundStyle(.secondary)
                 }
             }

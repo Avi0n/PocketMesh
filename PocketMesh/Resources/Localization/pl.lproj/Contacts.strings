@@ -732,6 +732,15 @@
 /* Location: TracePathListView.swift - Purpose: Hop row accessibility hint */
 "contacts.trace.list.hopHint" = "Przesuń w lewo, aby usunąć, użyj uchwytu do zmiany kolejności";
 
+/* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
+"contacts.trace.list.favoritesOnly" = "Tylko ulubione";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
+"contacts.trace.list.noFavorites.title" = "Brak ulubionych przekaźników";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
+"contacts.trace.list.noFavorites.description" = "Oznacz przekaźniki jako ulubione w zakładce Węzły, aby zobaczyć je tutaj.";
+
 // MARK: - Trace Path Map View
 
 /* Location: TracePathMapView.swift - Purpose: Hops count in results banner */

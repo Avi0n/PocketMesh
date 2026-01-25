@@ -732,6 +732,15 @@
 /* Location: TracePathListView.swift - Purpose: Hop row accessibility hint */
 "contacts.trace.list.hopHint" = "Проведи вліво для видалення, використовуй маркер перетягування для зміни порядку";
 
+/* Location: TracePathListView.swift - Purpose: Favorites filter toggle label */
+"contacts.trace.list.favoritesOnly" = "Лише обрані";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
+"contacts.trace.list.noFavorites.title" = "Немає обраних ретрансляторів";
+
+/* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
+"contacts.trace.list.noFavorites.description" = "Познач ретранслятори як обрані у вкладці Вузли, щоб побачити їх тут.";
+
 // MARK: - Trace Path Map View
 
 /* Location: TracePathMapView.swift - Purpose: Hops count in results banner */

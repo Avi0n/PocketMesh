@@ -1386,6 +1386,8 @@ public enum L10n {
           public static let copyPath = L10n.tr("Contacts", "contacts.trace.list.copyPath", fallback: "Copy Path")
           /// Location: TracePathListView.swift - Purpose: Empty path instruction
           public static let emptyPath = L10n.tr("Contacts", "contacts.trace.list.emptyPath", fallback: "Tap a repeater above to start building your path")
+          /// Location: TracePathListView.swift - Purpose: Favorites filter toggle label
+          public static let favoritesOnly = L10n.tr("Contacts", "contacts.trace.list.favoritesOnly", fallback: "Favorites Only")
           /// Location: TracePathListView.swift - Purpose: Hop row accessibility hint
           public static let hopHint = L10n.tr("Contacts", "contacts.trace.list.hopHint", fallback: "Swipe left to delete, use drag handle to reorder")
           /// Location: TracePathListView.swift - Purpose: Hop row accessibility label
@@ -1420,6 +1422,12 @@ public enum L10n {
           public static let singleHint = L10n.tr("Contacts", "contacts.trace.list.singleHint", fallback: "Double tap to trace the path")
           /// Location: TracePathListView.swift - Purpose: Traces count label
           public static let traces = L10n.tr("Contacts", "contacts.trace.list.traces", fallback: "Traces:")
+          public enum NoFavorites {
+            /// Location: TracePathListView.swift - Purpose: No favorite repeaters empty description
+            public static let description = L10n.tr("Contacts", "contacts.trace.list.noFavorites.description", fallback: "Mark repeaters as favorites in the Nodes tab to see them here.")
+            /// Location: TracePathListView.swift - Purpose: No favorite repeaters empty title
+            public static let title = L10n.tr("Contacts", "contacts.trace.list.noFavorites.title", fallback: "No Favorite Repeaters")
+          }
         }
         public enum Map {
           /// Location: TracePathMapView.swift - Purpose: Clear button
