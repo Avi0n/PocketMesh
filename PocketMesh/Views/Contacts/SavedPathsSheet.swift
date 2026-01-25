@@ -25,11 +25,11 @@ struct SavedPathsSheet: View {
                     pathsList
                 }
             }
-            .navigationTitle("Saved Paths")
+            .navigationTitle(L10n.Contacts.Contacts.SavedPaths.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.Contacts.Contacts.Common.done) { dismiss() }
                 }
             }
             .task {
@@ -37,14 +37,14 @@ struct SavedPathsSheet: View {
                 await viewModel.loadSavedPaths()
             }
             .confirmationDialog(
-                "Delete Path",
+                L10n.Contacts.Contacts.SavedPaths.deleteTitle,
                 isPresented: .init(
                     get: { pathToDelete != nil },
                     set: { if !$0 { pathToDelete = nil } }
                 ),
                 titleVisibility: .visible
             ) {
-                Button("Delete", role: .destructive) {
+                Button(L10n.Contacts.Contacts.Common.delete, role: .destructive) {
                     if let path = pathToDelete {
                         let pathId = path.id
                         Task {
@@ -55,16 +55,16 @@ struct SavedPathsSheet: View {
                 }
             } message: {
                 if let path = pathToDelete {
-                    Text("Delete \"\(path.name)\"? This will remove the path and all run history.")
+                    Text(L10n.Contacts.Contacts.SavedPaths.deleteMessage(path.name))
                 }
             }
-            .alert("Rename Path", isPresented: .init(
+            .alert(L10n.Contacts.Contacts.SavedPaths.renameTitle, isPresented: .init(
                 get: { pathToRename != nil },
                 set: { if !$0 { pathToRename = nil } }
             )) {
-                TextField("Name", text: $renameText)
-                Button("Cancel", role: .cancel) { }
-                Button("Save") {
+                TextField(L10n.Contacts.Contacts.Detail.name, text: $renameText)
+                Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
+                Button(L10n.Contacts.Contacts.Common.save) {
                     if let path = pathToRename {
                         Task { await viewModel.renamePath(path, to: renameText) }
                     }
@@ -78,9 +78,9 @@ struct SavedPathsSheet: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("No Saved Paths", systemImage: "bookmark")
+            Label(L10n.Contacts.Contacts.SavedPaths.Empty.title, systemImage: "bookmark")
         } description: {
-            Text("Save paths after running traces to quickly re-run them later.")
+            Text(L10n.Contacts.Contacts.SavedPaths.Empty.description)
         }
     }
 
@@ -97,16 +97,16 @@ struct SavedPathsSheet: View {
                 }
                 .buttonStyle(.plain)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button("Delete", role: .destructive) {
+                        Button(L10n.Contacts.Contacts.Common.delete, role: .destructive) {
                             pathToDelete = path
                         }
                     }
                     .contextMenu {
-                        Button("Rename", systemImage: "pencil") {
+                        Button(L10n.Contacts.Contacts.SavedPaths.rename, systemImage: "pencil") {
                             renameText = path.name
                             pathToRename = path
                         }
-                        Button("Delete", systemImage: "trash", role: .destructive) {
+                        Button(L10n.Contacts.Contacts.Common.delete, systemImage: "trash", role: .destructive) {
                             pathToDelete = path
                         }
                     }
@@ -157,12 +157,14 @@ private struct SavedPathRow: View {
         var parts: [String] = []
 
         // Run count
-        let runText = path.runCount == 1 ? "1 run" : "\(path.runCount) runs"
+        let runText = path.runCount == 1
+            ? L10n.Contacts.Contacts.SavedPaths.Runs.singular
+            : L10n.Contacts.Contacts.SavedPaths.Runs.plural(path.runCount)
         parts.append(runText)
 
         // Last run
         if let lastDate = path.lastRunDate {
-            parts.append("Last: \(lastDate.relativeFormatted)")
+            parts.append(L10n.Contacts.Contacts.SavedPaths.lastRun(lastDate.relativeFormatted))
         }
 
         return parts.joined(separator: " · ")
@@ -171,16 +173,20 @@ private struct SavedPathRow: View {
     @ViewBuilder
     private var healthDot: some View {
         let rate = path.successRate
-        let healthDescription = rate >= 90 ? "healthy" : rate >= 50 ? "degraded" : "poor"
+        let healthDescription = rate >= 90
+            ? L10n.Contacts.Contacts.SavedPaths.Health.healthy
+            : rate >= 50
+            ? L10n.Contacts.Contacts.SavedPaths.Health.degraded
+            : L10n.Contacts.Contacts.SavedPaths.Health.poor
         Circle()
             .fill(rate >= 90 ? .green : rate >= 50 ? .yellow : .red)
             .frame(width: 8, height: 8)
-            .accessibilityLabel("Path health: \(healthDescription), \(rate)% success rate")
+            .accessibilityLabel(L10n.Contacts.Contacts.SavedPaths.healthLabel(healthDescription, rate))
     }
 
     private var sparklineAccessibilityLabel: String {
         let rtts = path.recentRTTs
-        guard !rtts.isEmpty else { return "No response time data" }
+        guard !rtts.isEmpty else { return L10n.Contacts.Contacts.SavedPaths.noResponseData }
 
         let avgRTT = rtts.reduce(0, +) / rtts.count
         let trend: String
@@ -188,16 +194,16 @@ private struct SavedPathRow: View {
             let firstHalf = rtts.prefix(rtts.count / 2).reduce(0, +) / max(1, rtts.count / 2)
             let secondHalf = rtts.suffix(rtts.count / 2).reduce(0, +) / max(1, rtts.count / 2)
             if secondHalf > firstHalf + 50 {
-                trend = "increasing"
+                trend = L10n.Contacts.Contacts.SavedPaths.Trend.increasing
             } else if secondHalf < firstHalf - 50 {
-                trend = "decreasing"
+                trend = L10n.Contacts.Contacts.SavedPaths.Trend.decreasing
             } else {
-                trend = "stable"
+                trend = L10n.Contacts.Contacts.SavedPaths.Trend.stable
             }
         } else {
-            trend = "stable"
+            trend = L10n.Contacts.Contacts.SavedPaths.Trend.stable
         }
-        return "Response times: average \(avgRTT)ms, \(trend)"
+        return L10n.Contacts.Contacts.SavedPaths.responseTimes(avgRTT, trend)
     }
 }
 

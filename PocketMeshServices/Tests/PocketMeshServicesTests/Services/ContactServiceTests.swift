@@ -431,10 +431,10 @@ struct ContactServiceTests {
 
     /// Actor to track cleanup handler invocations in a thread-safe manner
     private actor CleanupTracker {
-        var invocations: [(contactID: UUID, reason: ContactCleanupReason)] = []
+        var invocations: [(contactID: UUID, reason: ContactCleanupReason, publicKey: Data)] = []
 
-        func record(contactID: UUID, reason: ContactCleanupReason) {
-            invocations.append((contactID: contactID, reason: reason))
+        func record(contactID: UUID, reason: ContactCleanupReason, publicKey: Data) {
+            invocations.append((contactID: contactID, reason: reason, publicKey: publicKey))
         }
     }
 
@@ -474,8 +474,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, reason in
-            await tracker.record(contactID: contactID, reason: reason)
+        await service.setCleanupHandler { contactID, reason, publicKey in
+            await tracker.record(contactID: contactID, reason: reason, publicKey: publicKey)
         }
 
         // Remove the contact
@@ -528,8 +528,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, reason in
-            await tracker.record(contactID: contactID, reason: reason)
+        await service.setCleanupHandler { contactID, reason, publicKey in
+            await tracker.record(contactID: contactID, reason: reason, publicKey: publicKey)
         }
 
         // Block the contact
@@ -583,8 +583,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, reason in
-            await tracker.record(contactID: contactID, reason: reason)
+        await service.setCleanupHandler { contactID, reason, publicKey in
+            await tracker.record(contactID: contactID, reason: reason, publicKey: publicKey)
         }
 
         // Update nickname (not blocking)
@@ -686,8 +686,8 @@ struct ContactServiceTests {
         let tracker = CleanupTracker()
 
         let service = ContactService(session: mockSession, dataStore: mockStore)
-        await service.setCleanupHandler { contactID, reason in
-            await tracker.record(contactID: contactID, reason: reason)
+        await service.setCleanupHandler { contactID, reason, publicKey in
+            await tracker.record(contactID: contactID, reason: reason, publicKey: publicKey)
         }
 
         // Unblock the contact

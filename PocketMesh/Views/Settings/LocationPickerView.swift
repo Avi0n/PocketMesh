@@ -6,6 +6,7 @@ import PocketMeshServices
 /// Map-based location picker for setting node position
 struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appState) private var appState
 
     // Configuration
     private let initialCoordinate: CLLocationCoordinate2D?
@@ -33,7 +34,7 @@ struct LocationPickerView: View {
                 MapReader { proxy in
                     Map(position: $position, interactionModes: [.pan, .zoom]) {
                         if let coord = selectedCoordinate {
-                            Marker("Node Location", coordinate: coord)
+                            Marker(L10n.Settings.LocationPicker.markerTitle, coordinate: coord)
                                 .tint(.blue)
                         }
                     }
@@ -91,33 +92,62 @@ struct LocationPickerView: View {
                     .padding(.bottom, 16)
                 }
             }
-            .navigationTitle("Set Location")
+            .navigationTitle(L10n.Settings.LocationPicker.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.Localizable.Common.cancel) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { saveLocation() }
-                        .disabled(isSaving)
+                    Button(L10n.Localizable.Common.save) { saveLocation() }
+                        .radioDisabled(for: appState.connectionState, or: isSaving)
                 }
             }
             .onAppear {
                 loadCurrentLocation()
+            }
+            .onChange(of: appState.locationService.currentLocation) { _, newLocation in
+                // Only react if we haven't set a position yet (no saved location case)
+                guard let newLocation,
+                      initialCoordinate == nil
+                        || (initialCoordinate?.latitude == 0 && initialCoordinate?.longitude == 0),
+                      position == .automatic else { return }
+
+                position = .region(MKCoordinateRegion(
+                    center: newLocation.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                ))
             }
             .errorAlert($showError)
         }
     }
 
     private func loadCurrentLocation() {
-        guard let coord = initialCoordinate,
-              coord.latitude != 0 || coord.longitude != 0 else { return }
+        // Case 1: Existing saved location
+        if let coord = initialCoordinate,
+           coord.latitude != 0 || coord.longitude != 0 {
+            selectedCoordinate = coord
+            position = .region(MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            ))
+            return
+        }
 
-        selectedCoordinate = coord
-        position = .region(MKCoordinateRegion(
-            center: coord,
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        ))
+        // Case 2: No saved location, check user location
+        let locationService = appState.locationService
+        if locationService.isAuthorized {
+            if let userLocation = locationService.currentLocation {
+                position = .region(MKCoordinateRegion(
+                    center: userLocation.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                ))
+            } else if !locationService.isRequestingLocation {
+                locationService.requestLocation()
+            }
+        }
+
+        // Case 3: No saved location, no authorization - .automatic handles it
     }
 
     private func dropPinAtCenter() {
@@ -130,7 +160,7 @@ struct LocationPickerView: View {
     }
 
     private func saveLocation() {
-        guard let coord = selectedCoordinate else { return }
+        let coord = selectedCoordinate ?? CLLocationCoordinate2D(latitude: 0, longitude: 0)
 
         isSaving = true
         Task {
@@ -148,13 +178,13 @@ struct LocationPickerView: View {
     private var buttonContent: some View {
         HStack(spacing: 12) {
             if selectedCoordinate != nil {
-                Button("Clear Location", role: .destructive) {
+                Button(L10n.Settings.LocationPicker.clearLocation, role: .destructive) {
                     selectedCoordinate = nil
                 }
                 .modifier(GlassButtonModifier(isProminent: false))
             }
 
-            Button("Drop Pin at Center") {
+            Button(L10n.Settings.LocationPicker.dropPin) {
                 dropPinAtCenter()
             }
             .modifier(GlassButtonModifier(isProminent: true))

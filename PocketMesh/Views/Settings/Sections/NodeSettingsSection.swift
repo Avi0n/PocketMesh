@@ -13,36 +13,38 @@ struct NodeSettingsSection: View {
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
     @State private var isSaving = false
+    @State private var copyHapticTrigger = 0
 
     var body: some View {
         Section {
             // Node Name
             HStack {
-                Label("Node Name", systemImage: "person.text.rectangle")
+                Label(L10n.Settings.Node.name, systemImage: "person.text.rectangle")
                 Spacer()
-                Button(appState.connectedDevice?.nodeName ?? "Unknown") {
+                Button(appState.connectedDevice?.nodeName ?? L10n.Settings.Node.unknown) {
                     nodeName = appState.connectedDevice?.nodeName ?? ""
                     isEditingName = true
                 }
                 .foregroundStyle(.secondary)
-                .disabled(isSaving)
             }
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             // Public Key (copy)
             if let device = appState.connectedDevice {
                 Button {
+                    copyHapticTrigger += 1
                     let hex = device.publicKey.map { String(format: "%02X", $0) }.joined()
                     UIPasteboard.general.string = hex
                 } label: {
                     HStack {
                         Label {
-                            Text("Public Key")
+                            Text(L10n.Settings.DeviceInfo.publicKey)
                         } icon: {
                             Image(systemName: "key")
                                 .foregroundStyle(.tint)
                         }
                         Spacer()
-                        Text("Copy")
+                        Text(L10n.Settings.Node.copy)
                             .foregroundStyle(.tint)
                     }
                 }
@@ -55,7 +57,7 @@ struct NodeSettingsSection: View {
             } label: {
                 HStack {
                     Label {
-                        Text("Set Location")
+                        Text(L10n.Settings.Node.setLocation)
                     } icon: {
                         Image(systemName: "mappin.and.ellipse")
                             .foregroundStyle(.tint)
@@ -63,10 +65,10 @@ struct NodeSettingsSection: View {
                     Spacer()
                     if let device = appState.connectedDevice,
                        device.latitude != 0 || device.longitude != 0 {
-                        Text("Set")
+                        Text(L10n.Settings.Node.locationSet)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("Not Set")
+                        Text(L10n.Settings.Node.locationNotSet)
                             .foregroundStyle(.tertiary)
                     }
                     Image(systemName: "chevron.right")
@@ -75,36 +77,37 @@ struct NodeSettingsSection: View {
                 }
             }
             .foregroundStyle(.primary)
-            .disabled(isSaving)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             // Share Location Toggle
             Toggle(isOn: $shareLocation) {
-                Label("Share Location Publicly", systemImage: "location")
+                Label(L10n.Settings.Node.shareLocationPublicly, systemImage: "location")
             }
             .onChange(of: shareLocation) { _, newValue in
                 updateShareLocation(newValue)
             }
-            .disabled(isSaving)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
         } header: {
-            Text("Node")
+            Text(L10n.Settings.Node.header)
         } footer: {
-            Text("Your node name and location are visible to other mesh users when shared.")
+            Text(L10n.Settings.Node.footer)
         }
         .onAppear {
             if let device = appState.connectedDevice {
                 shareLocation = device.advertLocationPolicy == 1
             }
         }
-        .alert("Edit Node Name", isPresented: $isEditingName) {
-            TextField("Node Name", text: $nodeName)
-            Button("Cancel", role: .cancel) { }
-            Button("Save") {
+        .alert(L10n.Settings.Node.Alert.EditName.title, isPresented: $isEditingName) {
+            TextField(L10n.Settings.Node.name, text: $nodeName)
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Localizable.Common.save) {
                 saveNodeName()
             }
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     private func saveNodeName() {

@@ -323,6 +323,19 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return contacts.values.first { $0.deviceID == deviceID && $0.publicKey.prefix(6) == publicKeyPrefix }
     }
 
+    public func fetchContactPublicKeysByPrefix(deviceID: UUID) async throws -> [UInt8: [Data]] {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        var result: [UInt8: [Data]] = [:]
+        for contact in contacts.values {
+            guard contact.deviceID == deviceID, contact.publicKey.count >= 1 else { continue }
+            let prefix = contact.publicKey[0]
+            result[prefix, default: []].append(contact.publicKey)
+        }
+        return result
+    }
+
     @discardableResult
     public func saveContact(deviceID: UUID, from frame: ContactFrame) async throws -> UUID {
         if let error = stubbedSaveContactError {
@@ -816,6 +829,36 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    // MARK: - RxLogEntry Lookup
+
+    private var mockRxLogEntries: [RxLogEntryDTO] = []
+
+    public func setMockRxLogEntry(_ entry: RxLogEntryDTO) {
+        mockRxLogEntries.append(entry)
+    }
+
+    public func findRxLogEntry(
+        channelIndex: UInt8?,
+        senderTimestamp: UInt32,
+        withinSeconds: Double,
+        contactName: String? = nil
+    ) async throws -> RxLogEntryDTO? {
+        if let channelIndex {
+            // Channel message: match by channelHash and senderTimestamp
+            return mockRxLogEntries.first { entry in
+                entry.channelHash == channelIndex &&
+                entry.senderTimestamp == senderTimestamp
+            }
+        } else {
+            // Direct message: match by senderTimestamp (now stored via decryption)
+            return mockRxLogEntries.first { entry in
+                entry.senderTimestamp == senderTimestamp &&
+                entry.channelHash == nil &&
+                (contactName == nil || entry.fromContactName == contactName)
+            }
+        }
+    }
+
     // MARK: - Saved Trace Paths
 
     public var savedTracePaths: [UUID: SavedTracePathDTO] = [:]
@@ -992,6 +1035,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         contacts = [:]
         channels = [:]
         debugLogEntries = []
+        mockRxLogEntries = []
+        linkPreviews = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []

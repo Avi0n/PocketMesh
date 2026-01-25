@@ -13,8 +13,8 @@ struct ErrorAlertModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .alert("Error", isPresented: isPresented) {
-                Button("OK") {
+            .alert(L10n.Settings.Alert.Error.title, isPresented: isPresented) {
+                Button(L10n.Localizable.Common.ok) {
                     errorMessage = nil
                 }
             } message: {

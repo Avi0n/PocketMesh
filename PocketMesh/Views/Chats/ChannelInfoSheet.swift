@@ -13,6 +13,7 @@ struct ChannelInfoSheet: View {
     @State private var isDeleting = false
     @State private var showingDeleteConfirmation = false
     @State private var errorMessage: String?
+    @State private var copyHapticTrigger = 0
 
     var body: some View {
         NavigationStack {
@@ -44,30 +45,31 @@ struct ChannelInfoSheet: View {
                 // Delete Section
                 deleteSection
             }
-            .navigationTitle("Channel Info")
+            .navigationTitle(L10n.Chats.Chats.ChannelInfo.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button(L10n.Chats.Chats.Common.done) {
                         dismiss()
                     }
                 }
             }
         }
         .confirmationDialog(
-            "Delete Channel",
+            L10n.Chats.Chats.ChannelInfo.DeleteConfirm.title,
             isPresented: $showingDeleteConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Delete Channel", role: .destructive) {
+            Button(L10n.Chats.Chats.ChannelInfo.deleteButton, role: .destructive) {
                 Task {
                     await deleteChannel()
                 }
             }
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.Chats.Chats.Common.cancel, role: .cancel) {}
         } message: {
-            Text("This will remove the channel from your device and delete all local messages. This action cannot be undone.")
+            Text(L10n.Chats.Chats.ChannelInfo.DeleteConfirm.message)
         }
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     // MARK: - Channel Header Section
@@ -79,7 +81,7 @@ struct ChannelInfoSheet: View {
                 VStack(spacing: 12) {
                     ChannelAvatar(channel: channel, size: 80)
 
-                    Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                         .font(.title2)
                         .bold()
 
@@ -97,10 +99,10 @@ struct ChannelInfoSheet: View {
 
     private var channelInfoSection: some View {
         Section {
-            LabeledContent("Slot", value: "\(channel.index)")
+            LabeledContent(L10n.Chats.Chats.ChannelInfo.slot, value: "\(channel.index)")
 
             if let lastMessage = channel.lastMessageDate {
-                LabeledContent("Last Message") {
+                LabeledContent(L10n.Chats.Chats.ChannelInfo.lastMessage) {
                     Text(lastMessage, style: .relative)
                 }
             }
@@ -109,11 +111,11 @@ struct ChannelInfoSheet: View {
 
     private var channelTypeLabel: String {
         if channel.isPublicChannel {
-            return "Public Channel • Slot 0"
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`public`
         } else if channel.name.hasPrefix("#") {
-            return "Hashtag Channel • Slot \(channel.index)"
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag(Int(channel.index))
         } else {
-            return "Private Channel • Slot \(channel.index)"
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`(Int(channel.index))
         }
     }
 
@@ -132,14 +134,14 @@ struct ChannelInfoSheet: View {
                             .frame(width: 180, height: 180)
                     }
 
-                    Text("Scan to join this channel")
+                    Text(L10n.Chats.Chats.ChannelInfo.scanToJoin)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
             }
         } header: {
-            Text("Share Channel")
+            Text(L10n.Chats.Chats.ChannelInfo.shareChannel)
         }
     }
 
@@ -148,7 +150,7 @@ struct ChannelInfoSheet: View {
     private var secretKeySection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Secret Key")
+                Text(L10n.Chats.Chats.ChannelInfo.secretKey)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -159,16 +161,17 @@ struct ChannelInfoSheet: View {
 
                     Spacer()
 
-                    Button("Copy", systemImage: "doc.on.doc") {
+                    Button(L10n.Chats.Chats.ChannelInfo.copy, systemImage: "doc.on.doc") {
+                        copyHapticTrigger += 1
                         UIPasteboard.general.string = channel.secret.hexString()
                     }
                     .labelStyle(.iconOnly)
                 }
             }
         } header: {
-            Text("Manual Sharing")
+            Text(L10n.Chats.Chats.ChannelInfo.manualSharing)
         } footer: {
-            Text("Share the channel name and this secret key for others to join manually.")
+            Text(L10n.Chats.Chats.ChannelInfo.manualSharingFooter)
         }
     }
 
@@ -184,14 +187,14 @@ struct ChannelInfoSheet: View {
                     if isDeleting {
                         ProgressView()
                     } else {
-                        Label("Delete Channel", systemImage: "trash")
+                        Label(L10n.Chats.Chats.ChannelInfo.deleteButton, systemImage: "trash")
                     }
                     Spacer()
                 }
             }
             .disabled(isDeleting)
         } footer: {
-            Text("Deleting removes this channel from your device. You can rejoin later if you have the secret key.")
+            Text(L10n.Chats.Chats.ChannelInfo.deleteFooter)
         }
     }
 
@@ -219,12 +222,12 @@ struct ChannelInfoSheet: View {
 
     private func deleteChannel() async {
         guard let deviceID = appState.connectedDevice?.id else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
         guard let channelService = appState.services?.channelService else {
-            errorMessage = "Services not available"
+            errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
             return
         }
 

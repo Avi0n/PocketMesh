@@ -76,7 +76,7 @@ struct BLEStatusIndicatorView: View {
                 } label: {
                     Label("Send Zero-Hop Advert", systemImage: "dot.radiowaves.right")
                 }
-                .disabled(isSendingAdvert)
+                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
                 .accessibilityHint("Broadcasts to direct neighbors only")
 
                 Button {
@@ -84,7 +84,7 @@ struct BLEStatusIndicatorView: View {
                 } label: {
                     Label("Send Flood Advert", systemImage: "dot.radiowaves.left.and.right")
                 }
-                .disabled(isSendingAdvert)
+                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
                 .accessibilityHint("Floods advertisement across entire mesh")
             }
 

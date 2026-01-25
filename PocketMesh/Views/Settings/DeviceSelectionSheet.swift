@@ -56,25 +56,25 @@ struct DeviceSelectionSheet: View {
                     deviceListView
                 }
             }
-            .navigationTitle("Connect Device")
+            .navigationTitle(L10n.Settings.DeviceSelection.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Localizable.Common.cancel) {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Connect") {
+                    Button(L10n.Settings.DeviceSelection.connect) {
                         guard let device = selectedDevice else { return }
                         dismiss()
                         Task {
                             do {
                                 if case .wifi(let host, let port, _) = device.primaryConnectionMethod {
-                                    try await appState.connectViaWiFi(host: host, port: port)
+                                    try await appState.connectViaWiFi(host: host, port: port, forceFullSync: true)
                                 } else {
-                                    try await appState.connectionManager.connect(to: device.id)
+                                    try await appState.connectionManager.connect(to: device.id, forceFullSync: true)
                                 }
                             } catch BLEError.deviceConnectedToOtherApp {
                                 appState.otherAppWarningDeviceID = device.id
@@ -114,36 +114,36 @@ struct DeviceSelectionSheet: View {
                             Button(role: .destructive) {
                                 deleteDevice(device)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label(L10n.Localizable.Common.delete, systemImage: "trash")
                             }
 
                             if device.primaryConnectionMethod?.isWiFi == true {
                                 Button {
                                     editingWiFiDevice = device
                                 } label: {
-                                    Label("Edit", systemImage: "pencil")
+                                    Label(L10n.Localizable.Common.edit, systemImage: "pencil")
                                 }
                                 .tint(.orange)
                             }
                         }
                 }
             } header: {
-                Text("Previously Paired")
+                Text(L10n.Settings.DeviceSelection.previouslyPaired)
             } footer: {
-                Text("Select a device to reconnect")
+                Text(L10n.Settings.DeviceSelection.selectToReconnect)
             }
 
             Section {
                 Button {
                     showingWiFiConnection = true
                 } label: {
-                    Label("Connect via WiFi", systemImage: "wifi.circle")
+                    Label(L10n.Settings.DeviceSelection.connectViaWifi, systemImage: "wifi.circle")
                 }
 
                 Button {
                     scanForNewDevice()
                 } label: {
-                    Label("Scan for Bluetooth Device", systemImage: "antenna.radiowaves.left.and.right")
+                    Label(L10n.Settings.DeviceSelection.scanBluetooth, systemImage: "antenna.radiowaves.left.and.right")
                 }
             }
         }
@@ -159,18 +159,21 @@ struct DeviceSelectionSheet: View {
 
     private var emptyStateView: some View {
         ContentUnavailableView {
-            Label("No Paired Devices", systemImage: "antenna.radiowaves.left.and.right.slash")
+            Label(L10n.Settings.DeviceSelection.noPairedDevices, systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
             VStack(spacing: 20) {
-                Text("You haven't paired any devices yet.")
+                Text(L10n.Settings.DeviceSelection.noPairedDescription)
 
                 VStack(spacing: 12) {
-                    Button("Connect via WiFi", systemImage: "wifi.circle") {
+                    Button(L10n.Settings.DeviceSelection.connectViaWifi, systemImage: "wifi.circle") {
                         showingWiFiConnection = true
                     }
                     .liquidGlassProminentButtonStyle()
 
-                    Button("Scan for Devices", systemImage: "antenna.radiowaves.left.and.right") {
+                    Button(
+                        L10n.Settings.DeviceSelection.scanForDevices,
+                        systemImage: "antenna.radiowaves.left.and.right"
+                    ) {
                         scanForNewDevice()
                     }
                     .liquidGlassProminentButtonStyle()
@@ -216,10 +219,8 @@ struct DeviceSelectionSheet: View {
 
         // Check which accessories are connected elsewhere
         var connectedElsewhere: Set<UUID> = []
-        for accessory in accessories {
-            if await appState.connectionManager.isDeviceConnectedToOtherApp(accessory.id) {
-                connectedElsewhere.insert(accessory.id)
-            }
+        for accessory in accessories where await appState.connectionManager.isDeviceConnectedToOtherApp(accessory.id) {
+            connectedElsewhere.insert(accessory.id)
         }
         devicesConnectedElsewhere = connectedElsewhere
     }
@@ -277,7 +278,7 @@ private struct DeviceRow: View {
         if let method = device.primaryConnectionMethod {
             return method.shortDescription
         }
-        return "Bluetooth"
+        return L10n.Settings.DeviceSelection.bluetooth
     }
 
     var body: some View {
@@ -293,7 +294,10 @@ private struct DeviceRow: View {
                     .font(.headline)
 
                 if isConnectedElsewhere {
-                    Label("Connected elsewhere", systemImage: "exclamationmark.triangle.fill")
+                    Label(
+                        L10n.Settings.DeviceSelection.connectedElsewhere,
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
                         .font(.caption)
                         .foregroundStyle(.orange)
                 } else {

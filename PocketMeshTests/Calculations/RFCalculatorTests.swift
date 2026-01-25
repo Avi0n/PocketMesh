@@ -113,7 +113,7 @@ struct RFCalculatorTests {
         let bulge = RFCalculator.earthBulge(
             distanceToAMeters: 3000,
             distanceToBMeters: 3000,
-            k: 0.25
+            kFactor: 0.25
         )
         // h = (3000 * 3000) / (2 * 0.25 * 6371000) = 9000000 / 3185500 ≈ 2.82
         #expect(abs(bulge - 2.82) < 0.05)
@@ -124,13 +124,13 @@ struct RFCalculatorTests {
         let bulgeConservative = RFCalculator.earthBulge(
             distanceToAMeters: 3000,
             distanceToBMeters: 3000,
-            k: 0.25
+            kFactor: 0.25
         )
 
         let bulgeStandard = RFCalculator.earthBulge(
             distanceToAMeters: 3000,
             distanceToBMeters: 3000,
-            k: 1.33
+            kFactor: 1.33
         )
 
         // Standard atmosphere (k=1.33) gives smaller bulge due to larger effective earth radius
@@ -144,13 +144,13 @@ struct RFCalculatorTests {
         let bulge1 = RFCalculator.earthBulge(
             distanceToAMeters: 2000,
             distanceToBMeters: 4000,
-            k: 1.0
+            kFactor: 1.0
         )
 
         let bulge2 = RFCalculator.earthBulge(
             distanceToAMeters: 4000,
             distanceToBMeters: 2000,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(abs(bulge1 - bulge2) < 0.001)
@@ -158,10 +158,10 @@ struct RFCalculatorTests {
 
     @Test("Earth bulge returns 0 for invalid inputs")
     func earthBulgeInvalidInputs() {
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 0, distanceToBMeters: 100, k: 1.0) == 0)
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 0, k: 1.0) == 0)
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, k: 0) == 0)
-        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, k: -1) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 0, distanceToBMeters: 100, kFactor: 1.0) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 0, kFactor: 1.0) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, kFactor: 0) == 0)
+        #expect(RFCalculator.earthBulge(distanceToAMeters: 100, distanceToBMeters: 100, kFactor: -1) == 0)
     }
 
     // MARK: - Path Loss Tests
@@ -428,7 +428,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.clearanceStatus == .clear)
@@ -451,7 +451,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         // FSPL for 6km at 910MHz is approximately 107.2 dB
@@ -466,7 +466,7 @@ struct PathAnalysisTests {
     func blockedPathWithMountain() {
         // 100m mountain at midpoint, antennas at 50m
         // LOS at midpoint: 50m
-        // Mountain peak: 0 + 100 + earth bulge ≈ 103m
+        // Mountain peakFactor: 0 + 100 + earth bulge ≈ 103m
         // This is well above LOS, so path is blocked
         let profile = createObstructedProfile(
             baseElevationMeters: 0,
@@ -480,7 +480,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -502,7 +502,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.peakDiffractionLoss > 10)
@@ -529,7 +529,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         // With 25m hill: LOS at 50m, terrain at ~28m (25 + 3m bulge)
@@ -557,7 +557,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         // Hill at 45m + ~3m bulge = ~48m, LOS at 50m
@@ -578,7 +578,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -598,7 +598,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -624,7 +624,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.clearanceStatus == .blocked)
@@ -646,7 +646,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 100,  // Higher antenna at A
             pointBHeightMeters: 20,   // Lower antenna at B
             frequencyMHz: 910,
-            k: 1.0
+            kFactor: 1.0
         )
 
         // LOS slopes downward from A to B
@@ -672,7 +672,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 0.25
+            kFactor: 0.25
         )
 
         // Standard atmosphere k=1.33 (smaller earth bulge)
@@ -681,7 +681,7 @@ struct PathAnalysisTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 910,
-            k: 1.33
+            kFactor: 1.33
         )
 
         // With smaller effective earth bulge (higher k), clearance should be better
@@ -714,7 +714,7 @@ struct PathAnalysisResultFieldsTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 915.0,
-            k: 1.33
+            kFactor: 1.33
         )
 
         #expect(result.frequencyMHz == 915.0)
@@ -740,7 +740,7 @@ struct PathAnalysisResultFieldsTests {
             pointAHeightMeters: 50,
             pointBHeightMeters: 50,
             frequencyMHz: 906.0,
-            k: 1.33
+            kFactor: 1.33
         )
 
         #expect(result.refractionK == 1.33)
@@ -770,7 +770,7 @@ struct SegmentAnalysisTests {
             startHeightMeters: 50, // 50m antenna height for adequate Fresnel clearance
             endHeightMeters: 50,
             frequencyMHz: 906,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.distanceMeters == 5000)
@@ -794,7 +794,7 @@ struct SegmentAnalysisTests {
             startHeightMeters: 10,
             endHeightMeters: 10,
             frequencyMHz: 906,
-            k: 1.0
+            kFactor: 1.0
         )
 
         #expect(result.distanceMeters == 5000)

@@ -1,0 +1,643 @@
+/*
+  Settings.strings
+  PocketMesh
+
+  Dutch translation of strings for the Settings feature.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Main Settings View
+
+/* Navigation title for the main settings screen */
+"title" = "Instellingen";
+
+/* Placeholder shown in split view detail when no setting is selected */
+"selectSetting" = "Selecteer een instelling";
+
+/* Footer text for the advanced settings row */
+"advancedSettings.footer" = "Radio-afstemming, telemetrie, contactinstellingen en apparaatbeheer";
+
+/* Label for the advanced settings navigation row */
+"advancedSettings.title" = "Geavanceerde instellingen";
+
+/* Version display prefix with version number */
+"version" = "v%@";
+
+/* Build number display with build number */
+"build" = "Build %@";
+
+
+// MARK: - Demo Mode Section
+
+/* Section header for demo mode */
+"demoMode.header" = "Demomodus";
+
+/* Toggle label to enable demo mode */
+"demoMode.enabled" = "Ingeschakeld";
+
+/* Footer explaining what demo mode does */
+"demoMode.footer" = "Demomodus maakt testen mogelijk zonder hardware met behulp van testgegevens.";
+
+
+// MARK: - Device Section
+
+/* Section header for device information */
+"device.header" = "Apparaat";
+
+/* Status shown when device is connected */
+"device.connected" = "Verbonden";
+
+/* Footer shown when no device is connected */
+"device.noDeviceConnected" = "Geen MeshCore-apparaat verbonden";
+
+/* Button to connect a device */
+"device.connect" = "Apparaat verbinden";
+
+
+// MARK: - Device Info View
+
+/* Navigation title for device info screen */
+"deviceInfo.title" = "Apparaatinfo";
+
+/* Section header for connection status */
+"deviceInfo.connection.header" = "Verbinding";
+
+/* Label for connection status */
+"deviceInfo.connection.status" = "Status";
+
+/* Section header for power and storage */
+"deviceInfo.powerStorage.header" = "Voeding en opslag";
+
+/* Label for battery level */
+"deviceInfo.battery" = "Batterij";
+
+/* Label for storage used */
+"deviceInfo.storageUsed" = "Opslag gebruikt";
+
+/* Combined label for battery and storage when loading */
+"deviceInfo.batteryAndStorage" = "Batterij en opslag";
+
+/* Section header for firmware information */
+"deviceInfo.firmware.header" = "Firmware";
+
+/* Label for firmware version */
+"deviceInfo.firmwareVersion" = "Firmwareversie";
+
+/* Label for build date */
+"deviceInfo.buildDate" = "Builddatum";
+
+/* Label for manufacturer */
+"deviceInfo.manufacturer" = "Fabrikant";
+
+/* Placeholder when a value is unknown */
+"deviceInfo.unknown" = "Onbekend";
+
+/* Section header for device capabilities */
+"deviceInfo.capabilities.header" = "Mogelijkheden";
+
+/* Label for max nodes capability */
+"deviceInfo.maxNodes" = "Max. knooppunten";
+
+/* Label for max channels capability */
+"deviceInfo.maxChannels" = "Max. kanalen";
+
+/* Label for max TX power capability */
+"deviceInfo.maxTxPower" = "Max. TX-vermogen";
+
+/* TX power display format with dBm unit */
+"deviceInfo.txPowerFormat" = "%@ dBm";
+
+/* Section header for identity information */
+"deviceInfo.identity.header" = "Identiteit";
+
+/* Label for public key */
+"deviceInfo.publicKey" = "Publieke sleutel";
+
+/* Button to share contact information */
+"deviceInfo.shareContact" = "Mijn contact delen";
+
+/* Title for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.title" = "Geen apparaat verbonden";
+
+/* Description for ContentUnavailableView when no device is connected */
+"deviceInfo.noDevice.description" = "Verbind met een MeshCore-apparaat om de informatie te bekijken";
+
+/* Fallback manufacturer name */
+"deviceInfo.defaultManufacturer" = "MeshCore-apparaat";
+
+
+// MARK: - Public Key View
+
+/* Navigation title for public key screen */
+"publicKey.title" = "Publieke sleutel";
+
+/* Section header describing the key type */
+"publicKey.header" = "32-byte Ed25519 publieke sleutel";
+
+/* Footer explaining the public key's purpose */
+"publicKey.footer" = "Deze sleutel identificeert je apparaat uniek op het mesh-netwerk";
+
+/* Section header for base64 representation */
+"publicKey.base64.header" = "Base64";
+
+/* Button to copy key to clipboard */
+"publicKey.copy" = "Kopieer naar klembord";
+
+
+// MARK: - Device Selection Sheet
+
+/* Navigation title for device selection */
+"deviceSelection.title" = "Apparaat verbinden";
+
+/* Button to connect to selected device */
+"deviceSelection.connect" = "Verbinden";
+
+/* Section header for previously paired devices */
+"deviceSelection.previouslyPaired" = "Eerder gekoppeld";
+
+/* Footer text prompting user to select a device */
+"deviceSelection.selectToReconnect" = "Selecteer een apparaat om opnieuw te verbinden";
+
+/* Button to connect via WiFi */
+"deviceSelection.connectViaWifi" = "Verbinden via wifi";
+
+/* Button to scan for Bluetooth devices */
+"deviceSelection.scanBluetooth" = "Scannen naar Bluetooth-apparaat";
+
+/* Title for empty state when no devices are paired */
+"deviceSelection.noPairedDevices" = "Geen gekoppelde apparaten";
+
+/* Description for empty state */
+"deviceSelection.noPairedDescription" = "Je hebt nog geen apparaten gekoppeld.";
+
+/* Button to scan for new devices */
+"deviceSelection.scanForDevices" = "Scannen naar apparaten";
+
+/* Label shown when device is connected to another app */
+"deviceSelection.connectedElsewhere" = "Elders verbonden";
+
+/* Fallback connection type description */
+"deviceSelection.bluetooth" = "Bluetooth";
+
+
+// MARK: - Location Picker View
+
+/* Navigation title for location picker */
+"locationPicker.title" = "Locatie instellen";
+
+/* Marker title for node location on map */
+"locationPicker.markerTitle" = "Knooppuntlocatie";
+
+/* Button to clear the selected location */
+"locationPicker.clearLocation" = "Locatie wissen";
+
+/* Button to drop a pin at the map center */
+"locationPicker.dropPin" = "Speld plaatsen in midden";
+
+/* Label for latitude display */
+"locationPicker.latitude" = "Breedtegraad:";
+
+/* Label for longitude display */
+"locationPicker.longitude" = "Lengtegraad:";
+
+
+// MARK: - Trusted Contacts Picker
+
+/* Navigation title for trusted contacts picker */
+"trustedContacts.title" = "Vertrouwde contacten";
+
+/* Title for empty state when no contacts exist */
+"trustedContacts.noContacts" = "Geen contacten";
+
+/* Description for empty state */
+"trustedContacts.noContactsDescription" = "Voeg contacten toe om vertrouwde te selecteren";
+
+
+// MARK: - About Section
+
+/* Section header for about links */
+"about.header" = "Over";
+
+/* Link to MeshCore website */
+"about.website" = "MeshCore-website";
+
+/* Link to MeshCore online map */
+"about.onlineMap" = "MeshCore online kaart";
+
+/* Link to GitHub repository */
+"about.github" = "GitHub";
+
+
+// MARK: - Advanced Radio Section
+
+/* Section header for radio configuration */
+"advancedRadio.header" = "Radioconfiguratie";
+
+/* Label for frequency input */
+"advancedRadio.frequency" = "Frequentie (MHz)";
+
+/* Placeholder for frequency text field */
+"advancedRadio.frequencyPlaceholder" = "MHz";
+
+/* Label for bandwidth picker */
+"advancedRadio.bandwidth" = "Bandbreedte (kHz)";
+
+/* Label for spreading factor picker */
+"advancedRadio.spreadingFactor" = "Spreidingsfactor";
+
+/* Label for coding rate picker */
+"advancedRadio.codingRate" = "Coderingssnelheid";
+
+/* Label for TX power input */
+"advancedRadio.txPower" = "TX-vermogen (dBm)";
+
+/* Placeholder for TX power text field */
+"advancedRadio.txPowerPlaceholder" = "dBm";
+
+/* Button to apply radio settings */
+"advancedRadio.apply" = "Radio-instellingen toepassen";
+
+/* Footer warning about incorrect radio settings */
+"advancedRadio.footer" = "Waarschuwing: Onjuiste instellingen kunnen communicatie met andere mesh-apparaten verhinderen.";
+
+/* Error message for invalid input */
+"advancedRadio.invalidInput" = "Ongeldige invoerwaarden of apparaat niet verbonden";
+
+
+// MARK: - Battery Curve Section
+
+/* Section header for battery curve */
+"batteryCurve.header" = "Batterijcurve";
+
+/* Footer explaining battery curve configuration */
+"batteryCurve.footer" = "Configureer de spanning-naar-percentage-curve voor de batterij van je apparaat.";
+
+/* Label for preset picker */
+"batteryCurve.preset" = "Voorinstelling";
+
+/* Option for custom battery curve */
+"batteryCurve.custom" = "Aangepast";
+
+/* Disclosure group label for editing values */
+"batteryCurve.editValues" = "Waarden bewerken";
+
+/* Validation error for value out of range - %d is the percentage level */
+"batteryCurve.validation.outOfRange" = "Waarde bij %d%% moet 1000-5000 mV zijn";
+
+/* Validation error for non-descending values */
+"batteryCurve.validation.notDescending" = "Waarden moeten in aflopende volgorde staan";
+
+/* Unit label for millivolts */
+"batteryCurve.mV" = "mV";
+
+
+// MARK: - Bluetooth Section
+
+/* Section header for Bluetooth settings */
+"bluetooth.header" = "Bluetooth";
+
+/* Label for PIN type picker */
+"bluetooth.pinType" = "PIN-type";
+
+/* PIN type option for default PIN */
+"bluetooth.pinType.default" = "Standaard";
+
+/* PIN type option for custom PIN */
+"bluetooth.pinType.custom" = "Aangepaste PIN";
+
+/* Label showing current PIN */
+"bluetooth.currentPin" = "Huidige PIN";
+
+/* Button to change the PIN */
+"bluetooth.changePin" = "PIN wijzigen";
+
+/* Button to change the device display name */
+"bluetooth.changeDisplayName" = "Weergavenaam wijzigen";
+
+/* Footer explaining default PIN */
+"bluetooth.defaultPinFooter" = "Standaard PIN is 123456. Apparaten met schermen tonen hun eigen PIN.";
+
+/* Alert title for setting custom PIN */
+"bluetooth.alert.setPin.title" = "Aangepaste PIN instellen";
+
+/* Alert title for changing custom PIN */
+"bluetooth.alert.changePin.title" = "Aangepaste PIN wijzigen";
+
+/* Placeholder for PIN text field */
+"bluetooth.pinPlaceholder" = "6-cijferige PIN";
+
+/* Button to set the PIN */
+"bluetooth.setPin" = "PIN instellen";
+
+/* Alert message for setting PIN */
+"bluetooth.alert.setPin.message" = "Voer een 6-cijferige PIN in. Het apparaat wordt opnieuw opgestart om de wijziging toe te passen.";
+
+/* Alert message for changing PIN */
+"bluetooth.alert.changePin.message" = "Voer een nieuwe 6-cijferige PIN in. Het apparaat wordt opnieuw opgestart om de wijziging toe te passen.";
+
+/* Alert title for confirming PIN type change */
+"bluetooth.alert.changePinType.title" = "PIN-type wijzigen?";
+
+/* Button to confirm change */
+"bluetooth.alert.change" = "Wijzigen";
+
+/* Alert message for PIN type change */
+"bluetooth.alert.changePinType.message" = "Het apparaat wordt opnieuw opgestart om de wijziging toe te passen.";
+
+/* Error for invalid PIN format */
+"bluetooth.error.invalidPin" = "PIN moet een 6-cijferig getal zijn tussen 100000 en 999999";
+
+
+// MARK: - Contacts Settings Section
+
+/* Section header for nodes/contacts settings */
+"contacts.header" = "Knooppunten";
+
+/* Toggle label for auto-add nodes */
+"contacts.autoAdd" = "Knooppunten automatisch toevoegen";
+
+/* Description for auto-add nodes toggle */
+"contacts.autoAddDescription" = "Voeg automatisch knooppunten toe van ontvangen advertenties";
+
+
+// MARK: - Danger Zone Section
+
+/* Section header for danger zone */
+"dangerZone.header" = "Gevarenzone";
+
+/* Button to forget/unpair the device */
+"dangerZone.forgetDevice" = "Apparaat vergeten";
+
+/* Button to factory reset the device */
+"dangerZone.factoryReset" = "Fabrieksinstellingen herstellen";
+
+/* Text shown while resetting */
+"dangerZone.resetting" = "Herstellen...";
+
+/* Footer explaining factory reset */
+"dangerZone.footer" = "Fabrieksinstellingen herstellen wist alle contacten, berichten en instellingen op het apparaat.";
+
+/* Alert title for forget device confirmation */
+"dangerZone.alert.forget.title" = "Apparaat vergeten";
+
+/* Button to confirm forget */
+"dangerZone.alert.forget.confirm" = "Vergeten";
+
+/* Alert message for forget device */
+"dangerZone.alert.forget.message" = "Dit verwijdert het apparaat uit je gekoppelde apparaten. Je kunt het later opnieuw koppelen.";
+
+/* Alert title for factory reset confirmation */
+"dangerZone.alert.reset.title" = "Fabrieksinstellingen herstellen";
+
+/* Button to confirm reset */
+"dangerZone.alert.reset.confirm" = "Herstellen";
+
+/* Alert message for factory reset */
+"dangerZone.alert.reset.message" = "Dit wist ALLE gegevens op het apparaat inclusief contacten, berichten en instellingen. Dit kan niet ongedaan worden gemaakt.";
+
+/* Error when services are not available */
+"dangerZone.error.servicesUnavailable" = "Services niet beschikbaar";
+
+
+// MARK: - Diagnostics Section
+
+/* Section header for diagnostics */
+"diagnostics.header" = "Diagnostiek";
+
+/* Button to export debug logs */
+"diagnostics.exportLogs" = "Debuglogboeken exporteren";
+
+/* Button to clear debug logs */
+"diagnostics.clearLogs" = "Debuglogboeken wissen";
+
+/* Footer explaining log export */
+"diagnostics.footer" = "Export bevat debuglogboeken van de afgelopen 24 uur over app-sessies. Logboeken worden lokaal opgeslagen en automatisch opgeschoond.";
+
+/* Alert title for clear logs confirmation */
+"diagnostics.alert.clear.title" = "Debuglogboeken wissen";
+
+/* Button to confirm clear */
+"diagnostics.alert.clear.confirm" = "Wissen";
+
+/* Alert message for clear logs */
+"diagnostics.alert.clear.message" = "Dit verwijdert alle opgeslagen debuglogboeken. Geëxporteerde logbestanden worden niet beïnvloed.";
+
+/* Error when export fails */
+"diagnostics.error.exportFailed" = "Kan exportbestand niet maken";
+
+
+// MARK: - Link Preview Settings Section
+
+/* Section header for privacy settings */
+"linkPreviews.header" = "Privacy";
+
+/* Toggle label for link previews */
+"linkPreviews.toggle" = "Linkvoorbeelden";
+
+/* Toggle label for showing previews in DMs */
+"linkPreviews.showInDMs" = "Tonen in directe berichten";
+
+/* Toggle label for showing previews in channels */
+"linkPreviews.showInChannels" = "Tonen in kanalen";
+
+/* Footer explaining link preview privacy implications */
+"linkPreviews.footer" = "Linkvoorbeelden halen gegevens op van het web, wat je IP-adres kan onthullen aan de server die de link host.";
+
+
+// MARK: - Node Settings Section
+
+/* Section header for node settings */
+"node.header" = "Knooppunt";
+
+/* Label for node name */
+"node.name" = "Knooppuntnaam";
+
+/* Default node name when unknown */
+"node.unknown" = "Onbekend";
+
+/* Button text to copy */
+"node.copy" = "Kopiëren";
+
+/* Label for set location button */
+"node.setLocation" = "Locatie instellen";
+
+/* Text shown when location is set */
+"node.locationSet" = "Ingesteld";
+
+/* Text shown when location is not set */
+"node.locationNotSet" = "Niet ingesteld";
+
+/* Toggle label for share location publicly */
+"node.shareLocationPublicly" = "Locatie openbaar delen";
+
+/* Footer explaining node visibility */
+"node.footer" = "Je knooppuntnaam en locatie zijn zichtbaar voor andere mesh-gebruikers wanneer gedeeld.";
+
+/* Alert title for editing node name */
+"node.alert.editName.title" = "Knooppuntnaam bewerken";
+
+
+// MARK: - Notification Settings Section
+
+/* Section header for notifications */
+"notifications.header" = "Meldingen";
+
+/* Toggle label for contact messages notifications */
+"notifications.contactMessages" = "Contactberichten";
+
+/* Toggle label for channel messages notifications */
+"notifications.channelMessages" = "Kanaalberichten";
+
+/* Toggle label for room messages notifications */
+"notifications.roomMessages" = "Kamerberichten";
+
+/* Toggle label for new contact discovered notifications */
+"notifications.newContactDiscovered" = "Nieuw contact ontdekt";
+
+/* Toggle label for low battery warnings */
+"notifications.lowBattery" = "Waarschuwingen lage batterij";
+
+/* Button to enable notifications */
+"notifications.enable" = "Meldingen inschakelen";
+
+/* Label shown when notifications are disabled */
+"notifications.disabled" = "Meldingen uitgeschakeld";
+
+/* Button to open system settings */
+"notifications.openSettings" = "Open Instellingen";
+
+/* Message shown when device not connected */
+"notifications.connectDevice" = "Verbind een apparaat om meldingen te configureren";
+
+
+// MARK: - Radio Preset Section
+
+/* Section header for radio settings */
+"radio.header" = "Radio";
+
+/* Label for radio preset picker */
+"radio.preset" = "Radiovoorinstelling";
+
+/* Footer explaining radio presets */
+"radio.footer" = "Kies een voorinstelling die overeenkomt met je regio. MeshCore-apparaten moeten dezelfde radio-instellingen gebruiken om te kunnen communiceren.";
+
+
+// MARK: - Telemetry Settings Section
+
+/* Section header for telemetry settings */
+"telemetry.header" = "Telemetrie";
+
+/* Toggle label for allowing telemetry requests */
+"telemetry.allowRequests" = "Telemetrieverzoeken toestaan";
+
+/* Description for telemetry requests toggle */
+"telemetry.allowRequestsDescription" = "Vereist voor andere gebruikers om handmatig een pad naar jou te traceren. Deelt batterijniveau.";
+
+/* Toggle label for including location in telemetry */
+"telemetry.includeLocation" = "Locatie opnemen";
+
+/* Description for include location toggle */
+"telemetry.includeLocationDescription" = "GPS-coördinaten delen in telemetrie";
+
+/* Toggle label for including environment sensors */
+"telemetry.includeEnvironment" = "Omgevingssensoren opnemen";
+
+/* Description for include environment toggle */
+"telemetry.includeEnvironmentDescription" = "Temperatuur, luchtvochtigheid, enz. delen";
+
+/* Toggle label for trusted contacts only */
+"telemetry.trustedOnly" = "Alleen delen met vertrouwde contacten";
+
+/* Description for trusted contacts toggle */
+"telemetry.trustedOnlyDescription" = "Beperk telemetrie tot geselecteerde contacten";
+
+/* Link to manage trusted contacts */
+"telemetry.manageTrusted" = "Vertrouwde contacten beheren";
+
+/* Footer explaining telemetry */
+"telemetry.footer" = "Wanneer ingeschakeld kunnen andere knooppunten de telemetriegegevens van je apparaat opvragen.";
+
+
+// MARK: - WiFi Section
+
+/* Section header for WiFi settings */
+"wifi.header" = "Wifi";
+
+/* Label for IP address */
+"wifi.address" = "Adres";
+
+/* Label for port number */
+"wifi.port" = "Poort";
+
+/* Button to edit WiFi connection */
+"wifi.editConnection" = "Verbinding bewerken";
+
+/* Footer explaining WiFi address */
+"wifi.footer" = "Het lokale netwerkadres van je apparaat";
+
+
+// MARK: - WiFi Edit Sheet
+
+/* Navigation title for WiFi edit sheet */
+"wifiEdit.title" = "Wifi-verbinding bewerken";
+
+/* Section header for connection details */
+"wifiEdit.connectionDetails" = "Verbindingsgegevens";
+
+/* Placeholder for IP address field */
+"wifiEdit.ipPlaceholder" = "IP-adres";
+
+/* Placeholder for port field */
+"wifiEdit.portPlaceholder" = "Poort";
+
+/* Accessibility label for clear IP button */
+"wifiEdit.clearIp" = "IP-adres wissen";
+
+/* Accessibility label for clear port button */
+"wifiEdit.clearPort" = "Poort wissen";
+
+/* Footer explaining reconnection */
+"wifiEdit.footer" = "Het wijzigen van deze waarden verbreekt de verbinding en maakt opnieuw verbinding met het nieuwe adres.";
+
+/* Text shown while reconnecting */
+"wifiEdit.reconnecting" = "Opnieuw verbinden...";
+
+/* Button to save changes */
+"wifiEdit.saveChanges" = "Wijzigingen opslaan";
+
+/* Error for invalid port */
+"wifiEdit.error.invalidPort" = "Ongeldig poortnummer";
+
+
+// MARK: - Error Alert
+
+/* Alert title for generic errors */
+"alert.error.title" = "Fout";
+
+
+// MARK: - Retry Alert
+
+/* Alert title when max retries exceeded */
+"alert.retry.unableToSave" = "Kan instelling niet opslaan";
+
+/* Alert title for connection errors */
+"alert.retry.connectionError" = "Verbindingsfout";
+
+/* Button to retry the operation */
+"alert.retry.retry" = "Opnieuw proberen";
+
+/* Alert message when max retries exceeded */
+"alert.retry.ensureConnected" = "Zorg ervoor dat je apparaat is verbonden.";
+
+
+// MARK: - Battery Curve Chart
+
+/* Chart X axis label */
+"chart.percent" = "Percentage";
+
+/* Chart Y axis label */
+"chart.voltage" = "Spanning (V)";
+
+/* Accessibility label for battery curve chart */
+"chart.accessibility" = "Batterijontlaadcurve met spanning bij elk percentageniveau";

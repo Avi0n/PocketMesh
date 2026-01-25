@@ -27,7 +27,7 @@ struct DeviceScanView: View {
                     .foregroundStyle(.tint)
                     .frame(height: 120)
 
-                Text("Pair Your Device")
+                Text(L10n.Onboarding.DeviceScan.title)
                     .font(.largeTitle)
                     .bold()
                     .onTapGesture {
@@ -35,7 +35,7 @@ struct DeviceScanView: View {
                     }
 
                 if !hasConnectedDevice {
-                    Text("Make sure your MeshCore device is powered on and nearby")
+                    Text(L10n.Onboarding.DeviceScan.subtitle)
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -47,7 +47,7 @@ struct DeviceScanView: View {
 
             if hasConnectedDevice && !didInitiatePairing {
                 VStack(spacing: 12) {
-                    Text("Your device is already paired 🎉")
+                    Text("\(L10n.Onboarding.DeviceScan.alreadyPaired) 🎉")
                         .font(.title2)
                         .multilineTextAlignment(.center)
                 }
@@ -55,10 +55,10 @@ struct DeviceScanView: View {
             } else if !hasConnectedDevice {
                 // Instructions
                 VStack(alignment: .leading, spacing: 16) {
-                    instructionRow(number: 1, text: "Power on your MeshCore device")
-                    instructionRow(number: 2, text: "Tap \"Add Device\" below")
-                    instructionRow(number: 3, text: "Select your device from the list")
-                    instructionRow(number: 4, text: "Enter the PIN when prompted")
+                    instructionRow(number: 1, text: L10n.Onboarding.DeviceScan.Instruction.powerOn)
+                    instructionRow(number: 2, text: L10n.Onboarding.DeviceScan.Instruction.tapAdd)
+                    instructionRow(number: 3, text: L10n.Onboarding.DeviceScan.Instruction.selectDevice)
+                    instructionRow(number: 4, text: L10n.Onboarding.DeviceScan.Instruction.enterPin)
                 }
                 .padding()
                 .liquidGlass(in: .rect(cornerRadius: 12))
@@ -73,7 +73,7 @@ struct DeviceScanView: View {
                     Button {
                         appState.onboardingPath.append(.radioPreset)
                     } label: {
-                        Text("Continue")
+                        Text(L10n.Onboarding.DeviceScan.continue)
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -89,10 +89,10 @@ struct DeviceScanView: View {
                             if appState.isPairing {
                                 ProgressView()
                                     .controlSize(.small)
-                                Text("Connecting...")
+                                Text(L10n.Onboarding.DeviceScan.connecting)
                             } else {
                                 Image(systemName: "laptopcomputer.and.iphone")
-                                Text("Connect Simulator")
+                                Text(L10n.Onboarding.DeviceScan.connectSimulator)
                             }
                         }
                         .font(.headline)
@@ -111,10 +111,10 @@ struct DeviceScanView: View {
                                 if appState.isPairing {
                                     ProgressView()
                                         .controlSize(.small)
-                                    Text("Connecting...")
+                                    Text(L10n.Onboarding.DeviceScan.connecting)
                                 } else {
                                     Image(systemName: "play.circle.fill")
-                                    Text("Continue in Demo Mode")
+                                    Text(L10n.Onboarding.DeviceScan.continueDemo)
                                 }
                             }
                             .font(.headline)
@@ -131,10 +131,10 @@ struct DeviceScanView: View {
                                 if appState.isPairing {
                                     ProgressView()
                                         .controlSize(.small)
-                                    Text("Connecting...")
+                                    Text(L10n.Onboarding.DeviceScan.connecting)
                                 } else {
                                     Image(systemName: "plus.circle.fill")
-                                    Text("Add Device")
+                                    Text(L10n.Onboarding.DeviceScan.addDevice)
                                 }
                             }
                             .font(.headline)
@@ -146,13 +146,13 @@ struct DeviceScanView: View {
                     }
                     #endif
 
-                    Button("Device not appearing?") {
+                    Button(L10n.Onboarding.DeviceScan.deviceNotAppearing) {
                         showTroubleshooting = true
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                    Button("Connect via WiFi") {
+                    Button(L10n.Onboarding.DeviceScan.connectViaWifi) {
                         showingWiFiConnection = true
                     }
                     .font(.subheadline)
@@ -170,10 +170,10 @@ struct DeviceScanView: View {
         .sheet(isPresented: $showingWiFiConnection) {
             WiFiConnectionSheet()
         }
-        .alert("Demo Mode Unlocked", isPresented: $showDemoModeAlert) {
-            Button("OK") { }
+        .alert(L10n.Onboarding.DeviceScan.DemoModeAlert.title, isPresented: $showDemoModeAlert) {
+            Button(L10n.Localizable.Common.ok) { }
         } message: {
-            Text("You can now continue without a device. Toggle demo mode in Settings anytime.")
+            Text(L10n.Onboarding.DeviceScan.DemoModeAlert.message)
         }
     }
 
@@ -270,20 +270,20 @@ private struct TroubleshootingSheet: View {
         NavigationStack {
             List {
                 Section {
-                    Label("Make sure your device is powered on", systemImage: "power")
-                    Label("Move the device closer to your phone", systemImage: "iphone.radiowaves.left.and.right")
-                    Label("Restart the MeshCore device", systemImage: "arrow.clockwise")
+                    Label(L10n.Onboarding.Troubleshooting.BasicChecks.powerOn, systemImage: "power")
+                    Label(L10n.Onboarding.Troubleshooting.BasicChecks.moveCloser, systemImage: "iphone.radiowaves.left.and.right")
+                    Label(L10n.Onboarding.Troubleshooting.BasicChecks.restart, systemImage: "arrow.clockwise")
                 } header: {
-                    Text("Basic Checks")
+                    Text(L10n.Onboarding.Troubleshooting.BasicChecks.header)
                 }
 
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("If you factory-reset your MeshCore device, iOS may still have the old pairing stored. Clearing this in system Settings allows the device to appear again.")
+                        Text(L10n.Onboarding.Troubleshooting.FactoryReset.explanation)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
-                        Text("Tapping below will ask you to confirm removing the old pairing. This is normal — it allows your reset device to appear again.")
+                        Text(L10n.Onboarding.Troubleshooting.FactoryReset.confirmationNote)
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -297,38 +297,38 @@ private struct TroubleshootingSheet: View {
                                 } else {
                                     Image(systemName: "trash")
                                 }
-                                Text("Clear Previous Pairing")
+                                Text(L10n.Onboarding.Troubleshooting.FactoryReset.clearPairing)
                             }
                         }
                         .disabled(isClearing || appState.connectionManager.pairedAccessoriesCount == 0)
                     }
                 } header: {
-                    Text("Factory Reset Device?")
+                    Text(L10n.Onboarding.Troubleshooting.FactoryReset.header)
                 } footer: {
                     if appState.connectionManager.pairedAccessoriesCount == 0 {
-                        Text("No previous pairings found.")
+                        Text(L10n.Onboarding.Troubleshooting.FactoryReset.noPairings)
                     } else {
-                        Text("Found \(appState.connectionManager.pairedAccessoriesCount) previous pairing(s).")
+                        Text(L10n.Onboarding.Troubleshooting.FactoryReset.pairingsFound(appState.connectionManager.pairedAccessoriesCount))
                     }
                 }
 
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("You can also manage Bluetooth accessories in:")
+                        Text(L10n.Onboarding.Troubleshooting.SystemSettings.manageAccessories)
                             .font(.subheadline)
-                        Text("Settings → Privacy & Security → Accessories")
+                        Text(L10n.Onboarding.Troubleshooting.SystemSettings.path)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("System Settings")
+                    Text(L10n.Onboarding.Troubleshooting.SystemSettings.header)
                 }
             }
-            .navigationTitle("Troubleshooting")
+            .navigationTitle(L10n.Onboarding.Troubleshooting.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button(L10n.Localizable.Common.done) {
                         dismiss()
                     }
                 }

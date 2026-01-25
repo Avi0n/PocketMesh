@@ -21,18 +21,16 @@ struct ScrollToMentionFAB: View {
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : 0.5)
         .animation(.snappy(duration: 0.2), value: isVisible)
-        .accessibilityLabel("Scroll to your oldest unread mention")
-        .accessibilityValue(unreadMentionCount > 1
-            ? "\(unreadMentionCount) unread mentions remaining"
-            : "1 unread mention")
-        .accessibilityHint("Double-tap to navigate to the message")
+        .accessibilityLabel(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityLabel)
+        .accessibilityValue(String(format: NSLocalizedString("chats.unreadMentions.accessibilityValue", tableName: "Chats", comment: ""), locale: .current, unreadMentionCount))
+        .accessibilityHint(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityHint)
         .accessibilityHidden(!isVisible)
     }
 
     @ViewBuilder
     private var unreadBadge: some View {
         if unreadMentionCount > 0 {
-            Text(unreadMentionCount > 99 ? "99+" : "\(unreadMentionCount)")
+            Text(unreadMentionCount > 99 ? L10n.Chats.Chats.Fab.Badge.overflow : "\(unreadMentionCount)")
                 .font(.caption2.bold())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)

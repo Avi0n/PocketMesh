@@ -21,25 +21,25 @@ extension BatteryInfo {
     func percentage(using ocvArray: [Int]) -> Int {
         guard ocvArray.count == 11 else { return percentage }  // Fallback to linear
 
-        let mV = level
+        let millivolts = level
 
         // Above max voltage = 100%
-        if mV >= ocvArray[0] {
+        if millivolts >= ocvArray[0] {
             return 100
         }
 
         // Below min voltage = 0%
-        if mV <= ocvArray[10] {
+        if millivolts <= ocvArray[10] {
             return 0
         }
 
         // Find segment and interpolate
-        for i in 0..<10 {
-            let upperV = ocvArray[i]
-            let lowerV = ocvArray[i + 1]
-            if mV >= lowerV {
-                let segmentPercent = Double(mV - lowerV) / Double(upperV - lowerV)
-                let basePercent = (10 - i - 1) * 10  // 90, 80, 70, ...
+        for index in 0..<10 {
+            let upperV = ocvArray[index]
+            let lowerV = ocvArray[index + 1]
+            if millivolts >= lowerV {
+                let segmentPercent = Double(millivolts - lowerV) / Double(upperV - lowerV)
+                let basePercent = (10 - index - 1) * 10  // 90, 80, 70, ...
                 return basePercent + Int((segmentPercent * 10).rounded())
             }
         }

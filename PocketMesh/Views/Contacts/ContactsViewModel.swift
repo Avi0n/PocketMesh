@@ -4,16 +4,32 @@ import PocketMeshServices
 
 /// Segment for the nodes picker
 enum NodeSegment: String, CaseIterable {
-    case favorites = "Favorites"
-    case contacts = "Contacts"
-    case network = "Network"
+    case favorites
+    case contacts
+    case network
+
+    var localizedTitle: String {
+        switch self {
+        case .favorites: L10n.Contacts.Contacts.Segment.favorites
+        case .contacts: L10n.Contacts.Contacts.Segment.contacts
+        case .network: L10n.Contacts.Contacts.Segment.network
+        }
+    }
 }
 
 /// Sort order for nodes list
 enum NodeSortOrder: String, CaseIterable {
-    case lastHeard = "Last Heard"
-    case name = "Name"
-    case distance = "Distance"
+    case lastHeard
+    case name
+    case distance
+
+    var localizedTitle: String {
+        switch self {
+        case .lastHeard: L10n.Contacts.Contacts.Sort.lastHeard
+        case .name: L10n.Contacts.Contacts.Sort.name
+        case .distance: L10n.Contacts.Contacts.Sort.distance
+        }
+    }
 }
 
 /// ViewModel for contact management
@@ -28,6 +44,9 @@ final class ContactsViewModel {
 
     /// Loading state
     var isLoading = false
+
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
 
     /// Syncing state
     var isSyncing = false
@@ -52,7 +71,7 @@ final class ContactsViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.dataStore = appState.offlineDataStore
         self.contactService = appState.services?.contactService
     }
 
@@ -77,6 +96,7 @@ final class ContactsViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -169,7 +189,10 @@ final class ContactsViewModel {
 
     /// Delete contact
     func deleteContact(_ contact: ContactDTO) async {
-        guard let contactService else { return }
+        guard let contactService else {
+            errorMessage = L10n.Contacts.Contacts.ViewModel.connectToDelete
+            return
+        }
 
         // Remove from UI immediately to avoid race condition with List animation
         let backup = contacts

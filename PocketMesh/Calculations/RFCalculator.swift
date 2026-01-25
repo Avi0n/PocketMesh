@@ -143,18 +143,18 @@ enum RFCalculator {
     /// - Parameters:
     ///   - distanceToAMeters: Distance from point A to the calculation point in meters.
     ///   - distanceToBMeters: Distance from the calculation point to point B in meters.
-    ///   - k: The effective earth radius factor. Use 1.0 for no adjustment,
-    ///        1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
+    ///   - kFactor: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///              1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: The earth bulge in meters.
     static func earthBulge(
         distanceToAMeters: Double,
         distanceToBMeters: Double,
-        k: Double
+        kFactor: Double
     ) -> Double {
-        guard distanceToAMeters > 0, distanceToBMeters > 0, k > 0 else { return 0 }
+        guard distanceToAMeters > 0, distanceToBMeters > 0, kFactor > 0 else { return 0 }
 
         let earthRadiusMeters = earthRadiusKm * 1000
-        let effectiveEarthRadius = k * earthRadiusMeters
+        let effectiveEarthRadius = kFactor * earthRadiusMeters
 
         // Earth bulge: h = (d1 * d2) / (2 * Re_effective)
         return (distanceToAMeters * distanceToBMeters) / (2 * effectiveEarthRadius)
@@ -212,38 +212,38 @@ enum RFCalculator {
 
         // Fresnel-Kirchhoff diffraction parameter:
         // v = h * sqrt(2 * (d1 + d2) / (lambda * d1 * d2))
-        let v = obstructionHeightMeters * sqrt(
+        let vParam = obstructionHeightMeters * sqrt(
             2 * totalDistance / (lambda * distanceToAMeters * distanceToBMeters)
         )
 
         // Approximate diffraction loss based on v parameter
         // Using ITU-R P.526 approximation
-        return diffractionLossFromV(v)
+        return diffractionLossFromV(vParam)
     }
 
     /// Calculates diffraction loss from the Fresnel-Kirchhoff v parameter.
     ///
     /// Uses a polynomial approximation of the ITU-R P.526 knife-edge diffraction model.
     ///
-    /// - Parameter v: The Fresnel-Kirchhoff diffraction parameter.
+    /// - Parameter vParam: The Fresnel-Kirchhoff diffraction parameter.
     /// - Returns: The diffraction loss in dB.
-    private static func diffractionLossFromV(_ v: Double) -> Double {
-        if v < -1 {
+    private static func diffractionLossFromV(_ vParam: Double) -> Double {
+        if vParam < -1 {
             // Clear line-of-sight with good clearance
             // Negligible loss (small gain possible)
             return 0
-        } else if v <= 0 {
+        } else if vParam <= 0 {
             // Grazing or slight clearance
             // Approximately: L = 6.02 + 9.11*v + 1.27*v^2
-            return max(0, 6.02 + 9.11 * v + 1.27 * v * v)
-        } else if v <= 2.4 {
+            return max(0, 6.02 + 9.11 * vParam + 1.27 * vParam * vParam)
+        } else if vParam <= 2.4 {
             // Moderate obstruction
             // Approximately: L = 6.02 + 9.11*v + 1.27*v^2
-            return 6.02 + 9.11 * v + 1.27 * v * v
+            return 6.02 + 9.11 * vParam + 1.27 * vParam * vParam
         } else {
             // Severe obstruction
             // Approximately: L = 12.95 + 20*log10(v)
-            return 12.95 + 20 * log10(v)
+            return 12.95 + 20 * log10(vParam)
         }
     }
 
@@ -253,22 +253,22 @@ enum RFCalculator {
     ///
     /// - Parameters:
     ///   - from: The starting coordinate.
-    ///   - to: The ending coordinate.
+    ///   - destination: The ending coordinate.
     /// - Returns: The distance in meters.
-    static func distance(from: CLLocationCoordinate2D, to: CLLocationCoordinate2D) -> Double {
+    static func distance(from: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> Double {
         let earthRadiusMeters = earthRadiusKm * 1000
 
         let lat1 = from.latitude * .pi / 180
-        let lat2 = to.latitude * .pi / 180
-        let deltaLat = (to.latitude - from.latitude) * .pi / 180
-        let deltaLon = (to.longitude - from.longitude) * .pi / 180
+        let lat2 = destination.latitude * .pi / 180
+        let deltaLat = (destination.latitude - from.latitude) * .pi / 180
+        let deltaLon = (destination.longitude - from.longitude) * .pi / 180
 
         // Haversine formula
-        let a = sin(deltaLat / 2) * sin(deltaLat / 2) +
-                cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
-        let c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        let haversineA = sin(deltaLat / 2) * sin(deltaLat / 2) +
+                         cos(lat1) * cos(lat2) * sin(deltaLon / 2) * sin(deltaLon / 2)
+        let angularDistance = 2 * atan2(sqrt(haversineA), sqrt(1 - haversineA))
 
-        return earthRadiusMeters * c
+        return earthRadiusMeters * angularDistance
     }
 
     // MARK: - Path Analysis
@@ -286,15 +286,15 @@ enum RFCalculator {
     ///   - pointAHeightMeters: Antenna height at point A in meters above ground.
     ///   - pointBHeightMeters: Antenna height at point B in meters above ground.
     ///   - frequencyMHz: The operating frequency in megahertz.
-    ///   - k: The effective earth radius factor. Use 1.0 for no adjustment,
-    ///        1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
+    ///   - kFactor: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///              1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: A PathAnalysisResult containing loss calculations and clearance status.
     static func analyzePath(
         elevationProfile: [ElevationSample],
         pointAHeightMeters: Double,
         pointBHeightMeters: Double,
         frequencyMHz: Double,
-        k: Double
+        kFactor: Double
     ) -> PathAnalysisResult {
         guard elevationProfile.count >= 2 else {
             return PathAnalysisResult(
@@ -306,7 +306,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: k
+                refractionK: kFactor
             )
         }
 
@@ -325,7 +325,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: k
+                refractionK: kFactor
             )
         }
 
@@ -356,7 +356,7 @@ enum RFCalculator {
             let bulge = earthBulge(
                 distanceToAMeters: distanceFromA,
                 distanceToBMeters: distanceToB,
-                k: k
+                kFactor: kFactor
             )
             let effectiveTerrainHeight = sample.elevation + bulge
 
@@ -440,7 +440,7 @@ enum RFCalculator {
             worstClearancePercent: worstClearancePercent,
             obstructionPoints: obstructionPoints,
             frequencyMHz: frequencyMHz,
-            refractionK: k
+            refractionK: kFactor
         )
     }
 
@@ -454,14 +454,14 @@ enum RFCalculator {
     ///   - startHeightMeters: Antenna height at segment start in meters above ground.
     ///   - endHeightMeters: Antenna height at segment end in meters above ground.
     ///   - frequencyMHz: The operating frequency in megahertz.
-    ///   - k: The effective earth radius factor.
+    ///   - kFactor: The effective earth radius factor.
     /// - Returns: A PathAnalysisResult for this segment.
     static func analyzePathSegment(
         elevationProfile: ArraySlice<ElevationSample>,
         startHeightMeters: Double,
         endHeightMeters: Double,
         frequencyMHz: Double,
-        k: Double
+        kFactor: Double
     ) -> PathAnalysisResult {
         guard elevationProfile.count >= 2,
               let firstSample = elevationProfile.first,
@@ -475,7 +475,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: k
+                refractionK: kFactor
             )
         }
 
@@ -494,7 +494,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: k
+                refractionK: kFactor
             )
         }
 
@@ -525,7 +525,7 @@ enum RFCalculator {
             let bulge = earthBulge(
                 distanceToAMeters: distanceFromSegmentStart,
                 distanceToBMeters: distanceToSegmentEnd,
-                k: k
+                kFactor: kFactor
             )
             let effectiveTerrainHeight = sample.elevation + bulge
 
@@ -598,7 +598,7 @@ enum RFCalculator {
             worstClearancePercent: worstClearancePercent,
             obstructionPoints: obstructionPoints,
             frequencyMHz: frequencyMHz,
-            refractionK: k
+            refractionK: kFactor
         )
     }
 }

@@ -187,8 +187,8 @@ public final class ServiceContainer {
         // Wire contact service to sync coordinator for UI refresh notifications
         await contactService.setSyncCoordinator(syncCoordinator)
 
-        // Wire contact service cleanup handler for notification/badge/cache updates
-        await contactService.setCleanupHandler { [weak self] contactID, reason in
+        // Wire contact service cleanup handler for notification/badge/cache/session updates
+        await contactService.setCleanupHandler { [weak self] contactID, reason, publicKey in
             guard let self else { return }
 
             // Invalidate blocked contacts cache (for both block and unblock)
@@ -203,6 +203,14 @@ public final class ServiceContainer {
 
             // Update badge count
             await self.notificationService.updateBadgeCount()
+
+            // Clean up any associated remote node session on delete
+            if reason == .deleted {
+                if let session = try? await self.dataStore.fetchRemoteNodeSession(publicKey: publicKey) {
+                    try? await self.remoteNodeService.removeSession(id: session.id, publicKey: publicKey)
+                }
+                await self.syncCoordinator.notifyConversationsChanged()
+            }
         }
 
         // Wire channel updates to RxLogService for decryption cache

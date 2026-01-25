@@ -58,9 +58,9 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Version: $VERSION"
 
-      - name: Install XcodeGen
+      - name: Install dependencies
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
-        run: brew install xcodegen
+        run: brew install xcodegen swiftgen
 
       - name: Generate Xcode project
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'

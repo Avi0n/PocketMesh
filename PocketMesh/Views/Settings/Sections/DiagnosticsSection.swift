@@ -15,7 +15,7 @@ struct DiagnosticsSection: View {
                 exportLogs()
             } label: {
                 HStack {
-                    Label("Export Debug Logs", systemImage: "arrow.up.doc")
+                    Label(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
                     Spacer()
                     if isExporting {
                         ProgressView()
@@ -27,20 +27,20 @@ struct DiagnosticsSection: View {
             Button(role: .destructive) {
                 showingClearLogsAlert = true
             } label: {
-                Label("Clear Debug Logs", systemImage: "trash")
+                Label(L10n.Settings.Diagnostics.clearLogs, systemImage: "trash")
             }
         } header: {
-            Text("Diagnostics")
+            Text(L10n.Settings.Diagnostics.header)
         } footer: {
-            Text("Export includes debug logs from the last 24 hours across app sessions. Logs are stored locally and automatically pruned.")
+            Text(L10n.Settings.Diagnostics.footer)
         }
-        .alert("Clear Debug Logs", isPresented: $showingClearLogsAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) {
+        .alert(L10n.Settings.Diagnostics.Alert.Clear.title, isPresented: $showingClearLogsAlert) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.Diagnostics.Alert.Clear.confirm, role: .destructive) {
                 clearDebugLogs()
             }
         } message: {
-            Text("This will delete all stored debug logs. Exported log files will not be affected.")
+            Text(L10n.Settings.Diagnostics.Alert.Clear.message)
         }
         .errorAlert($showError)
     }
@@ -86,7 +86,7 @@ struct DiagnosticsSection: View {
                 }
             } else {
                 await MainActor.run {
-                    showError = "Failed to create export file"
+                    showError = L10n.Settings.Diagnostics.Error.exportFailed
                     isExporting = false
                 }
             }

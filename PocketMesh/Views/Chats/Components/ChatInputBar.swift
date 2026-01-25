@@ -1,10 +1,9 @@
 import SwiftUI
 import PocketMeshServices
 
-private let sendButtonColor = Color(red: 36/255, green: 99/255, blue: 235/255)
-
 /// Reusable chat input bar with configurable styling
 struct ChatInputBar: View {
+    @Environment(\.appState) private var appState
     @Binding var text: String
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
@@ -42,8 +41,8 @@ struct ChatInputBar: View {
             .textFieldBackground()
             .lineLimit(1...5)
             .focused($isFocused)
-            .accessibilityLabel("Message input")
-            .accessibilityHint("Type your message here")
+            .accessibilityLabel(L10n.Chats.Chats.Input.accessibilityLabel)
+            .accessibilityHint(L10n.Chats.Chats.Input.accessibilityHint)
     }
 
     private var sendButtonWithCounter: some View {
@@ -60,7 +59,7 @@ struct ChatInputBar: View {
             .font(.caption2)
             .monospacedDigit()
             .foregroundStyle(isOverLimit ? .red : .secondary)
-            .accessibilityLabel("\(characterCount) of \(maxCharacters) characters")
+            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(characterCount, maxCharacters))
     }
 
     @ViewBuilder
@@ -69,7 +68,7 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(canSend ? sendButtonColor : .secondary)
+                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
             }
             .buttonStyle(.glass)
             .disabled(!canSend)
@@ -79,7 +78,7 @@ struct ChatInputBar: View {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(canSend ? sendButtonColor : .secondary)
+                    .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
             }
             .disabled(!canSend)
             .accessibilityLabel(sendAccessibilityLabel)
@@ -89,23 +88,26 @@ struct ChatInputBar: View {
 
     private var sendAccessibilityLabel: String {
         if isOverLimit {
-            return "Message too long"
+            return L10n.Chats.Chats.Input.tooLong
         } else {
-            return "Send message"
+            return L10n.Chats.Chats.Input.sendMessage
         }
     }
 
     private var sendAccessibilityHint: String {
         if isOverLimit {
-            return "Remove \(characterCount - maxCharacters) characters to send"
+            return L10n.Chats.Chats.Input.removeCharacters(characterCount - maxCharacters)
+        } else if appState.connectionState != .ready {
+            return L10n.Chats.Chats.Input.requiresConnection
         } else if canSend {
-            return "Tap to send your message"
+            return L10n.Chats.Chats.Input.tapToSend
         } else {
-            return "Type a message first"
+            return L10n.Chats.Chats.Input.typeFirst
         }
     }
 
     private var canSend: Bool {
+        appState.connectionState == .ready &&
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
     }
 }

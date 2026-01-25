@@ -17,24 +17,79 @@ final class ChatViewModel {
     /// All contacts for mention autocomplete (includes contacts without messages)
     var allContacts: [ContactDTO] = []
 
+    /// Synthetic contacts for channel senders not in contacts
+    var channelSenders: [ContactDTO] = []
+
+    /// O(1) lookup for channel sender names
+    private var channelSenderNames: Set<String> = []
+
+    /// O(1) lookup for contact names
+    private var contactNameSet: Set<String> = []
+
     /// Current channels with messages
     var channels: [ChannelDTO] = []
 
     /// Current room sessions
     var roomSessions: [RemoteNodeSessionDTO] = []
 
-    /// Combined conversations (contacts + channels + rooms)
+    /// Combined conversations (contacts + channels + rooms) - favorites first
     var allConversations: [Conversation] {
-        // Filter out repeaters and blocked contacts from direct conversations
+        favoriteConversations + nonFavoriteConversations
+    }
+
+    /// Favorite conversations sorted by last message date
+    var favoriteConversations: [Conversation] {
+        rebuildConversationCacheIfNeeded()
+        // Touch source arrays to maintain observation dependencies even when cache is valid.
+        // Without this, SwiftUI won't track changes after initial render because
+        // @ObservationIgnored cache properties don't register dependencies.
+        _ = conversations.count
+        _ = channels.count
+        _ = roomSessions.count
+        return cachedFavoriteConversations
+    }
+
+    /// Non-favorite conversations sorted by last message date
+    var nonFavoriteConversations: [Conversation] {
+        rebuildConversationCacheIfNeeded()
+        // Touch source arrays to maintain observation dependencies
+        _ = conversations.count
+        _ = channels.count
+        _ = roomSessions.count
+        return cachedNonFavoriteConversations
+    }
+
+    // MARK: - Conversation Cache
+
+    @ObservationIgnored private var cachedFavoriteConversations: [Conversation] = []
+    @ObservationIgnored private var cachedNonFavoriteConversations: [Conversation] = []
+    @ObservationIgnored private var conversationCacheValid = false
+
+    /// Invalidates the conversation cache, forcing rebuild on next access
+    func invalidateConversationCache() {
+        conversationCacheValid = false
+    }
+
+    private func rebuildConversationCacheIfNeeded() {
+        guard !conversationCacheValid else { return }
+
         let contactConversations = conversations
             .filter { $0.type != .repeater && !$0.isBlocked }
             .map { Conversation.direct($0) }
-        // Show channels that are configured (have a name OR have a non-zero secret)
-        let channelConversations = channels.filter { !$0.name.isEmpty || $0.hasSecret }.map { Conversation.channel($0) }
-        // Show all room sessions (connected or disconnected)
+        let channelConversations = channels
+            .filter { !$0.name.isEmpty || $0.hasSecret }
+            .map { Conversation.channel($0) }
         let roomConversations = roomSessions.map { Conversation.room($0) }
-        return (contactConversations + channelConversations + roomConversations)
+        let all = contactConversations + channelConversations + roomConversations
+
+        cachedFavoriteConversations = all
+            .filter { $0.isFavorite }
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+        cachedNonFavoriteConversations = all
+            .filter { !$0.isFavorite }
+            .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
+
+        conversationCacheValid = true
     }
 
     /// Messages for the current conversation
@@ -57,6 +112,9 @@ final class ChatViewModel {
 
     /// Loading state
     var isLoading = false
+
+    /// Whether data has been loaded at least once (prevents empty state flash)
+    var hasLoadedOnce = false
 
     /// Error message if any
     var errorMessage: String?
@@ -103,6 +161,7 @@ final class ChatViewModel {
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
     private var syncCoordinator: SyncCoordinator?
+    private weak var appState: AppState?
 
     // MARK: - Initialization
 
@@ -110,7 +169,8 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (with link preview cache for message views)
     func configure(appState: AppState, linkPreviewCache: any LinkPreviewCaching) {
-        self.dataStore = appState.services?.dataStore
+        self.appState = appState
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
@@ -121,7 +181,8 @@ final class ChatViewModel {
 
     /// Configure with services from AppState (for conversation list views that don't show previews)
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
+        self.appState = appState
+        self.dataStore = appState.offlineDataStore
         self.messageService = appState.services?.messageService
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
@@ -140,6 +201,7 @@ final class ChatViewModel {
 
     /// Toggles mute state for a conversation with optimistic UI update
     func toggleMute(_ conversation: Conversation) async {
+        guard appState?.connectionState == .ready else { return }
         let originalState = conversation.isMuted
         let newState = !originalState
 
@@ -166,6 +228,7 @@ final class ChatViewModel {
 
     /// Updates the mute state in the local conversations array
     private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
@@ -206,7 +269,9 @@ final class ChatViewModel {
                     isEnabled: updated.isEnabled,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
-                    isMuted: isMuted
+                    unreadMentionCount: updated.unreadMentionCount,
+                    isMuted: isMuted,
+                    isFavorite: updated.isFavorite
                 )
             }
         case .room(let session):
@@ -228,6 +293,7 @@ final class ChatViewModel {
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
                     isMuted: isMuted,
+                    isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
                     lastSyncTimestamp: updated.lastSyncTimestamp
@@ -239,12 +305,25 @@ final class ChatViewModel {
     // MARK: - Favorite
 
     /// Toggles favorite state for a conversation with optimistic UI update
-    func toggleFavorite(_ conversation: Conversation) async {
+    /// - Parameters:
+    ///   - conversation: The conversation to toggle
+    ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
+    ///     conflicts with swipe action dismissal animations
+    func toggleFavorite(_ conversation: Conversation, disableAnimation: Bool = false) async {
+        guard appState?.connectionState == .ready else { return }
         let originalState = conversation.isFavorite
         let newState = !originalState
 
         // Optimistic UI update
-        updateConversationFavoriteState(conversation, isFavorite: newState)
+        if disableAnimation {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                updateConversationFavoriteState(conversation, isFavorite: newState)
+            }
+        } else {
+            updateConversationFavoriteState(conversation, isFavorite: newState)
+        }
 
         do {
             switch conversation {
@@ -257,13 +336,22 @@ final class ChatViewModel {
             }
         } catch {
             // Rollback on failure
-            updateConversationFavoriteState(conversation, isFavorite: originalState)
+            if disableAnimation {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+            } else {
+                updateConversationFavoriteState(conversation, isFavorite: originalState)
+            }
             logger.error("Failed to toggle favorite: \(error)")
         }
     }
 
     /// Updates the favorite state in the local conversations array
     private func updateConversationFavoriteState(_ conversation: Conversation, isFavorite: Bool) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             if let index = conversations.firstIndex(where: { $0.id == contact.id }) {
@@ -341,6 +429,7 @@ final class ChatViewModel {
 
     /// Removes a conversation from local arrays for optimistic UI update.
     func removeConversation(_ conversation: Conversation) {
+        invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
             conversations = conversations.filter { $0.id != contact.id }
@@ -360,10 +449,12 @@ final class ChatViewModel {
 
         do {
             conversations = try await dataStore.fetchConversations(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -373,6 +464,7 @@ final class ChatViewModel {
 
         do {
             allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+            contactNameSet = Set(allContacts.map(\.name))
         } catch {
             logger.warning("Failed to load contacts for mentions: \(error.localizedDescription)")
         }
@@ -384,6 +476,7 @@ final class ChatViewModel {
 
         do {
             channels = try await dataStore.fetchChannels(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             // Silently handle - channels are optional
         }
@@ -395,6 +488,7 @@ final class ChatViewModel {
 
         do {
             roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+            invalidateConversationCache()
         } catch {
             // Silently handle - rooms are optional
         }
@@ -441,6 +535,7 @@ final class ChatViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -449,15 +544,17 @@ final class ChatViewModel {
     /// sees the new count immediately for unread tracking.
     func appendMessageIfNew(_ message: MessageDTO) {
         guard !messages.contains(where: { $0.id == message.id }) else { return }
-        let index = messages.count
+        let previous = messages.last
         messages.append(message)
         messagesByID[message.id] = message
 
         // Build display item synchronously for immediate consistency
+        let flags = Self.computeDisplayFlags(for: message, previous: previous)
         let newItem = MessageDisplayItem(
             messageID: message.id,
-            showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
-            showDirectionGap: Self.isDirectionChange(at: index, in: messages),
+            showTimestamp: flags.showTimestamp,
+            showDirectionGap: flags.showDirectionGap,
+            showSenderName: flags.showSenderName,
             detectedURL: nil,  // URL detection deferred to avoid main thread blocking
             isOutgoing: message.isOutgoing,
             status: message.status,
@@ -477,6 +574,12 @@ final class ChatViewModel {
         Task {
             await updateURLForDisplayItem(messageID: messageID, text: text)
         }
+
+        // Add sender to channelSenders if new (for channel messages)
+        if let senderName = message.senderNodeName,
+           let deviceID = currentChannel?.deviceID {
+            addChannelSenderIfNew(senderName, deviceID: deviceID)
+        }
     }
 
     /// Update URL detection for a single display item by message ID.
@@ -492,6 +595,7 @@ final class ChatViewModel {
             messageID: item.messageID,
             showTimestamp: item.showTimestamp,
             showDirectionGap: item.showDirectionGap,
+            showSenderName: item.showSenderName,
             detectedURL: detectedURL,
             isOutgoing: item.isOutgoing,
             status: item.status,
@@ -599,6 +703,7 @@ final class ChatViewModel {
             }
 
             messages = fetchedMessages
+            buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
@@ -613,6 +718,7 @@ final class ChatViewModel {
         }
 
         logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
+        hasLoadedOnce = true
         isLoading = false
     }
 
@@ -645,6 +751,73 @@ final class ChatViewModel {
             // Restore the text so user can retry
             composingText = text
         }
+    }
+
+    // MARK: - Channel Sender Tracking
+
+    /// Build synthetic contacts from channel message senders not in contacts.
+    /// Called after loading channel messages to populate mention picker.
+    /// Builds into local collections first to avoid multiple @Observable updates.
+    private func buildChannelSenders(deviceID: UUID) {
+        var localNames: Set<String> = []
+        var localSenders: [ContactDTO] = []
+
+        for message in messages {
+            if let name = message.senderNodeName {
+                let trimmed = name.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.isEmpty,
+                      trimmed.count <= 128,
+                      !contactNameSet.contains(trimmed),
+                      !localNames.contains(trimmed) else { continue }
+
+                localNames.insert(trimmed)
+                localSenders.append(makeSyntheticContact(name: trimmed, deviceID: deviceID))
+            }
+        }
+
+        // Assign once to minimize observation updates
+        channelSenderNames = localNames
+        channelSenders = localSenders
+
+        logger.info("Built \(self.channelSenders.count) synthetic contacts from channel senders")
+    }
+
+    /// Add a channel sender as a synthetic contact if not already tracked.
+    /// Used for incremental additions when new messages arrive.
+    private func addChannelSenderIfNew(_ name: String, deviceID: UUID) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty,
+              trimmed.count <= 128,
+              !contactNameSet.contains(trimmed),
+              !channelSenderNames.contains(trimmed) else { return }
+
+        channelSenderNames.insert(trimmed)
+        channelSenders.append(makeSyntheticContact(name: trimmed, deviceID: deviceID))
+    }
+
+    /// Create a synthetic ContactDTO for a channel sender not in contacts.
+    private func makeSyntheticContact(name: String, deviceID: UUID) -> ContactDTO {
+        ContactDTO(
+            id: name.stableUUID,
+            deviceID: deviceID,
+            publicKey: Data(),
+            name: name,
+            typeRawValue: ContactType.chat.rawValue,
+            flags: 0,
+            outPathLength: -1,
+            outPath: Data(),
+            lastAdvertTimestamp: 0,
+            latitude: 0.0,
+            longitude: 0.0,
+            lastModified: 0,
+            nickname: nil,
+            isBlocked: false,
+            isMuted: false,
+            isFavorite: false,
+            isDiscovered: false,
+            lastMessageDate: nil,
+            unreadCount: 0
+        )
     }
 
     /// Get the last message preview for a contact
@@ -813,6 +986,7 @@ final class ChatViewModel {
 
     /// Delete a single message
     func deleteMessage(_ message: MessageDTO) async {
+        guard appState?.connectionState == .ready else { return }
         guard let dataStore else { return }
 
         do {
@@ -849,6 +1023,7 @@ final class ChatViewModel {
 
     /// Delete all messages for a contact (conversation deletion)
     func deleteConversation(for contact: ContactDTO) async throws {
+        guard appState?.connectionState == .ready else { return }
         guard let dataStore else { return }
 
         // Fetch all messages for this contact
@@ -894,6 +1069,87 @@ final class ChatViewModel {
         return currentMessage.direction != previousMessage.direction
     }
 
+    /// Determines if sender name should be shown for a channel message at the given index.
+    /// Returns true for first message or when sender/timing breaks the group.
+    ///
+    /// **Note:** Channel messages identify senders solely by parsing "NodeName: text" from
+    /// the message content (per MeshCore protocol). There is no cryptographic sender
+    /// verification. `senderKeyPrefix` is always nil for channel messages.
+    static func shouldShowSenderName(at index: Int, in messages: [MessageDTO]) -> Bool {
+        let currentMessage = messages[index]
+
+        // Direct messages use configuration.showSenderName=false to hide names,
+        // so this value is ignored. Return true (no grouping) for simplicity.
+        guard currentMessage.contactID == nil else { return true }
+
+        // Outgoing messages don't show sender name
+        guard !currentMessage.isOutgoing else { return true }
+
+        // First message always shows sender name
+        guard index > 0 else { return true }
+
+        let previousMessage = messages[index - 1]
+
+        // Direction change breaks group
+        guard !previousMessage.isOutgoing else { return true }
+
+        // Time gap > 5 minutes breaks group
+        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
+        guard gap <= 300 else { return true }
+
+        // Different sender breaks group (channel messages only use senderNodeName)
+        if let currentName = currentMessage.senderNodeName,
+           let previousName = previousMessage.senderNodeName {
+            return currentName != previousName
+        }
+
+        // No sender name available (malformed message), show name to be safe
+        return true
+    }
+
+    /// Pre-computed display flags for a single message
+    struct DisplayFlags {
+        let showTimestamp: Bool
+        let showDirectionGap: Bool
+        let showSenderName: Bool
+    }
+
+    /// Computes all display flags in a single pass to avoid redundant message lookups.
+    /// Used by buildDisplayItems() for O(n) performance instead of O(3n).
+    static func computeDisplayFlags(for message: MessageDTO, previous: MessageDTO?) -> DisplayFlags {
+        guard let previous else {
+            // First message: show timestamp, no direction gap, show sender name
+            return DisplayFlags(showTimestamp: true, showDirectionGap: false, showSenderName: true)
+        }
+
+        // Time gap calculation (shared by timestamp and sender name logic)
+        let timeGap = abs(Int(message.timestamp) - Int(previous.timestamp))
+
+        // Timestamp: gap > 5 minutes
+        let showTimestamp = timeGap > 300
+
+        // Direction gap: direction changed from previous
+        let showDirectionGap = message.direction != previous.direction
+
+        // Sender name grouping (channel messages only)
+        let showSenderName: Bool
+        if message.contactID != nil || message.isOutgoing {
+            // Direct messages or outgoing: always true (UI ignores for direct messages anyway)
+            showSenderName = true
+        } else if previous.isOutgoing || timeGap > 300 {
+            // Direction change or time gap breaks group
+            showSenderName = true
+        } else if let currentName = message.senderNodeName, let previousName = previous.senderNodeName {
+            // Same sender continues group
+            showSenderName = currentName != previousName
+        } else {
+            // Malformed message: show name to be safe
+            showSenderName = true
+        }
+
+        return DisplayFlags(showTimestamp: showTimestamp, showDirectionGap: showDirectionGap, showSenderName: showSenderName)
+    }
+
     // MARK: - Display Items
 
     /// Build display items with pre-computed properties.
@@ -908,10 +1164,15 @@ final class ChatViewModel {
         }.value
 
         displayItems = messages.enumerated().map { index, message in
-            MessageDisplayItem(
+            // Compute all display flags in single pass to avoid redundant array lookups
+            let previous: MessageDTO? = index > 0 ? messages[index - 1] : nil
+            let flags = Self.computeDisplayFlags(for: message, previous: previous)
+
+            return MessageDisplayItem(
                 messageID: message.id,
-                showTimestamp: Self.shouldShowTimestamp(at: index, in: messages),
-                showDirectionGap: Self.isDirectionChange(at: index, in: messages),
+                showTimestamp: flags.showTimestamp,
+                showDirectionGap: flags.showDirectionGap,
+                showSenderName: flags.showSenderName,
                 detectedURL: urls[index],
                 isOutgoing: message.isOutgoing,
                 status: message.status,
@@ -1043,6 +1304,7 @@ final class ChatViewModel {
             messageID: item.messageID,
             showTimestamp: item.showTimestamp,
             showDirectionGap: item.showDirectionGap,
+            showSenderName: item.showSenderName,
             detectedURL: item.detectedURL,
             isOutgoing: item.isOutgoing,
             status: item.status,

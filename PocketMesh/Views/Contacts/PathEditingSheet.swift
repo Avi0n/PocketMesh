@@ -18,16 +18,16 @@ struct PathEditingSheet: View {
                 currentPathSection
                 addRepeaterSection
             }
-            .navigationTitle("Edit Path")
+            .navigationTitle(L10n.Contacts.Contacts.PathEdit.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Contacts.Contacts.Common.cancel) {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L10n.Contacts.Contacts.Common.save) {
                         Task {
                             await viewModel.saveEditedPath(for: contact)
                             dismiss()
@@ -45,7 +45,7 @@ struct PathEditingSheet: View {
 
     private var headerSection: some View {
         Section {
-            Text("Customize the route messages take to reach \(contact.displayName).")
+            Text(L10n.Contacts.Contacts.PathEdit.description(contact.displayName))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -74,12 +74,12 @@ struct PathEditingSheet: View {
                 }
             }
         } header: {
-            Text("Current Path")
+            Text(L10n.Contacts.Contacts.PathEdit.currentPath)
         } footer: {
             if viewModel.editablePath.isEmpty {
-                Text("No path set (direct or flood routing)")
+                Text(L10n.Contacts.Contacts.PathEdit.emptyFooter)
             } else {
-                Text("Drag to reorder. Tap to remove.")
+                Text(L10n.Contacts.Contacts.PathEdit.instructionsFooter)
             }
         }
     }
@@ -88,9 +88,9 @@ struct PathEditingSheet: View {
         Section {
             if viewModel.filteredAvailableRepeaters.isEmpty {
                 ContentUnavailableView(
-                    "No Repeaters Available",
+                    L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
                     systemImage: "antenna.radiowaves.left.and.right.slash",
-                    description: Text("Repeaters appear here once they're discovered in your mesh network.")
+                    description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
                 )
             } else {
                 ForEach(viewModel.filteredAvailableRepeaters) { repeater in
@@ -111,14 +111,14 @@ struct PathEditingSheet: View {
                         }
                     }
                     .foregroundStyle(.primary)
-                    .accessibilityLabel("Add \(repeater.displayName) to path")
+                    .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(repeater.displayName))
                 }
             }
         } header: {
-            Text("Add Repeater")
+            Text(L10n.Contacts.Contacts.PathEdit.addRepeater)
         } footer: {
             if !viewModel.filteredAvailableRepeaters.isEmpty {
-                Text("Tap a repeater to add it to the path.")
+                Text(L10n.Contacts.Contacts.PathEdit.addFooter)
             }
         }
     }
@@ -149,9 +149,9 @@ private struct PathHopRow: View {
 
     private var accessibilityDescription: String {
         if let name = hop.resolvedName {
-            return "Hop \(index + 1) of \(totalCount): \(name)"
+            return L10n.Contacts.Contacts.PathEdit.hopWithName(index + 1, totalCount, name)
         } else {
-            return "Hop \(index + 1) of \(totalCount): repeater \(String(format: "%02X", hop.hashByte))"
+            return L10n.Contacts.Contacts.PathEdit.hopWithHex(index + 1, totalCount, String(format: "%02X", hop.hashByte))
         }
     }
 }

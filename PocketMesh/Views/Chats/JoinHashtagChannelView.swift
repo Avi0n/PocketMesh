@@ -2,6 +2,7 @@ import SwiftUI
 import PocketMeshServices
 
 /// View for joining a hashtag channel (public, name-based)
+@MainActor
 struct JoinHashtagChannelView: View {
     @Environment(\.appState) private var appState
 
@@ -12,6 +13,15 @@ struct JoinHashtagChannelView: View {
     @State private var selectedSlot: UInt8
     @State private var isJoining = false
     @State private var errorMessage: String?
+    @State private var existingChannels: [ChannelDTO] = []
+
+    private var existingChannel: ChannelDTO? {
+        guard !channelName.isEmpty else { return nil }
+        let fullName = "#\(channelName)"
+        return existingChannels.first {
+            $0.name.localizedCaseInsensitiveCompare(fullName) == .orderedSame
+        }
+    }
 
     init(availableSlots: [UInt8], onComplete: @escaping (ChannelDTO?) -> Void) {
         self.availableSlots = availableSlots
@@ -31,7 +41,7 @@ struct JoinHashtagChannelView: View {
                         .font(.title2)
                         .foregroundStyle(.secondary)
 
-                    TextField("channel-name", text: $channelName)
+                    TextField(L10n.Chats.Chats.JoinHashtag.placeholder, text: $channelName)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .onChange(of: channelName) { _, newValue in
@@ -39,9 +49,9 @@ struct JoinHashtagChannelView: View {
                         }
                 }
             } header: {
-                Text("Hashtag Channel")
+                Text(L10n.Chats.Chats.JoinHashtag.Section.header)
             } footer: {
-                Text("Hashtag channels are public. Anyone can join by entering the same name. Only lowercase letters, numbers, and hyphens are allowed.")
+                Text(L10n.Chats.Chats.JoinHashtag.footer)
             }
 
             Section {
@@ -57,7 +67,7 @@ struct JoinHashtagChannelView: View {
                                 .font(.headline)
                         }
 
-                        Text("The channel name is used to generate the encryption key. Anyone with the same name can read messages.")
+                        Text(L10n.Chats.Chats.JoinHashtag.encryptionDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -77,34 +87,58 @@ struct JoinHashtagChannelView: View {
             Section {
                 Button {
                     Task {
-                        await joinChannel()
+                        guard !isJoining else { return }
+                        if let existing = existingChannel {
+                            onComplete(existing)
+                        } else {
+                            await joinChannel()
+                        }
                     }
                 } label: {
                     HStack {
                         Spacer()
                         if isJoining {
                             ProgressView()
+                        } else if existingChannel != nil {
+                            Text(L10n.Chats.Chats.JoinHashtag.goToButton(channelName))
                         } else {
-                            Text("Join #\(channelName)")
+                            Text(L10n.Chats.Chats.JoinHashtag.joinButton(channelName))
                         }
                         Spacer()
                     }
                 }
-                .disabled(!isValidName || isJoining)
+                .disabled(!isValidName || (isJoining && existingChannel == nil))
+                .accessibilityHint(existingChannel != nil ? L10n.Chats.Chats.JoinHashtag.existingHint : L10n.Chats.Chats.JoinHashtag.newHint)
+            } footer: {
+                if existingChannel != nil {
+                    Label(L10n.Chats.Chats.JoinHashtag.alreadyJoined, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .accessibilityLabel(L10n.Chats.Chats.JoinHashtag.alreadyJoinedAccessibility)
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
-        .navigationTitle("Join Hashtag Channel")
+        .navigationTitle(L10n.Chats.Chats.JoinHashtag.title)
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            guard let deviceID = appState.connectedDevice?.id,
+                  let dataStore = appState.services?.dataStore else { return }
+            do {
+                existingChannels = try await dataStore.fetchChannels(deviceID: deviceID)
+            } catch {
+                // Fail open - allow creation if fetch fails
+            }
+        }
     }
 
     private func joinChannel() async {
         guard let deviceID = appState.connectedDevice?.id else {
-            errorMessage = "No device connected"
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
         guard let channelService = appState.services?.channelService else {
-            errorMessage = "Services not available"
+            errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
             return
         }
 

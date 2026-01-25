@@ -12,6 +12,7 @@ struct TraceResultsSheet: View {
     @State private var savePathName = ""
     @State private var saveHapticTrigger = 0
     @State private var copyHapticTrigger = 0
+    @State private var showingDistanceInfo = false
 
     var body: some View {
         NavigationStack {
@@ -19,11 +20,11 @@ struct TraceResultsSheet: View {
                 resultsSection
                 outboundPathSection
             }
-            .navigationTitle("Trace Results")
+            .navigationTitle(L10n.Contacts.Contacts.Results.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Dismiss", systemImage: "xmark") {
+                    Button(L10n.Contacts.Contacts.Results.dismiss, systemImage: "xmark") {
                         dismiss()
                     }
                 }
@@ -44,7 +45,7 @@ struct TraceResultsSheet: View {
 
                 Spacer()
 
-                Button("Copy Path", systemImage: "doc.on.doc") {
+                Button(L10n.Contacts.Contacts.Trace.List.copyPath, systemImage: "doc.on.doc") {
                     copyHapticTrigger += 1
                     UIPasteboard.general.string = result.tracedPathString
                 }
@@ -52,7 +53,7 @@ struct TraceResultsSheet: View {
                 .buttonStyle(.borderless)
             }
         } header: {
-            Text("Outbound Path")
+            Text(L10n.Contacts.Contacts.Trace.List.outboundPath)
         }
     }
 
@@ -71,32 +72,30 @@ struct TraceResultsSheet: View {
                     )
                 }
 
-                // Batch progress indicator
-                if viewModel.batchEnabled && viewModel.isBatchInProgress {
+                // Batch status row (progress or completion)
+                if viewModel.batchEnabled && (viewModel.isBatchInProgress || viewModel.isBatchComplete) {
                     HStack {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
-                            .foregroundStyle(.secondary)
+                        if viewModel.isBatchComplete {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            Text(L10n.Contacts.Contacts.Results.batchSuccess(viewModel.successCount, viewModel.batchSize))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text(L10n.Contacts.Contacts.Results.batchProgress(viewModel.currentTraceIndex, viewModel.batchSize))
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                     }
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch progress: trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)")
-                }
-
-                // Batch completion status
-                if viewModel.batchEnabled && viewModel.isBatchComplete {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        Text("\(viewModel.successCount) of \(viewModel.batchSize) successful")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.vertical, 4)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Batch complete: \(viewModel.successCount) of \(viewModel.batchSize) traces successful")
+                    .accessibilityLabel(
+                        viewModel.isBatchComplete
+                            ? L10n.Contacts.Contacts.Results.batchCompleteLabel(viewModel.successCount, viewModel.batchSize)
+                            : L10n.Contacts.Contacts.Results.batchProgressLabel(viewModel.currentTraceIndex, viewModel.batchSize)
+                    )
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                 }
 
                 // Duration row with batch or single display
@@ -106,13 +105,16 @@ struct TraceResultsSheet: View {
                     comparisonRow(currentMs: result.durationMs, previousRun: previous)
                 } else {
                     HStack {
-                        Text("Round Trip")
+                        Text(L10n.Contacts.Contacts.PathDetail.roundTrip)
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text("\(result.durationMs) ms")
                             .font(.body.monospacedDigit())
                     }
                 }
+
+                // Total distance row
+                totalDistanceRow
 
                 // Save path action (only for successful traces when not running a saved path)
                 if !viewModel.isRunningSavedPath {
@@ -131,11 +133,11 @@ struct TraceResultsSheet: View {
     private var savePathRow: some View {
         if showingSaveDialog {
             VStack(alignment: .leading, spacing: 8) {
-                TextField("Path name", text: $savePathName)
+                TextField(L10n.Contacts.Contacts.Trace.Map.pathName, text: $savePathName)
                     .textFieldStyle(.roundedBorder)
 
                 HStack {
-                    Button("Cancel") {
+                    Button(L10n.Contacts.Contacts.Common.cancel) {
                         showingSaveDialog = false
                         savePathName = ""
                     }
@@ -143,7 +145,7 @@ struct TraceResultsSheet: View {
 
                     Spacer()
 
-                    Button("Save") {
+                    Button(L10n.Contacts.Contacts.Common.save) {
                         Task {
                             let success = await viewModel.savePath(name: savePathName)
                             if success {
@@ -164,7 +166,7 @@ struct TraceResultsSheet: View {
                 showingSaveDialog = true
             } label: {
                 HStack {
-                    Label("Save Path", systemImage: "bookmark")
+                    Label(L10n.Contacts.Contacts.Results.savePath, systemImage: "bookmark")
                     Spacer()
                     Image(systemName: "chevron.right")
                         .foregroundStyle(.secondary)
@@ -186,7 +188,7 @@ struct TraceResultsSheet: View {
 
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text("Round Trip")
+                Text(L10n.Contacts.Contacts.PathDetail.roundTrip)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Text("\(currentMs) ms")
@@ -203,7 +205,7 @@ struct TraceResultsSheet: View {
                 }
             }
 
-            Text("vs. \(previousRun.roundTripMs) ms on \(previousRun.date.formatted(date: .abbreviated, time: .omitted))")
+            Text(L10n.Contacts.Contacts.Results.comparison(previousRun.roundTripMs, previousRun.date.formatted(date: .abbreviated, time: .omitted)))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -219,10 +221,11 @@ struct TraceResultsSheet: View {
                 NavigationLink {
                     SavedPathDetailView(savedPath: savedPath)
                 } label: {
-                    Text("View \(savedPath.runCount) runs")
+                    Text(L10n.Contacts.Contacts.Results.viewRuns(savedPath.runCount))
                         .font(.caption)
                 }
             }
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
     }
 
@@ -234,7 +237,7 @@ struct TraceResultsSheet: View {
            let min = viewModel.minRTT,
            let max = viewModel.maxRTT {
             HStack {
-                Text("Avg Round Trip")
+                Text(L10n.Contacts.Contacts.Results.avgRoundTrip)
                     .foregroundStyle(.secondary)
                 Spacer()
                 VStack(alignment: .trailing) {
@@ -246,7 +249,103 @@ struct TraceResultsSheet: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Average round trip: \(avg) milliseconds, range \(min) to \(max)")
+            .accessibilityLabel(L10n.Contacts.Contacts.Results.avgRTTLabel(avg, min, max))
+        }
+    }
+
+    // MARK: - Total Distance Row
+
+    private func formatDistance(_ meters: Double) -> String {
+        let measurement = Measurement(value: meters, unit: UnitLength.meters)
+        return measurement.formatted(.measurement(width: .abbreviated, usage: .road))
+    }
+
+    @ViewBuilder
+    private var totalDistanceRow: some View {
+        HStack {
+            Text(L10n.Contacts.Contacts.Results.totalDistance)
+                .foregroundStyle(.secondary)
+            Spacer()
+
+            if let distance = viewModel.totalPathDistance {
+                HStack {
+                    Text(formatDistance(distance))
+                        .font(.body.monospacedDigit())
+                    if viewModel.isDistanceUsingFallback {
+                        Button("Distance info", systemImage: "info.circle") {
+                            showingDistanceInfo = true
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("Partial distance")
+                        .accessibilityHint("Double tap to learn why device location is excluded")
+                    }
+                }
+            } else {
+                HStack {
+                    Text(L10n.Contacts.Contacts.Results.unavailable)
+                        .foregroundStyle(.secondary)
+                    Button(L10n.Contacts.Contacts.Results.distanceInfo, systemImage: "info.circle") {
+                        showingDistanceInfo = true
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(L10n.Contacts.Contacts.Results.distanceUnavailableLabel)
+                    .accessibilityHint(L10n.Contacts.Contacts.Results.distanceInfoHint)
+                }
+            }
+        }
+        .sheet(isPresented: $showingDistanceInfo) {
+            distanceInfoSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var distanceInfoSheet: some View {
+        NavigationStack {
+            List {
+                if viewModel.isDistanceUsingFallback {
+                    Section {
+                        Text("Distance shown is between repeaters only. Your device's distance to the first repeater is not included because device location is unavailable.")
+                    } header: {
+                        Label("Partial Distance", systemImage: "location.slash")
+                    }
+                    Section {
+                        Text("Enable location services or set a location for your device to see the full path distance.")
+                    } header: {
+                        Label("To Include Full Path", systemImage: "lightbulb")
+                    }
+                } else if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
+                    Section {
+                        Text(L10n.Contacts.Contacts.Results.needsRepeaters)
+                    }
+                } else if viewModel.repeatersWithoutLocation.isEmpty {
+                    Section {
+                        Text(L10n.Contacts.Contacts.Results.distanceError)
+                    }
+                } else {
+                    Section {
+                        Text(L10n.Contacts.Contacts.Results.missingLocations)
+                    }
+                    Section(L10n.Contacts.Contacts.Results.repeatersWithoutLocations) {
+                        ForEach(viewModel.repeatersWithoutLocation, id: \.self) { name in
+                            Text(name)
+                        }
+                    }
+                }
+            }
+            .navigationTitle(viewModel.isDistanceUsingFallback ? L10n.Contacts.Contacts.Results.distanceInfoTitlePartial : L10n.Contacts.Contacts.Results.distanceInfoTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(L10n.Contacts.Contacts.Common.done) {
+                        showingDistanceInfo = false
+                    }
+                }
+            }
         }
     }
 }
@@ -285,14 +384,14 @@ struct TraceResultHopRow: View {
             VStack(alignment: .leading) {
                 // Node identifier
                 if hop.isStartNode {
-                    Text(hop.resolvedName ?? "My Device")
-                    Text("Started trace")
+                    Text(hop.resolvedName ?? L10n.Contacts.Contacts.Results.Hop.myDevice)
+                    Text(L10n.Contacts.Contacts.Results.Hop.started)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if hop.isEndNode {
-                    Text(hop.resolvedName ?? "My Device")
+                    Text(hop.resolvedName ?? L10n.Contacts.Contacts.Results.Hop.myDevice)
                         .foregroundStyle(.green)
-                    Text("Received response")
+                    Text(L10n.Contacts.Contacts.Results.Hop.received)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if let hashDisplay = hop.hashDisplayString {
@@ -304,7 +403,7 @@ struct TraceResultHopRow: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Text("Repeated")
+                    Text(L10n.Contacts.Contacts.Results.Hop.repeated)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -312,12 +411,12 @@ struct TraceResultHopRow: View {
                 // SNR display - batch mode shows avg with range, single shows plain SNR
                 if !hop.isStartNode {
                     if let stats = batchStats {
-                        Text("Avg SNR: \(stats.avg, format: .number.precision(.fractionLength(1))) dB (\(stats.min, format: .number.precision(.fractionLength(1))) – \(stats.max, format: .number.precision(.fractionLength(1))))")
+                        Text(L10n.Contacts.Contacts.Results.Hop.avgSNR(String(format: "%.1f", stats.avg), String(format: "%.1f", stats.min), String(format: "%.1f", stats.max)))
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .accessibilityLabel("Average signal to noise ratio: \(stats.avg, format: .number.precision(.fractionLength(1))) decibels, range \(stats.min, format: .number.precision(.fractionLength(1))) to \(stats.max, format: .number.precision(.fractionLength(1)))")
+                            .accessibilityLabel(L10n.Contacts.Contacts.Results.Hop.avgSNRLabel(String(format: "%.1f", stats.avg), String(format: "%.1f", stats.min), String(format: "%.1f", stats.max)))
                     } else {
-                        Text("SNR: \(hop.snr, format: .number.precision(.fractionLength(2))) dB")
+                        Text(L10n.Contacts.Contacts.Results.Hop.snr(String(format: "%.2f", hop.snr)))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

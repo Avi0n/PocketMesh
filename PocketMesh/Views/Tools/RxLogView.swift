@@ -22,7 +22,7 @@ struct RxLogView: View {
                 entryList
             }
         }
-        .navigationTitle("RX Log")
+        .navigationTitle(L10n.Tools.Tools.rxLog)
         .toolbar {
             toolbarContent
         }
@@ -39,17 +39,17 @@ struct RxLogView: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Listening...", systemImage: "antenna.radiowaves.left.and.right")
+            Label(L10n.Tools.Tools.RxLog.listening, systemImage: "antenna.radiowaves.left.and.right")
         } description: {
-            Text("RF packets will appear here as they arrive.")
+            Text(L10n.Tools.Tools.RxLog.listeningDescription)
         }
     }
 
     private var disconnectedState: some View {
         ContentUnavailableView {
-            Label("Not Connected", systemImage: "antenna.radiowaves.left.and.right.slash")
+            Label(L10n.Tools.Tools.RxLog.notConnected, systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
-            Text("Connect to a mesh radio to view RF packets.")
+            Text(L10n.Tools.Tools.RxLog.notConnectedDescription)
         }
     }
 
@@ -107,7 +107,7 @@ struct RxLogView: View {
         HStack(spacing: 8) {
             statusPill
 
-            Text("\(viewModel.entries.count) packets")
+            Text(L10n.Tools.Tools.RxLog.packetsCount(viewModel.entries.count))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -115,7 +115,7 @@ struct RxLogView: View {
         }
         .modifier(GlassContainerModifier())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(isConnected ? "Live" : "Offline"), \(viewModel.entries.count) packets")
+        .accessibilityLabel("\(isConnected ? L10n.Tools.Tools.RxLog.live : L10n.Tools.Tools.RxLog.offline), \(L10n.Tools.Tools.RxLog.packetsCount(viewModel.entries.count))")
     }
 
     private var statusPill: some View {
@@ -125,7 +125,7 @@ struct RxLogView: View {
                 .frame(width: 8, height: 8)
                 .modifier(PulseAnimationModifier(isActive: isConnected && !reduceMotion))
 
-            Text(isConnected ? "Live" : "Offline")
+            Text(isConnected ? L10n.Tools.Tools.RxLog.live : L10n.Tools.Tools.RxLog.offline)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -136,13 +136,13 @@ struct RxLogView: View {
 
     private var filterMenu: some View {
         Menu {
-            Section("Route Type") {
+            Section(L10n.Tools.Tools.RxLog.routeType) {
                 ForEach(RxLogViewModel.RouteFilter.allCases, id: \.self) { filter in
                     Button {
                         viewModel.setRouteFilter(filter)
                     } label: {
                         HStack {
-                            Text(filter.rawValue)
+                            Text(filter.displayName)
                             if viewModel.routeFilter == filter {
                                 Image(systemName: "checkmark")
                             }
@@ -151,13 +151,13 @@ struct RxLogView: View {
                 }
             }
 
-            Section("Decrypt Status") {
+            Section(L10n.Tools.Tools.RxLog.decryptStatus) {
                 ForEach(RxLogViewModel.DecryptFilter.allCases, id: \.self) { filter in
                     Button {
                         viewModel.setDecryptFilter(filter)
                     } label: {
                         HStack {
-                            Text(filter.rawValue)
+                            Text(filter.displayName)
                             if viewModel.decryptFilter == filter {
                                 Image(systemName: "checkmark")
                             }
@@ -166,7 +166,7 @@ struct RxLogView: View {
                 }
             }
         } label: {
-            Label("Filter", systemImage: viewModel.routeFilter == .all && viewModel.decryptFilter == .all
+            Label(L10n.Tools.Tools.RxLog.filter, systemImage: viewModel.routeFilter == .all && viewModel.decryptFilter == .all
                 ? "line.3.horizontal.decrease.circle"
                 : "line.3.horizontal.decrease.circle.fill")
         }
@@ -181,7 +181,7 @@ struct RxLogView: View {
                 groupDuplicates.toggle()
             } label: {
                 HStack {
-                    Text("Group Duplicates")
+                    Text(L10n.Tools.Tools.RxLog.groupDuplicates)
                     if groupDuplicates { Image(systemName: "checkmark") }
                 }
             }
@@ -191,14 +191,14 @@ struct RxLogView: View {
             Button(role: .destructive) {
                 showClearConfirmation = true
             } label: {
-                Label("Delete Logs", systemImage: "trash")
+                Label(L10n.Tools.Tools.RxLog.deleteLogs, systemImage: "trash")
             }
         } label: {
-            Label("More", systemImage: "ellipsis.circle")
+            Label(L10n.Tools.Tools.RxLog.more, systemImage: "ellipsis.circle")
         }
         .modifier(GlassButtonModifier())
-        .confirmationDialog("Delete all logs?", isPresented: $showClearConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
+        .confirmationDialog(L10n.Tools.Tools.RxLog.deleteConfirmation, isPresented: $showClearConfirmation, titleVisibility: .visible) {
+            Button(L10n.Tools.Tools.RxLog.delete, role: .destructive) {
                 clearLog()
             }
         }
@@ -265,7 +265,7 @@ struct RxLogRowView: View {
                 if entry.snr != nil {
                     Image(systemName: "cellularbars", variableValue: entry.snrLevel)
                         .foregroundStyle(signalColor)
-                        .accessibilityLabel("Signal strength: \(entry.snrQualityLabel)")
+                        .accessibilityLabel(L10n.Tools.Tools.RxLog.signalStrength(entry.snrQualityLabel))
                 }
             }
 
@@ -296,7 +296,7 @@ struct RxLogRowView: View {
                         .truncationMode(.tail)
                 } else {
                     let versionSuffix = entry.payloadVersion > 0 ? " v\(entry.payloadVersion)" : ""
-                    Text("\(entry.payloadType.displayName)\(versionSuffix) · \(entry.rawPayload.count) bytes")
+                    Text("\(entry.payloadType.displayName)\(versionSuffix) · \(entry.rawPayload.count) \(L10n.Tools.Tools.RxLog.bytes)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -313,7 +313,7 @@ struct RxLogRowView: View {
                     Text("×\(groupCount)")
                         .font(.caption.bold())
                         .foregroundStyle(.orange)
-                        .accessibilityLabel("Received \(groupCount) times")
+                        .accessibilityLabel(L10n.Tools.Tools.RxLog.receivedTimes(groupCount))
                 }
             }
         }
@@ -323,7 +323,7 @@ struct RxLogRowView: View {
 
     private var pathDisplayString: String {
         if entry.pathLength == 0 {
-            return "Direct"
+            return L10n.Tools.Tools.RxLog.direct
         }
 
         var parts: [String] = []
@@ -341,11 +341,11 @@ struct RxLogRowView: View {
 
     private var pathDetailString: String {
         if entry.pathLength == 0 {
-            return "Direct"
+            return L10n.Tools.Tools.RxLog.direct
         }
 
         let hopCount = Int(entry.pathLength)
-        let hopLabel = hopCount == 1 ? "hop" : "hops"
+        let hopLabel = hopCount == 1 ? L10n.Tools.Tools.RxLog.hopSingular : L10n.Tools.Tools.RxLog.hopPlural
         let nodes = entry.pathNodes.map { String(format: "%02X", $0) }.joined(separator: ", ")
         return "\(hopCount) \(hopLabel) [\(nodes)]"
     }
@@ -366,37 +366,37 @@ struct RxLogRowView: View {
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             if let rssi = entry.rssi {
-                DetailRow(label: "RSSI:", value: "\(rssi) dBm")
+                DetailRow(label: L10n.Tools.Tools.RxLog.rssiLabel, value: "\(rssi) dBm")
             }
             if let snr = entry.snr {
-                DetailRow(label: "SNR:", value: snr.formatted(.number.precision(.fractionLength(1))) + " dB")
+                DetailRow(label: L10n.Tools.Tools.RxLog.snrLabel, value: snr.formatted(.number.precision(.fractionLength(1))) + " dB")
             }
 
-            DetailRow(label: "Type:", value: entry.payloadType.displayName)
-            DetailRow(label: "Size:", value: "\(entry.rawPayload.count) bytes")
-            DetailRow(label: "Path:", value: pathDetailString)
-            DetailRow(label: "Hash:", value: entry.packetHash, truncate: true)
+            DetailRow(label: L10n.Tools.Tools.RxLog.typeLabel, value: entry.payloadType.displayName)
+            DetailRow(label: L10n.Tools.Tools.RxLog.sizeLabel, value: "\(entry.rawPayload.count) \(L10n.Tools.Tools.RxLog.bytes)")
+            DetailRow(label: L10n.Tools.Tools.RxLog.pathLabel, value: pathDetailString)
+            DetailRow(label: L10n.Tools.Tools.RxLog.hashLabel, value: entry.packetHash, truncate: true)
 
             // Direct message: show sender and recipient
             // Payload format: [dest: 1B] [src: 1B] [MAC + encrypted content]
             if isDirectTextMessage, entry.packetPayload.count >= 2 {
                 let destByte = entry.packetPayload[0]  // recipient
                 let srcByte = entry.packetPayload[1]   // sender
-                DetailRow(label: "From:", value: "<\(String(format: "%02x", srcByte))>")
-                DetailRow(label: "To:", value: "<\(String(format: "%02x", destByte))>")
+                DetailRow(label: L10n.Tools.Tools.RxLog.fromLabel, value: "<\(String(format: "%02x", srcByte))>")
+                DetailRow(label: L10n.Tools.Tools.RxLog.toLabel, value: "<\(String(format: "%02x", destByte))>")
             }
 
             // Channel message: show channel info
             if entry.decryptStatus == .success {
                 if let channelHashByte = entry.packetPayload.first {
-                    DetailRow(label: "Channel Hash:", value: String(format: "%02x", channelHashByte))
+                    DetailRow(label: L10n.Tools.Tools.RxLog.channelHashLabel, value: String(format: "%02x", channelHashByte))
                 }
                 if let channelName = entry.channelName {
-                    DetailRow(label: "Channel Name:", value: channelName)
+                    DetailRow(label: L10n.Tools.Tools.RxLog.channelNameLabel, value: channelName)
                 }
                 if let text = entry.decodedText {
                     HStack(alignment: .top) {
-                        Text("Text:")
+                        Text(L10n.Tools.Tools.RxLog.textLabel)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(text)
@@ -440,13 +440,13 @@ private struct RawPayloadSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
-                Text("Raw Payload")
+                Text(L10n.Tools.Tools.RxLog.rawPayload)
                     .font(.caption.bold())
                     .foregroundStyle(.secondary)
 
                 Spacer()
 
-                Button("Copy", systemImage: copied ? "checkmark" : "doc.on.doc", action: copyToClipboard)
+                Button(L10n.Tools.Tools.RxLog.copy, systemImage: copied ? "checkmark" : "doc.on.doc", action: copyToClipboard)
                     .font(.caption)
                     .foregroundStyle(copied ? .green : .secondary)
                     .labelStyle(.iconOnly)

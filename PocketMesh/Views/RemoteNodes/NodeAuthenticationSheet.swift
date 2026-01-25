@@ -54,10 +54,10 @@ struct NodeAuthenticationSheet: View {
                 authenticationSection
                 connectButton
             }
-            .navigationTitle(customTitle ?? (role == .roomServer ? "Join Room" : "Admin Access"))
+            .navigationTitle(customTitle ?? (role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.adminAccess))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L10n.RemoteNodes.RemoteNodes.Auth.cancel) { dismiss() }
                 }
             }
             .task {
@@ -75,31 +75,31 @@ struct NodeAuthenticationSheet: View {
 
     private var nodeDetailsSection: some View {
         Section {
-            LabeledContent("Name", value: contact.displayName)
-            LabeledContent("Type", value: role == .roomServer ? "Room" : "Repeater")
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.name, value: contact.displayName)
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.type, value: role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.typeRoom : L10n.RemoteNodes.RemoteNodes.Auth.typeRepeater)
         } header: {
-            Text("Node Details")
+            Text(L10n.RemoteNodes.RemoteNodes.Auth.nodeDetails)
         }
     }
 
     private var authenticationSection: some View {
         Section {
-            SecureField("Password", text: $password)
+            SecureField(L10n.RemoteNodes.RemoteNodes.Auth.password, text: $password)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
 
-            Toggle("Remember Password", isOn: $rememberPassword)
+            Toggle(L10n.RemoteNodes.RemoteNodes.Auth.rememberPassword, isOn: $rememberPassword)
         } header: {
-            Text("Authentication")
+            Text(L10n.RemoteNodes.RemoteNodes.Auth.authentication)
         } footer: {
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.circle.fill")
                     .foregroundStyle(.red)
-                    .accessibilityLabel("Error: \(errorMessage)")
+                    .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Auth.errorPrefix(errorMessage))
             } else if password.count > maxPasswordLength {
-                Text("MeshCore \(role == .repeater ? "repeaters" : "rooms") only accept passwords up to \(maxPasswordLength) characters. Extra characters will be ignored.")
+                Text(role == .repeater ? L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRepeaters(maxPasswordLength) : L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRooms(maxPasswordLength))
             } else if let remaining = authSecondsRemaining, remaining > 0 {
-                Text("Up to \(remaining) seconds remaining")
+                Text(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemaining(remaining))
             } else {
                 // Reserve footer space to prevent layout shift when error appears
                 Text(" ")
@@ -117,7 +117,7 @@ struct NodeAuthenticationSheet: View {
             // Announce when countdown starts or at 30/15/10/5 second thresholds
             let shouldAnnounce = oldValue == nil || remaining == 30 || remaining == 15 || remaining == 10 || remaining <= 5
             if shouldAnnounce {
-                AccessibilityNotification.Announcement("\(remaining) seconds remaining").post()
+                AccessibilityNotification.Announcement(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemainingAnnouncement(remaining)).post()
             }
         }
     }
@@ -131,11 +131,11 @@ struct NodeAuthenticationSheet: View {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                 } else {
-                    Text(role == .roomServer ? "Join Room" : "Connect")
+                    Text(role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.connect)
                         .frame(maxWidth: .infinity)
                 }
             }
-            .disabled(isAuthenticating || (role == .repeater && password.isEmpty))
+            .disabled(isAuthenticating)
         }
     }
 

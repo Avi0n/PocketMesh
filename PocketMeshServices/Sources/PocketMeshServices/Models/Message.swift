@@ -67,6 +67,9 @@ public final class Message {
     /// Signal-to-noise ratio in dB
     public var snr: Double?
 
+    /// Path nodes for incoming messages (1 byte per hop, from RxLogEntry correlation)
+    public var pathNodes: Data?
+
     /// Sender public key prefix (6 bytes, for incoming messages)
     public var senderKeyPrefix: Data?
 
@@ -118,6 +121,9 @@ public final class Message {
     /// Whether the user has scrolled to see this mention (for tracking unread mentions)
     public var mentionSeen: Bool = false
 
+    /// Whether the timestamp was corrected due to sender clock being invalid
+    public var timestampCorrected: Bool = false
+
     /// Heard repeats for this message (cascade delete)
     @Relationship(deleteRule: .cascade, inverse: \MessageRepeat.message)
     public var repeats: [MessageRepeat]?
@@ -136,6 +142,7 @@ public final class Message {
         ackCode: UInt32? = nil,
         pathLength: UInt8 = 0,
         snr: Double? = nil,
+        pathNodes: Data? = nil,
         senderKeyPrefix: Data? = nil,
         senderNodeName: String? = nil,
         isRead: Bool = false,
@@ -152,7 +159,8 @@ public final class Message {
         linkPreviewIconData: Data? = nil,
         linkPreviewFetched: Bool = false,
         containsSelfMention: Bool = false,
-        mentionSeen: Bool = false
+        mentionSeen: Bool = false,
+        timestampCorrected: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -167,6 +175,7 @@ public final class Message {
         self.ackCode = ackCode
         self.pathLength = pathLength
         self.snr = snr
+        self.pathNodes = pathNodes
         self.senderKeyPrefix = senderKeyPrefix
         self.senderNodeName = senderNodeName
         self.isRead = isRead
@@ -184,6 +193,7 @@ public final class Message {
         self.linkPreviewFetched = linkPreviewFetched
         self.containsSelfMention = containsSelfMention
         self.mentionSeen = mentionSeen
+        self.timestampCorrected = timestampCorrected
     }
 }
 
@@ -249,6 +259,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let ackCode: UInt32?
     public let pathLength: UInt8
     public let snr: Double?
+    public let pathNodes: Data?
     public let senderKeyPrefix: Data?
     public let senderNodeName: String?
     public let isRead: Bool
@@ -266,6 +277,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public let linkPreviewFetched: Bool
     public let containsSelfMention: Bool
     public let mentionSeen: Bool
+    public let timestampCorrected: Bool
 
     public init(from message: Message) {
         self.id = message.id
@@ -281,6 +293,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.ackCode = message.ackCode
         self.pathLength = message.pathLength
         self.snr = message.snr
+        self.pathNodes = message.pathNodes
         self.senderKeyPrefix = message.senderKeyPrefix
         self.senderNodeName = message.senderNodeName
         self.isRead = message.isRead
@@ -298,6 +311,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewFetched = message.linkPreviewFetched
         self.containsSelfMention = message.containsSelfMention
         self.mentionSeen = message.mentionSeen
+        self.timestampCorrected = message.timestampCorrected
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -315,6 +329,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         ackCode: UInt32?,
         pathLength: UInt8,
         snr: Double?,
+        pathNodes: Data? = nil,
         senderKeyPrefix: Data?,
         senderNodeName: String?,
         isRead: Bool,
@@ -331,7 +346,8 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         linkPreviewIconData: Data? = nil,
         linkPreviewFetched: Bool = false,
         containsSelfMention: Bool = false,
-        mentionSeen: Bool = false
+        mentionSeen: Bool = false,
+        timestampCorrected: Bool = false
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -346,6 +362,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.ackCode = ackCode
         self.pathLength = pathLength
         self.snr = snr
+        self.pathNodes = pathNodes
         self.senderKeyPrefix = senderKeyPrefix
         self.senderNodeName = senderNodeName
         self.isRead = isRead
@@ -363,6 +380,7 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
         self.linkPreviewFetched = linkPreviewFetched
         self.containsSelfMention = containsSelfMention
         self.mentionSeen = mentionSeen
+        self.timestampCorrected = timestampCorrected
     }
 
     public var isOutgoing: Bool {
@@ -383,5 +401,21 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
 
     public var date: Date {
         Date(timeIntervalSince1970: TimeInterval(timestamp))
+    }
+
+    /// Path nodes as hex strings for display (e.g., ["A3", "7F", "42"])
+    public var pathNodesHex: [String] {
+        guard let pathNodes else { return [] }
+        return pathNodes.map { String(format: "%02X", $0) }
+    }
+
+    /// Path as arrow-separated string (e.g., "A3 → 7F → 42")
+    public var pathString: String {
+        pathNodesHex.joined(separator: " → ")
+    }
+
+    /// Path as comma-separated string for clipboard (e.g., "A3,7F,42")
+    public var pathStringForClipboard: String {
+        pathNodesHex.joined(separator: ",")
     }
 }

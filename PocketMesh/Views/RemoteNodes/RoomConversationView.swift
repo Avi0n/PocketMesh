@@ -12,6 +12,7 @@ struct RoomConversationView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
+    @State private var keyboardObserver = KeyboardObserver()
     @FocusState private var isInputFocused: Bool
 
     init(session: RemoteNodeSessionDTO) {
@@ -23,17 +24,15 @@ struct RoomConversationView: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if session.canPost {
                     inputBar
+                        .floatingKeyboardAware()
                 } else {
                     readOnlyBanner
                 }
             }
-            .navigationTitle(session.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .ignoreKeyboardOnIPad()
+            .environment(keyboardObserver)
+            .navigationHeader(title: session.name, subtitle: connectionStatus)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    headerView
-                }
-
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showingRoomInfo = true
@@ -65,31 +64,18 @@ struct RoomConversationView: View {
             }
     }
 
-    // MARK: - Header
-
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(session.name)
-                .font(.headline)
-
-            Text(connectionStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-
     private var connectionStatus: String {
         if session.isConnected {
             return session.permissionLevel.displayName
         }
-        return "Disconnected"
+        return L10n.RemoteNodes.RemoteNodes.Room.disconnected
     }
 
     // MARK: - Messages View
 
     private var messagesView: some View {
         Group {
-            if viewModel.isLoading && viewModel.messages.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.messages.isEmpty {
@@ -134,11 +120,11 @@ struct RoomConversationView: View {
                 .font(.title2)
                 .bold()
 
-            Text("No public messages yet")
+            Text(L10n.RemoteNodes.RemoteNodes.Room.noMessagesYet)
                 .foregroundStyle(.secondary)
 
             if session.canPost {
-                Text("Be the first to post")
+                Text(L10n.RemoteNodes.RemoteNodes.Room.beFirstToPost)
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -153,7 +139,7 @@ struct RoomConversationView: View {
         ChatInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Public Message",
+            placeholder: L10n.RemoteNodes.RemoteNodes.Room.publicMessage,
             maxCharacters: ProtocolLimits.maxDirectMessageLength
         ) {
             // Force scroll to bottom on user send (before message is added)
@@ -167,7 +153,7 @@ struct RoomConversationView: View {
     private var readOnlyBanner: some View {
         HStack {
             Image(systemName: "eye")
-            Text("View only - join as member to post")
+            Text(L10n.RemoteNodes.RemoteNodes.Room.viewOnlyBanner)
         }
         .font(.subheadline)
         .foregroundStyle(.secondary)
@@ -196,25 +182,25 @@ private struct RoomInfoSheet: View {
                     .listRowBackground(Color.clear)
                 }
 
-                Section("Details") {
-                    LabeledContent("Name", value: session.name)
-                    LabeledContent("Permission", value: session.permissionLevel.displayName)
+                Section(L10n.RemoteNodes.RemoteNodes.Room.details) {
+                    LabeledContent(L10n.RemoteNodes.RemoteNodes.name, value: session.name)
+                    LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.permission, value: session.permissionLevel.displayName)
                     if session.isConnected {
-                        LabeledContent("Status", value: "Connected")
+                        LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.status, value: L10n.RemoteNodes.RemoteNodes.Room.connected)
                     }
                 }
 
                 if let lastConnected = session.lastConnectedDate {
-                    Section("Activity") {
-                        LabeledContent("Last Connected") {
+                    Section(L10n.RemoteNodes.RemoteNodes.Room.activity) {
+                        LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.lastConnected) {
                             Text(lastConnected, format: .relative(presentation: .named))
                         }
                     }
                 }
 
-                Section("Identification") {
+                Section(L10n.RemoteNodes.RemoteNodes.Room.identification) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Public Key")
+                        Text(L10n.RemoteNodes.RemoteNodes.Room.publicKey)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(session.publicKeyHex)
@@ -223,11 +209,11 @@ private struct RoomInfoSheet: View {
                     }
                 }
             }
-            .navigationTitle("Room Info")
+            .navigationTitle(L10n.RemoteNodes.RemoteNodes.Room.infoTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.RemoteNodes.RemoteNodes.done) { dismiss() }
                 }
             }
         }

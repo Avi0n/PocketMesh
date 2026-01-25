@@ -1,4 +1,5 @@
 import Combine
+import CoreLocation
 import SwiftUI
 import UIKit
 import MeshCore
@@ -15,10 +16,20 @@ struct TraceHop: Identifiable {
     let snr: Double
     let isStartNode: Bool
     let isEndNode: Bool
+    let latitude: Double?
+    let longitude: Double?
 
     /// Display string for hash (shows all bytes)
     var hashDisplayString: String? {
         hashBytes?.map { $0.hexString }.joined()
+    }
+
+    /// Whether this hop has a valid (non-zero) location.
+    /// Uses OR logic to match ContactDTO.hasLocation - if either coordinate is non-zero,
+    /// we have some location data. (0,0) is "Null Island" and extremely unlikely.
+    var hasLocation: Bool {
+        guard let lat = latitude, let lon = longitude else { return false }
+        return lat != 0 || lon != 0
     }
 
     /// Map SNR to 0-1 range for cellularbars variableValue
@@ -61,12 +72,42 @@ struct TraceResult: Identifiable {
 
     static func timeout(attemptedPath: [UInt8]) -> TraceResult {
         TraceResult(hops: [], durationMs: 0, success: false,
-                    errorMessage: "No response received", tracedPathBytes: attemptedPath)
+                    errorMessage: L10n.Contacts.Contacts.Trace.Error.noResponse, tracedPathBytes: attemptedPath)
     }
 
     static func sendFailed(_ message: String, attemptedPath: [UInt8]) -> TraceResult {
         TraceResult(hops: [], durationMs: 0, success: false,
                     errorMessage: message, tracedPathBytes: attemptedPath)
+    }
+}
+
+/// Result of parsing and adding repeater codes
+struct CodeInputResult {
+    var added: [String] = []
+    var notFound: [String] = []
+    var alreadyInPath: [String] = []
+    var invalidFormat: [String] = []
+
+    var hasErrors: Bool {
+        !notFound.isEmpty || !alreadyInPath.isEmpty || !invalidFormat.isEmpty
+    }
+
+    var errorMessage: String? {
+        guard hasErrors else { return nil }
+
+        var parts: [String] = []
+
+        if !invalidFormat.isEmpty {
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.invalidFormat(invalidFormat.joined(separator: ", ")))
+        }
+        if !notFound.isEmpty {
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.notFound(notFound.joined(separator: ", ")))
+        }
+        if !alreadyInPath.isEmpty {
+            parts.append(L10n.Contacts.Contacts.CodeInput.Error.alreadyInPath(alreadyInPath.joined(separator: ", ")))
+        }
+
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -250,9 +291,9 @@ final class TracePathViewModel {
         fullPathBytes.map { $0.hexString }.joined(separator: ",")
     }
 
-    /// Can run trace if path has at least one hop and device connected
-    var canRunTrace: Bool {
-        !outboundPath.isEmpty && appState?.connectedDevice != nil && !isRunning
+    /// Can run trace if path has at least one hop and not currently running
+    var canRunTraceWhenConnected: Bool {
+        !outboundPath.isEmpty && !isRunning
     }
 
     /// Can save path if result is successful and path hasn't changed since trace ran
@@ -265,6 +306,69 @@ final class TracePathViewModel {
             guard let result, result.success else { return false }
             return fullPathBytes == result.tracedPathBytes
         }
+    }
+
+    // MARK: - Distance Calculation
+
+    /// Total path distance in meters, using a priority cascade:
+    /// 1. Full path (including device legs) if device has location
+    /// 2. Intermediate repeaters only if device lacks location
+    /// 3. Nil if fewer than 2 hops with valid location
+    var totalPathDistance: Double? {
+        guard let result, result.success else { return nil }
+        guard result.hops.count >= 2 else { return nil }
+
+        // Priority 1: Full path including device legs
+        if let fullDistance = calculateDistance(for: result.hops) {
+            return fullDistance
+        }
+
+        // Priority 2: Intermediate repeaters only (device has no location)
+        let repeaters = result.hops.filter { !$0.isStartNode && !$0.isEndNode }
+        return calculateDistance(for: repeaters)
+    }
+
+    /// Calculate total distance for a sequence of hops, or nil if any lacks location
+    private func calculateDistance(for hops: [TraceHop]) -> Double? {
+        guard hops.count >= 2 else { return nil }
+
+        var totalMeters: Double = 0
+
+        for index in 0..<(hops.count - 1) {
+            let current = hops[index]
+            let next = hops[index + 1]
+
+            guard current.hasLocation, next.hasLocation,
+                  let curLat = current.latitude, let curLon = current.longitude,
+                  let nextLat = next.latitude, let nextLon = next.longitude else {
+                return nil
+            }
+
+            let from = CLLocation(latitude: curLat, longitude: curLon)
+            let to = CLLocation(latitude: nextLat, longitude: nextLon)
+            totalMeters += from.distance(from: to)
+        }
+
+        return totalMeters
+    }
+
+    /// Names of intermediate repeaters that lack location data
+    var repeatersWithoutLocation: [String] {
+        guard let result else { return [] }
+
+        return result.hops
+            .filter { !$0.isStartNode && !$0.isEndNode && !$0.hasLocation }
+            .map { $0.resolvedName ?? $0.hashDisplayString ?? "Unknown" }
+    }
+
+    /// Whether the distance calculation used intermediate-only fallback (device has no location)
+    var isDistanceUsingFallback: Bool {
+        guard let result, result.success, totalPathDistance != nil else { return false }
+
+        guard let startNode = result.hops.first, let endNode = result.hops.last else { return false }
+
+        // If device nodes lack location, we used the intermediate-only fallback
+        return !startNode.hasLocation || !endNode.hasLocation
     }
 
     // MARK: - Configuration
@@ -295,12 +399,31 @@ final class TracePathViewModel {
         errorMessage = nil
     }
 
-    // MARK: - Name Resolution
+    // MARK: - Hash Resolution
 
     /// Resolve a hash byte to contact name (single match only)
     func resolveHashToName(_ hashByte: UInt8) -> String? {
         let matches = allContacts.filter { $0.publicKey.first == hashByte }
         return matches.count == 1 ? matches[0].displayName : nil
+    }
+
+    /// Resolve a hash byte to contact location (single match only)
+    func resolveHashToLocation(_ hashByte: UInt8) -> (latitude: Double, longitude: Double)? {
+        let matches = allContacts.filter { $0.publicKey.first == hashByte }
+
+        guard matches.count == 1 else {
+            if matches.count > 1 {
+                logger.debug("Ambiguous hash 0x\(hashByte.hexString): \(matches.count) contacts match")
+            }
+            return nil
+        }
+
+        let contact = matches[0]
+        guard contact.hasLocation else {
+            logger.debug("Contact \(contact.displayName) has no location set")
+            return nil
+        }
+        return (contact.latitude, contact.longitude)
     }
 
     // MARK: - Data Loading
@@ -330,6 +453,57 @@ final class TracePathViewModel {
         outboundPath.append(hop)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
+    }
+
+    /// Parse comma-separated hex codes and add matching repeaters to the path
+    func addRepeatersFromCodes(_ input: String) -> CodeInputResult {
+        var result = CodeInputResult()
+
+        let codes = input
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces).uppercased() }
+            .filter { !$0.isEmpty }
+
+        // Deduplicate while preserving order
+        var seen = Set<String>()
+        let uniqueCodes = codes.filter { seen.insert($0).inserted }
+
+        let existingBytes = Set(outboundPath.map { $0.hashByte })
+
+        for code in uniqueCodes {
+            // Validate hex format (exactly 2 hex characters)
+            guard code.count == 2,
+                  let byte = UInt8(code, radix: 16) else {
+                result.invalidFormat.append(code)
+                continue
+            }
+
+            // Check if already in path
+            if existingBytes.contains(byte) {
+                result.alreadyInPath.append(code)
+                continue
+            }
+
+            // Find matching repeater
+            if let repeater = availableRepeaters.first(where: { $0.publicKey.first == byte }) {
+                let hop = PathHop(hashByte: byte, resolvedName: repeater.displayName)
+                outboundPath.append(hop)
+                result.added.append(code)
+            } else {
+                result.notFound.append(code)
+            }
+        }
+
+        // Clear saved path reference if we added anything
+        if !result.added.isEmpty {
+            activeSavedPath = nil
+            pendingPathHash = nil
+            self.result = nil
+            clearError()
+        }
+
+        return result
     }
 
     /// Remove a repeater from the path
@@ -339,6 +513,7 @@ final class TracePathViewModel {
         outboundPath.remove(at: index)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Move a repeater within the path
@@ -347,6 +522,7 @@ final class TracePathViewModel {
         outboundPath.move(fromOffsets: source, toOffset: destination)
         activeSavedPath = nil
         pendingPathHash = nil
+        result = nil
     }
 
     /// Copy full path string to clipboard
@@ -359,13 +535,13 @@ final class TracePathViewModel {
         let names = outboundPath.compactMap { $0.resolvedName }
         switch names.count {
         case 0:
-            return "Path \(fullPathString.prefix(8))"
+            return L10n.Contacts.Contacts.PathName.prefix(String(fullPathString.prefix(8)))
         case 1:
             return names[0]
         case 2:
-            return "\(names[0]) → \(names[1])"
+            return L10n.Contacts.Contacts.PathName.twoEndpoints(names[0], names[1])
         default:
-            return "\(names[0]) → ... → \(names[names.count - 1])"
+            return L10n.Contacts.Contacts.PathName.multipleEndpoints(names[0], names[names.count - 1])
         }
     }
 
@@ -576,7 +752,7 @@ final class TracePathViewModel {
             logger.info("Sent trace with tag \(tag), path: \(self.fullPathString), timeout: \(timeoutSeconds)s")
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
-            setError("Failed to send trace packet")
+            setError(L10n.Contacts.Contacts.Trace.Error.sendFailed)
             pendingPathHash = nil
 
             // Record failed run for saved paths
@@ -589,11 +765,11 @@ final class TracePathViewModel {
                     roundTripMs: 0,
                     hopsSNR: []
                 )
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     do {
                         try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                         if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                            activeSavedPath = updated
+                            self?.activeSavedPath = updated
                         }
                     } catch {
                         logger.error("Failed to record send failure: \(error.localizedDescription)")
@@ -615,7 +791,7 @@ final class TracePathViewModel {
                 // Timeout - no response received
                 if !Task.isCancelled && pendingTag == tag {
                     logger.warning("Trace timeout for tag \(tag) after \(timeoutSeconds)s")
-                    setError("No response received")
+                    setError(L10n.Contacts.Contacts.Trace.Error.noResponse)
                     pendingPathHash = nil
 
                     // Record failed run for saved paths
@@ -715,7 +891,7 @@ final class TracePathViewModel {
 
         // If batch completed but all traces failed, show error
         if isBatchComplete && successCount == 0 {
-            setError("All \(batchSize) traces failed")
+            setError(L10n.Contacts.Contacts.Trace.Error.allFailed(batchSize))
         }
     }
 
@@ -744,7 +920,7 @@ final class TracePathViewModel {
         } catch {
             logger.error("Failed to send trace: \(error.localizedDescription)")
             let failedResult = TraceResult.sendFailed(
-                "Failed to send trace packet",
+                L10n.Contacts.Contacts.Trace.Error.sendFailed,
                 attemptedPath: pendingPathHash ?? []
             )
             completedResults.append(failedResult)
@@ -772,9 +948,11 @@ final class TracePathViewModel {
                         pendingPathHash = nil
                         pendingTag = nil
 
-                        // Resume continuation (only if not already resumed by handleTraceResponse)
-                        traceContinuation?.resume()
-                        traceContinuation = nil
+                        // Resume continuation atomically (only if not already resumed by handleTraceResponse)
+                        if let continuation = traceContinuation {
+                            traceContinuation = nil
+                            continuation.resume()
+                        }
                     }
                 } catch {
                     // Cancelled - handleTraceResponse already resumed continuation
@@ -796,11 +974,11 @@ final class TracePathViewModel {
             hopsSNR: []
         )
 
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             do {
                 try await dataStore.appendTracePathRun(pathID: savedPath.id, run: failedRun)
                 if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                    activeSavedPath = updated
+                    self?.activeSavedPath = updated
                 }
             } catch {
                 logger.error("Failed to record run: \(error.localizedDescription)")
@@ -863,8 +1041,20 @@ final class TracePathViewModel {
         // Each node's SNR shows what it measured when receiving.
         // This answers "how well did this node receive the signal?"
         var hops: [TraceHop] = []
-        let deviceName = appState?.connectedDevice?.nodeName ?? "My Device"
+        let deviceName = appState?.connectedDevice?.nodeName ?? L10n.Contacts.Contacts.Results.Hop.myDevice
         let path = traceInfo.path
+
+        // Resolve device location: GPS first, then device's set location, treat (0,0) as nil
+        var deviceLat: Double?
+        var deviceLon: Double?
+        if let gpsLocation = appState?.locationService.currentLocation {
+            deviceLat = gpsLocation.coordinate.latitude
+            deviceLon = gpsLocation.coordinate.longitude
+        } else if let device = appState?.connectedDevice,
+                  device.latitude != 0 || device.longitude != 0 {
+            deviceLat = device.latitude
+            deviceLon = device.longitude
+        }
 
         // Start node has no SNR (it transmitted first, didn't receive anything)
         hops.append(TraceHop(
@@ -872,16 +1062,35 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: 0,
             isStartNode: true,
-            isEndNode: false
+            isEndNode: false,
+            latitude: deviceLat,
+            longitude: deviceLon
         ))
 
         // Intermediate hops - each shows SNR it measured when receiving
         for node in path where node.hashBytes != nil {
             let resolvedName: String?
-            if let bytes = node.hashBytes, bytes.count == 1 {
-                resolvedName = resolveHashToName(bytes[0])
+            var latitude: Double?
+            var longitude: Double?
+
+            if let bytes = node.hashBytes, let firstByte = bytes.first {
+                // Look up from availableRepeaters first (user's selected repeaters, no collisions)
+                if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }) {
+                    resolvedName = matchingRepeater.displayName
+                    if matchingRepeater.hasLocation {
+                        latitude = matchingRepeater.latitude
+                        longitude = matchingRepeater.longitude
+                    }
+                } else {
+                    // Fallback for unexpected hops not in our selected repeaters
+                    resolvedName = resolveHashToName(firstByte)
+                    if let location = resolveHashToLocation(firstByte) {
+                        latitude = location.latitude
+                        longitude = location.longitude
+                    }
+                }
             } else {
-                resolvedName = nil  // Multi-byte: no resolution possible
+                resolvedName = nil
             }
 
             hops.append(TraceHop(
@@ -889,7 +1098,9 @@ final class TracePathViewModel {
                 resolvedName: resolvedName,
                 snr: node.snr,
                 isStartNode: false,
-                isEndNode: false
+                isEndNode: false,
+                latitude: latitude,
+                longitude: longitude
             ))
         }
 
@@ -900,7 +1111,9 @@ final class TracePathViewModel {
             resolvedName: deviceName,
             snr: endSnr,
             isStartNode: false,
-            isEndNode: true
+            isEndNode: true,
+            latitude: deviceLat,
+            longitude: deviceLon
         ))
 
         result = TraceResult(
@@ -945,12 +1158,12 @@ final class TracePathViewModel {
                 hopsSNR: hopsSNR
             )
 
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 do {
                     try await dataStore.appendTracePathRun(pathID: savedPath.id, run: runDTO)
                     // Refresh saved path to get updated runs
                     if let updated = try await dataStore.fetchSavedTracePath(id: savedPath.id) {
-                        activeSavedPath = updated
+                        self?.activeSavedPath = updated
                     }
                     logger.info("Appended run to saved path")
                 } catch {
@@ -978,6 +1191,11 @@ final class TracePathViewModel {
     /// Test helper to set pending path hash
     func setPendingPathHashForTesting(_ pathHash: [UInt8]?) {
         pendingPathHash = pathHash
+    }
+
+    /// Test helper to set contacts for hash resolution
+    func setContactsForTesting(_ contacts: [ContactDTO]) {
+        allContacts = contacts
     }
     #endif
 }

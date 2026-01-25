@@ -6,12 +6,13 @@ struct DiscoveryView: View {
     @Environment(\.appState) private var appState
     @State private var discoveredContacts: [ContactDTO] = []
     @State private var isLoading = false
+    @State private var hasLoadedOnce = false
     @State private var addingContactID: UUID?
     @State private var errorMessage: String?
 
     var body: some View {
         Group {
-            if isLoading && discoveredContacts.isEmpty {
+            if !hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if discoveredContacts.isEmpty {
@@ -20,7 +21,7 @@ struct DiscoveryView: View {
                 contactsList
             }
         }
-        .navigationTitle("Discover")
+        .navigationTitle(L10n.Contacts.Contacts.Discovery.title)
         .task {
             await loadDiscoveredContacts()
         }
@@ -29,8 +30,8 @@ struct DiscoveryView: View {
                 await loadDiscoveredContacts()
             }
         }
-        .alert("Error", isPresented: .constant(errorMessage != nil)) {
-            Button("OK") { errorMessage = nil }
+        .alert(L10n.Contacts.Contacts.Common.error, isPresented: .constant(errorMessage != nil)) {
+            Button(L10n.Contacts.Contacts.Common.ok) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
         }
@@ -38,9 +39,9 @@ struct DiscoveryView: View {
 
     private var emptyView: some View {
         ContentUnavailableView(
-            "No Discovered Nodes",
+            L10n.Contacts.Contacts.Discovery.Empty.title,
             systemImage: "antenna.radiowaves.left.and.right",
-            description: Text("When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
+            description: Text(L10n.Contacts.Contacts.Discovery.Empty.description)
         )
     }
 
@@ -55,7 +56,7 @@ struct DiscoveryView: View {
 
     private func discoveredContactRow(_ contact: ContactDTO) -> some View {
         HStack {
-            ContactAvatar(contact: contact, size: 44)
+            avatarView(for: contact)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(contact.displayName)
@@ -78,7 +79,7 @@ struct DiscoveryView: View {
                     ProgressView()
                         .frame(width: 60)
                 } else {
-                    Text("Add")
+                    Text(L10n.Contacts.Contacts.Discovery.add)
                         .frame(width: 60)
                 }
             }
@@ -88,11 +89,23 @@ struct DiscoveryView: View {
         .padding(.vertical, 4)
     }
 
+    @ViewBuilder
+    private func avatarView(for contact: ContactDTO) -> some View {
+        switch contact.type {
+        case .chat:
+            ContactAvatar(contact: contact, size: 44)
+        case .repeater:
+            NodeAvatar(publicKey: contact.publicKey, role: .repeater, size: 44)
+        case .room:
+            NodeAvatar(publicKey: contact.publicKey, role: .roomServer, size: 44)
+        }
+    }
+
     private func contactTypeLabel(for contact: ContactDTO) -> String {
         switch contact.type {
-        case .chat: return "Chat"
-        case .repeater: return "Repeater"
-        case .room: return "Room"
+        case .chat: return L10n.Contacts.Contacts.NodeKind.chat
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 
@@ -106,16 +119,18 @@ struct DiscoveryView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+        hasLoadedOnce = true
         isLoading = false
     }
 
     private func addContact(_ contact: ContactDTO) async {
         guard let contactService = appState.services?.contactService,
               let dataStore = appState.services?.dataStore else {
-            errorMessage = "Services not available"
+            errorMessage = L10n.Contacts.Contacts.Discovery.Error.servicesUnavailable
             return
         }
 
+        let maxContacts = appState.connectedDevice?.maxContacts
         addingContactID = contact.id
 
         do {
@@ -130,6 +145,12 @@ struct DiscoveryView: View {
 
             // Remove from local list
             discoveredContacts.removeAll { $0.id == contact.id }
+        } catch ContactServiceError.contactTableFull {
+            if let maxContacts {
+                errorMessage = "Node list is full (max \(maxContacts) nodes)"
+            } else {
+                errorMessage = "Node list is full"
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

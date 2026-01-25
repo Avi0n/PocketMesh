@@ -43,11 +43,11 @@ struct JoinHashtagFromMessageView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Join Channel")
+            .navigationTitle(L10n.Chats.Chats.JoinFromMessage.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.Chats.Chats.Common.cancel) {
                         onComplete(nil)
                         dismiss()
                     }
@@ -63,17 +63,17 @@ struct JoinHashtagFromMessageView: View {
     // MARK: - Loading View
 
     private var loadingView: some View {
-        ProgressView("Loading...")
+        ProgressView(L10n.Chats.Chats.JoinFromMessage.loading)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var missingDeviceView: some View {
         ContentUnavailableView {
-            Label("No Device Connected", systemImage: "antenna.radiowaves.left.and.right.slash")
+            Label(L10n.Chats.Chats.JoinFromMessage.NoDevice.title, systemImage: "antenna.radiowaves.left.and.right.slash")
         } description: {
-            Text("Connect a device to join \(fullChannelName).")
+            Text(L10n.Chats.Chats.JoinFromMessage.NoDevice.description(fullChannelName))
         } actions: {
-            Button("OK") {
+            Button(L10n.Chats.Chats.Common.ok) {
                 onComplete(nil)
                 dismiss()
             }
@@ -85,11 +85,11 @@ struct JoinHashtagFromMessageView: View {
 
     private var noSlotsView: some View {
         ContentUnavailableView {
-            Label("No Slots Available", systemImage: "number.circle.fill")
+            Label(L10n.Chats.Chats.JoinFromMessage.NoSlots.title, systemImage: "number.circle.fill")
         } description: {
-            Text("All channel slots are full. Remove an existing channel to join \(fullChannelName).")
+            Text(L10n.Chats.Chats.JoinFromMessage.NoSlots.description(fullChannelName))
         } actions: {
-            Button("OK") {
+            Button(L10n.Chats.Chats.Common.ok) {
                 onComplete(nil)
                 dismiss()
             }
@@ -118,7 +118,7 @@ struct JoinHashtagFromMessageView: View {
                     .font(.title)
                     .bold()
 
-                Text("Hashtag channels are public. Anyone can join by entering the same name.")
+                Text(L10n.Chats.Chats.JoinFromMessage.description)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -142,7 +142,7 @@ struct JoinHashtagFromMessageView: View {
                 if isJoining {
                     ProgressView()
                 } else {
-                    Text("Join \(fullChannelName)")
+                    Text(L10n.Chats.Chats.JoinFromMessage.joinButton(fullChannelName))
                 }
             }
             .liquidGlassProminentButtonStyle()
@@ -180,22 +180,22 @@ struct JoinHashtagFromMessageView: View {
 
     private func joinChannel() async {
         guard let deviceID = appState.connectedDevice?.id else {
-            errorMessage = "No device connected."
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
             return
         }
 
         guard let channelService = appState.services?.channelService else {
-            errorMessage = "Services not available."
+            errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
             return
         }
 
         guard let selectedSlot = availableSlots.first else {
-            errorMessage = "No available slots."
+            errorMessage = L10n.Chats.Chats.JoinFromMessage.Error.noSlots
             return
         }
 
         guard HashtagUtilities.isValidHashtagName(normalizedName) else {
-            errorMessage = "Invalid channel name format."
+            errorMessage = L10n.Chats.Chats.JoinFromMessage.Error.invalidName
             return
         }
 
@@ -215,7 +215,7 @@ struct JoinHashtagFromMessageView: View {
                 onComplete(newChannel)
                 dismiss()
             } else {
-                errorMessage = "Channel created but could not be loaded."
+                errorMessage = L10n.Chats.Chats.JoinFromMessage.Error.loadFailed
             }
         } catch {
             logger.error("Failed to join channel: \(error)")

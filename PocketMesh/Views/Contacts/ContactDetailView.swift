@@ -76,27 +76,27 @@ struct ContactDetailView: View {
             // Danger zone
             dangerSection
         }
-        .navigationTitle(currentContact.type.displayName)
+        .navigationTitle(contactTypeLabel)
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Block Contact", isPresented: $showingBlockAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Block", role: .destructive) {
+        .alert(L10n.Contacts.Contacts.Detail.Alert.Block.title, isPresented: $showingBlockAlert) {
+            Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
+            Button(L10n.Contacts.Contacts.Swipe.block, role: .destructive) {
                 Task {
                     await toggleBlocked()
                 }
             }
         } message: {
-            Text("You won't receive messages from \(currentContact.displayName). Conversations from this user will be hidden from your Chats list, and their channel messages will not appear. Unblocking will reverse these actions and make visible any messages they have sent.")
+            Text(L10n.Contacts.Contacts.Detail.Alert.Block.message(currentContact.displayName))
         }
-        .alert("Delete \(currentContact.type.displayName)", isPresented: $showingDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
+        .alert(L10n.Contacts.Contacts.Detail.Alert.Delete.title(contactTypeLabel), isPresented: $showingDeleteAlert) {
+            Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
+            Button(L10n.Contacts.Contacts.Common.delete, role: .destructive) {
                 Task {
                     await deleteContact()
                 }
             }
         } message: {
-            Text("This will remove \(currentContact.displayName) and delete all associated data. This action cannot be undone.")
+            Text(L10n.Contacts.Contacts.Detail.Alert.Delete.message(currentContact.displayName))
         }
         .onAppear {
             nickname = currentContact.nickname ?? ""
@@ -131,13 +131,13 @@ struct ContactDetailView: View {
         .sheet(isPresented: $pathViewModel.showingPathEditor) {
             PathEditingSheet(viewModel: pathViewModel, contact: currentContact)
         }
-        .alert("Path Error", isPresented: $pathViewModel.showError) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Contacts.Contacts.Detail.Alert.pathError, isPresented: $pathViewModel.showError) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) { }
         } message: {
-            Text(pathViewModel.errorMessage ?? "An unknown error occurred")
+            Text(pathViewModel.errorMessage ?? L10n.Contacts.Contacts.Common.errorOccurred)
         }
-        .alert("Path Discovery", isPresented: $pathViewModel.showDiscoveryResult) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Contacts.Contacts.Detail.Alert.pathDiscovery, isPresented: $pathViewModel.showDiscoveryResult) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) { }
         } message: {
             Text(pathViewModel.discoveryResult?.description ?? "")
         }
@@ -157,7 +157,7 @@ struct ContactDetailView: View {
                     NodeAuthenticationSheet(
                         contact: currentContact,
                         role: role,
-                        customTitle: "Telemetry Access"
+                        customTitle: L10n.Contacts.Contacts.Detail.telemetryAccess
                     ) { session in
                         pendingSheet = .repeaterStatus(session)
                         activeSheet = nil  // Triggers dismissal, then onDismiss fires
@@ -270,7 +270,7 @@ struct ContactDetailView: View {
     private var profileSection: some View {
         Section {
             VStack(spacing: 16) {
-                ContactAvatar(contact: currentContact, size: 100)
+                avatarView
 
                 VStack(spacing: 4) {
                     Text(currentContact.displayName)
@@ -284,19 +284,19 @@ struct ContactDetailView: View {
                     // Status indicators
                     HStack(spacing: 12) {
                         if currentContact.isFavorite {
-                            Label("Favorite", systemImage: "star.fill")
+                            Label(L10n.Contacts.Contacts.Detail.favorite, systemImage: "star.fill")
                                 .font(.caption)
                                 .foregroundStyle(.yellow)
                         }
 
                         if currentContact.isBlocked {
-                            Label("Blocked", systemImage: "hand.raised.fill")
+                            Label(L10n.Contacts.Contacts.Detail.blocked, systemImage: "hand.raised.fill")
                                 .font(.caption)
                                 .foregroundStyle(.orange)
                         }
 
                         if currentContact.hasLocation {
-                            Label("Has Location", systemImage: "location.fill")
+                            Label(L10n.Contacts.Contacts.Detail.hasLocation, systemImage: "location.fill")
                                 .font(.caption)
                                 .foregroundStyle(.green)
                         }
@@ -305,6 +305,18 @@ struct ContactDetailView: View {
             }
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        switch currentContact.type {
+        case .chat:
+            ContactAvatar(contact: currentContact, size: 100)
+        case .repeater:
+            NodeAvatar(publicKey: currentContact.publicKey, role: .repeater, size: 100)
+        case .room:
+            NodeAvatar(publicKey: currentContact.publicKey, role: .roomServer, size: 100)
         }
     }
 
@@ -319,7 +331,7 @@ struct ContactDetailView: View {
                 Button {
                     showRoomJoinSheet = true
                 } label: {
-                    Label("Join Room", systemImage: "door.left.hand.open")
+                    Label(L10n.Contacts.Contacts.Detail.joinRoom, systemImage: "door.left.hand.open")
                 }
 
             case .repeater:
@@ -327,7 +339,7 @@ struct ContactDetailView: View {
                 Button {
                     activeSheet = .repeaterAuth
                 } label: {
-                    Label("Telemetry", systemImage: "chart.line.uptrend.xyaxis")
+                    Label(L10n.Contacts.Contacts.Detail.telemetry, systemImage: "chart.line.uptrend.xyaxis")
                 }
 
                 // Admin Access - navigates to settings view after auth
@@ -335,7 +347,7 @@ struct ContactDetailView: View {
                     adminSession = nil  // Clear stale session before presenting sheet
                     showRepeaterAdminAuth = true
                 } label: {
-                    Label("Admin Access", systemImage: "gearshape.2")
+                    Label(L10n.Contacts.Contacts.Detail.adminAccess, systemImage: "gearshape.2")
                 }
 
             case .chat:
@@ -344,8 +356,9 @@ struct ContactDetailView: View {
                     Button {
                         appState.navigateToChat(with: currentContact)
                     } label: {
-                        Label("Send Message", systemImage: "message.fill")
+                        Label(L10n.Contacts.Contacts.Detail.sendMessage, systemImage: "message.fill")
                     }
+                    .radioDisabled(for: appState.connectionState)
                 }
             }
 
@@ -356,16 +369,17 @@ struct ContactDetailView: View {
                 }
             } label: {
                 Label(
-                    currentContact.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                    currentContact.isFavorite ? L10n.Contacts.Contacts.Detail.removeFromFavorites : L10n.Contacts.Contacts.Detail.addToFavorites,
                     systemImage: currentContact.isFavorite ? "star.slash" : "star"
                 )
             }
+            .radioDisabled(for: appState.connectionState)
 
             // Share Contact via QR
             Button {
                 showQRShareSheet = true
             } label: {
-                Label("Share Contact", systemImage: "square.and.arrow.up")
+                Label(L10n.Contacts.Contacts.Detail.shareContact, systemImage: "square.and.arrow.up")
             }
 
             // Share Contact via Advert
@@ -374,8 +388,9 @@ struct ContactDetailView: View {
                     await shareContact()
                 }
             } label: {
-                Label("Share Contact via Advert", systemImage: "antenna.radiowaves.left.and.right")
+                Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
             }
+            .radioDisabled(for: appState.connectionState)
         }
     }
 
@@ -385,12 +400,12 @@ struct ContactDetailView: View {
         Section {
             // Nickname
             HStack {
-                Text("Nickname")
+                Text(L10n.Contacts.Contacts.Detail.nickname)
 
                 Spacer()
 
                 if isEditingNickname {
-                    TextField("Nickname", text: $nickname)
+                    TextField(L10n.Contacts.Contacts.Detail.nickname, text: $nickname)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 150)
                         .onSubmit {
@@ -399,17 +414,17 @@ struct ContactDetailView: View {
                             }
                         }
 
-                    Button("Save") {
+                    Button(L10n.Contacts.Contacts.Common.save) {
                         Task {
                             await saveNickname()
                         }
                     }
                     .disabled(isSaving)
                 } else {
-                    Text(currentContact.nickname ?? "None")
+                    Text(currentContact.nickname ?? L10n.Contacts.Contacts.Detail.nicknameNone)
                         .foregroundStyle(.secondary)
 
-                    Button("Edit") {
+                    Button(L10n.Contacts.Contacts.Common.edit) {
                         isEditingNickname = true
                     }
                     .buttonStyle(.borderless)
@@ -418,7 +433,7 @@ struct ContactDetailView: View {
 
             // Original name
             HStack {
-                Text("Name")
+                Text(L10n.Contacts.Contacts.Detail.name)
                 Spacer()
                 Text(currentContact.name)
                     .foregroundStyle(.secondary)
@@ -427,7 +442,7 @@ struct ContactDetailView: View {
             // Last advert
             if currentContact.lastAdvertTimestamp > 0 {
                 HStack {
-                    Text("Last Advert")
+                    Text(L10n.Contacts.Contacts.Detail.lastAdvert)
                     Spacer()
                     ConversationTimestamp(date: Date(timeIntervalSince1970: TimeInterval(currentContact.lastAdvertTimestamp)), font: .body)
                 }
@@ -436,14 +451,14 @@ struct ContactDetailView: View {
             // Unread count
             if currentContact.unreadCount > 0 {
                 HStack {
-                    Text("Unread Messages")
+                    Text(L10n.Contacts.Contacts.Detail.unreadMessages)
                     Spacer()
                     Text(currentContact.unreadCount, format: .number)
                         .foregroundStyle(.blue)
                 }
             }
         } header: {
-            Text("Info")
+            Text(L10n.Contacts.Contacts.Detail.info)
         }
     }
 
@@ -465,7 +480,7 @@ struct ContactDetailView: View {
 
             // Coordinates
             HStack {
-                Text("Coordinates")
+                Text(L10n.Contacts.Contacts.Detail.coordinates)
                 Spacer()
                 Text("\(currentContact.latitude, format: .number.precision(.fractionLength(4))), \(currentContact.longitude, format: .number.precision(.fractionLength(4)))")
                     .foregroundStyle(.secondary)
@@ -479,10 +494,10 @@ struct ContactDetailView: View {
             Button {
                 openInMaps()
             } label: {
-                Label("Open in Maps", systemImage: "map")
+                Label(L10n.Contacts.Contacts.Detail.openInMaps, systemImage: "map")
             }
         } header: {
-            Text("Location")
+            Text(L10n.Contacts.Contacts.Detail.location)
         }
     }
 
@@ -506,7 +521,7 @@ struct ContactDetailView: View {
             // Current routing path
             Label {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Route")
+                    Text(L10n.Contacts.Contacts.Detail.route)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -525,7 +540,7 @@ struct ContactDetailView: View {
             if !currentContact.isFloodRouted {
                 Label {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Hops Away")
+                        Text(L10n.Contacts.Contacts.Detail.hopsAway)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
 
@@ -543,10 +558,10 @@ struct ContactDetailView: View {
             if pathViewModel.isDiscovering {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Label("Discovering path...", systemImage: "antenna.radiowaves.left.and.right")
+                        Label(L10n.Contacts.Contacts.Detail.discoveringPath, systemImage: "antenna.radiowaves.left.and.right")
                         Spacer()
                         ProgressView()
-                        Button("Cancel") {
+                        Button(L10n.Contacts.Contacts.Common.cancel) {
                             pathViewModel.cancelDiscovery()
                         }
                         .buttonStyle(.borderless)
@@ -554,7 +569,7 @@ struct ContactDetailView: View {
                     }
 
                     if let remaining = pathViewModel.discoverySecondsRemaining, remaining > 0 {
-                        Text("Up to \(remaining) seconds remaining")
+                        Text(L10n.Contacts.Contacts.Detail.secondsRemaining(remaining))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -565,8 +580,9 @@ struct ContactDetailView: View {
                         await pathViewModel.discoverPath(for: currentContact)
                     }
                 } label: {
-                    Label("Discover Path", systemImage: "antenna.radiowaves.left.and.right")
+                    Label(L10n.Contacts.Contacts.Detail.discoverPath, systemImage: "antenna.radiowaves.left.and.right")
                 }
+                .radioDisabled(for: appState.connectionState)
             }
 
             // Edit Path button (secondary)
@@ -577,8 +593,9 @@ struct ContactDetailView: View {
                     pathViewModel.showingPathEditor = true
                 }
             } label: {
-                Label("Edit Path", systemImage: "pencil")
+                Label(L10n.Contacts.Contacts.Detail.editPath, systemImage: "pencil")
             }
+            .radioDisabled(for: appState.connectionState)
 
             // Reset Path button (destructive, disabled when already flood)
             Button(role: .destructive) {
@@ -588,7 +605,7 @@ struct ContactDetailView: View {
                 }
             } label: {
                 HStack {
-                    Label("Reset Path", systemImage: "arrow.triangle.2.circlepath")
+                    Label(L10n.Contacts.Contacts.Detail.resetPath, systemImage: "arrow.triangle.2.circlepath")
                     if pathViewModel.isSettingPath {
                         Spacer()
                         ProgressView()
@@ -596,9 +613,9 @@ struct ContactDetailView: View {
                     }
                 }
             }
-            .disabled(pathViewModel.isSettingPath || currentContact.isFloodRouted)
+            .radioDisabled(for: appState.connectionState, or: pathViewModel.isSettingPath || currentContact.isFloodRouted)
         } header: {
-            Text("Network Path")
+            Text(L10n.Contacts.Contacts.Detail.networkPath)
         } footer: {
             Text(networkPathFooterText)
         }
@@ -622,9 +639,9 @@ struct ContactDetailView: View {
     // Route display text for simplified view
     private var routeDisplayText: String {
         if currentContact.isFloodRouted {
-            return "Flood"
+            return L10n.Contacts.Contacts.Route.flood
         } else if currentContact.outPathLength == 0 {
-            return "Direct"
+            return L10n.Contacts.Contacts.Route.direct
         } else {
             return pathDisplayWithNames
         }
@@ -633,20 +650,20 @@ struct ContactDetailView: View {
     // Footer text for network path section
     private var networkPathFooterText: String {
         if currentContact.isFloodRouted {
-            return "Messages are broadcast to all nodes. Discover Path to find an optimal route."
+            return L10n.Contacts.Contacts.Detail.floodFooter
         } else {
-            return "Messages route through the path shown. Reset Path to use flood routing instead."
+            return L10n.Contacts.Contacts.Detail.pathFooter
         }
     }
 
     // VoiceOver accessibility label for path
     private var pathAccessibilityLabel: String {
         if currentContact.isFloodRouted {
-            return "Route: Flood"
+            return L10n.Contacts.Contacts.Detail.routeFlood
         } else if currentContact.outPathLength == 0 {
-            return "Route: Direct"
+            return L10n.Contacts.Contacts.Detail.routeDirect
         } else {
-            return "Route: \(pathDisplayWithNames)"
+            return L10n.Contacts.Contacts.Detail.routePrefix(pathDisplayWithNames)
         }
     }
 
@@ -656,7 +673,7 @@ struct ContactDetailView: View {
         Section {
             // Public key
             VStack(alignment: .leading, spacing: 4) {
-                Text("Public Key")
+                Text(L10n.Contacts.Contacts.Detail.publicKey)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(currentContact.publicKey.hexString(separator: " "))
@@ -666,13 +683,13 @@ struct ContactDetailView: View {
 
             // Contact type
             HStack {
-                Text("Type")
+                Text(L10n.Contacts.Contacts.Detail.type)
                 Spacer()
                 Text(contactTypeLabel)
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("Technical")
+            Text(L10n.Contacts.Contacts.Detail.technical)
         }
     }
 
@@ -691,19 +708,21 @@ struct ContactDetailView: View {
                     }
                 } label: {
                     Label(
-                        currentContact.isBlocked ? "Unblock Contact" : "Block Contact",
+                        currentContact.isBlocked ? L10n.Contacts.Contacts.Detail.unblockContact : L10n.Contacts.Contacts.Detail.blockContact,
                         systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
                     )
                 }
+                .radioDisabled(for: appState.connectionState)
             }
 
             Button(role: .destructive) {
                 showingDeleteAlert = true
             } label: {
-                Label("Delete \(currentContact.type.displayName)", systemImage: "trash")
+                Label(L10n.Contacts.Contacts.Detail.deleteType(contactTypeLabel), systemImage: "trash")
             }
+            .radioDisabled(for: appState.connectionState)
         } header: {
-            Text("Danger Zone")
+            Text(L10n.Contacts.Contacts.Detail.dangerZone)
         }
     }
 
@@ -711,9 +730,9 @@ struct ContactDetailView: View {
 
     private var contactTypeLabel: String {
         switch currentContact.type {
-        case .chat: return "Chat Contact"
-        case .repeater: return "Repeater"
-        case .room: return "Room"
+        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 

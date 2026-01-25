@@ -79,7 +79,7 @@ struct SelectedPoint: Identifiable, Equatable {
     }
 
     var displayName: String {
-        contact?.displayName ?? "Dropped pin"
+        contact?.displayName ?? L10n.Tools.Tools.LineOfSight.droppedPin
     }
 
     var isLoadingElevation: Bool {
@@ -279,8 +279,9 @@ final class LineOfSightViewModel {
     // MARK: - Configuration
 
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
-        self.deviceID = appState.connectedDevice?.id
+        // Use offline-capable data store and device ID to support browsing cached data when disconnected
+        self.dataStore = appState.offlineDataStore
+        self.deviceID = appState.currentDeviceID
 
         // Initialize frequency from connected device (stored in kHz, convert to MHz)
         if let deviceFrequencyKHz = appState.connectedDevice?.frequency {
@@ -587,7 +588,7 @@ final class LineOfSightViewModel {
             startHeightMeters: pointAHeight,
             endHeightMeters: repeaterHeight,
             frequencyMHz: freq,
-            k: k
+            kFactor: k
         )
 
         let rbResult = RFCalculator.analyzePathSegment(
@@ -595,7 +596,7 @@ final class LineOfSightViewModel {
             startHeightMeters: repeaterHeight,
             endHeightMeters: pointBHeight,
             frequencyMHz: freq,
-            k: k
+            kFactor: k
         )
 
         // Create segment results
@@ -683,7 +684,7 @@ final class LineOfSightViewModel {
                 startHeightMeters: pointAHeight,
                 endHeightMeters: repeaterHeight,
                 frequencyMHz: freq,
-                k: k
+                kFactor: k
             )
 
             let rbResult = RFCalculator.analyzePathSegment(
@@ -691,7 +692,7 @@ final class LineOfSightViewModel {
                 startHeightMeters: repeaterHeight,
                 endHeightMeters: pointBHeight,
                 frequencyMHz: freq,
-                k: k
+                kFactor: k
             )
 
             // Create segment results
@@ -810,7 +811,7 @@ final class LineOfSightViewModel {
                         pointAHeightMeters: pointAHeight,
                         pointBHeightMeters: pointBHeight,
                         frequencyMHz: freq,
-                        k: k
+                        kFactor: k
                     )
                 }.value
 
@@ -894,7 +895,7 @@ final class LineOfSightViewModel {
                     pointAHeightMeters: pointAHeight,
                     pointBHeightMeters: pointBHeight,
                     frequencyMHz: freq,
-                    k: k
+                    kFactor: k
                 )
             }.value
 

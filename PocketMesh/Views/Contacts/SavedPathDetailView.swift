@@ -29,7 +29,7 @@ struct SavedPathDetailView: View {
     // MARK: - Path Section
 
     private var pathSection: some View {
-        Section("Path") {
+        Section(L10n.Contacts.Contacts.PathDetail.path) {
             PathChipsView(pathBytes: viewModel.savedPath.pathHashBytes)
         }
     }
@@ -37,7 +37,7 @@ struct SavedPathDetailView: View {
     // MARK: - Performance Section
 
     private var performanceSection: some View {
-        Section("Performance") {
+        Section(L10n.Contacts.Contacts.PathDetail.performance) {
             // Chart
             if viewModel.successfulRuns.count >= 2 {
                 Chart(viewModel.successfulRuns) { run in
@@ -54,16 +54,16 @@ struct SavedPathDetailView: View {
                     .foregroundStyle(.blue)
                 }
                 .frame(height: 150)
-                .chartYAxisLabel("Round Trip (ms)")
+                .chartYAxisLabel(L10n.Contacts.Contacts.PathDetail.roundTripMs)
             }
 
             // Summary stats
             HStack {
-                StatView(label: "Avg", value: viewModel.averageRoundTrip.map { "\($0) ms" } ?? "-")
+                StatView(label: L10n.Contacts.Contacts.PathDetail.avg, value: viewModel.averageRoundTrip.map { "\($0) ms" } ?? "-")
                 Divider()
-                StatView(label: "Best", value: viewModel.bestRoundTrip.map { "\($0) ms" } ?? "-")
+                StatView(label: L10n.Contacts.Contacts.PathDetail.best, value: viewModel.bestRoundTrip.map { "\($0) ms" } ?? "-")
                 Divider()
-                StatView(label: "Success", value: viewModel.successRateText)
+                StatView(label: L10n.Contacts.Contacts.PathDetail.success, value: viewModel.successRateText)
             }
             .frame(height: 50)
         }
@@ -72,7 +72,7 @@ struct SavedPathDetailView: View {
     // MARK: - History Section
 
     private var historySection: some View {
-        Section("History") {
+        Section(L10n.Contacts.Contacts.PathDetail.history) {
             ForEach(viewModel.sortedRuns) { run in
                 NavigationLink {
                     RunDetailView(run: run)
@@ -90,7 +90,7 @@ struct SavedPathDetailView: View {
                         Spacer()
 
                         if !run.success {
-                            Text("Failed")
+                            Text(L10n.Contacts.Contacts.PathDetail.failed)
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -152,16 +152,16 @@ private struct RunDetailView: View {
 
     var body: some View {
         List {
-            Section("Overview") {
-                LabeledContent("Date", value: run.date.formatted())
-                LabeledContent("Round Trip", value: "\(run.roundTripMs) ms")
-                LabeledContent("Status", value: run.success ? "Success" : "Failed")
+            Section(L10n.Contacts.Contacts.PathDetail.overview) {
+                LabeledContent(L10n.Contacts.Contacts.PathDetail.date, value: run.date.formatted())
+                LabeledContent(L10n.Contacts.Contacts.PathDetail.roundTrip, value: "\(run.roundTripMs) ms")
+                LabeledContent(L10n.Contacts.Contacts.PathDetail.status, value: run.success ? L10n.Contacts.Contacts.PathDetail.success : L10n.Contacts.Contacts.PathDetail.failed)
             }
 
             if run.success && !run.hopsSNR.isEmpty {
-                Section("Per-Hop SNR") {
+                Section(L10n.Contacts.Contacts.PathDetail.perHopSNR) {
                     ForEach(Array(run.hopsSNR.enumerated()), id: \.offset) { index, snr in
-                        LabeledContent("Hop \(index + 1)") {
+                        LabeledContent(L10n.Contacts.Contacts.PathDetail.hop(index + 1)) {
                             Text(snr, format: .number.precision(.fractionLength(2)))
                             + Text(" dB")
                         }
@@ -169,7 +169,7 @@ private struct RunDetailView: View {
                 }
             }
         }
-        .navigationTitle("Run Details")
+        .navigationTitle(L10n.Contacts.Contacts.PathDetail.runDetails)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

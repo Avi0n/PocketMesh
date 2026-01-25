@@ -322,4 +322,10 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func countDebugLogEntries() async throws -> Int { 0 }
     func pruneDebugLogEntries(keepCount: Int) async throws {}
     func clearDebugLogEntries() async throws {}
+
+    // Contact Public Keys
+    func fetchContactPublicKeysByPrefix(deviceID: UUID) async throws -> [UInt8: [Data]] { [:] }
+
+    // RxLogEntry Lookup
+    func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
 }

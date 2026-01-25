@@ -4,7 +4,6 @@ import PocketMeshServices
 /// Layout constants for message bubbles
 private enum MessageLayout {
     static let maxBubbleWidth: CGFloat = 280
-    static let outgoingBubbleColor = Color(red: 36/255, green: 99/255, blue: 235/255)
 }
 
 /// Configuration for message bubble appearance and behavior
@@ -40,7 +39,7 @@ struct MessageBubbleConfiguration: Sendable {
 
         // Fallback: key prefix lookup
         guard let prefix = message.senderKeyPrefix else {
-            return "Unknown"
+            return L10n.Chats.Chats.Message.Sender.unknown
         }
 
         // Try to find matching contact
@@ -55,7 +54,7 @@ struct MessageBubbleConfiguration: Sendable {
         if prefix.count >= 2 {
             return prefix.prefix(2).map { String(format: "%02X", $0) }.joined()
         }
-        return "Unknown"
+        return L10n.Chats.Chats.Message.Sender.unknown
     }
 }
 
@@ -68,10 +67,12 @@ struct UnifiedMessageBubble: View {
     let configuration: MessageBubbleConfiguration
     let showTimestamp: Bool
     let showDirectionGap: Bool
+    let showSenderName: Bool
     let onRetry: (() -> Void)?
     let onReply: ((String) -> Void)?
     let onDelete: (() -> Void)?
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
+    let onShowPath: ((MessageDTO) -> Void)?
     let onSendAgain: (() -> Void)?
 
     // Preview state from display item (replaces @State)
@@ -84,6 +85,9 @@ struct UnifiedMessageBubble: View {
 
     @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
+    @State private var copyHapticTrigger = 0
 
     init(
         message: MessageDTO,
@@ -93,12 +97,14 @@ struct UnifiedMessageBubble: View {
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
         showDirectionGap: Bool = false,
+        showSenderName: Bool = true,
         previewState: PreviewLoadState = .idle,
         loadedPreview: LinkPreviewDataDTO? = nil,
         onRetry: (() -> Void)? = nil,
         onReply: ((String) -> Void)? = nil,
         onDelete: (() -> Void)? = nil,
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
+        onShowPath: ((MessageDTO) -> Void)? = nil,
         onSendAgain: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
@@ -110,12 +116,14 @@ struct UnifiedMessageBubble: View {
         self.configuration = configuration
         self.showTimestamp = showTimestamp
         self.showDirectionGap = showDirectionGap
+        self.showSenderName = showSenderName
         self.previewState = previewState
         self.loadedPreview = loadedPreview
         self.onRetry = onRetry
         self.onReply = onReply
         self.onDelete = onDelete
         self.onShowRepeatDetails = onShowRepeatDetails
+        self.onShowPath = onShowPath
         self.onSendAgain = onSendAgain
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
@@ -135,11 +143,12 @@ struct UnifiedMessageBubble: View {
                 }
 
                 VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
-                    // Sender name for incoming channel messages
-                    if !message.isOutgoing && configuration.showSenderName {
+                    // Sender name for incoming channel messages (hidden for continuation messages in a group)
+                    if !message.isOutgoing && configuration.showSenderName && showSenderName {
                         Text(senderName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.footnote)
+                            .bold()
+                            .foregroundStyle(senderColor)
                     }
 
                     // Message text with context menu
@@ -163,6 +172,8 @@ struct UnifiedMessageBubble: View {
                         statusRow
                     }
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessibilityMessageLabel)
 
                 if !message.isOutgoing {
                     Spacer(minLength: 60)
@@ -170,7 +181,7 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal)
-        .padding(.top, showDirectionGap ? 12 : 2)
+        .padding(.top, showDirectionGap ? 12 : (showSenderName ? 8 : 2))
         .padding(.bottom, message.isOutgoing ? 4 : 2)
         .onAppear {
             // Request preview fetch when cell becomes visible
@@ -179,6 +190,7 @@ struct UnifiedMessageBubble: View {
                 onRequestPreviewFetch?()
             }
         }
+        .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
     // MARK: - Link Preview Content
@@ -246,20 +258,37 @@ struct UnifiedMessageBubble: View {
         configuration.senderNameResolver?(message) ?? "Unknown"
     }
 
+    private var senderColor: Color {
+        AppColors.NameColor.color(for: senderName, highContrast: colorSchemeContrast == .increased)
+    }
+
     private var detectedURL: URL? {
         LinkPreviewService.extractFirstURL(from: message.text)
     }
 
     private var bubbleColor: Color {
         if message.isOutgoing {
-            return message.hasFailed ? .red.opacity(0.8) : MessageLayout.outgoingBubbleColor
+            return message.hasFailed ? AppColors.Message.outgoingBubbleFailed : AppColors.Message.outgoingBubble
         } else {
-            return Color(.systemGray5)
+            return AppColors.Message.incomingBubble
         }
     }
 
     private var textColor: Color {
         message.isOutgoing ? .white : .primary
+    }
+
+    private var accessibilityMessageLabel: String {
+        var label = ""
+        // Always include sender name for screen readers, even when visually hidden
+        if !message.isOutgoing && configuration.showSenderName {
+            label = "\(senderName): "
+        }
+        label += message.text
+        if message.isOutgoing {
+            label += ", \(statusText)"
+        }
+        return label
     }
 
     // MARK: - Context Menu
@@ -275,14 +304,15 @@ struct UnifiedMessageBubble: View {
                 let replyText = buildReplyText()
                 onReply(replyText)
             } label: {
-                Label("Reply", systemImage: "arrowshape.turn.up.left")
+                Label(L10n.Chats.Chats.Message.Action.reply, systemImage: "arrowshape.turn.up.left")
             }
         }
 
         Button {
+            copyHapticTrigger += 1
             UIPasteboard.general.string = message.text
         } label: {
-            Label("Copy", systemImage: "doc.on.doc")
+            Label(L10n.Chats.Chats.Message.Action.copy, systemImage: "doc.on.doc")
         }
 
         // Repeat Details button (only for outgoing channel messages with repeats)
@@ -290,7 +320,7 @@ struct UnifiedMessageBubble: View {
             Button {
                 onShowRepeatDetails(message)
             } label: {
-                Label("Repeat Details", systemImage: "arrow.triangle.branch")
+                Label(L10n.Chats.Chats.Message.Action.repeatDetails, systemImage: "arrow.triangle.branch")
             }
         }
 
@@ -299,36 +329,51 @@ struct UnifiedMessageBubble: View {
             Button {
                 onSendAgain()
             } label: {
-                Label("Send Again", systemImage: "arrow.uturn.forward")
+                Label(L10n.Chats.Chats.Message.Action.sendAgain, systemImage: "arrow.uturn.forward")
             }
         }
 
         // Outgoing message details
         if message.isOutgoing {
             if (message.status == .sent || message.status == .delivered) && message.heardRepeats > 0 {
-                Text("Heard: \(message.heardRepeats) repeat\(message.heardRepeats == 1 ? "" : "s")")
+                let repeatWord = message.heardRepeats == 1 ? L10n.Chats.Chats.Message.Repeat.singular : L10n.Chats.Chats.Message.Repeat.plural
+                Text(L10n.Chats.Chats.Message.Info.heardRepeats(message.heardRepeats, repeatWord))
             }
 
-            Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
+            Text(L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)))
 
             if let rtt = message.roundTripTime {
-                Text("Round trip: \(rtt)ms")
+                Text(L10n.Chats.Chats.Message.Info.roundTrip(Int(rtt)))
             }
         }
 
-        // Incoming message details in submenu (more fields)
+        // Incoming message path and details
         if !message.isOutgoing {
+            if message.pathNodes != nil && message.pathLength != 0 && message.pathLength != 0xFF {
+                Button {
+                    onShowPath?(message)
+                } label: {
+                    Label(L10n.Chats.Chats.Message.Action.viewPath, systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                }
+            }
+
+            Label(hopCountFormatted(message.pathLength), systemImage: "arrowshape.bounce.right")
+
             Menu {
-                Text("Sent: \(message.date.formatted(date: .abbreviated, time: .shortened))")
-                Text("Received: \(message.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                Text(L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)) + (message.timestampCorrected ? " " + L10n.Chats.Chats.Message.Info.adjusted : ""))
+                    .accessibilityLabel(message.timestampCorrected
+                        ? L10n.Chats.Chats.Message.Info.adjustedAccessibility
+                        : L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)))
+                    .accessibilityHint(message.timestampCorrected
+                        ? L10n.Chats.Chats.Message.Info.adjustedHint
+                        : "")
+                Text(L10n.Chats.Chats.Message.Info.received(message.createdAt.formatted(date: .abbreviated, time: .shortened)))
 
                 if let snr = message.snr {
-                    Text("SNR: \(snrFormatted(snr))")
+                    Text(L10n.Chats.Chats.Message.Info.snr(snrFormatted(snr)))
                 }
-
-                Text("Hops: \(hopCountFormatted(message.pathLength))")
             } label: {
-                Label("Details", systemImage: "info.circle")
+                Label(L10n.Chats.Chats.Message.Action.details, systemImage: "info.circle")
             }
         }
 
@@ -339,7 +384,7 @@ struct UnifiedMessageBubble: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(L10n.Chats.Chats.Message.Action.delete, systemImage: "trash")
             }
         }
     }
@@ -355,7 +400,7 @@ struct UnifiedMessageBubble: View {
                 } label: {
                     HStack(spacing: 2) {
                         Image(systemName: "arrow.clockwise")
-                        Text("Retry")
+                        Text(L10n.Chats.Chats.Message.Status.retry)
                     }
                     .font(.caption2)
                 }
@@ -386,31 +431,33 @@ struct UnifiedMessageBubble: View {
     private var statusText: String {
         switch message.status {
         case .pending:
-            return "Sending..."
+            return L10n.Chats.Chats.Message.Status.sending
         case .sending:
-            return "Sending..."
+            return L10n.Chats.Chats.Message.Status.sending
         case .sent:
             // Build status parts: repeats, send count, sent
             var parts: [String] = []
             if message.heardRepeats > 0 {
-                parts.append(message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats")
+                let repeatWord = message.heardRepeats == 1 ? L10n.Chats.Chats.Message.Repeat.singular : L10n.Chats.Chats.Message.Repeat.plural
+                parts.append("\(message.heardRepeats) \(repeatWord)")
             }
             if message.sendCount > 1 {
-                parts.append("Sent \(message.sendCount) times")
+                parts.append(L10n.Chats.Chats.Message.Status.sentMultiple(message.sendCount))
             } else {
-                parts.append("Sent")
+                parts.append(L10n.Chats.Chats.Message.Status.sent)
             }
             return parts.joined(separator: " • ")
         case .delivered:
             if message.heardRepeats > 0 {
-                let repeatText = message.heardRepeats == 1 ? "1 repeat" : "\(message.heardRepeats) repeats"
-                return "\(repeatText) • Delivered"
+                let repeatWord = message.heardRepeats == 1 ? L10n.Chats.Chats.Message.Repeat.singular : L10n.Chats.Chats.Message.Repeat.plural
+                let repeatText = "\(message.heardRepeats) \(repeatWord)"
+                return "\(repeatText) • \(L10n.Chats.Chats.Message.Status.delivered)"
             }
-            return "Delivered"
+            return L10n.Chats.Chats.Message.Status.delivered
         case .failed:
-            return "Failed"
+            return L10n.Chats.Chats.Message.Status.failed
         case .retrying:
-            return "Retrying..."
+            return L10n.Chats.Chats.Message.Status.retrying
         }
     }
 
@@ -478,15 +525,15 @@ struct UnifiedMessageBubble: View {
         let quality: String
         switch snr {
         case 10...:
-            quality = "Excellent"
+            quality = L10n.Chats.Chats.Signal.excellent
         case 5..<10:
-            quality = "Good"
+            quality = L10n.Chats.Chats.Signal.good
         case 0..<5:
-            quality = "Fair"
+            quality = L10n.Chats.Chats.Signal.fair
         case -10..<0:
-            quality = "Poor"
+            quality = L10n.Chats.Chats.Signal.poor
         default:
-            quality = "Very Poor"
+            quality = L10n.Chats.Chats.Signal.veryPoor
         }
         return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB (\(quality))"
     }
@@ -494,7 +541,7 @@ struct UnifiedMessageBubble: View {
     private func hopCountFormatted(_ pathLength: UInt8) -> String {
         switch pathLength {
         case 0, 0xFF:  // 0 = zero hops, 0xFF = direct/unknown (no route tracking)
-            return "Direct"
+            return L10n.Chats.Chats.Message.Hops.direct
         default:
             return "\(pathLength)"
         }

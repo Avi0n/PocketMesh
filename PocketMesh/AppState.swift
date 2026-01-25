@@ -55,6 +55,32 @@ public final class AppState {
     /// Incremented when services change (device switch, reconnect). Views observe this to reload.
     public private(set) var servicesVersion: Int = 0
 
+    // MARK: - Offline Data Access
+
+    /// Cached standalone persistence store for offline browsing
+    private var cachedOfflineStore: PersistenceStore?
+
+    /// Device ID for data access - returns connected device or last-connected device for offline browsing
+    public var currentDeviceID: UUID? {
+        connectedDevice?.id ?? connectionManager.lastConnectedDeviceID
+    }
+
+    /// Data store that works regardless of connection state - uses services when connected, cached standalone store when disconnected
+    public var offlineDataStore: PersistenceStore? {
+        if let services {
+            cachedOfflineStore = nil  // Clear cache when services available
+            return services.dataStore
+        }
+        guard connectionManager.lastConnectedDeviceID != nil else {
+            cachedOfflineStore = nil
+            return nil
+        }
+        if cachedOfflineStore == nil {
+            cachedOfflineStore = createStandalonePersistenceStore()
+        }
+        return cachedOfflineStore
+    }
+
     /// Incremented when contacts data changes. Views observe this to reload contact lists.
     public private(set) var contactsVersion: Int = 0
 
@@ -205,13 +231,14 @@ public final class AppState {
     }
 
     /// Updates disconnected pill visibility based on connection state
-    /// Called when connectionState changes
+    /// Called when connectionState changes or on app launch
     func updateDisconnectedPillState() {
         disconnectedPillTask?.cancel()
 
-        // Requires: disconnected + previously paired device
+        // Requires: disconnected + previously paired device + user didn't explicitly disconnect
         guard connectionState == .disconnected,
-              connectionManager.lastConnectedDeviceID != nil else {
+              connectionManager.lastConnectedDeviceID != nil,
+              !connectionManager.shouldSuppressDisconnectedPill else {
             disconnectedPillVisible = false
             return
         }
@@ -291,6 +318,8 @@ public final class AppState {
         // activate() will trigger onConnectionReady callback if connection succeeds
         // Notification delegate is set in wireServicesIfConnected() when services become available
         await connectionManager.activate()
+        // Check if disconnected pill should show (for fresh launch after termination)
+        updateDisconnectedPillState()
     }
 
     /// Wire services to message event broadcaster
@@ -544,10 +573,10 @@ public final class AppState {
     }
 
     /// Connect to a device via WiFi/TCP
-    func connectViaWiFi(host: String, port: UInt16) async throws {
+    func connectViaWiFi(host: String, port: UInt16, forceFullSync: Bool = false) async throws {
         // Hide disconnected pill when starting new connection
         hideDisconnectedPill()
-        try await connectionManager.connectViaWiFi(host: host, port: port)
+        try await connectionManager.connectViaWiFi(host: host, port: port, forceFullSync: forceFullSync)
         await wireServicesIfConnected()
     }
 
@@ -844,6 +873,47 @@ public final class AppState {
                 contactName: contact.displayName,
                 contactID: contactID
             )
+        }
+
+        // Channel quick reply handler
+        services.notificationService.onChannelQuickReply = { [weak self] deviceID, channelIndex, text in
+            guard let self else { return }
+
+            // Fetch channel for display name in failure notification
+            let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex)
+            let channelName = channel?.name ?? "Channel \(channelIndex)"
+
+            guard self.connectionState == .ready else {
+                await services.notificationService.postChannelQuickReplyFailedNotification(
+                    channelName: channelName,
+                    deviceID: deviceID,
+                    channelIndex: channelIndex
+                )
+                return
+            }
+
+            do {
+                _ = try await services.messageService.sendChannelMessage(
+                    text: text,
+                    channelIndex: channelIndex,
+                    deviceID: deviceID
+                )
+
+                // Clear unread state - user replied so they've seen the channel
+                try? await services.dataStore.clearChannelUnreadCount(deviceID: deviceID, index: channelIndex)
+                await services.notificationService.removeDeliveredNotifications(
+                    forChannelIndex: channelIndex,
+                    deviceID: deviceID
+                )
+                await services.notificationService.updateBadgeCount()
+                self.syncCoordinator?.notifyConversationsChanged()
+            } catch {
+                await services.notificationService.postChannelQuickReplyFailedNotification(
+                    channelName: channelName,
+                    deviceID: deviceID,
+                    channelIndex: channelIndex
+                )
+            }
         }
 
         // Mark as read handler

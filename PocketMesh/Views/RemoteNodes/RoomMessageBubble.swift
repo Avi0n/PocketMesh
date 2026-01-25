@@ -1,12 +1,12 @@
 import SwiftUI
 import PocketMeshServices
 
-private let outgoingBubbleColor = Color(red: 36/255, green: 99/255, blue: 235/255)
-
 /// Message bubble for room server messages
 struct RoomMessageBubble: View {
     let message: RoomMessageDTO
     let showTimestamp: Bool
+
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     private var isFromSelf: Bool { message.isFromSelf }
 
@@ -47,8 +47,9 @@ struct RoomMessageBubble: View {
             // Show author name for messages from others
             if !isFromSelf {
                 Text(message.authorDisplayName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.footnote)
+                    .bold()
+                    .foregroundStyle(AppColors.NameColor.color(for: message.authorDisplayName, highContrast: colorSchemeContrast == .increased))
                     .padding(.horizontal, 12)
             }
 
@@ -64,9 +65,9 @@ struct RoomMessageBubble: View {
     private var bubbleBackground: some View {
         Group {
             if isFromSelf {
-                outgoingBubbleColor
+                AppColors.Message.outgoingBubble
             } else {
-                Color(.systemGray5)
+                AppColors.Message.incomingBubble
             }
         }
     }

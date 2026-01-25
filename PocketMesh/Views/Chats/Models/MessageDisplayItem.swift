@@ -16,6 +16,7 @@ struct MessageDisplayItem: Identifiable, Hashable, Sendable {
     let messageID: UUID
     let showTimestamp: Bool
     let showDirectionGap: Bool
+    let showSenderName: Bool  // false for continuation messages in a group
     let detectedURL: URL?
 
     // Forwarded properties from message (lightweight copies)

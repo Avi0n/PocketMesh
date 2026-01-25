@@ -21,6 +21,7 @@ struct ContactsListView: View {
     @State private var showShareMyContact = false
     @State private var showAddContact = false
     @State private var showLocationDeniedAlert = false
+    @State private var showOfflineRefreshAlert = false
 
     private var filteredContacts: [ContactDTO] {
         // Fall back to lastHeard sort when distance is selected but location unavailable
@@ -59,7 +60,7 @@ struct ContactsListView: View {
                         ContactDetailView(contact: selectedContact)
                             .id(selectedContact.id)
                     } else {
-                        ContentUnavailableView("Select a node", systemImage: "flipphone")
+                        ContentUnavailableView(L10n.Contacts.Contacts.List.selectNode, systemImage: "flipphone")
                     }
                 }
             }
@@ -78,7 +79,7 @@ struct ContactsListView: View {
 
     private var contactsSidebarContent: some View {
         Group {
-            if viewModel.isLoading && viewModel.contacts.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredContacts.isEmpty && !isSearching {
@@ -93,8 +94,8 @@ struct ContactsListView: View {
                 }
             }
         }
-        .navigationTitle("Nodes")
-        .searchable(text: $searchText, prompt: "Search nodes")
+        .navigationTitle(L10n.Contacts.Contacts.List.title)
+        .searchable(text: $searchText, prompt: L10n.Contacts.Contacts.List.searchPrompt)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BLEStatusIndicatorView()
@@ -107,14 +108,14 @@ struct ContactsListView: View {
                             sortOrder = order
                         } label: {
                             if sortOrder == order {
-                                Label(order.rawValue, systemImage: "checkmark")
+                                Label(order.localizedTitle, systemImage: "checkmark")
                             } else {
-                                Text(order.rawValue)
+                                Text(order.localizedTitle)
                             }
                         }
                     }
                 } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                    Label(L10n.Contacts.Contacts.List.sort, systemImage: "arrow.up.arrow.down")
                 }
             }
 
@@ -123,7 +124,7 @@ struct ContactsListView: View {
                     NavigationLink {
                         BlockedContactsView()
                     } label: {
-                        Label("Blocked Contacts", systemImage: "hand.raised.fill")
+                        Label(L10n.Contacts.Contacts.List.blockedContacts, systemImage: "hand.raised.fill")
                     }
 
                     Divider()
@@ -131,13 +132,13 @@ struct ContactsListView: View {
                     Button {
                         showShareMyContact = true
                     } label: {
-                        Label("Share My Contact", systemImage: "square.and.arrow.up")
+                        Label(L10n.Contacts.Contacts.List.shareMyContact, systemImage: "square.and.arrow.up")
                     }
 
                     Button {
                         showAddContact = true
                     } label: {
-                        Label("Add Contact", systemImage: "plus")
+                        Label(L10n.Contacts.Contacts.List.addContact, systemImage: "plus")
                     }
 
                     Divider()
@@ -145,26 +146,39 @@ struct ContactsListView: View {
                     NavigationLink {
                         DiscoveryView()
                     } label: {
-                        Label("Discover", systemImage: "antenna.radiowaves.left.and.right")
+                        Label(L10n.Contacts.Contacts.List.discover, systemImage: "antenna.radiowaves.left.and.right")
                     }
 
                     Divider()
 
                     Button {
                         Task {
-                            await syncContacts()
+                            if appState.connectionState != .ready {
+                                showOfflineRefreshAlert = true
+                            } else {
+                                await syncContacts()
+                            }
                         }
                     } label: {
-                        Label("Sync Nodes", systemImage: "arrow.triangle.2.circlepath")
+                        Label(L10n.Contacts.Contacts.List.syncNodes, systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(viewModel.isSyncing)
                 } label: {
-                    Label("Options", systemImage: "ellipsis.circle")
+                    Label(L10n.Contacts.Contacts.List.options, systemImage: "ellipsis.circle")
                 }
             }
         }
         .refreshable {
-            await syncContacts()
+            if appState.connectionState != .ready {
+                showOfflineRefreshAlert = true
+            } else {
+                await syncContacts()
+            }
+        }
+        .alert(L10n.Contacts.Contacts.List.cannotRefresh, isPresented: $showOfflineRefreshAlert) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) { }
+        } message: {
+            Text(L10n.Contacts.Contacts.List.connectToSync)
         }
         .sensoryFeedback(.success, trigger: syncSuccessTrigger)
         .task {
@@ -172,6 +186,7 @@ struct ContactsListView: View {
             viewModel.configure(appState: appState)
             await loadContacts()
             nodesListLogger.info("NodesListView: loaded, contacts=\(viewModel.contacts.count)")
+            announceOfflineStateIfNeeded()
 
             // Request location for distance display (only if already authorized)
             if appState.locationService.isAuthorized {
@@ -242,16 +257,30 @@ struct ContactsListView: View {
         .sheet(isPresented: $showAddContact) {
             AddContactSheet()
         }
-        .alert("Location Unavailable", isPresented: $showLocationDeniedAlert) {
-            Button("Open Settings") {
+        .alert(L10n.Contacts.Contacts.List.locationUnavailable, isPresented: $showLocationDeniedAlert) {
+            Button(L10n.Contacts.Contacts.List.openSettings) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
-            Button("Cancel", role: .cancel) { }
+            Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
         } message: {
-            Text("Distance sorting requires location access.")
+            Text(L10n.Contacts.Contacts.List.distanceRequiresLocation)
         }
+        .alert(L10n.Contacts.Contacts.Common.error, isPresented: showErrorBinding) {
+            Button(L10n.Contacts.Contacts.Common.ok, role: .cancel) {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? L10n.Contacts.Contacts.Common.errorOccurred)
+        }
+    }
+
+    private var showErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )
     }
 
     // MARK: - Views
@@ -265,21 +294,21 @@ struct ContactsListView: View {
             switch selectedSegment {
             case .favorites:
                 ContentUnavailableView(
-                    "No Favorites Yet",
+                    L10n.Contacts.Contacts.List.Empty.Favorites.title,
                     systemImage: "star",
-                    description: Text("Swipe right on any node to add it to your favorites.")
+                    description: Text(L10n.Contacts.Contacts.List.Empty.Favorites.description)
                 )
             case .contacts:
                 ContentUnavailableView(
-                    "No Contacts",
+                    L10n.Contacts.Contacts.List.Empty.Contacts.title,
                     systemImage: "person.2",
-                    description: Text("Contacts appear when discovered on the mesh network. If auto-add contacts is off, check Discovery in the top right menu.")
+                    description: Text(L10n.Contacts.Contacts.List.Empty.Contacts.description)
                 )
             case .network:
                 ContentUnavailableView(
-                    "No Network Nodes",
+                    L10n.Contacts.Contacts.List.Empty.Network.title,
                     systemImage: "antenna.radiowaves.left.and.right",
-                    description: Text("Repeaters and room servers will appear when discovered on the mesh.")
+                    description: Text(L10n.Contacts.Contacts.List.Empty.Network.description)
                 )
             }
 
@@ -294,9 +323,9 @@ struct ContactsListView: View {
             Spacer()
 
             ContentUnavailableView(
-                "No Results",
+                L10n.Contacts.Contacts.List.Empty.Search.title,
                 systemImage: "magnifyingglass",
-                description: Text("No nodes match '\(searchText)'")
+                description: Text(L10n.Contacts.Contacts.List.Empty.Search.description(searchText))
             )
 
             Spacer()
@@ -312,8 +341,8 @@ struct ContactsListView: View {
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
-            ForEach(filteredContacts) { contact in
-                contactRow(contact)
+            ForEach(Array(filteredContacts.enumerated()), id: \.element.id) { index, contact in
+                contactRow(contact, index: index)
             }
         }
         .listStyle(.plain)
@@ -328,30 +357,32 @@ struct ContactsListView: View {
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
-            ForEach(filteredContacts) { contact in
-                contactSplitRow(contact)
+            ForEach(Array(filteredContacts.enumerated()), id: \.element.id) { index, contact in
+                contactSplitRow(contact, index: index)
                     .tag(contact)
             }
         }
         .listStyle(.plain)
     }
 
-    private func contactRow(_ contact: ContactDTO) -> some View {
+    private func contactRow(_ contact: ContactDTO, index: Int) -> some View {
         NavigationLink(value: contact) {
             ContactRowView(
                 contact: contact,
                 showTypeLabel: isSearching,
-                userLocation: appState.locationService.currentLocation
+                userLocation: appState.locationService.currentLocation,
+                index: index
             )
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
 
-    private func contactSplitRow(_ contact: ContactDTO) -> some View {
+    private func contactSplitRow(_ contact: ContactDTO, index: Int) -> some View {
         ContactRowView(
             contact: contact,
             showTypeLabel: isSearching,
-            userLocation: appState.locationService.currentLocation
+            userLocation: appState.locationService.currentLocation,
+            index: index
         )
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
@@ -359,13 +390,24 @@ struct ContactsListView: View {
     // MARK: - Actions
 
     private func loadContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadContacts(deviceID: deviceID)
     }
 
+    private func announceOfflineStateIfNeeded() {
+        guard UIAccessibility.isVoiceOverRunning,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: L10n.Contacts.Contacts.List.offlineAnnouncement
+        )
+    }
+
     private func syncContacts() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         await viewModel.syncContacts(deviceID: deviceID)
         syncSuccessTrigger.toggle()
     }
@@ -378,9 +420,9 @@ struct NodeSegmentPicker: View {
     let isSearching: Bool
 
     var body: some View {
-        Picker("Segment", selection: $selection) {
+        Picker(L10n.Contacts.Contacts.Segment.contacts, selection: $selection) {
             ForEach(NodeSegment.allCases, id: \.self) { segment in
-                Text(segment.rawValue).tag(segment)
+                Text(segment.localizedTitle).tag(segment)
             }
         }
         .pickerStyle(.segmented)
@@ -397,19 +439,21 @@ struct ContactRowView: View {
     let contact: ContactDTO
     let showTypeLabel: Bool
     let userLocation: CLLocation?
+    let index: Int
 
-    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil) {
+    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil, index: Int = 0) {
         self.contact = contact
         self.showTypeLabel = showTypeLabel
         self.userLocation = userLocation
+        self.index = index
     }
 
     var body: some View {
         HStack(spacing: 12) {
-            ContactAvatar(contact: contact, size: 44)
+            avatarView
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack {
+                HStack(spacing: 4) {
                     Text(contact.displayName)
                         .font(.body)
                         .fontWeight(.medium)
@@ -418,8 +462,19 @@ struct ContactRowView: View {
                         Image(systemName: "hand.raised.fill")
                             .font(.caption)
                             .foregroundStyle(.orange)
-                            .accessibilityLabel("Blocked")
+                            .accessibilityLabel(L10n.Contacts.Contacts.Row.blocked)
                     }
+
+                    Spacer()
+
+                    if contact.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundStyle(.yellow)
+                            .accessibilityLabel(L10n.Contacts.Contacts.Row.favorite)
+                    }
+
+                    RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
                 }
 
                 HStack(spacing: 8) {
@@ -441,7 +496,7 @@ struct ContactRowView: View {
 
                     // Location indicator with optional distance
                     if contact.hasLocation {
-                        Label("Location", systemImage: "location.fill")
+                        Label(L10n.Contacts.Contacts.Row.location, systemImage: "location.fill")
                             .labelStyle(.iconOnly)
                             .font(.caption)
                             .foregroundStyle(.green)
@@ -454,40 +509,40 @@ struct ContactRowView: View {
                     }
                 }
             }
-            .alignmentGuide(.listRowSeparatorLeading) { d in
-                d[.leading]
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if contact.isFavorite {
-                    Image(systemName: "star.fill")
-                        .font(.caption)
-                        .foregroundStyle(.yellow)
-                }
-
-                RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
+            .alignmentGuide(.listRowSeparatorLeading) { dimensions in
+                dimensions[.leading]
             }
         }
         .padding(.vertical, 4)
     }
 
+    @ViewBuilder
+    private var avatarView: some View {
+        switch contact.type {
+        case .chat:
+            ContactAvatar(contact: contact, size: 44)
+        case .repeater:
+            NodeAvatar(publicKey: contact.publicKey, role: .repeater, size: 44, index: index)
+        case .room:
+            NodeAvatar(publicKey: contact.publicKey, role: .roomServer, size: 44)
+        }
+    }
+
     private var contactTypeLabel: String {
         switch contact.type {
-        case .chat: return "Contact"
-        case .repeater: return "Repeater"
-        case .room: return "Room"
+        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 
     private var routeLabel: String {
         if contact.isFloodRouted {
-            return "Flood"
+            return L10n.Contacts.Contacts.Route.flood
         } else if contact.outPathLength == 0 {
-            return "Direct"
+            return L10n.Contacts.Contacts.Route.direct
         } else if contact.outPathLength > 0 {
-            return "\(contact.outPathLength) hops"
+            return L10n.Contacts.Contacts.Route.hops(Int(contact.outPathLength))
         }
         return ""
     }
@@ -502,18 +557,25 @@ struct ContactRowView: View {
         let meters = userLocation.distance(from: contactLocation)
         let measurement = Measurement(value: meters, unit: UnitLength.meters)
 
-        return measurement.formatted(.measurement(
+        let formattedDistance = measurement.formatted(.measurement(
             width: .abbreviated,
             usage: .road
-        )) + " away"
+        ))
+        return L10n.Contacts.Contacts.Row.away(formattedDistance)
     }
 }
 
 // MARK: - Contact Swipe Actions
 
 private struct ContactSwipeActionsModifier: ViewModifier {
+    @Environment(\.appState) private var appState
+
     let contact: ContactDTO
     let viewModel: ContactsViewModel
+
+    private var isConnected: Bool {
+        appState.connectionState == .ready
+    }
 
     func body(content: Content) -> some View {
         content
@@ -523,8 +585,9 @@ private struct ContactSwipeActionsModifier: ViewModifier {
                         await viewModel.deleteContact(contact)
                     }
                 } label: {
-                    Label("Delete", systemImage: "trash")
+                    Label(L10n.Contacts.Contacts.Common.delete, systemImage: "trash")
                 }
+                .disabled(!isConnected)
 
                 Button {
                     Task {
@@ -532,11 +595,12 @@ private struct ContactSwipeActionsModifier: ViewModifier {
                     }
                 } label: {
                     Label(
-                        contact.isBlocked ? "Unblock" : "Block",
+                        contact.isBlocked ? L10n.Contacts.Contacts.Swipe.unblock : L10n.Contacts.Contacts.Swipe.block,
                         systemImage: contact.isBlocked ? "hand.raised.slash" : "hand.raised"
                     )
                 }
                 .tint(.orange)
+                .disabled(!isConnected)
             }
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button {
@@ -545,11 +609,12 @@ private struct ContactSwipeActionsModifier: ViewModifier {
                     }
                 } label: {
                     Label(
-                        contact.isFavorite ? "Unfavorite" : "Favorite",
+                        contact.isFavorite ? L10n.Contacts.Contacts.Swipe.unfavorite : L10n.Contacts.Contacts.Row.favorite,
                         systemImage: contact.isFavorite ? "star.slash" : "star.fill"
                     )
                 }
                 .tint(.yellow)
+                .disabled(!isConnected)
             }
     }
 }

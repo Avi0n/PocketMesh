@@ -30,11 +30,33 @@ targets:
       - path: AppIcon.icon
     dependencies:
       - package: PocketMeshServices
+    preBuildScripts:
+      - name: SwiftGen
+        script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftgen &> /dev/null; then
+              echo "error: SwiftGen not installed. Install with: brew install swiftgen"
+              exit 1
+          fi
+          swiftgen config run --config "${PROJECT_DIR}/swiftgen.yml"
+        inputFiles:
+          - $(PROJECT_DIR)/swiftgen.yml
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Localizable.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Chats.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Contacts.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Map.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Settings.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Tools.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
+        outputFiles:
+          - $(PROJECT_DIR)/PocketMesh/Resources/Generated/L10n.swift
+        basedOnDependencyAnalysis: false
     settings:
       base:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 0.4.3
+        MARKETING_VERSION: 0.5.0
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -67,7 +89,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: PocketMeshTests/Info.plist
-        MARKETING_VERSION: 0.4.3
+        MARKETING_VERSION: 0.5.0
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"

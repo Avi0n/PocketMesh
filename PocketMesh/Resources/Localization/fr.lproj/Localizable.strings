@@ -1,0 +1,103 @@
+/*
+  Localizable.strings
+  PocketMesh
+
+  French translation of common and shared strings.
+  AI-translated - please verify with native speakers.
+*/
+
+
+// MARK: - Generic Buttons
+
+/* Standard confirmation button for dialogs */
+"common.ok" = "OK";
+
+/* Standard cancel button for dialogs and sheets */
+"common.cancel" = "Annuler";
+
+/* Standard done button for completing an action */
+"common.done" = "Terminé";
+
+/* Standard save button for persisting changes */
+"common.save" = "Enregistrer";
+
+/* Standard delete button for removing items */
+"common.delete" = "Supprimer";
+
+/* Standard edit button for entering edit mode */
+"common.edit" = "Modifier";
+
+/* Standard close button for dismissing views */
+"common.close" = "Fermer";
+
+/* Button to retry a failed operation */
+"common.tryAgain" = "Réessayer";
+
+/* Standard remove button for removing items from a list or group */
+"common.remove" = "Retirer";
+
+
+// MARK: - Tab Bar
+
+/* Tab bar title for the messaging/conversations screen */
+"tabs.chats" = "Messages";
+
+/* Tab bar title for the nodes/contacts list screen */
+"tabs.nodes" = "Nœuds";
+
+/* Tab bar title for the map screen showing node locations */
+"tabs.map" = "Carte";
+
+/* Tab bar title for the tools/utilities screen */
+"tabs.tools" = "Outils";
+
+/* Tab bar title for the app settings screen */
+"tabs.settings" = "Réglages";
+
+
+// MARK: - Connection Alerts
+
+/* Alert title when device connection fails */
+"alert.connectionFailed.title" = "Échec de connexion";
+
+/* Alert title when connection cannot be established */
+"alert.couldNotConnect.title" = "Impossible de se connecter";
+
+/* Default message when device connection fails */
+"alert.connectionFailed.defaultMessage" = "Impossible de se connecter à l'appareil.";
+
+/* Message suggesting another app may be connected to the device */
+"alert.couldNotConnect.otherAppMessage" = "Assurez-vous qu'aucune autre application n'est connectée à l'appareil, puis réessayez.";
+
+/* Button to remove failed pairing and retry connection */
+"alert.connectionFailed.removeAndRetry" = "Supprimer et réessayer";
+
+
+// MARK: - Accessibility
+
+/* VoiceOver announcement when viewing cached data while disconnected from device */
+"accessibility.viewingCachedData" = "Affichage des données en cache. Connectez-vous à l'appareil pour les mises à jour.";
+
+
+// MARK: - Node Types
+
+/* Node type for a person or contact */
+"nodeType.contact" = "Contact";
+
+/* Node type for a mesh network repeater device */
+"nodeType.repeater" = "Répéteur";
+
+/* Node type for a group chat room */
+"nodeType.room" = "Salon";
+
+
+// MARK: - Permission Levels
+
+/* Permission level with limited access */
+"permission.guest" = "Invité";
+
+/* Permission level with standard access */
+"permission.member" = "Membre";
+
+/* Permission level with full administrative access */
+"permission.admin" = "Admin";

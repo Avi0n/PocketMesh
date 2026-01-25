@@ -14,11 +14,11 @@ final class ContactAnnotation: NSObject, MKAnnotation {
     var subtitle: String? {
         switch contact.type {
         case .chat:
-            contact.isFavorite ? "Favorite" : nil
+            contact.isFavorite ? L10n.Map.Map.Annotation.favorite : nil
         case .repeater:
-            "Repeater"
+            L10n.Map.Map.Annotation.repeater
         case .room:
-            "Room"
+            L10n.Map.Map.Annotation.room
         }
     }
 

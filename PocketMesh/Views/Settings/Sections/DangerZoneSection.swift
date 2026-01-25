@@ -15,7 +15,7 @@ struct DangerZoneSection: View {
             Button(role: .destructive) {
                 showingForgetAlert = true
             } label: {
-                Label("Forget Device", systemImage: "trash")
+                Label(L10n.Settings.DangerZone.forgetDevice, systemImage: "trash")
             }
 
             Button(role: .destructive) {
@@ -24,33 +24,33 @@ struct DangerZoneSection: View {
                 if isResetting {
                     HStack {
                         ProgressView()
-                        Text("Resetting...")
+                        Text(L10n.Settings.DangerZone.resetting)
                     }
                 } else {
-                    Label("Factory Reset Device", systemImage: "exclamationmark.triangle")
+                    Label(L10n.Settings.DangerZone.factoryReset, systemImage: "exclamationmark.triangle")
                 }
             }
-            .disabled(isResetting)
+            .radioDisabled(for: appState.connectionState, or: isResetting)
         } header: {
-            Text("Danger Zone")
+            Text(L10n.Settings.DangerZone.header)
         } footer: {
-            Text("Factory reset erases all contacts, messages, and settings on the device.")
+            Text(L10n.Settings.DangerZone.footer)
         }
-        .alert("Forget Device", isPresented: $showingForgetAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Forget", role: .destructive) {
+        .alert(L10n.Settings.DangerZone.Alert.Forget.title, isPresented: $showingForgetAlert) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.DangerZone.Alert.Forget.confirm, role: .destructive) {
                 forgetDevice()
             }
         } message: {
-            Text("This will remove the device from your paired devices. You can pair it again later.")
+            Text(L10n.Settings.DangerZone.Alert.Forget.message)
         }
-        .alert("Factory Reset", isPresented: $showingResetAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Reset", role: .destructive) {
+        .alert(L10n.Settings.DangerZone.Alert.Reset.title, isPresented: $showingResetAlert) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.DangerZone.Alert.Reset.confirm, role: .destructive) {
                 factoryReset()
             }
         } message: {
-            Text("This will erase ALL data on the device including contacts, messages, and settings. This cannot be undone.")
+            Text(L10n.Settings.DangerZone.Alert.Reset.message)
         }
         .errorAlert($showError)
     }
@@ -68,7 +68,7 @@ struct DangerZoneSection: View {
 
     private func factoryReset() {
         guard let settingsService = appState.services?.settingsService else {
-            showError = "Services not available"
+            showError = L10n.Settings.DangerZone.Error.servicesUnavailable
             return
         }
 

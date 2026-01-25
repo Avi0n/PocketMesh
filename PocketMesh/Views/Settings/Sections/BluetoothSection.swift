@@ -21,6 +21,13 @@ struct BluetoothSection: View {
     enum BluetoothPinType: String, CaseIterable {
         case `default` = "Default"
         case custom = "Custom PIN"
+
+        var localizedName: String {
+            switch self {
+            case .default: L10n.Settings.Bluetooth.PinType.default
+            case .custom: L10n.Settings.Bluetooth.PinType.custom
+            }
+        }
     }
 
     private var currentPinType: BluetoothPinType {
@@ -34,23 +41,23 @@ struct BluetoothSection: View {
 
     var body: some View {
         Section {
-            Picker("PIN Type", selection: $pinType) {
+            Picker(L10n.Settings.Bluetooth.pinType, selection: $pinType) {
                 ForEach(BluetoothPinType.allCases, id: \.self) { type in
-                    Text(type.rawValue).tag(type)
+                    Text(type.localizedName).tag(type)
                 }
             }
             .onChange(of: pinType) { oldValue, newValue in
                 guard hasInitialized else { return }
                 handlePinTypeChange(from: oldValue, to: newValue)
             }
-            .disabled(isChangingPin)
+            .radioDisabled(for: appState.connectionState, or: isChangingPin)
 
             if pinType == .custom, let device = appState.connectedDevice, device.blePin > 0 {
                 Button {
                     isPinVisible.toggle()
                 } label: {
                     HStack {
-                        Text("Current PIN")
+                        Text(L10n.Settings.Bluetooth.currentPin)
                         Spacer()
                         Group {
                             if isPinVisible {
@@ -70,10 +77,11 @@ struct BluetoothSection: View {
                 }
                 .buttonStyle(.plain)
 
-                Button("Change PIN") {
+                Button(L10n.Settings.Bluetooth.changePin) {
                     customPin = ""
                     showingChangePinEntry = true
                 }
+                .radioDisabled(for: appState.connectionState)
             }
 
             if appState.connectionState == .ready,
@@ -83,7 +91,7 @@ struct BluetoothSection: View {
                     renameDevice()
                 } label: {
                     HStack {
-                        Text("Change Display Name")
+                        Text(L10n.Settings.Bluetooth.changeDisplayName)
                         Spacer()
                         if isRenaming {
                             ProgressView()
@@ -91,13 +99,13 @@ struct BluetoothSection: View {
                         }
                     }
                 }
-                .disabled(isRenaming)
+                .radioDisabled(for: appState.connectionState, or: isRenaming)
             }
         } header: {
-            Text("Bluetooth")
+            Text(L10n.Settings.Bluetooth.header)
         } footer: {
             if pinType == .default {
-                Text("Default PIN is 123456. Devices with screens show their own PIN.")
+                Text(L10n.Settings.Bluetooth.defaultPinFooter)
             }
         }
         .onAppear {
@@ -107,10 +115,10 @@ struct BluetoothSection: View {
                 hasInitialized = true
             }
         }
-        .alert("Set Custom PIN", isPresented: $showingPinEntry) {
-            TextField("6-digit PIN", text: $customPin)
+        .alert(L10n.Settings.Bluetooth.Alert.SetPin.title, isPresented: $showingPinEntry) {
+            TextField(L10n.Settings.Bluetooth.pinPlaceholder, text: $customPin)
                 .keyboardType(.numberPad)
-            Button("Cancel", role: .cancel) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) {
                 // Revert to previous pin type without triggering onChange loop
                 hasInitialized = false
                 pinType = currentPinType
@@ -118,24 +126,24 @@ struct BluetoothSection: View {
                     hasInitialized = true
                 }
             }
-            Button("Set PIN") {
+            Button(L10n.Settings.Bluetooth.setPin) {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a 6-digit PIN. The device will reboot to apply the change.")
+            Text(L10n.Settings.Bluetooth.Alert.SetPin.message)
         }
-        .alert("Change Custom PIN", isPresented: $showingChangePinEntry) {
-            TextField("6-digit PIN", text: $customPin)
+        .alert(L10n.Settings.Bluetooth.Alert.ChangePin.title, isPresented: $showingChangePinEntry) {
+            TextField(L10n.Settings.Bluetooth.pinPlaceholder, text: $customPin)
                 .keyboardType(.numberPad)
-            Button("Cancel", role: .cancel) { }
-            Button("Change PIN") {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.Bluetooth.changePin) {
                 setCustomPin()
             }
         } message: {
-            Text("Enter a new 6-digit PIN. The device will reboot to apply the change.")
+            Text(L10n.Settings.Bluetooth.Alert.ChangePin.message)
         }
-        .alert("Change PIN Type?", isPresented: $showingRemoveConfirmation) {
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.Settings.Bluetooth.Alert.ChangePinType.title, isPresented: $showingRemoveConfirmation) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) {
                 // Revert to previous pin type without triggering onChange loop
                 hasInitialized = false
                 pinType = currentPinType
@@ -143,11 +151,11 @@ struct BluetoothSection: View {
                     hasInitialized = true
                 }
             }
-            Button("Change") {
+            Button(L10n.Settings.Bluetooth.Alert.change) {
                 applyPendingPinType()
             }
         } message: {
-            Text("The device will reboot to apply the change.")
+            Text(L10n.Settings.Bluetooth.Alert.ChangePinType.message)
         }
         .errorAlert($showError)
     }
@@ -207,7 +215,7 @@ struct BluetoothSection: View {
 
     private func setCustomPin() {
         guard let pin = UInt32(customPin), pin >= 100000, pin <= 999999 else {
-            showError = "PIN must be a 6-digit number between 100000 and 999999"
+            showError = L10n.Settings.Bluetooth.Error.invalidPin
             customPin = ""
             // Revert
             hasInitialized = false

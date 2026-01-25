@@ -12,6 +12,7 @@ struct ContactQRShareSheet: View {
 
     @State private var showCopyFeedback = false
     @State private var qrImage: UIImage?
+    @State private var copyHapticTrigger = 0
 
     private var contactURI: String {
         ContactService.exportContactURI(name: contactName, publicKey: publicKey, type: contactType)
@@ -35,11 +36,11 @@ struct ContactQRShareSheet: View {
                     copyToClipboard: copyToClipboard
                 )
             }
-            .navigationTitle("Share Contact")
+            .navigationTitle(L10n.Contacts.Contacts.Qr.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(L10n.Contacts.Contacts.Common.done) {
                         dismiss()
                     }
                 }
@@ -47,6 +48,7 @@ struct ContactQRShareSheet: View {
             .onAppear {
                 qrImage = generateQRCode()
             }
+            .sensoryFeedback(.success, trigger: copyHapticTrigger)
         }
     }
 
@@ -61,7 +63,8 @@ struct ContactQRShareSheet: View {
         guard let outputImage = filter.outputImage else { return nil }
 
         // Scale up for better quality
-        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: Constants.qrScale, y: Constants.qrScale))
+        let transform = CGAffineTransform(scaleX: Constants.qrScale, y: Constants.qrScale)
+        let scaledImage = outputImage.transformed(by: transform)
 
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
 
@@ -77,6 +80,7 @@ struct ContactQRShareSheet: View {
     }
 
     private func copyToClipboard() {
+        copyHapticTrigger += 1
         UIPasteboard.general.string = publicKey.hexString().lowercased()
         showCopyFeedback = true
 
@@ -133,7 +137,7 @@ private struct ContactInfoSection: View {
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Public Key")
+                Text(L10n.Contacts.Contacts.Add.publicKey)
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -161,22 +165,27 @@ private struct ActionsSection: View {
             } label: {
                 HStack {
                     Spacer()
-                    Label(showCopyFeedback ? "Copied!" : "Copy", systemImage: "doc.on.doc")
+                    Label(
+                        showCopyFeedback
+                            ? L10n.Contacts.Contacts.Qr.copied
+                            : L10n.Contacts.Contacts.Qr.copy,
+                        systemImage: "doc.on.doc"
+                    )
                     Spacer()
                 }
             }
             .disabled(showCopyFeedback)
-            .alignmentGuide(.listRowSeparatorLeading) { d in d[.leading] }
+            .alignmentGuide(.listRowSeparatorLeading) { dimensions in dimensions[.leading] }
 
             if let qrImage {
                 ShareLink(
                     item: shareText,
-                    subject: Text("PocketMesh Contact"),
+                    subject: Text(L10n.Contacts.Contacts.Qr.shareSubject),
                     preview: SharePreview(contactName, image: Image(uiImage: qrImage))
                 ) {
                     HStack {
                         Spacer()
-                        Label("Share", systemImage: "square.and.arrow.up")
+                        Label(L10n.Contacts.Contacts.Qr.share, systemImage: "square.and.arrow.up")
                         Spacer()
                     }
                 }

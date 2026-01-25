@@ -43,25 +43,27 @@ struct RetryAlertModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .alert(
-                state.isMaxRetriesExceeded ? "Unable to Save Setting" : "Connection Error",
+                state.isMaxRetriesExceeded
+                    ? L10n.Settings.Alert.Retry.unableToSave
+                    : L10n.Settings.Alert.Retry.connectionError,
                 isPresented: $state.isPresented
             ) {
                 if state.isMaxRetriesExceeded {
-                    Button("OK") {
+                    Button(L10n.Localizable.Common.ok) {
                         state.onMaxRetriesExceeded?()
                         state.reset()
                     }
                 } else {
-                    Button("Retry") {
+                    Button(L10n.Settings.Alert.Retry.retry) {
                         state.onRetry?()
                     }
-                    Button("Cancel", role: .cancel) {
+                    Button(L10n.Localizable.Common.cancel, role: .cancel) {
                         state.reset()
                     }
                 }
             } message: {
                 if state.isMaxRetriesExceeded {
-                    Text("Please ensure your device is connected.")
+                    Text(L10n.Settings.Alert.Retry.ensureConnected)
                 } else {
                     Text(state.message)
                 }

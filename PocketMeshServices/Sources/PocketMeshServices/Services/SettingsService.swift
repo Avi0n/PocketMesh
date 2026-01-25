@@ -82,8 +82,8 @@ public struct RadioPreset: Identifiable, Sendable, Equatable {
     public let name: String
     public let region: RadioRegion
     public let frequencyMHz: Double
-    public let spreadingFactor: UInt8
     public let bandwidthKHz: Double
+    public let spreadingFactor: UInt8
     public let codingRate: UInt8
 
     /// Frequency in kHz for protocol encoding
@@ -101,16 +101,16 @@ public struct RadioPreset: Identifiable, Sendable, Equatable {
         name: String,
         region: RadioRegion,
         frequencyMHz: Double,
-        spreadingFactor: UInt8,
         bandwidthKHz: Double,
+        spreadingFactor: UInt8,
         codingRate: UInt8
     ) {
         self.id = id
         self.name = name
         self.region = region
         self.frequencyMHz = frequencyMHz
-        self.spreadingFactor = spreadingFactor
         self.bandwidthKHz = bandwidthKHz
+        self.spreadingFactor = spreadingFactor
         self.codingRate = codingRate
     }
 }
@@ -120,43 +120,45 @@ public enum RadioPresets {
     public static let all: [RadioPreset] = [
         // Oceania
         RadioPreset(id: "au-915", name: "Australia", region: .oceania,
-                    frequencyMHz: 915.800, spreadingFactor: 10, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 915.800, bandwidthKHz: 250, spreadingFactor: 10, codingRate: 5),
         RadioPreset(id: "au-narrow", name: "Australia (Narrow)", region: .oceania,
-                    frequencyMHz: 916.575, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 8),
+                    frequencyMHz: 916.575, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 8),
         RadioPreset(id: "au-sa-wa", name: "Australia SA, WA", region: .oceania,
-                    frequencyMHz: 923.125, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 8),
+                    frequencyMHz: 923.125, bandwidthKHz: 62.5, spreadingFactor: 8, codingRate: 8),
         RadioPreset(id: "au-qld", name: "Australia QLD", region: .oceania,
-                    frequencyMHz: 923.125, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 5),
+                    frequencyMHz: 923.125, bandwidthKHz: 62.5, spreadingFactor: 8, codingRate: 5),
         RadioPreset(id: "nz-lr", name: "New Zealand", region: .oceania,
-                    frequencyMHz: 917.375, spreadingFactor: 11, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 917.375, bandwidthKHz: 250, spreadingFactor: 11, codingRate: 5),
         RadioPreset(id: "nz-narrow", name: "New Zealand (Narrow)", region: .oceania,
-                    frequencyMHz: 917.375, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 5),
+                    frequencyMHz: 917.375, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
 
         // Europe
         RadioPreset(id: "eu-narrow", name: "EU/UK (Narrow)", region: .europe,
-                    frequencyMHz: 869.618, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 8),
+                    frequencyMHz: 869.618, bandwidthKHz: 62.5, spreadingFactor: 8, codingRate: 8),
         RadioPreset(id: "eu-lr", name: "EU/UK (Long Range)", region: .europe,
-                    frequencyMHz: 869.525, spreadingFactor: 11, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 869.525, bandwidthKHz: 250, spreadingFactor: 11, codingRate: 5),
         RadioPreset(id: "eu-mr", name: "EU/UK (Medium Range)", region: .europe,
-                    frequencyMHz: 869.525, spreadingFactor: 10, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 869.525, bandwidthKHz: 250, spreadingFactor: 10, codingRate: 5),
         RadioPreset(id: "cz-narrow", name: "Czech Republic (Narrow)", region: .europe,
-                    frequencyMHz: 869.525, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 5),
+                    frequencyMHz: 869.525, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
         RadioPreset(id: "eu-433-lr", name: "EU 433MHz (Long Range)", region: .europe,
-                    frequencyMHz: 433.650, spreadingFactor: 11, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 433.650, bandwidthKHz: 250, spreadingFactor: 11, codingRate: 5),
         RadioPreset(id: "pt-433", name: "Portugal 433", region: .europe,
-                    frequencyMHz: 433.375, spreadingFactor: 9, bandwidthKHz: 62.5, codingRate: 6),
+                    frequencyMHz: 433.375, bandwidthKHz: 62.5, spreadingFactor: 9, codingRate: 6),
         RadioPreset(id: "pt-868", name: "Portugal 868", region: .europe,
-                    frequencyMHz: 869.618, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 6),
+                    frequencyMHz: 869.618, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 6),
         RadioPreset(id: "ch", name: "Switzerland", region: .europe,
-                    frequencyMHz: 869.618, spreadingFactor: 8, bandwidthKHz: 62.5, codingRate: 8),
+                    frequencyMHz: 869.618, bandwidthKHz: 62.5, spreadingFactor: 8, codingRate: 8),
 
         // North America
         RadioPreset(id: "us-ca", name: "USA/Canada", region: .northAmerica,
-                    frequencyMHz: 910.525, spreadingFactor: 7, bandwidthKHz: 62.5, codingRate: 5),
+                    frequencyMHz: 910.525, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
+        RadioPreset(id: "wcmesh", name: "WCMesh (SoCal)", region: .northAmerica,
+                    frequencyMHz: 927.875, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 5),
 
         // Asia
         RadioPreset(id: "vn", name: "Vietnam", region: .asia,
-                    frequencyMHz: 920.250, spreadingFactor: 11, bandwidthKHz: 250, codingRate: 5),
+                    frequencyMHz: 920.250, bandwidthKHz: 250, spreadingFactor: 11, codingRate: 5),
     ]
 
     /// Get presets filtered and sorted by user's locale
@@ -409,16 +411,30 @@ public actor SettingsService {
 
     /// Set location with verification
     public func setLocationVerified(latitude: Double, longitude: Double) async throws -> MeshCore.SelfInfo {
+        // Calculate the scaled values we're actually sending
+        let scaledLatSent = Int32(latitude * 1_000_000)
+        let scaledLonSent = Int32(longitude * 1_000_000)
+
         try await setLocation(latitude: latitude, longitude: longitude)
 
+        // Read back and compare at scaled integer level for precise diagnostics
         let selfInfo = try await getSelfInfo()
+        let scaledLatReceived = Int32(selfInfo.latitude * 1_000_000)
+        let scaledLonReceived = Int32(selfInfo.longitude * 1_000_000)
 
-        // Location is stored as scaled integers, allow small floating point tolerance
-        let tolerance = 0.000002  // ~0.2 meters at equator
-        guard abs(selfInfo.latitude - latitude) < tolerance &&
-              abs(selfInfo.longitude - longitude) < tolerance else {
+        let latDiff = abs(scaledLatSent - scaledLatReceived)
+        let lonDiff = abs(scaledLonSent - scaledLonReceived)
+
+        // Tolerance of 2 scaled units (~0.2m) handles floating-point conversion
+        let tolerance: Int32 = 2
+
+        guard latDiff <= tolerance && lonDiff <= tolerance else {
+            logger.error("[Location] Verification failed - sent: (\(scaledLatSent), \(scaledLonSent)), received: (\(scaledLatReceived), \(scaledLonReceived)), diff: (lat=\(latDiff), lon=\(lonDiff))")
+
+            let expectedLat = Double(scaledLatSent) / 1_000_000
+            let expectedLon = Double(scaledLonSent) / 1_000_000
             throw SettingsServiceError.verificationFailed(
-                expected: "(\(latitude), \(longitude))",
+                expected: "(\(expectedLat), \(expectedLon))",
                 actual: "(\(selfInfo.latitude), \(selfInfo.longitude))"
             )
         }

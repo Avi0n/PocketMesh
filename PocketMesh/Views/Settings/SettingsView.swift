@@ -22,7 +22,7 @@ struct SettingsView: View {
             NavigationSplitView {
                 settingsListContent
             } detail: {
-                ContentUnavailableView("Select a setting", systemImage: "gear")
+                ContentUnavailableView(L10n.Settings.selectSetting, systemImage: "gear")
             }
         } else {
             NavigationStack {
@@ -70,7 +70,7 @@ struct SettingsView: View {
                         .foregroundStyle(.primary)
                     }
                 } footer: {
-                    Text("Radio tuning, telemetry, contact settings, and device management")
+                    Text(L10n.Settings.AdvancedSettings.footer)
                 }
 
                 AboutSection()
@@ -83,14 +83,14 @@ struct SettingsView: View {
 
             if demoModeManager.isUnlocked {
                 Section {
-                    Toggle("Enabled", isOn: Binding(
+                    Toggle(L10n.Settings.DemoMode.enabled, isOn: Binding(
                         get: { demoModeManager.isEnabled },
                         set: { demoModeManager.isEnabled = $0 }
                     ))
                 } header: {
-                    Text("Demo Mode")
+                    Text(L10n.Settings.DemoMode.header)
                 } footer: {
-                    Text("Demo mode allows testing without hardware using mock data.")
+                    Text(L10n.Settings.DemoMode.footer)
                 }
             }
 
@@ -105,8 +105,19 @@ struct SettingsView: View {
                 Text("Debug")
             }
             #endif
+
+            Section {
+            } footer: {
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+                let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+                VStack {
+                    Text(L10n.Settings.version(version))
+                    Text(L10n.Settings.build(build))
+                }
+                .frame(maxWidth: .infinity)
+            }
         }
-        .navigationTitle("Settings")
+        .navigationTitle(L10n.Settings.title)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 BLEStatusIndicatorView()
@@ -128,7 +139,7 @@ struct SettingsView: View {
     private var advancedSettingsRowLabel: some View {
         HStack {
             Label {
-                Text("Advanced Settings")
+                Text(L10n.Settings.AdvancedSettings.title)
             } icon: {
                 Image(systemName: "gearshape.2")
                     .foregroundStyle(.tint)
@@ -138,32 +149,6 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-    }
-}
-
-// MARK: - About View
-
-struct AboutView: View {
-    var body: some View {
-        List {
-            Section {
-                HStack {
-                    Text("Version")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("Build")
-                    Spacer()
-                    Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-        }
-        .navigationTitle("About")
     }
 }
 

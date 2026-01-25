@@ -37,6 +37,15 @@ public actor BLEStateMachine {
 
     // MARK: - CoreBluetooth
 
+    /// The central manager instance.
+    ///
+    /// Marked `nonisolated(unsafe)` because:
+    /// 1. CBCentralManager is not Sendable
+    /// 2. We need nonisolated access from `bluetoothState` property
+    /// 3. The manager is only mutated once during initialization
+    /// 4. All other access is from the actor's isolated context
+    /// 5. The `bluetoothState` property returns `.unknown` during the brief
+    ///    initialization window before the manager is assigned
     private nonisolated(unsafe) var centralManager: CBCentralManager!
     private let delegateHandler: BLEDelegateHandler
 
@@ -65,6 +74,9 @@ public actor BLEStateMachine {
 
     /// Tracks the current write timeout task so it can be cancelled when write completes
     private var writeTimeoutTask: Task<Void, Never>?
+
+    /// Tracks the service discovery timeout task so it can be cancelled on success
+    private var serviceDiscoveryTimeoutTask: Task<Void, Never>?
 
     // MARK: - Callbacks
 
@@ -827,6 +839,10 @@ extension BLEStateMachine {
             return
         }
 
+        // Cancel the service discovery timeout since we completed successfully
+        serviceDiscoveryTimeoutTask?.cancel()
+        serviceDiscoveryTimeoutTask = nil
+
         // Success! Resume continuation - connect() will complete the transition
         continuation.resume()
     }
@@ -932,6 +948,10 @@ extension BLEStateMachine {
 
     /// Cleans up non-continuation resources owned by a phase.
     private func cleanupPhaseResources(_ phase: BLEPhase) {
+        // Cancel any pending service discovery timeout
+        serviceDiscoveryTimeoutTask?.cancel()
+        serviceDiscoveryTimeoutTask = nil
+
         switch phase {
         case .connecting(_, _, let timeoutTask):
             timeoutTask.cancel()
@@ -981,6 +1001,18 @@ extension BLEStateMachine {
         centralManager.cancelPeripheralConnection(peripheral)
     }
 
+    /// Waits for the full service discovery chain to complete.
+    ///
+    /// ## Continuation Flow
+    /// The discovery process passes a continuation through multiple phases:
+    /// 1. `connectToPeripheral` creates initial continuation for connection timeout
+    /// 2. `handleDidConnect` moves continuation to `discoveringServices` phase
+    /// 3. This method replaces that continuation with a new one for discovery timeout
+    /// 4. The continuation is passed through `discoveringCharacteristics` → `subscribingToNotifications`
+    /// 5. `handleDidUpdateNotificationState` resumes the continuation on success
+    ///
+    /// This replacement pattern allows separate timeouts for connection vs discovery
+    /// while maintaining a single async/await call site in `connect(to:)`.
     private func discoverServices(on peripheral: CBPeripheral) async throws {
         // The discovery flow is already initiated in handleDidConnect
         // We need to wait for the full chain: services -> characteristics -> notifications
@@ -1004,8 +1036,9 @@ extension BLEStateMachine {
             phase = .discoveringServices(peripheral: peripheral, continuation: continuation)
 
             // Start timeout for entire discovery process
-            Task {
+            serviceDiscoveryTimeoutTask = Task {
                 try? await Task.sleep(for: .seconds(serviceDiscoveryTimeout))
+                guard !Task.isCancelled else { return }
                 self.handleServiceDiscoveryTimeout(for: peripheral)
             }
         }

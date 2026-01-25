@@ -1,9 +1,11 @@
-// BLEStateMachineTests.swift
+import Foundation
 import Testing
 @testable import PocketMeshServices
 
 @Suite("BLEStateMachine Tests")
 struct BLEStateMachineTests {
+
+    // MARK: - Initial State Tests
 
     @Test("initializes in idle phase")
     func initializesInIdlePhase() async {
@@ -26,37 +28,124 @@ struct BLEStateMachineTests {
         #expect(deviceID == nil)
     }
 
-    @Test("transition cancels timeout task when leaving connecting state")
-    func transitionCancelsTimeoutTask() async {
-        // This will be tested via integration - add placeholder
-        #expect(true)
+    @Test("isAutoReconnecting returns false when idle")
+    func isAutoReconnectingReturnsFalseWhenIdle() async {
+        let sm = BLEStateMachine()
+        let reconnecting = await sm.isAutoReconnecting
+        #expect(reconnecting == false)
     }
 
-    @Test("cancelCurrentOperation resumes continuation with error")
-    func cancelCurrentOperationResumesContinuation() async {
-        // This will be tested via integration - add placeholder
-        #expect(true)
+    @Test("currentPhaseName returns idle when idle")
+    func currentPhaseNameReturnsIdleWhenIdle() async {
+        let sm = BLEStateMachine()
+        let name = await sm.currentPhaseName
+        #expect(name == "idle")
     }
 
-    @Test("waitForPoweredOn returns immediately if already powered on")
-    func waitForPoweredOnReturnsImmediatelyIfAlreadyOn() async throws {
-        // Note: This test may not work in simulator without Bluetooth
-        // Full integration test needed on device
-        #expect(true)
+    // MARK: - Handler Registration Tests
+
+    @Test("setDisconnectionHandler can be registered")
+    func setDisconnectionHandlerCanBeRegistered() async {
+        let sm = BLEStateMachine()
+
+        await sm.setDisconnectionHandler { _, _ in }
+
+        #expect(await sm.currentPhase.name == "idle")
+    }
+
+    @Test("setReconnectionHandler can be registered")
+    func setReconnectionHandlerCanBeRegistered() async {
+        let sm = BLEStateMachine()
+
+        await sm.setReconnectionHandler { _, _ in }
+
+        #expect(await sm.currentPhase.name == "idle")
+    }
+
+    @Test("setBluetoothStateChangeHandler can be registered")
+    func setBluetoothStateChangeHandlerCanBeRegistered() async {
+        let sm = BLEStateMachine()
+
+        await sm.setBluetoothStateChangeHandler { _ in }
+
+        #expect(await sm.currentPhase.name == "idle")
     }
 
     @Test("setAutoReconnectingHandler can be registered")
     func setAutoReconnectingHandlerCanBeRegistered() async {
         let sm = BLEStateMachine()
 
-        // Verify handler can be registered without crashing
-        // The handler is never called in this test since we don't simulate a disconnect
-        await sm.setAutoReconnectingHandler { _ in
-            // Handler would be called with device ID on disconnect with isReconnecting: true
-            // Full integration test requires device
-        }
+        await sm.setAutoReconnectingHandler { _ in }
 
-        // Verify state machine is still in idle phase after registering handler
+        #expect(await sm.currentPhase.name == "idle")
+    }
+
+    // MARK: - Disconnect Tests
+
+    @Test("disconnect returns immediately when idle")
+    func disconnectReturnsImmediatelyWhenIdle() async {
+        let sm = BLEStateMachine()
+
+        await sm.disconnect()
+
+        #expect(await sm.currentPhase.name == "idle")
+        #expect(await sm.isConnected == false)
+    }
+
+    // MARK: - Connection Error Tests
+
+    @Test("connect throws appropriate error for unknown UUID")
+    func connectThrowsAppropriateErrorForUnknownUUID() async throws {
+        let sm = BLEStateMachine()
+        let unknownID = UUID()
+
+        // Wait for central manager to initialize
+        try? await Task.sleep(for: .milliseconds(100))
+
+        await #expect(throws: BLEError.self) {
+            _ = try await sm.connect(to: unknownID)
+        }
+    }
+
+    @Test("send throws notConnected when idle")
+    func sendThrowsNotConnectedWhenIdle() async throws {
+        let sm = BLEStateMachine()
+        let testData = Data([0x01, 0x02, 0x03])
+
+        do {
+            try await sm.send(testData)
+            Issue.record("Expected notConnected error")
+        } catch let error as BLEError {
+            if case .notConnected = error {
+                // Expected
+            } else {
+                Issue.record("Expected notConnected error, got \(error)")
+            }
+        }
+    }
+
+    // MARK: - Idempotency Tests
+
+    @Test("disconnect is idempotent")
+    func disconnectIsIdempotent() async {
+        let sm = BLEStateMachine()
+
+        // Multiple disconnects should not crash
+        await sm.disconnect()
+        await sm.disconnect()
+        await sm.disconnect()
+
+        #expect(await sm.currentPhase.name == "idle")
+    }
+
+    @Test("handler replacement works correctly")
+    func handlerReplacementWorksCorrectly() async {
+        let sm = BLEStateMachine()
+
+        await sm.setDisconnectionHandler { _, _ in }
+        await sm.setDisconnectionHandler { _, _ in }
+
+        // Multiple handler registrations should not crash
         #expect(await sm.currentPhase.name == "idle")
     }
 }

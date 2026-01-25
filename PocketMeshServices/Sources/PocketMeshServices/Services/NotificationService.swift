@@ -57,6 +57,11 @@ public final class NotificationService: NSObject {
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onChannelMarkAsRead: (@MainActor @Sendable (_ deviceID: UUID, _ channelIndex: UInt8, _ messageID: UUID) async -> Void)?
 
+    /// Callback for when a quick reply action is triggered on a channel message.
+    /// Includes deviceID to correctly identify the channel across multiple connected devices.
+    /// CRITICAL: Must be @MainActor - see onQuickReply comment.
+    public var onChannelQuickReply: (@MainActor @Sendable (_ deviceID: UUID, _ channelIndex: UInt8, _ text: String) async -> Void)?
+
     /// Whether notifications are enabled by user preference
     private var notificationsEnabled: Bool {
         get {
@@ -177,10 +182,10 @@ public final class NotificationService: NSObject {
             options: [.customDismissAction]
         )
 
-        // Channel message category (no reply action)
+        // Channel message category (with reply action)
         let channelMessageCategory = UNNotificationCategory(
             identifier: NotificationCategory.channelMessage.rawValue,
-            actions: [markReadAction],
+            actions: [replyAction, markReadAction],
             intentIdentifiers: [],
             options: [.customDismissAction]
         )
@@ -450,7 +455,7 @@ public final class NotificationService: NSObject {
 
         let content = UNMutableNotificationContent()
         content.title = "Message Not Sent"
-        content.body = "Your reply to \(contactName) couldn't be sent. Device is disconnected."
+        content.body = "Your reply to \(contactName) couldn't be sent."
         content.sound = .default
         content.categoryIdentifier = NotificationCategory.directMessage.rawValue
         content.userInfo = [
@@ -460,6 +465,37 @@ public final class NotificationService: NSObject {
 
         let request = UNNotificationRequest(
             identifier: "quick-reply-failed-\(contactID.uuidString)-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            // Notification failed to post
+        }
+    }
+
+    /// Posts a notification that a channel quick reply failed to send.
+    public func postChannelQuickReplyFailedNotification(
+        channelName: String,
+        deviceID: UUID,
+        channelIndex: UInt8
+    ) async {
+        guard isAuthorized else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Message Not Sent"
+        content.body = "Your reply to \(channelName) couldn't be sent."
+        content.sound = .default
+        content.userInfo = [
+            "channelIndex": Int(channelIndex),
+            "deviceID": deviceID.uuidString,
+            "type": "channelQuickReplyFailed"
+        ]
+
+        let request = UNNotificationRequest(
+            identifier: "channel-reply-failed-\(deviceID.uuidString)-\(channelIndex)-\(Date().timeIntervalSince1970)",
             content: content,
             trigger: nil
         )
@@ -604,6 +640,27 @@ public final class NotificationService: NSObject {
         }
     }
 
+    /// Remove all delivered notifications for a channel
+    public func removeDeliveredNotifications(forChannelIndex channelIndex: UInt8, deviceID: UUID) async {
+        let center = UNUserNotificationCenter.current()
+        let notifications = await center.deliveredNotifications()
+
+        let identifiersToRemove = notifications.compactMap { notification -> String? in
+            let userInfo = notification.request.content.userInfo
+            guard let notifChannelIndex = userInfo["channelIndex"] as? Int,
+                  let notifDeviceIDString = userInfo["deviceID"] as? String,
+                  UInt8(notifChannelIndex) == channelIndex,
+                  notifDeviceIDString == deviceID.uuidString else {
+                return nil
+            }
+            return notification.request.identifier
+        }
+
+        if !identifiersToRemove.isEmpty {
+            center.removeDeliveredNotifications(withIdentifiers: identifiersToRemove)
+        }
+    }
+
 }
 
 // MARK: - UNUserNotificationCenterDelegate
@@ -653,14 +710,23 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
         switch response.actionIdentifier {
         case NotificationAction.reply.rawValue:
             // Handle quick reply
-            guard let textResponse = response as? UNTextInputNotificationResponse,
-                  let contactIDString = userInfo["contactID"] as? String,
-                  let contactID = UUID(uuidString: contactIDString) else {
+            guard let textResponse = response as? UNTextInputNotificationResponse else {
                 return
             }
 
             let replyText = textResponse.userText
-            await onQuickReply?(contactID, replyText)
+
+            // Check if it's a direct message reply (existing)
+            if let contactIDString = userInfo["contactID"] as? String,
+               let contactID = UUID(uuidString: contactIDString) {
+                await onQuickReply?(contactID, replyText)
+            }
+            // Check if it's a channel reply (new)
+            else if let channelIndex = userInfo["channelIndex"] as? Int,
+                    let deviceIDString = userInfo["deviceID"] as? String,
+                    let deviceID = UUID(uuidString: deviceIDString) {
+                await onChannelQuickReply?(deviceID, UInt8(channelIndex), replyText)
+            }
 
         case NotificationAction.markRead.rawValue:
             // Handle mark as read

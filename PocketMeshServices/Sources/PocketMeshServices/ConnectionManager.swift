@@ -173,10 +173,14 @@ public final class ConnectionManager {
     /// Note: @Sendable @MainActor ensures safe cross-isolation callback
     public var onResyncFailed: (@Sendable @MainActor () -> Void)?
 
+    /// Temporary flag for forcing full sync on next connection
+    private var pendingForceFullSync: Bool = false
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
     private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
+    private let userDisconnectedKey = "com.pocketmesh.userExplicitlyDisconnected"
 
     // MARK: - Simulator Support
 
@@ -212,8 +216,28 @@ public final class ConnectionManager {
         UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
     }
 
+    /// Whether the user explicitly disconnected (should skip auto-reconnect)
+    private var userExplicitlyDisconnected: Bool {
+        UserDefaults.standard.bool(forKey: userDisconnectedKey)
+    }
+
+    /// Records that user explicitly disconnected
+    private func setUserDisconnected() {
+        UserDefaults.standard.set(true, forKey: userDisconnectedKey)
+    }
+
+    /// Clears user disconnect flag (when user initiates connection)
+    private func clearUserDisconnected() {
+        UserDefaults.standard.removeObject(forKey: userDisconnectedKey)
+    }
+
+    /// Whether the disconnected pill should be suppressed (user explicitly disconnected)
+    public var shouldSuppressDisconnectedPill: Bool {
+        userExplicitlyDisconnected
+    }
+
     /// Checks if a device is connected to the system by another app.
-    /// Returns false during auto-reconnect (our own connection restoring).
+    /// Returns false during auto-reconnect or when the device is already connected by us.
     /// - Parameter deviceID: The UUID of the device to check
     /// - Returns: `true` if device appears connected to another app
     public func isDeviceConnectedToOtherApp(_ deviceID: UUID) async -> Bool {
@@ -223,6 +247,11 @@ public final class ConnectionManager {
 
         // Don't check if we're already connected (switching devices)
         guard connectionState == .disconnected else { return false }
+
+        // Don't report our own connection as "another app" (state restoration may have completed)
+        if await stateMachine.isConnected, await stateMachine.connectedDeviceID == deviceID {
+            return false
+        }
 
         return await stateMachine.isDeviceConnectedToSystem(deviceID)
     }
@@ -482,7 +511,7 @@ public final class ConnectionManager {
         }
 
         // Don't reconnect if device is connected to another app
-        if await stateMachine.isDeviceConnectedToSystem(deviceID) {
+        if await isDeviceConnectedToOtherApp(deviceID) {
             logger.info("[BLE] Skipping foreground reconnect: device connected to another app")
             return
         }
@@ -500,26 +529,33 @@ public final class ConnectionManager {
     ///   - deviceID: The device ID to sync
     ///   - services: The service container
     ///   - context: Optional context string for logging (e.g., "WiFi reconnect")
+    ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
     private func performInitialSync(
         deviceID: UUID,
         services: ServiceContainer,
-        context: String = ""
+        context: String = "",
+        forceFullSync: Bool = false
     ) async {
         do {
             try await services.syncCoordinator.onConnectionEstablished(
                 deviceID: deviceID,
-                services: services
+                services: services,
+                forceFullSync: forceFullSync
             )
         } catch {
             let prefix = context.isEmpty ? "" : "\(context): "
             logger.warning("\(prefix)Initial sync failed, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: services)
+            startResyncLoop(deviceID: deviceID, services: services, forceFullSync: forceFullSync)
         }
     }
 
     /// Starts a retry loop to resync after initial sync failure.
     /// Retries every 2 seconds, shows "Sync Failed" pill and disconnects after 3 failures.
-    private func startResyncLoop(deviceID: UUID, services: ServiceContainer) {
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - services: The ServiceContainer with all services
+    ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
+    private func startResyncLoop(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) {
         resyncTask?.cancel()
         resyncAttemptCount = 0
 
@@ -538,7 +574,8 @@ public final class ConnectionManager {
 
                 let success = await services.syncCoordinator.performResync(
                     deviceID: deviceID,
-                    services: services
+                    services: services,
+                    forceFullSync: forceFullSync
                 )
 
                 if success {
@@ -640,6 +677,11 @@ public final class ConnectionManager {
         logger.info("Activating ConnectionManager")
 
         #if targetEnvironment(simulator)
+        // Skip auto-reconnect if user explicitly disconnected
+        if userExplicitlyDisconnected {
+            logger.info("Simulator: skipping auto-reconnect - user previously disconnected")
+            return
+        }
         // On simulator, skip ASK entirely and auto-reconnect to simulator device
         if let lastDeviceID = lastConnectedDeviceID,
            lastDeviceID == MockDataProvider.simulatorDeviceID {
@@ -661,6 +703,12 @@ public final class ConnectionManager {
         } catch {
             logger.error("Failed to activate AccessorySetupKit: \(error.localizedDescription)")
             // Don't return - WiFi doesn't need ASK
+        }
+
+        // Skip auto-reconnect if user explicitly disconnected
+        if userExplicitlyDisconnected {
+            logger.info("Skipping auto-reconnect: user previously disconnected")
+            return
         }
 
         // Auto-reconnect to last device if available
@@ -697,9 +745,14 @@ public final class ConnectionManager {
                 return
             }
 
+            if await stateMachine.isConnected, await stateMachine.connectedDeviceID == lastDeviceID {
+                logger.info("State restoration complete - device already connected, waiting for session setup")
+                return
+            }
+
             // Check if device is connected to another app before auto-reconnect
             // Silently skip per HIG: minimize interruptions on app launch
-            if await stateMachine.isDeviceConnectedToSystem(lastDeviceID) {
+            if await isDeviceConnectedToOtherApp(lastDeviceID) {
                 logger.info("Auto-reconnect skipped: device connected to another app")
                 shouldBeConnected = false
                 return
@@ -711,6 +764,8 @@ public final class ConnectionManager {
                 logger.warning("Auto-reconnect failed: \(error.localizedDescription)")
                 // Don't propagate - auto-reconnect failure is not fatal
             }
+        } else {
+            logger.info("No last connected device - skipping auto-reconnect")
         }
         #endif
     }
@@ -723,6 +778,7 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly pairing
         shouldBeConnected = true
+        clearUserDisconnected()
 
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
@@ -775,9 +831,11 @@ public final class ConnectionManager {
     /// - If already connected to this device: no-op
     /// - If connected to a different device: switches to the new device
     ///
-    /// - Parameter deviceID: The UUID of the device to connect to
+    /// - Parameters:
+    ///   - deviceID: The UUID of the device to connect to
+    ///   - forceFullSync: Whether to force a full sync instead of incremental
     /// - Throws: Connection errors
-    public func connect(to deviceID: UUID) async throws {
+    public func connect(to deviceID: UUID, forceFullSync: Bool = false) async throws {
         // Prevent concurrent connection attempts
         if connectionState == .connecting {
             logger.info("Connection already in progress, ignoring request for \(deviceID)")
@@ -828,6 +886,8 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly connecting
         shouldBeConnected = true
+        clearUserDisconnected()
+        pendingForceFullSync = forceFullSync
 
         do {
             // Validate device is still registered with ASK
@@ -873,6 +933,7 @@ public final class ConnectionManager {
 
         // Mark as intentional disconnect to suppress auto-reconnect
         shouldBeConnected = false
+        setUserDisconnected()
 
         // Stop event monitoring
         await services?.stopEventMonitoring()
@@ -899,9 +960,6 @@ public final class ConnectionManager {
         // Clear state
         await cleanupConnection()
 
-        // Clear persisted connection
-        clearPersistedConnection()
-
         logger.info("Disconnected")
     }
 
@@ -912,6 +970,7 @@ public final class ConnectionManager {
 
         connectionState = .connecting
         shouldBeConnected = true
+        clearUserDisconnected()
 
         do {
             // Connect simulator mode
@@ -967,8 +1026,9 @@ public final class ConnectionManager {
     /// - Parameters:
     ///   - host: The hostname or IP address of the device
     ///   - port: The TCP port to connect to
+    ///   - forceFullSync: When true, performs a complete sync ignoring cached timestamps
     /// - Throws: Connection or session errors
-    public func connectViaWiFi(host: String, port: UInt16) async throws {
+    public func connectViaWiFi(host: String, port: UInt16, forceFullSync: Bool = false) async throws {
         logger.info("Connecting via WiFi to \(host):\(port)")
 
         // Disconnect existing connection if any
@@ -978,6 +1038,7 @@ public final class ConnectionManager {
 
         connectionState = .connecting
         shouldBeConnected = true
+        clearUserDisconnected()
 
         do {
             // Create and configure WiFi transport
@@ -1049,7 +1110,7 @@ public final class ConnectionManager {
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
             await onConnectionReady?()
-            await performInitialSync(deviceID: deviceID, services: newServices)
+            await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: forceFullSync)
 
             // Wire disconnection handler for auto-reconnect
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
@@ -1084,6 +1145,7 @@ public final class ConnectionManager {
 
         // Update intent
         shouldBeConnected = true
+        clearUserDisconnected()
 
         // Validate device is registered with ASK
         if accessorySetupKit.isSessionActive {
@@ -1142,7 +1204,7 @@ public final class ConnectionManager {
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch")
+        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch", forceFullSync: true)
 
         currentTransportType = .bluetooth
         connectionState = .ready
@@ -1424,7 +1486,9 @@ public final class ConnectionManager {
         // Notify observers BEFORE sync starts so they can wire callbacks
         // (e.g., AppState needs to set sync activity callbacks for the syncing pill)
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices)
+        let shouldForceFullSync = pendingForceFullSync
+        pendingForceFullSync = false
+        await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: shouldForceFullSync)
 
         currentTransportType = .bluetooth
         connectionState = .ready

@@ -23,8 +23,6 @@ struct ContactAvatar: View {
     }
 
     private var avatarColor: Color {
-        let hash = contact.publicKey.prefix(4).reduce(0) { $0 ^ Int($1) }
-        let colors: [Color] = [.blue, .green, .orange, .purple, .pink, .cyan, .indigo, .mint]
-        return colors[abs(hash) % colors.count]
+        AppColors.NameColor.color(for: contact.displayName)
     }
 }

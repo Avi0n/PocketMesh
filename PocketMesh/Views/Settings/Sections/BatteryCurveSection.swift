@@ -12,6 +12,7 @@ struct BatteryCurveSection: View {
     @Binding var voltageValues: [Int]
 
     let onSave: (OCVPreset, [Int]) async -> Void
+    var isDisabled: Bool = false
 
     @State private var isEditingValues = false
     @State private var validationError: String?
@@ -20,12 +21,12 @@ struct BatteryCurveSection: View {
     var body: some View {
         Section {
             // Preset picker
-            Picker("Preset", selection: $selectedPreset) {
+            Picker(L10n.Settings.BatteryCurve.preset, selection: $selectedPreset) {
                 ForEach(availablePresets, id: \.self) { preset in
                     Text(preset.displayName).tag(preset)
                 }
                 if selectedPreset == .custom && !availablePresets.contains(.custom) {
-                    Text("Custom").tag(OCVPreset.custom)
+                    Text(L10n.Settings.BatteryCurve.custom).tag(OCVPreset.custom)
                 }
             }
             .onChange(of: selectedPreset) { _, newValue in
@@ -40,17 +41,19 @@ struct BatteryCurveSection: View {
                     }
                 }
             }
+            .disabled(isDisabled)
 
             BatteryCurveChart(ocvArray: voltageValues)
 
             // Edit values disclosure
-            DisclosureGroup("Edit Values", isExpanded: $isEditingValues) {
+            DisclosureGroup(L10n.Settings.BatteryCurve.editValues, isExpanded: $isEditingValues) {
                 VoltageFieldsGrid(
                     voltageValues: $voltageValues,
                     validationError: $validationError,
                     onValueChanged: handleValueChanged
                 )
             }
+            .disabled(isDisabled)
 
             // Validation error
             if let error = validationError {
@@ -87,12 +90,12 @@ struct BatteryCurveSection: View {
     private func validateVoltageValues() -> String? {
         for (index, value) in voltageValues.enumerated() {
             if value < 1000 || value > 5000 {
-                return "Value at \((10 - index) * 10)% must be 1000-5000 mV"
+                return L10n.Settings.BatteryCurve.Validation.outOfRange((10 - index) * 10)
             }
         }
 
         for (current, next) in zip(voltageValues, voltageValues.dropFirst()) where current <= next {
-            return "Values must be in descending order"
+            return L10n.Settings.BatteryCurve.Validation.notDescending
         }
 
         return nil
@@ -161,7 +164,7 @@ struct VoltageField: View {
                 .accessibilityValue("\(value) millivolts")
                 .accessibilityHint("Enter the expected voltage at this charge level")
 
-            Text("mV")
+            Text(L10n.Settings.BatteryCurve.mv)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

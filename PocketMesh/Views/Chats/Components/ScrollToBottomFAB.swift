@@ -21,15 +21,15 @@ struct ScrollToBottomFAB: View {
         .opacity(isVisible ? 1 : 0)
         .scaleEffect(isVisible ? 1 : 0.5)
         .animation(.snappy(duration: 0.2), value: isVisible)
-        .accessibilityLabel("Scroll to latest message")
-        .accessibilityValue(unreadCount > 0 ? "\(unreadCount) unread" : "")
+        .accessibilityLabel(L10n.Chats.Chats.Fab.ScrollToBottom.accessibilityLabel)
+        .accessibilityValue(unreadCount > 0 ? String(format: NSLocalizedString("chats.unreadMessages.accessibilityValue", tableName: "Chats", comment: ""), locale: .current, unreadCount) : "")
         .accessibilityHidden(!isVisible)
     }
 
     @ViewBuilder
     private var unreadBadge: some View {
         if unreadCount > 0 {
-            Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+            Text(unreadCount > 99 ? L10n.Chats.Chats.Fab.Badge.overflow : "\(unreadCount)")
                 .font(.caption2.bold())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 6)

@@ -16,57 +16,57 @@ struct TelemetrySettingsSection: View {
         Section {
             Toggle(isOn: telemetryEnabledBinding) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Allow Telemetry Requests")
-                    Text("Required for other users to manually trace a path to you. Shares battery level.")
+                    Text(L10n.Settings.Telemetry.allowRequests)
+                    Text(L10n.Settings.Telemetry.allowRequestsDescription)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
-            .disabled(isSaving)
+            .radioDisabled(for: appState.connectionState, or: isSaving)
 
             if device?.telemetryModeBase ?? 0 > 0 {
                 Toggle(isOn: locationEnabledBinding) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Include Location")
-                        Text("Share GPS coordinates in telemetry")
+                        Text(L10n.Settings.Telemetry.includeLocation)
+                        Text(L10n.Settings.Telemetry.includeLocationDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 Toggle(isOn: environmentEnabledBinding) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Include Environment Sensors")
-                        Text("Share temperature, humidity, etc.")
+                        Text(L10n.Settings.Telemetry.includeEnvironment)
+                        Text(L10n.Settings.Telemetry.includeEnvironmentDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 Toggle(isOn: $filterByTrusted) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Only Share with Trusted Contacts")
-                        Text("Limit telemetry to selected contacts")
+                        Text(L10n.Settings.Telemetry.trustedOnly)
+                        Text(L10n.Settings.Telemetry.trustedOnlyDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                .disabled(isSaving)
+                .radioDisabled(for: appState.connectionState, or: isSaving)
 
                 if filterByTrusted {
                     NavigationLink {
                         TrustedContactsPickerView()
                     } label: {
-                        Text("Manage Trusted Contacts")
+                        Text(L10n.Settings.Telemetry.manageTrusted)
                     }
                 }
             }
         } header: {
-            Text("Telemetry")
+            Text(L10n.Settings.Telemetry.header)
         } footer: {
-            Text("When enabled, other nodes can request your device's telemetry data.")
+            Text(L10n.Settings.Telemetry.footer)
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)

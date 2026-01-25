@@ -111,9 +111,4 @@ public enum BLEPhase: @unchecked Sendable {
         peripheral?.identifier
     }
 
-    /// Check if transition to another phase is valid (for testing)
-    public func canTransition(to other: BLEPhase) -> Bool {
-        // For now, all transitions are valid - the state machine enforces logic
-        return true
-    }
 }

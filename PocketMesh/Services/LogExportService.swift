@@ -116,9 +116,9 @@ enum LogExportService {
             Build Date: \(device.buildDate)
             Radio: \(String(format: "%.3f", frequencyMHz)) MHz, BW \(bandwidthKHz) kHz, SF\(device.spreadingFactor), CR\(device.codingRate)
             TX Power: \(device.txPower) dBm (max \(device.maxTxPower))
-            Max Contacts: \(device.maxContacts)
+            Max Nodes: \(device.maxContacts)
             Max Channels: \(device.maxChannels)
-            Manual Add Contacts: \(device.manualAddContacts)
+            Manual Add Nodes: \(device.manualAddContacts)
             Multi-ACKs: \(device.multiAcks)
             """
     }

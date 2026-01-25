@@ -14,6 +14,7 @@ struct ChatView: View {
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
+    @State private var keyboardObserver = KeyboardObserver()
     @State private var showingContactInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
@@ -21,6 +22,7 @@ struct ChatView: View {
     @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
@@ -32,17 +34,15 @@ struct ChatView: View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
+                    .floatingKeyboardAware()
             }
+            .ignoreKeyboardOnIPad()
+            .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
-            .navigationTitle(contact.displayName)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationHeader(title: contact.displayName, subtitle: connectionStatus)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                headerView
-            }
-
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingContactInfo = true
@@ -60,6 +60,11 @@ struct ChatView: View {
                 ContactDetailView(contact: contact, showFromDirectChat: true)
             }
         })
+        .sheet(item: $selectedMessageForPath) { message in
+            MessagePathSheet(message: message)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: appState.servicesVersion) {
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             await viewModel.loadMessages(for: contact)
@@ -129,10 +134,10 @@ struct ChatView: View {
                 break
             }
         }
-        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {
+            Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
         } message: {
-            Text("Please ensure your device is connected and try again.")
+            Text(L10n.Chats.Chats.Alert.UnableToSend.message)
         }
     }
 
@@ -193,33 +198,20 @@ struct ChatView: View {
         }
     }
 
-    // MARK: - Header
-
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(contact.displayName)
-                .font(.headline)
-
-            Text(connectionStatus)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-
     private var connectionStatus: String {
         if contact.isFloodRouted {
-            return "Flood routing"
+            return L10n.Chats.Chats.ConnectionStatus.floodRouting
         } else if contact.outPathLength >= 0 {
-            return "Direct • \(contact.outPathLength) hops"
+            return L10n.Chats.Chats.ConnectionStatus.direct(Int(contact.outPathLength))
         }
-        return "Unknown route"
+        return L10n.Chats.Chats.ConnectionStatus.unknown
     }
 
     // MARK: - Messages View
 
     private var messagesView: some View {
         Group {
-            if viewModel.isLoading && viewModel.messages.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.messages.isEmpty {
@@ -276,6 +268,7 @@ struct ChatView: View {
                 configuration: .directMessage,
                 showTimestamp: item.showTimestamp,
                 showDirectionGap: item.showDirectionGap,
+                showSenderName: item.showSenderName,
                 previewState: item.previewState,
                 loadedPreview: item.loadedPreview,
                 onRetry: { retryMessage(message) },
@@ -285,6 +278,7 @@ struct ChatView: View {
                 onDelete: {
                     deleteMessage(message)
                 },
+                onShowPath: { selectedMessageForPath = $0 },
                 onSendAgain: {
                     sendAgain(message)
                 },
@@ -299,10 +293,10 @@ struct ChatView: View {
             )
         } else {
             // ViewModel logs the warning for data inconsistency
-            Text("Message unavailable")
+            Text(L10n.Chats.Chats.Message.unavailable)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Message could not be loaded")
+                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
         }
     }
 
@@ -314,11 +308,11 @@ struct ChatView: View {
                 .font(.title2)
                 .bold()
 
-            Text("Start a conversation")
+            Text(L10n.Chats.Chats.EmptyState.startConversation)
                 .foregroundStyle(.secondary)
 
             if contact.hasLocation {
-                Label("Has location", systemImage: "location.fill")
+                Label(L10n.Chats.Chats.ContactInfo.hasLocation, systemImage: "location.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -357,7 +351,7 @@ struct ChatView: View {
         MentionInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: "Private Message",
+            placeholder: L10n.Chats.Chats.Input.Placeholder.directMessage,
             maxCharacters: ProtocolLimits.maxDirectMessageLength,
             contacts: viewModel.allContacts
         ) {

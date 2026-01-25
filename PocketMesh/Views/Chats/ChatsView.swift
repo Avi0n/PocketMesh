@@ -27,27 +27,36 @@ struct ChatsView: View {
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
+    @State private var showOfflineRefreshAlert = false
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
     }
 
+    private var filteredFavorites: [Conversation] {
+        viewModel.favoriteConversations.filtered(by: selectedFilter, searchText: searchText)
+    }
+
+    private var filteredOthers: [Conversation] {
+        viewModel.nonFavoriteConversations.filtered(by: selectedFilter, searchText: searchText)
+    }
+
     private var filteredConversations: [Conversation] {
-        viewModel.allConversations.filtered(by: selectedFilter, searchText: searchText)
+        filteredFavorites + filteredOthers
     }
 
     private var emptyStateMessage: (title: String, description: String, systemImage: String) {
         switch selectedFilter {
         case .none:
-            return ("No Conversations", "Start a conversation from Contacts", "message")
+            return (L10n.Chats.Chats.EmptyState.NoConversations.title, L10n.Chats.Chats.EmptyState.NoConversations.description, "message")
         case .unread:
-            return ("No Unread Messages", "You're all caught up", "checkmark.circle")
+            return (L10n.Chats.Chats.EmptyState.NoUnread.title, L10n.Chats.Chats.EmptyState.NoUnread.description, "checkmark.circle")
         case .directMessages:
-            return ("No Direct Messages", "Start a chat from Contacts", "person")
+            return (L10n.Chats.Chats.EmptyState.NoDirectMessages.title, L10n.Chats.Chats.EmptyState.NoDirectMessages.description, "person")
         case .channels:
-            return ("No Channels", "Join or create a channel", "number")
+            return (L10n.Chats.Chats.EmptyState.NoChannels.title, L10n.Chats.Chats.EmptyState.NoChannels.description, "number")
         case .favorites:
-            return ("No Favorites", "Mark contacts as favorites to see them here", "star")
+            return (L10n.Chats.Chats.EmptyState.NoFavorites.title, L10n.Chats.Chats.EmptyState.NoFavorites.description, "star")
         }
     }
 
@@ -55,7 +64,7 @@ struct ChatsView: View {
     private func conversationListState<Content: View>(
         @ViewBuilder listContent: () -> Content
     ) -> some View {
-        if viewModel.isLoading && viewModel.allConversations.isEmpty {
+        if !viewModel.hasLoadedOnce {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if filteredConversations.isEmpty {
@@ -65,7 +74,7 @@ struct ChatsView: View {
                 Text(emptyStateMessage.description)
             } actions: {
                 if selectedFilter != nil {
-                    Button("Clear Filter") {
+                    Button(L10n.Chats.Chats.Filter.clear) {
                         selectedFilter = nil
                     }
                 }
@@ -80,10 +89,10 @@ struct ChatsView: View {
         onTaskStart: @escaping () async -> Void
     ) -> some View {
         content
-            .navigationTitle("Chats")
-            .searchable(text: $searchText, prompt: "Search conversations")
+            .navigationTitle(L10n.Chats.Chats.title)
+            .searchable(text: $searchText, prompt: L10n.Chats.Chats.Search.placeholder)
             .searchScopes($selectedFilter, activation: .onSearchPresentation) {
-                Text("All").tag(nil as ChatFilter?)
+                Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
                 ForEach(ChatFilter.allCases) { filter in
                     Text(filter.rawValue).tag(filter as ChatFilter?)
                 }
@@ -100,21 +109,30 @@ struct ChatsView: View {
                         Button {
                             showingNewChat = true
                         } label: {
-                            Label("New Chat", systemImage: "person")
+                            Label(L10n.Chats.Chats.Compose.newChat, systemImage: "person")
                         }
 
                         Button {
                             showingChannelOptions = true
                         } label: {
-                            Label("New Channel", systemImage: "number")
+                            Label(L10n.Chats.Chats.Compose.newChannel, systemImage: "number")
                         }
                     } label: {
-                        Label("New Message", systemImage: "square.and.pencil")
+                        Label(L10n.Chats.Chats.Compose.newMessage, systemImage: "square.and.pencil")
                     }
                 }
             }
             .refreshable {
-                await refreshConversations()
+                if appState.connectionState != .ready {
+                    showOfflineRefreshAlert = true
+                } else {
+                    await refreshConversations()
+                }
+            }
+            .alert(L10n.Chats.Chats.Alert.CannotRefresh.title, isPresented: $showOfflineRefreshAlert) {
+                Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
+            } message: {
+                Text(L10n.Chats.Chats.Alert.CannotRefresh.message)
             }
             .task {
                 await onTaskStart()
@@ -142,12 +160,12 @@ struct ChatsView: View {
         let filterIcon = selectedFilter == nil
             ? "line.3.horizontal.decrease.circle"
             : "line.3.horizontal.decrease.circle.fill"
-        let accessibilityLabel = selectedFilter.map { "Filter conversations, currently showing \($0.rawValue)" }
-            ?? "Filter conversations"
+        let accessibilityLabel = selectedFilter.map { L10n.Chats.Chats.Filter.accessibilityLabelActive($0.rawValue) }
+            ?? L10n.Chats.Chats.Filter.accessibilityLabel
 
         Menu {
-            Picker("Filter", selection: $selectedFilter) {
-                Text("All").tag(nil as ChatFilter?)
+            Picker(L10n.Chats.Chats.Filter.title, selection: $selectedFilter) {
+                Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
                 ForEach(ChatFilter.allCases) { filter in
                     Label(filter.rawValue, systemImage: filter.systemImage)
                         .tag(filter as ChatFilter?)
@@ -156,10 +174,10 @@ struct ChatsView: View {
             .pickerStyle(.inline)
         } label: {
             if selectedFilter == nil {
-                Label("Filter", systemImage: filterIcon)
+                Label(L10n.Chats.Chats.Filter.title, systemImage: filterIcon)
                     .accessibilityLabel(accessibilityLabel)
             } else {
-                Label("Filter", systemImage: filterIcon)
+                Label(L10n.Chats.Chats.Filter.title, systemImage: filterIcon)
                     .foregroundStyle(.tint)
                     .accessibilityLabel(accessibilityLabel)
             }
@@ -225,12 +243,12 @@ struct ChatsView: View {
             }
             .presentationSizing(.page)
         }
-        .alert("Leave Room", isPresented: $showRoomDeleteAlert) {
-            Button("Cancel", role: .cancel) {
+        .alert(L10n.Chats.Chats.Alert.LeaveRoom.title, isPresented: $showRoomDeleteAlert) {
+            Button(L10n.Chats.Chats.Common.cancel, role: .cancel) {
                 roomToDelete = nil
                 routeBeingDeleted = nil
             }
-            Button("Leave", role: .destructive) {
+            Button(L10n.Chats.Chats.Alert.LeaveRoom.confirm, role: .destructive) {
                 Task {
                     if let session = roomToDelete {
                         routeBeingDeleted = .room(session)
@@ -241,7 +259,7 @@ struct ChatsView: View {
                 }
             }
         } message: {
-            Text("This will remove the room from your chat list, delete all room messages, and remove the associated contact.")
+            Text(L10n.Chats.Chats.Alert.LeaveRoom.message)
         }
     }
 
@@ -263,7 +281,8 @@ struct ChatsView: View {
             to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
-                    conversations: filteredConversations,
+                    favoriteConversations: filteredFavorites,
+                    otherConversations: filteredOthers,
                     selection: $selectedRoute,
                     onDeleteConversation: handleDeleteConversation
                 )
@@ -273,6 +292,7 @@ struct ChatsView: View {
                 viewModel.configure(appState: appState)
                 await loadConversations()
                 chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
+                announceOfflineStateIfNeeded()
                 handlePendingNavigation()
                 handlePendingRoomNavigation()
             }
@@ -316,7 +336,7 @@ struct ChatsView: View {
             RoomConversationView(session: session)
                 .id(session.id)
         case .none:
-            ContentUnavailableView("Select a conversation", systemImage: "message")
+            ContentUnavailableView(L10n.Chats.Chats.EmptyState.selectConversation, systemImage: "message")
         }
     }
 
@@ -368,7 +388,8 @@ struct ChatsView: View {
             to: conversationListState {
                 ConversationListContent(
                     viewModel: viewModel,
-                    conversations: filteredConversations,
+                    favoriteConversations: filteredFavorites,
+                    otherConversations: filteredOthers,
                     onNavigate: { route in
                         navigationPath.append(route)
                     },
@@ -381,6 +402,7 @@ struct ChatsView: View {
             onTaskStart: {
                 viewModel.configure(appState: appState)
                 await loadConversations()
+                announceOfflineStateIfNeeded()
                 handlePendingNavigation()
                 handlePendingRoomNavigation()
             }
@@ -388,7 +410,7 @@ struct ChatsView: View {
     }
 
     private func loadConversations() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         viewModel.configure(appState: appState)
         await viewModel.loadAllConversations(deviceID: deviceID)
 
@@ -419,8 +441,19 @@ struct ChatsView: View {
         }()
     }
 
+    private func announceOfflineStateIfNeeded() {
+        guard UIAccessibility.isVoiceOverRunning,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: L10n.Chats.Chats.Accessibility.offlineAnnouncement
+        )
+    }
+
     private func refreshConversations() async {
-        guard let deviceID = appState.connectedDevice?.id else { return }
+        guard let deviceID = appState.currentDeviceID else { return }
         await viewModel.loadAllConversations(deviceID: deviceID)
     }
 
@@ -563,7 +596,7 @@ struct ChatsView: View {
                 return
             }
 
-            guard let deviceID = appState.connectedDevice?.id else {
+            guard let deviceID = appState.currentDeviceID else {
                 await MainActor.run {
                     hashtagToJoin = HashtagJoinRequest(id: fullName)
                 }
@@ -575,7 +608,7 @@ struct ChatsView: View {
                     fullName,
                     deviceID: deviceID,
                     fetchChannels: { deviceID in
-                        try await appState.services?.dataStore.fetchChannels(deviceID: deviceID) ?? []
+                        try await appState.offlineDataStore?.fetchChannels(deviceID: deviceID) ?? []
                     }
                 ) {
                     await MainActor.run {

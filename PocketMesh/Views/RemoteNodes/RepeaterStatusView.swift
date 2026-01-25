@@ -20,11 +20,11 @@ struct RepeaterStatusView: View {
                 batteryCurveSection
             }
             .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Repeater Status")
+            .navigationTitle(L10n.RemoteNodes.RemoteNodes.Status.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L10n.RemoteNodes.RemoteNodes.done) { dismiss() }
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -33,12 +33,15 @@ struct RepeaterStatusView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry)
+                    .radioDisabled(
+                        for: appState.connectionState,
+                        or: viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry
+                    )
                 }
 
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L10n.RemoteNodes.RemoteNodes.done) {
                         UIApplication.shared.sendAction(
                             #selector(UIResponder.resignFirstResponder),
                             to: nil,
@@ -100,7 +103,7 @@ struct RepeaterStatusView: View {
     // MARK: - Status Section
 
     private var statusSection: some View {
-        Section("Status") {
+        Section(L10n.RemoteNodes.RemoteNodes.Status.statusSection) {
             if viewModel.isLoadingStatus && viewModel.status == nil {
                 HStack {
                     Spacer()
@@ -119,16 +122,16 @@ struct RepeaterStatusView: View {
     @ViewBuilder
     private var statusRows: some View {
         // Power
-        LabeledContent("Battery", value: viewModel.batteryDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.battery, value: viewModel.batteryDisplay)
         // Health
-        LabeledContent("Uptime", value: viewModel.uptimeDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.uptime, value: viewModel.uptimeDisplay)
         // Radio
-        LabeledContent("Last RSSI", value: viewModel.lastRSSIDisplay)
-        LabeledContent("Last SNR", value: viewModel.lastSNRDisplay)
-        LabeledContent("Noise Floor", value: viewModel.noiseFloorDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.lastRssi, value: viewModel.lastRSSIDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.lastSnr, value: viewModel.lastSNRDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.noiseFloor, value: viewModel.noiseFloorDisplay)
         // Activity
-        LabeledContent("Packets Sent", value: viewModel.packetsSentDisplay)
-        LabeledContent("Packets Received", value: viewModel.packetsReceivedDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.packetsSent, value: viewModel.packetsSentDisplay)
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.packetsReceived, value: viewModel.packetsReceivedDisplay)
     }
 
     // MARK: - Neighbors Section
@@ -143,7 +146,7 @@ struct RepeaterStatusView: View {
                         Spacer()
                     }
                 } else if viewModel.neighbors.isEmpty {
-                    Text("No neighbors discovered")
+                    Text(L10n.RemoteNodes.RemoteNodes.Status.noNeighbors)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
@@ -155,7 +158,7 @@ struct RepeaterStatusView: View {
                 }
             } label: {
                 HStack {
-                    Text("Neighbors")
+                    Text(L10n.RemoteNodes.RemoteNodes.Status.neighbors)
                     Spacer()
                     if viewModel.neighborsLoaded {
                         Text("\(viewModel.neighbors.count)")
@@ -184,7 +187,8 @@ struct RepeaterStatusView: View {
                     footerText: "",
                     selectedPreset: $viewModel.selectedOCVPreset,
                     voltageValues: $viewModel.ocvValues,
-                    onSave: viewModel.saveOCVSettings
+                    onSave: viewModel.saveOCVSettings,
+                    isDisabled: appState.connectionState != .ready
                 )
 
                 if let error = viewModel.ocvError {
@@ -193,7 +197,7 @@ struct RepeaterStatusView: View {
                         .foregroundStyle(.red)
                 }
             } label: {
-                Text("Battery Curve")
+                Text(L10n.RemoteNodes.RemoteNodes.Status.batteryCurve)
             }
             .onChange(of: viewModel.isBatteryCurveExpanded) { _, isExpanded in
                 if isExpanded, let deviceID = appState.connectedDevice?.id {
@@ -219,7 +223,7 @@ struct RepeaterStatusView: View {
                 } else if viewModel.telemetry != nil {
                     // Use cached data points to avoid repeated LPP decoding during view updates
                     if viewModel.cachedDataPoints.isEmpty {
-                        Text("No sensor data")
+                        Text(L10n.RemoteNodes.RemoteNodes.Status.noSensorData)
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(viewModel.cachedDataPoints, id: \.self) { dataPoint in
@@ -227,12 +231,12 @@ struct RepeaterStatusView: View {
                         }
                     }
                 } else {
-                    Text("No telemetry data")
+                    Text(L10n.RemoteNodes.RemoteNodes.Status.noTelemetryData)
                         .foregroundStyle(.secondary)
                 }
             } label: {
                 HStack {
-                    Text("Telemetry")
+                    Text(L10n.RemoteNodes.RemoteNodes.Status.telemetry)
                     Spacer()
                     if viewModel.telemetryLoaded {
                         Text("\(viewModel.cachedDataPoints.count)")
@@ -302,7 +306,7 @@ private struct NeighborRow: View {
     }
 
     private var displayName: String {
-        contact?.displayName ?? "Unknown"
+        contact?.displayName ?? L10n.RemoteNodes.RemoteNodes.Status.unknown
     }
 
     private var firstKeyByte: String {
@@ -313,11 +317,11 @@ private struct NeighborRow: View {
     private var lastSeenText: String {
         let seconds = neighbor.secondsAgo
         if seconds < 60 {
-            return "\(seconds)s ago"
+            return L10n.RemoteNodes.RemoteNodes.Status.secondsAgo(seconds)
         } else if seconds < 3600 {
-            return "\(seconds / 60)m ago"
+            return L10n.RemoteNodes.RemoteNodes.Status.minutesAgo(seconds / 60)
         } else {
-            return "\(seconds / 3600)h ago"
+            return L10n.RemoteNodes.RemoteNodes.Status.hoursAgo(seconds / 3600)
         }
     }
 

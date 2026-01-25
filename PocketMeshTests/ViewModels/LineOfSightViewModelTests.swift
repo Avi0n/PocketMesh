@@ -151,6 +151,14 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
 
     func fetchLinkPreview(url: String) async throws -> LinkPreviewDataDTO? { nil }
     func saveLinkPreview(_ dto: LinkPreviewDataDTO) async throws {}
+
+    // MARK: - Contact Public Keys (stubs)
+
+    func fetchContactPublicKeysByPrefix(deviceID: UUID) async throws -> [UInt8: [Data]] { [:] }
+
+    // MARK: - RxLogEntry Lookup (stubs)
+
+    func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
 }
 
 // MARK: - Test Helpers

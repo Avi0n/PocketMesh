@@ -7,7 +7,7 @@ struct ResultsCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Results")
+            Text(L10n.Tools.Tools.LineOfSight.results)
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -67,7 +67,7 @@ struct ResultsCardView: View {
 
                 Spacer()
 
-                Text(LOSFormatters.formatPathLoss(result.totalPathLoss) + " loss")
+                Text(LOSFormatters.formatPathLoss(result.totalPathLoss) + " " + L10n.Tools.Tools.LineOfSight.loss)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -88,13 +88,13 @@ struct ResultsCardView: View {
 
     private var pathLossBreakdown: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Path Loss Breakdown")
+            Text(L10n.Tools.Tools.LineOfSight.pathLossBreakdown)
                 .font(.subheadline)
                 .bold()
 
             Grid(alignment: .leading, verticalSpacing: 6) {
                 GridRow {
-                    Text("Free space loss")
+                    Text(L10n.Tools.Tools.LineOfSight.freeSpaceLoss)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(LOSFormatters.formatPathLoss(result.freeSpacePathLoss))
@@ -103,7 +103,7 @@ struct ResultsCardView: View {
 
                 if let diffractionText = LOSFormatters.formatDiffractionLoss(result.peakDiffractionLoss) {
                     GridRow {
-                        Text("Diffraction loss")
+                        Text(L10n.Tools.Tools.LineOfSight.diffractionLoss)
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(diffractionText)
@@ -115,7 +115,7 @@ struct ResultsCardView: View {
                     .gridCellColumns(2)
 
                 GridRow {
-                    Text("Total")
+                    Text(L10n.Tools.Tools.LineOfSight.total)
                         .bold()
                     Spacer()
                     Text(LOSFormatters.formatPathLoss(result.totalPathLoss))
@@ -131,13 +131,13 @@ struct ResultsCardView: View {
 
     private var clearanceDetails: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Clearance")
+            Text(L10n.Tools.Tools.LineOfSight.clearance)
                 .font(.subheadline)
                 .bold()
 
             Grid(alignment: .leading, verticalSpacing: 6) {
                 GridRow {
-                    Text("Worst clearance (% of 1st Fresnel)")
+                    Text(L10n.Tools.Tools.LineOfSight.worstClearanceShort)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(LOSFormatters.formatClearancePercent(result.worstClearancePercent))%")
@@ -145,7 +145,7 @@ struct ResultsCardView: View {
                 }
 
                 GridRow {
-                    Text("Obstructions found")
+                    Text(L10n.Tools.Tools.LineOfSight.obstructionsFound)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(result.obstructionPoints.count)")
@@ -242,7 +242,7 @@ struct RelayResultsCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Results")
+            Text(L10n.Tools.Tools.LineOfSight.results)
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 0) {
@@ -341,19 +341,19 @@ struct RelayResultsCardView: View {
 
             Grid(alignment: .leading, verticalSpacing: 4) {
                 GridRow {
-                    Text("Status")
+                    Text(L10n.Tools.Tools.LineOfSight.status)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(segment.clearanceStatus.rawValue)
                 }
                 GridRow {
-                    Text("Distance")
+                    Text(L10n.Tools.Tools.LineOfSight.distance)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text(LOSFormatters.formatDistance(segment.distanceMeters))
                 }
                 GridRow {
-                    Text("Worst clearance")
+                    Text(L10n.Tools.Tools.LineOfSight.worstClearanceShort)
                         .foregroundStyle(.secondary)
                     Spacer()
                     Text("\(LOSFormatters.formatClearancePercent(segment.worstClearancePercent))%")

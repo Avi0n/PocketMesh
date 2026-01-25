@@ -36,7 +36,7 @@ enum Conversation: Identifiable, Hashable {
         case .channel(let channel):
             return channel.lastMessageDate
         case .room(let session):
-            return session.lastMessageDate ?? session.lastConnectedDate
+            return session.lastMessageDate
         }
     }
 

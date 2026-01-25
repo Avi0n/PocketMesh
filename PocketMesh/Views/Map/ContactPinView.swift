@@ -265,11 +265,11 @@ final class ContactPinView: MKAnnotationView {
     private func pinColor(for contact: ContactDTO) -> UIColor {
         switch contact.type {
         case .chat:
-            contact.isFavorite ? .systemOrange : .systemBlue
+            UIColor(red: 204.0 / 255.0, green: 122.0 / 255.0, blue: 92.0 / 255.0, alpha: 1) // coral #cc7a5c
         case .repeater:
-            .systemGreen
+            UIColor(red: 0, green: 170.0 / 255.0, blue: 1, alpha: 1) // MeshCore cyan #00aaff
         case .room:
-            .systemPurple
+            UIColor(red: 1, green: 136.0 / 255.0, blue: 0, alpha: 1) // orange #ff8800 (matches Nodes)
         }
     }
 

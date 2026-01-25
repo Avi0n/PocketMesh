@@ -8,7 +8,7 @@ struct MutedIndicator: View {
             Image(systemName: "bell.slash")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Muted")
+                .accessibilityLabel(L10n.Chats.Chats.Row.muted)
         }
     }
 }

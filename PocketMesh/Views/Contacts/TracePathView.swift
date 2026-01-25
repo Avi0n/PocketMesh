@@ -1,6 +1,19 @@
 import SwiftUI
 import PocketMeshServices
 
+/// View mode for trace path building
+enum TracePathViewMode: String, CaseIterable {
+    case list
+    case map
+
+    var label: String {
+        switch self {
+        case .list: L10n.Contacts.Contacts.Trace.Mode.list
+        case .map: L10n.Contacts.Contacts.Trace.Mode.map
+        }
+    }
+}
+
 /// View for building and executing network path traces
 struct TracePathView: View {
     @Environment(\.appState) private var appState
@@ -19,49 +32,37 @@ struct TracePathView: View {
     @State private var presentedResult: TraceResult?
     @State private var showingClearConfirmation = false
 
-    @State private var showJumpToPath = false
+    @State private var showJumpToPath = true
     @State private var pathLoadedFromSheet = false
+    @AppStorage("tracePathViewMode") private var viewMode: TracePathViewMode = .list
 
     var body: some View {
-        ScrollViewReader { proxy in
-            List {
-                headerSection
-                availableRepeatersSection
-                outboundPathSection
-                pathActionsSection
-                runTraceSection
-
-                // Invisible sentinel at the bottom for scroll-to target
-                Color.clear
-                    .frame(height: 1)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets())
-                    .id("bottom")
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .overlay(alignment: .bottom) {
-                jumpToPathButton(proxy: proxy)
-            }
-            .onChange(of: showingSavedPaths) { wasShowing, isShowing in
-                if wasShowing && !isShowing && pathLoadedFromSheet {
-                    pathLoadedFromSheet = false
-                    withAnimation {
-                        proxy.scrollTo("runTrace", anchor: .bottom)
-                    }
-                }
+        Group {
+            switch viewMode {
+            case .list:
+                listView
+            case .map:
+                TracePathMapView(traceViewModel: viewModel, presentedResult: $presentedResult)
             }
         }
-        .navigationTitle("Trace Path")
+        .navigationTitle(L10n.Contacts.Contacts.Trace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("View Mode", selection: $viewMode) {
+                    ForEach(TracePathViewMode.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
             ToolbarItem(placement: .primaryAction) {
-                Button("Saved", systemImage: "bookmark") {
+                Button(L10n.Contacts.Contacts.Trace.saved, systemImage: "bookmark") {
                     showingSavedPaths = true
                 }
             }
         }
-        .environment(\.editMode, .constant(.active))
         .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
@@ -77,7 +78,9 @@ struct TracePathView: View {
         .onChange(of: viewModel.resultID) { _, newID in
             guard newID != nil else { return }
             if let result = viewModel.result, result.success {
-                presentedResult = result
+                if viewMode == .list {
+                    presentedResult = result
+                }
             }
         }
         .sheet(item: $presentedResult, onDismiss: {
@@ -88,6 +91,29 @@ struct TracePathView: View {
             TraceResultsSheet(result: result, viewModel: viewModel)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            L10n.Contacts.Contacts.Trace.clearPath,
+            isPresented: $showingClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.Contacts.Contacts.Trace.clearPath, role: .destructive) {
+                viewModel.clearPath()
+            }
+        } message: {
+            Text(L10n.Contacts.Contacts.Trace.clearPathMessage)
+        }
+        .alert(L10n.Contacts.Contacts.Trace.failed, isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.clearError() } }
+        )) {
+            Button(L10n.Contacts.Contacts.Common.ok) {
+                viewModel.clearError()
+            }
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
+            }
         }
         .task {
             viewModel.configure(appState: appState)
@@ -108,236 +134,30 @@ struct TracePathView: View {
         }
     }
 
-    // MARK: - Header Section
-
-    private var headerSection: some View {
-        Section {
-            Label {
-                Text("Tap repeaters below to build your path.")
-            } icon: {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.blue)
+    @ViewBuilder
+    private var listView: some View {
+        ScrollViewReader { proxy in
+            TracePathListView(
+                viewModel: viewModel,
+                addHapticTrigger: $addHapticTrigger,
+                dragHapticTrigger: $dragHapticTrigger,
+                copyHapticTrigger: $copyHapticTrigger,
+                recentlyAddedRepeaterID: $recentlyAddedRepeaterID,
+                showingClearConfirmation: $showingClearConfirmation,
+                presentedResult: $presentedResult,
+                showJumpToPath: $showJumpToPath
+            )
+            .scrollDismissesKeyboard(.interactively)
+            .overlay(alignment: .bottom) {
+                jumpToPathButton(proxy: proxy)
             }
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: - Outbound Path Section
-
-    private var outboundPathSection: some View {
-        Section {
-            if viewModel.outboundPath.isEmpty {
-                Text("Tap a repeater above to start building your path")
-                    .foregroundStyle(.secondary)
-                    .frame(minHeight: 44)
-            } else {
-                ForEach(viewModel.outboundPath) { hop in
-                    TracePathHopRow(hop: hop)
-                }
-                .onMove { source, destination in
-                    dragHapticTrigger += 1
-                    viewModel.moveRepeater(from: source, to: destination)
-                }
-                .onDelete { indexSet in
-                    for index in indexSet.sorted().reversed() {
-                        viewModel.removeRepeater(at: index)
+            .onChange(of: showingSavedPaths) { wasShowing, isShowing in
+                if wasShowing && !isShowing && pathLoadedFromSheet {
+                    pathLoadedFromSheet = false
+                    withAnimation {
+                        proxy.scrollTo("runTrace", anchor: .bottom)
                     }
                 }
-            }
-        } header: {
-            Text("Outbound Path")
-        }
-    }
-
-    private var pathActionsSection: some View {
-        Section {
-            if !viewModel.outboundPath.isEmpty {
-                Toggle(isOn: $viewModel.autoReturnPath) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Auto Return Path")
-                        Text("Mirror outbound path for the return journey")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Toggle(isOn: $viewModel.batchEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Batch Trace")
-                        Text("Run multiple traces and average the results")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if viewModel.batchEnabled {
-                    HStack(spacing: 12) {
-                        Text("Traces:")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        BatchSizeChip(size: 3, selectedSize: $viewModel.batchSize)
-                        BatchSizeChip(size: 5, selectedSize: $viewModel.batchSize)
-                        BatchSizeChip(size: 10, selectedSize: $viewModel.batchSize)
-                    }
-                }
-
-                HStack {
-                    Text(viewModel.fullPathString)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button("Copy Path", systemImage: "doc.on.doc") {
-                        copyHapticTrigger += 1
-                        viewModel.copyPathToClipboard()
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                }
-
-                Button("Clear Path", systemImage: "trash", role: .destructive) {
-                    showingClearConfirmation = true
-                }
-                .foregroundStyle(.red)
-                .confirmationDialog(
-                    "Clear Path",
-                    isPresented: $showingClearConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("Clear Path", role: .destructive) {
-                        viewModel.clearPath()
-                    }
-                } message: {
-                    Text("Remove all repeaters from the path?")
-                }
-            }
-        } footer: {
-            if !viewModel.outboundPath.isEmpty {
-                Text("You must be within range of the last repeater to receive a response.")
-            }
-        }
-    }
-
-    // MARK: - Available Repeaters Section
-
-    private var availableRepeatersSection: some View {
-        Section {
-            if viewModel.availableRepeaters.isEmpty {
-                ContentUnavailableView(
-                    "No Repeaters Available",
-                    systemImage: "antenna.radiowaves.left.and.right.slash",
-                    description: Text("Repeaters appear here once they're discovered in your mesh network.")
-                )
-            } else {
-                ForEach(viewModel.availableRepeaters) { repeater in
-                    Button {
-                        recentlyAddedRepeaterID = repeater.id
-                        addHapticTrigger += 1
-                        viewModel.addRepeater(repeater)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(repeater.displayName)
-                                Text(repeater.publicKey.hexString())
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
-                            Spacer()
-                            Image(systemName: recentlyAddedRepeaterID == repeater.id ? "checkmark.circle.fill" : "plus.circle")
-                                .foregroundStyle(recentlyAddedRepeaterID == repeater.id ? Color.green : Color.accentColor)
-                                .contentTransition(.symbolEffect(.replace))
-                        }
-                    }
-                    .id(repeater.id)
-                    .foregroundStyle(.primary)
-                    .accessibilityLabel("Add \(repeater.displayName) to path")
-                }
-            }
-        } header: {
-            Text("Available Repeaters")
-        }
-    }
-
-    // MARK: - Run Trace Section
-
-    private var runTraceSection: some View {
-        Section {
-            HStack {
-                Spacer()
-                if viewModel.isRunning {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        if viewModel.batchEnabled {
-                            Text("Running Trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)...")
-                        } else {
-                            Text("Running Trace...")
-                        }
-                    }
-                    .frame(minWidth: 160)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .background(.regularMaterial, in: .capsule)
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
-                    }
-                    .accessibilityLabel(viewModel.batchEnabled
-                        ? "Running trace \(viewModel.currentTraceIndex) of \(viewModel.batchSize)"
-                        : "Running trace, please wait")
-                    .accessibilityHint("Trace is in progress")
-                } else {
-                    Button {
-                        Task {
-                            if viewModel.batchEnabled {
-                                await viewModel.runBatchTrace()
-                            } else {
-                                await viewModel.runTrace()
-                            }
-                        }
-                    } label: {
-                        Text("Run Trace")
-                            .frame(minWidth: 160)
-                            .padding(.vertical, 4)
-                    }
-                    .liquidGlassProminentButtonStyle()
-                    .disabled(!viewModel.canRunTrace)
-                    .accessibilityLabel("Run trace")
-                    .accessibilityHint(viewModel.batchEnabled
-                        ? "Double tap to run \(viewModel.batchSize) traces"
-                        : "Double tap to trace the path")
-                }
-                Spacer()
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .id("runTrace")
-            .onAppear {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showJumpToPath = false
-                }
-            }
-            .onDisappear {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showJumpToPath = true
-                }
-            }
-        }
-        .listSectionSeparator(.hidden)
-        .alert("Trace Failed", isPresented: Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.clearError() } }
-        )) {
-            Button("OK") {
-                viewModel.clearError()
-            }
-        } message: {
-            if let error = viewModel.errorMessage {
-                Text(error)
             }
         }
     }
@@ -358,28 +178,6 @@ struct TracePathView: View {
     }
 }
 
-// MARK: - Path Hop Row
-
-/// Row for displaying a hop in the path building section
-private struct TracePathHopRow: View {
-    let hop: PathHop
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            if let name = hop.resolvedName {
-                Text(name)
-                Text(hop.hashByte.hexString)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(hop.hashByte.hexString)
-                    .font(.body.monospaced())
-            }
-        }
-        .frame(minHeight: 44)
-    }
-}
-
 // MARK: - Jump to Path Button
 
 /// Floating pill button to scroll to the Run Trace button
@@ -389,7 +187,7 @@ private struct JumpToPathButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            Label("Jump to Path", systemImage: "arrow.down")
+            Label(L10n.Contacts.Contacts.Trace.runBelow, systemImage: "arrow.down")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
@@ -403,34 +201,8 @@ private struct JumpToPathButton: View {
         .scaleEffect(isVisible ? 1 : 0.8)
         .allowsHitTesting(isVisible)
         .animation(.snappy(duration: 0.2), value: isVisible)
-        .accessibilityLabel("Jump to Run Trace button")
-        .accessibilityHint("Double tap to scroll to the bottom of the path")
+        .accessibilityLabel(L10n.Contacts.Contacts.Trace.jumpLabel)
+        .accessibilityHint(L10n.Contacts.Contacts.Trace.jumpHint)
         .accessibilityHidden(!isVisible)
-    }
-}
-
-// MARK: - Batch Size Chip
-
-/// Chip button for selecting batch trace count
-private struct BatchSizeChip: View {
-    let size: Int
-    @Binding var selectedSize: Int
-
-    private var isSelected: Bool { selectedSize == size }
-
-    var body: some View {
-        Button {
-            selectedSize = size
-        } label: {
-            Text("\(size)×")
-                .font(.subheadline.weight(.medium))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), in: .capsule)
-                .foregroundStyle(isSelected ? .white : .primary)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(size) traces")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

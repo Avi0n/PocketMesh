@@ -45,6 +45,37 @@ private func createTestMessage(
     return MessageDTO(from: message)
 }
 
+private func createChannelMessage(
+    timestamp: UInt32,
+    senderName: String? = nil,
+    isOutgoing: Bool = false,
+    text: String = "Test message"
+) -> MessageDTO {
+    MessageDTO(
+        id: UUID(),
+        deviceID: UUID(),
+        contactID: nil,  // nil = channel message
+        channelIndex: 0,
+        text: text,
+        timestamp: timestamp,
+        createdAt: Date(),
+        direction: isOutgoing ? .outgoing : .incoming,
+        status: isOutgoing ? .sent : .delivered,
+        textType: .plain,
+        ackCode: nil,
+        pathLength: 0,
+        snr: nil,
+        senderKeyPrefix: nil,  // Always nil for channel messages per MeshCore protocol
+        senderNodeName: senderName,
+        isRead: false,
+        replyToID: nil,
+        roundTripTime: nil,
+        heardRepeats: 0,
+        retryAttempt: 0,
+        maxRetryAttempts: 0
+    )
+}
+
 // MARK: - ChatViewModel Tests
 
 @Suite("ChatViewModel Tests")
@@ -208,6 +239,20 @@ struct ChatViewModelTests {
         #expect(conversations.isEmpty)
     }
 
+    // MARK: - Loading State Tests
+
+    @Test("hasLoadedOnce starts false")
+    func hasLoadedOnceStartsFalse() {
+        let viewModel = ChatViewModel()
+        #expect(viewModel.hasLoadedOnce == false)
+    }
+
+    @Test("isLoading starts false")
+    func isLoadingStartsFalse() {
+        let viewModel = ChatViewModel()
+        #expect(viewModel.isLoading == false)
+    }
+
 }
 
 // MARK: - Blocked Contact Filtering Tests
@@ -366,5 +411,132 @@ struct BlockedContactFilteringTests {
         #expect(filtered.count == 2)
         #expect(filtered[0].senderNodeName == "NormalUser")
         #expect(filtered[1].senderNodeName == nil)
+    }
+}
+
+// MARK: - Message Grouping Tests
+
+@Suite("Message Grouping")
+@MainActor
+struct MessageGroupingTests {
+
+    @Test("First message always shows sender name")
+    func firstMessageAlwaysShowsSenderName() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice")
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+    }
+
+    @Test("Consecutive messages from same sender within 5 min hide sender name")
+    func consecutiveMessagesFromSameSenderHideName() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: "Alice"),  // 1 min later
+            createChannelMessage(timestamp: 1120, senderName: "Alice")   // 2 min later
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == false)
+        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == false)
+    }
+
+    @Test("Different sender shows sender name")
+    func differentSenderShowsName() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: "Bob")
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+    }
+
+    @Test("Gap over 5 minutes shows sender name")
+    func gapOver5MinutesShowsName() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1301, senderName: "Alice")  // 5 min 1 sec later
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+    }
+
+    @Test("Exactly 5 minute gap still groups")
+    func exactly5MinuteGapStillGroups() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1300, senderName: "Alice")  // Exactly 5 min
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == false)
+    }
+
+    @Test("Outgoing message between incoming breaks group")
+    func outgoingMessageBreaksGroup() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: nil, isOutgoing: true),
+            createChannelMessage(timestamp: 1120, senderName: "Alice")
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)  // outgoing
+        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == true)  // after outgoing
+    }
+
+    @Test("Interleaved senders all show names")
+    func interleavedSendersAllShowNames() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: "Bob"),
+            createChannelMessage(timestamp: 1120, senderName: "Alice")
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == true)
+    }
+
+    @Test("Nil sender name shows name to be safe")
+    func nilSenderNameShowsName() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: nil)  // malformed message
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+    }
+
+    @Test("Empty string sender name treated as different sender")
+    func emptyStringSenderNameTreatedAsDifferent() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: "")
+        ]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+    }
+
+    @Test("Direct messages always return true")
+    func directMessagesAlwaysReturnTrue() {
+        // Direct messages have contactID set
+        let message = Message(
+            id: UUID(),
+            deviceID: UUID(),
+            contactID: UUID(),  // non-nil = direct message
+            text: "Test",
+            timestamp: 1000,
+            directionRawValue: MessageDirection.incoming.rawValue,
+            statusRawValue: MessageStatus.delivered.rawValue
+        )
+        let messages = [MessageDTO(from: message)]
+
+        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
     }
 }

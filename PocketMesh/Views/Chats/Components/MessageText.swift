@@ -7,6 +7,8 @@ struct MessageText: View {
     let baseColor: Color
     let currentUserName: String?
 
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+
     init(_ text: String, baseColor: Color = .primary, currentUserName: String? = nil) {
         self.text = text
         self.baseColor = baseColor
@@ -71,10 +73,14 @@ struct MessageText: View {
                     replacement.backgroundColor = Color.white.opacity(0.3)
                 }
             } else {
-                // On light bubbles: use accent color
-                replacement.foregroundColor = Color.accentColor
+                // On light bubbles: use sender color for the mentioned name
+                let mentionColor = AppColors.NameColor.color(
+                    for: name,
+                    highContrast: colorSchemeContrast == .increased
+                )
+                replacement.foregroundColor = mentionColor
                 if isSelfMention {
-                    replacement.backgroundColor = Color.accentColor.opacity(0.15)
+                    replacement.backgroundColor = mentionColor.opacity(0.15)
                 }
             }
 

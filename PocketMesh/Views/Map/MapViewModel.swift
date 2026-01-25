@@ -44,8 +44,8 @@ final class MapViewModel {
 
     /// Configure with services from AppState
     func configure(appState: AppState) {
-        self.dataStore = appState.services?.dataStore
-        self.deviceID = appState.connectedDevice?.id
+        self.dataStore = appState.offlineDataStore
+        self.deviceID = appState.currentDeviceID
     }
 
     /// Configure with services (for testing)
@@ -114,8 +114,9 @@ final class MapViewModel {
 
         let centerLat = (minLat + maxLat) / 2
         let centerLon = (minLon + maxLon) / 2
-        let latDelta = max(0.01, (maxLat - minLat) * 1.5)
-        let lonDelta = max(0.01, (maxLon - minLon) * 1.5)
+        // Clamp spans to valid MKCoordinateSpan bounds (lat: 0-180, lon: 0-360)
+        let latDelta = min(180, max(0.01, (maxLat - minLat) * 1.5))
+        let lonDelta = min(360, max(0.01, (maxLon - minLon) * 1.5))
 
         let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
         let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)

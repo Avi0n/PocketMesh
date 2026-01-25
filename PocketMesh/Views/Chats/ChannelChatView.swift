@@ -14,6 +14,7 @@ struct ChannelChatView: View {
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
+    @State private var keyboardObserver = KeyboardObserver()
     @State private var showingChannelInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
@@ -22,6 +23,7 @@ struct ChannelChatView: View {
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
     @State private var selectedMessageForRepeats: MessageDTO?
+    @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
@@ -33,17 +35,15 @@ struct ChannelChatView: View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
+                    .floatingKeyboardAware()
             }
+            .ignoreKeyboardOnIPad()
+            .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
-            .navigationTitle(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationHeader(title: channelDisplayName, subtitle: channelTypeLabel)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                headerView
-            }
-
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingChannelInfo = true
@@ -63,12 +63,18 @@ struct ChannelChatView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .sheet(item: $selectedMessageForPath) { message in
+            MessagePathSheet(message: message)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .task(id: appState.servicesVersion) {
             logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
+            // Load contacts first so contactNameSet is populated before buildChannelSenders runs
+            await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
-            await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await loadUnseenMentions()
             logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
         }
@@ -138,24 +144,21 @@ struct ChannelChatView: View {
                 break
             }
         }
-        .alert("Unable to Send", isPresented: $viewModel.showRetryError) {
-            Button("OK", role: .cancel) { }
+        .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {
+            Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
         } message: {
-            Text("Please ensure your device is connected and try again.")
+            Text(L10n.Chats.Chats.Alert.UnableToSend.message)
         }
     }
 
     // MARK: - Header
 
-    private var headerView: some View {
-        VStack(spacing: 0) {
-            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
-                .font(.headline)
+    private var channelDisplayName: String {
+        channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name
+    }
 
-            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
+    private var channelTypeLabel: String {
+        channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate
     }
 
     // MARK: - Mention Tracking
@@ -214,7 +217,7 @@ struct ChannelChatView: View {
 
     private var messagesView: some View {
         Group {
-            if viewModel.isLoading && viewModel.messages.isEmpty {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if viewModel.messages.isEmpty {
@@ -265,8 +268,8 @@ struct ChannelChatView: View {
         if let message = viewModel.message(for: item) {
             UnifiedMessageBubble(
                 message: message,
-                contactName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
-                contactNodeName: channel.name.isEmpty ? "Channel \(channel.index)" : channel.name,
+                contactName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
+                contactNodeName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .channel(
                     isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
@@ -274,6 +277,7 @@ struct ChannelChatView: View {
                 ),
                 showTimestamp: item.showTimestamp,
                 showDirectionGap: item.showDirectionGap,
+                showSenderName: item.showSenderName,
                 previewState: item.previewState,
                 loadedPreview: item.loadedPreview,
                 onRetry: { retryMessage(message) },
@@ -286,6 +290,7 @@ struct ChannelChatView: View {
                 onShowRepeatDetails: { message in
                     showRepeatDetails(for: message)
                 },
+                onShowPath: { selectedMessageForPath = $0 },
                 onSendAgain: {
                     sendAgain(message)
                 },
@@ -300,10 +305,10 @@ struct ChannelChatView: View {
             )
         } else {
             // ViewModel logs the warning for data inconsistency
-            Text("Message unavailable")
+            Text(L10n.Chats.Chats.Message.unavailable)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Message could not be loaded")
+                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
         }
     }
 
@@ -311,14 +316,14 @@ struct ChannelChatView: View {
         VStack(spacing: 16) {
             ChannelAvatar(channel: channel, size: 80)
 
-            Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+            Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                 .font(.title2)
                 .bold()
 
-            Text("No messages yet")
+            Text(L10n.Chats.Chats.Channel.EmptyState.noMessages)
                 .foregroundStyle(.secondary)
 
-            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? "This is a public broadcast channel" : "This is a private channel")
+            Text(channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.EmptyState.publicDescription : L10n.Chats.Chats.Channel.EmptyState.privateDescription)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -368,7 +373,7 @@ struct ChannelChatView: View {
         MentionInputBar(
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
-            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? "Public Channel" : "Private Channel",
+            placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate,
             maxCharacters: maxChannelMessageLength,
             contacts: viewModel.allContacts
         ) {
@@ -386,7 +391,8 @@ struct ChannelChatView: View {
         guard let query = MentionUtilities.detectActiveMention(in: viewModel.composingText) else {
             return []
         }
-        return MentionUtilities.filterContacts(viewModel.allContacts, query: query)
+        let combined = viewModel.allContacts + viewModel.channelSenders
+        return MentionUtilities.filterContacts(combined, query: query)
     }
 
     @ViewBuilder

@@ -3,6 +3,8 @@ import SwiftUI
 import MapKit
 import PocketMeshServices
 
+// swiftlint:disable nesting
+
 private let logger = Logger(subsystem: "com.pocketmesh", category: "MapView")
 
 /// Map view displaying contacts with their locations
@@ -115,7 +117,10 @@ struct MapView: View {
                         navigateToChat(with: contact)
                     },
                     onSnapshotParamsGetter: { getter in
-                        getSnapshotParams = getter
+                        Task { @MainActor in
+                            await Task.yield()
+                            getSnapshotParams = getter
+                        }
                     }
                 )
                 .opacity(showingSnapshot ? 0 : 1)
@@ -141,11 +146,11 @@ struct MapView: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("No Contacts on Map", systemImage: "map")
+            Label(L10n.Map.Map.EmptyState.title, systemImage: "map")
         } description: {
-            Text("Contacts with location data will appear here once discovered on the mesh network.")
+            Text(L10n.Map.Map.EmptyState.description)
         } actions: {
-            Button("Refresh") {
+            Button(L10n.Map.Map.Common.refresh) {
                 Task {
                     await viewModel.loadContactsWithLocation()
                 }
@@ -175,77 +180,45 @@ struct MapView: View {
     }
 
     private var mapControlsStack: some View {
-        VStack(spacing: 0) {
-            // User location button (custom since we can't use MapUserLocationButton without scope)
-            Button {
-                centerOnUserLocation()
-            } label: {
-                Image(systemName: "location.fill")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Center on my location")
-
-            Divider()
-                .frame(width: 36)
-
-            // Layers button
-            Button {
-                withAnimation(.spring(response: 0.3)) {
-                    viewModel.showingLayersMenu.toggle()
-                }
-            } label: {
-                Image(systemName: "square.3.layers.3d.down.right")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Map layers")
-
-            Divider()
-                .frame(width: 36)
-
-            // Labels toggle button
-            Button {
-                withAnimation {
-                    viewModel.showLabels.toggle()
-                }
-            } label: {
-                Image(systemName: "character.textbox")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(viewModel.showLabels ? .blue : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(viewModel.showLabels ? "Hide labels" : "Show labels")
-
-            Divider()
-                .frame(width: 36)
-
-            // Center on all button
-            Button {
-                clearSelection()
-                viewModel.centerOnAllContacts()
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.contactsWithLocation.isEmpty)
-            .accessibilityLabel("Center on all contacts")
+        MapControlsToolbar(
+            onLocationTap: { centerOnUserLocation() },
+            showingLayersMenu: $viewModel.showingLayersMenu
+        ) {
+            labelsToggleButton
+            centerAllButton
         }
-        .liquidGlass(in: .rect(cornerRadius: 8))
-        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-        .padding()
+    }
+
+    private var labelsToggleButton: some View {
+        Button {
+            withAnimation {
+                viewModel.showLabels.toggle()
+            }
+        } label: {
+            Image(systemName: "character.textbox")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(viewModel.showLabels ? .blue : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(viewModel.showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
+    }
+
+    private var centerAllButton: some View {
+        Button {
+            clearSelection()
+            viewModel.centerOnAllContacts()
+        } label: {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.contactsWithLocation.isEmpty)
+        .accessibilityLabel(L10n.Map.Map.Controls.centerAll)
     }
 
     // MARK: - Refresh Button
@@ -365,10 +338,10 @@ private struct ContactDetailSheet: View {
         NavigationStack {
             List {
                 // Basic info section
-                Section("Contact Info") {
-                    LabeledContent("Name", value: contact.displayName)
+                Section(L10n.Map.Map.Detail.Section.contactInfo) {
+                    LabeledContent(L10n.Map.Map.Detail.name, value: contact.displayName)
 
-                    LabeledContent("Type") {
+                    LabeledContent(L10n.Map.Map.Detail.type) {
                         HStack {
                             Image(systemName: typeIconName)
                             Text(typeDisplayName)
@@ -377,39 +350,40 @@ private struct ContactDetailSheet: View {
                     }
 
                     if contact.isFavorite {
-                        LabeledContent("Status") {
+                        LabeledContent(L10n.Map.Map.Detail.status) {
                             HStack {
                                 Image(systemName: "star.fill")
-                                Text("Favorite")
+                                Text(L10n.Map.Map.Detail.favorite)
                             }
                             .foregroundStyle(.orange)
                         }
                     }
 
                     if contact.lastAdvertTimestamp > 0 {
-                        LabeledContent("Last Advert") {
+                        LabeledContent(L10n.Map.Map.Detail.lastAdvert) {
                             ConversationTimestamp(date: Date(timeIntervalSince1970: TimeInterval(contact.lastAdvertTimestamp)), font: .body)
                         }
                     }
                 }
 
                 // Location section
-                Section("Location") {
-                    LabeledContent("Latitude") {
+                Section(L10n.Map.Map.Detail.Section.location) {
+                    LabeledContent(L10n.Map.Map.Detail.latitude) {
                         Text(contact.latitude, format: .number.precision(.fractionLength(6)))
                     }
 
-                    LabeledContent("Longitude") {
+                    LabeledContent(L10n.Map.Map.Detail.longitude) {
                         Text(contact.longitude, format: .number.precision(.fractionLength(6)))
                     }
                 }
 
                 // Path info section
-                Section("Network Path") {
+                Section(L10n.Map.Map.Detail.Section.networkPath) {
                     if contact.isFloodRouted {
-                        LabeledContent("Routing", value: "Flood")
+                        LabeledContent(L10n.Map.Map.Detail.routing, value: L10n.Map.Map.Detail.routingFlood)
                     } else {
-                        LabeledContent("Path Length", value: "\(contact.outPathLength) hops")
+                        let hopCount = Int(contact.outPathLength)
+                        LabeledContent(L10n.Map.Map.Detail.pathLength, value: hopCount == 1 ? L10n.Map.Map.Detail.hopSingular : L10n.Map.Map.Detail.hops(hopCount))
                     }
                 }
 
@@ -420,20 +394,20 @@ private struct ContactDetailSheet: View {
                         Button {
                             activeSheet = .telemetryAuth
                         } label: {
-                            Label("Telemetry", systemImage: "chart.line.uptrend.xyaxis")
+                            Label(L10n.Map.Map.Detail.Action.telemetry, systemImage: "chart.line.uptrend.xyaxis")
                         }
 
                         Button {
                             activeSheet = .adminAuth
                         } label: {
-                            Label("Admin Access", systemImage: "gearshape.2")
+                            Label(L10n.Map.Map.Detail.Action.adminAccess, systemImage: "gearshape.2")
                         }
 
                     case .room:
                         Button {
                             activeSheet = .roomJoin
                         } label: {
-                            Label("Join Room", systemImage: "door.left.hand.open")
+                            Label(L10n.Map.Map.Detail.Action.joinRoom, systemImage: "door.left.hand.open")
                         }
 
                     case .chat:
@@ -441,8 +415,9 @@ private struct ContactDetailSheet: View {
                             dismiss()
                             onMessage()
                         } label: {
-                            Label("Send Message", systemImage: "message.fill")
+                            Label(L10n.Map.Map.Detail.Action.sendMessage, systemImage: "message.fill")
                         }
+                        .radioDisabled(for: appState.connectionState)
                     }
                 }
             }
@@ -450,7 +425,7 @@ private struct ContactDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(L10n.Map.Map.Common.done) {
                         dismiss()
                     }
                 }
@@ -462,7 +437,7 @@ private struct ContactDetailSheet: View {
                         NodeAuthenticationSheet(
                             contact: contact,
                             role: role,
-                            customTitle: "Telemetry Access"
+                            customTitle: L10n.Map.Map.Detail.Action.telemetryAccessTitle
                         ) { session in
                             pendingSheet = .telemetryStatus(session)
                             activeSheet = nil
@@ -487,7 +462,7 @@ private struct ContactDetailSheet: View {
                         RepeaterSettingsView(session: session)
                             .toolbar {
                                 ToolbarItem(placement: .confirmationAction) {
-                                    Button("Done") {
+                                    Button(L10n.Map.Map.Common.done) {
                                         activeSheet = nil
                                     }
                                 }
@@ -534,11 +509,11 @@ private struct ContactDetailSheet: View {
     private var typeDisplayName: String {
         switch contact.type {
         case .chat:
-            "Chat Contact"
+            L10n.Map.Map.NodeKind.chatContact
         case .repeater:
-            "Repeater"
+            L10n.Map.Map.NodeKind.repeater
         case .room:
-            "Room"
+            L10n.Map.Map.NodeKind.room
         }
     }
 

@@ -4,7 +4,7 @@ import os
 
 // MARK: - Contact Service Errors
 
-public enum ContactServiceError: Error, Sendable {
+public enum ContactServiceError: Error, Sendable, LocalizedError {
     case notConnected
     case sendFailed
     case invalidResponse
@@ -12,6 +12,25 @@ public enum ContactServiceError: Error, Sendable {
     case contactNotFound
     case contactTableFull
     case sessionError(MeshCoreError)
+
+    public var errorDescription: String? {
+        switch self {
+        case .notConnected:
+            return "Not connected to radio"
+        case .sendFailed:
+            return "Failed to send message"
+        case .invalidResponse:
+            return "Invalid response from device"
+        case .syncInterrupted:
+            return "Sync was interrupted"
+        case .contactNotFound:
+            return "Contact not found on device"
+        case .contactTableFull:
+            return "Device node list is full"
+        case .sessionError(let error):
+            return error.localizedDescription
+        }
+    }
 }
 
 /// Reason for contact cleanup (deletion or blocking)
@@ -55,7 +74,7 @@ public actor ContactService {
     private var syncProgressHandler: (@Sendable (Int, Int) -> Void)?
 
     /// Cleanup handler called when a contact is deleted or blocked
-    private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason) async -> Void)?
+    private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason, Data) async -> Void)?
 
     // MARK: - Initialization
 
@@ -77,7 +96,7 @@ public actor ContactService {
     }
 
     /// Set handler for contact cleanup operations (deletion/blocking)
-    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason) async -> Void) {
+    public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason, Data) async -> Void) {
         cleanupHandler = handler
     }
 
@@ -97,6 +116,9 @@ public actor ContactService {
             var receivedCount = 0
             var lastTimestamp: UInt32 = 0
 
+            // Build set of public keys from device for cleanup
+            let devicePublicKeys = Set(meshContacts.map(\.publicKey))
+
             for meshContact in meshContacts {
                 let frame = meshContact.toContactFrame()
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
@@ -108,6 +130,16 @@ public actor ContactService {
                 }
 
                 syncProgressHandler?(receivedCount, meshContacts.count)
+            }
+
+            // On full sync, remove local contacts that no longer exist on device
+            if since == nil {
+                let localContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+                for localContact in localContacts where !devicePublicKeys.contains(localContact.publicKey) {
+                    try await dataStore.deleteMessagesForContact(contactID: localContact.id)
+                    try await dataStore.deleteContact(id: localContact.id)
+                    await cleanupHandler?(localContact.id, .deleted, localContact.publicKey)
+                }
             }
 
             return ContactSyncResult(
@@ -175,8 +207,8 @@ public actor ContactService {
                 // Delete the contact
                 try await dataStore.deleteContact(id: contactID)
 
-                // Trigger cleanup (notifications, badge)
-                await cleanupHandler?(contactID, .deleted)
+                // Trigger cleanup (notifications, badge, session)
+                await cleanupHandler?(contactID, .deleted, publicKey)
             }
 
             // Notify UI to refresh contacts list
@@ -385,9 +417,9 @@ public actor ContactService {
 
         // Trigger cleanup for blocking state changes
         if isBeingBlocked {
-            await cleanupHandler?(contactID, .blocked)
+            await cleanupHandler?(contactID, .blocked, existing.publicKey)
         } else if isBeingUnblocked {
-            await cleanupHandler?(contactID, .unblocked)
+            await cleanupHandler?(contactID, .unblocked, existing.publicKey)
         }
     }
 

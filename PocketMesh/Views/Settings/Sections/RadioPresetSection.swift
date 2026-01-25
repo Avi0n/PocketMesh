@@ -27,10 +27,10 @@ struct RadioPresetSection: View {
 
     var body: some View {
         Section {
-            Picker("Radio Preset", selection: $selectedPresetID) {
+            Picker(L10n.Settings.Radio.preset, selection: $selectedPresetID) {
                 // Only show Custom when device is not using a preset
                 if currentPreset == nil {
-                    Text("Custom").tag(nil as String?)
+                    Text(L10n.Settings.BatteryCurve.custom).tag(nil as String?)
                 }
 
                 ForEach(RadioRegion.allCases, id: \.self) { region in
@@ -51,7 +51,7 @@ struct RadioPresetSection: View {
                 guard let newID = newValue else { return }
                 applyPreset(id: newID)
             }
-            .disabled(isApplying)
+            .radioDisabled(for: appState.connectionState, or: isApplying)
 
             if let preset = presets.first(where: { $0.id == selectedPresetID }) {
                 // Display preset settings
@@ -77,9 +77,9 @@ struct RadioPresetSection: View {
                 .foregroundStyle(.secondary)
             }
         } header: {
-            Text("Radio")
+            Text(L10n.Settings.Radio.header)
         } footer: {
-            Text("Choose a preset matching your region. MeshCore devices must use the same radio settings in order to communicate.")
+            Text(L10n.Settings.Radio.footer)
         }
         .onAppear {
             selectedPresetID = currentPreset?.id

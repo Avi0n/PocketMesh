@@ -321,6 +321,25 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return contacts.first { $0.publicKey.prefix(6) == publicKeyPrefix }.map { ContactDTO(from: $0) }
     }
 
+    /// Fetch all contacts with their public keys grouped by 1-byte prefix.
+    /// Used for crypto operations when looking up contacts by public key prefix.
+    public func fetchContactPublicKeysByPrefix(deviceID: UUID) throws -> [UInt8: [Data]] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID
+        }
+        let descriptor = FetchDescriptor(predicate: predicate)
+        let contacts = try modelContext.fetch(descriptor)
+
+        var result: [UInt8: [Data]] = [:]
+        for contact in contacts {
+            guard contact.publicKey.count >= 1 else { continue }
+            let prefix = contact.publicKey[0]
+            result[prefix, default: []].append(contact.publicKey)
+        }
+        return result
+    }
+
     /// Save or update a contact from a ContactFrame
     public func saveContact(deviceID: UUID, from frame: ContactFrame) throws -> UUID {
         let targetDeviceID = deviceID
@@ -772,6 +791,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             ackCode: dto.ackCode,
             pathLength: dto.pathLength,
             snr: dto.snr,
+            pathNodes: dto.pathNodes,
             senderKeyPrefix: dto.senderKeyPrefix,
             senderNodeName: dto.senderNodeName,
             isRead: dto.isRead,
@@ -782,7 +802,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             maxRetryAttempts: dto.maxRetryAttempts,
             deduplicationKey: nil,
             containsSelfMention: dto.containsSelfMention,
-            mentionSeen: dto.mentionSeen
+            mentionSeen: dto.mentionSeen,
+            timestampCorrected: dto.timestampCorrected
         )
         modelContext.insert(message)
         try modelContext.save()
@@ -1764,6 +1785,68 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             modelContext.delete(entry)
         }
         try modelContext.save()
+    }
+
+    /// Find RxLogEntry matching an incoming message for path correlation.
+    ///
+    /// For channel messages: Correlates by channel index and sender timestamp (stored in RxLogEntry).
+    /// For direct messages: Correlates by sender timestamp (now stored via decryption), payload type, and optional contact name.
+    ///
+    /// - Parameters:
+    ///   - channelIndex: Channel index for channel messages, nil for direct messages
+    ///   - senderTimestamp: The sender's timestamp from the message
+    ///   - withinSeconds: Time window for correlation (unused, kept for API compatibility)
+    ///   - contactName: For direct messages, the sender's contact name for additional filtering
+    public func findRxLogEntry(
+        channelIndex: UInt8?,
+        senderTimestamp: UInt32,
+        withinSeconds: Double,
+        contactName: String? = nil
+    ) async throws -> RxLogEntryDTO? {
+        let targetTimestamp = Int(senderTimestamp)
+
+        if let channelIndex {
+            // Channel message: match on channelHash and senderTimestamp
+            let channelIndexInt = Int(channelIndex)
+
+            let predicate = #Predicate<RxLogEntry> { entry in
+                entry.channelHash == channelIndexInt &&
+                entry.senderTimestamp == targetTimestamp
+            }
+
+            var descriptor = FetchDescriptor<RxLogEntry>(predicate: predicate)
+            descriptor.fetchLimit = 1
+            descriptor.sortBy = [SortDescriptor(\.receivedAt, order: .reverse)]
+
+            let results = try modelContext.fetch(descriptor)
+            return results.first.map { RxLogEntryDTO(from: $0) }
+        } else {
+            // Direct message: match on senderTimestamp (now stored via decryption)
+            let textMessageType = Int(PayloadType.textMessage.rawValue)
+
+            let predicate: Predicate<RxLogEntry>
+            if let contactName {
+                predicate = #Predicate<RxLogEntry> { entry in
+                    entry.senderTimestamp == targetTimestamp &&
+                    entry.channelHash == nil &&
+                    entry.payloadType == textMessageType &&
+                    entry.fromContactName == contactName
+                }
+            } else {
+                predicate = #Predicate<RxLogEntry> { entry in
+                    entry.senderTimestamp == targetTimestamp &&
+                    entry.channelHash == nil &&
+                    entry.payloadType == textMessageType
+                }
+            }
+
+            var descriptor = FetchDescriptor<RxLogEntry>(predicate: predicate)
+            descriptor.fetchLimit = 1
+            descriptor.sortBy = [SortDescriptor(\.receivedAt, order: .reverse)]
+
+            let results = try modelContext.fetch(descriptor)
+            return results.first.map { RxLogEntryDTO(from: $0) }
+        }
     }
 
     /// Fetch recent RX log entries that failed decryption due to missing keys.
