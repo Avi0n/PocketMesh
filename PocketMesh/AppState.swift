@@ -500,7 +500,7 @@ public final class AppState {
         // We fetch directly here (not via fetchDeviceBattery) to avoid calling
         // checkBatteryThresholds before thresholds are initialized
         deviceBattery = try? await services.settingsService.getBattery()
-        initializeBatteryThresholds()
+        await initializeBatteryThresholds()
         startBatteryRefreshLoop()
     }
 
@@ -618,19 +618,30 @@ public final class AppState {
         batteryRefreshTask = nil
     }
 
-    /// Initialize battery thresholds based on current level to prevent false notifications on connect
-    private func initializeBatteryThresholds() {
-        guard let battery = deviceBattery, let device = connectedDevice else {
+    /// Initialize battery thresholds based on current level and notify if already below a threshold
+    private func initializeBatteryThresholds() async {
+        guard let battery = deviceBattery,
+              let device = connectedDevice else {
             notifiedBatteryThresholds = []
             return
         }
 
         let percentage = battery.percentage(using: device.activeOCVArray)
 
-        // Mark all thresholds at or above current level as "already notified"
-        notifiedBatteryThresholds = Set(
-            batteryWarningThresholds.filter { percentage <= $0 }
-        )
+        // Find thresholds we're already below
+        let crossedThresholds = batteryWarningThresholds.filter { percentage <= $0 }
+
+        // Mark all crossed thresholds as notified
+        notifiedBatteryThresholds = Set(crossedThresholds)
+
+        // If below any threshold on connect, send a single catch-up notification
+        if !crossedThresholds.isEmpty,
+           let notificationService = services?.notificationService {
+            await notificationService.postLowBatteryNotification(
+                deviceName: device.nodeName,
+                batteryPercentage: percentage
+            )
+        }
     }
 
     /// Check battery level against thresholds and send notifications
