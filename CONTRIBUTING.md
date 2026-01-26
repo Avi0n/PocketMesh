@@ -14,7 +14,7 @@ When submitting a PR, please include:
 - The testing steps you performed.
 
 ### Important Note for AI-Assisted Contributions
-If you're an experienced software engineer and did not rely heavily on AI for your contribution, skip to the bottom.
+If you're an experienced software engineer and did not rely heavily on AI for your contribution, skip to Getting Started.
 
 If you used AI extensively (which is totally fine, I built this entire project with AI despite not being a SWE and only having basic Python scripting experience), please follow these best practices to ensure high-quality results:
 
@@ -50,8 +50,9 @@ If you used AI extensively (which is totally fine, I built this entire project w
 - **Xcode 26.0+**
 - **Swift 6.2+**
 - **XcodeGen**: Required for project file generation.
+- **SwiftGen**: Required for localization.
   ```bash
-  brew install xcodegen
+  brew install xcodegen swiftgen
   ```
 - **xcsift** (optional): Transforms verbose Xcode output into concise JSON.
   ```bash
