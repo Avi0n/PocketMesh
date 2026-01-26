@@ -19,7 +19,7 @@ If you're an experienced software engineer and did not rely heavily on AI for yo
 If you used AI extensively (which is totally fine, I built this entire project with AI despite not being a SWE and only having basic Python scripting experience), please follow these best practices to ensure high-quality results:
 
 1. **Choose the right model for planning**  
-   If you're not a software engineer and aren't comfortable creating detailed technical plans yourself, stick to the strongest reasoning models: **Claude Opus 4.5** or **GPT 5.2 (high/xhigh)**. These excel at turning non-technical ideas into solid implementation plans. Other popular models (e.g., GLM 4.7, MiniMax 2.1) perform well when given a detailed plan, but struggle to create one from scratch in a large codebase.
+   If you're not a software engineer and aren't comfortable creating detailed technical plans yourself, stick to the strongest reasoning models: **Claude Opus 4.5** or **GPT 5.2 (high/xhigh)**. These are decent at turning non-technical ideas into solid implementation plans. Other popular models (e.g., GLM 4.7, MiniMax 2.1) perform well when given a detailed plan, but struggle to create one from scratch in a large codebase.
 
 2. **Plan thoroughly**  
    Ask the AI to use research agents/tools to gather context about the relevant parts of the codebase. Think of edge cases. Write the plan to an md file.
@@ -40,7 +40,7 @@ If you used AI extensively (which is totally fine, I built this entire project w
    Manually verify that everything works as expected. Test edge cases.
 
 8. **Submit the PR**  
-   You can ask the AI to draft the PR description. Feel free to use it directly, but adding a bit of your own voice is always appreciated!
+   PR into dev, not main. You can ask the AI to draft the PR description. Feel free to use it directly, but adding a bit of your own voice is always appreciated!
 
 
 ## Getting Started
