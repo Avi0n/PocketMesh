@@ -648,8 +648,11 @@
 /* Section header for Messages settings */
 "messages.header" = "Berichten";
 
-/* Toggle label for showing routing info */
-"messages.showRoutingInfo" = "Inkomende routeringsinfo tonen";
+/* Toggle label for showing routing path on incoming messages */
+"messages.showIncomingPath" = "Inkomend pad tonen";
 
-/* Footer text explaining the routing info toggle */
-"messages.showRoutingInfoFooter" = "Toont het aantal hops en het routeringspad in inkomende berichtballonnen.";
+/* Toggle label for showing hop count on incoming messages */
+"messages.showIncomingHopCount" = "Inkomend aantal hops tonen";
+
+/* Footer explaining what the message display options show */
+"messages.footer" = "Routeringsinformatie weergeven in inkomende berichtballonnen.";

@@ -648,8 +648,11 @@
 /* Section header for Messages settings */
 "messages.header" = "Повідомлення";
 
-/* Toggle label for showing routing info */
-"messages.showRoutingInfo" = "Показувати інфо про маршрутизацію";
+/* Toggle label for showing routing path on incoming messages */
+"messages.showIncomingPath" = "Показувати вхідний шлях";
 
-/* Footer text explaining the routing info toggle */
-"messages.showRoutingInfoFooter" = "Показує кількість переходів та шлях маршрутизації у вхідних повідомленнях.";
+/* Toggle label for showing hop count on incoming messages */
+"messages.showIncomingHopCount" = "Показувати вхідну кількість переходів";
+
+/* Footer explaining what the message display options show */
+"messages.footer" = "Показувати інформацію про маршрутизацію у вхідних повідомленнях.";

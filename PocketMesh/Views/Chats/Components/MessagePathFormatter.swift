@@ -26,10 +26,10 @@ enum MessagePathFormatter {
             return L10n.Chats.Chats.Message.Path.hops(Int(message.pathLength))
         }
 
-        // Truncate if more than 4 nodes: show first 2 + ellipsis + last 2
-        if nodes.count > 4 {
-            let first = nodes.prefix(2).joined(separator: ",")
-            let last = nodes.suffix(2).joined(separator: ",")
+        // Truncate if more than 6 nodes: show first 3 + ellipsis + last 3
+        if nodes.count > 6 {
+            let first = nodes.prefix(3).joined(separator: ",")
+            let last = nodes.suffix(3).joined(separator: ",")
             return "\(first)…\(last)"
         }
 

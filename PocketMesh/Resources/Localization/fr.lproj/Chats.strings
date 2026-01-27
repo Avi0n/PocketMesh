@@ -760,3 +760,6 @@
 
 /* Accessibility label for message path */
 "chats.message.path.accessibilityLabel" = "Chemin de routage: %@";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility label for hop count display - %d is count */
+"chats.message.hopCount.accessibilityLabel" = "Nombre de sauts: %d";

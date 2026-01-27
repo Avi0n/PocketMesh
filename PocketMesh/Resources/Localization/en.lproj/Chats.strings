@@ -621,6 +621,9 @@
 /* Location: UnifiedMessageBubble.swift - Accessibility label for routing path - %@ is the path */
 "chats.message.path.accessibilityLabel" = "Routing path: %@";
 
+/* Location: UnifiedMessageBubble.swift - Accessibility label for hop count display - %d is count */
+"chats.message.hopCount.accessibilityLabel" = "Hop count: %d";
+
 // MARK: - Chat Input Bar
 
 /* Location: ChatInputBar.swift - Accessibility label for text input */

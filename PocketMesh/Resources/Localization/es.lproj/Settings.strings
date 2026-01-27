@@ -648,8 +648,11 @@
 /* Section header for Messages settings */
 "messages.header" = "Mensajes";
 
-/* Toggle label for showing routing info */
-"messages.showRoutingInfo" = "Mostrar info de enrutamiento entrante";
+/* Toggle label for showing routing path on incoming messages */
+"messages.showIncomingPath" = "Mostrar ruta entrante";
 
-/* Footer text explaining the routing info toggle */
-"messages.showRoutingInfoFooter" = "Muestra el número de saltos y la ruta en las burbujas de mensajes entrantes.";
+/* Toggle label for showing hop count on incoming messages */
+"messages.showIncomingHopCount" = "Mostrar saltos entrantes";
+
+/* Footer explaining what the message display options show */
+"messages.footer" = "Mostrar información de enrutamiento en las burbujas de mensajes entrantes.";

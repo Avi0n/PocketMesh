@@ -84,7 +84,8 @@ struct UnifiedMessageBubble: View {
     let onManualPreviewFetch: (() -> Void)?
 
     @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
-    @AppStorage("showIncomingRoutingInfo") private var showRoutingInfo = false
+    @AppStorage("showIncomingPath") private var showIncomingPath = false
+    @AppStorage("showIncomingHopCount") private var showIncomingHopCount = false
     @Environment(\.openURL) private var openURL
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
@@ -152,12 +153,17 @@ struct UnifiedMessageBubble: View {
                             .foregroundStyle(senderColor)
                     }
 
-                    // Message bubble with text and optional path footer
+                    // Message bubble with text and optional routing footer
                     VStack(alignment: .leading, spacing: 4) {
                         MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
 
-                        if showRoutingInfo && !message.isOutgoing {
-                            routingInfoFooter
+                        if !message.isOutgoing {
+                            if showIncomingPath {
+                                pathFooter
+                            }
+                            if showIncomingHopCount && !isDirect {
+                                hopCountFooter
+                            }
                         }
                     }
                     .padding(.horizontal, 12)
@@ -283,6 +289,10 @@ struct UnifiedMessageBubble: View {
 
     private var textColor: Color {
         message.isOutgoing ? .white : .primary
+    }
+
+    private var isDirect: Bool {
+        message.pathLength == 0 || message.pathLength == 0xFF
     }
 
     private var accessibilityMessageLabel: String {
@@ -447,9 +457,9 @@ struct UnifiedMessageBubble: View {
         .padding(.trailing, 4)
     }
 
-    // MARK: - Routing Info Footer
+    // MARK: - Routing Info Footer Views
 
-    private var routingInfoFooter: some View {
+    private var pathFooter: some View {
         let formattedPath = MessagePathFormatter.format(message)
         return HStack(spacing: 4) {
             Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
@@ -459,6 +469,17 @@ struct UnifiedMessageBubble: View {
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(L10n.Chats.Chats.Message.Path.accessibilityLabel(formattedPath))
+    }
+
+    private var hopCountFooter: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrowshape.bounce.right")
+            Text("\(message.pathLength)")
+        }
+        .font(.caption2)  // Not monospaced - only hex paths need alignment
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.Chats.Chats.Message.HopCount.accessibilityLabel(Int(message.pathLength)))
     }
 
     private var statusText: String {
