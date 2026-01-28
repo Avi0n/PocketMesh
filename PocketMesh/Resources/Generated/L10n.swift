@@ -242,6 +242,10 @@ public enum L10n {
         /// Location: ChannelInfoSheet.swift - Error when services unavailable
         public static let servicesUnavailable = L10n.tr("Chats", "chats.error.servicesUnavailable", fallback: "Services not available")
       }
+      public enum Errors {
+        /// Location: ChatView.swift - Error when loading older messages fails
+        public static let loadOlderMessagesFailed = L10n.tr("Chats", "chats.errors.loadOlderMessagesFailed", fallback: "Failed to load older messages")
+      }
       public enum Fab {
         public enum Badge {
           /// Location: ScrollToMentionFAB.swift, ScrollToBottomFAB.swift - Badge text for 99+ unread
