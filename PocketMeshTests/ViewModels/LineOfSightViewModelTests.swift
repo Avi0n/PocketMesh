@@ -159,6 +159,15 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     // MARK: - RxLogEntry Lookup (stubs)
 
     func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
+
+    // MARK: - Room Message Operations (stubs)
+
+    func saveRoomMessage(_ dto: RoomMessageDTO) async throws {}
+    func fetchRoomMessage(id: UUID) async throws -> RoomMessageDTO? { nil }
+    func fetchRoomMessages(sessionID: UUID, limit: Int?, offset: Int?) async throws -> [RoomMessageDTO] { [] }
+    func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
+    func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
+    func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
 }
 
 // MARK: - Test Helpers

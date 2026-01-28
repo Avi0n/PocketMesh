@@ -31,19 +31,30 @@ public actor RoomServerService {
     /// Set from SelfInfo when device connects.
     private var selfPublicKeyPrefix: Data?
 
+    /// Configuration for retry behavior (shared with MessageService)
+    private let config: MessageServiceConfig
+
     /// Handler for incoming room messages
     public var roomMessageHandler: (@Sendable (RoomMessageDTO) async -> Void)?
+
+    /// Handler for status update events (broadcasts to UI)
+    public var statusUpdateHandler: (@Sendable (UUID, MessageStatus) async -> Void)?
+
+    /// Tracks message IDs currently being retried to prevent concurrent retry attempts
+    private var inFlightRetries: Set<UUID> = []
 
     // MARK: - Initialization
 
     public init(
         session: MeshCoreSession,
         remoteNodeService: RemoteNodeService,
-        dataStore: PersistenceStore
+        dataStore: PersistenceStore,
+        config: MessageServiceConfig = MessageServiceConfig()
     ) {
         self.session = session
         self.remoteNodeService = remoteNodeService
         self.dataStore = dataStore
+        self.config = config
     }
 
     /// Set self public key prefix from SelfInfo.
@@ -57,6 +68,11 @@ public actor RoomServerService {
     /// Set handler for incoming room messages
     public func setRoomMessageHandler(_ handler: @escaping @Sendable (RoomMessageDTO) async -> Void) {
         roomMessageHandler = handler
+    }
+
+    /// Set handler for status update events
+    public func setStatusUpdateHandler(_ handler: @escaping @Sendable (UUID, MessageStatus) async -> Void) {
+        statusUpdateHandler = handler
     }
 
     // MARK: - Room Management
@@ -182,38 +198,187 @@ public actor RoomServerService {
         }
 
         let timestamp = Date()
+        let messageID = UUID()
 
-        // Send message via MeshCore session
-        do {
-            _ = try await session.sendMessage(
-                to: remoteSession.publicKeyPrefix,
-                text: text,
-                timestamp: timestamp
-            )
-        } catch let error as MeshCoreError {
-            throw RoomServerError.sessionError(error)
-        }
-
-        // Log room message posted (metadata only, no content)
-        await auditLogger.logRoomMessagePosted(publicKey: remoteSession.publicKey, messageLength: text.count)
-
-        // Create local message record immediately
-        // Room server won't push this message back to us
+        // Create local message record immediately with pending status
         let messageDTO = RoomMessageDTO(
+            id: messageID,
             sessionID: sessionID,
             authorKeyPrefix: selfPublicKeyPrefix ?? Data(repeating: 0, count: 4),
             authorName: "Me",
             text: text,
             timestamp: UInt32(timestamp.timeIntervalSince1970),
-            isFromSelf: true
+            isFromSelf: true,
+            status: .pending,
+            maxRetryAttempts: config.maxAttempts
         )
 
         try await dataStore.saveRoomMessage(messageDTO)
 
-        // Update sync timestamp with our own message's timestamp
-        try await dataStore.updateRoomLastSyncTimestamp(sessionID, timestamp: messageDTO.timestamp)
+        // Log room message posted (metadata only, no content)
+        await auditLogger.logRoomMessagePosted(publicKey: remoteSession.publicKey, messageLength: text.count)
 
+        // Send message in background so UI can show pending message immediately
+        Task { [weak self] in
+            guard let self else { return }
+
+            // Send message with retry logic
+            // NOTE: sendMessageWithRetry requires full 32-byte public key for path reset
+            do {
+                let sentInfo = try await session.sendMessageWithRetry(
+                    to: remoteSession.publicKey,  // Full 32-byte key required
+                    text: text,
+                    timestamp: timestamp,
+                    maxAttempts: config.maxAttempts,
+                    floodAfter: config.floodAfter,
+                    maxFloodAttempts: config.maxFloodAttempts
+                )
+
+                if let sentInfo {
+                    // Success - update to delivered
+                    let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+                    // Handle database errors gracefully - don't lose send success state
+                    do {
+                        try await dataStore.updateRoomMessageStatus(
+                            id: messageID,
+                            status: .delivered,
+                            ackCode: ackCodeUInt32,
+                            roundTripTime: UInt32(sentInfo.suggestedTimeoutMs)
+                        )
+                    } catch {
+                        logger.error("Failed to update message status after successful send: \(error)")
+                    }
+                    await statusUpdateHandler?(messageID, .delivered)
+                } else {
+                    // All retries exhausted
+                    do {
+                        try await dataStore.updateRoomMessageStatus(
+                            id: messageID,
+                            status: .failed,
+                            ackCode: nil,
+                            roundTripTime: nil
+                        )
+                    } catch {
+                        logger.error("Failed to update message status to failed: \(error)")
+                    }
+                    await statusUpdateHandler?(messageID, .failed)
+                }
+            } catch {
+                // Send failed with error
+                do {
+                    try await dataStore.updateRoomMessageStatus(
+                        id: messageID,
+                        status: .failed,
+                        ackCode: nil,
+                        roundTripTime: nil
+                    )
+                } catch let dbError {
+                    logger.error("Failed to update message status after send error: \(dbError)")
+                }
+                await statusUpdateHandler?(messageID, .failed)
+                logger.warning("Room message send failed: \(error)")
+            }
+
+            // Update sync timestamp with our own message's timestamp
+            try? await dataStore.updateRoomLastSyncTimestamp(sessionID, timestamp: messageDTO.timestamp)
+        }
+
+        // Return pending message immediately so UI can display it
         return messageDTO
+    }
+
+    /// Retry sending a failed room message.
+    /// - Parameter id: The message ID to retry
+    /// - Returns: Updated message DTO
+    public func retryMessage(id: UUID) async throws -> RoomMessageDTO {
+        // Guard against concurrent retries
+        guard !inFlightRetries.contains(id) else {
+            logger.warning("Retry already in progress for message: \(id)")
+            throw RoomServerError.sendFailed("Retry already in progress")
+        }
+
+        inFlightRetries.insert(id)
+        defer { inFlightRetries.remove(id) }
+
+        guard let message = try await dataStore.fetchRoomMessage(id: id) else {
+            throw RoomServerError.sendFailed("Message not found")
+        }
+
+        guard message.status == .failed else {
+            throw RoomServerError.sendFailed("Message is not in failed state")
+        }
+
+        guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: message.sessionID) else {
+            throw RoomServerError.sessionNotFound
+        }
+
+        // Update to pending/retrying
+        let newRetryAttempt = message.retryAttempt + 1
+        try await dataStore.updateRoomMessageRetryStatus(
+            id: id,
+            status: .pending,
+            retryAttempt: newRetryAttempt,
+            maxRetryAttempts: config.maxAttempts
+        )
+        await statusUpdateHandler?(id, .pending)
+
+        // Retry send with retry logic
+        // NOTE: sendMessageWithRetry requires full 32-byte public key for path reset
+        do {
+            let sentInfo = try await session.sendMessageWithRetry(
+                to: remoteSession.publicKey,  // Full 32-byte key required
+                text: message.text,
+                timestamp: message.date,
+                maxAttempts: config.maxAttempts,
+                floodAfter: config.floodAfter,
+                maxFloodAttempts: config.maxFloodAttempts
+            )
+
+            if let sentInfo {
+                let ackCodeUInt32 = sentInfo.expectedAck.ackCodeUInt32
+                do {
+                    try await dataStore.updateRoomMessageStatus(
+                        id: id,
+                        status: .delivered,
+                        ackCode: ackCodeUInt32,
+                        roundTripTime: UInt32(sentInfo.suggestedTimeoutMs)
+                    )
+                } catch {
+                    logger.error("Failed to update message status after successful retry: \(error)")
+                }
+                await statusUpdateHandler?(id, .delivered)
+            } else {
+                do {
+                    try await dataStore.updateRoomMessageStatus(
+                        id: id,
+                        status: .failed,
+                        ackCode: nil,
+                        roundTripTime: nil
+                    )
+                } catch {
+                    logger.error("Failed to update message status to failed: \(error)")
+                }
+                await statusUpdateHandler?(id, .failed)
+            }
+        } catch {
+            do {
+                try await dataStore.updateRoomMessageStatus(
+                    id: id,
+                    status: .failed,
+                    ackCode: nil,
+                    roundTripTime: nil
+                )
+            } catch let dbError {
+                logger.error("Failed to update message status after retry error: \(dbError)")
+            }
+            await statusUpdateHandler?(id, .failed)
+            logger.warning("Room message retry failed: \(error)")
+        }
+
+        guard let updatedMessage = try await dataStore.fetchRoomMessage(id: id) else {
+            throw RoomServerError.sendFailed("Failed to fetch message after retry")
+        }
+        return updatedMessage
     }
 
     // MARK: - Incoming Messages
