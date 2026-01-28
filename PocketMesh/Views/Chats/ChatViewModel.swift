@@ -152,6 +152,23 @@ final class ChatViewModel {
     /// In-flight preview fetch tasks (prevents duplicate fetches)
     private var previewFetchTasks: [UUID: Task<Void, Never>] = [:]
 
+    // MARK: - Pagination State
+
+    /// Whether currently fetching older messages (exposed for UI binding)
+    private(set) var isLoadingOlder = false
+
+    /// Whether more messages exist beyond what's loaded
+    private var hasMoreMessages = true
+
+    /// Number of messages to fetch per page
+    private let pageSize = 50
+
+    /// Cached blocked contact names for channel filtering (set during initial load)
+    private var cachedBlockedNames: Set<String> = []
+
+    /// Total messages fetched from database (unfiltered, for accurate offset calculation)
+    private var totalFetchedCount = 0
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -521,8 +538,16 @@ final class ChatViewModel {
         isLoading = true
         errorMessage = nil
 
+        // Reset pagination state for new conversation
+        hasMoreMessages = true
+        isLoadingOlder = false
+        cachedBlockedNames = []
+        totalFetchedCount = 0
+
         do {
-            messages = try await dataStore.fetchMessages(contactID: contact.id)
+            messages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
+            totalFetchedCount = messages.count
+            hasMoreMessages = messages.count == pageSize
             await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
@@ -547,6 +572,7 @@ final class ChatViewModel {
         let previous = messages.last
         messages.append(message)
         messagesByID[message.id] = message
+        totalFetchedCount += 1
 
         // Build display item synchronously for immediate consistency
         let flags = Self.computeDisplayFlags(for: message, previous: previous)
@@ -681,9 +707,17 @@ final class ChatViewModel {
         isLoading = true
         errorMessage = nil
 
+        // Reset pagination state for new conversation
+        hasMoreMessages = true
+        isLoadingOlder = false
+        cachedBlockedNames = []
+        totalFetchedCount = 0
+
         do {
-            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
-            logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: pageSize, offset: 0)
+            let unfilteredCount = fetchedMessages.count
+            totalFetchedCount = unfilteredCount
+            logger.info("loadChannelMessages: fetched \(unfilteredCount) messages")
 
             // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
             let blockedNames: Set<String>
@@ -695,6 +729,9 @@ final class ChatViewModel {
                 blockedNames = []
             }
 
+            // Cache for pagination
+            cachedBlockedNames = blockedNames
+
             if !blockedNames.isEmpty {
                 fetchedMessages = fetchedMessages.filter { message in
                     guard let senderName = message.senderNodeName else { return true }
@@ -702,6 +739,8 @@ final class ChatViewModel {
                 }
             }
 
+            // Use unfiltered count to determine if more messages exist
+            hasMoreMessages = unfilteredCount == pageSize
             messages = fetchedMessages
             buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
@@ -720,6 +759,70 @@ final class ChatViewModel {
         logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         hasLoadedOnce = true
         isLoading = false
+    }
+
+    // MARK: - Pagination
+
+    /// Load older messages when user scrolls near the top
+    func loadOlderMessages() async {
+        // Guard against duplicate fetches and end of history
+        guard !isLoadingOlder, hasMoreMessages else { return }
+        guard let dataStore else { return }
+
+        isLoadingOlder = true
+        defer { isLoadingOlder = false }
+
+        do {
+            let currentOffset = totalFetchedCount
+            var olderMessages: [MessageDTO]
+
+            if let contact = currentContact {
+                olderMessages = try await dataStore.fetchMessages(
+                    contactID: contact.id,
+                    limit: pageSize,
+                    offset: currentOffset
+                )
+            } else if let channel = currentChannel {
+                olderMessages = try await dataStore.fetchMessages(
+                    deviceID: channel.deviceID,
+                    channelIndex: channel.index,
+                    limit: pageSize,
+                    offset: currentOffset
+                )
+            } else {
+                return
+            }
+
+            // Use unfiltered count to determine if more messages exist
+            let unfilteredCount = olderMessages.count
+            totalFetchedCount += unfilteredCount
+            if unfilteredCount < pageSize {
+                hasMoreMessages = false
+            }
+
+            // Filter blocked senders for channel messages (use cached names from initial load)
+            if currentChannel != nil && !cachedBlockedNames.isEmpty {
+                olderMessages = olderMessages.filter { message in
+                    guard let senderName = message.senderNodeName else { return true }
+                    return !cachedBlockedNames.contains(senderName)
+                }
+            }
+
+            // Prepend older messages (they're chronologically earlier)
+            messages.insert(contentsOf: olderMessages, at: 0)
+
+            // Update lookup dictionary
+            for message in olderMessages {
+                messagesByID[message.id] = message
+            }
+
+            // Rebuild display items with new messages
+            await buildDisplayItems()
+
+        } catch {
+            errorMessage = L10n.Chats.Chats.Errors.loadOlderMessagesFailed
+            logger.error("Failed to load older messages: \(error)")
+        }
     }
 
     /// Send a channel message

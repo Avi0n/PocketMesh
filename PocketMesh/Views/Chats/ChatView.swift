@@ -19,9 +19,15 @@ struct ChatView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
-    @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+
+    /// Mention IDs that are both unseen AND present in loaded messages
+    private var reachableMentionIDs: Set<UUID> {
+        let loadedIDs = Set(viewModel.displayItems.map(\.id))
+        return unseenMentionIDs.intersection(loadedIDs)
+    }
+
     @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
 
@@ -155,7 +161,6 @@ struct ChatView: View {
         guard let dataStore = appState.services?.dataStore else { return }
         do {
             unseenMentionIDs = Set(try await dataStore.fetchUnseenMentionIDs(contactID: contact.id))
-            unreadMentionCount = unseenMentionIDs.count
         } catch {
             logger.error("Failed to load unseen mentions: \(error)")
         }
@@ -170,7 +175,6 @@ struct ChatView: View {
             try await dataStore.decrementUnreadMentionCount(contactID: contact.id)
 
             unseenMentionIDs.remove(messageID)
-            unreadMentionCount = max(0, unreadMentionCount - 1)
 
             // Refresh parent's conversation list to update badge in sidebar (important for iPad split view)
             if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
@@ -234,13 +238,19 @@ struct ChatView: View {
                             await markMentionSeen(messageID: messageID)
                         }
                     },
-                    mentionTargetID: unseenMentionIDs.first
+                    mentionTargetID: reachableMentionIDs.first,
+                    onNearTop: {
+                        Task {
+                            await viewModel.loadOlderMessages()
+                        }
+                    },
+                    isLoadingOlderMessages: viewModel.isLoadingOlder
                 )
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 12) {
                         ScrollToMentionFAB(
-                            isVisible: unreadMentionCount > 0,
-                            unreadMentionCount: unreadMentionCount,
+                            isVisible: !reachableMentionIDs.isEmpty,
+                            unreadMentionCount: reachableMentionIDs.count,
                             onTap: { scrollToMentionRequest += 1 }
                         )
 

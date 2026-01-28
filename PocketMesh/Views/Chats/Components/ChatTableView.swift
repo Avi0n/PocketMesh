@@ -41,6 +41,12 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     /// Callback when scroll state changes
     var onScrollStateChanged: ((Bool, Int) -> Void)?
 
+    /// Callback when user scrolls near the top (oldest messages)
+    var onNearTop: (() -> Void)?
+
+    /// Whether pagination is in progress (skip auto-scroll during pagination)
+    var isLoadingOlderMessages = false
+
     /// Callback when a mention becomes visible
     var onMentionBecameVisible: ((Item.ID) -> Void)?
 
@@ -245,13 +251,15 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
         // Handle unread tracking
         let hasNewItems = newItems.count > previousCount
+        // Detect prepend (pagination) vs append (new messages): prepend changes first item ID
+        let wasPrepend = previousCount > 0 && hasNewItems && oldItems.first?.id != newItems.first?.id
 
-        if !wasAtBottom && previousCount > 0 && hasNewItems {
-            // New messages arrived while scrolled up
+        if !wasAtBottom && previousCount > 0 && hasNewItems && !wasPrepend {
+            // New messages arrived while scrolled up (not pagination)
             let newMessageCount = newItems.count - previousCount
             unreadCount += newMessageCount
             onScrollStateChanged?(isAtBottom, unreadCount)
-        } else if wasAtBottom && hasNewItems && !skipAutoScroll && !isScrollingToBottom {
+        } else if wasAtBottom && hasNewItems && !skipAutoScroll && !isScrollingToBottom && !wasPrepend {
             // At bottom with NEW items, auto-scroll to newest
             // Only scroll if there are actually new items (not just SwiftUI re-renders)
             lastSeenItemID = newItems.last?.id
@@ -328,6 +336,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         updateIsAtBottom()
         checkVisibleMentions()
+        checkNearTop()
     }
 
     private func checkVisibleMentions() {
@@ -411,6 +420,20 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
             onScrollStateChanged?(isAtBottom, unreadCount)
         }
     }
+
+    /// Check if user has scrolled near the top (oldest messages) and trigger callback
+    private func checkNearTop() {
+        guard let visibleRows = tableView.indexPathsForVisibleRows,
+              let highestRow = visibleRows.map(\.row).max() else { return }
+
+        let totalRows = items.count
+        let distanceFromTop = totalRows - highestRow
+
+        // Trigger when within 10 messages of the oldest
+        if distanceFromTop <= 10 {
+            onNearTop?()
+        }
+    }
 }
 
 // MARK: - SwiftUI Wrapper
@@ -427,6 +450,8 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     var isUnseenMention: ((Item) -> Bool)?
     var onMentionBecameVisible: ((Item.ID) -> Void)?
     var mentionTargetID: Item.ID?
+    var onNearTop: (() -> Void)?
+    var isLoadingOlderMessages: Bool = false
 
     func makeUIViewController(context: Context) -> ChatTableViewController<Item> {
         let controller = ChatTableViewController<Item>()
@@ -465,6 +490,10 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         // Update mention detection closures
         controller.isUnseenMention = isUnseenMention
         controller.onMentionBecameVisible = onMentionBecameVisible
+
+        // Update pagination state
+        controller.onNearTop = onNearTop
+        controller.isLoadingOlderMessages = isLoadingOlderMessages
 
         // Check for scroll-to-mention request
         let shouldScrollToMention = scrollToMentionRequest != context.coordinator.lastMentionRequest
