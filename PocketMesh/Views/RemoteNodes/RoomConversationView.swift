@@ -58,6 +58,13 @@ struct RoomConversationView: View {
                         await viewModel.loadMessages(for: session)
                     }
                 }
+
+                // Handle status updates and failures
+                if let event = appState.messageEventBroadcaster.latestEvent {
+                    Task {
+                        await viewModel.handleEvent(event)
+                    }
+                }
             }
             .refreshable {
                 await viewModel.refreshMessages()
@@ -108,7 +115,12 @@ struct RoomConversationView: View {
         let index = viewModel.messages.firstIndex(where: { $0.id == message.id }) ?? 0
         return RoomMessageBubble(
             message: message,
-            showTimestamp: RoomConversationViewModel.shouldShowTimestamp(at: index, in: viewModel.messages)
+            showTimestamp: RoomConversationViewModel.shouldShowTimestamp(at: index, in: viewModel.messages),
+            onRetry: message.status == .failed ? {
+                Task {
+                    await viewModel.retryMessage(id: message.id)
+                }
+            } : nil
         )
     }
 

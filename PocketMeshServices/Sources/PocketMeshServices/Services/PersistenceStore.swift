@@ -1487,9 +1487,76 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             authorName: dto.authorName,
             text: dto.text,
             timestamp: dto.timestamp,
-            isFromSelf: dto.isFromSelf
+            isFromSelf: dto.isFromSelf,
+            status: dto.status
         )
+        message.ackCode = dto.ackCode
+        message.roundTripTime = dto.roundTripTime
+        message.retryAttempt = dto.retryAttempt
+        message.maxRetryAttempts = dto.maxRetryAttempts
         modelContext.insert(message)
+        try modelContext.save()
+    }
+
+    /// Fetch a room message by ID
+    public func fetchRoomMessage(id: UUID) throws -> RoomMessageDTO? {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return nil
+        }
+        return RoomMessageDTO(from: message)
+    }
+
+    /// Update room message status after send attempt
+    public func updateRoomMessageStatus(
+        id: UUID,
+        status: MessageStatus,
+        ackCode: UInt32? = nil,
+        roundTripTime: UInt32? = nil
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return
+        }
+        message.statusRawValue = status.rawValue
+        if let ackCode {
+            message.ackCode = ackCode
+        }
+        if let roundTripTime {
+            message.roundTripTime = roundTripTime
+        }
+        try modelContext.save()
+    }
+
+    /// Update room message retry status
+    public func updateRoomMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return
+        }
+        message.statusRawValue = status.rawValue
+        message.retryAttempt = retryAttempt
+        message.maxRetryAttempts = maxRetryAttempts
         try modelContext.save()
     }
 

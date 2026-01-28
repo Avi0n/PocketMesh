@@ -1027,6 +1027,89 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         linkPreviews[dto.url] = dto
     }
 
+    // MARK: - Room Message Operations
+
+    public var roomMessages: [UUID: RoomMessageDTO] = [:]
+    public private(set) var savedRoomMessages: [RoomMessageDTO] = []
+    public private(set) var updatedRoomMessageStatuses: [(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?)] = []
+
+    public func saveRoomMessage(_ dto: RoomMessageDTO) async throws {
+        savedRoomMessages.append(dto)
+        roomMessages[dto.id] = dto
+    }
+
+    public func fetchRoomMessage(id: UUID) async throws -> RoomMessageDTO? {
+        roomMessages[id]
+    }
+
+    public func fetchRoomMessages(sessionID: UUID, limit: Int?, offset: Int?) async throws -> [RoomMessageDTO] {
+        let filtered = roomMessages.values.filter { $0.sessionID == sessionID }
+            .sorted { $0.timestamp < $1.timestamp }
+        var result = Array(filtered)
+        if let offset {
+            result = Array(result.dropFirst(offset))
+        }
+        if let limit {
+            result = Array(result.prefix(limit))
+        }
+        return result
+    }
+
+    public func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool {
+        roomMessages.values.contains { $0.sessionID == sessionID && $0.deduplicationKey == deduplicationKey }
+    }
+
+    public func updateRoomMessageStatus(
+        id: UUID,
+        status: MessageStatus,
+        ackCode: UInt32?,
+        roundTripTime: UInt32?
+    ) async throws {
+        updatedRoomMessageStatuses.append((id: id, status: status, ackCode: ackCode, roundTripTime: roundTripTime))
+        if let message = roomMessages[id] {
+            roomMessages[id] = RoomMessageDTO(
+                id: message.id,
+                sessionID: message.sessionID,
+                authorKeyPrefix: message.authorKeyPrefix,
+                authorName: message.authorName,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                isFromSelf: message.isFromSelf,
+                status: status,
+                ackCode: ackCode ?? message.ackCode,
+                roundTripTime: roundTripTime ?? message.roundTripTime,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts
+            )
+        }
+    }
+
+    public func updateRoomMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) async throws {
+        if let message = roomMessages[id] {
+            roomMessages[id] = RoomMessageDTO(
+                id: message.id,
+                sessionID: message.sessionID,
+                authorKeyPrefix: message.authorKeyPrefix,
+                authorName: message.authorName,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                isFromSelf: message.isFromSelf,
+                status: status,
+                ackCode: message.ackCode,
+                roundTripTime: message.roundTripTime,
+                retryAttempt: retryAttempt,
+                maxRetryAttempts: maxRetryAttempts
+            )
+        }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1037,13 +1120,16 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         debugLogEntries = []
         mockRxLogEntries = []
         linkPreviews = [:]
+        roomMessages = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []
+        savedRoomMessages = []
         deletedContactIDs = []
         deletedChannelIDs = []
         deletedMessagesForContactIDs = []
         updatedMessageStatuses = []
         updatedMessageAcks = []
+        updatedRoomMessageStatuses = []
     }
 }

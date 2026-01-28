@@ -12,6 +12,8 @@ public enum MessageEvent: Sendable, Equatable {
     case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
     case heardRepeatRecorded(messageID: UUID, count: Int)
     case routingChanged(contactID: UUID, isFlood: Bool)
+    case roomMessageStatusUpdated(messageID: UUID)
+    case roomMessageFailed(messageID: UUID)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -82,6 +84,20 @@ public final class MessageEventBroadcaster {
     func handleRoomMessage(_ message: RoomMessageDTO) {
         logger.info("dispatch: roomMessageReceived for session \(message.sessionID)")
         self.latestEvent = .roomMessageReceived(message: message, sessionID: message.sessionID)
+        self.newMessageCount += 1
+    }
+
+    /// Handle room message status update
+    func handleRoomMessageStatusUpdated(messageID: UUID) {
+        logger.info("dispatch: roomMessageStatusUpdated for \(messageID)")
+        self.latestEvent = .roomMessageStatusUpdated(messageID: messageID)
+        self.newMessageCount += 1
+    }
+
+    /// Handle room message delivery failure
+    func handleRoomMessageFailed(messageID: UUID) {
+        logger.info("dispatch: roomMessageFailed for \(messageID)")
+        self.latestEvent = .roomMessageFailed(messageID: messageID)
         self.newMessageCount += 1
     }
 

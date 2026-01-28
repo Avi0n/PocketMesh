@@ -445,6 +445,17 @@ public final class AppState {
         // Wire room server service for room message handling
         messageEventBroadcaster.roomServerService = services.roomServerService
 
+        // Wire room message status handler for delivery confirmation UI updates
+        await services.roomServerService.setStatusUpdateHandler { [weak self] messageID, status in
+            await MainActor.run {
+                if status == .failed {
+                    self?.messageEventBroadcaster.handleRoomMessageFailed(messageID: messageID)
+                } else {
+                    self?.messageEventBroadcaster.handleRoomMessageStatusUpdated(messageID: messageID)
+                }
+            }
+        }
+
         // Wire binary protocol and repeater admin services
         messageEventBroadcaster.binaryProtocolService = services.binaryProtocolService
         messageEventBroadcaster.repeaterAdminService = services.repeaterAdminService
