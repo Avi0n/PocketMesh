@@ -158,6 +158,11 @@ public final class AppState {
     /// Message event broadcaster for UI updates
     let messageEventBroadcaster = MessageEventBroadcaster()
 
+    // MARK: - CLI Tool
+
+    /// Persistent CLI tool view model (survives tab switches, reset on device disconnect)
+    var cliToolViewModel: CLIToolViewModel?
+
     // MARK: - Activity Tracking
 
     /// Counter for sync/settings operations (on-demand) - shows pill
@@ -333,6 +338,8 @@ public final class AppState {
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
             syncActivityCount = 0
+            // Reset CLI tool state on disconnect (preserves command history)
+            cliToolViewModel?.reset()
             // Hide ready toast on disconnect
             hideReadyToast()
             // Stop battery refresh loop on disconnect

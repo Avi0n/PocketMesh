@@ -2732,6 +2732,8 @@ public enum L10n {
   }
   public enum Tools {
     public enum Tools {
+      /// Location: CLIToolView.swift - Tool selection label
+      public static let cli = L10n.tr("Tools", "tools.cli", fallback: "CLI")
       /// Location: ToolsView.swift - Tool selection label
       public static let lineOfSight = L10n.tr("Tools", "tools.lineOfSight", fallback: "Line of Sight")
       /// Location: ToolsView.swift - Tool selection label
@@ -2744,6 +2746,132 @@ public enum L10n {
       public static let title = L10n.tr("Tools", "tools.title", fallback: "Tools")
       /// Location: ToolsView.swift - Tool selection label
       public static let tracePath = L10n.tr("Tools", "tools.tracePath", fallback: "Trace Path")
+      public enum Cli {
+        /// Location: CLIToolView.swift - Command cancelled
+        public static let cancelled = L10n.tr("Tools", "tools.cli.cancelled", fallback: "Command cancelled")
+        /// Location: CLIInputAccessoryView.swift - Cancel operation button label
+        public static let cancelOperation = L10n.tr("Tools", "tools.cli.cancelOperation", fallback: "Cancel operation")
+        /// Location: CLIToolView.swift - Accessory button: clear
+        public static let clear = L10n.tr("Tools", "tools.cli.clear", fallback: "Clear")
+        /// Location: CLIToolView.swift - Accessibility label for command input
+        public static let commandInput = L10n.tr("Tools", "tools.cli.commandInput", fallback: "Command input")
+        /// Location: CLIToolView.swift - Accessibility label for command prompt
+        public static let commandPrompt = L10n.tr("Tools", "tools.cli.commandPrompt", fallback: "Command prompt")
+        /// Location: CLIToolViewModel.swift - Command timeout (post-login)
+        public static let commandTimeout = L10n.tr("Tools", "tools.cli.commandTimeout", fallback: "Request timed out")
+        /// Accessibility label for completion suggestions container
+        public static let completionSuggestions = L10n.tr("Tools", "tools.cli.completionSuggestions", fallback: "Completion suggestions")
+        /// Accessibility value for completion suggestions - %lld is count, %@ is selected
+        public static func completionSuggestionsValue(_ p1: Int, _ p2: Any) -> String {
+          return L10n.tr("Tools", "tools.cli.completionSuggestionsValue", p1, String(describing: p2), fallback: "%lld available, %@ selected")
+        }
+        /// Location: CLIInputAccessoryView.swift - Cursor left button
+        public static let cursorLeft = L10n.tr("Tools", "tools.cli.cursorLeft", fallback: "Move cursor left")
+        /// Location: CLIInputAccessoryView.swift - Cursor right button
+        public static let cursorRight = L10n.tr("Tools", "tools.cli.cursorRight", fallback: "Move cursor right")
+        /// Location: CLIToolView.swift - Default device name
+        public static let defaultDevice = L10n.tr("Tools", "tools.cli.defaultDevice", fallback: "Device")
+        /// Location: CLIToolView.swift - Disconnected prompt
+        public static let disconnected = L10n.tr("Tools", "tools.cli.disconnected", fallback: "disconnected")
+        /// Location: CLIToolView.swift - Accessory button: dismiss
+        public static let dismiss = L10n.tr("Tools", "tools.cli.dismiss", fallback: "Dismiss keyboard")
+        /// Location: CLIToolViewModel.swift - Help: clear command
+        public static let helpClear = L10n.tr("Tools", "tools.cli.helpClear", fallback: "  clear\n    Clear terminal")
+        /// Location: CLIToolView.swift - Help command output header
+        public static let helpHeader = L10n.tr("Tools", "tools.cli.helpHeader", fallback: "Available commands:")
+        /// Location: CLIToolViewModel.swift - Help: help command
+        public static let helpHelp = L10n.tr("Tools", "tools.cli.helpHelp", fallback: "  help\n    Show this help")
+        /// Location: CLIToolViewModel.swift - Help: login command
+        public static let helpLogin = L10n.tr("Tools", "tools.cli.helpLogin", fallback: "  login [-f] <node>\n    Login to repeater (-f: forget saved password)")
+        /// Location: CLIToolViewModel.swift - Help: logout command
+        public static let helpLogout = L10n.tr("Tools", "tools.cli.helpLogout", fallback: "  logout\n    End remote session")
+        /// Location: CLIToolViewModel.swift - Help: nodes command
+        public static let helpNodes = L10n.tr("Tools", "tools.cli.helpNodes", fallback: "  nodes\n    Show list of repeaters and rooms")
+        /// Location: CLIToolViewModel.swift - Help: repeater commands header
+        public static let helpRepeaterHeader = L10n.tr("Tools", "tools.cli.helpRepeaterHeader", fallback: "Repeater commands (passthrough):")
+        /// Location: CLIToolViewModel.swift - Help: repeater commands list 1
+        public static let helpRepeaterList1 = L10n.tr("Tools", "tools.cli.helpRepeaterList1", fallback: "  ver, clock, reboot, advert, neighbors")
+        /// Location: CLIToolViewModel.swift - Help: repeater commands list 2
+        public static let helpRepeaterList2 = L10n.tr("Tools", "tools.cli.helpRepeaterList2", fallback: "  get/set <param>, password <new>")
+        /// Location: CLIToolViewModel.swift - Help: repeater commands list 3
+        public static let helpRepeaterList3 = L10n.tr("Tools", "tools.cli.helpRepeaterList3", fallback: "  log start/stop/erase")
+        /// Location: CLIToolViewModel.swift - Help: repeater commands list 4
+        public static let helpRepeaterList4 = L10n.tr("Tools", "tools.cli.helpRepeaterList4", fallback: "  setperm, tempradio, neighbor.remove")
+        /// Location: CLIToolViewModel.swift - Help: session list command
+        public static let helpSessionList = L10n.tr("Tools", "tools.cli.helpSessionList", fallback: "  session list\n    Show active sessions")
+        /// Location: CLIToolViewModel.swift - Help: session local command
+        public static let helpSessionLocal = L10n.tr("Tools", "tools.cli.helpSessionLocal", fallback: "  session local\n    Switch to local")
+        /// Location: CLIToolViewModel.swift - Help: session name command
+        public static let helpSessionName = L10n.tr("Tools", "tools.cli.helpSessionName", fallback: "  session <name>\n    Switch to session")
+        /// Location: CLIToolViewModel.swift - Help: session shortcut
+        public static let helpSessionShortcut = L10n.tr("Tools", "tools.cli.helpSessionShortcut", fallback: "  s<n>\n    Switch to session n (e.g., s1, s2)")
+        /// Location: CLIToolView.swift - Accessory button: history down
+        public static let historyDown = L10n.tr("Tools", "tools.cli.historyDown", fallback: "Next command")
+        /// Location: CLIToolView.swift - History empty message
+        public static let historyEmpty = L10n.tr("Tools", "tools.cli.historyEmpty", fallback: "No command history")
+        /// Location: CLIToolView.swift - Accessory button: history up
+        public static let historyUp = L10n.tr("Tools", "tools.cli.historyUp", fallback: "Previous command")
+        /// Location: CLIToolView.swift - Jump to bottom button
+        public static let jumpToBottom = L10n.tr("Tools", "tools.cli.jumpToBottom", fallback: "Jump to bottom")
+        /// Location: CLIToolViewModel.swift - Local commands not implemented
+        public static let localNotImplemented = L10n.tr("Tools", "tools.cli.localNotImplemented", fallback: "Local commands not yet implemented")
+        /// Location: CLIToolView.swift - Login failed
+        public static let loginFailed = L10n.tr("Tools", "tools.cli.loginFailed", fallback: "Login failed:")
+        /// Location: CLIToolView.swift - Login failed reason
+        public static let loginFailedAuth = L10n.tr("Tools", "tools.cli.loginFailedAuth", fallback: "Authentication failed")
+        /// Location: CLIToolView.swift - Login from local only
+        public static let loginFromLocalOnly = L10n.tr("Tools", "tools.cli.loginFromLocalOnly", fallback: "Login only available from local session")
+        /// Location: CLIToolView.swift - Login success
+        public static let loginSuccess = L10n.tr("Tools", "tools.cli.loginSuccess", fallback: "Logged in to")
+        /// Location: CLIToolView.swift - Login usage
+        public static let loginUsage = L10n.tr("Tools", "tools.cli.loginUsage", fallback: "Usage: login [-f] <node>")
+        /// Location: CLIToolView.swift - Logout success
+        public static let logoutSuccess = L10n.tr("Tools", "tools.cli.logoutSuccess", fallback: "Logged out")
+        /// Location: CLIToolView.swift - Node not found error
+        public static let nodeNotFound = L10n.tr("Tools", "tools.cli.nodeNotFound", fallback: "Node not found:")
+        /// Location: CLIToolView.swift - No sessions message
+        public static let noSessions = L10n.tr("Tools", "tools.cli.noSessions", fallback: "No active sessions")
+        /// Location: CLIToolView.swift - Disconnected state title
+        public static let notConnected = L10n.tr("Tools", "tools.cli.notConnected", fallback: "Not Connected")
+        /// Location: CLIToolView.swift - Disconnected state description
+        public static let notConnectedDescription = L10n.tr("Tools", "tools.cli.notConnectedDescription", fallback: "Connect to a mesh radio to use the CLI.")
+        /// Location: CLIToolView.swift - Not logged in error
+        public static let notLoggedIn = L10n.tr("Tools", "tools.cli.notLoggedIn", fallback: "Not logged in to any repeater")
+        /// Location: CLIToolViewModel.swift - Password prompt
+        public static let passwordPrompt = L10n.tr("Tools", "tools.cli.passwordPrompt", fallback: "Password:")
+        /// Location: CLIToolView.swift - Password required error
+        public static let passwordRequired = L10n.tr("Tools", "tools.cli.passwordRequired", fallback: "Password required")
+        /// Location: CLIToolView.swift - Prompt suffix
+        public static let promptSuffix = L10n.tr("Tools", "tools.cli.promptSuffix", fallback: ">")
+        /// Location: CLIToolViewModel.swift - Reboot command confirmation
+        public static let rebootSent = L10n.tr("Tools", "tools.cli.rebootSent", fallback: "Reboot command sent")
+        /// Location: CLIToolView.swift - Session list header
+        public static let sessionListHeader = L10n.tr("Tools", "tools.cli.sessionListHeader", fallback: "Active sessions:")
+        /// Location: CLIToolView.swift - Local session label
+        public static let sessionLocal = L10n.tr("Tools", "tools.cli.sessionLocal", fallback: "local")
+        /// Location: CLIToolView.swift - Session not found
+        public static let sessionNotFound = L10n.tr("Tools", "tools.cli.sessionNotFound", fallback: "Session not found:")
+        /// Location: CLIToolView.swift - Accessory button: sessions
+        public static let sessions = L10n.tr("Tools", "tools.cli.sessions", fallback: "Sessions")
+        /// Location: CLIToolView.swift - Session switched
+        public static let sessionSwitched = L10n.tr("Tools", "tools.cli.sessionSwitched", fallback: "Switched to")
+        /// Location: CLIToolView.swift - Accessory button: tab complete
+        public static let tabComplete = L10n.tr("Tools", "tools.cli.tabComplete", fallback: "Tab complete")
+        /// Location: CLIToolView.swift - Command timeout
+        public static let timeout = L10n.tr("Tools", "tools.cli.timeout", fallback: "Timeout waiting for response")
+        /// Location: CLIToolView.swift - Unknown command error
+        public static let unknownCommand = L10n.tr("Tools", "tools.cli.unknownCommand", fallback: "Unknown command:")
+        /// Location: CLIToolView.swift - Waiting indicator
+        public static let waiting = L10n.tr("Tools", "tools.cli.waiting", fallback: "...")
+        /// Location: CLIToolViewModel.swift - Welcome banner line 2
+        public static func welcomeConnected(_ p1: Any) -> String {
+          return L10n.tr("Tools", "tools.cli.welcomeConnected", String(describing: p1), fallback: "Connected to %@")
+        }
+        /// Location: CLIToolViewModel.swift - Welcome banner line 3
+        public static let welcomeHint = L10n.tr("Tools", "tools.cli.welcomeHint", fallback: "Type 'help' for available commands.")
+        /// Location: CLIToolViewModel.swift - Welcome banner line 1
+        public static let welcomeLine1 = L10n.tr("Tools", "tools.cli.welcomeLine1", fallback: "PocketMesh CLI")
+      }
       public enum LineOfSight {
         /// Location: LineOfSightView.swift - Additional height label
         public static let additionalHeight = L10n.tr("Tools", "tools.lineOfSight.additionalHeight", fallback: "Additional height")

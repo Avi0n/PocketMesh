@@ -1074,15 +1074,24 @@ final class TracePathViewModel {
             var longitude: Double?
 
             if let bytes = node.hashBytes, let firstByte = bytes.first {
-                // Look up from availableRepeaters first (user's selected repeaters, no collisions)
-                if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }) {
+                // Look up from outboundPath first (user's selected repeaters, avoids hash collisions)
+                if let matchingHop = outboundPath.first(where: { $0.hashByte == firstByte }) {
+                    resolvedName = matchingHop.resolvedName
+                    // Get location from availableRepeaters
+                    if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }),
+                       matchingRepeater.hasLocation {
+                        latitude = matchingRepeater.latitude
+                        longitude = matchingRepeater.longitude
+                    }
+                } else if let matchingRepeater = availableRepeaters.first(where: { $0.publicKey.first == firstByte }) {
+                    // Fallback to availableRepeaters for unexpected hops not in outboundPath
                     resolvedName = matchingRepeater.displayName
                     if matchingRepeater.hasLocation {
                         latitude = matchingRepeater.latitude
                         longitude = matchingRepeater.longitude
                     }
                 } else {
-                    // Fallback for unexpected hops not in our selected repeaters
+                    // Fallback for hops not in our contacts at all
                     resolvedName = resolveHashToName(firstByte)
                     if let location = resolveHashToLocation(firstByte) {
                         latitude = location.latitude
