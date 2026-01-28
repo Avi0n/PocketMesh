@@ -699,6 +699,18 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    public func clearDiscoveredContacts(deviceID: UUID) async throws {
+        if let error = stubbedDeleteContactError {
+            throw error
+        }
+        let keysToRemove = contacts.values
+            .filter { $0.deviceID == deviceID && $0.isDiscovered }
+            .map(\.id)
+        for key in keysToRemove {
+            contacts.removeValue(forKey: key)
+        }
+    }
+
     // MARK: - Channel Operations
 
     public func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {
