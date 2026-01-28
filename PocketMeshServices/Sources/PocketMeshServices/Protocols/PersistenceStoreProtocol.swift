@@ -147,6 +147,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Mark a discovered contact as confirmed
     func confirmContact(id: UUID) async throws
 
+    /// Clear all discovered (unadded) contacts for a device
+    func clearDiscoveredContacts(deviceID: UUID) async throws
+
     // MARK: - Channel Operations
 
     /// Fetch all channels for a device

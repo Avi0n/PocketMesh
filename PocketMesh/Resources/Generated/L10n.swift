@@ -722,10 +722,12 @@ public enum L10n {
           public static func invalidSize(_ p1: Int, _ p2: Int) -> String {
             return L10n.tr("Contacts", "contacts.add.error.invalidSize", p1, p2, fallback: "Public key must be %d bytes (%d hex characters)")
           }
-          /// Location: AddContactSheet.swift - Purpose: Node list full error
+          /// Location: AddContactSheet.swift, DiscoveryView.swift - Purpose: Node list full error with max count
           public static func nodeListFull(_ p1: Int) -> String {
             return L10n.tr("Contacts", "contacts.add.error.nodeListFull", p1, fallback: "Node list is full (max %d nodes)")
           }
+          /// Location: AddContactSheet.swift, DiscoveryView.swift - Purpose: Node list full error without max count
+          public static let nodeListFullSimple = L10n.tr("Contacts", "contacts.add.error.nodeListFullSimple", fallback: "Node list is full")
           /// Location: AddContactSheet.swift - Purpose: Not connected error
           public static let notConnected = L10n.tr("Contacts", "contacts.add.error.notConnected", fallback: "Not connected to device")
         }
@@ -893,17 +895,57 @@ public enum L10n {
       public enum Discovery {
         /// Location: DiscoveryView.swift - Purpose: Add button
         public static let add = L10n.tr("Contacts", "contacts.discovery.add", fallback: "Add")
+        /// Location: DiscoveryView.swift - Purpose: Clear all menu item
+        public static let clear = L10n.tr("Contacts", "contacts.discovery.clear", fallback: "Clear All")
+        /// Location: DiscoveryView.swift - Purpose: VoiceOver announcement after clearing
+        public static let clearedAllNodes = L10n.tr("Contacts", "contacts.discovery.clearedAllNodes", fallback: "All discovered nodes cleared")
+        /// Location: DiscoveryView.swift - Purpose: More menu accessibility label
+        public static let menu = L10n.tr("Contacts", "contacts.discovery.menu", fallback: "More")
+        /// Location: DiscoveryView.swift - Purpose: Swipe action to remove discovered node
+        public static let remove = L10n.tr("Contacts", "contacts.discovery.remove", fallback: "Remove")
+        /// Location: DiscoveryView.swift - Purpose: VoiceOver announcement when searching
+        public static let searchingAllTypes = L10n.tr("Contacts", "contacts.discovery.searchingAllTypes", fallback: "Searching all types")
+        /// Location: DiscoveryView.swift - Purpose: Search prompt
+        public static let searchPrompt = L10n.tr("Contacts", "contacts.discovery.searchPrompt", fallback: "Search discovered")
+        /// Location: DiscoveryView.swift - Purpose: Sort menu accessibility label
+        public static let sortMenu = L10n.tr("Contacts", "contacts.discovery.sortMenu", fallback: "Sort options")
+        /// Location: DiscoveryView.swift - Purpose: Sort menu accessibility hint
+        public static let sortMenuHint = L10n.tr("Contacts", "contacts.discovery.sortMenuHint", fallback: "Choose how to sort discovered nodes")
         /// Location: DiscoveryView.swift - Purpose: Navigation title
         public static let title = L10n.tr("Contacts", "contacts.discovery.title", fallback: "Discover")
+        public enum Clear {
+          /// Location: DiscoveryView.swift - Purpose: Clear confirmation button
+          public static let confirm = L10n.tr("Contacts", "contacts.discovery.clear.confirm", fallback: "Clear")
+          /// Location: DiscoveryView.swift - Purpose: Clear confirmation message
+          public static let message = L10n.tr("Contacts", "contacts.discovery.clear.message", fallback: "Discovered nodes will be removed from this list but can be rediscovered on the mesh network.")
+          /// Location: DiscoveryView.swift - Purpose: Clear confirmation title
+          public static let title = L10n.tr("Contacts", "contacts.discovery.clear.title", fallback: "Clear all discovered nodes?")
+        }
         public enum Empty {
           /// Location: DiscoveryView.swift - Purpose: Empty state description
           public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
           /// Location: DiscoveryView.swift - Purpose: Empty state title
           public static let title = L10n.tr("Contacts", "contacts.discovery.empty.title", fallback: "No Discovered Nodes")
+          public enum Search {
+            /// Location: DiscoveryView.swift - Purpose: Search empty state description
+            public static func description(_ p1: Any) -> String {
+              return L10n.tr("Contacts", "contacts.discovery.empty.search.description", String(describing: p1), fallback: "No discovered nodes match '%@'")
+            }
+            /// Location: DiscoveryView.swift - Purpose: Search empty state title
+            public static let title = L10n.tr("Contacts", "contacts.discovery.empty.search.title", fallback: "No Results")
+          }
         }
         public enum Error {
           /// Location: DiscoveryView.swift - Purpose: Services not available error
           public static let servicesUnavailable = L10n.tr("Contacts", "contacts.discovery.error.servicesUnavailable", fallback: "Services not available")
+        }
+        public enum Segment {
+          /// Location: DiscoveryView.swift - Purpose: Segment filter: All
+          public static let all = L10n.tr("Contacts", "contacts.discovery.segment.all", fallback: "All")
+          /// Location: DiscoveryView.swift - Purpose: Segment filter: Contacts
+          public static let contacts = L10n.tr("Contacts", "contacts.discovery.segment.contacts", fallback: "Contacts")
+          /// Location: DiscoveryView.swift - Purpose: Segment filter: Network
+          public static let network = L10n.tr("Contacts", "contacts.discovery.segment.network", fallback: "Network")
         }
       }
       public enum List {

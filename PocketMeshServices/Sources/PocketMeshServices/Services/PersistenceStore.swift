@@ -503,6 +503,19 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    /// Clear all discovered (unadded) contacts for a device
+    public func clearDiscoveredContacts(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { contact in
+            contact.deviceID == targetDeviceID && contact.isDiscovered == true
+        }
+        let contacts = try modelContext.fetch(FetchDescriptor(predicate: predicate))
+        for contact in contacts {
+            modelContext.delete(contact)
+        }
+        try modelContext.save()
+    }
+
     /// Update contact's last message info (nil clears the date, removing from conversations list)
     public func updateContactLastMessage(contactID: UUID, date: Date?) throws {
         let targetID = contactID

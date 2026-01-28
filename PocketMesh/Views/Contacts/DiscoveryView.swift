@@ -1,57 +1,201 @@
+import CoreLocation
 import SwiftUI
 import PocketMeshServices
 
 /// Shows contacts discovered via advertisement that haven't been added to the device
 struct DiscoveryView: View {
     @Environment(\.appState) private var appState
-    @State private var discoveredContacts: [ContactDTO] = []
-    @State private var isLoading = false
-    @State private var hasLoadedOnce = false
+    @State private var viewModel = DiscoveryViewModel()
+    @State private var searchText = ""
+    @State private var selectedSegment: DiscoverSegment = .all
+    @AppStorage("discoverySortOrder") private var sortOrder: NodeSortOrder = .lastHeard
     @State private var addingContactID: UUID?
-    @State private var errorMessage: String?
+    @State private var showClearConfirmation = false
+
+    private var filteredContacts: [ContactDTO] {
+        let effectiveSortOrder = (sortOrder == .distance && appState.locationService.currentLocation == nil)
+            ? .lastHeard
+            : sortOrder
+
+        return viewModel.filteredContacts(
+            searchText: searchText,
+            segment: selectedSegment,
+            sortOrder: effectiveSortOrder,
+            userLocation: appState.locationService.currentLocation
+        )
+    }
+
+    private var isSearching: Bool {
+        !searchText.isEmpty
+    }
+
+    private var showErrorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )
+    }
 
     var body: some View {
         Group {
-            if !hasLoadedOnce {
+            if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if discoveredContacts.isEmpty {
+            } else if filteredContacts.isEmpty && !isSearching {
                 emptyView
+            } else if filteredContacts.isEmpty && isSearching {
+                searchEmptyView
             } else {
                 contactsList
             }
         }
         .navigationTitle(L10n.Contacts.Contacts.Discovery.title)
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                sortMenu
+            }
+
+            ToolbarItem(placement: .automatic) {
+                moreMenu
+            }
+        }
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: L10n.Contacts.Contacts.Discovery.searchPrompt
+        )
+        .onChange(of: searchText) { _, newValue in
+            if !newValue.isEmpty && UIAccessibility.isVoiceOverRunning {
+                UIAccessibility.post(
+                    notification: .announcement,
+                    argument: L10n.Contacts.Contacts.Discovery.searchingAllTypes
+                )
+            }
+        }
         .task {
+            viewModel.configure(appState: appState)
             await loadDiscoveredContacts()
+        }
+        .onChange(of: appState.servicesVersion) { _, _ in
+            Task {
+                await loadDiscoveredContacts()
+            }
         }
         .onChange(of: appState.contactsVersion) { _, _ in
             Task {
                 await loadDiscoveredContacts()
             }
         }
-        .alert(L10n.Contacts.Contacts.Common.error, isPresented: .constant(errorMessage != nil)) {
-            Button(L10n.Contacts.Contacts.Common.ok) { errorMessage = nil }
+        .alert(L10n.Contacts.Contacts.Common.error, isPresented: showErrorBinding) {
+            Button(L10n.Contacts.Contacts.Common.ok) { viewModel.errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "")
+            Text(viewModel.errorMessage ?? "")
+        }
+        .confirmationDialog(
+            L10n.Contacts.Contacts.Discovery.Clear.title,
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(L10n.Contacts.Contacts.Discovery.Clear.confirm, role: .destructive) {
+                Task {
+                    await clearAllDiscoveredContacts()
+                }
+            }
+        } message: {
+            Text(L10n.Contacts.Contacts.Discovery.Clear.message)
         }
     }
 
     private var emptyView: some View {
-        ContentUnavailableView(
-            L10n.Contacts.Contacts.Discovery.Empty.title,
-            systemImage: "antenna.radiowaves.left.and.right",
-            description: Text(L10n.Contacts.Contacts.Discovery.Empty.description)
-        )
+        VStack {
+            DiscoverSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            ContentUnavailableView(
+                L10n.Contacts.Contacts.Discovery.Empty.title,
+                systemImage: "antenna.radiowaves.left.and.right",
+                description: Text(L10n.Contacts.Contacts.Discovery.Empty.description)
+            )
+
+            Spacer()
+        }
+    }
+
+    private var searchEmptyView: some View {
+        VStack {
+            DiscoverSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+
+            Spacer()
+
+            ContentUnavailableView(
+                L10n.Contacts.Contacts.Discovery.Empty.Search.title,
+                systemImage: "magnifyingglass",
+                description: Text(L10n.Contacts.Contacts.Discovery.Empty.Search.description(searchText))
+            )
+
+            Spacer()
+        }
     }
 
     private var contactsList: some View {
         List {
-            ForEach(discoveredContacts) { contact in
+            Section {
+                DiscoverSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+            .listSectionSeparator(.hidden)
+
+            ForEach(filteredContacts) { contact in
                 discoveredContactRow(contact)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            Task {
+                                await viewModel.deleteDiscoveredContact(contact)
+                            }
+                        } label: {
+                            Label(L10n.Contacts.Contacts.Discovery.remove, systemImage: "trash")
+                        }
+                    }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(NodeSortOrder.allCases, id: \.self) { order in
+                Button {
+                    sortOrder = order
+                } label: {
+                    if sortOrder == order {
+                        Label(order.localizedTitle, systemImage: "checkmark")
+                    } else {
+                        Text(order.localizedTitle)
+                    }
+                }
+            }
+        } label: {
+            Label(L10n.Contacts.Contacts.List.sort, systemImage: "arrow.up.arrow.down")
+        }
+        .modifier(GlassButtonModifier())
+        .accessibilityLabel(L10n.Contacts.Contacts.Discovery.sortMenu)
+        .accessibilityHint(L10n.Contacts.Contacts.Discovery.sortMenuHint)
+    }
+
+    private var moreMenu: some View {
+        Menu {
+            Button(role: .destructive) {
+                showClearConfirmation = true
+            } label: {
+                Label(L10n.Contacts.Contacts.Discovery.clear, systemImage: "trash")
+            }
+            .disabled(viewModel.discoveredContacts.isEmpty)
+        } label: {
+            Label(L10n.Contacts.Contacts.Discovery.menu, systemImage: "ellipsis.circle")
+        }
+        .modifier(GlassButtonModifier())
     }
 
     private func discoveredContactRow(_ contact: ContactDTO) -> some View {
@@ -63,12 +207,28 @@ struct DiscoveryView: View {
                     .font(.body)
                     .fontWeight(.medium)
 
-                Text(contactTypeLabel(for: contact))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(contactTypeLabel(for: contact))
+
+                    if contact.hasLocation {
+                        Text("·")
+
+                        Label(L10n.Contacts.Contacts.Row.location, systemImage: "location.fill")
+                            .labelStyle(.iconOnly)
+                            .foregroundStyle(.green)
+
+                        if let distance = distanceToContact(contact) {
+                            Text(distance)
+                        }
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
+
+            RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
 
             Button {
                 Task {
@@ -87,6 +247,24 @@ struct DiscoveryView: View {
             .disabled(addingContactID != nil)
         }
         .padding(.vertical, 4)
+    }
+
+    private func distanceToContact(_ contact: ContactDTO) -> String? {
+        guard let userLocation = appState.locationService.currentLocation,
+              contact.hasLocation else { return nil }
+
+        let contactLocation = CLLocation(
+            latitude: contact.latitude,
+            longitude: contact.longitude
+        )
+        let meters = userLocation.distance(from: contactLocation)
+        let measurement = Measurement(value: meters, unit: UnitLength.meters)
+
+        let formattedDistance = measurement.formatted(.measurement(
+            width: .abbreviated,
+            usage: .road
+        ))
+        return L10n.Contacts.Contacts.Row.away(formattedDistance)
     }
 
     @ViewBuilder
@@ -110,23 +288,27 @@ struct DiscoveryView: View {
     }
 
     private func loadDiscoveredContacts() async {
-        guard let deviceID = appState.connectedDevice?.id,
-              let dataStore = appState.services?.dataStore else { return }
+        guard let deviceID = appState.connectedDevice?.id else { return }
+        viewModel.configure(appState: appState)
+        await viewModel.loadDiscoveredContacts(deviceID: deviceID)
+    }
 
-        isLoading = true
-        do {
-            discoveredContacts = try await dataStore.fetchDiscoveredContacts(deviceID: deviceID)
-        } catch {
-            errorMessage = error.localizedDescription
+    private func clearAllDiscoveredContacts() async {
+        guard let deviceID = appState.connectedDevice?.id else { return }
+        await viewModel.clearAllDiscoveredContacts(deviceID: deviceID)
+
+        if UIAccessibility.isVoiceOverRunning {
+            UIAccessibility.post(
+                notification: .announcement,
+                argument: L10n.Contacts.Contacts.Discovery.clearedAllNodes
+            )
         }
-        hasLoadedOnce = true
-        isLoading = false
     }
 
     private func addContact(_ contact: ContactDTO) async {
         guard let contactService = appState.services?.contactService,
               let dataStore = appState.services?.dataStore else {
-            errorMessage = L10n.Contacts.Contacts.Discovery.Error.servicesUnavailable
+            viewModel.errorMessage = L10n.Contacts.Contacts.Discovery.Error.servicesUnavailable
             return
         }
 
@@ -144,18 +326,50 @@ struct DiscoveryView: View {
             try await dataStore.confirmContact(id: contact.id)
 
             // Remove from local list
-            discoveredContacts.removeAll { $0.id == contact.id }
+            viewModel.discoveredContacts.removeAll { $0.id == contact.id }
         } catch ContactServiceError.contactTableFull {
             if let maxContacts {
-                errorMessage = "Node list is full (max \(maxContacts) nodes)"
+                viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFull(Int(maxContacts))
             } else {
-                errorMessage = "Node list is full"
+                viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFullSimple
             }
         } catch {
-            errorMessage = error.localizedDescription
+            viewModel.errorMessage = error.localizedDescription
         }
 
         addingContactID = nil
+    }
+}
+
+// MARK: - Discover Segment Picker
+
+struct DiscoverSegmentPicker: View {
+    @Binding var selection: DiscoverSegment
+    let isSearching: Bool
+
+    var body: some View {
+        Picker(L10n.Contacts.Contacts.Discovery.Segment.all, selection: $selection) {
+            ForEach(DiscoverSegment.allCases, id: \.self) { segment in
+                Text(segment.localizedTitle).tag(segment)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .opacity(isSearching ? 0.5 : 1.0)
+        .disabled(isSearching)
+    }
+}
+
+// MARK: - Glass Effect Modifier
+
+private struct GlassButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content
+        }
     }
 }
 
