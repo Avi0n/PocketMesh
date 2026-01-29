@@ -10,6 +10,7 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
     var onSubmit: () -> Void
     var onHistoryUp: () -> Void
     var onHistoryDown: () -> Void
+    var onRightArrowAtEnd: () -> Void
 
     func makeUIView(context: Context) -> FocusableTextView {
         let textView = FocusableTextView()
@@ -63,7 +64,8 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
             cursorPosition: $cursorPosition,
             onSubmit: onSubmit,
             onHistoryUp: onHistoryUp,
-            onHistoryDown: onHistoryDown
+            onHistoryDown: onHistoryDown,
+            onRightArrowAtEnd: onRightArrowAtEnd
         )
     }
 
@@ -74,6 +76,7 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
         let onSubmit: () -> Void
         let onHistoryUp: () -> Void
         let onHistoryDown: () -> Void
+        let onRightArrowAtEnd: () -> Void
 
         init(
             text: Binding<String>,
@@ -81,7 +84,8 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
             cursorPosition: Binding<Int>,
             onSubmit: @escaping () -> Void,
             onHistoryUp: @escaping () -> Void,
-            onHistoryDown: @escaping () -> Void
+            onHistoryDown: @escaping () -> Void,
+            onRightArrowAtEnd: @escaping () -> Void
         ) {
             _text = text
             _isFocused = isFocused
@@ -89,6 +93,7 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
             self.onSubmit = onSubmit
             self.onHistoryUp = onHistoryUp
             self.onHistoryDown = onHistoryDown
+            self.onRightArrowAtEnd = onRightArrowAtEnd
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -148,6 +153,10 @@ struct HiddenTextViewFocusable: UIViewRepresentable {
             guard let endPosition = textView.position(from: textView.endOfDocument, offset: 0) else { return }
             textView.selectedTextRange = textView.textRange(from: endPosition, to: endPosition)
         }
+
+        func rightArrowAtEnd() {
+            onRightArrowAtEnd()
+        }
     }
 }
 
@@ -158,6 +167,7 @@ protocol FocusableTextViewDelegate: UITextViewDelegate {
     func historyDown()
     func moveCursor(by offset: Int, in textView: FocusableTextView)
     func moveCursorToEnd(in textView: FocusableTextView)
+    func rightArrowAtEnd()
 }
 
 class FocusableTextView: UITextView {
@@ -170,7 +180,7 @@ class FocusableTextView: UITextView {
             UIKeyCommand(input: UIKeyCommand.inputUpArrow, modifierFlags: [], action: #selector(handleUpArrow)),
             UIKeyCommand(input: UIKeyCommand.inputDownArrow, modifierFlags: [], action: #selector(handleDownArrow))
         ]
-        // Note: Left/right arrows not intercepted - let UITextView handle them natively
+        // Note: Left/right arrows handled via pressesBegan to intercept before UITextView's default handling
     }
 
     @objc private func handleUpArrow() {
@@ -179,6 +189,39 @@ class FocusableTextView: UITextView {
 
     @objc private func handleDownArrow() {
         customDelegate?.historyDown()
+    }
+
+    // MARK: - Hardware Keyboard Press Handling
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        guard let key = presses.first?.key else {
+            super.pressesBegan(presses, with: event)
+            return
+        }
+
+        switch key.keyCode {
+        case .keyboardRightArrow:
+            // Check if cursor is at end of text
+            let cursorOffset: Int
+            if let selectedRange = selectedTextRange {
+                cursorOffset = offset(from: beginningOfDocument, to: selectedRange.start)
+            } else {
+                cursorOffset = text.count
+            }
+
+            if cursorOffset >= text.count {
+                // Cursor at end - notify delegate for ghost text acceptance
+                customDelegate?.rightArrowAtEnd()
+                // Don't call super - prevent default behavior
+                return
+            } else {
+                // Cursor not at end - let UITextView handle normal cursor movement
+                super.pressesBegan(presses, with: event)
+            }
+
+        default:
+            super.pressesBegan(presses, with: event)
+        }
     }
 
     // Public methods for programmatic cursor movement (called from accessory bar buttons)

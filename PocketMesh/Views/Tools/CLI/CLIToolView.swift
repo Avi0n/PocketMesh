@@ -167,6 +167,12 @@ private struct CLIToolContent: View {
                 onHistoryDown: {
                     viewModel.historyDown()
                     cursorPosition = viewModel.currentInput.count
+                },
+                onRightArrowAtEnd: {
+                    if !viewModel.ghostText.isEmpty {
+                        viewModel.acceptGhostText()
+                        cursorPosition = viewModel.currentInput.count
+                    }
                 }
             )
             .frame(width: 1, height: 1)
