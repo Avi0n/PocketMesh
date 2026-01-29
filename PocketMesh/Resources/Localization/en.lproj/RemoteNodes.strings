@@ -411,6 +411,12 @@
 /* Location: RoomConversationView.swift - Public key label */
 "remoteNodes.room.publicKey" = "Public Key";
 
+/* Location: RoomConversationView.swift - Disconnected banner text */
+"remoteNodes.room.disconnectedBanner" = "Disconnected";
+
+/* Location: RoomConversationView.swift - Accessibility hint for disconnected banner */
+"remoteNodes.room.disconnectedHint" = "Return to chat list to reconnect";
+
 // MARK: - Shared
 
 /* Location: Multiple files - Cancel button */

@@ -1949,6 +1949,10 @@ public enum L10n {
         public static let details = L10n.tr("RemoteNodes", "remoteNodes.room.details", fallback: "Details")
         /// Location: RoomConversationView.swift - Disconnected status
         public static let disconnected = L10n.tr("RemoteNodes", "remoteNodes.room.disconnected", fallback: "Disconnected")
+        /// Location: RoomConversationView.swift - Disconnected banner text
+        public static let disconnectedBanner = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedBanner", fallback: "Disconnected")
+        /// Location: RoomConversationView.swift - Accessibility hint for disconnected banner
+        public static let disconnectedHint = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedHint", fallback: "Return to chat list to reconnect")
         /// Location: RoomConversationView.swift - Identification section header
         public static let identification = L10n.tr("RemoteNodes", "remoteNodes.room.identification", fallback: "Identification")
         /// Location: RoomConversationView.swift - Room info sheet title

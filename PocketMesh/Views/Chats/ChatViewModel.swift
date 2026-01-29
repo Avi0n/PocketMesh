@@ -484,10 +484,11 @@ final class ChatViewModel {
 
     /// Load room sessions for a device
     func loadRoomSessions(deviceID: UUID) async {
-        guard let roomServerService else { return }
+        guard let dataStore else { return }
 
         do {
-            roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+            let sessions = try await dataStore.fetchRemoteNodeSessions(deviceID: deviceID)
+            roomSessions = sessions.filter { $0.isRoom }
             invalidateConversationCache()
         } catch {
             // Silently handle - rooms are optional

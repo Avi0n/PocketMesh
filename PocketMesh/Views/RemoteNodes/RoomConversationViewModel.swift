@@ -114,6 +114,15 @@ final class RoomConversationViewModel {
         await loadMessages(for: session)
     }
 
+    /// Refresh session state from database
+    func refreshSession() async {
+        guard let session, let dataStore else { return }
+
+        if let updated = try? await dataStore.fetchRemoteNodeSession(id: session.id) {
+            self.session = updated
+        }
+    }
+
     /// Handle message event and update if relevant to current session
     func handleEvent(_ event: MessageEvent) async {
         guard let session else { return }

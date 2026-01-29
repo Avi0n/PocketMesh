@@ -22,7 +22,9 @@ struct RoomConversationView: View {
     var body: some View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if session.canPost {
+                if !session.isConnected {
+                    disconnectedBanner
+                } else if session.canPost {
                     inputBar
                         .floatingKeyboardAware()
                 } else {
@@ -63,6 +65,14 @@ struct RoomConversationView: View {
                 if let event = appState.messageEventBroadcaster.latestEvent {
                     Task {
                         await viewModel.handleEvent(event)
+                    }
+                }
+            }
+            .onChange(of: appState.messageEventBroadcaster.sessionStateChanged) { _, _ in
+                Task {
+                    await viewModel.refreshSession()
+                    if let updated = viewModel.session {
+                        session = updated
                     }
                 }
             }
@@ -173,6 +183,22 @@ struct RoomConversationView: View {
         .padding()
         .background(.bar)
     }
+
+    private var disconnectedBanner: some View {
+        HStack {
+            Image(systemName: "exclamationmark.triangle.fill")
+            Text(L10n.RemoteNodes.RemoteNodes.Room.disconnectedBanner)
+        }
+        .font(.subheadline)
+        .bold()
+        .foregroundStyle(.orange)
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(.bar)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Room.disconnectedBanner)
+        .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Room.disconnectedHint)
+    }
 }
 
 // MARK: - Room Info Sheet
@@ -196,9 +222,15 @@ private struct RoomInfoSheet: View {
 
                 Section(L10n.RemoteNodes.RemoteNodes.Room.details) {
                     LabeledContent(L10n.RemoteNodes.RemoteNodes.name, value: session.name)
-                    LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.permission, value: session.permissionLevel.displayName)
+                    LabeledContent(
+                        L10n.RemoteNodes.RemoteNodes.Room.permission,
+                        value: session.permissionLevel.displayName
+                    )
                     if session.isConnected {
-                        LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.status, value: L10n.RemoteNodes.RemoteNodes.Room.connected)
+                        LabeledContent(
+                            L10n.RemoteNodes.RemoteNodes.Room.status,
+                            value: L10n.RemoteNodes.RemoteNodes.Room.connected
+                        )
                     }
                 }
 
