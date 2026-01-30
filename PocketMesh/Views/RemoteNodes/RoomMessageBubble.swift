@@ -5,6 +5,7 @@ import PocketMeshServices
 struct RoomMessageBubble: View {
     let message: RoomMessageDTO
     let showTimestamp: Bool
+    var onRetry: (() -> Void)?
 
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
@@ -21,7 +22,10 @@ struct RoomMessageBubble: View {
                     Spacer(minLength: 60)
                 }
 
-                bubbleContent
+                VStack(alignment: isFromSelf ? .trailing : .leading, spacing: 2) {
+                    bubbleContent
+                    statusIndicator
+                }
 
                 if !isFromSelf {
                     Spacer(minLength: 60)
@@ -62,18 +66,82 @@ struct RoomMessageBubble: View {
         }
     }
 
-    private var bubbleBackground: some View {
-        Group {
-            if isFromSelf {
-                AppColors.Message.outgoingBubble
-            } else {
-                AppColors.Message.incomingBubble
-            }
+    private var bubbleBackground: Color {
+        if isFromSelf {
+            return message.status == .failed
+                ? AppColors.Message.outgoingBubbleFailed
+                : AppColors.Message.outgoingBubble
+        } else {
+            return AppColors.Message.incomingBubble
         }
     }
 
     private var textColor: Color {
         isFromSelf ? .white : .primary
+    }
+
+    // MARK: - Status Indicator
+
+    @ViewBuilder
+    private var statusIndicator: some View {
+        if isFromSelf {
+            HStack(spacing: 4) {
+                if message.status == .failed, let onRetry {
+                    Button {
+                        onRetry()
+                    } label: {
+                        HStack(spacing: 2) {
+                            Image(systemName: "arrow.clockwise")
+                            Text(L10n.Chats.Chats.Message.Status.retry)
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.Chats.Chats.Message.Status.retry)
+                    .accessibilityHint("Double-tap to resend this message")
+                }
+
+                Text(statusText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                if message.status == .failed {
+                    Image(systemName: "exclamationmark.circle")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+            }
+            .padding(.trailing, 4)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(accessibilityStatusLabel)
+        }
+    }
+
+    private var statusText: String {
+        switch message.status {
+        case .pending, .sending:
+            return L10n.Chats.Chats.Message.Status.sending
+        case .sent:
+            return L10n.Chats.Chats.Message.Status.sent
+        case .delivered:
+            return L10n.Chats.Chats.Message.Status.delivered
+        case .failed:
+            return L10n.Chats.Chats.Message.Status.failed
+        case .retrying:
+            return L10n.Chats.Chats.Message.Status.retrying
+        }
+    }
+
+    private var accessibilityStatusLabel: String {
+        switch message.status {
+        case .failed:
+            return "Message failed to send. Double tap retry button to resend."
+        case .pending, .sending, .retrying:
+            return "Sending message"
+        default:
+            return "Message delivered"
+        }
     }
 }
 
@@ -102,5 +170,36 @@ struct RoomMessageBubble: View {
             isFromSelf: false
         ),
         showTimestamp: true
+    )
+}
+
+#Preview("Pending Message") {
+    RoomMessageBubble(
+        message: RoomMessageDTO(
+            sessionID: UUID(),
+            authorKeyPrefix: Data(repeating: 0x42, count: 4),
+            authorName: "Me",
+            text: "Sending...",
+            timestamp: UInt32(Date().timeIntervalSince1970),
+            isFromSelf: true,
+            status: .pending
+        ),
+        showTimestamp: true
+    )
+}
+
+#Preview("Failed Message") {
+    RoomMessageBubble(
+        message: RoomMessageDTO(
+            sessionID: UUID(),
+            authorKeyPrefix: Data(repeating: 0x42, count: 4),
+            authorName: "Me",
+            text: "This failed to send",
+            timestamp: UInt32(Date().timeIntervalSince1970),
+            isFromSelf: true,
+            status: .failed
+        ),
+        showTimestamp: true,
+        onRetry: { print("Retry tapped") }
     )
 }
