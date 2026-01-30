@@ -2210,7 +2210,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     /// Handles raw data received from the device.
+    ///
+    /// Per the MeshCore Companion Radio Protocol, each BLE notification is a complete frame.
+    /// No reassembly or buffering is needed - we parse each packet directly.
     private func handleReceivedData(_ data: Data) async {
+        guard !data.isEmpty else { return }
+
         var event = PacketParser.parse(data)
 
         if case .parseFailure(_, let reason) = event {

@@ -447,11 +447,14 @@ public actor SyncCoordinator {
         }
 
         do {
+            // Defer advert-driven contact fetches during sync to avoid BLE contention
+            await services.advertisementService.setSyncingContacts(true)
+
             // 1. Wire message handlers FIRST (before events can arrive)
             await wireMessageHandlers(services: services, deviceID: deviceID)
 
-            // 2. NOW start event monitoring (handlers are ready)
-            await services.startEventMonitoring(deviceID: deviceID)
+            // 2. NOW start event monitoring (handlers are ready), but delay auto-fetch and advert monitoring until after sync
+            await services.startEventMonitoring(deviceID: deviceID, enableAutoFetch: false)
 
             // 3. Export device private key for direct message decryption
             do {
@@ -474,10 +477,16 @@ public actor SyncCoordinator {
                 forceFullSync: forceFullSync
             )
 
-            // 5. Wire discovery handlers (for ongoing contact discovery)
+            // 5. Start auto-fetch after full sync to reduce BLE contention
+            await services.messagePollingService.startAutoFetch(deviceID: deviceID)
+
+            // 6. Wire discovery handlers (for ongoing contact discovery)
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
 
-            // 6. Wait for any pending message handlers to complete
+            // 7. Flush deferred advert-driven contact fetches now that handlers are wired
+            await services.advertisementService.setSyncingContacts(false)
+
+            // 8. Wait for any pending message handlers to complete
             // Message events are processed asynchronously by the event monitor - we need to ensure
             // all handlers finish before resuming notifications, otherwise sync-time messages
             // may trigger notifications after suppression is lifted
@@ -507,6 +516,7 @@ public actor SyncCoordinator {
                 logger.info("Resuming message notifications (sync failed)")
                 services.notificationService.isSuppressingNotifications = false
             }
+            await services.advertisementService.setSyncingContacts(false)
             throw error
         }
     }

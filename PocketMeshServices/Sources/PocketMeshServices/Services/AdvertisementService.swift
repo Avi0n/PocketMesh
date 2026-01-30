@@ -26,6 +26,11 @@ public actor AdvertisementService {
 
     /// Task monitoring for events
     private var eventMonitorTask: Task<Void, Never>?
+    private var currentDeviceID: UUID?
+
+    /// Whether contact fetches should be deferred (during sync)
+    private var isSyncingContacts = false
+    private var pendingUnknownContactKeys: Set<Data> = []
 
     /// Handler for new advertisement events (for UI updates)
     private var advertHandler: (@Sendable (ContactFrame) -> Void)?
@@ -104,6 +109,7 @@ public actor AdvertisementService {
     /// Start monitoring MeshCore events for advertisement-related notifications
     public func startEventMonitoring(deviceID: UUID) {
         eventMonitorTask?.cancel()
+        currentDeviceID = deviceID
 
         eventMonitorTask = Task { [weak self] in
             guard let self else { return }
@@ -120,6 +126,15 @@ public actor AdvertisementService {
     public func stopEventMonitoring() {
         eventMonitorTask?.cancel()
         eventMonitorTask = nil
+        currentDeviceID = nil
+    }
+
+    /// Toggle deferred contact fetching during sync.
+    public func setSyncingContacts(_ isSyncing: Bool) async {
+        isSyncingContacts = isSyncing
+        if !isSyncing {
+            await fetchPendingUnknownContacts()
+        }
     }
 
     /// Handle incoming MeshCore event
@@ -214,24 +229,56 @@ public actor AdvertisementService {
                 // Notify UI of contact update
                 await contactUpdatedHandler?()
             } else {
-                // Unknown contact - device has it but we don't (auto-add mode)
-                // Fetch just this contact from device and notify
-                logger.info("ADVERT received for unknown contact - fetching from device")
-                do {
-                    if let meshContact = try await session.getContact(publicKey: publicKey) {
-                        let frame = meshContact.toContactFrame()
-                        let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
-                        let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
-                        let contactType = ContactType(rawValue: meshContact.type) ?? .chat
-                        await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                if isSyncingContacts {
+                    pendingUnknownContactKeys.insert(publicKey)
+                    logger.info("ADVERT received for unknown contact during sync - deferring fetch")
+                } else {
+                    // Unknown contact - device has it but we don't (auto-add mode)
+                    // Fetch just this contact from device and notify
+                    logger.info("ADVERT received for unknown contact - fetching from device")
+                    do {
+                        if let meshContact = try await session.getContact(publicKey: publicKey) {
+                            let frame = meshContact.toContactFrame()
+                            let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+                            let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
+                            let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                            await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                        }
+                    } catch {
+                        logger.error("Failed to fetch new contact: \(error.localizedDescription)")
                     }
-                } catch {
-                    logger.error("Failed to fetch new contact: \(error.localizedDescription)")
+                    await contactSyncRequestHandler?(deviceID)
                 }
-                await contactSyncRequestHandler?(deviceID)
             }
         } catch {
             logger.error("Error handling advert event: \(error.localizedDescription)")
+        }
+    }
+
+    private func fetchPendingUnknownContacts() async {
+        guard !pendingUnknownContactKeys.isEmpty else { return }
+        guard let deviceID = currentDeviceID else {
+            logger.warning("No device ID available to fetch pending contacts")
+            return
+        }
+
+        let pendingKeys = pendingUnknownContactKeys
+        pendingUnknownContactKeys.removeAll()
+
+        for publicKey in pendingKeys {
+            do {
+                if let meshContact = try await session.getContact(publicKey: publicKey) {
+                    let frame = meshContact.toContactFrame()
+                    let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+                    let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
+                    let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                    await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                    await contactSyncRequestHandler?(deviceID)
+                }
+            } catch {
+                pendingUnknownContactKeys.insert(publicKey)
+                logger.error("Failed to fetch deferred contact: \(error.localizedDescription)")
+            }
         }
     }
 

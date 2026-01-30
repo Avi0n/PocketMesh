@@ -72,6 +72,22 @@ public enum DisconnectReason: String, Sendable {
     case wifiReconnectPrep = "preparing for WiFi reconnect"
 }
 
+/// Device platform type for BLE write pacing configuration
+public enum DevicePlatform: Sendable {
+    case esp32
+    case nrf52
+    case unknown
+
+    /// Recommended write pacing delay for this platform
+    var recommendedWritePacing: TimeInterval {
+        switch self {
+        case .esp32: return 0.060  // 60ms required by ESP32 BLE stack
+        case .nrf52: return 0.025  // Light pacing to avoid RX queue pressure
+        case .unknown: return 0  // No pacing needed
+        }
+    }
+}
+
 /// Manages the connection lifecycle for mesh devices.
 ///
 /// `ConnectionManager` owns the transport, session, and services. It handles:
@@ -872,7 +888,7 @@ public final class ConnectionManager {
             return
         }
 
-        // Cancel pending state restoration auto-reconnect if connecting to different device
+        // Handle state restoration auto-reconnect
         if await stateMachine.isAutoReconnecting {
             let restoringDeviceID = await stateMachine.connectedDeviceID
             let blePhase = await stateMachine.currentPhaseName
@@ -882,10 +898,12 @@ public final class ConnectionManager {
                 logger.info("Cancelling state restoration auto-reconnect to \(restoringDeviceID?.uuidString ?? "unknown") to connect to \(deviceID)")
                 await transport.disconnect()
             } else {
-                // Diagnostic: Log when trying to connect to same device that's in autoReconnecting
-                logger.warning(
-                    "Attempting connect to device already in autoReconnecting - deviceID: \(deviceID), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
+                // Same device - let auto-reconnect complete instead of racing with it.
+                // The reconnection handler will create the session when auto-reconnect succeeds.
+                logger.info(
+                    "Deferring to iOS auto-reconnect for device \(deviceID) - blePhase: \(blePhase), blePeripheralState: \(blePeripheralState)"
                 )
+                return
             }
         }
 
@@ -1195,6 +1213,9 @@ public final class ConnectionManager {
         }
         let deviceCapabilities = try await newSession.queryDevice()
 
+        // Configure BLE write pacing based on device platform
+        await configureBLEPacing(for: deviceCapabilities)
+
         // Create and wire services
         let newServices = ServiceContainer(
             session: newSession,
@@ -1464,6 +1485,9 @@ public final class ConnectionManager {
         }
         let deviceCapabilities = try await newSession.queryDevice()
 
+        // Configure BLE write pacing based on device platform
+        await configureBLEPacing(for: deviceCapabilities)
+
         // Sync device time (best effort)
         do {
             let deviceTime = try await newSession.getTime()
@@ -1561,6 +1585,39 @@ public final class ConnectionManager {
             customOCVArrayString: existingDevice?.customOCVArrayString,
             connectionMethods: mergedMethods
         )
+    }
+
+    /// Detects the device platform from the model string for BLE write pacing configuration.
+    /// - Parameter model: The device model string from DeviceCapabilities
+    /// - Returns: The detected platform type
+    private func detectPlatform(from model: String) -> DevicePlatform {
+        // ESP32-based devices
+        let esp32Models = ["Heltec", "T-Beam", "T-Deck", "LILYGO", "Station", "TLora", "Ebyte"]
+        // nRF52-based devices
+        let nrf52Models = ["RAK", "T-Echo", "Tracker", "Seeed", "Wio", "Ikoka", "Mesh Pocket"]
+
+        for indicator in esp32Models {
+            if model.localizedStandardContains(indicator) {
+                return .esp32
+            }
+        }
+        for indicator in nrf52Models {
+            if model.localizedStandardContains(indicator) {
+                return .nrf52
+            }
+        }
+        return .unknown
+    }
+
+    /// Configures BLE write pacing based on detected device platform.
+    /// - Parameter capabilities: The device capabilities from queryDevice()
+    private func configureBLEPacing(for capabilities: MeshCore.DeviceCapabilities) async {
+        let platform = detectPlatform(from: capabilities.model)
+        let pacing = platform.recommendedWritePacing
+        await stateMachine.setWritePacingDelay(pacing)
+        if pacing > 0 {
+            logger.info("[BLE] Platform detected: \(capabilities.model) -> \(platform), write pacing: \(pacing)s")
+        }
     }
 
     // MARK: - Connection Loss Handling
@@ -1687,6 +1744,9 @@ public final class ConnectionManager {
                 throw ConnectionError.initializationFailed("No self info")
             }
             let capabilities = try await newSession.queryDevice()
+
+            // Configure BLE write pacing based on device platform
+            await configureBLEPacing(for: capabilities)
 
             // Time sync (best effort)
             if let deviceTime = try? await newSession.getTime() {

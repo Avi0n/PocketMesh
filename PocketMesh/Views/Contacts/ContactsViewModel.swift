@@ -64,6 +64,7 @@ final class ContactsViewModel {
 
     private var dataStore: DataStore?
     private var contactService: ContactService?
+    private var advertisementService: AdvertisementService?
 
     // MARK: - Initialization
 
@@ -73,12 +74,18 @@ final class ContactsViewModel {
     func configure(appState: AppState) {
         self.dataStore = appState.offlineDataStore
         self.contactService = appState.services?.contactService
+        self.advertisementService = appState.services?.advertisementService
     }
 
     /// Configure with services (for testing)
-    func configure(dataStore: DataStore, contactService: ContactService) {
+    func configure(
+        dataStore: DataStore,
+        contactService: ContactService,
+        advertisementService: AdvertisementService? = nil
+    ) {
         self.dataStore = dataStore
         self.contactService = contactService
+        self.advertisementService = advertisementService
     }
 
     // MARK: - Load Contacts
@@ -109,6 +116,15 @@ final class ContactsViewModel {
         isSyncing = true
         syncProgress = nil
         errorMessage = nil
+
+        if let advertisementService {
+            await advertisementService.setSyncingContacts(true)
+        }
+        defer {
+            if let advertisementService {
+                Task { await advertisementService.setSyncingContacts(false) }
+            }
+        }
 
         // Set up progress handler
         await contactService.setSyncProgressHandler { [weak self] current, total in

@@ -31,7 +31,10 @@ public actor iOSBLETransport: MeshTransport {
 
     private let stateMachine: BLEStateMachine
     private var deviceID: UUID?
-    private var dataStream: AsyncStream<Data>?
+
+    /// Lock-protected data stream storage.
+    /// Using a lock allows synchronous access from BLEStateMachine callbacks without spawning Tasks.
+    private let dataStreamLock = OSAllocatedUnfairLock<AsyncStream<Data>?>(initialState: nil)
 
     // MARK: - Initialization
 
@@ -66,19 +69,12 @@ public actor iOSBLETransport: MeshTransport {
     ///
     /// - Parameter handler: Called when iOS auto-reconnect completes successfully.
     public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID) -> Void) async {
-        await stateMachine.setReconnectionHandler { [weak self] deviceID, stream in
-            Task {
-                // First capture the stream for this transport
-                await self?.setDataStream(stream)
-                // Then call user's handler (stream is now ready)
-                handler(deviceID)
-            }
+        await stateMachine.setReconnectionHandler { [dataStreamLock] deviceID, stream in
+            // Capture the stream synchronously using lock (no Task spawning).
+            // This ensures the stream is available before any handler code runs.
+            dataStreamLock.withLock { $0 = stream }
+            handler(deviceID)
         }
-    }
-
-    /// Sets the data stream (used internally for reconnection)
-    private func setDataStream(_ stream: AsyncStream<Data>) {
-        self.dataStream = stream
     }
 
     // MARK: - MeshTransport Protocol
@@ -92,7 +88,7 @@ public actor iOSBLETransport: MeshTransport {
     ///
     /// Returns an empty stream if not connected.
     public var receivedData: AsyncStream<Data> {
-        dataStream ?? AsyncStream { $0.finish() }
+        dataStreamLock.withLock { $0 } ?? AsyncStream { $0.finish() }
     }
 
     /// Connects to the configured device.
@@ -122,14 +118,15 @@ public actor iOSBLETransport: MeshTransport {
         }
 
         logger.info("Connecting to device: \(deviceID)")
-        dataStream = try await stateMachine.connect(to: deviceID)
+        let stream = try await stateMachine.connect(to: deviceID)
+        dataStreamLock.withLock { $0 = stream }
     }
 
     /// Disconnects from the current device.
     public func disconnect() async {
         logger.info("Disconnecting")
         await stateMachine.disconnect()
-        dataStream = nil
+        dataStreamLock.withLock { $0 = nil }
     }
 
     /// Sends data to the connected device.
@@ -158,6 +155,7 @@ public actor iOSBLETransport: MeshTransport {
     public func switchDevice(to deviceID: UUID) async throws {
         logger.info("Switching to device: \(deviceID)")
         self.deviceID = deviceID
-        dataStream = try await stateMachine.switchDevice(to: deviceID)
+        let stream = try await stateMachine.switchDevice(to: deviceID)
+        dataStreamLock.withLock { $0 = stream }
     }
 }

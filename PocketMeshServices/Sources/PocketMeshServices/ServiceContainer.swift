@@ -238,8 +238,15 @@ public final class ServiceContainer {
     /// Call this after a device is connected to begin processing events
     /// from the MeshCoreSession.
     ///
-    /// - Parameter deviceID: The connected device's UUID
-    public func startEventMonitoring(deviceID: UUID) async {
+    /// - Parameters:
+    ///   - deviceID: The connected device's UUID
+    ///   - enableAutoFetch: Whether to start message auto-fetch immediately (default true)
+    ///   - enableAdvertisementMonitoring: Whether to start advertisement monitoring immediately (default true)
+    public func startEventMonitoring(
+        deviceID: UUID,
+        enableAutoFetch: Bool = true,
+        enableAdvertisementMonitoring: Bool = true
+    ) async {
         guard !isMonitoringEvents else { return }
 
         let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
@@ -259,11 +266,15 @@ public final class ServiceContainer {
         }
 
         // Start event monitoring for services that need it
-        await advertisementService.startEventMonitoring(deviceID: deviceID)
+        if enableAdvertisementMonitoring {
+            await advertisementService.startEventMonitoring(deviceID: deviceID)
+        }
         await rxLogService.startEventMonitoring(deviceID: deviceID)
         await messageService.startEventListening()
         await remoteNodeService.startEventMonitoring()
-        await messagePollingService.startAutoFetch(deviceID: deviceID)
+        if enableAutoFetch {
+            await messagePollingService.startAutoFetch(deviceID: deviceID)
+        }
 
         // Prune debug logs on connection
         Task {
