@@ -768,9 +768,44 @@ public actor SyncCoordinator {
                     parsed: parsed,
                     channelIndex: message.channelIndex
                 ) {
-                    // TODO: Save as reaction and update summary cache (Phase 4)
-                    self.logger.debug("Detected reaction to message \(targetMessageID)")
+                    // Check for duplicate
+                    let senderName = senderNodeName ?? "Unknown"
+                    let exists = try? await services.dataStore.reactionExists(
+                        messageID: targetMessageID,
+                        senderName: senderName,
+                        emoji: parsed.emoji
+                    )
+
+                    if exists != true {
+                        // Save reaction
+                        let reactionDTO = ReactionDTO(
+                            messageID: targetMessageID,
+                            emoji: parsed.emoji,
+                            senderName: senderName,
+                            messageHash: parsed.messageHash,
+                            rawText: messageText,
+                            channelIndex: message.channelIndex,
+                            deviceID: deviceID
+                        )
+                        try? await services.dataStore.saveReaction(reactionDTO)
+
+                        // Update summary
+                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
+                            let counts = Dictionary(grouping: reactions, by: \.emoji)
+                                .map { ($0.key, $0.value.count) }
+                            let summary = ReactionParser.buildSummary(from: counts)
+                            try? await services.dataStore.updateMessageReactionSummary(
+                                messageID: targetMessageID,
+                                summary: summary
+                            )
+                        }
+
+                        self.logger.debug("Saved reaction \(parsed.emoji) to message \(targetMessageID)")
+                    }
+
+                    return  // Don't save as regular message
                 }
+                // If no match found, fall through to save as regular message
             }
 
             do {
