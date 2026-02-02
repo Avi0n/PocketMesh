@@ -22,7 +22,7 @@ public struct ParsedReaction: Sendable, Equatable {
 }
 
 /// Parses reaction wire format using end-to-start strategy.
-/// Format: `{emoji} @{sender}: {preview} [xxxxxxxx]`
+/// Format: `{emoji} @[{sender}] {preview} [xxxxxxxx]`
 public enum ReactionParser {
 
     /// Parses reaction text, returns nil if format doesn't match
@@ -38,27 +38,27 @@ public enum ReactionParser {
         // Remove hash suffix
         let withoutHash = String(text[..<hashMatch.range.lowerBound])
 
-        // Step 2: Find ` @` to locate sender start
-        guard let atIndex = withoutHash.range(of: " @") else {
+        // Step 2: Find ` @[` to locate sender start
+        guard let atBracketIndex = withoutHash.range(of: " @[") else {
             return nil
         }
 
-        let emoji = String(withoutHash[..<atIndex.lowerBound])
+        let emoji = String(withoutHash[..<atBracketIndex.lowerBound])
 
         // Validate emoji is not empty and starts with emoji character
         guard !emoji.isEmpty, emoji.first?.isEmoji == true else {
             return nil
         }
 
-        let afterAt = withoutHash[atIndex.upperBound...]
+        let afterAtBracket = withoutHash[atBracketIndex.upperBound...]
 
-        // Step 3: Find `: ` after @ to split sender from content (use LAST occurrence)
-        guard let colonIndex = afterAt.range(of: ": ", options: .backwards) else {
+        // Step 3: Find `] ` to extract sender and split from content
+        guard let closeBracketIndex = afterAtBracket.range(of: "] ") else {
             return nil
         }
 
-        let sender = String(afterAt[..<colonIndex.lowerBound])
-        let preview = String(afterAt[colonIndex.upperBound...])
+        let sender = String(afterAtBracket[..<closeBracketIndex.lowerBound])
+        let preview = String(afterAtBracket[closeBracketIndex.upperBound...])
 
         guard !sender.isEmpty, !preview.isEmpty else {
             return nil

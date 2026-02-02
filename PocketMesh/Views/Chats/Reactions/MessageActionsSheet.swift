@@ -27,6 +27,7 @@ struct MessageActionsSheet: View {
     }
 
     @State private var longPressHapticTrigger = 0
+    @State private var showEmojiPicker = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,10 +88,16 @@ struct MessageActionsSheet: View {
                 dismiss()
             },
             onOpenKeyboard: {
-                // Full emoji keyboard not implemented yet
+                showEmojiPicker = true
             }
         )
         .padding()
+        .sheet(isPresented: $showEmojiPicker) {
+            EmojiPickerSheet { emoji in
+                onAction(.react(emoji))
+                dismiss()
+            }
+        }
     }
 
     // MARK: - Actions Section

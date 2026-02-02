@@ -9,7 +9,7 @@ struct ReactionParserTests {
 
     @Test("Parses simple reaction with thumbs up")
     func parsesSimpleReaction() {
-        let text = "👍 @AlphaNode: What's the situation at... [7f3a9c12]"
+        let text = "👍 @[AlphaNode] What's the situation at... [7f3a9c12]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -21,7 +21,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with heart emoji")
     func parsesHeartReaction() {
-        let text = "❤️ @BetaNode: ok [e4d8b1a0]"
+        let text = "❤️ @[BetaNode] ok [e4d8b1a0]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -33,7 +33,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction to emoji-only message")
     func parsesReactionToEmojiMessage() {
-        let text = "😂 @GammaNode: 👍 [2c5f8e77]"
+        let text = "😂 @[GammaNode] 👍 [2c5f8e77]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -45,7 +45,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with all lowercase hash")
     func parsesLowercaseHash() {
-        let text = "👍 @Node: hello [abcdef12]"
+        let text = "👍 @[Node] hello [abcdef12]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -86,7 +86,7 @@ struct ReactionParserTests {
 
     @Test("Parses sender name containing colon")
     func parsesSenderWithColon() {
-        let text = "👍 @Node:Alpha: Hello world... [a1b2c3d4]"
+        let text = "👍 @[Node:Alpha] Hello world... [a1b2c3d4]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -104,49 +104,49 @@ struct ReactionParserTests {
 
     @Test("Returns nil for missing hash")
     func returnsNilForMissingHash() {
-        let text = "👍 @Node: Hello"
+        let text = "👍 @[Node] Hello"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for missing @ symbol")
     func returnsNilForMissingAt() {
-        let text = "👍 Node: Hello [a1b2c3d4]"
+        let text = "👍 [Node] Hello [a1b2c3d4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
-    @Test("Returns nil for missing colon after sender")
-    func returnsNilForMissingColon() {
+    @Test("Returns nil for missing brackets around sender")
+    func returnsNilForMissingBrackets() {
         let text = "👍 @Node Hello [a1b2c3d4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for invalid hash (wrong length)")
     func returnsNilForInvalidHashLength() {
-        let text = "👍 @Node: Hello [abc]"
+        let text = "👍 @[Node] Hello [abc]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for invalid hash (uppercase)")
     func returnsNilForUppercaseHash() {
-        let text = "👍 @Node: Hello [A1B2C3D4]"
+        let text = "👍 @[Node] Hello [A1B2C3D4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for empty sender")
     func returnsNilForEmptySender() {
-        let text = "👍 @: Hello [a1b2c3d4]"
+        let text = "👍 @[] Hello [a1b2c3d4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for empty content preview")
     func returnsNilForEmptyContent() {
-        let text = "👍 @Node:  [a1b2c3d4]"
+        let text = "👍 @[Node]  [a1b2c3d4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for text not starting with emoji")
     func returnsNilForNonEmojiStart() {
-        let text = "A @Node: Hello [a1b2c3d4]"
+        let text = "A @[Node] Hello [a1b2c3d4]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
@@ -154,7 +154,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with skin tone modifier")
     func parsesEmojiWithSkinTone() {
-        let text = "👍🏽 @Node: Hello [a1b2c3d4]"
+        let text = "👍🏽 @[Node] Hello [a1b2c3d4]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -163,7 +163,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with family ZWJ emoji")
     func parsesFamilyEmoji() {
-        let text = "👨‍👩‍👧 @Node: Hello [a1b2c3d4]"
+        let text = "👨‍👩‍👧 @[Node] Hello [a1b2c3d4]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -172,7 +172,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with flag emoji")
     func parsesFlagEmoji() {
-        let text = "🇺🇸 @Node: Hello [a1b2c3d4]"
+        let text = "🇺🇸 @[Node] Hello [a1b2c3d4]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)

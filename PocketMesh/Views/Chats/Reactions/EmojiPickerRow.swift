@@ -31,7 +31,7 @@ struct EmojiPickerRow: View {
             .buttonStyle(.plain)
             .frame(width: 44, height: 44)
             .background(.ultraThinMaterial, in: .circle)
-            .accessibilityLabel(L10n.Chats.Chats.Chats.Reactions.moreEmojis)
+            .accessibilityLabel(L10n.Chats.Reactions.moreEmojis)
         }
         .padding(.horizontal)
     }

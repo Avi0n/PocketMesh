@@ -22,7 +22,7 @@ public actor ReactionService {
     }
 
     /// Builds reaction wire format text for sending
-    /// Format: `{emoji} @{sender}: {preview} [xxxxxxxx]`
+    /// Format: `{emoji} @[{sender}] {preview} [xxxxxxxx]`
     public nonisolated func buildReactionText(
         emoji: String,
         targetSender: String,
@@ -31,7 +31,7 @@ public actor ReactionService {
     ) -> String {
         let preview = ReactionParser.generateContentPreview(targetText)
         let hash = ReactionParser.generateMessageHash(text: targetText, timestamp: targetTimestamp)
-        return "\(emoji) @\(targetSender): \(preview) [\(hash)]"
+        return "\(emoji) @[\(targetSender)] \(preview) [\(hash)]"
     }
 
     /// Finds target message ID for a parsed reaction (O(1) cache lookup)

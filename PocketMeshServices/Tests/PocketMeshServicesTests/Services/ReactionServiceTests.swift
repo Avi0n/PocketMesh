@@ -17,8 +17,8 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        // Verify format: {emoji} @{sender}: {preview} [xxxxxxxx]
-        #expect(text.hasPrefix("👍 @AlphaNode: What's the situation at..."))
+        // Verify format: {emoji} @[{sender}] {preview} [xxxxxxxx]
+        #expect(text.hasPrefix("👍 @[AlphaNode] What's the situation at..."))
         #expect(text.contains(" ["))
         #expect(text.hasSuffix("]"))
 
@@ -39,7 +39,7 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        #expect(text.contains("@Node: ok"))
+        #expect(text.contains("@[Node] ok"))
         #expect(text.hasSuffix("]"))
     }
 
