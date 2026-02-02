@@ -56,6 +56,13 @@ public actor AdvertisementService {
     /// Handler for contact sync request events (when ADVERT received for unknown contact)
     private var contactSyncRequestHandler: (@Sendable (UUID) async -> Void)?
 
+    /// Handler for node storage full state changes (true = full, false = has space)
+    private var nodeStorageFullChangedHandler: (@Sendable (Bool) async -> Void)?
+
+    /// Handler for contact deleted cleanup (notifications, badge, session)
+    /// Parameters: contactID, publicKey
+    private var contactDeletedCleanupHandler: (@Sendable (UUID, Data) async -> Void)?
+
     // MARK: - Initialization
 
     public init(session: MeshCoreSession, dataStore: PersistenceStore) {
@@ -102,6 +109,16 @@ public actor AdvertisementService {
     /// Set handler for contact sync requests (called when ADVERT received for unknown contact)
     public func setContactSyncRequestHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
         contactSyncRequestHandler = handler
+    }
+
+    /// Set handler for node storage full state changes (called when 0x90 or 0x8F push received)
+    public func setNodeStorageFullChangedHandler(_ handler: @escaping @Sendable (Bool) async -> Void) {
+        nodeStorageFullChangedHandler = handler
+    }
+
+    /// Set handler for contact deleted cleanup (called when device auto-deletes via 0x8F)
+    public func setContactDeletedCleanupHandler(_ handler: @escaping @Sendable (UUID, Data) async -> Void) {
+        contactDeletedCleanupHandler = handler
     }
 
     // MARK: - Event Monitoring
@@ -154,6 +171,12 @@ public actor AdvertisementService {
 
         case .traceData(let traceInfo):
             await handleTraceData(traceInfo: traceInfo, deviceID: deviceID)
+
+        case .contactDeleted(let publicKey):
+            await handleContactDeletedEvent(publicKey: publicKey, deviceID: deviceID)
+
+        case .contactsFull:
+            await handleContactsFullEvent()
 
         default:
             break
@@ -287,18 +310,17 @@ public actor AdvertisementService {
         let contactFrame = contact.toContactFrame()
 
         do {
-            let (contactID, isNew) = try await dataStore.saveDiscoveredContact(deviceID: deviceID, from: contactFrame)
+            let (node, isNew) = try await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: contactFrame)
             advertHandler?(contactFrame)
 
-            // Notify UI of contact update
+            // Notify UI of discovered node update
             await contactUpdatedHandler?()
 
             // Only post notification for NEW discoveries (not repeat adverts from same contact)
             if isNew {
-                let savedContact = try? await dataStore.fetchContact(id: contactID)
-                let contactName = savedContact?.displayName ?? "Unknown Contact"
-                let contactType = savedContact?.type ?? .chat
-                await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                let contactName = node.name
+                let contactType = node.nodeType
+                await newContactDiscoveredHandler?(contactName, node.id, contactType)
             }
         } catch {
             logger.error("Error handling new advert event: \(error.localizedDescription)")
@@ -385,5 +407,45 @@ public actor AdvertisementService {
                 userInfo: ["traceInfo": traceInfo, "deviceID": deviceID]
             )
         }
+    }
+
+    /// Handle contact deleted event (0x8F) - device auto-deleted a contact via overwrite oldest
+    private func handleContactDeletedEvent(publicKey: Data, deviceID: UUID) async {
+        let pubKeyHex = publicKey.prefix(6).map { String(format: "%02X", $0) }.joined()
+        logger.info("Contact deleted by device: \(pubKeyHex)...")
+
+        do {
+            // Fetch contact by publicKey to get its UUID
+            guard let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) else {
+                logger.warning("Contact not found in local database for deletion: \(pubKeyHex)...")
+                return
+            }
+
+            let contactID = contact.id
+
+            // Delete associated messages first
+            try await dataStore.deleteMessagesForContact(contactID: contactID)
+
+            // Delete the contact
+            try await dataStore.deleteContact(id: contactID)
+            logger.debug("Deleted contact from local database")
+
+            // Trigger cleanup (notifications, badge, session)
+            await contactDeletedCleanupHandler?(contactID, publicKey)
+
+            // Storage now has room - clear the full flag
+            await nodeStorageFullChangedHandler?(false)
+
+            // Notify UI to refresh contacts list
+            await contactUpdatedHandler?()
+        } catch {
+            logger.error("Failed to delete contact: \(error.localizedDescription)")
+        }
+    }
+
+    /// Handle contacts full event (0x90) - device storage is full
+    private func handleContactsFullEvent() async {
+        logger.warning("Device node storage is full")
+        await nodeStorageFullChangedHandler?(true)
     }
 }

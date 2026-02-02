@@ -407,7 +407,6 @@ public actor ContactService {
                 isFavorite: isFavorite ?? existing.isFavorite,
                 lastMessageDate: existing.lastMessageDate,
                 unreadCount: isBeingBlocked ? 0 : existing.unreadCount,
-                isDiscovered: existing.isDiscovered,
                 ocvPreset: existing.ocvPreset,
                 customOCVArrayString: existing.customOCVArrayString
             )
@@ -421,16 +420,6 @@ public actor ContactService {
         } else if isBeingUnblocked {
             await cleanupHandler?(contactID, .unblocked, existing.publicKey)
         }
-    }
-
-    /// Get discovered contacts (from NEW_ADVERT push, not yet added to device)
-    public func getDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] {
-        try await dataStore.fetchDiscoveredContacts(deviceID: deviceID)
-    }
-
-    /// Confirm a discovered contact (mark as added to device)
-    public func confirmContact(id: UUID) async throws {
-        try await dataStore.confirmContact(id: id)
     }
 
     /// Updates OCV settings for a contact
@@ -466,7 +455,6 @@ public actor ContactService {
                 isFavorite: existing.isFavorite,
                 lastMessageDate: existing.lastMessageDate,
                 unreadCount: existing.unreadCount,
-                isDiscovered: existing.isDiscovered,
                 ocvPreset: preset,
                 customOCVArrayString: customArray
             )

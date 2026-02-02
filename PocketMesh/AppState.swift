@@ -107,6 +107,9 @@ public final class AppState {
     /// Whether device pairing is in progress (ASK picker or connecting after selection)
     var isPairing = false
 
+    /// Whether the device's node storage is full (set by 0x90 push, cleared on delete/overwrite)
+    var isNodeStorageFull = false
+
     /// Current device battery info (nil if not fetched)
     var deviceBattery: BatteryInfo?
 
@@ -349,6 +352,8 @@ public final class AppState {
             stopBatteryRefreshLoop()
             // Clear battery notification thresholds for next connection
             notifiedBatteryThresholds = []
+            // Reset node storage full flag (will be set again by 0x90 push if still full)
+            isNodeStorageFull = false
             // Update disconnected pill state (may show after delay)
             updateDisconnectedPillState()
             return
@@ -413,6 +418,42 @@ public final class AppState {
             await MainActor.run {
                 self?.connectionManager.updateDevice(with: deviceDTO)
             }
+        }
+
+        // Wire auto-add config callback
+        // Updates connectedDevice.autoAddConfig when changed via SettingsService
+        await services.settingsService.setAutoAddConfigCallback { [weak self] config in
+            await MainActor.run {
+                self?.connectionManager.updateAutoAddConfig(config)
+                // Clear storage full flag when overwrite oldest is enabled (bit 0x01)
+                if config & 0x01 != 0 {
+                    self?.isNodeStorageFull = false
+                }
+            }
+        }
+
+        // Wire node storage full callback
+        // Updates isNodeStorageFull when 0x90 (contactsFull) or 0x8F (contactDeleted) push received
+        await services.advertisementService.setNodeStorageFullChangedHandler { [weak self] isFull in
+            await MainActor.run {
+                self?.isNodeStorageFull = isFull
+            }
+        }
+
+        // Wire node deleted callback
+        // Clears isNodeStorageFull when user manually deletes a node (frees up space)
+        await services.contactService.setNodeDeletedHandler { [weak self] in
+            await MainActor.run {
+                self?.isNodeStorageFull = false
+            }
+        }
+
+        // Wire contact deleted cleanup callback
+        // Removes notifications and updates badge when device auto-deletes a contact via 0x8F
+        await services.advertisementService.setContactDeletedCleanupHandler { [weak self] contactID, _ in
+            guard let self else { return }
+            await self.services?.notificationService.removeDeliveredNotifications(forContactID: contactID)
+            await self.services?.notificationService.updateBadgeCount()
         }
 
         // Wire message event callbacks for real-time chat updates

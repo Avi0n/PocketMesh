@@ -166,4 +166,78 @@ final class V112ProtocolTests: XCTestCase {
 
         XCTAssertTrue(manager.needsRefresh)
     }
+
+    // MARK: - Auto-Add Config PacketBuilder Tests
+
+    func test_getAutoAddConfig_packetBuilder() {
+        let packet = PacketBuilder.getAutoAddConfig()
+
+        XCTAssertEqual(packet, Data([0x3B]))
+    }
+
+    func test_setAutoAddConfig_packetBuilder() {
+        let packet = PacketBuilder.setAutoAddConfig(0x0F)
+
+        XCTAssertEqual(packet, Data([0x3A, 0x0F]))
+    }
+
+    func test_setAutoAddConfig_packetBuilder_allBitsSet() {
+        let packet = PacketBuilder.setAutoAddConfig(0xFF)
+
+        XCTAssertEqual(packet, Data([0x3A, 0xFF]))
+    }
+
+    func test_setAutoAddConfig_packetBuilder_zeroBits() {
+        let packet = PacketBuilder.setAutoAddConfig(0x00)
+
+        XCTAssertEqual(packet, Data([0x3A, 0x00]))
+    }
+
+    // MARK: - Auto-Add Config Response Parser Tests
+
+    func test_autoAddConfig_responseCode_exists() {
+        let code = ResponseCode(rawValue: 0x19)
+        XCTAssertNotNil(code)
+        XCTAssertEqual(code, .autoAddConfig)
+    }
+
+    func test_autoAddConfig_category_isDevice() {
+        XCTAssertEqual(ResponseCode.autoAddConfig.category, .device)
+    }
+
+    func test_autoAddConfig_parsesValidPayload() {
+        let packet = Data([0x19, 0x0F])
+
+        let event = PacketParser.parse(packet)
+
+        if case .autoAddConfig(let config) = event {
+            XCTAssertEqual(config, 0x0F)
+        } else {
+            XCTFail("Expected .autoAddConfig event, got \(event)")
+        }
+    }
+
+    func test_autoAddConfig_parseFailure_forEmptyPayload() {
+        let packet = Data([0x19])
+
+        let event = PacketParser.parse(packet)
+
+        if case .parseFailure(_, let reason) = event {
+            XCTAssertTrue(reason.contains("AutoAddConfig response too short"))
+        } else {
+            XCTFail("Expected .parseFailure event, got \(event)")
+        }
+    }
+
+    func test_autoAddConfig_ignoresExtraBytes() {
+        let packet = Data([0x19, 0x0E, 0xFF, 0xFF])
+
+        let event = PacketParser.parse(packet)
+
+        if case .autoAddConfig(let config) = event {
+            XCTAssertEqual(config, 0x0E)
+        } else {
+            XCTFail("Expected .autoAddConfig event, got \(event)")
+        }
+    }
 }

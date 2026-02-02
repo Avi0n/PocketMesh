@@ -24,8 +24,11 @@ final class DiscoveryViewModel {
 
     // MARK: - Properties
 
-    /// Discovered contacts from the mesh network
-    var discoveredContacts: [ContactDTO] = []
+    /// Discovered nodes from the mesh network
+    var discoveredNodes: [DiscoveredNodeDTO] = []
+
+    /// Public keys of contacts that have been added
+    var addedPublicKeys: Set<Data> = []
 
     /// Loading state
     var isLoading = false
@@ -54,16 +57,22 @@ final class DiscoveryViewModel {
         self.dataStore = dataStore
     }
 
-    // MARK: - Load Contacts
+    // MARK: - Load Nodes
 
-    func loadDiscoveredContacts(deviceID: UUID) async {
+    func loadDiscoveredNodes(deviceID: UUID) async {
         guard let dataStore else { return }
 
         isLoading = true
         errorMessage = nil
 
         do {
-            discoveredContacts = try await dataStore.fetchDiscoveredContacts(deviceID: deviceID)
+            let nodes = try await dataStore.fetchDiscoveredNodes(deviceID: deviceID)
+
+            // Single batch query for all contact public keys (O(1) vs O(N))
+            let addedKeys = try await dataStore.fetchContactPublicKeys(deviceID: deviceID)
+
+            discoveredNodes = nodes
+            addedPublicKeys = addedKeys
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -72,27 +81,34 @@ final class DiscoveryViewModel {
         isLoading = false
     }
 
+    // MARK: - Added State
+
+    /// Check if a node has already been added as a contact
+    func isAdded(_ node: DiscoveredNodeDTO) -> Bool {
+        addedPublicKeys.contains(node.publicKey)
+    }
+
     // MARK: - Delete
 
-    func deleteDiscoveredContact(_ contact: ContactDTO) async {
+    func deleteDiscoveredNode(_ node: DiscoveredNodeDTO) async {
         guard let dataStore else { return }
 
         // Remove from UI immediately
-        discoveredContacts.removeAll { $0.id == contact.id }
+        discoveredNodes.removeAll { $0.id == node.id }
 
         do {
-            try await dataStore.deleteContact(id: contact.id)
+            try await dataStore.deleteDiscoveredNode(id: node.id)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    func clearAllDiscoveredContacts(deviceID: UUID) async {
+    func clearAllDiscoveredNodes(deviceID: UUID) async {
         guard let dataStore else { return }
 
         do {
-            try await dataStore.clearDiscoveredContacts(deviceID: deviceID)
-            discoveredContacts = []
+            try await dataStore.clearDiscoveredNodes(deviceID: deviceID)
+            discoveredNodes = []
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -100,26 +116,26 @@ final class DiscoveryViewModel {
 
     // MARK: - Filtering
 
-    func filteredContacts(
+    func filteredNodes(
         searchText: String,
         segment: DiscoverSegment,
         sortOrder: NodeSortOrder,
         userLocation: CLLocation?
-    ) -> [ContactDTO] {
-        var result = discoveredContacts
+    ) -> [DiscoveredNodeDTO] {
+        var result = discoveredNodes
 
         if searchText.isEmpty {
             switch segment {
             case .all:
                 break
             case .contacts:
-                result = result.filter { $0.type == .chat }
+                result = result.filter { $0.nodeType == .chat }
             case .network:
-                result = result.filter { $0.type == .repeater || $0.type == .room }
+                result = result.filter { $0.nodeType == .repeater || $0.nodeType == .room }
             }
         } else {
-            result = result.filter { contact in
-                contact.displayName.localizedStandardContains(searchText)
+            result = result.filter { node in
+                node.name.localizedStandardContains(searchText)
             }
         }
 
@@ -129,22 +145,22 @@ final class DiscoveryViewModel {
     // MARK: - Sorting
 
     private func sorted(
-        _ contacts: [ContactDTO],
+        _ nodes: [DiscoveredNodeDTO],
         by order: NodeSortOrder,
         userLocation: CLLocation?
-    ) -> [ContactDTO] {
+    ) -> [DiscoveredNodeDTO] {
         switch order {
         case .lastHeard:
-            return contacts.sorted { $0.lastAdvertTimestamp > $1.lastAdvertTimestamp }
+            return nodes.sorted { $0.lastAdvertTimestamp > $1.lastAdvertTimestamp }
         case .name:
-            return contacts.sorted {
-                $0.displayName.localizedCompare($1.displayName) == .orderedAscending
+            return nodes.sorted {
+                $0.name.localizedCompare($1.name) == .orderedAscending
             }
         case .distance:
             guard let userLocation else {
-                return sorted(contacts, by: .name, userLocation: nil)
+                return sorted(nodes, by: .name, userLocation: nil)
             }
-            return contacts.sorted { lhs, rhs in
+            return nodes.sorted { lhs, rhs in
                 let lhsHasLocation = lhs.hasLocation
                 let rhsHasLocation = rhs.hasLocation
 
@@ -153,7 +169,7 @@ final class DiscoveryViewModel {
                 }
 
                 guard lhsHasLocation && rhsHasLocation else {
-                    return lhs.displayName.localizedCompare(rhs.displayName) == .orderedAscending
+                    return lhs.name.localizedCompare(rhs.name) == .orderedAscending
                 }
 
                 let lhsLocation = CLLocation(latitude: lhs.latitude, longitude: lhs.longitude)

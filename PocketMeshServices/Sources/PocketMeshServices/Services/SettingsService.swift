@@ -540,6 +540,42 @@ public actor SettingsService {
         return selfInfo
     }
 
+    // MARK: - Auto-Add Config
+
+    /// Get auto-add configuration from device
+    public func getAutoAddConfig() async throws -> UInt8 {
+        do {
+            return try await session.getAutoAddConfig()
+        } catch let error as MeshCoreError {
+            throw SettingsServiceError.sessionError(error)
+        }
+    }
+
+    /// Set auto-add configuration on device
+    public func setAutoAddConfig(_ config: UInt8) async throws {
+        do {
+            try await session.setAutoAddConfig(config)
+        } catch let error as MeshCoreError {
+            throw SettingsServiceError.sessionError(error)
+        }
+    }
+
+    /// Set auto-add configuration with verification
+    public func setAutoAddConfigVerified(_ config: UInt8) async throws -> UInt8 {
+        try await setAutoAddConfig(config)
+
+        let actualConfig = try await getAutoAddConfig()
+
+        guard actualConfig == config else {
+            throw SettingsServiceError.verificationFailed(
+                expected: "config=\(config)",
+                actual: "config=\(actualConfig)"
+            )
+        }
+
+        return actualConfig
+    }
+
     // MARK: - Stats
 
     /// Get core statistics

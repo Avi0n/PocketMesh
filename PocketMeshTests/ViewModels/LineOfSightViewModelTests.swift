@@ -64,7 +64,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     var contacts: [UUID: ContactDTO] = [:]
 
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] {
-        Array(contacts.values.filter { $0.deviceID == deviceID && !$0.isDiscovered })
+        Array(contacts.values.filter { $0.deviceID == deviceID })
     }
 
     func addContact(_ contact: ContactDTO) {
@@ -108,10 +108,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func clearChannelUnreadMentionCount(channelID: UUID) async throws {}
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
-    func confirmContact(id: UUID) async throws {}
-    func clearDiscoveredContacts(deviceID: UUID) async throws {}
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
     func fetchChannel(id: UUID) async throws -> ChannelDTO? { nil }
@@ -160,6 +157,16 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     // MARK: - RxLogEntry Lookup (stubs)
 
     func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
+
+    // MARK: - Discovered Nodes (stubs)
+
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
 }
 
 // MARK: - Test Helpers
@@ -192,7 +199,6 @@ private func createTestContact(
         isBlocked: false,
         isMuted: false,
         isFavorite: false,
-        isDiscovered: false,
         lastMessageDate: nil,
         unreadCount: 0
     )

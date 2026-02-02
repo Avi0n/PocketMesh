@@ -105,6 +105,11 @@ public enum MeshEvent: Sendable {
     /// Emitted in response to ``MeshCoreSession/getStatsPackets()``.
     case statsPackets(PacketStats)
 
+    /// Indicates that auto-add configuration was received.
+    ///
+    /// Emitted in response to ``MeshCoreSession/getAutoAddConfig()``.
+    case autoAddConfig(UInt8)
+
     // MARK: - Contact Management
 
     /// Indicates that a contact list transfer has started.

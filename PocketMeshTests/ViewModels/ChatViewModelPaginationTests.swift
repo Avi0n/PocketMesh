@@ -27,7 +27,6 @@ private func createTestContact(
         isBlocked: false,
         isMuted: false,
         isFavorite: false,
-        isDiscovered: false,
         lastMessageDate: Date(),
         unreadCount: 0
     )
@@ -227,12 +226,9 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
     func deleteMessagesForContact(contactID: UUID) async throws {}
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
         blockedContacts.filter { $0.deviceID == deviceID }
     }
-    func confirmContact(id: UUID) async throws {}
-    func clearDiscoveredContacts(deviceID: UUID) async throws {}
 
     // MARK: - Channel Operations
 
@@ -314,6 +310,16 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         withinSeconds: Double,
         contactName: String?
     ) async throws -> RxLogEntryDTO? { nil }
+
+    // MARK: - Discovered Nodes
+
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
 }
 
 // MARK: - Mock Link Preview Cache

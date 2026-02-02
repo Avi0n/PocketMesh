@@ -63,6 +63,64 @@ public final class Device {
     /// Manual add contacts mode
     public var manualAddContacts: Bool
 
+    /// Auto-add configuration bitmask from device
+    public var autoAddConfig: UInt8 = 0
+
+    /// Computed auto-add mode based on manualAddContacts and autoAddConfig
+    public var autoAddMode: AutoAddMode {
+        AutoAddMode.mode(manualAddContacts: manualAddContacts, autoAddConfig: autoAddConfig)
+    }
+
+    /// Whether to auto-add Contact type nodes (bit 0x02)
+    public var autoAddContacts: Bool {
+        get { autoAddConfig & 0x02 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x02
+            } else {
+                autoAddConfig &= ~0x02
+            }
+        }
+    }
+
+    /// Whether to auto-add Repeater type nodes (bit 0x04)
+    public var autoAddRepeaters: Bool {
+        get { autoAddConfig & 0x04 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x04
+            } else {
+                autoAddConfig &= ~0x04
+            }
+        }
+    }
+
+    /// Whether to auto-add Room Server type nodes (bit 0x08)
+    public var autoAddRoomServers: Bool {
+        get { autoAddConfig & 0x08 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x08
+            } else {
+                autoAddConfig &= ~0x08
+            }
+        }
+    }
+
+    // Note: Sensor auto-add (0x10) not supported in this version - deferred per design doc
+
+    /// Whether to overwrite oldest non-favorite when storage is full (bit 0x01)
+    public var overwriteOldest: Bool {
+        get { autoAddConfig & 0x01 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x01
+            } else {
+                autoAddConfig &= ~0x01
+            }
+        }
+    }
+
     /// Number of acknowledgments to send for direct messages (0=disabled, 1-2 typical)
     public var multiAcks: UInt8
 
@@ -116,6 +174,7 @@ public final class Device {
         longitude: Double = 0,
         blePin: UInt32 = 0,
         manualAddContacts: Bool = false,
+        autoAddConfig: UInt8 = 0,
         multiAcks: UInt8 = 2,
         telemetryModeBase: UInt8 = 2,
         telemetryModeLoc: UInt8 = 0,
@@ -147,6 +206,7 @@ public final class Device {
         self.longitude = longitude
         self.blePin = blePin
         self.manualAddContacts = manualAddContacts
+        self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
         self.telemetryModeBase = telemetryModeBase
         self.telemetryModeLoc = telemetryModeLoc
@@ -184,6 +244,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let longitude: Double
     public let blePin: UInt32
     public let manualAddContacts: Bool
+    public let autoAddConfig: UInt8
     public let multiAcks: UInt8
     public let telemetryModeBase: UInt8
     public let telemetryModeLoc: UInt8
@@ -195,6 +256,31 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let ocvPreset: String?
     public let customOCVArrayString: String?
     public let connectionMethods: [ConnectionMethod]
+
+    /// Computed auto-add mode based on manualAddContacts and autoAddConfig
+    public var autoAddMode: AutoAddMode {
+        AutoAddMode.mode(manualAddContacts: manualAddContacts, autoAddConfig: autoAddConfig)
+    }
+
+    /// Whether to auto-add Contact type nodes (bit 0x02)
+    public var autoAddContacts: Bool {
+        autoAddConfig & 0x02 != 0
+    }
+
+    /// Whether to auto-add Repeater type nodes (bit 0x04)
+    public var autoAddRepeaters: Bool {
+        autoAddConfig & 0x04 != 0
+    }
+
+    /// Whether to auto-add Room Server type nodes (bit 0x08)
+    public var autoAddRoomServers: Bool {
+        autoAddConfig & 0x08 != 0
+    }
+
+    /// Whether to overwrite oldest non-favorite when storage is full (bit 0x01)
+    public var overwriteOldest: Bool {
+        autoAddConfig & 0x01 != 0
+    }
 
     public init(
         id: UUID,
@@ -216,6 +302,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         longitude: Double,
         blePin: UInt32,
         manualAddContacts: Bool,
+        autoAddConfig: UInt8 = 0,
         multiAcks: UInt8,
         telemetryModeBase: UInt8,
         telemetryModeLoc: UInt8,
@@ -247,6 +334,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = longitude
         self.blePin = blePin
         self.manualAddContacts = manualAddContacts
+        self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
         self.telemetryModeBase = telemetryModeBase
         self.telemetryModeLoc = telemetryModeLoc
@@ -280,6 +368,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = device.longitude
         self.blePin = device.blePin
         self.manualAddContacts = device.manualAddContacts
+        self.autoAddConfig = device.autoAddConfig
         self.multiAcks = device.multiAcks
         self.telemetryModeBase = device.telemetryModeBase
         self.telemetryModeLoc = device.telemetryModeLoc
@@ -341,6 +430,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             longitude: selfInfo.longitude,
             blePin: blePin,
             manualAddContacts: selfInfo.manualAddContacts,
+            autoAddConfig: autoAddConfig,
             multiAcks: multiAcks,
             telemetryModeBase: telemetryModeBase,
             telemetryModeLoc: telemetryModeLoc,

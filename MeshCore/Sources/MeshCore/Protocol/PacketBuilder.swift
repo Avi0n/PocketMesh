@@ -623,6 +623,17 @@ public enum PacketBuilder: Sendable {
         return data
     }
 
+    /// Builds a packet to get the auto-add configuration.
+    public static func getAutoAddConfig() -> Data {
+        Data([CommandCode.getAutoAddConfig.rawValue])
+    }
+
+    /// Builds a packet to set the auto-add configuration.
+    /// - Parameter config: The bitmask (0x01=overwrite, 0x02=contacts, 0x04=repeaters, 0x08=rooms)
+    public static func setAutoAddConfig(_ config: UInt8) -> Data {
+        Data([CommandCode.setAutoAddConfig.rawValue, config])
+    }
+
     /// Builds a getSelfTelemetry command to request current sensor data from the device.
     ///
     /// - Parameter destination: Optional 32-byte public key to send telemetry to.

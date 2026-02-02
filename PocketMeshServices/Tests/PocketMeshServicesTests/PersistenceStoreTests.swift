@@ -576,7 +576,6 @@ struct PersistenceStoreTests {
             isBlocked: true,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 5
         )

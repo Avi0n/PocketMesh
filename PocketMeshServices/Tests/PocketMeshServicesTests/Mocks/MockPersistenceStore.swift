@@ -290,7 +290,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         if let error = stubbedFetchContactError {
             throw error
         }
-        return contacts.values.filter { $0.deviceID == deviceID && !$0.isDiscovered }
+        return Array(contacts.values.filter { $0.deviceID == deviceID })
     }
 
     public func fetchConversations(deviceID: UUID) async throws -> [ContactDTO] {
@@ -298,7 +298,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             throw error
         }
         return contacts.values
-            .filter { $0.deviceID == deviceID && $0.lastMessageDate != nil && !$0.isDiscovered }
+            .filter { $0.deviceID == deviceID && $0.lastMessageDate != nil }
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
     }
 
@@ -363,7 +363,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -407,7 +406,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: date,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: contact.unreadMentionCount
@@ -434,7 +432,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount + 1,
                 unreadMentionCount: contact.unreadMentionCount
@@ -461,7 +458,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: 0,
                 unreadMentionCount: contact.unreadMentionCount
@@ -526,7 +522,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: contact.unreadMentionCount + 1
@@ -553,7 +548,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: max(0, contact.unreadMentionCount - 1)
@@ -580,7 +574,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: 0
@@ -658,57 +651,11 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         messages = messages.filter { $0.value.contactID != contactID }
     }
 
-    public func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] {
-        if let error = stubbedFetchContactError {
-            throw error
-        }
-        return contacts.values.filter { $0.deviceID == deviceID && $0.isDiscovered }
-    }
-
     public func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
         if let error = stubbedFetchContactError {
             throw error
         }
-        return contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked }
-    }
-
-    public func confirmContact(id: UUID) async throws {
-        if let contact = contacts[id] {
-            contacts[id] = ContactDTO(
-                id: contact.id,
-                deviceID: contact.deviceID,
-                publicKey: contact.publicKey,
-                name: contact.name,
-                typeRawValue: contact.typeRawValue,
-                flags: contact.flags,
-                outPathLength: contact.outPathLength,
-                outPath: contact.outPath,
-                lastAdvertTimestamp: contact.lastAdvertTimestamp,
-                latitude: contact.latitude,
-                longitude: contact.longitude,
-                lastModified: contact.lastModified,
-                nickname: contact.nickname,
-                isBlocked: contact.isBlocked,
-                isMuted: contact.isMuted,
-                isFavorite: contact.isFavorite,
-                isDiscovered: false,
-                lastMessageDate: contact.lastMessageDate,
-                unreadCount: contact.unreadCount,
-                unreadMentionCount: contact.unreadMentionCount
-            )
-        }
-    }
-
-    public func clearDiscoveredContacts(deviceID: UUID) async throws {
-        if let error = stubbedDeleteContactError {
-            throw error
-        }
-        let keysToRemove = contacts.values
-            .filter { $0.deviceID == deviceID && $0.isDiscovered }
-            .map(\.id)
-        for key in keysToRemove {
-            contacts.removeValue(forKey: key)
-        }
+        return Array(contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked })
     }
 
     // MARK: - Channel Operations
@@ -1039,6 +986,71 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         linkPreviews[dto.url] = dto
     }
 
+    // MARK: - Discovered Nodes
+
+    public var discoveredNodes: [UUID: DiscoveredNodeDTO] = [:]
+
+    public func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        if let existing = discoveredNodes.values.first(where: { $0.deviceID == deviceID && $0.publicKey == frame.publicKey }) {
+            let updated = DiscoveredNodeDTO(
+                id: existing.id,
+                deviceID: deviceID,
+                publicKey: frame.publicKey,
+                name: frame.name,
+                typeRawValue: frame.type.rawValue,
+                lastHeard: Date(),
+                lastAdvertTimestamp: frame.lastAdvertTimestamp,
+                latitude: frame.latitude,
+                longitude: frame.longitude,
+                outPathLength: frame.outPathLength,
+                outPath: frame.outPath
+            )
+            discoveredNodes[existing.id] = updated
+            return (node: updated, isNew: false)
+        }
+
+        let id = UUID()
+        let dto = DiscoveredNodeDTO(
+            id: id,
+            deviceID: deviceID,
+            publicKey: frame.publicKey,
+            name: frame.name,
+            typeRawValue: frame.type.rawValue,
+            lastHeard: Date(),
+            lastAdvertTimestamp: frame.lastAdvertTimestamp,
+            latitude: frame.latitude,
+            longitude: frame.longitude,
+            outPathLength: frame.outPathLength,
+            outPath: frame.outPath
+        )
+        discoveredNodes[id] = dto
+        return (node: dto, isNew: true)
+    }
+
+    public func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] {
+        discoveredNodes.values.filter { $0.deviceID == deviceID }
+    }
+
+    public func deleteDiscoveredNode(id: UUID) async throws {
+        discoveredNodes.removeValue(forKey: id)
+    }
+
+    public func clearDiscoveredNodes(deviceID: UUID) async throws {
+        let keysToRemove = discoveredNodes.values
+            .filter { $0.deviceID == deviceID }
+            .map(\.id)
+        for key in keysToRemove {
+            discoveredNodes.removeValue(forKey: key)
+        }
+    }
+
+    public func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return Set(contacts.values.filter { $0.deviceID == deviceID }.map(\.publicKey))
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1049,6 +1061,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         debugLogEntries = []
         mockRxLogEntries = []
         linkPreviews = [:]
+        discoveredNodes = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []

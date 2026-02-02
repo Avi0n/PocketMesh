@@ -143,6 +143,16 @@ extension PacketParser {
         case .tuningParams:
             return Parsers.TuningParamsResponse.parse(payload)
 
+        case .autoAddConfig:
+            // Single byte bitmask
+            guard payload.count >= 1 else {
+                return .parseFailure(
+                    data: payload,
+                    reason: "AutoAddConfig response too short: \(payload.count) < 1"
+                )
+            }
+            return .autoAddConfig(payload[0])
+
         default:
             return .parseFailure(data: payload, reason: "Unexpected code in device response: \(code)")
         }

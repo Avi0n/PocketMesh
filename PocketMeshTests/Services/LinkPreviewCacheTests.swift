@@ -282,10 +282,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
     func deleteMessagesForContact(contactID: UUID) async throws {}
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
-    func confirmContact(id: UUID) async throws {}
-    func clearDiscoveredContacts(deviceID: UUID) async throws {}
 
     // Channel Operations
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
@@ -329,4 +326,13 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
 
     // RxLogEntry Lookup
     func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
+
+    // Discovered Nodes
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
 }

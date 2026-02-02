@@ -464,7 +464,6 @@ struct ContactServiceTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 3
         )
@@ -518,7 +517,6 @@ struct ContactServiceTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 5
         )
@@ -573,7 +571,6 @@ struct ContactServiceTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 5
         )
@@ -626,7 +623,6 @@ struct ContactServiceTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: true,
-            isDiscovered: true,
             lastMessageDate: Date(),
             unreadCount: 5,
             ocvPreset: "medium",
@@ -643,7 +639,6 @@ struct ContactServiceTests {
         let updatedContact = await mockStore.contacts[contactID]
         #expect(updatedContact?.nickname == "MyNickname")
         #expect(updatedContact?.isFavorite == true)
-        #expect(updatedContact?.isDiscovered == true)
         #expect(updatedContact?.ocvPreset == "medium")
         #expect(updatedContact?.customOCVArrayString == "custom")
         #expect(updatedContact?.unreadCount == 0)
@@ -676,7 +671,6 @@ struct ContactServiceTests {
             isBlocked: true,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )

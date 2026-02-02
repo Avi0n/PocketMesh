@@ -15,8 +15,8 @@ struct AdvancedSettingsView: View {
                 // Manual Radio Configuration
                 AdvancedRadioSection()
 
-                // Contacts Settings
-                ContactsSettingsSection()
+                // Nodes Settings
+                NodesSettingsSection()
 
                 // Telemetry Settings
                 TelemetrySettingsSection()

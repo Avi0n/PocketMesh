@@ -897,7 +897,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -940,7 +939,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -961,7 +959,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -993,7 +990,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -1566,7 +1562,6 @@ struct OutboundPathNameResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -1599,7 +1594,6 @@ struct OutboundPathNameResolutionTests {
             isBlocked: contact2.isBlocked,
             isMuted: contact2.isMuted,
             isFavorite: contact2.isFavorite,
-            isDiscovered: contact2.isDiscovered,
             lastMessageDate: contact2.lastMessageDate,
             unreadCount: contact2.unreadCount
         )

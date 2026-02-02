@@ -484,10 +484,15 @@ public final class ConnectionManager {
         self.services = newServices
 
         let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
+
+        // Fetch auto-add config from device (v1.12+)
+        let autoAddConfig = (try? await session.getAutoAddConfig()) ?? 0
+
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: selfInfo,
             capabilities: capabilities,
+            autoAddConfig: autoAddConfig,
             existingDevice: existingDevice
         )
 
@@ -1128,6 +1133,9 @@ public final class ConnectionManager {
             // Fetch existing device to preserve local settings
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
 
+            // Fetch auto-add config from device (v1.12+)
+            let autoAddConfig = (try? await newSession.getAutoAddConfig()) ?? 0
+
             // Create WiFi connection method
             let wifiMethod = ConnectionMethod.wifi(host: host, port: port, displayName: nil)
 
@@ -1136,6 +1144,7 @@ public final class ConnectionManager {
                 deviceID: deviceID,
                 selfInfo: meshCoreSelfInfo,
                 capabilities: deviceCapabilities,
+                autoAddConfig: autoAddConfig,
                 existingDevice: existingDevice,
                 connectionMethods: [wifiMethod]
             )
@@ -1228,11 +1237,15 @@ public final class ConnectionManager {
         // Fetch existing device to preserve local settings (e.g., OCV preset)
         let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
 
+        // Fetch auto-add config from device (v1.12+)
+        let autoAddConfig = (try? await newSession.getAutoAddConfig()) ?? 0
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: meshCoreSelfInfo,
             capabilities: deviceCapabilities,
+            autoAddConfig: autoAddConfig,
             existingDevice: existingDevice
         )
 
@@ -1512,11 +1525,15 @@ public final class ConnectionManager {
         // Fetch existing device to preserve local settings (e.g., OCV preset)
         let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
 
+        // Fetch auto-add config from device (v1.12+)
+        let autoAddConfig = (try? await newSession.getAutoAddConfig()) ?? 0
+
         // Create and save device
         let device = createDevice(
             deviceID: deviceID,
             selfInfo: meshCoreSelfInfo,
             capabilities: deviceCapabilities,
+            autoAddConfig: autoAddConfig,
             existingDevice: existingDevice
         )
 
@@ -1543,6 +1560,7 @@ public final class ConnectionManager {
         deviceID: UUID,
         selfInfo: MeshCore.SelfInfo,
         capabilities: MeshCore.DeviceCapabilities,
+        autoAddConfig: UInt8,
         existingDevice: DeviceDTO? = nil,
         connectionMethods: [ConnectionMethod] = []
     ) -> Device {
@@ -1572,6 +1590,7 @@ public final class ConnectionManager {
             longitude: selfInfo.longitude,
             blePin: capabilities.blePin,
             manualAddContacts: selfInfo.manualAddContacts,
+            autoAddConfig: autoAddConfig,
             multiAcks: selfInfo.multiAcks,
             telemetryModeBase: selfInfo.telemetryModeBase,
             telemetryModeLoc: selfInfo.telemetryModeLocation,
@@ -1784,7 +1803,10 @@ public final class ConnectionManager {
             // Fetch existing device to preserve local settings (e.g., OCV preset)
             let existingDevice = try? await newServices.dataStore.fetchDevice(id: deviceID)
 
-            let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities, existingDevice: existingDevice)
+            // Fetch auto-add config from device (v1.12+)
+            let autoAddConfig = (try? await newSession.getAutoAddConfig()) ?? 0
+
+            let device = createDevice(deviceID: deviceID, selfInfo: selfInfo, capabilities: capabilities, autoAddConfig: autoAddConfig, existingDevice: existingDevice)
             try await newServices.dataStore.saveDevice(DeviceDTO(from: device))
             self.connectedDevice = DeviceDTO(from: device)
 

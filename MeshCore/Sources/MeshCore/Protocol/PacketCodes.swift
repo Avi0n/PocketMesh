@@ -98,6 +98,10 @@ public enum CommandCode: UInt8, Sendable {
     case sendControlData = 0x37
     /// Requests device statistics.
     case getStats = 0x38
+    /// Sets the auto-add configuration bitmask.
+    case setAutoAddConfig = 0x3A
+    /// Gets the current auto-add configuration bitmask.
+    case getAutoAddConfig = 0x3B
 }
 
 /// Defines the response codes received from the mesh device.
@@ -152,6 +156,8 @@ public enum ResponseCode: UInt8, Sendable {
     case tuningParams = 0x17
     /// Contains device statistics.
     case stats = 0x18
+    /// Contains the auto-add configuration bitmask.
+    case autoAddConfig = 0x19
 
     // Push notifications (0x80+)
     /// Indicates a node advertisement was received.
@@ -262,7 +268,8 @@ extension ResponseCode {
         switch self {
         case .ok, .error:
             return .simple
-        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams:
+        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams,
+             .autoAddConfig:
             return .device
         case .contactStart, .contact, .contactEnd, .contactURI:
             return .contact

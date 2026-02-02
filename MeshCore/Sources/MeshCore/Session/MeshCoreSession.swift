@@ -1075,6 +1075,29 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await applyOtherParams(config)
     }
 
+    /// Gets the current auto-add configuration from the device.
+    ///
+    /// - Returns: The auto-add config bitmask.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    public func getAutoAddConfig() async throws -> UInt8 {
+        try await sendAndWait(PacketBuilder.getAutoAddConfig()) { event in
+            if case .autoAddConfig(let config) = event { return config }
+            return nil
+        }
+    }
+
+    /// Sets the auto-add configuration on the device.
+    ///
+    /// - Parameter config: The bitmask (0x01=overwrite, 0x02=contacts, 0x04=repeaters, 0x08=rooms).
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    public func setAutoAddConfig(_ config: UInt8) async throws {
+        try await sendAndWaitWithError(PacketBuilder.setAutoAddConfig(config)) { event in
+            if case .ok = event { return () }
+            return nil
+        }
+    }
+
     /// Returns the current device configuration from selfInfo.
     ///
     /// - Returns: Current other params configuration.

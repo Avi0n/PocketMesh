@@ -86,7 +86,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-1800),  // 30 min ago
                 unreadCount: 3
             ),
@@ -109,7 +108,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: true,
-                isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-900),  // 15 min ago
                 unreadCount: 0
             ),
@@ -132,7 +130,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -155,7 +152,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -178,7 +174,6 @@ public enum MockDataProvider {
                 isBlocked: true,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -201,7 +196,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: now.addingTimeInterval(-7200),  // 2 hours ago
                 unreadCount: 0
             ),
@@ -224,7 +218,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: false,
                 lastMessageDate: nil,
                 unreadCount: 0
             ),
@@ -247,7 +240,6 @@ public enum MockDataProvider {
                 isBlocked: false,
                 isMuted: false,
                 isFavorite: false,
-                isDiscovered: true,  // Just discovered
                 lastMessageDate: nil,
                 unreadCount: 0
             )

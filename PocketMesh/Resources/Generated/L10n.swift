@@ -929,6 +929,10 @@ public enum L10n {
       public enum Discovery {
         /// Location: DiscoveryView.swift - Purpose: Add button
         public static let add = L10n.tr("Contacts", "contacts.discovery.add", fallback: "Add")
+        /// Location: DiscoveryView.swift - Purpose: Button label when node is already added
+        public static let added = L10n.tr("Contacts", "contacts.discovery.added", fallback: "Added")
+        /// Location: DiscoveryView.swift - Purpose: Accessibility label for added button
+        public static let addedAccessibility = L10n.tr("Contacts", "contacts.discovery.addedAccessibility", fallback: "Already added to contacts")
         /// Location: DiscoveryView.swift - Purpose: Clear all menu item
         public static let clear = L10n.tr("Contacts", "contacts.discovery.clear", fallback: "Clear All")
         /// Location: DiscoveryView.swift - Purpose: VoiceOver announcement after clearing
@@ -2665,6 +2669,44 @@ public enum L10n {
           /// Alert title for editing node name
           public static let title = L10n.tr("Settings", "node.alert.editName.title", fallback: "Edit Node Name")
         }
+      }
+    }
+    public enum Nodes {
+      /// Toggle label for auto-add contacts
+      public static let autoAddContacts = L10n.tr("Settings", "nodes.autoAddContacts", fallback: "Contacts")
+      /// Label for auto-add mode picker
+      public static let autoAddMode = L10n.tr("Settings", "nodes.autoAddMode", fallback: "Auto-Add Mode")
+      /// Toggle label for auto-add repeaters
+      public static let autoAddRepeaters = L10n.tr("Settings", "nodes.autoAddRepeaters", fallback: "Repeaters")
+      /// Toggle label for auto-add room servers
+      public static let autoAddRoomServers = L10n.tr("Settings", "nodes.autoAddRoomServers", fallback: "Room Servers")
+      /// Section header for nodes settings
+      public static let header = L10n.tr("Settings", "nodes.header", fallback: "Nodes")
+      /// Toggle label for overwrite oldest
+      public static let overwriteOldest = L10n.tr("Settings", "nodes.overwriteOldest", fallback: "Overwrite Oldest")
+      /// Description for overwrite oldest toggle
+      public static let overwriteOldestDescription = L10n.tr("Settings", "nodes.overwriteOldestDescription", fallback: "When storage is full, replace the oldest non-favorite node")
+      public enum AutoAddMode {
+        /// Auto-add mode: all
+        public static let all = L10n.tr("Settings", "nodes.autoAddMode.all", fallback: "All")
+        /// Auto-add mode: all description
+        public static let allDescription = L10n.tr("Settings", "nodes.autoAddMode.allDescription", fallback: "Auto-add every discovered node")
+        /// Auto-add mode: manual
+        public static let manual = L10n.tr("Settings", "nodes.autoAddMode.manual", fallback: "Manual")
+        /// Auto-add mode: manual description
+        public static let manualDescription = L10n.tr("Settings", "nodes.autoAddMode.manualDescription", fallback: "Review all nodes in Discover before adding")
+        /// Auto-add mode: selected types
+        public static let selectedTypes = L10n.tr("Settings", "nodes.autoAddMode.selectedTypes", fallback: "Selected Types")
+        /// Auto-add mode: selected types description
+        public static let selectedTypesDescription = L10n.tr("Settings", "nodes.autoAddMode.selectedTypesDescription", fallback: "Auto-add only the types enabled below")
+      }
+      public enum AutoAddTypes {
+        /// Section header for auto-add types
+        public static let header = L10n.tr("Settings", "nodes.autoAddTypes.header", fallback: "Auto-Add Types")
+      }
+      public enum Storage {
+        /// Section header for storage settings
+        public static let header = L10n.tr("Settings", "nodes.storage.header", fallback: "Storage")
       }
     }
     public enum Notifications {

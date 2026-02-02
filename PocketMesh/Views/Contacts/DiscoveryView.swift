@@ -9,15 +9,15 @@ struct DiscoveryView: View {
     @State private var searchText = ""
     @State private var selectedSegment: DiscoverSegment = .all
     @AppStorage("discoverySortOrder") private var sortOrder: NodeSortOrder = .lastHeard
-    @State private var addingContactID: UUID?
+    @State private var addingNodeID: UUID?
     @State private var showClearConfirmation = false
 
-    private var filteredContacts: [ContactDTO] {
+    private var filteredNodes: [DiscoveredNodeDTO] {
         let effectiveSortOrder = (sortOrder == .distance && appState.locationService.currentLocation == nil)
             ? .lastHeard
             : sortOrder
 
-        return viewModel.filteredContacts(
+        return viewModel.filteredNodes(
             searchText: searchText,
             segment: selectedSegment,
             sortOrder: effectiveSortOrder,
@@ -41,12 +41,12 @@ struct DiscoveryView: View {
             if !viewModel.hasLoadedOnce {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if filteredContacts.isEmpty && !isSearching {
+            } else if filteredNodes.isEmpty && !isSearching {
                 emptyView
-            } else if filteredContacts.isEmpty && isSearching {
+            } else if filteredNodes.isEmpty && isSearching {
                 searchEmptyView
             } else {
-                contactsList
+                nodesList
             }
         }
         .navigationTitle(L10n.Contacts.Contacts.Discovery.title)
@@ -74,16 +74,16 @@ struct DiscoveryView: View {
         }
         .task {
             viewModel.configure(appState: appState)
-            await loadDiscoveredContacts()
+            await loadDiscoveredNodes()
         }
         .onChange(of: appState.servicesVersion) { _, _ in
             Task {
-                await loadDiscoveredContacts()
+                await loadDiscoveredNodes()
             }
         }
         .onChange(of: appState.contactsVersion) { _, _ in
             Task {
-                await loadDiscoveredContacts()
+                await loadDiscoveredNodes()
             }
         }
         .alert(L10n.Contacts.Contacts.Common.error, isPresented: showErrorBinding) {
@@ -98,7 +98,7 @@ struct DiscoveryView: View {
         ) {
             Button(L10n.Contacts.Contacts.Discovery.Clear.confirm, role: .destructive) {
                 Task {
-                    await clearAllDiscoveredContacts()
+                    await clearAllDiscoveredNodes()
                 }
             }
         } message: {
@@ -138,7 +138,7 @@ struct DiscoveryView: View {
         }
     }
 
-    private var contactsList: some View {
+    private var nodesList: some View {
         List {
             Section {
                 DiscoverSegmentPicker(selection: $selectedSegment, isSearching: isSearching)
@@ -147,12 +147,12 @@ struct DiscoveryView: View {
             .listRowBackground(Color.clear)
             .listSectionSeparator(.hidden)
 
-            ForEach(filteredContacts) { contact in
-                discoveredContactRow(contact)
+            ForEach(filteredNodes) { node in
+                discoveredNodeRow(node)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
                             Task {
-                                await viewModel.deleteDiscoveredContact(contact)
+                                await viewModel.deleteDiscoveredNode(node)
                             }
                         } label: {
                             Label(L10n.Contacts.Contacts.Discovery.remove, systemImage: "trash")
@@ -191,33 +191,33 @@ struct DiscoveryView: View {
             } label: {
                 Label(L10n.Contacts.Contacts.Discovery.clear, systemImage: "trash")
             }
-            .disabled(viewModel.discoveredContacts.isEmpty)
+            .disabled(viewModel.discoveredNodes.isEmpty)
         } label: {
             Label(L10n.Contacts.Contacts.Discovery.menu, systemImage: "ellipsis.circle")
         }
         .modifier(GlassButtonModifier())
     }
 
-    private func discoveredContactRow(_ contact: ContactDTO) -> some View {
+    private func discoveredNodeRow(_ node: DiscoveredNodeDTO) -> some View {
         HStack {
-            avatarView(for: contact)
+            avatarView(for: node)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(contact.displayName)
+                Text(node.name)
                     .font(.body)
-                    .fontWeight(.medium)
+                    .bold()
 
                 HStack(spacing: 4) {
-                    Text(contactTypeLabel(for: contact))
+                    Text(nodeTypeLabel(for: node))
 
-                    if contact.hasLocation {
+                    if node.hasLocation {
                         Text("·")
 
                         Label(L10n.Contacts.Contacts.Row.location, systemImage: "location.fill")
                             .labelStyle(.iconOnly)
                             .foregroundStyle(.green)
 
-                        if let distance = distanceToContact(contact) {
+                        if let distance = distanceToNode(node) {
                             Text(distance)
                         }
                     }
@@ -228,36 +228,33 @@ struct DiscoveryView: View {
 
             Spacer()
 
-            RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
+            RelativeTimestampText(timestamp: node.lastAdvertTimestamp)
 
-            Button {
-                Task {
-                    await addContact(contact)
+            if viewModel.isAdded(node) {
+                Button(L10n.Contacts.Contacts.Discovery.added) {}
+                    .buttonStyle(.bordered)
+                    .disabled(true)
+                    .accessibilityLabel(L10n.Contacts.Contacts.Discovery.addedAccessibility)
+            } else {
+                Button(L10n.Contacts.Contacts.Discovery.add) {
+                    addNode(node)
                 }
-            } label: {
-                if addingContactID == contact.id {
-                    ProgressView()
-                        .frame(width: 60)
-                } else {
-                    Text(L10n.Contacts.Contacts.Discovery.add)
-                        .frame(width: 60)
-                }
+                .buttonStyle(.borderedProminent)
+                .disabled(addingNodeID == node.id)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(addingContactID != nil)
         }
         .padding(.vertical, 4)
     }
 
-    private func distanceToContact(_ contact: ContactDTO) -> String? {
+    private func distanceToNode(_ node: DiscoveredNodeDTO) -> String? {
         guard let userLocation = appState.locationService.currentLocation,
-              contact.hasLocation else { return nil }
+              node.hasLocation else { return nil }
 
-        let contactLocation = CLLocation(
-            latitude: contact.latitude,
-            longitude: contact.longitude
+        let nodeLocation = CLLocation(
+            latitude: node.latitude,
+            longitude: node.longitude
         )
-        let meters = userLocation.distance(from: contactLocation)
+        let meters = userLocation.distance(from: nodeLocation)
         let measurement = Measurement(value: meters, unit: UnitLength.meters)
 
         let formattedDistance = measurement.formatted(.measurement(
@@ -268,34 +265,34 @@ struct DiscoveryView: View {
     }
 
     @ViewBuilder
-    private func avatarView(for contact: ContactDTO) -> some View {
-        switch contact.type {
+    private func avatarView(for node: DiscoveredNodeDTO) -> some View {
+        switch node.nodeType {
         case .chat:
-            ContactAvatar(contact: contact, size: 44)
+            DiscoveredNodeAvatar(name: node.name, size: 44)
         case .repeater:
-            NodeAvatar(publicKey: contact.publicKey, role: .repeater, size: 44)
+            NodeAvatar(publicKey: node.publicKey, role: .repeater, size: 44)
         case .room:
-            NodeAvatar(publicKey: contact.publicKey, role: .roomServer, size: 44)
+            NodeAvatar(publicKey: node.publicKey, role: .roomServer, size: 44)
         }
     }
 
-    private func contactTypeLabel(for contact: ContactDTO) -> String {
-        switch contact.type {
+    private func nodeTypeLabel(for node: DiscoveredNodeDTO) -> String {
+        switch node.nodeType {
         case .chat: return L10n.Contacts.Contacts.NodeKind.chat
         case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
         case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
     }
 
-    private func loadDiscoveredContacts() async {
+    private func loadDiscoveredNodes() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
         viewModel.configure(appState: appState)
-        await viewModel.loadDiscoveredContacts(deviceID: deviceID)
+        await viewModel.loadDiscoveredNodes(deviceID: deviceID)
     }
 
-    private func clearAllDiscoveredContacts() async {
+    private func clearAllDiscoveredNodes() async {
         guard let deviceID = appState.connectedDevice?.id else { return }
-        await viewModel.clearAllDiscoveredContacts(deviceID: deviceID)
+        await viewModel.clearAllDiscoveredNodes(deviceID: deviceID)
 
         if UIAccessibility.isVoiceOverRunning {
             UIAccessibility.post(
@@ -305,39 +302,38 @@ struct DiscoveryView: View {
         }
     }
 
-    private func addContact(_ contact: ContactDTO) async {
-        guard let contactService = appState.services?.contactService,
-              let dataStore = appState.services?.dataStore else {
-            viewModel.errorMessage = L10n.Contacts.Contacts.Discovery.Error.servicesUnavailable
-            return
-        }
+    private func addNode(_ node: DiscoveredNodeDTO) {
+        guard let contactService = appState.services?.contactService else { return }
 
-        let maxContacts = appState.connectedDevice?.maxContacts
-        addingContactID = contact.id
-
-        do {
-            // Send to device
-            try await contactService.addOrUpdateContact(
-                deviceID: contact.deviceID,
-                contact: contact.toContactFrame()
-            )
-
-            // Mark as confirmed locally
-            try await dataStore.confirmContact(id: contact.id)
-
-            // Remove from local list
-            viewModel.discoveredContacts.removeAll { $0.id == contact.id }
-        } catch ContactServiceError.contactTableFull {
-            if let maxContacts {
-                viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFull(Int(maxContacts))
-            } else {
-                viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFullSimple
+        addingNodeID = node.id
+        Task {
+            do {
+                let frame = ContactFrame(
+                    publicKey: node.publicKey,
+                    type: node.nodeType,
+                    flags: 0,
+                    outPathLength: node.outPathLength,
+                    outPath: node.outPath,
+                    name: node.name,
+                    lastAdvertTimestamp: node.lastAdvertTimestamp,
+                    latitude: node.latitude,
+                    longitude: node.longitude,
+                    lastModified: 0
+                )
+                try await contactService.addOrUpdateContact(deviceID: node.deviceID, contact: frame)
+                await viewModel.loadDiscoveredNodes(deviceID: node.deviceID)
+            } catch ContactServiceError.contactTableFull {
+                let maxContacts = appState.connectedDevice?.maxContacts
+                if let maxContacts {
+                    viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFull(Int(maxContacts))
+                } else {
+                    viewModel.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFullSimple
+                }
+            } catch {
+                viewModel.errorMessage = error.localizedDescription
             }
-        } catch {
-            viewModel.errorMessage = error.localizedDescription
+            addingNodeID = nil
         }
-
-        addingContactID = nil
     }
 }
 
@@ -370,6 +366,33 @@ private struct GlassButtonModifier: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// MARK: - Discovered Node Avatar
+
+private struct DiscoveredNodeAvatar: View {
+    let name: String
+    let size: CGFloat
+
+    var body: some View {
+        Text(initials)
+            .font(.system(size: size * 0.4, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(avatarColor, in: .circle)
+    }
+
+    private var initials: String {
+        let words = name.split(separator: " ")
+        if words.count >= 2 {
+            return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+
+    private var avatarColor: Color {
+        AppColors.NameColor.color(for: name)
     }
 }
 

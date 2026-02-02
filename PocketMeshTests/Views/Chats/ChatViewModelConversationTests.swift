@@ -31,7 +31,6 @@ struct ChatViewModelConversationTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: isFavorite,
-            isDiscovered: false,
             lastMessageDate: lastMessageDate,
             unreadCount: 0,
             ocvPreset: nil,
