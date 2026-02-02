@@ -542,6 +542,10 @@ public enum L10n {
           }
         }
       }
+      public enum MessageActions {
+        /// Location: MessageActionsSheet.swift - Sheet title
+        public static let title = L10n.tr("Chats", "chats.messageActions.title", fallback: "Message")
+      }
       public enum NewChat {
         /// Location: NewChatView.swift - Navigation title
         public static let title = L10n.tr("Chats", "chats.newChat.title", fallback: "New Chat")

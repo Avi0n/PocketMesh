@@ -680,6 +680,11 @@
 /* Location: MessageContextOverlay.swift - Delete action label */
 "chats.chats.reactions.delete" = "Delete";
 
+// MARK: - Message Actions Sheet
+
+/* Location: MessageActionsSheet.swift - Sheet title */
+"chats.messageActions.title" = "Message";
+
 // MARK: - Chat Input Bar
 
 /* Location: ChatInputBar.swift - Accessibility label for text input */

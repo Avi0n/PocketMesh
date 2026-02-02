@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PocketMeshServices
 import OSLog
 
@@ -29,6 +30,8 @@ struct ChatView: View {
     }
 
     @State private var selectedMessageForPath: MessageDTO?
+    @State private var selectedMessageForActions: MessageDTO?
+    @State private var recentEmojisStore = RecentEmojisStore()
     @FocusState private var isInputFocused: Bool
 
     init(contact: ContactDTO, parentViewModel: ChatViewModel? = nil) {
@@ -70,6 +73,18 @@ struct ChatView: View {
             MessagePathSheet(message: message)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: $selectedMessageForActions) { message in
+            MessageActionsSheet(
+                message: message,
+                senderName: message.isOutgoing
+                    ? (appState.connectedDevice?.nodeName ?? "Me")
+                    : contact.displayName,
+                recentEmojis: recentEmojisStore.recentEmojis,
+                onAction: { action in
+                    handleMessageAction(action, for: message)
+                }
+            )
         }
         .task(id: appState.servicesVersion) {
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
@@ -282,16 +297,7 @@ struct ChatView: View {
                 previewState: item.previewState,
                 loadedPreview: item.loadedPreview,
                 onRetry: { retryMessage(message) },
-                onReply: { replyText in
-                    setReplyText(replyText)
-                },
-                onDelete: {
-                    deleteMessage(message)
-                },
-                onShowPath: { selectedMessageForPath = $0 },
-                onSendAgain: {
-                    sendAgain(message)
-                },
+                onLongPress: { selectedMessageForActions = message },
                 onRequestPreviewFetch: {
                     viewModel.requestPreviewFetch(for: message.id)
                 },
@@ -353,6 +359,38 @@ struct ChatView: View {
         Task {
             await viewModel.sendAgain(message)
         }
+    }
+
+    // MARK: - Message Actions
+
+    private func handleMessageAction(_ action: MessageAction, for message: MessageDTO) {
+        switch action {
+        case .react(let emoji):
+            recentEmojisStore.recordUsage(emoji)
+            Task { await viewModel.sendReaction(emoji: emoji, to: message) }
+        case .reply:
+            let replyText = buildReplyText(for: message)
+            setReplyText(replyText)
+        case .copy:
+            UIPasteboard.general.string = message.text
+        case .sendAgain:
+            sendAgain(message)
+        case .repeatDetails:
+            break // Not applicable for direct messages
+        case .viewPath:
+            selectedMessageForPath = message
+        case .delete:
+            deleteMessage(message)
+        }
+    }
+
+    private func buildReplyText(for message: MessageDTO) -> String {
+        let mentionName = contact.name
+        let preview = String(message.text.prefix(20))
+        let hasMore = message.text.count > 20
+        let suffix = hasMore ? ".." : ""
+        let mention = MentionUtilities.createMention(for: mentionName)
+        return "\(mention)\"\(preview)\(suffix)\"\n"
     }
 
     // MARK: - Input Bar

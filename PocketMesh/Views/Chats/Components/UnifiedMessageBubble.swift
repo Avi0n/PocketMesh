@@ -69,11 +69,6 @@ struct UnifiedMessageBubble: View {
     let showDirectionGap: Bool
     let showSenderName: Bool
     let onRetry: (() -> Void)?
-    let onReply: ((String) -> Void)?
-    let onDelete: (() -> Void)?
-    let onShowRepeatDetails: ((MessageDTO) -> Void)?
-    let onShowPath: ((MessageDTO) -> Void)?
-    let onSendAgain: (() -> Void)?
     let onReaction: ((String) -> Void)?
     let onLongPress: (() -> Void)?
 
@@ -91,7 +86,6 @@ struct UnifiedMessageBubble: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
-    @State private var copyHapticTrigger = 0
     @State private var showingReactionDetails = false
 
     init(
@@ -106,11 +100,6 @@ struct UnifiedMessageBubble: View {
         previewState: PreviewLoadState = .idle,
         loadedPreview: LinkPreviewDataDTO? = nil,
         onRetry: (() -> Void)? = nil,
-        onReply: ((String) -> Void)? = nil,
-        onDelete: (() -> Void)? = nil,
-        onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
-        onShowPath: ((MessageDTO) -> Void)? = nil,
-        onSendAgain: (() -> Void)? = nil,
         onReaction: ((String) -> Void)? = nil,
         onLongPress: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
@@ -127,11 +116,6 @@ struct UnifiedMessageBubble: View {
         self.previewState = previewState
         self.loadedPreview = loadedPreview
         self.onRetry = onRetry
-        self.onReply = onReply
-        self.onDelete = onDelete
-        self.onShowRepeatDetails = onShowRepeatDetails
-        self.onShowPath = onShowPath
-        self.onSendAgain = onSendAgain
         self.onReaction = onReaction
         self.onLongPress = onLongPress
         self.onRequestPreviewFetch = onRequestPreviewFetch
@@ -161,33 +145,10 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Message bubble with text and optional routing footer
-                    VStack(alignment: .leading, spacing: 4) {
-                        MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
-
-                        if !message.isOutgoing {
-                            if showIncomingPath {
-                                pathFooter
-                            }
-                            if showIncomingHopCount && !isDirect {
-                                hopCountFooter
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(bubbleColor)
-                    .clipShape(.rect(cornerRadius: 16))
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
-                    .ifCondition(configuration.isChannel && onLongPress != nil) { view in
-                        view.onLongPressGesture {
+                    messageBubbleContent
+                        .onLongPressGesture(minimumDuration: 0.3) {
                             onLongPress?()
                         }
-                    }
-                    .ifCondition(!configuration.isChannel || onLongPress == nil) { view in
-                        view.contextMenu {
-                            contextMenuContent
-                        }
-                    }
 
                     // Link preview (if applicable)
                     if previewsEnabled {
@@ -230,7 +191,6 @@ struct UnifiedMessageBubble: View {
                 onRequestPreviewFetch?()
             }
         }
-        .sensoryFeedback(.success, trigger: copyHapticTrigger)
         .sheet(isPresented: $showingReactionDetails) {
             ReactionDetailsSheet(messageID: message.id)
                 .presentationDetents([.medium])
@@ -296,6 +256,28 @@ struct UnifiedMessageBubble: View {
         }
     }
 
+    // MARK: - Message Bubble Content
+
+    private var messageBubbleContent: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
+
+            if !message.isOutgoing {
+                if showIncomingPath {
+                    pathFooter
+                }
+                if showIncomingHopCount && !isDirect {
+                    hopCountFooter
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(bubbleColor)
+        .clipShape(.rect(cornerRadius: 16))
+        .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
+    }
+
     // MARK: - Computed Properties
 
     private var senderName: String {
@@ -337,116 +319,6 @@ struct UnifiedMessageBubble: View {
             label += ", \(statusText)"
         }
         return label
-    }
-
-    // MARK: - Context Menu
-    //
-    // HIG: "Hide unavailable menu items, don't dim them"
-    // Only show actions that have handlers provided
-
-    @ViewBuilder
-    private var contextMenuContent: some View {
-        // Only show Reply for incoming messages (not outgoing)
-        if let onReply, !message.isOutgoing {
-            Button {
-                let replyText = buildReplyText()
-                onReply(replyText)
-            } label: {
-                Label(L10n.Chats.Chats.Message.Action.reply, systemImage: "arrowshape.turn.up.left")
-            }
-        }
-
-        Button {
-            copyHapticTrigger += 1
-            UIPasteboard.general.string = message.text
-        } label: {
-            Label(L10n.Chats.Chats.Message.Action.copy, systemImage: "doc.on.doc")
-        }
-
-        // Repeat Details button (only for outgoing channel messages with repeats)
-        if message.isOutgoing, message.channelIndex != nil, message.heardRepeats > 0, let onShowRepeatDetails {
-            Button {
-                onShowRepeatDetails(message)
-            } label: {
-                Label(L10n.Chats.Chats.Message.Action.repeatDetails, systemImage: "arrow.triangle.branch")
-            }
-        }
-
-        // Send Again button (for outgoing messages not yet delivered)
-        if message.isOutgoing && (message.status == .sent || message.status == .failed) && message.heardRepeats == 0, let onSendAgain {
-            Button {
-                onSendAgain()
-            } label: {
-                Label(L10n.Chats.Chats.Message.Action.sendAgain, systemImage: "arrow.uturn.forward")
-            }
-        }
-
-        // Outgoing message details
-        if message.isOutgoing {
-            if (message.status == .sent || message.status == .delivered) && message.heardRepeats > 0 {
-                let repeatWord = message.heardRepeats == 1
-                    ? L10n.Chats.Chats.Message.Repeat.singular
-                    : L10n.Chats.Chats.Message.Repeat.plural
-                Text(L10n.Chats.Chats.Message.Info.heardRepeats(message.heardRepeats, repeatWord))
-            }
-
-            Text(L10n.Chats.Chats.Message.Info.sent(message.date.formatted(date: .abbreviated, time: .shortened)))
-
-            if let rtt = message.roundTripTime {
-                Text(L10n.Chats.Chats.Message.Info.roundTrip(Int(rtt)))
-            }
-        }
-
-        // Incoming message path and details
-        if !message.isOutgoing {
-            if message.pathNodes != nil && message.pathLength != 0 && message.pathLength != 0xFF {
-                Button {
-                    onShowPath?(message)
-                } label: {
-                    Label(
-                        L10n.Chats.Chats.Message.Action.viewPath,
-                        systemImage: "point.topleft.down.to.point.bottomright.curvepath"
-                    )
-                }
-            }
-
-            Label(hopCountFormatted(message.pathLength), systemImage: "arrowshape.bounce.right")
-
-            Menu {
-                let sentTime = message.date.formatted(date: .abbreviated, time: .shortened)
-                let sentText = L10n.Chats.Chats.Message.Info.sent(sentTime)
-                let adjustedSuffix = message.timestampCorrected
-                    ? " " + L10n.Chats.Chats.Message.Info.adjusted
-                    : ""
-                Text(sentText + adjustedSuffix)
-                    .accessibilityLabel(message.timestampCorrected
-                        ? L10n.Chats.Chats.Message.Info.adjustedAccessibility
-                        : sentText)
-                    .accessibilityHint(message.timestampCorrected
-                        ? L10n.Chats.Chats.Message.Info.adjustedHint
-                        : "")
-
-                let receivedTime = message.createdAt.formatted(date: .abbreviated, time: .shortened)
-                Text(L10n.Chats.Chats.Message.Info.received(receivedTime))
-
-                if let snr = message.snr {
-                    Text(L10n.Chats.Chats.Message.Info.snr(snrFormatted(snr)))
-                }
-            } label: {
-                Label(L10n.Chats.Chats.Message.Action.details, systemImage: "info.circle")
-            }
-        }
-
-        // Only show Delete if handler is provided
-        if let onDelete {
-            Divider()
-
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label(L10n.Chats.Chats.Message.Action.delete, systemImage: "trash")
-            }
-        }
     }
 
     // MARK: - Status Row
@@ -553,64 +425,6 @@ struct UnifiedMessageBubble: View {
 
     // MARK: - Helpers
 
-    /// Builds reply preview text with mention and proper Unicode/locale handling
-    ///
-    /// Format: @[nodeContactName]"preview.."\n
-    ///
-    /// Per CLAUDE.md: Use localizedStandard APIs for text filtering.
-    /// This handles:
-    /// - Unicode word boundaries (emoji, CJK characters)
-    /// - RTL languages (Arabic, Hebrew)
-    /// - Messages without spaces (Asian languages)
-    private func buildReplyText() -> String {
-        // Determine the mesh network name for the mention
-        let mentionName: String
-        if configuration.showSenderName {
-            // Channel message - use sender's node name (from message)
-            mentionName = message.senderNodeName ?? senderName
-        } else {
-            // Direct message - use contact's mesh network name
-            mentionName = contactNodeName
-        }
-
-        // Use locale-aware word enumeration for proper Unicode handling
-        // Count up to 3 words to know if there's more than 2
-        var wordCount = 0
-        var secondWordEndIndex = message.text.startIndex
-        message.text.enumerateSubstrings(
-            in: message.text.startIndex...,
-            options: [.byWords, .localized]
-        ) { _, range, _, stop in
-            wordCount += 1
-            if wordCount <= 2 {
-                secondWordEndIndex = range.upperBound
-            }
-            if wordCount >= 3 {
-                stop = true
-            }
-        }
-
-        // Build preview
-        let preview: String
-        let hasMore: Bool
-        if wordCount > 0 {
-            preview = String(message.text[..<secondWordEndIndex]).trimmingCharacters(in: .whitespaces)
-            // Only show ".." if message has more than 2 words
-            hasMore = wordCount > 2
-        } else {
-            // Fallback for messages without word boundaries (pure emoji, etc.)
-            // Take first ~20 characters
-            let maxChars = min(20, message.text.count)
-            let index = message.text.index(message.text.startIndex, offsetBy: maxChars)
-            preview = String(message.text[..<index])
-            hasMore = maxChars < message.text.count
-        }
-
-        let suffix = hasMore ? ".." : ""
-        let mention = MentionUtilities.createMention(for: mentionName)
-        return "\(mention)\"\(preview)\(suffix)\"\n"
-    }
-
     private func snrFormatted(_ snr: Double) -> String {
         let quality: String
         switch snr {
@@ -634,20 +448,6 @@ struct UnifiedMessageBubble: View {
             return L10n.Chats.Chats.Message.Hops.direct
         default:
             return "\(pathLength)"
-        }
-    }
-}
-
-// MARK: - View Extension
-
-private extension View {
-    /// Conditionally applies a transformation to a view
-    @ViewBuilder
-    func ifCondition<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
         }
     }
 }
