@@ -11,6 +11,7 @@ public enum MessageEvent: Sendable, Equatable {
     case messageFailed(messageID: UUID)
     case messageRetrying(messageID: UUID, attempt: Int, maxAttempts: Int)
     case heardRepeatRecorded(messageID: UUID, count: Int)
+    case reactionReceived(messageID: UUID, summary: String)
     case routingChanged(contactID: UUID, isFlood: Bool)
     case unknownSender(keyPrefix: Data)
     case error(String)
@@ -117,6 +118,12 @@ public final class MessageEventBroadcaster {
     func handleHeardRepeatRecorded(messageID: UUID, count: Int) {
         logger.info("[REPEAT-DEBUG] handleHeardRepeatRecorded called: messageID=\(messageID), count=\(count), newMessageCount will be \(self.newMessageCount + 1)")
         self.latestEvent = .heardRepeatRecorded(messageID: messageID, count: count)
+        self.newMessageCount += 1
+    }
+
+    /// Called when a reaction is received for a channel message
+    func handleReactionReceived(messageID: UUID, summary: String) {
+        self.latestEvent = .reactionReceived(messageID: messageID, summary: summary)
         self.newMessageCount += 1
     }
 

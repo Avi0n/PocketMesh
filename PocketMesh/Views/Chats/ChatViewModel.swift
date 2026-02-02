@@ -590,6 +590,7 @@ final class ChatViewModel {
             heardRepeats: message.heardRepeats,
             retryAttempt: message.retryAttempt,
             maxRetryAttempts: message.maxRetryAttempts,
+            reactionSummary: message.reactionSummary,
             previewState: .idle,
             loadedPreview: nil
         )
@@ -633,6 +634,7 @@ final class ChatViewModel {
             heardRepeats: item.heardRepeats,
             retryAttempt: item.retryAttempt,
             maxRetryAttempts: item.maxRetryAttempts,
+            reactionSummary: item.reactionSummary,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -744,6 +746,16 @@ final class ChatViewModel {
                 }
             }
 
+            // Hide sent reaction messages (unless failed)
+            fetchedMessages = fetchedMessages.filter { message in
+                guard message.direction == .outgoing,
+                      ReactionParser.parse(message.text) != nil else {
+                    return true
+                }
+                // Only show if explicitly failed
+                return message.status == .failed
+            }
+
             // Use unfiltered count to determine if more messages exist
             hasMoreMessages = unfilteredCount == pageSize
             messages = fetchedMessages
@@ -813,6 +825,17 @@ final class ChatViewModel {
                 }
             }
 
+            // Hide sent reaction messages for channel messages (unless failed)
+            if currentChannel != nil {
+                olderMessages = olderMessages.filter { message in
+                    guard message.direction == .outgoing,
+                          ReactionParser.parse(message.text) != nil else {
+                        return true
+                    }
+                    return message.status == .failed
+                }
+            }
+
             // Prepend older messages (they're chronologically earlier)
             messages.insert(contentsOf: olderMessages, at: 0)
 
@@ -863,10 +886,13 @@ final class ChatViewModel {
 
     /// Send a reaction emoji to a channel message
     func sendReaction(emoji: String, to message: MessageDTO) async {
+        logger.info("[REACTION-DEBUG] sendReaction called: emoji=\(emoji), targetMessageID=\(message.id)")
         guard let senderName = message.senderNodeName,
               let channelIndex = message.channelIndex,
               let reactionService = appState?.services?.reactionService,
-              let messageService else {
+              let messageService,
+              let dataStore else {
+            logger.info("[REACTION-DEBUG] sendReaction guard failed: senderName=\(message.senderNodeName ?? "nil"), channelIndex=\(message.channelIndex?.description ?? "nil")")
             return
         }
 
@@ -877,6 +903,7 @@ final class ChatViewModel {
             targetText: message.text,
             targetTimestamp: message.timestamp
         )
+        logger.info("[REACTION-DEBUG] Built reaction text: \(reactionText)")
 
         // Send as channel message
         do {
@@ -885,13 +912,41 @@ final class ChatViewModel {
                 channelIndex: channelIndex,
                 deviceID: message.deviceID
             )
+            logger.info("[REACTION-DEBUG] Channel message sent successfully")
 
             // Record emoji usage for recents
             recentEmojisStore.recordUsage(emoji)
 
-            // Reload messages to show the sent reaction
-            if let channel = currentChannel, channel.index == channelIndex {
-                await loadChannelMessages(for: channel)
+            // Optimistic local update: save reaction and update target message
+            let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
+            let messageHash = ReactionParser.generateMessageHash(text: message.text, timestamp: message.timestamp)
+            logger.info("[REACTION-DEBUG] Saving local reaction: localNodeName=\(localNodeName), hash=\(messageHash)")
+            let reactionDTO = ReactionDTO(
+                messageID: message.id,
+                emoji: emoji,
+                senderName: localNodeName,
+                messageHash: messageHash,
+                rawText: reactionText,
+                channelIndex: channelIndex,
+                deviceID: message.deviceID
+            )
+            try? await dataStore.saveReaction(reactionDTO)
+            logger.info("[REACTION-DEBUG] Reaction saved to database")
+
+            // Update reaction summary
+            if let reactions = try? await dataStore.fetchReactions(for: message.id) {
+                logger.info("[REACTION-DEBUG] Fetched \(reactions.count) reactions for message")
+                let counts = Dictionary(grouping: reactions, by: \.emoji)
+                    .map { ($0.key, $0.value.count) }
+                let summary = ReactionParser.buildSummary(from: counts)
+                logger.info("[REACTION-DEBUG] Built summary: \(summary)")
+                try? await dataStore.updateMessageReactionSummary(messageID: message.id, summary: summary)
+
+                // Update UI inline
+                logger.info("[REACTION-DEBUG] Calling updateReactionSummary for messageID=\(message.id)")
+                updateReactionSummary(for: message.id, summary: summary)
+            } else {
+                logger.info("[REACTION-DEBUG] Failed to fetch reactions for message")
             }
         } catch {
             logger.error("Failed to send reaction: \(error)")
@@ -1330,6 +1385,7 @@ final class ChatViewModel {
                 heardRepeats: message.heardRepeats,
                 retryAttempt: message.retryAttempt,
                 maxRetryAttempts: message.maxRetryAttempts,
+                reactionSummary: message.reactionSummary,
                 previewState: previewStates[message.id] ?? .idle,
                 loadedPreview: loadedPreviews[message.id]
             )
@@ -1446,10 +1502,66 @@ final class ChatViewModel {
         rebuildDisplayItem(for: messageID)
     }
 
+    /// Update reaction summary for a specific message inline (O(1) update)
+    func updateReactionSummary(for messageID: UUID, summary: String) {
+        logger.info("[REACTION-DEBUG] updateReactionSummary called: messageID=\(messageID), summary=\(summary)")
+        let messageCount = messages.count
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              let existing = messagesByID[messageID] else {
+            logger.info("[REACTION-DEBUG] updateReactionSummary guard failed: message not found in messages array, total messages=\(messageCount)")
+            return
+        }
+        logger.info("[REACTION-DEBUG] Found message at index \(index), updating...")
+
+        // Create updated MessageDTO with new reaction summary
+        let updated = MessageDTO(
+            id: existing.id,
+            deviceID: existing.deviceID,
+            contactID: existing.contactID,
+            channelIndex: existing.channelIndex,
+            text: existing.text,
+            timestamp: existing.timestamp,
+            createdAt: existing.createdAt,
+            direction: existing.direction,
+            status: existing.status,
+            textType: existing.textType,
+            ackCode: existing.ackCode,
+            pathLength: existing.pathLength,
+            snr: existing.snr,
+            pathNodes: existing.pathNodes,
+            senderKeyPrefix: existing.senderKeyPrefix,
+            senderNodeName: existing.senderNodeName,
+            isRead: existing.isRead,
+            replyToID: existing.replyToID,
+            roundTripTime: existing.roundTripTime,
+            heardRepeats: existing.heardRepeats,
+            sendCount: existing.sendCount,
+            retryAttempt: existing.retryAttempt,
+            maxRetryAttempts: existing.maxRetryAttempts,
+            deduplicationKey: existing.deduplicationKey,
+            linkPreviewURL: existing.linkPreviewURL,
+            linkPreviewTitle: existing.linkPreviewTitle,
+            linkPreviewImageData: existing.linkPreviewImageData,
+            linkPreviewIconData: existing.linkPreviewIconData,
+            linkPreviewFetched: existing.linkPreviewFetched,
+            containsSelfMention: existing.containsSelfMention,
+            mentionSeen: existing.mentionSeen,
+            timestampCorrected: existing.timestampCorrected,
+            reactionSummary: summary
+        )
+
+        messages[index] = updated
+        messagesByID[messageID] = updated
+        logger.info("[REACTION-DEBUG] Updated message in arrays, calling rebuildDisplayItem")
+        rebuildDisplayItem(for: messageID)
+        logger.info("[REACTION-DEBUG] rebuildDisplayItem completed")
+    }
+
     /// Rebuild a single display item with current preview state (O(1) lookup)
     private func rebuildDisplayItem(for messageID: UUID) {
         guard let index = displayItemIndexByID[messageID] else { return }
         let item = displayItems[index]
+        let message = messagesByID[messageID]
 
         displayItems[index] = MessageDisplayItem(
             messageID: item.messageID,
@@ -1464,6 +1576,7 @@ final class ChatViewModel {
             heardRepeats: item.heardRepeats,
             retryAttempt: item.retryAttempt,
             maxRetryAttempts: item.maxRetryAttempts,
+            reactionSummary: message?.reactionSummary,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )

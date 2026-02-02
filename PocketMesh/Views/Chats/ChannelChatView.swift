@@ -161,6 +161,14 @@ struct ChannelChatView: View {
                         logger.info("[REPEAT-DEBUG] Reload complete, messages count: \(viewModel.messages.count)")
                     }
                 }
+            case .reactionReceived(let messageID, let summary):
+                logger.info("[REACTION-DEBUG] ChannelChatView received reactionReceived: messageID=\(messageID), summary=\(summary)")
+                let messageExists = viewModel.messages.contains(where: { $0.id == messageID })
+                logger.info("[REACTION-DEBUG] Message exists in viewModel.messages: \(messageExists)")
+                if messageExists {
+                    logger.info("[REACTION-DEBUG] Calling updateReactionSummary")
+                    viewModel.updateReactionSummary(for: messageID, summary: summary)
+                }
             default:
                 break
             }

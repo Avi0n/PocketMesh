@@ -466,6 +466,9 @@ public final class AppState {
             },
             onRoomMessageReceived: { [weak self] message in
                 await self?.messageEventBroadcaster.handleRoomMessage(message)
+            },
+            onReactionReceived: { [weak self] messageID, summary in
+                await self?.messageEventBroadcaster.handleReactionReceived(messageID: messageID, summary: summary)
             }
         )
 

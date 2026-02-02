@@ -27,6 +27,7 @@ struct MessageDisplayItem: Identifiable, Hashable, Sendable {
     let heardRepeats: Int
     let retryAttempt: Int
     let maxRetryAttempts: Int
+    let reactionSummary: String?
 
     // Preview state (owned by ViewModel, not view)
     let previewState: PreviewLoadState

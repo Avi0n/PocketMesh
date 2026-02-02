@@ -117,6 +117,9 @@ public actor SyncCoordinator {
     /// Callback when a room message is received (for MessageEventBroadcaster)
     private var onRoomMessageReceived: (@Sendable (_ message: RoomMessageDTO) async -> Void)?
 
+    /// Callback when a reaction is received for a channel message
+    private var onReactionReceived: (@Sendable (_ messageID: UUID, _ summary: String) async -> Void)?
+
     // MARK: - Initialization
 
     public init() {}
@@ -163,11 +166,13 @@ public actor SyncCoordinator {
     public func setMessageEventCallbacks(
         onDirectMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ contact: ContactDTO) async -> Void,
         onChannelMessageReceived: @escaping @Sendable (_ message: MessageDTO, _ channelIndex: UInt8) async -> Void,
-        onRoomMessageReceived: @escaping @Sendable (_ message: RoomMessageDTO) async -> Void
+        onRoomMessageReceived: @escaping @Sendable (_ message: RoomMessageDTO) async -> Void,
+        onReactionReceived: @escaping @Sendable (_ messageID: UUID, _ summary: String) async -> Void
     ) {
         self.onDirectMessageReceived = onDirectMessageReceived
         self.onChannelMessageReceived = onChannelMessageReceived
         self.onRoomMessageReceived = onRoomMessageReceived
+        self.onReactionReceived = onReactionReceived
     }
 
     // MARK: - Notifications
@@ -763,11 +768,14 @@ public actor SyncCoordinator {
             }
 
             // Check if this is a reaction
+            self.logger.info("[REACTION-DEBUG] Checking if message is reaction: \(messageText.prefix(50))...")
             if let parsed = services.reactionService.tryProcessAsReaction(messageText) {
+                self.logger.info("[REACTION-DEBUG] Parsed as reaction: emoji=\(parsed.emoji), target=\(parsed.targetSender), hash=\(parsed.messageHash)")
                 if let targetMessageID = await services.reactionService.findTargetMessage(
                     parsed: parsed,
                     channelIndex: message.channelIndex
                 ) {
+                    self.logger.info("[REACTION-DEBUG] Found target message: \(targetMessageID)")
                     // Check for duplicate
                     let senderName = senderNodeName ?? "Unknown"
                     let exists = try? await services.dataStore.reactionExists(
@@ -798,14 +806,22 @@ public actor SyncCoordinator {
                                 messageID: targetMessageID,
                                 summary: summary
                             )
+
+                            // Notify UI of reaction update
+                            self.logger.info("[REACTION-DEBUG] Firing onReactionReceived callback: messageID=\(targetMessageID), summary=\(summary)")
+                            await self.onReactionReceived?(targetMessageID, summary)
                         }
 
                         self.logger.debug("Saved reaction \(parsed.emoji) to message \(targetMessageID)")
                     }
 
                     return  // Don't save as regular message
+                } else {
+                    self.logger.info("[REACTION-DEBUG] Target message NOT found in cache for hash=\(parsed.messageHash), sender=\(parsed.targetSender)")
                 }
                 // If no match found, fall through to save as regular message
+            } else {
+                self.logger.info("[REACTION-DEBUG] Message did not parse as reaction")
             }
 
             do {
