@@ -1333,6 +1333,14 @@ public final class ConnectionManager {
         connectedDevice = deviceDTO
     }
 
+    /// Updates the connected device's auto-add config.
+    /// Called by SettingsService after auto-add config is successfully changed.
+    public func updateAutoAddConfig(_ config: UInt8) {
+        guard var device = connectedDevice else { return }
+        device = device.withAutoAddConfig(config)
+        connectedDevice = device
+    }
+
     /// Checks if an accessory is registered with AccessorySetupKit.
     /// - Parameter deviceID: The Bluetooth UUID of the device
     /// - Returns: `true` if the accessory is available for connection

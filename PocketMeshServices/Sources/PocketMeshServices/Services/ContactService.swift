@@ -76,6 +76,9 @@ public actor ContactService {
     /// Cleanup handler called when a contact is deleted or blocked
     private var cleanupHandler: (@Sendable (UUID, ContactCleanupReason, Data) async -> Void)?
 
+    /// Handler called when a node is deleted (for clearing storage full flag)
+    private var nodeDeletedHandler: (@Sendable () async -> Void)?
+
     // MARK: - Initialization
 
     public init(session: any MeshCoreSessionProtocol, dataStore: any PersistenceStoreProtocol) {
@@ -98,6 +101,11 @@ public actor ContactService {
     /// Set handler for contact cleanup operations (deletion/blocking)
     public func setCleanupHandler(_ handler: @escaping @Sendable (UUID, ContactCleanupReason, Data) async -> Void) {
         cleanupHandler = handler
+    }
+
+    /// Set handler for node deletion events (for clearing storage full flag)
+    public func setNodeDeletedHandler(_ handler: @escaping @Sendable () async -> Void) {
+        nodeDeletedHandler = handler
     }
 
     // MARK: - Contact Sync
@@ -210,6 +218,9 @@ public actor ContactService {
                 // Trigger cleanup (notifications, badge, session)
                 await cleanupHandler?(contactID, .deleted, publicKey)
             }
+
+            // Notify that a node was deleted (for clearing storage full flag)
+            await nodeDeletedHandler?()
 
             // Notify UI to refresh contacts list
             await syncCoordinator?.notifyContactsChanged()

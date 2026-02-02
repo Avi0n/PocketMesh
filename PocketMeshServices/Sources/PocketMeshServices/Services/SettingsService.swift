@@ -232,6 +232,10 @@ public actor SettingsService {
     /// Used to update ConnectionManager.connectedDevice for UI refresh.
     private var onDeviceUpdated: (@Sendable (MeshCore.SelfInfo) async -> Void)?
 
+    /// Callback invoked when auto-add config is successfully changed.
+    /// Used to update ConnectionManager.connectedDevice.autoAddConfig for UI refresh.
+    private var onAutoAddConfigUpdated: (@Sendable (UInt8) async -> Void)?
+
     public init(session: MeshCoreSession) {
         self.session = session
     }
@@ -241,6 +245,13 @@ public actor SettingsService {
         _ callback: @escaping @Sendable (MeshCore.SelfInfo) async -> Void
     ) {
         onDeviceUpdated = callback
+    }
+
+    /// Sets the callback for auto-add config updates.
+    public func setAutoAddConfigCallback(
+        _ callback: @escaping @Sendable (UInt8) async -> Void
+    ) {
+        onAutoAddConfigUpdated = callback
     }
 
     // MARK: - Radio Settings
@@ -573,6 +584,7 @@ public actor SettingsService {
             )
         }
 
+        await onAutoAddConfigUpdated?(actualConfig)
         return actualConfig
     }
 

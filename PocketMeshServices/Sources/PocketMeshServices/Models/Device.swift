@@ -444,6 +444,44 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             connectionMethods: connectionMethods
         )
     }
+
+    /// Returns a new DeviceDTO with updated auto-add config.
+    /// Used after auto-add settings are changed via SettingsService.
+    public func withAutoAddConfig(_ config: UInt8) -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: nodeName,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: frequency,
+            bandwidth: bandwidth,
+            spreadingFactor: spreadingFactor,
+            codingRate: codingRate,
+            txPower: txPower,
+            maxTxPower: maxTxPower,
+            latitude: latitude,
+            longitude: longitude,
+            blePin: blePin,
+            manualAddContacts: manualAddContacts,
+            autoAddConfig: config,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
+        )
+    }
 }
 
 // MARK: - Extensions
