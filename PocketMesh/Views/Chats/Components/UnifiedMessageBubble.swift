@@ -74,6 +74,7 @@ struct UnifiedMessageBubble: View {
     let onShowRepeatDetails: ((MessageDTO) -> Void)?
     let onShowPath: ((MessageDTO) -> Void)?
     let onSendAgain: (() -> Void)?
+    let onReaction: ((String) -> Void)?
 
     // Preview state from display item (replaces @State)
     let previewState: PreviewLoadState
@@ -90,6 +91,7 @@ struct UnifiedMessageBubble: View {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     @State private var copyHapticTrigger = 0
+    @State private var showingReactionDetails = false
 
     init(
         message: MessageDTO,
@@ -108,6 +110,7 @@ struct UnifiedMessageBubble: View {
         onShowRepeatDetails: ((MessageDTO) -> Void)? = nil,
         onShowPath: ((MessageDTO) -> Void)? = nil,
         onSendAgain: (() -> Void)? = nil,
+        onReaction: ((String) -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -127,6 +130,7 @@ struct UnifiedMessageBubble: View {
         self.onShowRepeatDetails = onShowRepeatDetails
         self.onShowPath = onShowPath
         self.onSendAgain = onSendAgain
+        self.onReaction = onReaction
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -184,6 +188,19 @@ struct UnifiedMessageBubble: View {
                     if message.isOutgoing {
                         statusRow
                     }
+
+                    // Reaction badges for channel messages
+                    if message.channelIndex != nil {
+                        ReactionBadgesView(
+                            summary: message.reactionSummary,
+                            onTapReaction: { emoji in
+                                onReaction?(emoji)
+                            },
+                            onLongPress: {
+                                showingReactionDetails = true
+                            }
+                        )
+                    }
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(accessibilityMessageLabel)
@@ -204,6 +221,10 @@ struct UnifiedMessageBubble: View {
             }
         }
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
+        .sheet(isPresented: $showingReactionDetails) {
+            ReactionDetailsSheet(messageID: message.id)
+                .presentationDetents([.medium])
+        }
     }
 
     // MARK: - Link Preview Content
