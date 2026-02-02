@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PocketMeshServices
 import OSLog
 
@@ -30,6 +31,9 @@ struct ChannelChatView: View {
 
     @State private var selectedMessageForRepeats: MessageDTO?
     @State private var selectedMessageForPath: MessageDTO?
+    @State private var overlayMessage: MessageDTO?
+    @State private var showContextOverlay = false
+    @State private var recentEmojisStore = RecentEmojisStore()
     @FocusState private var isInputFocused: Bool
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
@@ -73,6 +77,26 @@ struct ChannelChatView: View {
             MessagePathSheet(message: message)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showContextOverlay) {
+            if let message = overlayMessage {
+                MessageContextOverlay(
+                    isPresented: $showContextOverlay,
+                    messageContent: overlayBubbleContent(for: message),
+                    emojis: recentEmojisStore.recentEmojis,
+                    onSelectEmoji: { emoji in
+                        recentEmojisStore.recordUsage(emoji)
+                        Task {
+                            await viewModel.sendReaction(emoji: emoji, to: message)
+                        }
+                    },
+                    onOpenEmojiKeyboard: {
+                        // Full emoji keyboard not implemented yet
+                    },
+                    menuActions: buildContextMenuActions(for: message)
+                )
+                .presentationBackground(.clear)
+            }
         }
         .task(id: appState.servicesVersion) {
             logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
@@ -304,6 +328,10 @@ struct ChannelChatView: View {
                 onSendAgain: {
                     sendAgain(message)
                 },
+                onLongPress: {
+                    overlayMessage = message
+                    showContextOverlay = true
+                },
                 onRequestPreviewFetch: {
                     viewModel.requestPreviewFetch(for: message.id)
                 },
@@ -369,6 +397,62 @@ struct ChannelChatView: View {
         Task {
             await viewModel.sendAgain(message)
         }
+    }
+
+    // MARK: - Context Overlay
+
+    @ViewBuilder
+    private func overlayBubbleContent(for message: MessageDTO) -> some View {
+        let bubbleColor = message.isOutgoing ? AppColors.Message.outgoingBubble : AppColors.Message.incomingBubble
+        let textColor: Color = message.isOutgoing ? .white : .primary
+
+        Text(message.text)
+            .foregroundStyle(textColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(bubbleColor)
+            .clipShape(.rect(cornerRadius: 16))
+            .frame(maxWidth: 280)
+    }
+
+    private func buildContextMenuActions(for message: MessageDTO) -> [MessageContextAction] {
+        var actions: [MessageContextAction] = []
+
+        // Reply (for incoming messages only)
+        if !message.isOutgoing {
+            actions.append(MessageContextAction(
+                L10n.Chats.Chats.Chats.Reactions.reply,
+                systemImage: "arrowshape.turn.up.left"
+            ) {
+                let mentionName = message.senderNodeName ?? L10n.Chats.Chats.Message.Sender.unknown
+                let preview = String(message.text.prefix(20))
+                let hasMore = message.text.count > 20
+                let suffix = hasMore ? ".." : ""
+                let mention = MentionUtilities.createMention(for: mentionName)
+                setReplyText("\(mention)\"\(preview)\(suffix)\"\n")
+            })
+        }
+
+        // Copy
+        actions.append(MessageContextAction(
+            L10n.Chats.Chats.Chats.Reactions.copy,
+            systemImage: "doc.on.doc"
+        ) {
+            UIPasteboard.general.string = message.text
+        })
+
+        // Delete (for own messages only)
+        if message.isOutgoing {
+            actions.append(MessageContextAction(
+                L10n.Chats.Chats.Chats.Reactions.delete,
+                systemImage: "trash",
+                isDestructive: true
+            ) {
+                deleteMessage(message)
+            })
+        }
+
+        return actions
     }
 
     // MARK: - Input Bar

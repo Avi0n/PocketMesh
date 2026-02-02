@@ -75,6 +75,7 @@ struct UnifiedMessageBubble: View {
     let onShowPath: ((MessageDTO) -> Void)?
     let onSendAgain: (() -> Void)?
     let onReaction: ((String) -> Void)?
+    let onLongPress: (() -> Void)?
 
     // Preview state from display item (replaces @State)
     let previewState: PreviewLoadState
@@ -111,6 +112,7 @@ struct UnifiedMessageBubble: View {
         onShowPath: ((MessageDTO) -> Void)? = nil,
         onSendAgain: (() -> Void)? = nil,
         onReaction: ((String) -> Void)? = nil,
+        onLongPress: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -131,6 +133,7 @@ struct UnifiedMessageBubble: View {
         self.onShowPath = onShowPath
         self.onSendAgain = onSendAgain
         self.onReaction = onReaction
+        self.onLongPress = onLongPress
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -175,8 +178,15 @@ struct UnifiedMessageBubble: View {
                     .background(bubbleColor)
                     .clipShape(.rect(cornerRadius: 16))
                     .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
-                    .contextMenu {
-                        contextMenuContent
+                    .ifCondition(configuration.isChannel && onLongPress != nil) { view in
+                        view.onLongPressGesture {
+                            onLongPress?()
+                        }
+                    }
+                    .ifCondition(!configuration.isChannel || onLongPress == nil) { view in
+                        view.contextMenu {
+                            contextMenuContent
+                        }
                     }
 
                     // Link preview (if applicable)
@@ -624,6 +634,20 @@ struct UnifiedMessageBubble: View {
             return L10n.Chats.Chats.Message.Hops.direct
         default:
             return "\(pathLength)"
+        }
+    }
+}
+
+// MARK: - View Extension
+
+private extension View {
+    /// Conditionally applies a transformation to a view
+    @ViewBuilder
+    func ifCondition<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
         }
     }
 }
