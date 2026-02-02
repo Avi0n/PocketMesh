@@ -79,6 +79,22 @@ public enum ReactionParser {
         let hash = SHA256.hash(data: data)
         return hash.prefix(4).map { String(format: "%02x", $0) }.joined()
     }
+
+    /// Generates content preview for reaction wire format
+    /// - Parameters:
+    ///   - text: Original message text
+    ///   - maxWords: Maximum words to include (default 4)
+    /// - Returns: Preview with "..." appended if truncated
+    public static func generateContentPreview(_ text: String, maxWords: Int = 4) -> String {
+        let words = text.split(separator: " ", omittingEmptySubsequences: true)
+
+        if words.count <= maxWords {
+            return text
+        }
+
+        let preview = words.prefix(maxWords).joined(separator: " ")
+        return "\(preview)..."
+    }
 }
 
 // MARK: - Character Extension for Emoji Detection

@@ -29,6 +29,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         Contact.self,
         Message.self,
         MessageRepeat.self,
+        Reaction.self,
         Channel.self,
         RemoteNodeSession.self,
         RoomMessage.self,
