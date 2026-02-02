@@ -7,7 +7,8 @@ struct NodesSettingsSection: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showError: String?
     @State private var retryAlert = RetryAlertState()
-    @State private var isSaving = false
+    @State private var isApplying = false
+    @State private var showSuccess = false
 
     // Local state for editing
     @State private var autoAddMode: AutoAddMode = .manual
@@ -18,6 +19,17 @@ struct NodesSettingsSection: View {
 
     private var device: DeviceDTO? { appState.connectedDevice }
 
+    /// Combined hash of all node settings for change detection
+    private var deviceNodeSettingsHash: Int {
+        var hasher = Hasher()
+        hasher.combine(appState.connectedDevice?.autoAddMode)
+        hasher.combine(appState.connectedDevice?.autoAddContacts)
+        hasher.combine(appState.connectedDevice?.autoAddRepeaters)
+        hasher.combine(appState.connectedDevice?.autoAddRoomServers)
+        hasher.combine(appState.connectedDevice?.overwriteOldest)
+        return hasher.finalize()
+    }
+
     var body: some View {
         Section {
             Picker(L10n.Settings.Nodes.autoAddMode, selection: $autoAddMode) {
@@ -25,37 +37,18 @@ struct NodesSettingsSection: View {
                 Text(L10n.Settings.Nodes.AutoAddMode.selectedTypes).tag(AutoAddMode.selectedTypes)
                 Text(L10n.Settings.Nodes.AutoAddMode.all).tag(AutoAddMode.all)
             }
-            .radioDisabled(for: appState.connectionState, or: isSaving)
             .onChange(of: autoAddMode) { _, newValue in
-                // Announce for VoiceOver when type toggles appear
                 if newValue == .selectedTypes {
                     UIAccessibility.post(notification: .screenChanged, argument: nil)
                 }
-                saveSettings()
             }
-        } header: {
-            Text(L10n.Settings.Nodes.header)
-        } footer: {
-            Text(autoAddModeDescription)
-        }
 
-        if autoAddMode == .selectedTypes {
-            Section {
+            if autoAddMode == .selectedTypes {
                 Toggle(L10n.Settings.Nodes.autoAddContacts, isOn: $autoAddContacts)
-                    .onChange(of: autoAddContacts) { _, _ in saveSettings() }
-
                 Toggle(L10n.Settings.Nodes.autoAddRepeaters, isOn: $autoAddRepeaters)
-                    .onChange(of: autoAddRepeaters) { _, _ in saveSettings() }
-
                 Toggle(L10n.Settings.Nodes.autoAddRoomServers, isOn: $autoAddRoomServers)
-                    .onChange(of: autoAddRoomServers) { _, _ in saveSettings() }
-            } header: {
-                Text(L10n.Settings.Nodes.AutoAddTypes.header)
             }
-            .radioDisabled(for: appState.connectionState, or: isSaving)
-        }
 
-        Section {
             Toggle(isOn: $overwriteOldest) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.Settings.Nodes.overwriteOldest)
@@ -64,15 +57,37 @@ struct NodesSettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .radioDisabled(for: appState.connectionState, or: isSaving)
-            .onChange(of: overwriteOldest) { _, _ in saveSettings() }
+
+            Button {
+                applySettings()
+            } label: {
+                HStack {
+                    Spacer()
+                    if isApplying {
+                        ProgressView()
+                    } else if showSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        Text(L10n.Settings.AdvancedRadio.apply)
+                            .transition(.opacity)
+                    }
+                    Spacer()
+                }
+                .animation(.default, value: showSuccess)
+            }
+            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess)
         } header: {
-            Text(L10n.Settings.Nodes.Storage.header)
+            Text(L10n.Settings.Nodes.header)
+        } footer: {
+            Text(autoAddModeDescription)
         }
+        .radioDisabled(for: appState.connectionState, or: isApplying)
         .onAppear {
             loadFromDevice()
         }
-        .onChange(of: device?.autoAddConfig) { _, _ in
+        .onChange(of: deviceNodeSettingsHash) { _, _ in
             loadFromDevice()
         }
         .errorAlert($showError)
@@ -99,11 +114,11 @@ struct NodesSettingsSection: View {
         overwriteOldest = device.overwriteOldest
     }
 
-    private func saveSettings() {
-        guard !isSaving else { return }  // Guard against rapid-fire saves
+    private func applySettings() {
+        guard !isApplying else { return }
         guard let device, let settingsService = appState.services?.settingsService else { return }
 
-        isSaving = true
+        isApplying = true
         Task {
             do {
                 // Build config bitmask
@@ -145,20 +160,28 @@ struct NodesSettingsSection: View {
                 _ = try await settingsService.setAutoAddConfigVerified(config)
 
                 retryAlert.reset()
+                isApplying = false
+
+                withAnimation {
+                    showSuccess = true
+                }
+                try? await Task.sleep(for: .seconds(1.5))
+                withAnimation {
+                    showSuccess = false
+                }
+                return
             } catch let error as SettingsServiceError where error.isRetryable {
-                // On any error, reload from device to ensure UI matches firmware state
                 loadFromDevice()
                 retryAlert.show(
                     message: error.errorDescription ?? "Connection error",
-                    onRetry: { saveSettings() },
+                    onRetry: { applySettings() },
                     onMaxRetriesExceeded: { dismiss() }
                 )
             } catch {
-                // Reload from device on failure to revert local state
                 loadFromDevice()
                 showError = error.localizedDescription
             }
-            isSaving = false
+            isApplying = false
         }
     }
 }
