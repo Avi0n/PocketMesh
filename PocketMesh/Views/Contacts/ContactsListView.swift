@@ -371,7 +371,8 @@ struct ContactsListView: View {
                 contact: contact,
                 showTypeLabel: isSearching,
                 userLocation: appState.locationService.currentLocation,
-                index: index
+                index: index,
+                isTogglingFavorite: viewModel.togglingFavoriteID == contact.id
             )
         }
         .contactSwipeActions(contact: contact, viewModel: viewModel)
@@ -382,7 +383,8 @@ struct ContactsListView: View {
             contact: contact,
             showTypeLabel: isSearching,
             userLocation: appState.locationService.currentLocation,
-            index: index
+            index: index,
+            isTogglingFavorite: viewModel.togglingFavoriteID == contact.id
         )
         .contactSwipeActions(contact: contact, viewModel: viewModel)
     }
@@ -440,12 +442,20 @@ struct ContactRowView: View {
     let showTypeLabel: Bool
     let userLocation: CLLocation?
     let index: Int
+    let isTogglingFavorite: Bool
 
-    init(contact: ContactDTO, showTypeLabel: Bool = false, userLocation: CLLocation? = nil, index: Int = 0) {
+    init(
+        contact: ContactDTO,
+        showTypeLabel: Bool = false,
+        userLocation: CLLocation? = nil,
+        index: Int = 0,
+        isTogglingFavorite: Bool = false
+    ) {
         self.contact = contact
         self.showTypeLabel = showTypeLabel
         self.userLocation = userLocation
         self.index = index
+        self.isTogglingFavorite = isTogglingFavorite
     }
 
     var body: some View {
@@ -467,7 +477,10 @@ struct ContactRowView: View {
 
                     Spacer()
 
-                    if contact.isFavorite {
+                    if isTogglingFavorite {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if contact.isFavorite {
                         Image(systemName: "star.fill")
                             .font(.caption)
                             .foregroundStyle(.yellow)
@@ -614,7 +627,7 @@ private struct ContactSwipeActionsModifier: ViewModifier {
                     )
                 }
                 .tint(.yellow)
-                .disabled(!isConnected)
+                .disabled(!isConnected || viewModel.togglingFavoriteID == contact.id)
             }
     }
 }

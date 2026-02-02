@@ -313,7 +313,19 @@ public final class ServiceContainer {
     public func performInitialSync(deviceID: UUID) async {
         let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
 
-        // Sync contacts
+        // Migrate app favorites to device BEFORE sync (one-time on upgrade)
+        // Must run first because sync overwrites isFavorite with device flags
+        guard !Task.isCancelled else { return }
+        do {
+            let migrated = try await contactService.migrateAppFavoritesToDevice(deviceID: deviceID)
+            if migrated > 0 {
+                logger.info("Initial sync: \(migrated) favorites migrated to device")
+            }
+        } catch {
+            logger.warning("Initial sync: favorites migration failed: \(error)")
+        }
+
+        // Sync contacts from device
         guard !Task.isCancelled else { return }
         do {
             let result = try await contactService.syncContacts(deviceID: deviceID)

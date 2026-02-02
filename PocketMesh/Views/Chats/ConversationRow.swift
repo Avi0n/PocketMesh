@@ -19,7 +19,10 @@ struct ConversationRow: View {
 
                     MutedIndicator(isMuted: contact.isMuted)
 
-                    if contact.isFavorite {
+                    if viewModel.togglingFavoriteID == contact.id {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if contact.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)

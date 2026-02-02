@@ -11,6 +11,11 @@ struct ConversationSwipeActionsModifier: ViewModifier {
         appState.connectionState == .ready
     }
 
+    private var isTogglingFavorite: Bool {
+        guard case .direct(let contact) = conversation else { return false }
+        return viewModel.togglingFavoriteID == contact.id
+    }
+
     func body(content: Content) -> some View {
         content
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -46,7 +51,7 @@ struct ConversationSwipeActionsModifier: ViewModifier {
                     )
                 }
                 .tint(.yellow)
-                .disabled(!isConnected)
+                .disabled(!isConnected || isTogglingFavorite)
             }
     }
 }
