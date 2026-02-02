@@ -86,6 +86,9 @@ public final class ServiceContainer {
     /// Buffer for batching debug log entries to persistence
     public let debugLogBuffer: DebugLogBuffer
 
+    /// Service for handling emoji reactions on channel messages
+    public let reactionService: ReactionService
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -150,6 +153,7 @@ public final class ServiceContainer {
         self.heardRepeatsService = HeardRepeatsService(persistenceStore: dataStore)
         self.debugLogBuffer = DebugLogBuffer(persistenceStore: dataStore)
         DebugLogBuffer.shared = debugLogBuffer
+        self.reactionService = ReactionService()
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
