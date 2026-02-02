@@ -762,8 +762,30 @@ public actor SyncCoordinator {
                 return
             }
 
+            // Check if this is a reaction
+            if let parsed = services.reactionService.tryProcessAsReaction(messageText) {
+                if let targetMessageID = await services.reactionService.findTargetMessage(
+                    parsed: parsed,
+                    channelIndex: message.channelIndex
+                ) {
+                    // TODO: Save as reaction and update summary cache (Phase 4)
+                    self.logger.debug("Detected reaction to message \(targetMessageID)")
+                }
+            }
+
             do {
                 try await services.dataStore.saveMessage(messageDTO)
+
+                // Index message for reaction matching
+                if let senderName = senderNodeName {
+                    await services.reactionService.indexMessage(
+                        id: messageDTO.id,
+                        channelIndex: message.channelIndex,
+                        senderName: senderName,
+                        text: messageText,
+                        timestamp: finalTimestamp
+                    )
+                }
 
                 // Update channel's last message date
                 if let channelID = channel?.id {
