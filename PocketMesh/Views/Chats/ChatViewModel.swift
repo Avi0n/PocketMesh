@@ -143,6 +143,9 @@ final class ChatViewModel {
     /// Last message previews cache
     private var lastMessageCache: [UUID: MessageDTO] = [:]
 
+    /// Store for recently used reaction emojis
+    let recentEmojisStore = RecentEmojisStore()
+
     /// Preview state per message (keyed by message ID)
     private var previewStates: [UUID: PreviewLoadState] = [:]
 
@@ -855,6 +858,44 @@ final class ChatViewModel {
             errorMessage = error.localizedDescription
             // Restore the text so user can retry
             composingText = text
+        }
+    }
+
+    /// Send a reaction emoji to a channel message
+    func sendReaction(emoji: String, to message: MessageDTO) async {
+        guard let senderName = message.senderNodeName,
+              let channelIndex = message.channelIndex,
+              let reactionService = appState?.services?.reactionService,
+              let messageService else {
+            return
+        }
+
+        // Build reaction wire format using ReactionService (nonisolated, no await needed)
+        let reactionText = reactionService.buildReactionText(
+            emoji: emoji,
+            targetSender: senderName,
+            targetText: message.text,
+            targetTimestamp: message.timestamp
+        )
+
+        // Send as channel message
+        do {
+            _ = try await messageService.sendChannelMessage(
+                text: reactionText,
+                channelIndex: channelIndex,
+                deviceID: message.deviceID
+            )
+
+            // Record emoji usage for recents
+            recentEmojisStore.recordUsage(emoji)
+
+            // Reload messages to show the sent reaction
+            if let channel = currentChannel, channel.index == channelIndex {
+                await loadChannelMessages(for: channel)
+            }
+        } catch {
+            logger.error("Failed to send reaction: \(error)")
+            errorMessage = error.localizedDescription
         }
     }
 
