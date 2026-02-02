@@ -2190,4 +2190,61 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let contacts = try modelContext.fetch(descriptor)
         return Set(contacts.map { $0.publicKey })
     }
+
+    // MARK: - Reactions
+
+    /// Saves a new reaction
+    public func saveReaction(_ dto: ReactionDTO) throws {
+        let reaction = Reaction(
+            id: dto.id,
+            messageID: dto.messageID,
+            emoji: dto.emoji,
+            senderName: dto.senderName,
+            messageHash: dto.messageHash,
+            rawText: dto.rawText,
+            receivedAt: dto.receivedAt,
+            channelIndex: dto.channelIndex,
+            deviceID: dto.deviceID
+        )
+        modelContext.insert(reaction)
+        try modelContext.save()
+    }
+
+    /// Fetches reactions for a message
+    public func fetchReactions(for messageID: UUID, limit: Int = 100) throws -> [ReactionDTO] {
+        let targetMessageID = messageID
+        var descriptor = FetchDescriptor<Reaction>(
+            predicate: #Predicate { $0.messageID == targetMessageID },
+            sortBy: [SortDescriptor(\Reaction.receivedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        return try modelContext.fetch(descriptor).map { ReactionDTO(from: $0) }
+    }
+
+    /// Checks if a reaction already exists (deduplication)
+    public func reactionExists(messageID: UUID, senderName: String, emoji: String) throws -> Bool {
+        let targetMessageID = messageID
+        let targetSenderName = senderName
+        let targetEmoji = emoji
+        let predicate = #Predicate<Reaction> {
+            $0.messageID == targetMessageID &&
+            $0.senderName == targetSenderName &&
+            $0.emoji == targetEmoji
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// Updates a message's reaction summary cache
+    public func updateMessageReactionSummary(messageID: UUID, summary: String?) throws {
+        let targetMessageID = messageID
+        let predicate = #Predicate<Message> { $0.id == targetMessageID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else { return }
+        message.reactionSummary = summary
+        try modelContext.save()
+    }
 }
