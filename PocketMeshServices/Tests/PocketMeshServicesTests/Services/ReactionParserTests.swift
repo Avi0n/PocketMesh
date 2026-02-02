@@ -215,4 +215,45 @@ struct ReactionParserTests {
         let preview = ReactionParser.generateContentPreview(text)
         #expect(preview == "Hello there friend")
     }
+
+    // MARK: - Summary Cache Tests
+
+    @Test("Builds summary from reactions")
+    func buildsSummary() {
+        let reactions = [
+            ("👍", 3),
+            ("❤️", 2),
+            ("😂", 1)
+        ]
+        let summary = ReactionParser.buildSummary(from: reactions)
+        #expect(summary == "👍:3,❤️:2,😂:1")
+    }
+
+    @Test("Parses summary string")
+    func parsesSummary() {
+        let summary = "👍:3,❤️:2,😂:1"
+        let parsed = ReactionParser.parseSummary(summary)
+
+        #expect(parsed.count == 3)
+        #expect(parsed[0] == ("👍", 3))
+        #expect(parsed[1] == ("❤️", 2))
+        #expect(parsed[2] == ("😂", 1))
+    }
+
+    @Test("Parses empty summary")
+    func parsesEmptySummary() {
+        let parsed = ReactionParser.parseSummary(nil)
+        #expect(parsed.isEmpty)
+    }
+
+    @Test("Sorts summary by count descending")
+    func sortsSummaryByCount() {
+        let reactions = [
+            ("😂", 1),
+            ("👍", 5),
+            ("❤️", 3)
+        ]
+        let summary = ReactionParser.buildSummary(from: reactions)
+        #expect(summary == "👍:5,❤️:3,😂:1")
+    }
 }

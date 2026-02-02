@@ -95,6 +95,26 @@ public enum ReactionParser {
         let preview = words.prefix(maxWords).joined(separator: " ")
         return "\(preview)..."
     }
+
+    /// Builds summary string from emoji counts, sorted by count descending
+    public static func buildSummary(from reactions: [(emoji: String, count: Int)]) -> String {
+        reactions
+            .sorted { $0.count > $1.count }
+            .map { "\($0.emoji):\($0.count)" }
+            .joined(separator: ",")
+    }
+
+    /// Parses summary string into emoji/count pairs
+    public static func parseSummary(_ summary: String?) -> [(emoji: String, count: Int)] {
+        guard let summary, !summary.isEmpty else { return [] }
+
+        return summary.split(separator: ",").compactMap { part in
+            let components = part.split(separator: ":")
+            guard components.count == 2,
+                  let count = Int(components[1]) else { return nil }
+            return (String(components[0]), count)
+        }
+    }
 }
 
 // MARK: - Character Extension for Emoji Detection
