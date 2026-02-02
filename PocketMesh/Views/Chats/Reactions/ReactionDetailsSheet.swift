@@ -30,9 +30,9 @@ struct ReactionDetailsSheet: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if reactions.isEmpty {
                     ContentUnavailableView(
-                        L10n.Chats.Reactions.EmptyState.title,
+                        L10n.Chats.Chats.Reactions.EmptyState.title,
                         systemImage: "face.smiling",
-                        description: Text(L10n.Chats.Reactions.EmptyState.description)
+                        description: Text(L10n.Chats.Chats.Reactions.EmptyState.description)
                     )
                 } else {
                     emojiTabsView
@@ -40,7 +40,7 @@ struct ReactionDetailsSheet: View {
                     senderListView
                 }
             }
-            .navigationTitle(L10n.Chats.Reactions.title)
+            .navigationTitle(L10n.Chats.Chats.Reactions.title)
             .navigationBarTitleDisplayMode(.inline)
             .task {
                 await loadReactions()
@@ -91,7 +91,7 @@ struct ReactionDetailsSheet: View {
         }
 
         do {
-            reactions = try dataStore.fetchReactions(for: messageID)
+            reactions = try await dataStore.fetchReactions(for: messageID)
             if let first = emojiGroups.first {
                 selectedEmoji = first.emoji
             }
