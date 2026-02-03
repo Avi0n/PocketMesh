@@ -17,9 +17,8 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        // Verify format: {emoji} @[{sender}] {preview} [XXXXXXXX]
-        #expect(text.hasPrefix("👍 @[AlphaNode] What's the situation at..."))
-        #expect(text.contains(" ["))
+        // Verify format: {emoji} @[{sender}] [XXXXXXXX]
+        #expect(text.hasPrefix("👍 @[AlphaNode] ["))
         #expect(text.hasSuffix("]"))
 
         // Verify 8-char Crockford Base32 identifier is present (lowercase)
@@ -39,7 +38,7 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        #expect(text.contains("@[Node] ok"))
+        #expect(text.hasPrefix("❤️ @[Node] ["))
         #expect(text.hasSuffix("]"))
     }
 
@@ -124,8 +123,7 @@ struct ReactionServiceTests {
         let parsed = ParsedReaction(
             emoji: "👍",
             targetSender: "Node",
-            contentPreview: "Hello",
-            messageHash: "ABCD1234"
+            messageHash: "abcd1234"
         )
 
         let foundID = await service.findTargetMessage(parsed: parsed, channelIndex: 0)
@@ -133,84 +131,15 @@ struct ReactionServiceTests {
         #expect(foundID == nil)
     }
 
-    @Test("Disambiguates by preview when multiple candidates have same hash")
-    func disambiguatesByPreview() async {
+    @Test("Returns most recently indexed when multiple candidates have same hash")
+    func returnsMostRecentWhenMultipleCandidates() async {
         let service = ReactionService()
         let id1 = UUID()
         let id2 = UUID()
         let timestamp: UInt32 = 1704067200
 
-        // Index two messages with same hash but different text
-        // (In reality this would be rare, but we simulate it by indexing with same params)
-        await service.indexMessage(
-            id: id1,
-            channelIndex: 0,
-            senderName: "Node",
-            text: "Message one",
-            timestamp: timestamp
-        )
-
-        await service.indexMessage(
-            id: id2,
-            channelIndex: 0,
-            senderName: "Node",
-            text: "Message two",
-            timestamp: timestamp
-        )
-
-        // Build reaction for second message
-        let reactionText = service.buildReactionText(
-            emoji: "👍",
-            targetSender: "Node",
-            targetText: "Message two",
-            targetTimestamp: timestamp
-        )
-
-        let parsed = ReactionParser.parse(reactionText)!
-        let foundID = await service.findTargetMessage(parsed: parsed, channelIndex: 0)
-
-        // Should find the second message based on preview match
-        #expect(foundID == id2)
-    }
-
-    @Test("Returns nil when preview doesn't match any candidate (fail-safe)")
-    func returnsNilWhenPreviewDoesntMatch() async {
-        let service = ReactionService()
-        let messageID = UUID()
-        let timestamp: UInt32 = 1704067200
-
-        await service.indexMessage(
-            id: messageID,
-            channelIndex: 0,
-            senderName: "Node",
-            text: "Original message",
-            timestamp: timestamp
-        )
-
-        // Create a parsed reaction with wrong preview but matching hash
-        let hash = ReactionParser.generateMessageHash(text: "Original message", timestamp: timestamp)
-        let parsed = ParsedReaction(
-            emoji: "👍",
-            targetSender: "Node",
-            contentPreview: "Different preview",
-            messageHash: hash
-        )
-
-        let foundID = await service.findTargetMessage(parsed: parsed, channelIndex: 0)
-
-        // Should return nil because preview doesn't match
-        #expect(foundID == nil)
-    }
-
-    @Test("Picks most recently indexed when multiple candidates match preview")
-    func picksMostRecentWhenMultipleMatch() async {
-        let service = ReactionService()
-        let id1 = UUID()
-        let id2 = UUID()
-        let timestamp: UInt32 = 1704067200
-
-        // Index two messages with identical text (same hash and same preview)
-        await service.indexMessage(
+        // Index two messages with same hash (same text and timestamp)
+        _ = await service.indexMessage(
             id: id1,
             channelIndex: 0,
             senderName: "Node",
@@ -221,7 +150,7 @@ struct ReactionServiceTests {
         // Small delay to ensure different indexedAt times
         try? await Task.sleep(for: .milliseconds(10))
 
-        await service.indexMessage(
+        _ = await service.indexMessage(
             id: id2,
             channelIndex: 0,
             senderName: "Node",
@@ -229,6 +158,7 @@ struct ReactionServiceTests {
             timestamp: timestamp
         )
 
+        // Build reaction for the message
         let reactionText = service.buildReactionText(
             emoji: "👍",
             targetSender: "Node",
@@ -325,8 +255,8 @@ struct ReactionServiceTests {
         #expect(emojis == ["👍", "❤️", "😂"])
     }
 
-    @Test("Preview mismatch prevents false match")
-    func previewMismatchPreventsFalseMatch() async {
+    @Test("Hash mismatch prevents false match")
+    func hashMismatchPreventsFalseMatch() async {
         let service = ReactionService()
         let messageID = UUID()
         let deviceID = UUID()
@@ -349,8 +279,7 @@ struct ReactionServiceTests {
             deviceID: deviceID
         )
 
-        // Index a different message with same hash but different text
-        // (simulating a hash collision)
+        // Index a different message (different hash)
         let matches = await service.indexMessage(
             id: messageID,
             channelIndex: 0,
@@ -359,7 +288,7 @@ struct ReactionServiceTests {
             timestamp: timestamp
         )
 
-        // Should NOT match because preview doesn't match
+        // Should NOT match because hash is different
         #expect(matches.isEmpty)
     }
 

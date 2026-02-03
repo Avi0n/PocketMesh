@@ -74,24 +74,21 @@ private func normalizeCrockfordBase32(_ string: String) -> String {
 public struct ParsedReaction: Sendable, Equatable {
     public let emoji: String
     public let targetSender: String
-    public let contentPreview: String
     public let messageHash: String  // 8 Crockford Base32 chars (lowercase)
 
     public init(
         emoji: String,
         targetSender: String,
-        contentPreview: String,
         messageHash: String
     ) {
         self.emoji = emoji
         self.targetSender = targetSender
-        self.contentPreview = contentPreview
         self.messageHash = messageHash
     }
 }
 
 /// Parses reaction wire format using end-to-start strategy.
-/// Format: `{emoji} @[{sender}] {preview} [xxxxxxxx]`
+/// Format: `{emoji} @[{sender}] [xxxxxxxx]`
 public enum ReactionParser {
 
     /// Parses reaction text, returns nil if format doesn't match
@@ -125,22 +122,20 @@ public enum ReactionParser {
 
         let afterAtBracket = withoutHash[atBracketIndex.upperBound...]
 
-        // Step 3: Find `] ` to extract sender and split from content
-        guard let closeBracketIndex = afterAtBracket.range(of: "] ") else {
+        // Step 3: Extract sender (everything up to closing bracket)
+        guard afterAtBracket.hasSuffix("]") else {
             return nil
         }
 
-        let sender = String(afterAtBracket[..<closeBracketIndex.lowerBound])
-        let preview = String(afterAtBracket[closeBracketIndex.upperBound...])
+        let sender = String(afterAtBracket.dropLast())
 
-        guard !sender.isEmpty, !preview.isEmpty else {
+        guard !sender.isEmpty else {
             return nil
         }
 
         return ParsedReaction(
             emoji: emoji,
             targetSender: sender,
-            contentPreview: preview,
             messageHash: messageHash
         )
     }
@@ -152,35 +147,6 @@ public enum ReactionParser {
         let digest = SHA256.hash(data: data)
         let bytes = Array(digest.prefix(5))
         return encodeCrockfordBase32(bytes)
-    }
-
-    /// Generates content preview that fits within byte limit
-    /// Uses character-based truncation for universal language support (including CJK)
-    /// - Parameters:
-    ///   - text: Original message text
-    ///   - maxBytes: Maximum bytes available for preview
-    /// - Returns: Preview truncated to fit, with "..." if needed
-    public static func generateContentPreview(_ text: String, maxBytes: Int) -> String {
-        let ellipsis = "..."
-        let ellipsisBytes = ellipsis.utf8.count
-
-        // If entire text fits, return it
-        if text.utf8.count <= maxBytes {
-            return text
-        }
-
-        // Need at least space for ellipsis
-        guard maxBytes > ellipsisBytes else {
-            return String(ellipsis.prefix(maxBytes))
-        }
-
-        // Truncate by character until it fits (works for all languages)
-        var truncated = text
-        while !truncated.isEmpty && (truncated.utf8.count + ellipsisBytes) > maxBytes {
-            truncated = String(truncated.dropLast())
-        }
-
-        return truncated.isEmpty ? ellipsis : truncated + ellipsis
     }
 
     /// Builds summary string from emoji counts, sorted by count descending

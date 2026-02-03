@@ -730,11 +730,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let candidates = try modelContext.fetch(descriptor)
         guard !candidates.isEmpty else { return nil }
 
-        let maxPreviewBytes = ReactionService.previewBytesAvailable(
-            emoji: parsedReaction.emoji,
-            senderName: parsedReaction.targetSender
-        )
-
         for candidate in candidates {
             if candidate.direction == .outgoing {
                 guard let localNodeName, parsedReaction.targetSender == localNodeName else {
@@ -751,12 +746,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 timestamp: candidate.timestamp
             )
             guard hash == parsedReaction.messageHash else { continue }
-
-            let preview = ReactionParser.generateContentPreview(
-                candidate.text,
-                maxBytes: maxPreviewBytes
-            )
-            guard preview == parsedReaction.contentPreview else { continue }
 
             return MessageDTO(from: candidate)
         }

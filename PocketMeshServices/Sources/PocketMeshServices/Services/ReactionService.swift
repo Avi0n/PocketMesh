@@ -17,11 +17,6 @@ public actor ReactionService {
     private let logger = Logger(subsystem: "PocketMeshServices", category: "ReactionService")
     private let messageCache: MessageLRUCache
 
-    // Wire format: {emoji} @[{sender}] {preview} [xxxxxxxx]
-    // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + identifier (8) = 16
-    // Channel message limit: 147 bytes (matches official MeshCore app)
-    private static let fixedOverhead = 16
-    private static let maxMessageBytes = 147
     private static let maxPendingReactions = 100
 
     // Pending reactions queue (Element X pattern: no TTL, session lifetime)
@@ -32,11 +27,6 @@ public actor ReactionService {
         let channelIndex: UInt8
         let targetSender: String
         let messageHash: String
-    }
-
-    /// Calculates available bytes for content preview in reaction wire format
-    nonisolated static func previewBytesAvailable(emoji: String, senderName: String) -> Int {
-        maxMessageBytes - emoji.utf8.count - senderName.utf8.count - fixedOverhead
     }
 
     public init(messageCache: MessageLRUCache = MessageLRUCache()) {
@@ -67,40 +57,19 @@ public actor ReactionService {
             messageHash: hash
         )
 
-        guard var candidates = pendingReactions[key] else {
+        guard let matched = pendingReactions.removeValue(forKey: key) else {
             return []
         }
 
-        // Filter by content preview match (same disambiguation as findTargetMessage)
-        let matched = candidates.filter { pending in
-            let maxPreviewBytes = Self.previewBytesAvailable(
-                emoji: pending.parsed.emoji,
-                senderName: senderName
-            )
-            let preview = ReactionParser.generateContentPreview(text, maxBytes: maxPreviewBytes)
-            return preview == pending.parsed.contentPreview
-        }
+        pendingOrder.removeAll { $0 == key }
 
-        // Remove matched from pending
-        let matchedSet = Set(matched.map { "\($0.senderNodeName)-\($0.receivedAt.timeIntervalSince1970)" })
-        candidates.removeAll { matchedSet.contains("\($0.senderNodeName)-\($0.receivedAt.timeIntervalSince1970)") }
-
-        if candidates.isEmpty {
-            pendingReactions.removeValue(forKey: key)
-            pendingOrder.removeAll { $0 == key }
-        } else {
-            pendingReactions[key] = candidates
-        }
-
-        if !matched.isEmpty {
-            logger.debug("Matched \(matched.count) pending reaction(s) to message \(id)")
-        }
+        logger.debug("Matched \(matched.count) pending reaction(s) to message \(id)")
 
         return matched
     }
 
     /// Builds reaction wire format text for sending
-    /// Format: `{emoji} @[{sender}] {preview} [xxxxxxxx]`
+    /// Format: `{emoji} @[{sender}] [xxxxxxxx]`
     public nonisolated func buildReactionText(
         emoji: String,
         targetSender: String,
@@ -108,12 +77,10 @@ public actor ReactionService {
         targetTimestamp: UInt32
     ) -> String {
         let hash = ReactionParser.generateMessageHash(text: targetText, timestamp: targetTimestamp)
-        let availableForPreview = Self.previewBytesAvailable(emoji: emoji, senderName: targetSender)
-        let preview = ReactionParser.generateContentPreview(targetText, maxBytes: availableForPreview)
-        return "\(emoji) @[\(targetSender)] \(preview) [\(hash)]"
+        return "\(emoji) @[\(targetSender)] [\(hash)]"
     }
 
-    /// Finds target message ID for a parsed reaction using preview-based disambiguation
+    /// Finds target message ID for a parsed reaction using hash-based lookup
     public func findTargetMessage(parsed: ParsedReaction, channelIndex: UInt8) async -> UUID? {
         let candidates = await messageCache.lookup(
             channelIndex: channelIndex,
@@ -121,15 +88,8 @@ public actor ReactionService {
             messageHash: parsed.messageHash
         )
 
-        guard !candidates.isEmpty else { return nil }
-
-        let maxPreviewBytes = Self.previewBytesAvailable(emoji: parsed.emoji, senderName: parsed.targetSender)
-        let matches = candidates.filter { candidate in
-            let preview = ReactionParser.generateContentPreview(candidate.text, maxBytes: maxPreviewBytes)
-            return preview == parsed.contentPreview
-        }
-
-        return matches.max(by: { $0.indexedAt < $1.indexedAt })?.messageID
+        // Return most recently indexed match
+        return candidates.max(by: { $0.indexedAt < $1.indexedAt })?.messageID
     }
 
     /// Attempts to process incoming text as a reaction

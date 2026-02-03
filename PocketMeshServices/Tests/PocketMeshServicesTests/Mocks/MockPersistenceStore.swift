@@ -107,11 +107,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             return $0.createdAt > $1.createdAt
         }
 
-        let maxPreviewBytes = ReactionService.previewBytesAvailable(
-            emoji: parsedReaction.emoji,
-            senderName: parsedReaction.targetSender
-        )
-
         for candidate in candidates.prefix(limit) {
             if candidate.direction == .outgoing {
                 guard let localNodeName, parsedReaction.targetSender == localNodeName else {
@@ -128,12 +123,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 timestamp: candidate.timestamp
             )
             guard hash == parsedReaction.messageHash else { continue }
-
-            let preview = ReactionParser.generateContentPreview(
-                candidate.text,
-                maxBytes: maxPreviewBytes
-            )
-            guard preview == parsedReaction.contentPreview else { continue }
 
             return candidate
         }
