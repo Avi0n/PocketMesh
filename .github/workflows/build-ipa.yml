@@ -60,11 +60,20 @@ jobs:
 
       - name: Install dependencies
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
-        run: brew install xcodegen swiftgen
+        run: |
+          brew tap FelixHerrmann/tap
+          brew install xcodegen swiftgen swift-package-list
 
       - name: Generate Xcode project
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: xcodegen generate
+
+      - name: Update acknowledgements
+        if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          xcodebuild -resolvePackageDependencies -project PocketMesh.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages
+          swift-package-list PocketMesh.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path PocketMesh
+          rm -rf SourcePackages
 
       - name: Build Debug
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'

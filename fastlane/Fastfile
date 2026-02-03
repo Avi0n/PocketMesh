@@ -7,6 +7,14 @@ platform :ios do
     match(type: "appstore", readonly: ENV["CI"] == "true")
   end
 
+  desc "Update acknowledgements from SPM dependencies"
+  lane :update_acknowledgements do
+    sh("cd .. && xcodegen generate")
+    sh("cd .. && xcodebuild -resolvePackageDependencies -project PocketMesh.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages")
+    sh("cd .. && swift-package-list PocketMesh.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path PocketMesh")
+    sh("cd .. && rm -rf SourcePackages")
+  end
+
   desc "Build and upload to TestFlight"
   lane :beta do
     # Ensure we have the latest certificates

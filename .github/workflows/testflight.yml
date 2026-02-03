@@ -29,7 +29,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install xcodegen swiftgen
+          brew tap FelixHerrmann/tap
+          brew install xcodegen swiftgen swift-package-list
           gem install fastlane
 
       - name: Setup SSH for Match
