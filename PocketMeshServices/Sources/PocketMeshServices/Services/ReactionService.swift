@@ -17,8 +17,20 @@ public actor ReactionService {
     }
 
     /// Indexes a message for reaction matching (call when message received)
-    public func indexMessage(id: UUID, channelIndex: UInt8, senderName: String, text: String, timestamp: UInt32) async {
-        await messageCache.index(messageID: id, channelIndex: channelIndex, senderName: senderName, text: text, timestamp: timestamp)
+    public func indexMessage(
+        id: UUID,
+        channelIndex: UInt8,
+        senderName: String,
+        text: String,
+        timestamp: UInt32
+    ) async {
+        await messageCache.index(
+            messageID: id,
+            channelIndex: channelIndex,
+            senderName: senderName,
+            text: text,
+            timestamp: timestamp
+        )
     }
 
     /// Builds reaction wire format text for sending
@@ -42,13 +54,31 @@ public actor ReactionService {
         return "\(emoji) @[\(targetSender)] \(preview) [\(hash)]"
     }
 
-    /// Finds target message ID for a parsed reaction (O(1) cache lookup)
+    /// Finds target message ID for a parsed reaction using preview-based disambiguation
     public func findTargetMessage(parsed: ParsedReaction, channelIndex: UInt8) async -> UUID? {
-        await messageCache.lookup(
+        let candidates = await messageCache.lookup(
             channelIndex: channelIndex,
             senderName: parsed.targetSender,
             messageHash: parsed.messageHash
         )
+
+        guard !candidates.isEmpty else { return nil }
+
+        // Calculate preview bytes limit matching buildReactionText
+        // Format: {emoji} @[{sender}] {preview} [XXXXXXXX]
+        // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + identifier (8) = 16
+        let fixedOverhead = 16
+        let maxMessageBytes = 160
+        let maxPreviewBytes = maxMessageBytes - parsed.emoji.utf8.count - parsed.targetSender.utf8.count - fixedOverhead
+
+        // Find candidates whose preview matches
+        let matches = candidates.filter { candidate in
+            let preview = ReactionParser.generateContentPreview(candidate.text, maxBytes: maxPreviewBytes)
+            return preview == parsed.contentPreview
+        }
+
+        // Return most recently indexed match, or nil if no match
+        return matches.max(by: { $0.indexedAt < $1.indexedAt })?.messageID
     }
 
     /// Attempts to process incoming text as a reaction

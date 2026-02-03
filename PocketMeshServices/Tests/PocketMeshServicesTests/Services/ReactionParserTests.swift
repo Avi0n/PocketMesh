@@ -43,46 +43,77 @@ struct ReactionParserTests {
         #expect(result?.messageHash == "2c5f8e77")
     }
 
-    @Test("Parses reaction with all lowercase hash")
-    func parsesLowercaseHash() {
-        let text = "👍 @[Node] hello [abcdef12]"
+    @Test("Parses reaction with uppercase identifier and normalizes to lowercase")
+    func parsesUppercaseIdentifier() {
+        let text = "👍 @[Node] hello [ABCDEF12]"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
         #expect(result?.messageHash == "abcdef12")
     }
 
-    // MARK: - Hash Generation Tests
+    @Test("Parses reaction with mixed case identifier")
+    func parsesMixedCaseIdentifier() {
+        let text = "👍 @[Node] hello [AbCdEf12]"
+        let result = ReactionParser.parse(text)
 
-    @Test("Generates 8-character hex hash")
-    func generatesEightCharHash() {
-        let hash = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
-        #expect(hash.count == 8)
-        #expect(hash.allSatisfy { $0.isHexDigit })
+        #expect(result != nil)
+        #expect(result?.messageHash == "abcdef12")
     }
 
-    @Test("Same input produces same hash")
+    // MARK: - Crockford Base32 Identifier Tests
+
+    @Test("Generates 8-character Crockford Base32 identifier")
+    func generatesEightCharBase32() {
+        let hash = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
+        #expect(hash.count == 8)
+        // Verify all characters are valid Crockford Base32 (lowercase)
+        let validChars = CharacterSet(charactersIn: "0123456789abcdefghjkmnpqrstvwxyz")
+        #expect(hash.unicodeScalars.allSatisfy { validChars.contains($0) })
+    }
+
+    @Test("Same input produces same identifier")
     func sameInputSameHash() {
         let hash1 = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
         let hash2 = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
         #expect(hash1 == hash2)
     }
 
-    @Test("Different text produces different hash")
+    @Test("Different text produces different identifier")
     func differentTextDifferentHash() {
         let hash1 = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
         let hash2 = ReactionParser.generateMessageHash(text: "World", timestamp: 1704067200)
         #expect(hash1 != hash2)
     }
 
-    @Test("Different timestamp produces different hash")
+    @Test("Different timestamp produces different identifier")
     func differentTimestampDifferentHash() {
         let hash1 = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067200)
         let hash2 = ReactionParser.generateMessageHash(text: "Hello", timestamp: 1704067201)
         #expect(hash1 != hash2)
     }
 
-    // MARK: - Edge Cases (Task 4)
+    @Test("Crockford O is decoded as 0")
+    func crockfordODecodesAsZero() {
+        let text = "👍 @[Node] hello [OOOOOOOO]"
+        let result = ReactionParser.parse(text)
+
+        #expect(result != nil)
+        #expect(result?.messageHash == "00000000")
+    }
+
+    @Test("Crockford I/L are decoded as 1")
+    func crockfordILDecodeAsOne() {
+        let textI = "👍 @[Node] hello [iiiiiiii]"
+        let resultI = ReactionParser.parse(textI)
+        #expect(resultI?.messageHash == "11111111")
+
+        let textL = "👍 @[Node] hello [LLLLLLLL]"
+        let resultL = ReactionParser.parse(textL)
+        #expect(resultL?.messageHash == "11111111")
+    }
+
+    // MARK: - Edge Cases
 
     @Test("Parses sender name containing colon")
     func parsesSenderWithColon() {
@@ -94,7 +125,7 @@ struct ReactionParserTests {
         #expect(result?.contentPreview == "Hello world...")
     }
 
-    // MARK: - Invalid Format Tests (Task 5)
+    // MARK: - Invalid Format Tests
 
     @Test("Returns nil for plain text message")
     func returnsNilForPlainText() {
@@ -102,7 +133,7 @@ struct ReactionParserTests {
         #expect(ReactionParser.parse(text) == nil)
     }
 
-    @Test("Returns nil for missing hash")
+    @Test("Returns nil for missing identifier")
     func returnsNilForMissingHash() {
         let text = "👍 @[Node] Hello"
         #expect(ReactionParser.parse(text) == nil)
@@ -120,15 +151,15 @@ struct ReactionParserTests {
         #expect(ReactionParser.parse(text) == nil)
     }
 
-    @Test("Returns nil for invalid hash (wrong length)")
+    @Test("Returns nil for invalid identifier length")
     func returnsNilForInvalidHashLength() {
         let text = "👍 @[Node] Hello [abc]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
-    @Test("Returns nil for invalid hash (uppercase)")
-    func returnsNilForUppercaseHash() {
-        let text = "👍 @[Node] Hello [A1B2C3D4]"
+    @Test("Returns nil for invalid Crockford characters (U)")
+    func returnsNilForInvalidCrockfordU() {
+        let text = "👍 @[Node] Hello [uuuuuuuu]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
@@ -150,7 +181,7 @@ struct ReactionParserTests {
         #expect(ReactionParser.parse(text) == nil)
     }
 
-    // MARK: - ZWJ Emoji Tests (Task 6)
+    // MARK: - ZWJ Emoji Tests
 
     @Test("Parses reaction with skin tone modifier")
     func parsesEmojiWithSkinTone() {

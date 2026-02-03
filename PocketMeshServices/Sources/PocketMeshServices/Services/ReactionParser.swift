@@ -1,12 +1,81 @@
 import Foundation
 import CryptoKit
 
+// MARK: - Crockford Base32
+
+/// Crockford Base32 alphabet (excludes I, L, O, U to avoid ambiguity)
+private let crockfordAlphabet = Array("0123456789abcdefghjkmnpqrstvwxyz")
+
+/// Crockford Base32 decode table (maps ASCII to 5-bit values, -1 for invalid)
+private let crockfordDecodeTable: [Int8] = {
+    var table = [Int8](repeating: -1, count: 128)
+    for (index, char) in crockfordAlphabet.enumerated() {
+        table[Int(char.asciiValue!)] = Int8(index)
+        if let upper = Character(char.uppercased()).asciiValue {
+            table[Int(upper)] = Int8(index)
+        }
+    }
+    // Handle common substitutions (both cases)
+    table[Int(Character("O").asciiValue!)] = 0  // O -> 0
+    table[Int(Character("o").asciiValue!)] = 0
+    table[Int(Character("I").asciiValue!)] = 1  // I -> 1
+    table[Int(Character("i").asciiValue!)] = 1
+    table[Int(Character("L").asciiValue!)] = 1  // L -> 1
+    table[Int(Character("l").asciiValue!)] = 1
+    return table
+}()
+
+/// Encodes 5 bytes (40 bits) to 8 Crockford Base32 characters
+private func encodeCrockfordBase32(_ bytes: some Collection<UInt8>) -> String {
+    precondition(bytes.count == 5)
+    let byteArray = Array(bytes)
+
+    // Pack 5 bytes into a 40-bit value
+    var bits: UInt64 = 0
+    for byte in byteArray {
+        bits = (bits << 8) | UInt64(byte)
+    }
+
+    // Extract 8 groups of 5 bits, MSB first
+    var result = ""
+    result.reserveCapacity(8)
+    for shift in stride(from: 35, through: 0, by: -5) {
+        let index = Int((bits >> shift) & 0x1F)
+        result.append(crockfordAlphabet[index])
+    }
+    return result
+}
+
+/// Validates a string contains only valid Crockford Base32 characters
+private func isValidCrockfordBase32(_ string: String) -> Bool {
+    for char in string {
+        guard let ascii = char.asciiValue, ascii < 128, crockfordDecodeTable[Int(ascii)] >= 0 else {
+            return false
+        }
+    }
+    return true
+}
+
+/// Normalizes a Crockford Base32 string to lowercase canonical form
+private func normalizeCrockfordBase32(_ string: String) -> String {
+    var result = ""
+    result.reserveCapacity(string.count)
+    for char in string {
+        guard let ascii = char.asciiValue, ascii < 128 else { continue }
+        let value = crockfordDecodeTable[Int(ascii)]
+        if value >= 0 {
+            result.append(crockfordAlphabet[Int(value)])
+        }
+    }
+    return result
+}
+
 /// Parsed reaction data extracted from wire format
 public struct ParsedReaction: Sendable, Equatable {
     public let emoji: String
     public let targetSender: String
     public let contentPreview: String
-    public let messageHash: String  // 8 hex chars
+    public let messageHash: String  // 8 Crockford Base32 chars (lowercase)
 
     public init(
         emoji: String,
@@ -27,16 +96,20 @@ public enum ReactionParser {
 
     /// Parses reaction text, returns nil if format doesn't match
     public static func parse(_ text: String) -> ParsedReaction? {
-        // Step 1: Match hash suffix ` [xxxxxxxx]` at end (8 hex chars)
-        let hashPattern = #/ \[([0-9a-f]{8})\]$/#
-        guard let hashMatch = text.firstMatch(of: hashPattern) else {
+        // Step 1: Match identifier suffix ` [XXXXXXXX]` at end (8 Crockford Base32 chars, case-insensitive)
+        let idPattern = #/ \[([0-9A-Za-z]{8})\]$/#
+        guard let idMatch = text.firstMatch(of: idPattern) else {
             return nil
         }
 
-        let messageHash = String(hashMatch.1)
+        let rawHash = String(idMatch.1)
+        guard isValidCrockfordBase32(rawHash) else {
+            return nil
+        }
+        let messageHash = normalizeCrockfordBase32(rawHash)
 
-        // Remove hash suffix
-        let withoutHash = String(text[..<hashMatch.range.lowerBound])
+        // Remove identifier suffix
+        let withoutHash = String(text[..<idMatch.range.lowerBound])
 
         // Step 2: Find ` @[` to locate sender start
         guard let atBracketIndex = withoutHash.range(of: " @[") else {
@@ -72,12 +145,13 @@ public enum ReactionParser {
         )
     }
 
-    /// Generates message hash for reaction wire format
+    /// Generates message identifier for reaction wire format (8-char Crockford Base32)
     public static func generateMessageHash(text: String, timestamp: UInt32) -> String {
         var data = Data(text.utf8)
         withUnsafeBytes(of: timestamp.littleEndian) { data.append(contentsOf: $0) }
-        let hash = SHA256.hash(data: data)
-        return hash.prefix(4).map { String(format: "%02x", $0) }.joined()
+        let digest = SHA256.hash(data: data)
+        let bytes = Array(digest.prefix(5))
+        return encodeCrockfordBase32(bytes)
     }
 
     /// Generates content preview that fits within byte limit
