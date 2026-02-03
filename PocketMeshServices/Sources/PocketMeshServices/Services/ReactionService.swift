@@ -45,9 +45,10 @@ public actor ReactionService {
 
         // Calculate available bytes for preview
         // Format: {emoji} @[{sender}] {preview} [xxxxxxxx]
-        // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + hash (8) = 16
+        // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + identifier (8) = 16
+        // Channel message limit: 147 bytes (matches official MeshCore app)
         let fixedOverhead = 16
-        let maxMessageBytes = 160
+        let maxMessageBytes = 147
         let availableForPreview = maxMessageBytes - emoji.utf8.count - targetSender.utf8.count - fixedOverhead
 
         let preview = ReactionParser.generateContentPreview(targetText, maxBytes: availableForPreview)
@@ -65,10 +66,11 @@ public actor ReactionService {
         guard !candidates.isEmpty else { return nil }
 
         // Calculate preview bytes limit matching buildReactionText
-        // Format: {emoji} @[{sender}] {preview} [XXXXXXXX]
+        // Format: {emoji} @[{sender}] {preview} [xxxxxxxx]
         // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + identifier (8) = 16
+        // Channel message limit: 147 bytes (matches official MeshCore app)
         let fixedOverhead = 16
-        let maxMessageBytes = 160
+        let maxMessageBytes = 147
         let maxPreviewBytes = maxMessageBytes - parsed.emoji.utf8.count - parsed.targetSender.utf8.count - fixedOverhead
 
         // Find candidates whose preview matches
