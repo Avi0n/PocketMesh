@@ -147,20 +147,11 @@ struct UnifiedMessageBubble: View {
                     // Message bubble with text and optional routing footer
                     messageBubbleContent
                         .onLongPressGesture(minimumDuration: 0.3) {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             onLongPress?()
                         }
 
-                    // Link preview (if applicable)
-                    if previewsEnabled {
-                        linkPreviewContent
-                    }
-
-                    // Status row for outgoing messages
-                    if message.isOutgoing {
-                        statusRow
-                    }
-
-                    // Reaction badges for channel messages
+                    // Reaction badges for channel messages (right after bubble)
                     if message.channelIndex != nil {
                         ReactionBadgesView(
                             summary: message.reactionSummary,
@@ -171,6 +162,18 @@ struct UnifiedMessageBubble: View {
                                 showingReactionDetails = true
                             }
                         )
+                        .offset(y: -6)
+                        .padding(.bottom, -6)
+                    }
+
+                    // Link preview (if applicable)
+                    if previewsEnabled {
+                        linkPreviewContent
+                    }
+
+                    // Status row for outgoing messages
+                    if message.isOutgoing {
+                        statusRow
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -193,7 +196,6 @@ struct UnifiedMessageBubble: View {
         }
         .sheet(isPresented: $showingReactionDetails) {
             ReactionDetailsSheet(messageID: message.id)
-                .presentationDetents([.medium])
         }
     }
 

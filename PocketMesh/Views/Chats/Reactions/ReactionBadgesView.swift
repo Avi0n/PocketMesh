@@ -12,16 +12,16 @@ struct ReactionBadgesView: View {
     }
 
     private var visibleReactions: [(emoji: String, count: Int)] {
-        Array(reactions.prefix(5))
+        Array(reactions.prefix(3))
     }
 
     private var overflowCount: Int {
-        max(0, reactions.count - 5)
+        max(0, reactions.count - 3)
     }
 
     var body: some View {
         if !reactions.isEmpty {
-            HStack(spacing: 6) {
+            HStack(spacing: 0) {
                 ForEach(visibleReactions, id: \.emoji) { reaction in
                     ReactionBadge(emoji: reaction.emoji, count: reaction.count)
                         .onTapGesture {
@@ -37,6 +37,7 @@ struct ReactionBadgesView: View {
                 }
             }
             .onLongPressGesture {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 onLongPress()
             }
         }
@@ -50,13 +51,17 @@ private struct ReactionBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(emoji)
-            Text(count, format: .number)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.subheadline)
+            if count > 1 {
+                Text(count, format: .number)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .background(.quaternary, in: .capsule)
+        .background(AppColors.Message.incomingBubble, in: .capsule)
+        .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 2))
     }
 }
 
@@ -65,11 +70,12 @@ private struct OverflowBadge: View {
 
     var body: some View {
         Text("+\(count)")
-            .font(.caption)
+            .font(.footnote)
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(.quaternary, in: .capsule)
+            .background(AppColors.Message.incomingBubble, in: .capsule)
+            .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 2))
     }
 }
 
