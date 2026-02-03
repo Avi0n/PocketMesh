@@ -887,19 +887,43 @@ final class ChatViewModel {
     /// Send a reaction emoji to a channel message
     func sendReaction(emoji: String, to message: MessageDTO) async {
         logger.info("[REACTION-DEBUG] sendReaction called: emoji=\(emoji), targetMessageID=\(message.id)")
-        guard let senderName = message.senderNodeName,
-              let channelIndex = message.channelIndex,
+        guard let channelIndex = message.channelIndex,
               let reactionService = appState?.services?.reactionService,
               let messageService,
               let dataStore else {
-            logger.info("[REACTION-DEBUG] sendReaction guard failed: senderName=\(message.senderNodeName ?? "nil"), channelIndex=\(message.channelIndex?.description ?? "nil")")
+            logger.info("[REACTION-DEBUG] sendReaction guard failed: channelIndex=\(message.channelIndex?.description ?? "nil")")
+            return
+        }
+
+        // Determine target sender name:
+        // - For outgoing messages (user's own): use local node name
+        // - For incoming messages: use senderNodeName
+        let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
+        let targetSenderName: String
+        if message.isOutgoing {
+            targetSenderName = localNodeName
+        } else {
+            guard let senderName = message.senderNodeName else {
+                logger.info("[REACTION-DEBUG] sendReaction guard failed: senderName=nil for incoming message")
+                return
+            }
+            targetSenderName = senderName
+        }
+
+        // Check if user already reacted with this emoji
+        if let alreadyReacted = try? await dataStore.reactionExists(
+            messageID: message.id,
+            senderName: localNodeName,
+            emoji: emoji
+        ), alreadyReacted {
+            logger.info("[REACTION-DEBUG] User already reacted with \(emoji), ignoring")
             return
         }
 
         // Build reaction wire format using ReactionService (nonisolated, no await needed)
         let reactionText = reactionService.buildReactionText(
             emoji: emoji,
-            targetSender: senderName,
+            targetSender: targetSenderName,
             targetText: message.text,
             targetTimestamp: message.timestamp
         )
@@ -918,7 +942,6 @@ final class ChatViewModel {
             recentEmojisStore.recordUsage(emoji)
 
             // Optimistic local update: save reaction and update target message
-            let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
             let messageHash = ReactionParser.generateMessageHash(text: message.text, timestamp: message.timestamp)
             logger.info("[REACTION-DEBUG] Saving local reaction: localNodeName=\(localNodeName), hash=\(messageHash)")
             let reactionDTO = ReactionDTO(
@@ -933,12 +956,18 @@ final class ChatViewModel {
             try? await dataStore.saveReaction(reactionDTO)
             logger.info("[REACTION-DEBUG] Reaction saved to database")
 
-            // Update reaction summary
+            // Update reaction summary with Element X-style ordering (count desc, earliest timestamp asc)
             if let reactions = try? await dataStore.fetchReactions(for: message.id) {
                 logger.info("[REACTION-DEBUG] Fetched \(reactions.count) reactions for message")
-                let counts = Dictionary(grouping: reactions, by: \.emoji)
-                    .map { ($0.key, $0.value.count) }
-                let summary = ReactionParser.buildSummary(from: counts)
+                let grouped = Dictionary(grouping: reactions, by: \.emoji)
+                let sorted = grouped.map { emoji, items in
+                    (emoji: emoji, count: items.count, earliest: items.map(\.receivedAt).min() ?? Date.distantPast)
+                }
+                .sorted { lhs, rhs in
+                    if lhs.count != rhs.count { return lhs.count > rhs.count }
+                    return lhs.earliest < rhs.earliest
+                }
+                let summary = sorted.map { "\($0.emoji):\($0.count)" }.joined(separator: ",")
                 logger.info("[REACTION-DEBUG] Built summary: \(summary)")
                 try? await dataStore.updateMessageReactionSummary(messageID: message.id, summary: summary)
 
