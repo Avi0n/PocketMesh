@@ -6,6 +6,7 @@ public struct NotificationPreferences: Sendable {
     public let channelMessagesEnabled: Bool
     public let roomMessagesEnabled: Bool
     public let newContactDiscoveredEnabled: Bool
+    public let reactionNotificationsEnabled: Bool
     public let soundEnabled: Bool
     public let badgeEnabled: Bool
     public let lowBatteryEnabled: Bool
@@ -16,6 +17,7 @@ public struct NotificationPreferences: Sendable {
         self.channelMessagesEnabled = defaults.object(forKey: "notifyChannelMessages") as? Bool ?? true
         self.roomMessagesEnabled = defaults.object(forKey: "notifyRoomMessages") as? Bool ?? true
         self.newContactDiscoveredEnabled = defaults.object(forKey: "notifyNewContacts") as? Bool ?? true
+        self.reactionNotificationsEnabled = defaults.object(forKey: "notifyReactions") as? Bool ?? true
         self.soundEnabled = defaults.object(forKey: "notificationSoundEnabled") as? Bool ?? true
         self.badgeEnabled = defaults.object(forKey: "notificationBadgeEnabled") as? Bool ?? true
         self.lowBatteryEnabled = defaults.object(forKey: "notifyLowBattery") as? Bool ?? true
@@ -52,6 +54,12 @@ public final class NotificationPreferencesStore {
     public var newContactDiscoveredEnabled: Bool {
         get { defaults.object(forKey: "notifyNewContacts") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "notifyNewContacts") }
+    }
+
+    /// Enable notifications when someone reacts to your messages
+    public var reactionNotificationsEnabled: Bool {
+        get { defaults.object(forKey: "notifyReactions") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "notifyReactions") }
     }
 
     // MARK: - Sound & Badge

@@ -8,6 +8,7 @@ public enum NotificationCategory: String, Sendable {
     case directMessage = "DIRECT_MESSAGE"
     case channelMessage = "CHANNEL_MESSAGE"
     case roomMessage = "ROOM_MESSAGE"
+    case reaction = "REACTION"
     case lowBattery = "LOW_BATTERY"
 }
 
@@ -51,6 +52,16 @@ public final class NotificationService: NSObject {
     /// Callback for when a new contact discovered notification is tapped
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onNewContactNotificationTapped: (@MainActor @Sendable (_ contactID: UUID) async -> Void)?
+
+    /// Callback for when a reaction notification is tapped
+    /// Parameters: contactID (for DM) or nil, channelIndex/deviceID (for channel) or nil, and messageID
+    /// CRITICAL: Must be @MainActor - see onQuickReply comment.
+    public var onReactionNotificationTapped: (@MainActor @Sendable (
+        _ contactID: UUID?,
+        _ channelIndex: UInt8?,
+        _ deviceID: UUID?,
+        _ messageID: UUID
+    ) async -> Void)?
 
     /// Provider for localized notification strings
     private var stringProvider: NotificationStringProvider?
@@ -211,6 +222,14 @@ public final class NotificationService: NSObject {
             options: [.customDismissAction]
         )
 
+        // Reaction category (no actions - just tap to navigate)
+        let reactionCategory = UNNotificationCategory(
+            identifier: NotificationCategory.reaction.rawValue,
+            actions: [],
+            intentIdentifiers: [],
+            options: []
+        )
+
         // Low battery category
         let lowBatteryCategory = UNNotificationCategory(
             identifier: NotificationCategory.lowBattery.rawValue,
@@ -223,6 +242,7 @@ public final class NotificationService: NSObject {
             directMessageCategory,
             channelMessageCategory,
             roomMessageCategory,
+            reactionCategory,
             lowBatteryCategory
         ]
 
@@ -441,6 +461,74 @@ public final class NotificationService: NSObject {
         case .chat: "New Contact Discovered"
         case .repeater: "New Repeater Discovered"
         case .room: "New Room Discovered"
+        }
+    }
+
+    /// Posts a notification when someone reacts to the user's message.
+    /// - Parameters:
+    ///   - reactorName: Name of the person who reacted
+    ///   - emoji: The reaction emoji
+    ///   - messagePreview: Preview of the message that was reacted to
+    ///   - messageID: ID of the message that was reacted to
+    ///   - contactID: Contact ID if this is a direct message reaction (nil for channels)
+    ///   - channelIndex: Channel index if this is a channel reaction (nil for DMs)
+    ///   - deviceID: Device ID for channel reactions (nil for DMs)
+    public func postReactionNotification(
+        reactorName: String,
+        emoji: String,
+        messagePreview: String,
+        messageID: UUID,
+        contactID: UUID?,
+        channelIndex: UInt8?,
+        deviceID: UUID?
+    ) async {
+        guard isAuthorized && notificationsEnabled else { return }
+
+        // Check reaction-specific preference
+        guard preferences.reactionNotificationsEnabled else { return }
+
+        // Skip if suppressed (during sync window)
+        guard !isSuppressingNotifications else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = reactorName
+
+        // Truncate preview if too long
+        let truncatedPreview = messagePreview.count > 50
+            ? String(messagePreview.prefix(47)) + "..."
+            : messagePreview
+        content.body = "Reacted \(emoji) to your message: \"\(truncatedPreview)\""
+
+        content.sound = preferences.soundEnabled ? .default : nil
+        content.categoryIdentifier = NotificationCategory.reaction.rawValue
+
+        // Build userInfo with all identifiers needed for navigation
+        var userInfo: [String: Any] = [
+            "messageID": messageID.uuidString,
+            "type": "reaction"
+        ]
+        if let contactID {
+            userInfo["contactID"] = contactID.uuidString
+            content.threadIdentifier = "reaction-contact-\(contactID.uuidString)"
+        }
+        if let channelIndex, let deviceID {
+            userInfo["channelIndex"] = Int(channelIndex)
+            userInfo["deviceID"] = deviceID.uuidString
+            content.threadIdentifier = "reaction-channel-\(deviceID.uuidString)-\(channelIndex)"
+        }
+        content.userInfo = userInfo
+
+        // Unique identifier per reaction to avoid replacing previous notifications
+        let request = UNNotificationRequest(
+            identifier: "reaction-\(messageID.uuidString)-\(reactorName)-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            // Notification failed to post
         }
     }
 
@@ -780,15 +868,28 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
 
         case UNNotificationDefaultActionIdentifier:
             // User tapped the notification
-            if let contactIDString = userInfo["contactID"] as? String,
+            let notificationType = userInfo["type"] as? String
+
+            // Handle reaction notifications (includes messageID for scroll-to)
+            if notificationType == "reaction",
+               let messageIDString = userInfo["messageID"] as? String,
+               let messageID = UUID(uuidString: messageIDString) {
+                let contactID = (userInfo["contactID"] as? String).flatMap { UUID(uuidString: $0) }
+                let channelIndex = (userInfo["channelIndex"] as? Int).map { UInt8($0) }
+                let deviceID = (userInfo["deviceID"] as? String).flatMap { UUID(uuidString: $0) }
+                await onReactionNotificationTapped?(contactID, channelIndex, deviceID, messageID)
+            }
+            // Handle contact-based notifications (DM, new contact)
+            else if let contactIDString = userInfo["contactID"] as? String,
                let contactID = UUID(uuidString: contactIDString) {
-                let notificationType = userInfo["type"] as? String
                 if notificationType == "newContact" {
                     await onNewContactNotificationTapped?(contactID)
                 } else {
                     await onNotificationTapped?(contactID)
                 }
-            } else if let channelIndex = userInfo["channelIndex"] as? Int,
+            }
+            // Handle channel notifications
+            else if let channelIndex = userInfo["channelIndex"] as? Int,
                       let deviceIDString = userInfo["deviceID"] as? String,
                       let deviceID = UUID(uuidString: deviceIDString) {
                 await onChannelNotificationTapped?(deviceID, UInt8(channelIndex))

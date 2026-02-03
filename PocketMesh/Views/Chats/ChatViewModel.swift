@@ -808,6 +808,8 @@ final class ChatViewModel {
                       ReactionParser.parse(message.text) != nil else {
                     return true
                 }
+                // Debug: log filtered messages
+                logger.info("loadChannelMessages: FILTERING message \(message.id) - text parses as reaction: \(message.text.prefix(50))")
                 // Only show if explicitly failed
                 return message.status == .failed
             }

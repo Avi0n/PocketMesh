@@ -1096,6 +1096,15 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return Set(contacts.values.filter { $0.deviceID == deviceID }.map(\.publicKey))
     }
 
+    // MARK: - Reactions
+
+    public var reactions: [UUID: [ReactionDTO]] = [:]
+
+    public func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO] {
+        let messageReactions = reactions[messageID] ?? []
+        return Array(messageReactions.sorted { $0.receivedAt > $1.receivedAt }.prefix(limit))
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1107,6 +1116,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         mockRxLogEntries = []
         linkPreviews = [:]
         discoveredNodes = [:]
+        reactions = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []

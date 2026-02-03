@@ -30,6 +30,9 @@ struct NotificationSettingsSection: View {
                     Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
                         Label(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
                     }
+                    Toggle(isOn: $preferences.reactionNotificationsEnabled) {
+                        Label(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
+                    }
                     Toggle(isOn: $preferences.lowBatteryEnabled) {
                         Label(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")
                     }
@@ -68,6 +71,9 @@ struct NotificationSettingsSection: View {
                     }
                     Toggle(isOn: $preferences.newContactDiscoveredEnabled) {
                         Label(L10n.Settings.Notifications.newContactDiscovered, systemImage: "person.badge.plus")
+                    }
+                    Toggle(isOn: $preferences.reactionNotificationsEnabled) {
+                        Label(L10n.Settings.Notifications.reactions, systemImage: "face.smiling")
                     }
                     Toggle(isOn: $preferences.lowBatteryEnabled) {
                         Label(L10n.Settings.Notifications.lowBattery, systemImage: "battery.25")

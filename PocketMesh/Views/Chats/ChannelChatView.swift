@@ -22,11 +22,21 @@ struct ChannelChatView: View {
     @State private var scrollToBottomRequest = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var scrollToTargetID: UUID?
 
     /// Mention IDs that are both unseen AND present in loaded messages
     private var reachableMentionIDs: Set<UUID> {
         let loadedIDs = Set(viewModel.displayItems.map(\.id))
         return unseenMentionIDs.intersection(loadedIDs)
+    }
+
+    /// Target message ID for scrolling (notification target takes priority over mentions)
+    private var scrollTargetID: UUID? {
+        if let targetID = scrollToTargetID,
+           viewModel.displayItems.contains(where: { $0.id == targetID }) {
+            return targetID
+        }
+        return reachableMentionIDs.first
     }
 
     @State private var selectedMessageForRepeats: MessageDTO?
@@ -90,14 +100,24 @@ struct ChannelChatView: View {
             )
         }
         .task(id: appState.servicesVersion) {
-            logger.info(".task: starting for channel \(channel.index), services=\(appState.services != nil)")
+            // Capture pending scroll target before loading
+            let pendingTarget = appState.pendingScrollToMessageID
+            if pendingTarget != nil {
+                appState.clearPendingScrollToMessage()
+            }
+
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             // Load contacts first so contactNameSet is populated before buildChannelSenders runs
             await viewModel.loadAllContacts(deviceID: channel.deviceID)
             await viewModel.loadChannelMessages(for: channel)
             await viewModel.loadConversations(deviceID: channel.deviceID)
             await loadUnseenMentions()
-            logger.info(".task: completed, messages.count=\(viewModel.messages.count)")
+
+            // Trigger scroll to target message if pending
+            if let targetID = pendingTarget {
+                scrollToTargetID = targetID
+                scrollToMentionRequest += 1
+            }
         }
         .onDisappear {
             // Clear active channel for notification suppression
@@ -263,7 +283,7 @@ struct ChannelChatView: View {
                             await markMentionSeen(messageID: messageID)
                         }
                     },
-                    mentionTargetID: reachableMentionIDs.first,
+                    mentionTargetID: scrollTargetID,
                     onNearTop: {
                         Task {
                             await viewModel.loadOlderMessages()

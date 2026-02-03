@@ -278,4 +278,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Batch fetch all contact public keys for efficient "added" state lookup.
     /// Returns public keys of confirmed (non-discovered) contacts only.
     func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data>
+
+    // MARK: - Reactions
+
+    /// Fetch reactions for a message, ordered by most recent first
+    func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO]
 }

@@ -320,6 +320,8 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
     func deleteDiscoveredNode(id: UUID) async throws {}
     func clearDiscoveredNodes(deviceID: UUID) async throws {}
     func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
+    func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO] { [] }
+    func findChannelMessageForReaction(deviceID: UUID, channelIndex: UInt8, parsedReaction: ParsedReaction, localNodeName: String?, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
 }
 
 // MARK: - Mock Link Preview Cache

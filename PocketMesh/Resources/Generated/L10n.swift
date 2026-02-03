@@ -2798,6 +2798,8 @@ public enum L10n {
       public static let newContactDiscovered = L10n.tr("Settings", "notifications.newContactDiscovered", fallback: "New Contact Discovered")
       /// Button to open system settings
       public static let openSettings = L10n.tr("Settings", "notifications.openSettings", fallback: "Open Settings")
+      /// Toggle label for reaction notifications
+      public static let reactions = L10n.tr("Settings", "notifications.reactions", fallback: "Reactions")
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
     }

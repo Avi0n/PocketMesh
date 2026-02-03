@@ -22,11 +22,21 @@ struct ChatView: View {
     @State private var scrollToBottomRequest = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var scrollToTargetID: UUID?
 
     /// Mention IDs that are both unseen AND present in loaded messages
     private var reachableMentionIDs: Set<UUID> {
         let loadedIDs = Set(viewModel.displayItems.map(\.id))
         return unseenMentionIDs.intersection(loadedIDs)
+    }
+
+    /// Target message ID for scrolling (notification target takes priority over mentions)
+    private var scrollTargetID: UUID? {
+        if let targetID = scrollToTargetID,
+           viewModel.displayItems.contains(where: { $0.id == targetID }) {
+            return targetID
+        }
+        return reachableMentionIDs.first
     }
 
     @State private var selectedMessageForPath: MessageDTO?
@@ -87,12 +97,24 @@ struct ChatView: View {
             )
         }
         .task(id: appState.servicesVersion) {
+            // Capture pending scroll target before loading
+            let pendingTarget = appState.pendingScrollToMessageID
+            if pendingTarget != nil {
+                appState.clearPendingScrollToMessage()
+            }
+
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
             await viewModel.loadMessages(for: contact)
             await viewModel.loadConversations(deviceID: contact.deviceID)
             await viewModel.loadAllContacts(deviceID: contact.deviceID)
             viewModel.loadDraftIfExists()
             await loadUnseenMentions()
+
+            // Trigger scroll to target message if pending
+            if let targetID = pendingTarget {
+                scrollToTargetID = targetID
+                scrollToMentionRequest += 1
+            }
         }
         .onDisappear {
             // Clear active conversation for notification suppression
@@ -253,7 +275,7 @@ struct ChatView: View {
                             await markMentionSeen(messageID: messageID)
                         }
                     },
-                    mentionTargetID: reachableMentionIDs.first,
+                    mentionTargetID: scrollTargetID,
                     onNearTop: {
                         Task {
                             await viewModel.loadOlderMessages()

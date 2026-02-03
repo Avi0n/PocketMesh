@@ -59,4 +59,104 @@ struct NotificationServiceTests {
         // If we got here without compile error, the signature is correct
         #expect(true)
     }
+
+    // MARK: - Reaction Notification Tests
+
+    @Test("postReactionNotification has correct method signature")
+    @MainActor
+    func postReactionNotificationHasCorrectSignature() async {
+        let service = NotificationService()
+
+        // Verify method exists with correct signature (compile-time check)
+        // Actual notification won't post without authorization
+        await service.postReactionNotification(
+            reactorName: "Alice",
+            emoji: "👍",
+            messagePreview: "Hello world",
+            messageID: UUID(),
+            contactID: UUID(),
+            channelIndex: nil,
+            deviceID: nil
+        )
+
+        #expect(true)
+    }
+
+    @Test("postReactionNotification accepts channel parameters")
+    @MainActor
+    func postReactionNotificationAcceptsChannelParameters() async {
+        let service = NotificationService()
+
+        // Verify method accepts channel parameters for channel reactions
+        await service.postReactionNotification(
+            reactorName: "Bob",
+            emoji: "❤️",
+            messagePreview: "Team update",
+            messageID: UUID(),
+            contactID: nil,
+            channelIndex: 3,
+            deviceID: UUID()
+        )
+
+        #expect(true)
+    }
+
+    @Test("onReactionNotificationTapped callback can be set")
+    @MainActor
+    func onReactionNotificationTappedCallbackCanBeSet() async {
+        let service = NotificationService()
+        var callbackInvoked = false
+
+        service.onReactionNotificationTapped = { contactID, channelIndex, deviceID, messageID in
+            callbackInvoked = true
+        }
+
+        // Verify callback is settable
+        #expect(service.onReactionNotificationTapped != nil)
+
+        // Invoke callback to verify it works
+        await service.onReactionNotificationTapped?(UUID(), nil, nil, UUID())
+        #expect(callbackInvoked)
+    }
+
+    @Test("onReactionNotificationTapped receives all parameters")
+    @MainActor
+    func onReactionNotificationTappedReceivesAllParameters() async {
+        let service = NotificationService()
+        let expectedContactID = UUID()
+        let expectedChannelIndex: UInt8 = 5
+        let expectedDeviceID = UUID()
+        let expectedMessageID = UUID()
+
+        var receivedContactID: UUID?
+        var receivedChannelIndex: UInt8?
+        var receivedDeviceID: UUID?
+        var receivedMessageID: UUID?
+
+        service.onReactionNotificationTapped = { contactID, channelIndex, deviceID, messageID in
+            receivedContactID = contactID
+            receivedChannelIndex = channelIndex
+            receivedDeviceID = deviceID
+            receivedMessageID = messageID
+        }
+
+        await service.onReactionNotificationTapped?(
+            expectedContactID,
+            expectedChannelIndex,
+            expectedDeviceID,
+            expectedMessageID
+        )
+
+        #expect(receivedContactID == expectedContactID)
+        #expect(receivedChannelIndex == expectedChannelIndex)
+        #expect(receivedDeviceID == expectedDeviceID)
+        #expect(receivedMessageID == expectedMessageID)
+    }
+
+    @Test("Notification category includes reaction")
+    func notificationCategoryIncludesReaction() {
+        // Verify reaction category exists in the enum
+        let category = NotificationCategory.reaction
+        #expect(category.rawValue == "REACTION")
+    }
 }

@@ -706,6 +706,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         timestampWindow: ClosedRange<UInt32>,
         limit: Int
     ) throws -> MessageDTO? {
+        let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        logger.debug("[REACTION-MATCH] Looking for message: targetSender=\(parsedReaction.targetSender), hash=\(parsedReaction.messageHash), localNodeName=\(localNodeName ?? "nil"), window=\(timestampWindow.lowerBound)...\(timestampWindow.upperBound)")
+
         let targetDeviceID = deviceID
         let targetChannelIndex: UInt8? = channelIndex
         let start = timestampWindow.lowerBound
@@ -728,15 +731,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = limit
 
         let candidates = try modelContext.fetch(descriptor)
+        logger.debug("[REACTION-MATCH] Found \(candidates.count) candidates in window")
         guard !candidates.isEmpty else { return nil }
 
         for candidate in candidates {
+            let direction = candidate.direction == .outgoing ? "outgoing" : "incoming"
+            let candidateHash = ReactionParser.generateMessageHash(text: candidate.text, timestamp: candidate.timestamp)
+            logger.debug("[REACTION-MATCH] Candidate: direction=\(direction), senderNodeName=\(candidate.senderNodeName ?? "nil"), hash=\(candidateHash), text=\(candidate.text.prefix(30))")
+
             if candidate.direction == .outgoing {
                 guard let localNodeName, parsedReaction.targetSender == localNodeName else {
+                    logger.debug("[REACTION-MATCH] Skip outgoing: localNodeName=\(localNodeName ?? "nil"), targetSender=\(parsedReaction.targetSender)")
                     continue
                 }
             } else {
                 guard candidate.senderNodeName == parsedReaction.targetSender else {
+                    logger.debug("[REACTION-MATCH] Skip incoming: senderNodeName=\(candidate.senderNodeName ?? "nil") != targetSender=\(parsedReaction.targetSender)")
                     continue
                 }
             }
@@ -745,11 +755,16 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 text: candidate.text,
                 timestamp: candidate.timestamp
             )
-            guard hash == parsedReaction.messageHash else { continue }
+            guard hash == parsedReaction.messageHash else {
+                logger.debug("[REACTION-MATCH] Hash mismatch: \(hash) != \(parsedReaction.messageHash)")
+                continue
+            }
 
+            logger.debug("[REACTION-MATCH] Found match!")
             return MessageDTO(from: candidate)
         }
 
+        logger.debug("[REACTION-MATCH] No match found")
         return nil
     }
 

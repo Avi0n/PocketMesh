@@ -816,6 +816,8 @@ public actor SyncCoordinator {
                 let windowStart = now > windowSize ? now - windowSize : 0
                 let windowEnd = now + windowSize
 
+                self.logger.debug("[REACTION-DEBUG] DB lookup: selfNodeName='\(selfNodeName)', targetSender=\(parsed.targetSender), hash=\(parsed.messageHash)")
+
                 if let targetMessage = try? await services.dataStore.findChannelMessageForReaction(
                     deviceID: deviceID,
                     channelIndex: message.channelIndex,
