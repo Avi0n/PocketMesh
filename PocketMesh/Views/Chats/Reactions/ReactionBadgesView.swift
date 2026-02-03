@@ -40,10 +40,13 @@ struct ReactionBadgesView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .onLongPressGesture {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                onLongPress()
-            }
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.3)
+                    .onEnded { _ in
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onLongPress()
+                    }
+            )
         }
     }
 }
