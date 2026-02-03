@@ -440,6 +440,11 @@ public final class AppState {
             }
         }
 
+        // Wire contact updated callback for real-time Discover page updates
+        await services.advertisementService.setContactUpdatedHandler { @MainActor [weak self] in
+            self?.contactsVersion += 1
+        }
+
         // Wire node deleted callback
         // Clears isNodeStorageFull when user manually deletes a node (frees up space)
         await services.contactService.setNodeDeletedHandler { [weak self] in

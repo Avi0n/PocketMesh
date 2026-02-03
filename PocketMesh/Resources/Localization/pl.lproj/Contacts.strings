@@ -460,7 +460,7 @@
 "contacts.discovery.empty.title" = "Brak odkrytych węzłów";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Gdy automatyczne dodawanie węzłów jest wyłączone, nowo odkryte węzły pojawią się tutaj do ręcznego dodania.";
+"contacts.discovery.empty.description" = "Węzły pojawią się tutaj w miarę odkrywania ich ogłoszeń.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Dodaj";

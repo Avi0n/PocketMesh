@@ -460,7 +460,7 @@
 "contacts.discovery.empty.title" = "Нет обнаруженных узлов";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Когда автодобавление узлов отключено, новые обнаруженные узлы будут появляться здесь для ручного добавления.";
+"contacts.discovery.empty.description" = "Узлы будут появляться здесь по мере обнаружения их объявлений.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Добавить";

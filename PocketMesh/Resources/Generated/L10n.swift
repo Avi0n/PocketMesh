@@ -965,7 +965,7 @@ public enum L10n {
         }
         public enum Empty {
           /// Location: DiscoveryView.swift - Purpose: Empty state description
-          public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
+          public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "Nodes will appear here as their advertisements are discovered.")
           /// Location: DiscoveryView.swift - Purpose: Empty state title
           public static let title = L10n.tr("Contacts", "contacts.discovery.empty.title", fallback: "No Discovered Nodes")
           public enum Search {

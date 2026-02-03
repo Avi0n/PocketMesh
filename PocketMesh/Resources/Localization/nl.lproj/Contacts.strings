@@ -460,7 +460,7 @@
 "contacts.discovery.empty.title" = "Geen ontdekte nodes";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Wanneer Automatisch Nodes Toevoegen uit staat, verschijnen nieuw ontdekte nodes hier zodat je ze handmatig kunt toevoegen.";
+"contacts.discovery.empty.description" = "Nodes verschijnen hier zodra hun advertenties worden ontdekt.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Toevoegen";

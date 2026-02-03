@@ -463,7 +463,7 @@
 "contacts.discovery.empty.title" = "No Discovered Nodes";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.";
+"contacts.discovery.empty.description" = "Nodes will appear here as their advertisements are discovered.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Add";
