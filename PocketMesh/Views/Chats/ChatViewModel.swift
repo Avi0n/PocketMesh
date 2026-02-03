@@ -864,6 +864,7 @@ final class ChatViewModel {
                                         messageID: message.id,
                                         summary: summary
                                     )
+                                    updateReactionSummary(for: message.id, summary: summary)
                                 }
                             }
                         }
@@ -1003,6 +1004,7 @@ final class ChatViewModel {
                                         messageID: message.id,
                                         summary: summary
                                     )
+                                    updateReactionSummary(for: message.id, summary: summary)
                                 }
                             }
                         }
