@@ -538,15 +538,27 @@ public final class ConnectionManager {
         // Only check BLE connections
         guard currentTransportType == nil || currentTransportType == .bluetooth else { return }
 
-        // Check if user expects to be connected but we're disconnected
+        // Check if user expects to be connected
         guard shouldBeConnected,
-              connectionState == .disconnected,
               let deviceID = lastConnectedDeviceID else { return }
+
+        // Check actual BLE state - if connected at BLE level, no action needed
+        let bleConnected = await stateMachine.isConnected
+        if bleConnected {
+            return
+        }
 
         // Don't interfere if iOS auto-reconnect is still in progress
         if await stateMachine.isAutoReconnecting {
             logger.info("[BLE] Skipping foreground reconnect: iOS auto-reconnect still in progress")
             return
+        }
+
+        // Detect stale connection state: app thinks connected but BLE is actually disconnected
+        // This happens when iOS terminates the BLE connection while app is suspended
+        if connectionState == .ready || connectionState == .connected {
+            logger.warning("[BLE] Detected stale connection state on foreground: connectionState=\(String(describing: connectionState)) but BLE disconnected, triggering cleanup")
+            await handleConnectionLoss(deviceID: deviceID, error: nil)
         }
 
         // Don't reconnect if device is connected to another app
