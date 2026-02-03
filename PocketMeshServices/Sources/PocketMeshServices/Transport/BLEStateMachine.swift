@@ -9,7 +9,7 @@ import os
 /// All CoreBluetooth operations are modeled as state transitions. Each state
 /// owns its resources (continuations, timeouts), ensuring proper cleanup
 /// on any transition.
-public actor BLEStateMachine {
+public actor BLEStateMachine: BLEStateMachineProtocol {
 
     // MARK: - Logging
 

@@ -153,7 +153,7 @@ public final class ConnectionManager {
 
     /// Shared BLE state machine to manage connection lifecycle.
     /// This prevents state restoration race conditions that cause "API MISUSE" errors.
-    private let stateMachine = BLEStateMachine()
+    private let stateMachine: any BLEStateMachineProtocol
 
     /// Timer to transition UI from "connecting" to "disconnected" after timeout.
     /// iOS auto-reconnect continues in background even after this fires.
@@ -225,8 +225,18 @@ public final class ConnectionManager {
 
     // MARK: - Last Device Persistence
 
+    #if DEBUG
+    /// Test override for lastConnectedDeviceID
+    internal var testLastConnectedDeviceID: UUID?
+    #endif
+
     /// The last connected device ID (for auto-reconnect)
     public var lastConnectedDeviceID: UUID? {
+        #if DEBUG
+        if let testID = testLastConnectedDeviceID {
+            return testID
+        }
+        #endif
         guard let uuidString = UserDefaults.standard.string(forKey: lastDeviceIDKey) else {
             return nil
         }
@@ -671,14 +681,28 @@ public final class ConnectionManager {
     // MARK: - Initialization
 
     /// Creates a new connection manager.
-    /// - Parameter modelContainer: The SwiftData model container for persistence
-    public init(modelContainer: ModelContainer) {
+    /// - Parameters:
+    ///   - modelContainer: The SwiftData model container for persistence
+    ///   - stateMachine: Optional BLE state machine for testing. If nil, creates a real BLEStateMachine.
+    public init(modelContainer: ModelContainer, stateMachine: (any BLEStateMachineProtocol)? = nil) {
         self.modelContainer = modelContainer
-        self.transport = iOSBLETransport(stateMachine: stateMachine)
+
+        // Use provided state machine or create default
+        let bleStateMachine = stateMachine ?? BLEStateMachine()
+        self.stateMachine = bleStateMachine
+
+        // Transport requires concrete BLEStateMachine
+        if let concrete = bleStateMachine as? BLEStateMachine {
+            self.transport = iOSBLETransport(stateMachine: concrete)
+        } else {
+            // Test mode: create a dummy transport (won't be used when mocking BLE)
+            self.transport = iOSBLETransport(stateMachine: BLEStateMachine())
+        }
+
         accessorySetupKit.delegate = self
 
         // Wire up transport handlers
-        Task {
+        Task { [stateMachine = self.stateMachine] in
             // Handle disconnection events
             await transport.setDisconnectionHandler { [weak self] deviceID, error in
                 Task { @MainActor in
@@ -688,7 +712,7 @@ public final class ConnectionManager {
             }
 
             // Handle entering auto-reconnecting phase
-            await stateMachine.setAutoReconnectingHandler { [weak self] deviceID in
+            await stateMachine.setAutoReconnectingHandler { [weak self] (deviceID: UUID) in
                 Task { @MainActor in
                     guard let self else { return }
                     await self.handleEnteringAutoReconnect(deviceID: deviceID)
@@ -1935,4 +1959,29 @@ extension ConnectionManager: AccessorySetupKitServiceDelegate {
             clearPersistedConnection()
         }
     }
+
+    // MARK: - Test Helpers
+
+    #if DEBUG
+    /// Sets internal state for testing. Only available in DEBUG builds.
+    /// - Parameters:
+    ///   - connectionState: Override connection state
+    ///   - currentTransportType: Override transport type (use .some(nil) to set nil, omit to leave unchanged)
+    ///   - shouldBeConnected: Override shouldBeConnected flag
+    internal func setTestState(
+        connectionState: ConnectionState? = nil,
+        currentTransportType: TransportType?? = nil,
+        shouldBeConnected: Bool? = nil
+    ) {
+        if let state = connectionState {
+            self.connectionState = state
+        }
+        if let transport = currentTransportType {
+            self.currentTransportType = transport
+        }
+        if let connected = shouldBeConnected {
+            self.shouldBeConnected = connected
+        }
+    }
+    #endif
 }
