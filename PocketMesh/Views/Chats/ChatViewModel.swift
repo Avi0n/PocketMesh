@@ -866,6 +866,11 @@ final class ChatViewModel {
                 }
             }
 
+            // Filter out messages already in array (race condition: appendMessageIfNew can add
+            // a message while this fetch is in-flight, causing duplicates)
+            let existingIDs = Set(messages.map(\.id))
+            olderMessages = olderMessages.filter { !existingIDs.contains($0.id) }
+
             // Prepend older messages (they're chronologically earlier)
             messages.insert(contentsOf: olderMessages, at: 0)
 
