@@ -242,4 +242,210 @@ struct ReactionServiceTests {
         // Should find the most recently indexed (id2)
         #expect(foundID == id2)
     }
+
+    // MARK: - Pending Reactions Queue Tests
+
+    @Test("Queued reaction matches when message indexed")
+    func queuedReactionMatchesWhenMessageIndexed() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Build reaction text for a message that doesn't exist yet
+        let reactionText = service.buildReactionText(
+            emoji: "👍",
+            targetSender: "AlphaNode",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+
+        let parsed = ReactionParser.parse(reactionText)!
+
+        // Queue the reaction (target message not indexed yet)
+        await service.queuePendingReaction(
+            parsed: parsed,
+            channelIndex: 0,
+            senderNodeName: "BetaNode",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Now index the target message - should return the pending reaction
+        let matches = await service.indexMessage(
+            id: messageID,
+            channelIndex: 0,
+            senderName: "AlphaNode",
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matches.count == 1)
+        #expect(matches.first?.parsed.emoji == "👍")
+        #expect(matches.first?.senderNodeName == "BetaNode")
+    }
+
+    @Test("Multiple reactions for same target all match")
+    func multipleReactionsForSameTargetAllMatch() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue multiple reactions for the same message
+        for emoji in ["👍", "❤️", "😂"] {
+            let reactionText = service.buildReactionText(
+                emoji: emoji,
+                targetSender: "AlphaNode",
+                targetText: "Hello world",
+                targetTimestamp: timestamp
+            )
+            let parsed = ReactionParser.parse(reactionText)!
+
+            await service.queuePendingReaction(
+                parsed: parsed,
+                channelIndex: 0,
+                senderNodeName: "BetaNode",
+                rawText: reactionText,
+                deviceID: deviceID
+            )
+        }
+
+        // Index the target message - should return all pending reactions
+        let matches = await service.indexMessage(
+            id: messageID,
+            channelIndex: 0,
+            senderName: "AlphaNode",
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matches.count == 3)
+        let emojis = Set(matches.map { $0.parsed.emoji })
+        #expect(emojis == ["👍", "❤️", "😂"])
+    }
+
+    @Test("Preview mismatch prevents false match")
+    func previewMismatchPreventsFalseMatch() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue a reaction for "Hello world"
+        let reactionText = service.buildReactionText(
+            emoji: "👍",
+            targetSender: "AlphaNode",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parse(reactionText)!
+
+        await service.queuePendingReaction(
+            parsed: parsed,
+            channelIndex: 0,
+            senderNodeName: "BetaNode",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Index a different message with same hash but different text
+        // (simulating a hash collision)
+        let matches = await service.indexMessage(
+            id: messageID,
+            channelIndex: 0,
+            senderName: "AlphaNode",
+            text: "Different text",
+            timestamp: timestamp
+        )
+
+        // Should NOT match because preview doesn't match
+        #expect(matches.isEmpty)
+    }
+
+    @Test("Clear removes all pending reactions")
+    func clearRemovesAllPending() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue a reaction
+        let reactionText = service.buildReactionText(
+            emoji: "👍",
+            targetSender: "AlphaNode",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parse(reactionText)!
+
+        await service.queuePendingReaction(
+            parsed: parsed,
+            channelIndex: 0,
+            senderNodeName: "BetaNode",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Clear all pending
+        await service.clearPendingReactions()
+
+        // Index the target message - should return nothing
+        let matches = await service.indexMessage(
+            id: messageID,
+            channelIndex: 0,
+            senderName: "AlphaNode",
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matches.isEmpty)
+    }
+
+    @Test("Pending reactions are scoped by channel")
+    func pendingReactionsScopedByChannel() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue a reaction for channel 0
+        let reactionText = service.buildReactionText(
+            emoji: "👍",
+            targetSender: "AlphaNode",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parse(reactionText)!
+
+        await service.queuePendingReaction(
+            parsed: parsed,
+            channelIndex: 0,
+            senderNodeName: "BetaNode",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Index on channel 1 - should NOT match
+        let matchesChannel1 = await service.indexMessage(
+            id: messageID,
+            channelIndex: 1,
+            senderName: "AlphaNode",
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matchesChannel1.isEmpty)
+
+        // Index on channel 0 - should match
+        let matchesChannel0 = await service.indexMessage(
+            id: messageID,
+            channelIndex: 0,
+            senderName: "AlphaNode",
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matchesChannel0.count == 1)
+    }
 }

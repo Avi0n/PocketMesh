@@ -191,6 +191,20 @@ public enum ReactionParser {
             .joined(separator: ",")
     }
 
+    /// Builds summary string from reaction DTOs using Element X-style ordering.
+    /// Sorts by count descending, then by earliest timestamp ascending for tie-breaker.
+    public static func buildSummary(from reactions: [ReactionDTO]) -> String {
+        let grouped = Dictionary(grouping: reactions, by: \.emoji)
+        let sorted = grouped.map { emoji, items in
+            (emoji: emoji, count: items.count, earliest: items.map(\.receivedAt).min() ?? Date.distantPast)
+        }
+        .sorted { lhs, rhs in
+            if lhs.count != rhs.count { return lhs.count > rhs.count }
+            return lhs.earliest < rhs.earliest
+        }
+        return sorted.map { "\($0.emoji):\($0.count)" }.joined(separator: ",")
+    }
+
     /// Parses summary string into emoji/count pairs
     public static func parseSummary(_ summary: String?) -> [(emoji: String, count: Int)] {
         guard let summary, !summary.isEmpty else { return [] }

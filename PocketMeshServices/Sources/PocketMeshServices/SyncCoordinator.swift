@@ -537,6 +537,8 @@ public actor SyncCoordinator {
     /// onSyncActivityEnded to decrement the activity count, otherwise the pill stays stuck.
     public func onDisconnected(services: ServiceContainer) async {
         await deduplicationCache.clear()
+        // Note: pending reactions are NOT cleared on disconnect - they persist for the app session
+        // This handles temporary BLE disconnects without losing queued reactions
 
         // If we're mid-sync in contacts or channels phase, end the activity to hide the pill
         let currentState = await state
@@ -768,14 +770,11 @@ public actor SyncCoordinator {
             }
 
             // Check if this is a reaction
-            self.logger.info("[REACTION-DEBUG] Checking if message is reaction: \(messageText.prefix(50))...")
             if let parsed = services.reactionService.tryProcessAsReaction(messageText) {
-                self.logger.info("[REACTION-DEBUG] Parsed as reaction: emoji=\(parsed.emoji), target=\(parsed.targetSender), hash=\(parsed.messageHash)")
                 if let targetMessageID = await services.reactionService.findTargetMessage(
                     parsed: parsed,
                     channelIndex: message.channelIndex
                 ) {
-                    self.logger.info("[REACTION-DEBUG] Found target message: \(targetMessageID)")
                     // Check for duplicate
                     let senderName = senderNodeName ?? "Unknown"
                     let exists = try? await services.dataStore.reactionExists(
@@ -797,24 +796,13 @@ public actor SyncCoordinator {
                         )
                         try? await services.dataStore.saveReaction(reactionDTO)
 
-                        // Update summary with Element X-style ordering (count desc, earliest timestamp asc)
+                        // Update summary and notify UI
                         if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
-                            let grouped = Dictionary(grouping: reactions, by: \.emoji)
-                            let sorted = grouped.map { emoji, items in
-                                (emoji: emoji, count: items.count, earliest: items.map(\.receivedAt).min() ?? Date.distantPast)
-                            }
-                            .sorted { lhs, rhs in
-                                if lhs.count != rhs.count { return lhs.count > rhs.count }
-                                return lhs.earliest < rhs.earliest
-                            }
-                            let summary = sorted.map { "\($0.emoji):\($0.count)" }.joined(separator: ",")
+                            let summary = ReactionParser.buildSummary(from: reactions)
                             try? await services.dataStore.updateMessageReactionSummary(
                                 messageID: targetMessageID,
                                 summary: summary
                             )
-
-                            // Notify UI of reaction update
-                            self.logger.info("[REACTION-DEBUG] Firing onReactionReceived callback: messageID=\(targetMessageID), summary=\(summary)")
                             await self.onReactionReceived?(targetMessageID, summary)
                         }
 
@@ -822,26 +810,128 @@ public actor SyncCoordinator {
                     }
 
                     return  // Don't save as regular message
-                } else {
-                    self.logger.info("[REACTION-DEBUG] Target message NOT found in cache for hash=\(parsed.messageHash), sender=\(parsed.targetSender)")
                 }
-                // If no match found, fall through to save as regular message
-            } else {
-                self.logger.info("[REACTION-DEBUG] Message did not parse as reaction")
+                let now = UInt32(receiveTime.timeIntervalSince1970)
+                let windowSize: UInt32 = 300
+                let windowStart = now > windowSize ? now - windowSize : 0
+                let windowEnd = now + windowSize
+
+                if let targetMessage = try? await services.dataStore.findChannelMessageForReaction(
+                    deviceID: deviceID,
+                    channelIndex: message.channelIndex,
+                    parsedReaction: parsed,
+                    localNodeName: selfNodeName.isEmpty ? nil : selfNodeName,
+                    timestampWindow: windowStart...windowEnd,
+                    limit: 200
+                ) {
+                    let targetMessageID = targetMessage.id
+                    let senderName = senderNodeName ?? "Unknown"
+                    let exists = try? await services.dataStore.reactionExists(
+                        messageID: targetMessageID,
+                        senderName: senderName,
+                        emoji: parsed.emoji
+                    )
+
+                    if exists != true {
+                        let reactionDTO = ReactionDTO(
+                            messageID: targetMessageID,
+                            emoji: parsed.emoji,
+                            senderName: senderName,
+                            messageHash: parsed.messageHash,
+                            rawText: messageText,
+                            channelIndex: message.channelIndex,
+                            deviceID: deviceID
+                        )
+                        try? await services.dataStore.saveReaction(reactionDTO)
+
+                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
+                            let summary = ReactionParser.buildSummary(from: reactions)
+                            try? await services.dataStore.updateMessageReactionSummary(
+                                messageID: targetMessageID,
+                                summary: summary
+                            )
+                            await self.onReactionReceived?(targetMessageID, summary)
+                        }
+
+                        let targetSenderName: String?
+                        if targetMessage.direction == .outgoing {
+                            targetSenderName = selfNodeName.isEmpty ? nil : selfNodeName
+                        } else {
+                            targetSenderName = targetMessage.senderNodeName
+                        }
+
+                        if let targetSenderName {
+                            // Index for future reactions (pending matches not needed here since
+                            // message exists in DB, so pending reactions would also match via DB fallback)
+                            _ = await services.reactionService.indexMessage(
+                                id: targetMessageID,
+                                channelIndex: message.channelIndex,
+                                senderName: targetSenderName,
+                                text: targetMessage.text,
+                                timestamp: targetMessage.timestamp
+                            )
+                        }
+
+                        self.logger.debug("Saved reaction \(parsed.emoji) to message \(targetMessageID) via DB lookup")
+                    }
+
+                    return  // Don't save as regular message
+                }
+
+                // Queue reaction for later matching when target message arrives
+                await services.reactionService.queuePendingReaction(
+                    parsed: parsed,
+                    channelIndex: message.channelIndex,
+                    senderNodeName: senderNodeName ?? "Unknown",
+                    rawText: messageText,
+                    deviceID: deviceID
+                )
+                return  // Don't save as regular message
             }
 
             do {
                 try await services.dataStore.saveMessage(messageDTO)
 
-                // Index message for reaction matching
+                // Index message for reaction matching and process any pending reactions
                 if let senderName = senderNodeName {
-                    await services.reactionService.indexMessage(
+                    let pendingMatches = await services.reactionService.indexMessage(
                         id: messageDTO.id,
                         channelIndex: message.channelIndex,
                         senderName: senderName,
                         text: messageText,
                         timestamp: finalTimestamp
                     )
+
+                    // Process any pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await services.dataStore.reactionExists(
+                            messageID: messageDTO.id,
+                            senderName: pending.senderNodeName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: messageDTO.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderNodeName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                channelIndex: pending.channelIndex,
+                                deviceID: pending.deviceID
+                            )
+                            try? await services.dataStore.saveReaction(reactionDTO)
+
+                            if let reactions = try? await services.dataStore.fetchReactions(for: messageDTO.id) {
+                                let summary = ReactionParser.buildSummary(from: reactions)
+                                try? await services.dataStore.updateMessageReactionSummary(
+                                    messageID: messageDTO.id,
+                                    summary: summary
+                                )
+                                await self.onReactionReceived?(messageDTO.id, summary)
+                            }
+                        }
+                    }
                 }
 
                 // Update channel's last message date

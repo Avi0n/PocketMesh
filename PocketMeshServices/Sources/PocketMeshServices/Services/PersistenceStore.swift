@@ -697,6 +697,73 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return messages.reversed().map { MessageDTO(from: $0) }
     }
 
+    /// Finds a channel message matching a parsed reaction within a timestamp window.
+    public func findChannelMessageForReaction(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        parsedReaction: ParsedReaction,
+        localNodeName: String?,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) throws -> MessageDTO? {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        let start = timestampWindow.lowerBound
+        let end = timestampWindow.upperBound
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.channelIndex == targetChannelIndex &&
+            message.timestamp >= start &&
+            message.timestamp <= end
+        }
+
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+
+        let candidates = try modelContext.fetch(descriptor)
+        guard !candidates.isEmpty else { return nil }
+
+        let maxPreviewBytes = ReactionService.previewBytesAvailable(
+            emoji: parsedReaction.emoji,
+            senderName: parsedReaction.targetSender
+        )
+
+        for candidate in candidates {
+            if candidate.direction == .outgoing {
+                guard let localNodeName, parsedReaction.targetSender == localNodeName else {
+                    continue
+                }
+            } else {
+                guard candidate.senderNodeName == parsedReaction.targetSender else {
+                    continue
+                }
+            }
+
+            let hash = ReactionParser.generateMessageHash(
+                text: candidate.text,
+                timestamp: candidate.timestamp
+            )
+            guard hash == parsedReaction.messageHash else { continue }
+
+            let preview = ReactionParser.generateContentPreview(
+                candidate.text,
+                maxBytes: maxPreviewBytes
+            )
+            guard preview == parsedReaction.contentPreview else { continue }
+
+            return MessageDTO(from: candidate)
+        }
+
+        return nil
+    }
+
     /// Fetch a message by ID
     public func fetchMessage(id: UUID) throws -> MessageDTO? {
         let targetID = id

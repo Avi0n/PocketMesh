@@ -762,6 +762,59 @@ final class ChatViewModel {
             buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
 
+            // Index loaded messages for reaction matching and process any pending reactions
+            if let reactionService = appState?.services?.reactionService {
+                let localNodeName = appState?.connectedDevice?.nodeName
+                let deviceID = appState?.connectedDevice?.id ?? UUID()
+                for message in fetchedMessages {
+                    let senderName: String?
+                    if message.isOutgoing {
+                        senderName = localNodeName
+                    } else {
+                        senderName = message.senderNodeName
+                    }
+                    if let senderName {
+                        let pendingMatches = await reactionService.indexMessage(
+                            id: message.id,
+                            channelIndex: channel.index,
+                            senderName: senderName,
+                            text: message.text,
+                            timestamp: message.timestamp
+                        )
+
+                        // Process any pending reactions that now have their target
+                        for pending in pendingMatches {
+                            let exists = try? await dataStore.reactionExists(
+                                messageID: message.id,
+                                senderName: pending.senderNodeName,
+                                emoji: pending.parsed.emoji
+                            )
+
+                            if exists != true {
+                                let reactionDTO = ReactionDTO(
+                                    messageID: message.id,
+                                    emoji: pending.parsed.emoji,
+                                    senderName: pending.senderNodeName,
+                                    messageHash: pending.parsed.messageHash,
+                                    rawText: pending.rawText,
+                                    channelIndex: pending.channelIndex,
+                                    deviceID: deviceID
+                                )
+                                try? await dataStore.saveReaction(reactionDTO)
+
+                                if let reactions = try? await dataStore.fetchReactions(for: message.id) {
+                                    let summary = ReactionParser.buildSummary(from: reactions)
+                                    try? await dataStore.updateMessageReactionSummary(
+                                        messageID: message.id,
+                                        summary: summary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
             syncCoordinator?.notifyConversationsChanged()
@@ -847,6 +900,60 @@ final class ChatViewModel {
             // Rebuild display items with new messages
             await buildDisplayItems()
 
+            // Index older channel messages for reaction matching and process pending reactions
+            if let channel = currentChannel,
+               let reactionService = appState?.services?.reactionService {
+                let localNodeName = appState?.connectedDevice?.nodeName
+                let deviceID = appState?.connectedDevice?.id ?? UUID()
+                for message in olderMessages {
+                    let senderName: String?
+                    if message.isOutgoing {
+                        senderName = localNodeName
+                    } else {
+                        senderName = message.senderNodeName
+                    }
+                    if let senderName {
+                        let pendingMatches = await reactionService.indexMessage(
+                            id: message.id,
+                            channelIndex: channel.index,
+                            senderName: senderName,
+                            text: message.text,
+                            timestamp: message.timestamp
+                        )
+
+                        // Process any pending reactions that now have their target
+                        for pending in pendingMatches {
+                            let exists = try? await dataStore.reactionExists(
+                                messageID: message.id,
+                                senderName: pending.senderNodeName,
+                                emoji: pending.parsed.emoji
+                            )
+
+                            if exists != true {
+                                let reactionDTO = ReactionDTO(
+                                    messageID: message.id,
+                                    emoji: pending.parsed.emoji,
+                                    senderName: pending.senderNodeName,
+                                    messageHash: pending.parsed.messageHash,
+                                    rawText: pending.rawText,
+                                    channelIndex: pending.channelIndex,
+                                    deviceID: deviceID
+                                )
+                                try? await dataStore.saveReaction(reactionDTO)
+
+                                if let reactions = try? await dataStore.fetchReactions(for: message.id) {
+                                    let summary = ReactionParser.buildSummary(from: reactions)
+                                    try? await dataStore.updateMessageReactionSummary(
+                                        messageID: message.id,
+                                        summary: summary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
         } catch {
             errorMessage = L10n.Chats.Chats.Errors.loadOlderMessagesFailed
             logger.error("Failed to load older messages: \(error)")
@@ -866,11 +973,24 @@ final class ChatViewModel {
         errorMessage = nil
 
         do {
-            _ = try await messageService.sendChannelMessage(
+            let (messageID, timestamp) = try await messageService.sendChannelMessage(
                 text: text,
                 channelIndex: channel.index,
                 deviceID: channel.deviceID
             )
+
+            // Index immediately for reaction matching (before reload to avoid race)
+            // Pending reactions handled by loadChannelMessages below
+            if let reactionService = appState?.services?.reactionService,
+               let localNodeName = appState?.connectedDevice?.nodeName {
+                _ = await reactionService.indexMessage(
+                    id: messageID,
+                    channelIndex: channel.index,
+                    senderName: localNodeName,
+                    text: text,
+                    timestamp: timestamp
+                )
+            }
 
             // Reload messages to show the sent message
             await loadChannelMessages(for: channel)
@@ -886,12 +1006,10 @@ final class ChatViewModel {
 
     /// Send a reaction emoji to a channel message
     func sendReaction(emoji: String, to message: MessageDTO) async {
-        logger.info("[REACTION-DEBUG] sendReaction called: emoji=\(emoji), targetMessageID=\(message.id)")
         guard let channelIndex = message.channelIndex,
               let reactionService = appState?.services?.reactionService,
               let messageService,
               let dataStore else {
-            logger.info("[REACTION-DEBUG] sendReaction guard failed: channelIndex=\(message.channelIndex?.description ?? "nil")")
             return
         }
 
@@ -904,7 +1022,6 @@ final class ChatViewModel {
             targetSenderName = localNodeName
         } else {
             guard let senderName = message.senderNodeName else {
-                logger.info("[REACTION-DEBUG] sendReaction guard failed: senderName=nil for incoming message")
                 return
             }
             targetSenderName = senderName
@@ -916,18 +1033,17 @@ final class ChatViewModel {
             senderName: localNodeName,
             emoji: emoji
         ), alreadyReacted {
-            logger.info("[REACTION-DEBUG] User already reacted with \(emoji), ignoring")
+            logger.debug("User already reacted with \(emoji), ignoring")
             return
         }
 
-        // Build reaction wire format using ReactionService (nonisolated, no await needed)
+        // Build reaction wire format
         let reactionText = reactionService.buildReactionText(
             emoji: emoji,
             targetSender: targetSenderName,
             targetText: message.text,
             targetTimestamp: message.timestamp
         )
-        logger.info("[REACTION-DEBUG] Built reaction text: \(reactionText)")
 
         // Send as channel message
         do {
@@ -936,14 +1052,12 @@ final class ChatViewModel {
                 channelIndex: channelIndex,
                 deviceID: message.deviceID
             )
-            logger.info("[REACTION-DEBUG] Channel message sent successfully")
 
             // Record emoji usage for recents
             recentEmojisStore.recordUsage(emoji)
 
             // Optimistic local update: save reaction and update target message
             let messageHash = ReactionParser.generateMessageHash(text: message.text, timestamp: message.timestamp)
-            logger.info("[REACTION-DEBUG] Saving local reaction: localNodeName=\(localNodeName), hash=\(messageHash)")
             let reactionDTO = ReactionDTO(
                 messageID: message.id,
                 emoji: emoji,
@@ -954,28 +1068,12 @@ final class ChatViewModel {
                 deviceID: message.deviceID
             )
             try? await dataStore.saveReaction(reactionDTO)
-            logger.info("[REACTION-DEBUG] Reaction saved to database")
 
-            // Update reaction summary with Element X-style ordering (count desc, earliest timestamp asc)
+            // Update reaction summary
             if let reactions = try? await dataStore.fetchReactions(for: message.id) {
-                logger.info("[REACTION-DEBUG] Fetched \(reactions.count) reactions for message")
-                let grouped = Dictionary(grouping: reactions, by: \.emoji)
-                let sorted = grouped.map { emoji, items in
-                    (emoji: emoji, count: items.count, earliest: items.map(\.receivedAt).min() ?? Date.distantPast)
-                }
-                .sorted { lhs, rhs in
-                    if lhs.count != rhs.count { return lhs.count > rhs.count }
-                    return lhs.earliest < rhs.earliest
-                }
-                let summary = sorted.map { "\($0.emoji):\($0.count)" }.joined(separator: ",")
-                logger.info("[REACTION-DEBUG] Built summary: \(summary)")
+                let summary = ReactionParser.buildSummary(from: reactions)
                 try? await dataStore.updateMessageReactionSummary(messageID: message.id, summary: summary)
-
-                // Update UI inline
-                logger.info("[REACTION-DEBUG] Calling updateReactionSummary for messageID=\(message.id)")
                 updateReactionSummary(for: message.id, summary: summary)
-            } else {
-                logger.info("[REACTION-DEBUG] Failed to fetch reactions for message")
             }
         } catch {
             logger.error("Failed to send reaction: \(error)")
@@ -1533,14 +1631,10 @@ final class ChatViewModel {
 
     /// Update reaction summary for a specific message inline (O(1) update)
     func updateReactionSummary(for messageID: UUID, summary: String) {
-        logger.info("[REACTION-DEBUG] updateReactionSummary called: messageID=\(messageID), summary=\(summary)")
-        let messageCount = messages.count
         guard let index = messages.firstIndex(where: { $0.id == messageID }),
               let existing = messagesByID[messageID] else {
-            logger.info("[REACTION-DEBUG] updateReactionSummary guard failed: message not found in messages array, total messages=\(messageCount)")
             return
         }
-        logger.info("[REACTION-DEBUG] Found message at index \(index), updating...")
 
         // Create updated MessageDTO with new reaction summary
         let updated = MessageDTO(
@@ -1581,9 +1675,7 @@ final class ChatViewModel {
 
         messages[index] = updated
         messagesByID[messageID] = updated
-        logger.info("[REACTION-DEBUG] Updated message in arrays, calling rebuildDisplayItem")
         rebuildDisplayItem(for: messageID)
-        logger.info("[REACTION-DEBUG] rebuildDisplayItem completed")
     }
 
     /// Rebuild a single display item with current preview state (O(1) lookup)

@@ -298,6 +298,132 @@ struct PersistenceStoreTests {
         #expect(messages.last?.text == "Message 4")
     }
 
+    @Test("Find channel message for reaction within timestamp window")
+    func findChannelMessageForReactionWithinWindow() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let channelIndex: UInt8 = 1
+        let baseTimestamp: UInt32 = 1_700_000_000
+        var targetMessage: MessageDTO?
+
+        for i in 0..<120 {
+            let timestamp = baseTimestamp + UInt32(i)
+            let message = MessageDTO(
+                id: UUID(),
+                deviceID: device.id,
+                contactID: nil,
+                channelIndex: channelIndex,
+                text: "Message \(i)",
+                timestamp: timestamp,
+                createdAt: Date(timeIntervalSince1970: TimeInterval(timestamp)),
+                direction: .incoming,
+                status: .delivered,
+                textType: .plain,
+                ackCode: nil,
+                pathLength: 0,
+                snr: nil,
+                senderKeyPrefix: nil,
+                senderNodeName: "RemoteNode",
+                isRead: false,
+                replyToID: nil,
+                roundTripTime: nil,
+                heardRepeats: 0,
+                retryAttempt: 0,
+                maxRetryAttempts: 0
+            )
+            try await store.saveMessage(message)
+            if i == 80 {
+                targetMessage = message
+            }
+        }
+
+        let message = try #require(targetMessage)
+        let reactionService = ReactionService()
+        let reactionText = reactionService.buildReactionText(
+            emoji: "👍",
+            targetSender: "RemoteNode",
+            targetText: message.text,
+            targetTimestamp: message.timestamp
+        )
+        let parsed = try #require(ReactionParser.parse(reactionText))
+
+        let now = message.timestamp
+        let windowStart = now > 300 ? now - 300 : 0
+        let windowEnd = now + 300
+
+        let found = try await store.findChannelMessageForReaction(
+            deviceID: device.id,
+            channelIndex: channelIndex,
+            parsedReaction: parsed,
+            localNodeName: "LocalNode",
+            timestampWindow: windowStart...windowEnd,
+            limit: 200
+        )
+
+        #expect(found?.id == message.id)
+    }
+
+    @Test("Find outgoing channel message for reaction using local node name")
+    func findOutgoingChannelMessageForReaction() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let channelIndex: UInt8 = 2
+        let timestamp: UInt32 = 1_700_000_200
+
+        let outgoingMessage = MessageDTO(
+            id: UUID(),
+            deviceID: device.id,
+            contactID: nil,
+            channelIndex: channelIndex,
+            text: "Local message",
+            timestamp: timestamp,
+            createdAt: Date(timeIntervalSince1970: TimeInterval(timestamp)),
+            direction: .outgoing,
+            status: .sent,
+            textType: .plain,
+            ackCode: nil,
+            pathLength: 0,
+            snr: nil,
+            senderKeyPrefix: nil,
+            senderNodeName: nil,
+            isRead: false,
+            replyToID: nil,
+            roundTripTime: nil,
+            heardRepeats: 0,
+            retryAttempt: 0,
+            maxRetryAttempts: 0
+        )
+        try await store.saveMessage(outgoingMessage)
+
+        let reactionService = ReactionService()
+        let reactionText = reactionService.buildReactionText(
+            emoji: "🔥",
+            targetSender: "LocalNode",
+            targetText: outgoingMessage.text,
+            targetTimestamp: outgoingMessage.timestamp
+        )
+        let parsed = try #require(ReactionParser.parse(reactionText))
+
+        let now = outgoingMessage.timestamp
+        let windowStart = now > 300 ? now - 300 : 0
+        let windowEnd = now + 300
+
+        let found = try await store.findChannelMessageForReaction(
+            deviceID: device.id,
+            channelIndex: channelIndex,
+            parsedReaction: parsed,
+            localNodeName: "LocalNode",
+            timestampWindow: windowStart...windowEnd,
+            limit: 200
+        )
+
+        #expect(found?.id == outgoingMessage.id)
+    }
+
     @Test("Update message status")
     func updateMessageStatus() async throws {
         let store = try await createTestStore()

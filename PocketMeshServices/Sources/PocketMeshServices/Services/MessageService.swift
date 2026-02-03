@@ -841,7 +841,7 @@ public actor MessageService {
         channelIndex: UInt8,
         deviceID: UUID,
         textType: TextType = .plain
-    ) async throws -> UUID {
+    ) async throws -> (id: UUID, timestamp: UInt32) {
         // Validate message length
         guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
             throw MessageServiceError.messageTooLong
@@ -873,7 +873,7 @@ public actor MessageService {
                 try await dataStore.updateChannelLastMessage(channelID: channel.id, date: Date())
             }
 
-            return messageID
+            return (id: messageID, timestamp: timestamp)
         } catch let error as MeshCoreError {
             throw MessageServiceError.sessionError(error)
         }

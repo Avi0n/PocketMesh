@@ -23,17 +23,21 @@ struct ReactionBadgesView: View {
         if !reactions.isEmpty {
             HStack(spacing: 0) {
                 ForEach(visibleReactions, id: \.emoji) { reaction in
-                    ReactionBadge(emoji: reaction.emoji, count: reaction.count)
-                        .onTapGesture {
-                            onTapReaction(reaction.emoji)
-                        }
+                    Button {
+                        onTapReaction(reaction.emoji)
+                    } label: {
+                        ReactionBadge(emoji: reaction.emoji, count: reaction.count)
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if overflowCount > 0 {
-                    OverflowBadge(count: overflowCount)
-                        .onTapGesture {
-                            onLongPress()
-                        }
+                    Button {
+                        onLongPress()
+                    } label: {
+                        OverflowBadge(count: overflowCount)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .onLongPressGesture {

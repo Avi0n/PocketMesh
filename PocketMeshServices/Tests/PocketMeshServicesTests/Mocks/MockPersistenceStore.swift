@@ -85,6 +85,62 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return Array(filtered.dropFirst(offset).prefix(limit))
     }
 
+    public func findChannelMessageForReaction(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        parsedReaction: ParsedReaction,
+        localNodeName: String?,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) async throws -> MessageDTO? {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+
+        let candidates = messages.values.filter {
+            $0.deviceID == deviceID &&
+            $0.channelIndex == channelIndex &&
+            timestampWindow.contains($0.timestamp)
+        }
+        .sorted {
+            if $0.timestamp != $1.timestamp { return $0.timestamp > $1.timestamp }
+            return $0.createdAt > $1.createdAt
+        }
+
+        let maxPreviewBytes = ReactionService.previewBytesAvailable(
+            emoji: parsedReaction.emoji,
+            senderName: parsedReaction.targetSender
+        )
+
+        for candidate in candidates.prefix(limit) {
+            if candidate.direction == .outgoing {
+                guard let localNodeName, parsedReaction.targetSender == localNodeName else {
+                    continue
+                }
+            } else {
+                guard candidate.senderNodeName == parsedReaction.targetSender else {
+                    continue
+                }
+            }
+
+            let hash = ReactionParser.generateMessageHash(
+                text: candidate.text,
+                timestamp: candidate.timestamp
+            )
+            guard hash == parsedReaction.messageHash else { continue }
+
+            let preview = ReactionParser.generateContentPreview(
+                candidate.text,
+                maxBytes: maxPreviewBytes
+            )
+            guard preview == parsedReaction.contentPreview else { continue }
+
+            return candidate
+        }
+
+        return nil
+    }
+
     public func updateMessageStatus(id: UUID, status: MessageStatus) async throws {
         updatedMessageStatuses.append((id: id, status: status))
         if let error = stubbedUpdateMessageStatusError {

@@ -35,7 +35,7 @@ public actor MessageLRUCache {
     private let capacity: Int
     private let maxCandidatesPerKey: Int
 
-    public init(capacity: Int = 200, maxCandidatesPerKey: Int = 5) {
+    public init(capacity: Int = 500, maxCandidatesPerKey: Int = 5) {
         self.capacity = capacity
         self.maxCandidatesPerKey = maxCandidatesPerKey
     }

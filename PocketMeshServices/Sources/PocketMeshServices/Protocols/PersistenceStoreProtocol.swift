@@ -37,6 +37,16 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Fetch messages for a channel
     func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int, offset: Int) async throws -> [MessageDTO]
 
+    /// Finds a channel message matching a parsed reaction within a timestamp window
+    func findChannelMessageForReaction(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        parsedReaction: ParsedReaction,
+        localNodeName: String?,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) async throws -> MessageDTO?
+
     /// Update message status
     func updateMessageStatus(id: UUID, status: MessageStatus) async throws
 
