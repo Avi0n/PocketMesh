@@ -29,8 +29,16 @@ public actor ReactionService {
         targetText: String,
         targetTimestamp: UInt32
     ) -> String {
-        let preview = ReactionParser.generateContentPreview(targetText)
         let hash = ReactionParser.generateMessageHash(text: targetText, timestamp: targetTimestamp)
+
+        // Calculate available bytes for preview
+        // Format: {emoji} @[{sender}] {preview} [xxxxxxxx]
+        // Fixed overhead: " @[" (3) + "] " (2) + " [" (2) + "]" (1) + hash (8) = 16
+        let fixedOverhead = 16
+        let maxMessageBytes = 160
+        let availableForPreview = maxMessageBytes - emoji.utf8.count - targetSender.utf8.count - fixedOverhead
+
+        let preview = ReactionParser.generateContentPreview(targetText, maxBytes: availableForPreview)
         return "\(emoji) @[\(targetSender)] \(preview) [\(hash)]"
     }
 

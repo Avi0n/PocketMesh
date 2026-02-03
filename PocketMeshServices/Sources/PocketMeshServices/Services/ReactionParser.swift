@@ -80,20 +80,33 @@ public enum ReactionParser {
         return hash.prefix(4).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// Generates content preview for reaction wire format
+    /// Generates content preview that fits within byte limit
+    /// Uses character-based truncation for universal language support (including CJK)
     /// - Parameters:
     ///   - text: Original message text
-    ///   - maxWords: Maximum words to include (default 4)
-    /// - Returns: Preview with "..." appended if truncated
-    public static func generateContentPreview(_ text: String, maxWords: Int = 4) -> String {
-        let words = text.split(separator: " ", omittingEmptySubsequences: true)
+    ///   - maxBytes: Maximum bytes available for preview
+    /// - Returns: Preview truncated to fit, with "..." if needed
+    public static func generateContentPreview(_ text: String, maxBytes: Int) -> String {
+        let ellipsis = "..."
+        let ellipsisBytes = ellipsis.utf8.count
 
-        if words.count <= maxWords {
+        // If entire text fits, return it
+        if text.utf8.count <= maxBytes {
             return text
         }
 
-        let preview = words.prefix(maxWords).joined(separator: " ")
-        return "\(preview)..."
+        // Need at least space for ellipsis
+        guard maxBytes > ellipsisBytes else {
+            return String(ellipsis.prefix(maxBytes))
+        }
+
+        // Truncate by character until it fits (works for all languages)
+        var truncated = text
+        while !truncated.isEmpty && (truncated.utf8.count + ellipsisBytes) > maxBytes {
+            truncated = String(truncated.dropLast())
+        }
+
+        return truncated.isEmpty ? ellipsis : truncated + ellipsis
     }
 
     /// Builds summary string from emoji counts, sorted by count descending

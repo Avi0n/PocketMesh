@@ -181,39 +181,77 @@ struct ReactionParserTests {
 
     // MARK: - Content Preview Generation Tests
 
-    @Test("Generates preview with 4 words truncated")
-    func generatesPreviewTruncated() {
-        let text = "What's the situation at Main St today?"
-        let preview = ReactionParser.generateContentPreview(text)
-        #expect(preview == "What's the situation at...")
-    }
-
-    @Test("Generates preview with exact 4 words")
-    func generatesPreviewExactFourWords() {
+    @Test("Returns full text when it fits")
+    func generatesPreviewFullText() {
         let text = "This is four words"
-        let preview = ReactionParser.generateContentPreview(text)
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 100)
         #expect(preview == "This is four words")
     }
 
-    @Test("Generates preview with less than 4 words")
+    @Test("Returns short message unchanged")
     func generatesPreviewShortMessage() {
         let text = "ok"
-        let preview = ReactionParser.generateContentPreview(text)
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 100)
         #expect(preview == "ok")
     }
 
-    @Test("Generates preview with single character")
-    func generatesPreviewSingleChar() {
+    @Test("Returns single emoji unchanged")
+    func generatesPreviewSingleEmoji() {
         let text = "👍"
-        let preview = ReactionParser.generateContentPreview(text)
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 100)
         #expect(preview == "👍")
     }
 
-    @Test("Generates preview with 3 words")
-    func generatesPreviewThreeWords() {
-        let text = "Hello there friend"
-        let preview = ReactionParser.generateContentPreview(text)
-        #expect(preview == "Hello there friend")
+    @Test("Truncates by character when byte limit exceeded")
+    func truncatesByCharacter() {
+        let text = "Hello world"
+        // "Hello..." = 8 bytes, allow 10
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 10)
+        #expect(preview.utf8.count <= 10)
+        #expect(preview.hasSuffix("..."))
+        #expect(preview == "Hello w...")
+    }
+
+    @Test("Truncates long word by character")
+    func truncatesLongWord() {
+        let text = "Supercalifragilisticexpialidocious"
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 10)
+        #expect(preview.utf8.count <= 10)
+        #expect(preview.hasSuffix("..."))
+        #expect(preview == "Superc...")
+    }
+
+    @Test("Handles Chinese text truncation")
+    func truncatesChineseText() {
+        let text = "你好世界这是一条很长的消息"  // Each char is 3 bytes
+        // Allow 15 bytes: 4 chars (12 bytes) + "..." (3 bytes) = 15
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 15)
+        #expect(preview.utf8.count <= 15)
+        #expect(preview.hasSuffix("..."))
+        #expect(preview == "你好世界...")
+    }
+
+    @Test("Handles Japanese text truncation")
+    func truncatesJapaneseText() {
+        let text = "こんにちは世界"  // Mixed 3-byte chars
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 12)
+        #expect(preview.utf8.count <= 12)
+        #expect(preview.hasSuffix("..."))
+    }
+
+    @Test("Handles emoji in middle of text")
+    func truncatesTextWithEmoji() {
+        let text = "Hello 👋 world"
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 15)
+        #expect(preview.utf8.count <= 15)
+        #expect(preview.hasSuffix("..."))
+    }
+
+    @Test("Returns ellipsis when maxBytes is very small")
+    func returnsEllipsisWhenTiny() {
+        let text = "Hello"
+        let preview = ReactionParser.generateContentPreview(text, maxBytes: 4)
+        #expect(preview.utf8.count <= 4)
     }
 
     // MARK: - Summary Cache Tests
