@@ -150,6 +150,13 @@ struct ChannelChatView: View {
                 break
             }
         }
+        .onChange(of: appState.conversationsVersion) { _, _ in
+            // Reload from database after sync completes to catch any messages
+            // that were saved but missed due to rapid event overwrites
+            Task {
+                await viewModel.loadChannelMessages(for: channel)
+            }
+        }
         .alert(L10n.Chats.Chats.Alert.UnableToSend.title, isPresented: $viewModel.showRetryError) {
             Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
         } message: {
