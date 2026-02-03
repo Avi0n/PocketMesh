@@ -356,6 +356,11 @@ public final class ConnectionManager {
 
         cancelResyncLoop()
 
+        // Reset sync state before destroying services to prevent stuck "Syncing" pill
+        if let services {
+            await services.syncCoordinator.onDisconnected(services: services)
+        }
+
         // Tear down session (invalid now)
         await services?.stopEventMonitoring()
         services = nil
@@ -1201,6 +1206,11 @@ public final class ConnectionManager {
             if !isRegistered {
                 throw ConnectionError.deviceNotFound
             }
+        }
+
+        // Reset sync state before destroying services to prevent stuck "Syncing" pill
+        if let services {
+            await services.syncCoordinator.onDisconnected(services: services)
         }
 
         // Stop current services

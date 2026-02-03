@@ -48,4 +48,26 @@ struct StatusPillStateTests {
         // Without a paired device, should remain hidden
         #expect(appState.statusPillState == .hidden)
     }
+
+    @Test("Double onSyncActivityEnded does not drive count below zero")
+    @MainActor
+    func doubleEndedCallDoesNotGoNegative() {
+        let appState = AppState()
+
+        // Simulate sync starting
+        appState.simulateSyncStarted()
+        #expect(appState.statusPillState == .syncing)
+
+        // First end call (simulates onDisconnected path)
+        appState.simulateSyncEnded()
+        #expect(appState.statusPillState != .syncing)
+
+        // Second end call (simulates error path) - should be no-op due to guard
+        appState.simulateSyncEnded()
+        #expect(appState.statusPillState == .hidden)
+
+        // Start new sync - pill should show (proves count didn't go negative)
+        appState.simulateSyncStarted()
+        #expect(appState.statusPillState == .syncing)
+    }
 }

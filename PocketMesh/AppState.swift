@@ -390,6 +390,9 @@ public final class AppState {
             },
             onEnded: { @MainActor [weak self] in
                 guard let self else { return }
+                // Guard against double-decrement: onDisconnected and sync error path
+                // can both call this if WiFi drops or device switch during sync
+                guard self.syncActivityCount > 0 else { return }
                 self.syncActivityCount -= 1
                 // Show "Ready" toast when all sync activity completes
                 if self.syncActivityCount == 0 {
@@ -896,6 +899,19 @@ public final class AppState {
         defer { syncActivityCount -= 1 }
         return try await operation()
     }
+
+    #if DEBUG
+    /// Test helper: Simulates sync activity started callback
+    func simulateSyncStarted() {
+        syncActivityCount += 1
+    }
+
+    /// Test helper: Simulates sync activity ended callback (mirrors actual callback guard logic)
+    func simulateSyncEnded() {
+        guard syncActivityCount > 0 else { return }
+        syncActivityCount -= 1
+    }
+    #endif
 
     // MARK: - Notification Handlers
 

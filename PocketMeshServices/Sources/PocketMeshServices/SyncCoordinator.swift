@@ -96,6 +96,11 @@ public actor SyncCoordinator {
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
 
+    /// Tracks whether onSyncActivityEnded has been called for the current sync cycle.
+    /// Prevents double-callback when disconnect occurs mid-sync (both onDisconnected
+    /// and error path would otherwise call onSyncActivityEnded).
+    private var hasEndedSyncActivity = true
+
     /// Callback when sync phase changes (for SwiftUI observation)
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
@@ -168,6 +173,16 @@ public actor SyncCoordinator {
         self.onDirectMessageReceived = onDirectMessageReceived
         self.onChannelMessageReceived = onChannelMessageReceived
         self.onRoomMessageReceived = onRoomMessageReceived
+    }
+
+    // MARK: - Sync Activity Tracking
+
+    /// Calls onSyncActivityEnded at most once per sync cycle.
+    /// Guards against double-callback when disconnect occurs mid-sync.
+    private func endSyncActivityOnce() async {
+        guard !hasEndedSyncActivity else { return }
+        hasEndedSyncActivity = true
+        await onSyncActivityEnded?()
     }
 
     // MARK: - Notifications
@@ -254,6 +269,7 @@ public actor SyncCoordinator {
         do {
             // Set phase before triggering pill visibility
             await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
+            hasEndedSyncActivity = false
             await onSyncActivityStarted?()
 
             // Perform contacts and channels sync (activity should show pill)
@@ -332,12 +348,12 @@ public actor SyncCoordinator {
                 }
             } catch {
                 // End sync activity on error during contacts/channels phase
-                await onSyncActivityEnded?()
+                await endSyncActivityOnce()
                 throw error
             }
 
             // End sync activity before messages phase (pill should hide)
-            await onSyncActivityEnded?()
+            await endSyncActivityOnce()
 
             // Phase 3: Messages (no pill for this phase)
             await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
@@ -537,7 +553,7 @@ public actor SyncCoordinator {
         let currentState = await state
         if case .syncing(let progress) = currentState,
            progress.phase == .contacts || progress.phase == .channels {
-            await onSyncActivityEnded?()
+            await endSyncActivityOnce()
         }
 
         await setState(.idle)
