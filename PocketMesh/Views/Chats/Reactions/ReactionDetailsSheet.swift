@@ -15,7 +15,14 @@ struct ReactionDetailsSheet: View {
     private var emojiGroups: [(emoji: String, reactions: [ReactionDTO])] {
         Dictionary(grouping: reactions, by: \.emoji)
             .map { (emoji: $0.key, reactions: $0.value) }
-            .sorted { $0.reactions.count > $1.reactions.count }
+            .sorted { lhs, rhs in
+                if lhs.reactions.count != rhs.reactions.count {
+                    return lhs.reactions.count > rhs.reactions.count
+                }
+                let lhsEarliest = lhs.reactions.map(\.receivedAt).min() ?? .distantPast
+                let rhsEarliest = rhs.reactions.map(\.receivedAt).min() ?? .distantPast
+                return lhsEarliest < rhsEarliest
+            }
     }
 
     private var selectedReactions: [ReactionDTO] {
@@ -40,12 +47,12 @@ struct ReactionDetailsSheet: View {
                     senderListView
                 }
             }
-            .navigationTitle(L10n.Chats.Reactions.title)
-            .navigationBarTitleDisplayMode(.inline)
             .task {
                 await loadReactions()
             }
         }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     private var emojiTabsView: some View {

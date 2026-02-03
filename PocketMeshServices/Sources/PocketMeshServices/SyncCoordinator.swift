@@ -797,11 +797,17 @@ public actor SyncCoordinator {
                         )
                         try? await services.dataStore.saveReaction(reactionDTO)
 
-                        // Update summary
+                        // Update summary with Element X-style ordering (count desc, earliest timestamp asc)
                         if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
-                            let counts = Dictionary(grouping: reactions, by: \.emoji)
-                                .map { ($0.key, $0.value.count) }
-                            let summary = ReactionParser.buildSummary(from: counts)
+                            let grouped = Dictionary(grouping: reactions, by: \.emoji)
+                            let sorted = grouped.map { emoji, items in
+                                (emoji: emoji, count: items.count, earliest: items.map(\.receivedAt).min() ?? Date.distantPast)
+                            }
+                            .sorted { lhs, rhs in
+                                if lhs.count != rhs.count { return lhs.count > rhs.count }
+                                return lhs.earliest < rhs.earliest
+                            }
+                            let summary = sorted.map { "\($0.emoji):\($0.count)" }.joined(separator: ",")
                             try? await services.dataStore.updateMessageReactionSummary(
                                 messageID: targetMessageID,
                                 summary: summary
