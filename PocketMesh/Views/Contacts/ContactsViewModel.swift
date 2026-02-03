@@ -60,6 +60,9 @@ final class ContactsViewModel {
     /// User's current location for distance sorting (optional)
     var userLocation: CLLocation?
 
+    /// Contact ID currently having its favorite status toggled (for loading UI)
+    var togglingFavoriteID: UUID?
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -150,17 +153,17 @@ final class ContactsViewModel {
 
     // MARK: - Contact Actions
 
-    /// Toggle favorite status
+    /// Toggle favorite status on device and update local state
     func toggleFavorite(contact: ContactDTO) async {
         guard let contactService else { return }
 
-        do {
-            try await contactService.updateContactPreferences(
-                contactID: contact.id,
-                isFavorite: !contact.isFavorite
-            )
+        togglingFavoriteID = contact.id
+        defer { togglingFavoriteID = nil }
 
-            // Update local list
+        do {
+            try await contactService.setContactFavorite(contact.id, isFavorite: !contact.isFavorite)
+
+            // Reload to get updated state
             if contacts.contains(where: { $0.id == contact.id }) {
                 await loadContacts(deviceID: contact.deviceID)
             }

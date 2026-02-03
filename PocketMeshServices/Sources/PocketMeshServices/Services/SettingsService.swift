@@ -562,6 +562,13 @@ public actor SettingsService {
         }
     }
 
+    /// Refresh auto-add config from device (for initial load)
+    /// Fetches current value and triggers callback to update connected device
+    public func refreshAutoAddConfig() async throws {
+        let config = try await getAutoAddConfig()
+        await onAutoAddConfigUpdated?(config)
+    }
+
     /// Set auto-add configuration on device
     public func setAutoAddConfig(_ config: UInt8) async throws {
         do {

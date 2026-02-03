@@ -75,4 +75,41 @@ struct LinkPreviewServiceTests {
         let url = LinkPreviewService.extractFirstURL(from: text)
         #expect(url?.fragment == "section")
     }
+
+    // MARK: - URL in Mention Tests
+
+    @Test("Ignores URL-like text within mention brackets")
+    func ignoresURLInMention() {
+        let text = "Hey @[Ferret PocketMesh WCMesh.com], check this out!"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url == nil, "WCMesh.com within @[] should not be extracted as a URL")
+    }
+
+    @Test("Ignores domain-like text within mention brackets")
+    func ignoresDomainInMention() {
+        let text = "@[Server node.example.com] says hello"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url == nil, "node.example.com within @[] should not be extracted")
+    }
+
+    @Test("Extracts real URL when mention also contains URL-like text")
+    func extractsRealURLNotMentionURL() {
+        let text = "@[Server node.example.com] says check https://docs.example.com"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url?.absoluteString == "https://docs.example.com")
+    }
+
+    @Test("Extracts URL when no mentions present")
+    func extractsURLWithoutMentions() {
+        let text = "Just a normal message with https://example.com link"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url?.absoluteString == "https://example.com")
+    }
+
+    @Test("Returns nil when only URL-like text in mention")
+    func returnsNilForOnlyMentionURL() {
+        let text = "Message from @[192.168.1.100]"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url == nil, "IP address in mention should not be extracted")
+    }
 }

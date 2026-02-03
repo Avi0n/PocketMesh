@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Пошук вузлів";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Пошук вузлів (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Сортування";
 
@@ -457,7 +460,7 @@
 "contacts.discovery.empty.title" = "Немає виявлених вузлів";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Коли автоматичне додавання вузлів вимкнено, нововиявлені вузли з'являтимуться тут для додавання вручну.";
+"contacts.discovery.empty.description" = "Вузли з'являтимуться тут, коли їхні оголошення будуть виявлені.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Додати";

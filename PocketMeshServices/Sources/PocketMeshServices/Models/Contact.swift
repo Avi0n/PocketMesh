@@ -129,7 +129,8 @@ public final class Contact {
             lastAdvertTimestamp: frame.lastAdvertTimestamp,
             latitude: frame.latitude,
             longitude: frame.longitude,
-            lastModified: frame.lastModified
+            lastModified: frame.lastModified,
+            isFavorite: (frame.flags & 0x01) != 0
         )
     }
 }
@@ -187,6 +188,7 @@ public extension Contact {
         self.latitude = frame.latitude
         self.longitude = frame.longitude
         self.lastModified = frame.lastModified
+        self.isFavorite = (frame.flags & 0x01) != 0
     }
 
     /// Converts to a protocol ContactFrame for sending to device

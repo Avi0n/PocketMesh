@@ -282,6 +282,12 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         autoAddConfig & 0x01 != 0
     }
 
+    /// Whether the device supports auto-add configuration (v1.12+)
+    /// Devices with older firmware only support manualAddContacts toggle
+    public var supportsAutoAddConfig: Bool {
+        firmwareVersionString.isAtLeast(major: 1, minor: 12)
+    }
+
     public init(
         id: UUID,
         publicKey: Data,
@@ -521,5 +527,28 @@ public extension Device {
     /// The 6-byte public key prefix used for identifying messages
     var publicKeyPrefix: Data {
         publicKey.prefix(6)
+    }
+}
+
+// MARK: - Version String Comparison
+
+extension String {
+    /// Checks if this version string is at least the specified version.
+    /// Handles formats like "v1.12.0", "1.12", "v1.12"
+    /// - Parameters:
+    ///   - major: Required major version
+    ///   - minor: Required minor version
+    /// - Returns: true if this version >= major.minor
+    func isAtLeast(major requiredMajor: Int, minor requiredMinor: Int) -> Bool {
+        let cleaned = trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+        let components = cleaned.split(separator: ".")
+        guard components.count >= 2,
+              let major = Int(components[0]),
+              let minor = Int(components[1]) else {
+            return false
+        }
+        if major > requiredMajor { return true }
+        if major < requiredMajor { return false }
+        return minor >= requiredMinor
     }
 }

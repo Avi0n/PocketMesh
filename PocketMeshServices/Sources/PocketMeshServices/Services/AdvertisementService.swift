@@ -247,6 +247,10 @@ public actor AdvertisementService {
                     lastModified: UInt32(Date().timeIntervalSince1970)
                 )
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                // Also track in DiscoveredNode for Discover page visibility
+                _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
                 advertHandler?(frame)
 
                 // Notify UI of contact update
@@ -263,6 +267,10 @@ public actor AdvertisementService {
                         if let meshContact = try await session.getContact(publicKey: publicKey) {
                             let frame = meshContact.toContactFrame()
                             let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                            // Also track in DiscoveredNode for Discover page visibility
+                            _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
                             let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
                             let contactType = ContactType(rawValue: meshContact.type) ?? .chat
                             await newContactDiscoveredHandler?(contactName, contactID, contactType)
@@ -293,6 +301,10 @@ public actor AdvertisementService {
                 if let meshContact = try await session.getContact(publicKey: publicKey) {
                     let frame = meshContact.toContactFrame()
                     let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                    // Also track in DiscoveredNode for Discover page visibility
+                    _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
                     let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
                     let contactType = ContactType(rawValue: meshContact.type) ?? .chat
                     await newContactDiscoveredHandler?(contactName, contactID, contactType)

@@ -1,7 +1,6 @@
 // PocketMesh/Views/Chats/Components/MessagePathSheet.swift
 import SwiftUI
 import PocketMeshServices
-import OSLog
 
 /// Sheet displaying the path an incoming message took through the mesh.
 struct MessagePathSheet: View {
@@ -9,16 +8,13 @@ struct MessagePathSheet: View {
 
     @Environment(\.appState) private var appState
 
-    @State private var contacts: [ContactDTO] = []
-    @State private var isLoading = true
+    @State private var viewModel = MessagePathViewModel()
     @State private var copyHapticTrigger = 0
-
-    private let logger = Logger(subsystem: "PocketMesh", category: "MessagePathSheet")
 
     var body: some View {
         NavigationStack {
             List {
-                if isLoading {
+                if viewModel.isLoading {
                     Section {
                         HStack {
                             Spacer()
@@ -39,8 +35,8 @@ struct MessagePathSheet: View {
                         // Sender row
                         PathHopRowView(
                             hopType: .sender,
-                            nodeName: senderName,
-                            nodeID: senderNodeID,
+                            nodeName: viewModel.senderName(for: message),
+                            nodeID: viewModel.senderNodeID(for: message),
                             snr: nil
                         )
 
@@ -48,7 +44,10 @@ struct MessagePathSheet: View {
                         ForEach(Array(pathBytes.enumerated()), id: \.offset) { index, byte in
                             PathHopRowView(
                                 hopType: .intermediate(index + 1),
-                                nodeName: contactName(for: byte),
+                                nodeName: viewModel.repeaterName(
+                                    for: byte,
+                                    userLocation: appState.locationService.currentLocation
+                                ),
                                 nodeID: String(format: "%02X", byte),
                                 snr: nil
                             )
@@ -92,7 +91,7 @@ struct MessagePathSheet: View {
             .navigationTitle(L10n.Chats.Chats.Path.title)
             .navigationBarTitleDisplayMode(.inline)
             .task {
-                await loadContacts()
+                await viewModel.loadContacts(services: appState.services, deviceID: message.deviceID)
             }
         }
     }
@@ -107,57 +106,9 @@ struct MessagePathSheet: View {
         message.pathNodes != nil
     }
 
-    /// Sender display name: node name for channels, contact lookup for DMs
-    private var senderName: String {
-        // For channel messages, use senderNodeName if available
-        if message.isChannelMessage, let nodeName = message.senderNodeName {
-            return nodeName
-        }
-
-        // For direct messages, look up contact by senderKeyPrefix
-        if let keyPrefix = message.senderKeyPrefix,
-           let firstByte = keyPrefix.first,
-           let contact = contacts.first(where: { $0.publicKey.first == firstByte }) {
-            return contact.displayName
-        }
-
-        return L10n.Chats.Chats.Path.Hop.unknown
-    }
-
-    /// Sender node ID (first byte of key prefix as hex)
-    private var senderNodeID: String? {
-        guard let keyPrefix = message.senderKeyPrefix, let firstByte = keyPrefix.first else {
-            return nil
-        }
-        return String(format: "%02X", firstByte)
-    }
-
     /// Receiver display name: device node name or "You"
     private var receiverName: String {
         appState.connectedDevice?.nodeName ?? L10n.Chats.Chats.Path.Receiver.you
-    }
-
-    /// Look up contact name by node ID byte
-    private func contactName(for byte: UInt8) -> String {
-        if let contact = contacts.first(where: { $0.publicKey.first == byte }) {
-            return contact.displayName
-        }
-        return L10n.Chats.Chats.Path.Hop.unknown
-    }
-
-    private func loadContacts() async {
-        guard let services = appState.services else {
-            isLoading = false
-            return
-        }
-
-        do {
-            contacts = try await services.dataStore.fetchContacts(deviceID: message.deviceID)
-        } catch {
-            logger.error("Failed to load contacts: \(error.localizedDescription)")
-        }
-
-        isLoading = false
     }
 }
 

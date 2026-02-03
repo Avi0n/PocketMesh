@@ -1027,7 +1027,7 @@ public enum L10n {
         }
         public enum Empty {
           /// Location: DiscoveryView.swift - Purpose: Empty state description
-          public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "When Auto-Add Nodes is disabled, newly discovered nodes will appear here for you to add manually.")
+          public static let description = L10n.tr("Contacts", "contacts.discovery.empty.description", fallback: "Nodes will appear here as their advertisements are discovered.")
           /// Location: DiscoveryView.swift - Purpose: Empty state title
           public static let title = L10n.tr("Contacts", "contacts.discovery.empty.title", fallback: "No Discovered Nodes")
           public enum Search {
@@ -1075,6 +1075,10 @@ public enum L10n {
         public static let options = L10n.tr("Contacts", "contacts.list.options", fallback: "Options")
         /// Location: ContactsListView.swift - Purpose: Search prompt
         public static let searchPrompt = L10n.tr("Contacts", "contacts.list.searchPrompt", fallback: "Search nodes")
+        /// Location: ContactsListView.swift - Purpose: Search prompt with count
+        public static func searchPromptWithCount(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.list.searchPromptWithCount", p1, fallback: "Search nodes (%d)")
+        }
         /// Location: ContactsListView.swift - Purpose: Empty state for split view
         public static let selectNode = L10n.tr("Contacts", "contacts.list.selectNode", fallback: "Select a node")
         /// Location: ContactsListView.swift - Purpose: Menu item to share own contact

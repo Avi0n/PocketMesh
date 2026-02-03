@@ -19,6 +19,11 @@ struct MessageText: View {
         Text(formattedText)
     }
 
+    /// Exposes formatted text for testing
+    var testableFormattedText: AttributedString {
+        formattedText
+    }
+
     private var formattedText: AttributedString {
         var result = AttributedString(text)
         result.foregroundColor = baseColor
@@ -97,6 +102,15 @@ struct MessageText: View {
     private func applyURLFormatting(_ attributedString: inout AttributedString) {
         guard let detector = Self.urlDetector else { return }
 
+        // Collect ranges already styled as mentions (have stronglyEmphasized intent)
+        // URLs within these ranges should not be converted to links
+        var mentionRanges: [Range<AttributedString.Index>] = []
+        for run in attributedString.runs {
+            if run.inlinePresentationIntent == .stronglyEmphasized {
+                mentionRanges.append(run.range)
+            }
+        }
+
         // Get the current string content (may have been modified by mention formatting)
         let currentString = String(attributedString.characters)
         let nsRange = NSRange(currentString.startIndex..., in: currentString)
@@ -109,6 +123,14 @@ struct MessageText: View {
                   scheme == "http" || scheme == "https",
                   let matchRange = Range(match.range, in: currentString),
                   let attrRange = Range(matchRange, in: attributedString) else { continue }
+
+            // Skip URLs that overlap with mention ranges
+            let overlapsWithMention = mentionRanges.contains { mentionRange in
+                attrRange.overlaps(mentionRange)
+            }
+            if overlapsWithMention {
+                continue
+            }
 
             attributedString[attrRange].link = url
             attributedString[attrRange].foregroundColor = baseColor

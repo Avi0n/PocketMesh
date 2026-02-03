@@ -473,6 +473,134 @@ public actor ContactService {
 
         try await dataStore.saveContact(updated)
     }
+
+    // MARK: - Device Favorite Sync
+
+    /// Sets a contact's favorite status on the device and updates local storage.
+    ///
+    /// This method updates the device's contact flags (bit 0 = favorite), waits for
+    /// confirmation, then updates the local SwiftData contact.
+    ///
+    /// - Parameters:
+    ///   - contactID: The contact's UUID.
+    ///   - isFavorite: Whether to mark the contact as a favorite.
+    /// - Throws: `ContactServiceError` if the device update fails.
+    public func setContactFavorite(_ contactID: UUID, isFavorite: Bool) async throws {
+        guard let existing = try await dataStore.fetchContact(id: contactID) else {
+            throw ContactServiceError.contactNotFound
+        }
+
+        // Calculate new flags: set or clear bit 0
+        let newFlags: UInt8 = isFavorite
+            ? existing.flags | 0x01
+            : existing.flags & ~0x01
+
+        // Build MeshContact for device update
+        let meshContact = MeshContact(
+            id: existing.publicKey.hexString(),
+            publicKey: existing.publicKey,
+            type: existing.typeRawValue,
+            flags: existing.flags,
+            outPathLength: existing.outPathLength,
+            outPath: existing.outPath,
+            advertisedName: existing.name,
+            lastAdvertisement: Date(timeIntervalSince1970: TimeInterval(existing.lastAdvertTimestamp)),
+            latitude: existing.latitude,
+            longitude: existing.longitude,
+            lastModified: Date(timeIntervalSince1970: TimeInterval(existing.lastModified))
+        )
+
+        // Push to device and wait for confirmation
+        do {
+            try await session.changeContactFlags(meshContact, flags: newFlags)
+        } catch let error as MeshCoreError {
+            throw ContactServiceError.sessionError(error)
+        }
+
+        // Device confirmed - update local storage
+        let updated = ContactDTO(
+            from: Contact(
+                id: existing.id,
+                deviceID: existing.deviceID,
+                publicKey: existing.publicKey,
+                name: existing.name,
+                typeRawValue: existing.typeRawValue,
+                flags: newFlags,
+                outPathLength: existing.outPathLength,
+                outPath: existing.outPath,
+                lastAdvertTimestamp: existing.lastAdvertTimestamp,
+                latitude: existing.latitude,
+                longitude: existing.longitude,
+                lastModified: existing.lastModified,
+                nickname: existing.nickname,
+                isBlocked: existing.isBlocked,
+                isFavorite: isFavorite,
+                lastMessageDate: existing.lastMessageDate,
+                unreadCount: existing.unreadCount,
+                ocvPreset: existing.ocvPreset,
+                customOCVArrayString: existing.customOCVArrayString
+            )
+        )
+
+        try await dataStore.saveContact(updated)
+    }
+
+    // MARK: - Favorites Migration
+
+    private static let favoritesMigrationKey = "hasMigratedContactFavorites"
+
+    /// Migrates existing app favorites to device flags (one-time operation).
+    ///
+    /// On first run after upgrade, this merges app favorites with device favorites:
+    /// any contact that is favorite in either location becomes favorite in both.
+    /// After migration, device wins for future syncs.
+    ///
+    /// - Parameter deviceID: The connected device's UUID.
+    /// - Returns: Number of contacts migrated to device.
+    @discardableResult
+    public func migrateAppFavoritesToDevice(deviceID: UUID) async throws -> Int {
+        // Check if already migrated
+        if UserDefaults.standard.bool(forKey: Self.favoritesMigrationKey) {
+            return 0
+        }
+
+        logger.info("Starting favorites migration to device")
+
+        // Find contacts that are favorite in app but not on device
+        let contacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        let toMigrate = contacts.filter { contact in
+            contact.isFavorite && (contact.flags & 0x01) == 0
+        }
+
+        if toMigrate.isEmpty {
+            logger.info("No favorites to migrate, marking complete")
+            UserDefaults.standard.set(true, forKey: Self.favoritesMigrationKey)
+            return 0
+        }
+
+        logger.info("Migrating \(toMigrate.count) favorites to device")
+
+        var migratedCount = 0
+        for contact in toMigrate {
+            do {
+                try await setContactFavorite(contact.id, isFavorite: true)
+                migratedCount += 1
+            } catch {
+                logger.warning("Failed to migrate favorite for \(contact.name): \(error)")
+                // Continue with other contacts, will retry on next connect
+            }
+        }
+
+        // Only mark complete if all were migrated
+        if migratedCount == toMigrate.count {
+            UserDefaults.standard.set(true, forKey: Self.favoritesMigrationKey)
+            logger.info("Favorites migration complete: \(migratedCount) contacts")
+        } else {
+            logger.warning("Partial migration: \(migratedCount)/\(toMigrate.count), will retry")
+        }
+
+        return migratedCount
+    }
 }
 
 // MARK: - ContactServiceProtocol Conformance

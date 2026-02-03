@@ -1,11 +1,13 @@
 // PocketMesh/Views/Chats/Components/RepeatRowView.swift
-import SwiftUI
+import CoreLocation
 import PocketMeshServices
+import SwiftUI
 
 /// Row displaying a single heard repeat with repeater info and signal quality.
 struct RepeatRowView: View {
     let repeatEntry: MessageRepeatDTO
-    let contacts: [ContactDTO]
+    let repeaters: [ContactDTO]
+    let userLocation: CLLocation?
 
     var body: some View {
         HStack(alignment: .top) {
@@ -70,18 +72,13 @@ struct RepeatRowView: View {
         return count == 1 ? L10n.Chats.Chats.Repeats.Hop.singular : L10n.Chats.Chats.Repeats.Hop.plural(count)
     }
 
-    /// Resolve repeater name from contacts or show placeholder
+    /// Resolve repeater name from repeaters list or show placeholder
     private var repeaterName: String {
         guard let repeaterByte = repeatEntry.repeaterByte else {
             return L10n.Chats.Chats.Repeats.unknownRepeater
         }
 
-        // Only match repeater-type contacts (contacts and rooms cannot repeat messages)
-        if let repeater = contacts.first(where: { contact in
-            guard contact.type == .repeater,
-                  let firstByte = contact.publicKey.first else { return false }
-            return firstByte == repeaterByte
-        }) {
+        if let repeater = RepeaterResolver.bestMatch(for: repeaterByte, in: repeaters, userLocation: userLocation) {
             return repeater.displayName
         }
 
@@ -100,7 +97,8 @@ struct RepeatRowView: View {
                 rssi: -85,
                 rxLogEntryID: nil
             ),
-            contacts: []
+            repeaters: [],
+            userLocation: nil
         )
 
         RepeatRowView(
@@ -112,7 +110,8 @@ struct RepeatRowView: View {
                 rssi: -102,
                 rxLogEntryID: nil
             ),
-            contacts: []
+            repeaters: [],
+            userLocation: nil
         )
     }
 }

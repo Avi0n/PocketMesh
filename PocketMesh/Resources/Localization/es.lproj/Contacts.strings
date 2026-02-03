@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Buscar nodos";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Buscar nodos (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Ordenar";
 
@@ -457,7 +460,7 @@
 "contacts.discovery.empty.title" = "Sin nodos descubiertos";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Cuando Añadir Nodos Automáticamente está desactivado, los nodos recién descubiertos aparecerán aquí para que los añadas manualmente.";
+"contacts.discovery.empty.description" = "Los nodos aparecerán aquí a medida que se descubran sus anuncios.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Añadir";

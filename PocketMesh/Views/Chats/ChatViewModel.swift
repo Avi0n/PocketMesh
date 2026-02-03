@@ -180,8 +180,12 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
+    private var contactService: ContactService?
     private var syncCoordinator: SyncCoordinator?
     private weak var appState: AppState?
+
+    /// Contact ID currently having its favorite status toggled (for loading UI)
+    var togglingFavoriteID: UUID?
 
     // MARK: - Initialization
 
@@ -195,6 +199,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
         self.linkPreviewCache = linkPreviewCache
     }
@@ -207,6 +212,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
     }
 
@@ -323,7 +329,12 @@ final class ChatViewModel {
 
     // MARK: - Favorite
 
-    /// Toggles favorite state for a conversation with optimistic UI update
+    /// Toggles favorite state for a conversation.
+    ///
+    /// For direct messages (contacts), this pushes the change to the device and waits
+    /// for confirmation before updating the UI. For channels and rooms (app-only),
+    /// this uses optimistic updates.
+    ///
     /// - Parameters:
     ///   - conversation: The conversation to toggle
     ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
@@ -333,38 +344,83 @@ final class ChatViewModel {
         let originalState = conversation.isFavorite
         let newState = !originalState
 
-        // Optimistic UI update
-        if disableAnimation {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                updateConversationFavoriteState(conversation, isFavorite: newState)
-            }
-        } else {
-            updateConversationFavoriteState(conversation, isFavorite: newState)
-        }
+        switch conversation {
+        case .direct(let contact):
+            // Contacts sync with device - wait for confirmation
+            togglingFavoriteID = contact.id
+            defer { togglingFavoriteID = nil }
 
-        do {
-            switch conversation {
-            case .direct(let contact):
-                try await dataStore?.setContactFavorite(contact.id, isFavorite: newState)
-            case .channel(let channel):
-                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
-            case .room(let session):
-                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            do {
+                try await contactService?.setContactFavorite(contact.id, isFavorite: newState)
+                // Device confirmed - update local UI
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: newState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } catch {
+                logger.error("Failed to toggle contact favorite: \(error)")
             }
-        } catch {
-            // Rollback on failure
+
+        case .channel(let channel):
+            // Channels are app-only - optimistic update
             if disableAnimation {
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
                 }
             } else {
-                updateConversationFavoriteState(conversation, isFavorite: originalState)
+                updateConversationFavoriteState(conversation, isFavorite: newState)
             }
-            logger.error("Failed to toggle favorite: \(error)")
+
+            do {
+                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle channel favorite: \(error)")
+            }
+
+        case .room(let session):
+            // Rooms are app-only - optimistic update
+            if disableAnimation {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } else {
+                updateConversationFavoriteState(conversation, isFavorite: newState)
+            }
+
+            do {
+                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle room favorite: \(error)")
+            }
         }
     }
 

@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Rechercher des nœuds";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Rechercher des nœuds (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Trier";
 
@@ -457,7 +460,7 @@
 "contacts.discovery.empty.title" = "Aucun nœud découvert";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Lorsque l'ajout automatique des nœuds est désactivé, les nœuds nouvellement découverts apparaîtront ici pour que vous puissiez les ajouter manuellement.";
+"contacts.discovery.empty.description" = "Les nœuds apparaîtront ici au fur et à mesure que leurs annonces sont découvertes.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Ajouter";

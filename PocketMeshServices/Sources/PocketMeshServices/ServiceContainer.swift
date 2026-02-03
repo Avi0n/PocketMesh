@@ -276,6 +276,9 @@ public final class ServiceContainer {
         await rxLogService.startEventMonitoring(deviceID: deviceID)
         await messageService.startEventListening()
         await remoteNodeService.startEventMonitoring()
+
+        // Always start message event monitoring so handlers are ready for polled messages
+        await messagePollingService.startMessageEventMonitoring(deviceID: deviceID)
         if enableAutoFetch {
             await messagePollingService.startAutoFetch(deviceID: deviceID)
         }
@@ -297,7 +300,7 @@ public final class ServiceContainer {
         await advertisementService.stopEventMonitoring()
         await rxLogService.stopEventMonitoring()
         await messageService.stopEventListening()
-        await messagePollingService.stopAutoFetch()
+        await messagePollingService.stopMessageEventMonitoring()
         // RemoteNodeService event monitoring is per-session, handled internally
 
         // Flush debug log buffer
@@ -317,7 +320,19 @@ public final class ServiceContainer {
     public func performInitialSync(deviceID: UUID) async {
         let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
 
-        // Sync contacts
+        // Migrate app favorites to device BEFORE sync (one-time on upgrade)
+        // Must run first because sync overwrites isFavorite with device flags
+        guard !Task.isCancelled else { return }
+        do {
+            let migrated = try await contactService.migrateAppFavoritesToDevice(deviceID: deviceID)
+            if migrated > 0 {
+                logger.info("Initial sync: \(migrated) favorites migrated to device")
+            }
+        } catch {
+            logger.warning("Initial sync: favorites migration failed: \(error)")
+        }
+
+        // Sync contacts from device
         guard !Task.isCancelled else { return }
         do {
             let result = try await contactService.syncContacts(deviceID: deviceID)

@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Поиск узлов";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Поиск узлов (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Сортировка";
 
@@ -457,7 +460,7 @@
 "contacts.discovery.empty.title" = "Нет обнаруженных узлов";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Когда автодобавление узлов отключено, новые обнаруженные узлы будут появляться здесь для ручного добавления.";
+"contacts.discovery.empty.description" = "Узлы будут появляться здесь по мере обнаружения их объявлений.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Добавить";

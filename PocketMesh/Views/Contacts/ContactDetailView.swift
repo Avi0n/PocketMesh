@@ -30,6 +30,7 @@ struct ContactDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var showingShareSheet = false
     @State private var isSaving = false
+    @State private var isTogglingFavorite = false
     @State private var errorMessage: String?
     @State private var pathViewModel = PathManagementViewModel()
     @State private var showAdvanced = false
@@ -216,9 +217,12 @@ struct ContactDetailView: View {
     // MARK: - Actions
 
     private func toggleFavorite() async {
+        isTogglingFavorite = true
+        defer { isTogglingFavorite = false }
+
         do {
-            try await appState.services?.contactService.updateContactPreferences(
-                contactID: currentContact.id,
+            try await appState.services?.contactService.setContactFavorite(
+                currentContact.id,
                 isFavorite: !currentContact.isFavorite
             )
             await refreshContact()
@@ -368,11 +372,18 @@ struct ContactDetailView: View {
                     await toggleFavorite()
                 }
             } label: {
-                Label(
-                    currentContact.isFavorite ? L10n.Contacts.Contacts.Detail.removeFromFavorites : L10n.Contacts.Contacts.Detail.addToFavorites,
-                    systemImage: currentContact.isFavorite ? "star.slash" : "star"
-                )
+                HStack {
+                    Label(
+                        currentContact.isFavorite ? L10n.Contacts.Contacts.Detail.removeFromFavorites : L10n.Contacts.Contacts.Detail.addToFavorites,
+                        systemImage: currentContact.isFavorite ? "star.slash" : "star"
+                    )
+                    if isTogglingFavorite {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
             }
+            .disabled(isTogglingFavorite)
             .radioDisabled(for: appState.connectionState)
 
             // Share Contact via QR
