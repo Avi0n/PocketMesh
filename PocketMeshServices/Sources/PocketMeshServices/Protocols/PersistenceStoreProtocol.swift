@@ -47,6 +47,15 @@ public protocol PersistenceStoreProtocol: Actor {
         limit: Int
     ) async throws -> MessageDTO?
 
+    /// Finds a DM message matching a reaction by hash within a timestamp window
+    func findDMMessageForReaction(
+        deviceID: UUID,
+        contactID: UUID,
+        messageHash: String,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) async throws -> MessageDTO?
+
     /// Update message status
     func updateMessageStatus(id: UUID, status: MessageStatus) async throws
 

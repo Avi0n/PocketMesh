@@ -130,6 +130,40 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return nil
     }
 
+    public func findDMMessageForReaction(
+        deviceID: UUID,
+        contactID: UUID,
+        messageHash: String,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) async throws -> MessageDTO? {
+        if let error = stubbedFetchMessageError {
+            throw error
+        }
+
+        let candidates = messages.values.filter {
+            $0.deviceID == deviceID &&
+            $0.contactID == contactID &&
+            timestampWindow.contains($0.timestamp)
+        }
+        .sorted {
+            if $0.timestamp != $1.timestamp { return $0.timestamp > $1.timestamp }
+            return $0.createdAt > $1.createdAt
+        }
+
+        for candidate in candidates.prefix(limit) {
+            let hash = ReactionParser.generateMessageHash(
+                text: candidate.text,
+                timestamp: candidate.timestamp
+            )
+            if hash == messageHash {
+                return candidate
+            }
+        }
+
+        return nil
+    }
+
     public func updateMessageStatus(id: UUID, status: MessageStatus) async throws {
         updatedMessageStatuses.append((id: id, status: status))
         if let error = stubbedUpdateMessageStatusError {

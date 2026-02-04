@@ -768,6 +768,55 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return nil
     }
 
+    /// Finds a DM message matching a reaction by hash within a timestamp window.
+    public func findDMMessageForReaction(
+        deviceID: UUID,
+        contactID: UUID,
+        messageHash: String,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) throws -> MessageDTO? {
+        let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        logger.debug("[DM-REACTION-MATCH] Looking for DM: hash=\(messageHash), contactID=\(contactID)")
+
+        let targetDeviceID = deviceID
+        let targetContactID: UUID? = contactID
+        let start = timestampWindow.lowerBound
+        let end = timestampWindow.upperBound
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.contactID == targetContactID &&
+            message.timestamp >= start &&
+            message.timestamp <= end
+        }
+
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+
+        let candidates = try modelContext.fetch(descriptor)
+        logger.debug("[DM-REACTION-MATCH] Found \(candidates.count) candidates")
+
+        for candidate in candidates {
+            let candidateHash = ReactionParser.generateMessageHash(
+                text: candidate.text,
+                timestamp: candidate.timestamp
+            )
+            if candidateHash == messageHash {
+                logger.debug("[DM-REACTION-MATCH] Found match: \(candidate.id)")
+                return MessageDTO(from: candidate)
+            }
+        }
+
+        return nil
+    }
+
     /// Fetch a message by ID
     public func fetchMessage(id: UUID) throws -> MessageDTO? {
         let targetID = id
