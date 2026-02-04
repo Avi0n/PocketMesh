@@ -104,6 +104,12 @@
 "permission.admin" = "Admin";
 
 
+// MARK: - Reaction Notifications
+
+/* Notification body when someone reacts to your message - %1$@ is the emoji, %2$@ is the message preview */
+"notifications.reaction.body" = "Reacted %1$@ to your message: \"%2$@\"";
+
+
 // MARK: - Discovery Notifications
 
 /* Notification title when a new contact is discovered on the mesh network */

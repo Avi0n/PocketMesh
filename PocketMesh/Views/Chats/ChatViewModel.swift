@@ -155,6 +155,10 @@ final class ChatViewModel {
     /// In-flight preview fetch tasks (prevents duplicate fetches)
     private var previewFetchTasks: [UUID: Task<Void, Never>] = [:]
 
+    /// In-flight reaction sends (prevents duplicate reactions on rapid taps)
+    /// Key format: "{messageID}-{emoji}"
+    private var inFlightReactions: Set<String> = []
+
     // MARK: - Pagination State
 
     /// Whether currently fetching older messages (exposed for UI binding)
@@ -607,13 +611,7 @@ final class ChatViewModel {
             totalFetchedCount = unfilteredCount
 
             // Hide sent reaction messages (unless failed)
-            fetchedMessages = fetchedMessages.filter { message in
-                guard message.direction == .outgoing,
-                      ReactionParser.parseDM(message.text) != nil else {
-                    return true
-                }
-                return message.status == .failed
-            }
+            fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: true)
 
             messages = fetchedMessages
             hasMoreMessages = unfilteredCount == pageSize
@@ -854,16 +852,7 @@ final class ChatViewModel {
             }
 
             // Hide sent reaction messages (unless failed)
-            fetchedMessages = fetchedMessages.filter { message in
-                guard message.direction == .outgoing,
-                      ReactionParser.parse(message.text) != nil else {
-                    return true
-                }
-                // Debug: log filtered messages
-                logger.info("loadChannelMessages: FILTERING message \(message.id) - text parses as reaction: \(message.text.prefix(50))")
-                // Only show if explicitly failed
-                return message.status == .failed
-            }
+            fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: false)
 
             // Use unfiltered count to determine if more messages exist
             hasMoreMessages = unfilteredCount == pageSize
@@ -985,23 +974,8 @@ final class ChatViewModel {
             }
 
             // Hide sent reaction messages (unless failed)
-            if currentChannel != nil {
-                olderMessages = olderMessages.filter { message in
-                    guard message.direction == .outgoing,
-                          ReactionParser.parse(message.text) != nil else {
-                        return true
-                    }
-                    return message.status == .failed
-                }
-            } else if currentContact != nil {
-                olderMessages = olderMessages.filter { message in
-                    guard message.direction == .outgoing,
-                          ReactionParser.parseDM(message.text) != nil else {
-                        return true
-                    }
-                    return message.status == .failed
-                }
-            }
+            let isDM = currentContact != nil
+            olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
 
             // Prepend older messages (they're chronologically earlier)
             messages.insert(contentsOf: olderMessages, at: 0)
@@ -1163,6 +1137,15 @@ final class ChatViewModel {
             return
         }
 
+        // Prevent duplicate sends from rapid taps
+        let reactionKey = "\(message.id)-\(emoji)"
+        guard !inFlightReactions.contains(reactionKey) else {
+            logger.debug("Reaction \(emoji) already in flight for message \(message.id), ignoring")
+            return
+        }
+        inFlightReactions.insert(reactionKey)
+        defer { inFlightReactions.remove(reactionKey) }
+
         let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
 
         // Check if user already reacted with this emoji
@@ -1309,6 +1292,28 @@ final class ChatViewModel {
         } catch {
             logger.error("Failed to send DM reaction: \(error)")
             errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Reaction Filtering
+
+    /// Filter out outgoing reaction messages unless they failed to send.
+    /// Reaction messages are hidden from the UI to avoid clutter since they're displayed as badges.
+    /// - Parameters:
+    ///   - messages: The messages to filter
+    ///   - isDM: Whether these are DM messages (uses parseDM) or channel messages (uses parse)
+    /// - Returns: Filtered messages with successful outgoing reactions removed
+    private func filterOutgoingReactionMessages(_ messages: [MessageDTO], isDM: Bool) -> [MessageDTO] {
+        messages.filter { message in
+            guard message.direction == .outgoing else { return true }
+
+            let isReaction = isDM
+                ? ReactionParser.parseDM(message.text) != nil
+                : ReactionParser.parse(message.text) != nil
+
+            guard isReaction else { return true }
+
+            return message.status == .failed
         }
     }
 

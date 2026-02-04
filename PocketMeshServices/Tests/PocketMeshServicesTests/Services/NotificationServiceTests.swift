@@ -71,8 +71,7 @@ struct NotificationServiceTests {
         // Actual notification won't post without authorization
         await service.postReactionNotification(
             reactorName: "Alice",
-            emoji: "👍",
-            messagePreview: "Hello world",
+            body: "Reacted 👍 to your message: \"Hello world\"",
             messageID: UUID(),
             contactID: UUID(),
             channelIndex: nil,
@@ -90,8 +89,7 @@ struct NotificationServiceTests {
         // Verify method accepts channel parameters for channel reactions
         await service.postReactionNotification(
             reactorName: "Bob",
-            emoji: "❤️",
-            messagePreview: "Team update",
+            body: "Reacted ❤️ to your message: \"Team update\"",
             messageID: UUID(),
             contactID: nil,
             channelIndex: 3,

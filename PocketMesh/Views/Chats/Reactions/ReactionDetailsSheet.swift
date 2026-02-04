@@ -1,12 +1,15 @@
 // PocketMesh/Views/Chats/Reactions/ReactionDetailsSheet.swift
 import SwiftUI
 import PocketMeshServices
+import OSLog
 
 /// Element X-style sheet showing who reacted with each emoji.
 struct ReactionDetailsSheet: View {
     let messageID: UUID
 
     @Environment(\.appState) private var appState
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "ReactionDetailsSheet")
 
     @State private var reactions: [ReactionDTO] = []
     @State private var selectedEmoji: String?
@@ -104,7 +107,7 @@ struct ReactionDetailsSheet: View {
                 selectedEmoji = first.emoji
             }
         } catch {
-            // Empty state is acceptable
+            logger.debug("Failed to fetch reactions for message \(messageID): \(error)")
         }
 
         isLoading = false

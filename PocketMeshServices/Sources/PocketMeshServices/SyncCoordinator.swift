@@ -76,6 +76,10 @@ public actor SyncCoordinator {
     /// Cached blocked contact names for O(1) lookup in message handlers
     private var blockedContactNames: Set<String> = []
 
+    /// Timestamp window size (in seconds) for matching reactions to messages.
+    /// Allows for clock drift and delayed delivery within a 5-minute window.
+    private let reactionTimestampWindowSeconds: UInt32 = 300
+
     // MARK: - Observable State (@MainActor for SwiftUI)
 
     /// Current sync state
@@ -686,9 +690,8 @@ public actor SyncCoordinator {
 
                 // Try persistence fallback
                 let now = UInt32(Date().timeIntervalSince1970)
-                let windowSize: UInt32 = 300
-                let windowStart = now > windowSize ? now - windowSize : 0
-                let windowEnd = now + windowSize
+                let windowStart = now > reactionTimestampWindowSeconds ? now - reactionTimestampWindowSeconds : 0
+                let windowEnd = now + reactionTimestampWindowSeconds
 
                 if let targetMessage = try? await services.dataStore.findDMMessageForReaction(
                     deviceID: deviceID,
@@ -942,9 +945,8 @@ public actor SyncCoordinator {
                     return  // Don't save as regular message
                 }
                 let now = UInt32(receiveTime.timeIntervalSince1970)
-                let windowSize: UInt32 = 300
-                let windowStart = now > windowSize ? now - windowSize : 0
-                let windowEnd = now + windowSize
+                let windowStart = now > reactionTimestampWindowSeconds ? now - reactionTimestampWindowSeconds : 0
+                let windowEnd = now + reactionTimestampWindowSeconds
 
                 self.logger.debug("[REACTION-DEBUG] DB lookup: selfNodeName='\(selfNodeName)', targetSender=\(parsed.targetSender), hash=\(parsed.messageHash)")
 

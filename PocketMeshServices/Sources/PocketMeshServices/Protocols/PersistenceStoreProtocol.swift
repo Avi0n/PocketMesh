@@ -305,3 +305,12 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete all reactions for a message
     func deleteReactionsForMessage(messageID: UUID) async throws
 }
+
+// MARK: - Default Parameter Values
+
+public extension PersistenceStoreProtocol {
+    /// Fetch reactions with default limit of 100
+    func fetchReactions(for messageID: UUID) async throws -> [ReactionDTO] {
+        try await fetchReactions(for: messageID, limit: 100)
+    }
+}

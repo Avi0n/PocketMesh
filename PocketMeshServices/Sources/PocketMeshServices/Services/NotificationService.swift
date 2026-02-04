@@ -467,16 +467,14 @@ public final class NotificationService: NSObject {
     /// Posts a notification when someone reacts to the user's message.
     /// - Parameters:
     ///   - reactorName: Name of the person who reacted
-    ///   - emoji: The reaction emoji
-    ///   - messagePreview: Preview of the message that was reacted to
+    ///   - body: Localized notification body text
     ///   - messageID: ID of the message that was reacted to
     ///   - contactID: Contact ID if this is a direct message reaction (nil for channels)
     ///   - channelIndex: Channel index if this is a channel reaction (nil for DMs)
     ///   - deviceID: Device ID for channel reactions (nil for DMs)
     public func postReactionNotification(
         reactorName: String,
-        emoji: String,
-        messagePreview: String,
+        body: String,
         messageID: UUID,
         contactID: UUID?,
         channelIndex: UInt8?,
@@ -492,12 +490,7 @@ public final class NotificationService: NSObject {
 
         let content = UNMutableNotificationContent()
         content.title = reactorName
-
-        // Truncate preview if too long
-        let truncatedPreview = messagePreview.count > 50
-            ? String(messagePreview.prefix(47)) + "..."
-            : messagePreview
-        content.body = "Reacted \(emoji) to your message: \"\(truncatedPreview)\""
+        content.body = body
 
         content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.reaction.rawValue

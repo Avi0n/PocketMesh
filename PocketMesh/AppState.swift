@@ -1101,11 +1101,15 @@ public final class AppState {
 
         guard !isMuted else { return }
 
+        // Truncate preview if too long
+        let truncatedPreview = message.text.count > 50
+            ? String(message.text.prefix(47)) + "..."
+            : message.text
+
         // Post the notification
         await services.notificationService.postReactionNotification(
             reactorName: latestReaction.senderName,
-            emoji: latestReaction.emoji,
-            messagePreview: message.text,
+            body: L10n.Localizable.Notifications.Reaction.body(latestReaction.emoji, truncatedPreview),
             messageID: messageID,
             contactID: message.contactID,
             channelIndex: message.channelIndex,

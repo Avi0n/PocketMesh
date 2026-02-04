@@ -1692,6 +1692,12 @@ public enum L10n {
         /// Notification title when a new room is discovered on the mesh network
         public static let room = L10n.tr("Localizable", "notifications.discovery.room", fallback: "New Room Discovered")
       }
+      public enum Reaction {
+        /// Notification body when someone reacts to your message - %1$@ is the emoji, %2$@ is the message preview
+        public static func body(_ p1: Any, _ p2: Any) -> String {
+          return L10n.tr("Localizable", "notifications.reaction.body", String(describing: p1), String(describing: p2), fallback: "Reacted %1$@ to your message: \"%2$@\"")
+        }
+      }
     }
     public enum Permission {
       /// Permission level with full administrative access
