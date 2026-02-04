@@ -94,7 +94,7 @@ struct ChatsView: View {
             .searchScopes($selectedFilter, activation: .onSearchPresentation) {
                 Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
                 ForEach(ChatFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter as ChatFilter?)
+                    Text(filter.localizedName).tag(filter as ChatFilter?)
                 }
             }
             .toolbar {
@@ -140,6 +140,9 @@ struct ChatsView: View {
             .onChange(of: appState.pendingChatContact) { _, _ in
                 handlePendingNavigation()
             }
+            .onChange(of: appState.pendingChannel) { _, _ in
+                handlePendingChannelNavigation()
+            }
             .onChange(of: appState.pendingRoomSession) { _, _ in
                 handlePendingRoomNavigation()
             }
@@ -160,14 +163,14 @@ struct ChatsView: View {
         let filterIcon = selectedFilter == nil
             ? "line.3.horizontal.decrease.circle"
             : "line.3.horizontal.decrease.circle.fill"
-        let accessibilityLabel = selectedFilter.map { L10n.Chats.Chats.Filter.accessibilityLabelActive($0.rawValue) }
+        let accessibilityLabel = selectedFilter.map { L10n.Chats.Chats.Filter.accessibilityLabelActive($0.localizedName) }
             ?? L10n.Chats.Chats.Filter.accessibilityLabel
 
         Menu {
             Picker(L10n.Chats.Chats.Filter.title, selection: $selectedFilter) {
                 Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
                 ForEach(ChatFilter.allCases) { filter in
-                    Label(filter.rawValue, systemImage: filter.systemImage)
+                    Label(filter.localizedName, systemImage: filter.systemImage)
                         .tag(filter as ChatFilter?)
                 }
             }
@@ -294,6 +297,7 @@ struct ChatsView: View {
                 chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
                 announceOfflineStateIfNeeded()
                 handlePendingNavigation()
+                handlePendingChannelNavigation()
                 handlePendingRoomNavigation()
             }
         )
@@ -404,6 +408,7 @@ struct ChatsView: View {
                 await loadConversations()
                 announceOfflineStateIfNeeded()
                 handlePendingNavigation()
+                handlePendingChannelNavigation()
                 handlePendingRoomNavigation()
             }
         )
@@ -570,6 +575,10 @@ struct ChatsView: View {
                 deviceID: channel.deviceID,
                 index: channel.index
             )
+            await appState.services?.notificationService.removeDeliveredNotifications(
+                forChannelIndex: channel.index,
+                deviceID: channel.deviceID
+            )
             await appState.services?.notificationService.updateBadgeCount()
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")
@@ -581,6 +590,12 @@ struct ChatsView: View {
         guard let contact = appState.pendingChatContact else { return }
         navigate(to: .direct(contact))
         appState.clearPendingNavigation()
+    }
+
+    private func handlePendingChannelNavigation() {
+        guard let channel = appState.pendingChannel else { return }
+        navigate(to: .channel(channel))
+        appState.clearPendingChannelNavigation()
     }
 
     private func handlePendingRoomNavigation() {

@@ -167,12 +167,27 @@ public actor RepeaterAdminService {
     // MARK: - CLI Commands
 
     /// Send a CLI command to a repeater and wait for response (admin only).
+    /// Uses content-based matching for structured CLI responses.
     public func sendCommand(
         sessionID: UUID,
         command: String,
         timeout: Duration = .seconds(10)
     ) async throws -> String {
         try await remoteNodeService.sendCLICommand(
+            sessionID: sessionID,
+            command: command,
+            timeout: timeout
+        )
+    }
+
+    /// Send a raw CLI command using FIFO response matching (admin only).
+    /// Used by CLI tool for passthrough where any response is accepted.
+    public func sendRawCommand(
+        sessionID: UUID,
+        command: String,
+        timeout: Duration = .seconds(10)
+    ) async throws -> String {
+        try await remoteNodeService.sendRawCLICommand(
             sessionID: sessionID,
             command: command,
             timeout: timeout

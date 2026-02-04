@@ -88,6 +88,27 @@ public actor MessagePollingService {
         acknowledgementHandler = handler
     }
 
+    // MARK: - Event Monitoring
+
+    /// Start event monitoring for message handlers without enabling auto-fetch.
+    /// Call this before sync to ensure handlers are ready for polled messages.
+    /// - Parameter deviceID: The device ID for contact lookups
+    public func startMessageEventMonitoring(deviceID: UUID) {
+        currentDeviceID = deviceID
+        startEventMonitoring()
+        logger.info("Message event monitoring started for device \(deviceID)")
+    }
+
+    /// Stop event monitoring (also stops auto-fetch if running)
+    public func stopMessageEventMonitoring() async {
+        if isAutoFetchEnabled {
+            await stopAutoFetch()
+        } else {
+            stopEventMonitoring()
+            currentDeviceID = nil
+        }
+    }
+
     // MARK: - Auto-Fetch Control
 
     /// Start automatic message fetching for a device.
@@ -99,7 +120,10 @@ public actor MessagePollingService {
         currentDeviceID = deviceID
         isAutoFetchEnabled = true
 
-        startEventMonitoring()
+        // Start event monitoring if not already running
+        if eventMonitorTask == nil {
+            startEventMonitoring()
+        }
         await session.startAutoMessageFetching()
 
         logger.info("Auto-fetch started for device \(deviceID)")

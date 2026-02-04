@@ -19,9 +19,15 @@ struct ChannelChatView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
-    @State private var unreadMentionCount = 0
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
+
+    /// Mention IDs that are both unseen AND present in loaded messages
+    private var reachableMentionIDs: Set<UUID> {
+        let loadedIDs = Set(viewModel.displayItems.map(\.id))
+        return unseenMentionIDs.intersection(loadedIDs)
+    }
+
     @State private var selectedMessageForRepeats: MessageDTO?
     @State private var selectedMessageForPath: MessageDTO?
     @FocusState private var isInputFocused: Bool
@@ -53,10 +59,26 @@ struct ChannelChatView: View {
             }
         }
         .sheet(isPresented: $showingChannelInfo) {
-            ChannelInfoSheet(channel: channel) {
-                // Dismiss the chat view when channel is deleted
-                dismiss()
-            }
+            ChannelInfoSheet(
+                channel: channel,
+                onClearMessages: {
+                    Task {
+                        // Reload messages for this channel (now empty)
+                        await viewModel.loadChannelMessages(for: channel)
+
+                        // Refresh parent's channel list and clear cached message preview
+                        if let parent = parentViewModel {
+                            await parent.loadChannels(deviceID: channel.deviceID)
+                            await parent.loadLastMessagePreviews()
+                        }
+                    }
+                },
+                onDelete: {
+                    // Dismiss the chat view when channel is deleted
+                    dismiss()
+                }
+            )
+            .environment(\.chatViewModel, viewModel)
         }
         .sheet(item: $selectedMessageForRepeats) { message in
             RepeatDetailsSheet(message: message)
@@ -170,7 +192,6 @@ struct ChannelChatView: View {
                 deviceID: channel.deviceID,
                 channelIndex: channel.index
             ))
-            unreadMentionCount = unseenMentionIDs.count
         } catch {
             logger.error("Failed to load unseen channel mentions: \(error)")
         }
@@ -185,7 +206,6 @@ struct ChannelChatView: View {
             try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
 
             unseenMentionIDs.remove(messageID)
-            unreadMentionCount = max(0, unreadMentionCount - 1)
 
             // Refresh parent's channel list to update badge in sidebar (important for iPad split view)
             if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
@@ -240,13 +260,19 @@ struct ChannelChatView: View {
                             await markMentionSeen(messageID: messageID)
                         }
                     },
-                    mentionTargetID: unseenMentionIDs.first
+                    mentionTargetID: reachableMentionIDs.first,
+                    onNearTop: {
+                        Task {
+                            await viewModel.loadOlderMessages()
+                        }
+                    },
+                    isLoadingOlderMessages: viewModel.isLoadingOlder
                 )
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 12) {
                         ScrollToMentionFAB(
-                            isVisible: unreadMentionCount > 0,
-                            unreadMentionCount: unreadMentionCount,
+                            isVisible: !reachableMentionIDs.isEmpty,
+                            unreadMentionCount: reachableMentionIDs.count,
                             onTap: { scrollToMentionRequest += 1 }
                         )
 

@@ -98,6 +98,10 @@ public enum CommandCode: UInt8, Sendable {
     case sendControlData = 0x37
     /// Requests device statistics.
     case getStats = 0x38
+    /// Sets the auto-add configuration bitmask.
+    case setAutoAddConfig = 0x3A
+    /// Gets the current auto-add configuration bitmask.
+    case getAutoAddConfig = 0x3B
 }
 
 /// Defines the response codes received from the mesh device.
@@ -152,6 +156,8 @@ public enum ResponseCode: UInt8, Sendable {
     case tuningParams = 0x17
     /// Contains device statistics.
     case stats = 0x18
+    /// Contains the auto-add configuration bitmask.
+    case autoAddConfig = 0x19
 
     // Push notifications (0x80+)
     /// Indicates a node advertisement was received.
@@ -184,6 +190,10 @@ public enum ResponseCode: UInt8, Sendable {
     case pathDiscoveryResponse = 0x8D
     /// Contains raw control data.
     case controlData = 0x8E
+    /// Indicates a contact was automatically deleted (overwritten by auto-add).
+    case contactDeleted = 0x8F
+    /// Indicates the device's contact storage is full.
+    case contactsFull = 0x90
 }
 
 /// Defines the types of binary requests used in asynchronous operations.
@@ -258,7 +268,8 @@ extension ResponseCode {
         switch self {
         case .ok, .error:
             return .simple
-        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams:
+        case .selfInfo, .deviceInfo, .battery, .currentTime, .privateKey, .disabled, .advertPath, .tuningParams,
+             .autoAddConfig:
             return .device
         case .contactStart, .contact, .contactEnd, .contactURI:
             return .contact
@@ -266,7 +277,8 @@ extension ResponseCode {
              .channelMessageReceived, .channelMessageReceivedV3, .noMoreMessages:
             return .message
         case .advertisement, .pathUpdate, .ack, .messagesWaiting, .newAdvertisement,
-             .statusResponse, .telemetryResponse, .binaryResponse, .pathDiscoveryResponse, .controlData:
+             .statusResponse, .telemetryResponse, .binaryResponse, .pathDiscoveryResponse,
+             .controlData, .contactDeleted, .contactsFull:
             return .push
         case .loginSuccess, .loginFailed:
             return .login

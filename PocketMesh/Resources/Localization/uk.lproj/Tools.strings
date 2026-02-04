@@ -426,3 +426,194 @@
 
 /* Location: ClearanceStatusView.swift - Clearance percentage, %lld is percent */
 "tools.lineOfSight.clearancePercent" = "%lld%% зазору";
+
+// MARK: - CLI Tool View
+
+/* Location: CLIToolView.swift - Tool selection label */
+"tools.cli" = "CLI";
+
+/* Location: CLIToolView.swift - Disconnected state title */
+"tools.cli.notConnected" = "Не підключено";
+
+/* Location: CLIToolView.swift - Disconnected state description */
+"tools.cli.notConnectedDescription" = "Підключіться до mesh-радіо для використання CLI.";
+
+/* Location: CLIToolView.swift - Prompt suffix */
+"tools.cli.promptSuffix" = ">";
+
+/* Location: CLIToolView.swift - Waiting indicator */
+"tools.cli.waiting" = "...";
+
+/* Location: CLIToolView.swift - Disconnected prompt */
+"tools.cli.disconnected" = "відключено";
+
+/* Location: CLIToolView.swift - Help command output header */
+"tools.cli.helpHeader" = "Доступні команди:";
+
+/* Location: CLIToolView.swift - Session list header */
+"tools.cli.sessionListHeader" = "Активні сесії:";
+
+/* Location: CLIToolView.swift - Local session label */
+"tools.cli.sessionLocal" = "local";
+
+/* Location: CLIToolView.swift - No sessions message */
+"tools.cli.noSessions" = "Немає активних сесій";
+
+/* Location: CLIToolView.swift - History empty message */
+"tools.cli.historyEmpty" = "Історія команд порожня";
+
+/* Location: CLIToolView.swift - Unknown command error */
+"tools.cli.unknownCommand" = "Невідома команда:";
+
+/* Location: CLIToolView.swift - Login success */
+"tools.cli.loginSuccess" = "Виконано вхід до";
+
+/* Location: CLIToolView.swift - Login failed */
+"tools.cli.loginFailed" = "Помилка входу:";
+
+/* Location: CLIToolView.swift - Login failed reason */
+"tools.cli.loginFailedAuth" = "Помилка автентифікації";
+
+/* Location: CLIToolView.swift - Node not found error */
+"tools.cli.nodeNotFound" = "Вузол не знайдено:";
+
+/* Location: CLIToolView.swift - Password required error */
+"tools.cli.passwordRequired" = "Потрібен пароль";
+
+/* Location: CLIToolViewModel.swift - Password prompt */
+"tools.cli.passwordPrompt" = "Пароль:";
+
+/* Location: CLIToolViewModel.swift - Login countdown */
+"tools.cli.loggingIn" = "Вхід в систему... (%ds)";
+
+/* Location: CLIToolView.swift - Logout success */
+"tools.cli.logoutSuccess" = "Вихід виконано";
+
+/* Location: CLIToolView.swift - Not logged in error */
+"tools.cli.notLoggedIn" = "Не підключено до жодного ретранслятора";
+
+/* Location: CLIToolView.swift - Session switched */
+"tools.cli.sessionSwitched" = "Переключено на";
+
+/* Location: CLIToolView.swift - Session not found */
+"tools.cli.sessionNotFound" = "Сесію не знайдено:";
+
+/* Location: CLIToolView.swift - Command timeout */
+"tools.cli.timeout" = "Перевищено час очікування відповіді";
+
+/* Location: CLIToolView.swift - Command cancelled */
+"tools.cli.cancelled" = "Команду скасовано";
+
+/* Location: CLIToolView.swift - Login from local only */
+"tools.cli.loginFromLocalOnly" = "Вхід доступний лише з локальної сесії";
+
+/* Location: CLIToolView.swift - Login usage */
+"tools.cli.loginUsage" = "Використання: login [-f] <node>";
+
+/* Location: CLIToolView.swift - Accessory button: history up */
+"tools.cli.historyUp" = "Попередня команда";
+
+/* Location: CLIToolView.swift - Accessory button: history down */
+"tools.cli.historyDown" = "Наступна команда";
+
+/* Location: CLIToolView.swift - Accessory button: tab complete */
+"tools.cli.tabComplete" = "Автодоповнення";
+
+/* Location: CLIInputAccessoryView.swift - Cursor left button */
+"tools.cli.cursorLeft" = "Перемістити курсор ліворуч";
+
+/* Location: CLIInputAccessoryView.swift - Cursor right button */
+"tools.cli.cursorRight" = "Перемістити курсор праворуч";
+
+/* Location: CLIInputAccessoryView.swift - Paste button */
+"tools.cli.paste" = "Вставити";
+
+/* Location: CLIToolView.swift - Accessory button: clear */
+"tools.cli.clear" = "Очистити";
+
+/* Location: CLIToolView.swift - Accessory button: sessions */
+"tools.cli.sessions" = "Сесії";
+
+/* Location: CLIToolView.swift - Accessory button: dismiss */
+"tools.cli.dismiss" = "Сховати клавіатуру";
+
+/* Location: CLIToolView.swift - Default device name */
+"tools.cli.defaultDevice" = "Пристрій";
+
+/* Location: CLIToolViewModel.swift - Help: login command */
+"tools.cli.helpLogin" = "  login [-f] <node>\n    Вхід до ретранслятора (-f: забути збережений пароль)";
+
+/* Location: CLIToolViewModel.swift - Help: logout command */
+"tools.cli.helpLogout" = "  logout\n    Завершити віддалену сесію";
+
+/* Location: CLIToolViewModel.swift - Help: session list command */
+"tools.cli.helpSessionList" = "  session list\n    Показати активні сесії";
+
+/* Location: CLIToolViewModel.swift - Help: session local command */
+"tools.cli.helpSessionLocal" = "  session local\n    Переключитися на локальну сесію";
+
+/* Location: CLIToolViewModel.swift - Help: session name command */
+"tools.cli.helpSessionName" = "  session <name>\n    Переключитися на сесію";
+
+/* Location: CLIToolViewModel.swift - Help: session shortcut */
+"tools.cli.helpSessionShortcut" = "  s<n>\n    Переключитися на сесію n (напр., s1, s2)";
+
+/* Location: CLIToolViewModel.swift - Help: clear command */
+"tools.cli.helpClear" = "  clear\n    Очистити термінал";
+
+/* Location: CLIToolViewModel.swift - Help: help command */
+"tools.cli.helpHelp" = "  help\n    Показати цю довідку";
+
+/* Location: CLIToolViewModel.swift - Help: nodes command */
+"tools.cli.helpNodes" = "  nodes\n    Показати список ретрансляторів і кімнат";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands header */
+"tools.cli.helpRepeaterHeader" = "Команди ретранслятора (passthrough):";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 1 */
+"tools.cli.helpRepeaterList1" = "  ver, clock, reboot, advert, neighbors";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 2 */
+"tools.cli.helpRepeaterList2" = "  get/set <param>, password <new>";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 3 */
+"tools.cli.helpRepeaterList3" = "  log start/stop/erase";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 4 */
+"tools.cli.helpRepeaterList4" = "  setperm, tempradio, neighbor.remove";
+
+/* Location: CLIToolViewModel.swift - Local commands not implemented */
+"tools.cli.localNotImplemented" = "Локальні команди ще не реалізовані";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 1 */
+"tools.cli.welcomeLine1" = "PocketMesh CLI";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 2 */
+"tools.cli.welcomeConnected" = "Підключено до %@";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 3 */
+"tools.cli.welcomeHint" = "Введіть 'help' для списку команд.";
+
+/* Location: CLIToolView.swift - Jump to bottom button */
+"tools.cli.jumpToBottom" = "Перейти вниз";
+
+/* Location: CLIToolView.swift - Accessibility label for command input */
+"tools.cli.commandInput" = "Введення команди";
+
+/* Location: CLIToolView.swift - Accessibility label for command prompt */
+"tools.cli.commandPrompt" = "Командний рядок";
+
+/* Location: CLIInputAccessoryView.swift - Cancel operation button label */
+"tools.cli.cancelOperation" = "Скасувати операцію";
+
+/* Location: CLIToolViewModel.swift - Command timeout (post-login) */
+"tools.cli.commandTimeout" = "Перевищено час запиту";
+
+/* Location: CLIToolViewModel.swift - Reboot command confirmation */
+"tools.cli.rebootSent" = "Команду перезавантаження надіслано";
+
+/* Accessibility label for completion suggestions container */
+"tools.cli.completionSuggestions" = "Підказки автодоповнення";
+
+/* Accessibility value for completion suggestions - %lld is count, %@ is selected */
+"tools.cli.completionSuggestionsValue" = "%lld доступно, %@ вибрано";

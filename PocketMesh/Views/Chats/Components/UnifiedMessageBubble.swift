@@ -437,11 +437,6 @@ struct UnifiedMessageBubble: View {
                 .foregroundStyle(.blue)
             }
 
-            // Show spinner for retrying status
-            if message.status == .retrying {
-                ProgressView()
-                    .controlSize(.mini)
-            }
 
             // Only show icon for failed status
             if message.status == .failed {
@@ -515,6 +510,12 @@ struct UnifiedMessageBubble: View {
         case .failed:
             return L10n.Chats.Chats.Message.Status.failed
         case .retrying:
+            // Show attempt count: "Retrying 1/4" (1-indexed for user display)
+            let displayAttempt = message.retryAttempt + 1
+            let maxAttempts = message.maxRetryAttempts
+            if maxAttempts > 0 {
+                return L10n.Chats.Chats.Message.Status.retryingAttempt(displayAttempt, maxAttempts)
+            }
             return L10n.Chats.Chats.Message.Status.retrying
         }
     }

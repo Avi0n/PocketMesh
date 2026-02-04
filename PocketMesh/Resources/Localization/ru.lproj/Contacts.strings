@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Поиск узлов";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Поиск узлов (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Сортировка";
 
@@ -399,6 +402,9 @@
 /* Location: AddContactSheet.swift - Purpose: Node list full error */
 "contacts.add.error.nodeListFull" = "Список узлов заполнен (максимум %d узлов)";
 
+/* Location: AddContactSheet.swift, DiscoveryView.swift - Purpose: Node list full error without max count */
+"contacts.add.error.nodeListFullSimple" = "Node list is full";
+
 // MARK: - Contact QR Share Sheet
 
 /* Location: ContactQRShareSheet.swift - Purpose: Navigation title */
@@ -457,13 +463,67 @@
 "contacts.discovery.empty.title" = "Нет обнаруженных узлов";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Когда автодобавление узлов отключено, новые обнаруженные узлы будут появляться здесь для ручного добавления.";
+"contacts.discovery.empty.description" = "Узлы будут появляться здесь по мере обнаружения их объявлений.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Добавить";
 
+/* Location: DiscoveryView.swift - Purpose: Button label when node is already added */
+"contacts.discovery.added" = "Added";
+
+/* Location: DiscoveryView.swift - Purpose: Accessibility label for added button */
+"contacts.discovery.addedAccessibility" = "Already added to contacts";
+
 /* Location: DiscoveryView.swift - Purpose: Services not available error */
 "contacts.discovery.error.servicesUnavailable" = "Сервисы недоступны";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - All */
+"contacts.discovery.segment.all" = "Все";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - Contacts */
+"contacts.discovery.segment.contacts" = "Контакты";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - Network */
+"contacts.discovery.segment.network" = "Сеть";
+
+/* Location: DiscoveryView.swift - Purpose: Search field placeholder */
+"contacts.discovery.searchPrompt" = "Поиск обнаруженных";
+
+/* Location: DiscoveryView.swift - Purpose: More menu label */
+"contacts.discovery.menu" = "Ещё";
+
+/* Location: DiscoveryView.swift - Purpose: Clear all menu item */
+"contacts.discovery.clear" = "Очистить всё";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation title */
+"contacts.discovery.clear.title" = "Очистить все обнаруженные узлы?";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation message */
+"contacts.discovery.clear.message" = "Обнаруженные узлы будут удалены из этого списка, но могут быть обнаружены снова в mesh-сети.";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation button */
+"contacts.discovery.clear.confirm" = "Очистить";
+
+/* Location: DiscoveryView.swift - Purpose: VoiceOver announcement when searching */
+"contacts.discovery.searchingAllTypes" = "Поиск всех типов";
+
+/* Location: DiscoveryView.swift - Purpose: Sort menu accessibility label */
+"contacts.discovery.sortMenu" = "Параметры сортировки";
+
+/* Location: DiscoveryView.swift - Purpose: Sort menu accessibility hint */
+"contacts.discovery.sortMenuHint" = "Выберите способ сортировки обнаруженных узлов";
+
+/* Location: DiscoveryView.swift - Purpose: VoiceOver announcement after clearing */
+"contacts.discovery.clearedAllNodes" = "Все обнаруженные узлы очищены";
+
+/* Location: DiscoveryView.swift - Purpose: Swipe action to remove discovered node */
+"contacts.discovery.remove" = "Удалить";
+
+/* Location: DiscoveryView.swift - Purpose: Search empty state title */
+"contacts.discovery.empty.search.title" = "Нет результатов";
+
+/* Location: DiscoveryView.swift - Purpose: Search empty state description */
+"contacts.discovery.empty.search.description" = "Ни один обнаруженный узел не соответствует '%@'";
 
 // MARK: - Path Editing Sheet
 
@@ -633,6 +693,9 @@
 
 /* Location: TracePathView.swift - Purpose: Navigation title */
 "contacts.trace.title" = "Трассировка пути";
+
+/* Location: TracePathView.swift - Purpose: View mode picker label */
+"contacts.trace.viewMode" = "Режим просмотра";
 
 /* Location: TracePathView.swift - Purpose: List view mode */
 "contacts.trace.mode.list" = "Список";

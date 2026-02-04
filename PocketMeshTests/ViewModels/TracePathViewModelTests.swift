@@ -897,7 +897,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -918,8 +917,8 @@ struct LocationResolutionTests {
         #expect(location == nil)
     }
 
-    @Test("resolveHashToLocation returns nil for multiple matches (ambiguous)")
-    func returnsNilForMultipleMatches() {
+    @Test("resolveHashToLocation returns best match for multiple contacts")
+    func returnsBestMatchForMultipleContacts() {
         let viewModel = TracePathViewModel()
         let deviceID = UUID()
 
@@ -932,7 +931,7 @@ struct LocationResolutionTests {
             flags: 0,
             outPathLength: 0,
             outPath: Data(),
-            lastAdvertTimestamp: 0,
+            lastAdvertTimestamp: 10,
             latitude: 37.0,
             longitude: -122.0,
             lastModified: 0,
@@ -940,7 +939,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -953,7 +951,7 @@ struct LocationResolutionTests {
             flags: 0,
             outPathLength: 0,
             outPath: Data(),
-            lastAdvertTimestamp: 0,
+            lastAdvertTimestamp: 50,
             latitude: 38.0,
             longitude: -123.0,
             lastModified: 0,
@@ -961,14 +959,14 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
         viewModel.setContactsForTesting([contact1, contact2])
 
         let location = viewModel.resolveHashToLocation(0x3F)
-        #expect(location == nil)
+        #expect(location?.latitude == 38.0)
+        #expect(location?.longitude == -123.0)
     }
 
     @Test("resolveHashToLocation returns nil for contact without location")
@@ -993,7 +991,6 @@ struct LocationResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -1566,14 +1563,13 @@ struct OutboundPathNameResolutionTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
     }
 
-    @Test("resolves name from outboundPath even with contact collision")
-    func resolvesNameFromOutboundPathWithCollision() {
+    @Test("resolves name using best match when contact collision exists")
+    func resolvesNameUsingBestMatchWithCollision() {
         let viewModel = TracePathViewModel()
 
         // Two contacts with same first byte (collision)
@@ -1582,6 +1578,26 @@ struct OutboundPathNameResolutionTests {
         // Make contact2 have different second byte so they're distinct
         var contact2Key = contact2.publicKey
         contact2Key = Data([0x3F, 0x01] + Array(repeating: UInt8(0), count: 30))
+        let contact1Modified = ContactDTO(
+            id: contact1.id,
+            deviceID: contact1.deviceID,
+            publicKey: contact1.publicKey,
+            name: contact1.name,
+            typeRawValue: contact1.typeRawValue,
+            flags: contact1.flags,
+            outPathLength: contact1.outPathLength,
+            outPath: contact1.outPath,
+            lastAdvertTimestamp: 10,
+            latitude: contact1.latitude,
+            longitude: contact1.longitude,
+            lastModified: contact1.lastModified,
+            nickname: contact1.nickname,
+            isBlocked: contact1.isBlocked,
+            isMuted: contact1.isMuted,
+            isFavorite: contact1.isFavorite,
+            lastMessageDate: contact1.lastMessageDate,
+            unreadCount: contact1.unreadCount
+        )
         let contact2Modified = ContactDTO(
             id: contact2.id,
             deviceID: contact2.deviceID,
@@ -1591,7 +1607,7 @@ struct OutboundPathNameResolutionTests {
             flags: contact2.flags,
             outPathLength: contact2.outPathLength,
             outPath: contact2.outPath,
-            lastAdvertTimestamp: contact2.lastAdvertTimestamp,
+            lastAdvertTimestamp: 50,
             latitude: contact2.latitude,
             longitude: contact2.longitude,
             lastModified: contact2.lastModified,
@@ -1599,18 +1615,14 @@ struct OutboundPathNameResolutionTests {
             isBlocked: contact2.isBlocked,
             isMuted: contact2.isMuted,
             isFavorite: contact2.isFavorite,
-            isDiscovered: contact2.isDiscovered,
             lastMessageDate: contact2.lastMessageDate,
             unreadCount: contact2.unreadCount
         )
 
-        viewModel.setContactsForTesting([contact1, contact2Modified])
-
-        // Verify collision exists (old method would return nil)
-        #expect(viewModel.resolveHashToName(0x3F) == nil)
+        viewModel.setContactsForTesting([contact1Modified, contact2Modified])
 
         // User selects contact1 for their path
-        viewModel.addRepeater(contact1)
+        viewModel.addRepeater(contact1Modified)
 
         // Run trace
         let traceInfo = TraceInfo(
@@ -1632,8 +1644,8 @@ struct OutboundPathNameResolutionTests {
             return
         }
 
-        // Name should resolve from outboundPath despite collision
-        #expect(result.hops[1].resolvedName == "Flint Hill - KC3ELT")
+        // Name should resolve from best match (most recent advert)
+        #expect(result.hops[1].resolvedName == "Other Tower")
     }
 
     @Test("falls back to contact lookup when hop not in outboundPath")

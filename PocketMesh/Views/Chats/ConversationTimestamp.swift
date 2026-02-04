@@ -18,7 +18,7 @@ struct ConversationTimestamp: View {
         if calendar.isDateInToday(date) {
             return date.formatted(date: .omitted, time: .shortened)
         } else if calendar.isDateInYesterday(date) {
-            return "Yesterday"
+            return date.formatted(.relative(presentation: .named))
         } else {
             return date.formatted(.dateTime.month(.abbreviated).day())
         }

@@ -269,6 +269,74 @@ struct PersistenceStoreTests {
         #expect(contact2Messages.count == 1)
     }
 
+    @Test("deleteMessagesForChannel removes all messages for a channel")
+    func deleteMessagesForChannelRemovesAll() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let channelIndex0: UInt8 = 0
+        let channelIndex1: UInt8 = 1
+
+        // Create messages for channel 0
+        for i in 0..<5 {
+            let message = MessageDTO(from: Message(
+                deviceID: device.id,
+                channelIndex: channelIndex0,
+                text: "Channel 0 Message \(i)",
+                timestamp: UInt32(Date().timeIntervalSince1970) + UInt32(i)
+            ))
+            try await store.saveMessage(message)
+        }
+
+        // Create messages for channel 1 (should not be deleted)
+        for i in 0..<3 {
+            let message = MessageDTO(from: Message(
+                deviceID: device.id,
+                channelIndex: channelIndex1,
+                text: "Channel 1 Message \(i)",
+                timestamp: UInt32(Date().timeIntervalSince1970) + UInt32(i + 100)
+            ))
+            try await store.saveMessage(message)
+        }
+
+        // Create a contact message (should not be deleted)
+        let frame = createTestContactFrame(name: "Contact1")
+        let contactID = try await store.saveContact(deviceID: device.id, from: frame)
+        let contactMessage = MessageDTO(from: Message(
+            deviceID: device.id,
+            contactID: contactID,
+            text: "Contact message",
+            timestamp: UInt32(Date().timeIntervalSince1970) + 200
+        ))
+        try await store.saveMessage(contactMessage)
+
+        // Verify messages exist before deletion
+        var channel0Messages = try await store.fetchMessages(deviceID: device.id, channelIndex: channelIndex0)
+        #expect(channel0Messages.count == 5)
+
+        var channel1Messages = try await store.fetchMessages(deviceID: device.id, channelIndex: channelIndex1)
+        #expect(channel1Messages.count == 3)
+
+        var contactMessages = try await store.fetchMessages(contactID: contactID)
+        #expect(contactMessages.count == 1)
+
+        // Delete messages for channel 0
+        try await store.deleteMessagesForChannel(deviceID: device.id, channelIndex: channelIndex0)
+
+        // Verify channel 0 messages are gone
+        channel0Messages = try await store.fetchMessages(deviceID: device.id, channelIndex: channelIndex0)
+        #expect(channel0Messages.isEmpty)
+
+        // Verify channel 1 messages still exist
+        channel1Messages = try await store.fetchMessages(deviceID: device.id, channelIndex: channelIndex1)
+        #expect(channel1Messages.count == 3)
+
+        // Verify contact messages still exist
+        contactMessages = try await store.fetchMessages(contactID: contactID)
+        #expect(contactMessages.count == 1)
+    }
+
     // MARK: - Message Tests
 
     @Test("Save and fetch messages for contact")
@@ -540,7 +608,7 @@ struct PersistenceStoreTests {
         try await store.incrementChannelUnreadCount(channelID: channelID)
         try await store.incrementChannelUnreadCount(channelID: channelID)
 
-        let (contacts, channels, rooms) = try await store.getTotalUnreadCounts()
+        let (contacts, channels, rooms) = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(contacts == 3)  // 2 + 1
         #expect(channels == 3)
         #expect(rooms == 0)
@@ -576,14 +644,13 @@ struct PersistenceStoreTests {
             isBlocked: true,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 5
         )
         try await store.saveContact(blockedContact)
 
         // Get total unread counts - should exclude blocked contact
-        let (contacts, _, _) = try await store.getTotalUnreadCounts()
+        let (contacts, _, _) = try await store.getTotalUnreadCounts(deviceID: device.id)
 
         // Should only include the 2 unread from the regular contact, not the 5 from blocked
         #expect(contacts == 2, "Blocked contacts should not contribute to unread count total")
@@ -725,9 +792,41 @@ struct PersistenceStoreTests {
         try await store.incrementUnreadCount(contactID: contact2ID)
         try await store.setContactMuted(contact2ID, isMuted: true)
 
-        let (contacts, _, _) = try await store.getTotalUnreadCounts()
+        let (contacts, _, _) = try await store.getTotalUnreadCounts(deviceID: device.id)
 
         // Only Alice's 2 unreads should count, Bob is muted
         #expect(contacts == 2)
+    }
+
+    @Test("Notification levels affect badge count correctly")
+    func notificationLevelsAffectBadgeCount() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create channel with unreads
+        let channelInfo = ChannelInfo(index: 1, name: "Test", secret: Data(repeating: 0x42, count: 16))
+        let channelID = try await store.saveChannel(deviceID: device.id, from: channelInfo)
+        try await store.incrementChannelUnreadCount(channelID: channelID)
+        try await store.incrementChannelUnreadCount(channelID: channelID)
+
+        // Default (all) - should count all unreads
+        var counts = try await store.getTotalUnreadCounts(deviceID: device.id)
+        #expect(counts.channels == 2)
+
+        // Muted - should exclude from badge
+        try await store.setChannelNotificationLevel(channelID, level: .muted)
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
+        #expect(counts.channels == 0)
+
+        // Mentions only with no mentions - should show 0
+        try await store.setChannelNotificationLevel(channelID, level: .mentionsOnly)
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
+        #expect(counts.channels == 0)
+
+        // Mentions only with mentions - should show mention count
+        try await store.incrementChannelUnreadMentionCount(channelID: channelID)
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
+        #expect(counts.channels == 1)
     }
 }

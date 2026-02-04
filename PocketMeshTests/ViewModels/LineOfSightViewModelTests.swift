@@ -64,7 +64,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     var contacts: [UUID: ContactDTO] = [:]
 
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] {
-        Array(contacts.values.filter { $0.deviceID == deviceID && !$0.isDiscovered })
+        Array(contacts.values.filter { $0.deviceID == deviceID })
     }
 
     func addContact(_ contact: ContactDTO) {
@@ -88,7 +88,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
     func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {}
-    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) async throws {}
+    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) throws {}
     func fetchConversations(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchContact(id: UUID) async throws -> ContactDTO? { nil }
     func fetchContact(deviceID: UUID, publicKey: Data) async throws -> ContactDTO? { nil }
@@ -108,9 +108,7 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func clearChannelUnreadMentionCount(channelID: UUID) async throws {}
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
-    func confirmContact(id: UUID) async throws {}
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
     func fetchChannel(id: UUID) async throws -> ChannelDTO? { nil }
@@ -168,6 +166,21 @@ actor MockPersistenceStore: PersistenceStoreProtocol {
     func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
     func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
     func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+
+    // MARK: - Discovered Nodes (stubs)
+
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
+
+    // MARK: - Notification Level (stubs)
+
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
 }
 
 // MARK: - Test Helpers
@@ -200,7 +213,6 @@ private func createTestContact(
         isBlocked: false,
         isMuted: false,
         isFavorite: false,
-        isDiscovered: false,
         lastMessageDate: nil,
         unreadCount: 0
     )

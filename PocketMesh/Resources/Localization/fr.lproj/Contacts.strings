@@ -90,6 +90,9 @@
 /* Location: ContactsListView.swift - Purpose: Search prompt */
 "contacts.list.searchPrompt" = "Rechercher des nœuds";
 
+/* Location: ContactsListView.swift - Purpose: Search prompt with count */
+"contacts.list.searchPromptWithCount" = "Rechercher des nœuds (%d)";
+
 /* Location: ContactsListView.swift - Purpose: Sort menu label */
 "contacts.list.sort" = "Trier";
 
@@ -399,6 +402,9 @@
 /* Location: AddContactSheet.swift - Purpose: Node list full error */
 "contacts.add.error.nodeListFull" = "La liste de nœuds est pleine (max %d nœuds)";
 
+/* Location: AddContactSheet.swift, DiscoveryView.swift - Purpose: Node list full error without max count */
+"contacts.add.error.nodeListFullSimple" = "Node list is full";
+
 // MARK: - Contact QR Share Sheet
 
 /* Location: ContactQRShareSheet.swift - Purpose: Navigation title */
@@ -457,13 +463,67 @@
 "contacts.discovery.empty.title" = "Aucun nœud découvert";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "Lorsque l'ajout automatique des nœuds est désactivé, les nœuds nouvellement découverts apparaîtront ici pour que vous puissiez les ajouter manuellement.";
+"contacts.discovery.empty.description" = "Les nœuds apparaîtront ici au fur et à mesure que leurs annonces sont découvertes.";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Ajouter";
 
+/* Location: DiscoveryView.swift - Purpose: Button label when node is already added */
+"contacts.discovery.added" = "Added";
+
+/* Location: DiscoveryView.swift - Purpose: Accessibility label for added button */
+"contacts.discovery.addedAccessibility" = "Already added to contacts";
+
 /* Location: DiscoveryView.swift - Purpose: Services not available error */
 "contacts.discovery.error.servicesUnavailable" = "Services non disponibles";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - All */
+"contacts.discovery.segment.all" = "Tous";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - Contacts */
+"contacts.discovery.segment.contacts" = "Contacts";
+
+/* Location: DiscoveryView.swift - Purpose: Segment filter - Network */
+"contacts.discovery.segment.network" = "Réseau";
+
+/* Location: DiscoveryView.swift - Purpose: Search field placeholder */
+"contacts.discovery.searchPrompt" = "Rechercher découverts";
+
+/* Location: DiscoveryView.swift - Purpose: More menu label */
+"contacts.discovery.menu" = "Plus";
+
+/* Location: DiscoveryView.swift - Purpose: Clear all menu item */
+"contacts.discovery.clear" = "Tout effacer";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation title */
+"contacts.discovery.clear.title" = "Effacer tous les nœuds découverts ?";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation message */
+"contacts.discovery.clear.message" = "Les nœuds découverts seront supprimés de cette liste mais pourront être redécouverts sur le réseau mesh.";
+
+/* Location: DiscoveryView.swift - Purpose: Clear confirmation button */
+"contacts.discovery.clear.confirm" = "Effacer";
+
+/* Location: DiscoveryView.swift - Purpose: VoiceOver announcement when searching */
+"contacts.discovery.searchingAllTypes" = "Recherche de tous les types";
+
+/* Location: DiscoveryView.swift - Purpose: Sort menu accessibility label */
+"contacts.discovery.sortMenu" = "Options de tri";
+
+/* Location: DiscoveryView.swift - Purpose: Sort menu accessibility hint */
+"contacts.discovery.sortMenuHint" = "Choisir comment trier les nœuds découverts";
+
+/* Location: DiscoveryView.swift - Purpose: VoiceOver announcement after clearing */
+"contacts.discovery.clearedAllNodes" = "Tous les nœuds découverts effacés";
+
+/* Location: DiscoveryView.swift - Purpose: Swipe action to remove discovered node */
+"contacts.discovery.remove" = "Supprimer";
+
+/* Location: DiscoveryView.swift - Purpose: Search empty state title */
+"contacts.discovery.empty.search.title" = "Aucun résultat";
+
+/* Location: DiscoveryView.swift - Purpose: Search empty state description */
+"contacts.discovery.empty.search.description" = "Aucun nœud découvert ne correspond à '%@'";
 
 // MARK: - Path Editing Sheet
 
@@ -633,6 +693,9 @@
 
 /* Location: TracePathView.swift - Purpose: Navigation title */
 "contacts.trace.title" = "Tracer le chemin";
+
+/* Location: TracePathView.swift - Purpose: View mode picker label */
+"contacts.trace.viewMode" = "Mode d'affichage";
 
 /* Location: TracePathView.swift - Purpose: List view mode */
 "contacts.trace.mode.list" = "Liste";

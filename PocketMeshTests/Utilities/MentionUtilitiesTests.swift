@@ -206,7 +206,6 @@ struct MentionUtilitiesTests {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )

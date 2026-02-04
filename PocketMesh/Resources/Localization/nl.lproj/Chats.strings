@@ -29,6 +29,18 @@
 /* Location: ChatsView.swift - Button to clear active filter */
 "chats.filter.clear" = "Filter wissen";
 
+/* Location: ChatsView.swift - Filter option for unread conversations */
+"chats.filter.unread" = "Ongelezen";
+
+/* Location: ChatsView.swift - Filter option for direct messages */
+"chats.filter.directMessages" = "DBs";
+
+/* Location: ChatsView.swift - Filter option for channels */
+"chats.filter.channels" = "Kanalen";
+
+/* Location: ChatsView.swift - Filter option for favorites */
+"chats.filter.favorites" = "Favorieten";
+
 // MARK: - Compose Menu
 
 /* Location: ChatsView.swift - Button to start a new direct chat */
@@ -101,6 +113,9 @@
 
 /* Location: MessageTimestampView.swift - Prefix for yesterday's date */
 "chats.timestamp.yesterday" = "Gisteren";
+
+/* Location: RelativeTimestampText.swift - Timestamp for messages under 1 minute old */
+"chats.timestamp.now" = "Nu";
 
 // MARK: - Floating Action Buttons
 
@@ -180,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Dit verwijdert het kanaal van je apparaat en wist alle lokale berichten. Deze actie kan niet ongedaan worden gemaakt.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Openbaar kanaal • Slot 0";
+"chats.channelInfo.channelType.public" = "Openbaar kanaal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Hashtag-kanaal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Hashtag-kanaal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Privékanaal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Privékanaal";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Slot";
@@ -212,6 +227,15 @@
 /* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
 "chats.channelInfo.manualSharingFooter" = "Deel de kanaalnaam en deze geheime sleutel zodat anderen handmatig kunnen deelnemen.";
 
+/* Location: ChannelInfoSheet.swift - Clear messages button */
+"chats.channelInfo.clearMessagesButton" = "Berichten wissen";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog title */
+"chats.channelInfo.clearMessagesConfirm.title" = "Berichten wissen?";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message */
+"chats.channelInfo.clearMessagesConfirm.message" = "Alle berichten in dit kanaal worden permanent verwijderd. Het kanaal blijft actief.";
+
 /* Location: ChannelInfoSheet.swift - Delete channel button */
 "chats.channelInfo.deleteButton" = "Kanaal verwijderen";
 
@@ -223,6 +247,9 @@
 
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "Services niet beschikbaar";
+
+/* Location: ChatView.swift - Error when loading older messages fails */
+"chats.errors.loadOlderMessagesFailed" = "Laden van oudere berichten mislukt";
 
 // MARK: - Channel Options Sheet
 
@@ -348,6 +375,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Gesprekken";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 
@@ -594,6 +626,9 @@
 /* Location: UnifiedMessageBubble.swift - Message status retrying */
 "chats.message.status.retrying" = "Opnieuw proberen...";
 
+/* Location: UnifiedMessageBubble.swift - Message status retrying with attempt count - %d is current attempt, %d is max attempts */
+"chats.message.status.retryingAttempt" = "Poging %d/%d";
+
 /* Location: UnifiedMessageBubble.swift - SNR quality excellent */
 "chats.signal.excellent" = "Uitstekend";
 
@@ -766,3 +801,11 @@
 
 /* Location: UnifiedMessageBubble.swift - Accessibility label for hop count display - %d is count */
 "chats.message.hopCount.accessibilityLabel" = "Aantal hops: %d";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Maak jezelf bekend op het mesh-netwerk";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Tik hier en verstuur een Flood Advert om apparaten in de buurt te laten weten dat je bent toegetreden.";

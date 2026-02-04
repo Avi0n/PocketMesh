@@ -29,6 +29,18 @@
 /* Location: ChatsView.swift - Button to clear active filter */
 "chats.filter.clear" = "Filter entfernen";
 
+/* Location: ChatsView.swift - Filter option for unread conversations */
+"chats.filter.unread" = "Ungelesen";
+
+/* Location: ChatsView.swift - Filter option for direct messages */
+"chats.filter.directMessages" = "DMs";
+
+/* Location: ChatsView.swift - Filter option for channels */
+"chats.filter.channels" = "Kanäle";
+
+/* Location: ChatsView.swift - Filter option for favorites */
+"chats.filter.favorites" = "Favoriten";
+
 // MARK: - Compose Menu
 
 /* Location: ChatsView.swift - Button to start a new direct chat */
@@ -101,6 +113,9 @@
 
 /* Location: MessageTimestampView.swift - Prefix for yesterday's date */
 "chats.timestamp.yesterday" = "Gestern";
+
+/* Location: RelativeTimestampText.swift - Timestamp for messages under 1 minute old */
+"chats.timestamp.now" = "Jetzt";
 
 // MARK: - Floating Action Buttons
 
@@ -180,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Der Kanal wird von deinem Gerät entfernt und alle lokalen Nachrichten werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Öffentlicher Kanal • Slot 0";
+"chats.channelInfo.channelType.public" = "Öffentlicher Kanal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Hashtag-Kanal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Hashtag-Kanal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Privater Kanal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Privater Kanal";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Slot";
@@ -212,6 +227,15 @@
 /* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
 "chats.channelInfo.manualSharingFooter" = "Teile den Kanalnamen und diesen geheimen Schlüssel, damit andere manuell beitreten können.";
 
+/* Location: ChannelInfoSheet.swift - Clear messages button */
+"chats.channelInfo.clearMessagesButton" = "Nachrichten löschen";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog title */
+"chats.channelInfo.clearMessagesConfirm.title" = "Nachrichten löschen?";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message */
+"chats.channelInfo.clearMessagesConfirm.message" = "Alle Nachrichten in diesem Kanal werden dauerhaft gelöscht. Der Kanal bleibt aktiv.";
+
 /* Location: ChannelInfoSheet.swift - Delete channel button */
 "chats.channelInfo.deleteButton" = "Kanal löschen";
 
@@ -223,6 +247,9 @@
 
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "Dienste nicht verfügbar";
+
+/* Location: ChatView.swift - Error when loading older messages fails */
+"chats.errors.loadOlderMessagesFailed" = "Laden älterer Nachrichten fehlgeschlagen";
 
 // MARK: - Channel Options Sheet
 
@@ -348,6 +375,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Unterhaltungen";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 
@@ -594,6 +626,9 @@
 /* Location: UnifiedMessageBubble.swift - Message status retrying */
 "chats.message.status.retrying" = "Wird wiederholt...";
 
+/* Location: UnifiedMessageBubble.swift - Message status retrying with attempt count - %d is current attempt, %d is max attempts */
+"chats.message.status.retryingAttempt" = "Wiederholung %d/%d";
+
 /* Location: UnifiedMessageBubble.swift - SNR quality excellent */
 "chats.signal.excellent" = "Ausgezeichnet";
 
@@ -766,3 +801,11 @@
 
 /* Location: UnifiedMessageBubble.swift - Accessibility label for hop count display - %d is count */
 "chats.message.hopCount.accessibilityLabel" = "Hop-Anzahl: %d";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Melde dich im Mesh-Netzwerk an";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Tippe hier und sende ein Flood-Advert, um nahegelegenen Geräten mitzuteilen, dass du beigetreten bist.";

@@ -1,16 +1,17 @@
 import SwiftUI
 
-/// Displays a relative timestamp like "2m ago", "1h ago", "Yesterday"
+/// Displays a relative timestamp using Apple's localized relative date formatting
 struct RelativeTimestampText: View {
     let timestamp: UInt32
 
-    private enum Constants {
-        static let minute: TimeInterval = 60
-        static let hour: TimeInterval = 3_600
-        static let day: TimeInterval = 86_400
-        static let twoDays: TimeInterval = 172_800
-        static let week: TimeInterval = 604_800
-    }
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
+
+    private static let weekThreshold: TimeInterval = 604_800
+    private static let nowThreshold: TimeInterval = 60
 
     var body: some View {
         TimelineView(.everyMinute) { context in
@@ -25,22 +26,15 @@ struct RelativeTimestampText: View {
         let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
         let interval = now.timeIntervalSince(date)
 
-        if interval < Constants.minute {
-            return "Now"
-        } else if interval < Constants.hour {
-            let minutes = Int(interval / Constants.minute)
-            return "\(minutes)m ago"
-        } else if interval < Constants.day {
-            let hours = Int(interval / Constants.hour)
-            return "\(hours)h ago"
-        } else if interval < Constants.twoDays {
-            return "Yesterday"
-        } else if interval < Constants.week {
-            let days = Int(interval / Constants.day)
-            return "\(days)d ago"
-        } else {
+        if interval < nowThreshold {
+            return L10n.Chats.Chats.Timestamp.now
+        }
+
+        if interval >= weekThreshold {
             return date.formatted(.dateTime.month(.abbreviated).day())
         }
+
+        return relativeFormatter.localizedString(for: date, relativeTo: now)
     }
 }
 

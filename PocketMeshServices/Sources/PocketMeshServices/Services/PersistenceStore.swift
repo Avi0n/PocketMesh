@@ -36,7 +36,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         TracePathRun.self,
         RxLogEntry.self,
         DebugLogEntry.self,
-        LinkPreviewData.self
+        LinkPreviewData.self,
+        DiscoveredNode.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -115,6 +116,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.longitude = dto.longitude
             existing.blePin = dto.blePin
             existing.manualAddContacts = dto.manualAddContacts
+            existing.autoAddConfig = dto.autoAddConfig
             existing.multiAcks = dto.multiAcks
             existing.telemetryModeBase = dto.telemetryModeBase
             existing.telemetryModeLoc = dto.telemetryModeLoc
@@ -148,6 +150,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 longitude: dto.longitude,
                 blePin: dto.blePin,
                 manualAddContacts: dto.manualAddContacts,
+                autoAddConfig: dto.autoAddConfig,
                 multiAcks: dto.multiAcks,
                 telemetryModeBase: dto.telemetryModeBase,
                 telemetryModeLoc: dto.telemetryModeLoc,
@@ -260,11 +263,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
 
     // MARK: - Contact Operations
 
-    /// Fetch all confirmed contacts for a device (excludes discovered contacts)
+    /// Fetch all contacts for a device
     public func fetchContacts(deviceID: UUID) throws -> [ContactDTO] {
         let targetDeviceID = deviceID
         let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID && contact.isDiscovered == false
+            contact.deviceID == targetDeviceID
         }
         let descriptor = FetchDescriptor(
             predicate: predicate,
@@ -274,11 +277,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return contacts.map { ContactDTO(from: $0) }
     }
 
-    /// Fetch contacts with recent messages (for chat list, excludes discovered contacts)
+    /// Fetch contacts with recent messages (for chat list)
     public func fetchConversations(deviceID: UUID) throws -> [ContactDTO] {
         let targetDeviceID = deviceID
         let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID && contact.lastMessageDate != nil && contact.isDiscovered == false
+            contact.deviceID == targetDeviceID && contact.lastMessageDate != nil
         }
         let descriptor = FetchDescriptor(
             predicate: predicate,
@@ -429,51 +432,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Save a discovered contact (from NEW_ADVERT push)
-    /// These contacts are not yet on the device's contact table
-    /// - Returns: Tuple of (contactID, isNew) where isNew is true only if contact was newly created
-    public func saveDiscoveredContact(deviceID: UUID, from frame: ContactFrame) throws -> (contactID: UUID, isNew: Bool) {
-        let targetDeviceID = deviceID
-        let targetKey = frame.publicKey
-        let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID && contact.publicKey == targetKey
-        }
-        var descriptor = FetchDescriptor(predicate: predicate)
-        descriptor.fetchLimit = 1
-
-        let contact: Contact
-        let isNew: Bool
-        if let existing = try modelContext.fetch(descriptor).first {
-            // Update existing discovered contact
-            existing.update(from: frame)
-            contact = existing
-            isNew = false
-        } else {
-            // Create new discovered contact
-            contact = Contact(deviceID: deviceID, from: frame)
-            contact.isDiscovered = true
-            modelContext.insert(contact)
-            isNew = true
-        }
-
-        try modelContext.save()
-        return (contactID: contact.id, isNew: isNew)
-    }
-
-    /// Fetch all discovered (pending) contacts for a device
-    public func fetchDiscoveredContacts(deviceID: UUID) throws -> [ContactDTO] {
-        let targetDeviceID = deviceID
-        let predicate = #Predicate<Contact> { contact in
-            contact.deviceID == targetDeviceID && contact.isDiscovered == true
-        }
-        let descriptor = FetchDescriptor(
-            predicate: predicate,
-            sortBy: [SortDescriptor(\.name)]
-        )
-        let contacts = try modelContext.fetch(descriptor)
-        return contacts.map { ContactDTO(from: $0) }
-    }
-
     /// Fetch all blocked contacts for a device
     public func fetchBlockedContacts(deviceID: UUID) throws -> [ContactDTO] {
         let targetDeviceID = deviceID
@@ -486,21 +444,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         )
         let contacts = try modelContext.fetch(descriptor)
         return contacts.map { ContactDTO(from: $0) }
-    }
-
-    /// Mark a discovered contact as confirmed (after adding to device)
-    public func confirmContact(id: UUID) throws {
-        let targetID = id
-        let predicate = #Predicate<Contact> { contact in
-            contact.id == targetID
-        }
-        var descriptor = FetchDescriptor(predicate: predicate)
-        descriptor.fetchLimit = 1
-
-        if let contact = try modelContext.fetch(descriptor).first {
-            contact.isDiscovered = false
-            try modelContext.save()
-        }
     }
 
     /// Update contact's last message info (nil clears the date, removing from conversations list)
@@ -932,7 +875,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         let targetID = id
         let predicate = #Predicate<Message> { message in
             message.id == targetID
@@ -1052,6 +995,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isEnabled = dto.isEnabled
             existing.lastMessageDate = dto.lastMessageDate
             existing.unreadCount = dto.unreadCount
+            existing.unreadMentionCount = dto.unreadMentionCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
         } else {
             let channel = Channel(
                 id: dto.id,
@@ -1061,7 +1007,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 secret: dto.secret,
                 isEnabled: dto.isEnabled,
                 lastMessageDate: dto.lastMessageDate,
-                unreadCount: dto.unreadCount
+                unreadCount: dto.unreadCount,
+                unreadMentionCount: dto.unreadMentionCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite
             )
             modelContext.insert(channel)
         }
@@ -1081,8 +1030,18 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Update channel's last message info
-    public func updateChannelLastMessage(channelID: UUID, date: Date) throws {
+    /// Delete all messages for a channel
+    public func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) throws {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        try modelContext.delete(model: Message.self, where: #Predicate {
+            $0.deviceID == targetDeviceID && $0.channelIndex == targetChannelIndex
+        })
+        try modelContext.save()
+    }
+
+    /// Update channel's last message info (nil clears the date)
+    public func updateChannelLastMessage(channelID: UUID, date: Date?) throws {
         let targetID = channelID
         let predicate = #Predicate<Channel> { channel in
             channel.id == targetID
@@ -1155,7 +1114,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.channelNotFound
         }
 
-        channel.isMuted = isMuted
+        channel.notificationLevel = isMuted ? .muted : .all
+        try modelContext.save()
+    }
+
+    /// Sets the notification level for a channel
+    public func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.channelNotFound
+        }
+
+        channel.notificationLevel = level
         try modelContext.save()
     }
 
@@ -1179,21 +1153,39 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Efficiently calculate total unread counts for badge display
     /// Returns tuple of (contactUnread, channelUnread, roomUnread) for preference-aware calculation
     /// Optimization: Only fetches entities with unread > 0 to minimize memory usage
-    public func getTotalUnreadCounts() throws -> (contacts: Int, channels: Int, rooms: Int) {
-        // Only fetch non-blocked, non-muted contacts with unread messages (reduces memory pressure)
-        let contactPredicate = #Predicate<Contact> { $0.unreadCount > 0 && !$0.isMuted && !$0.isBlocked }
+    public func getTotalUnreadCounts(deviceID: UUID) throws -> (contacts: Int, channels: Int, rooms: Int) {
+        let targetDeviceID = deviceID
+
+        // Only fetch non-blocked, non-muted contacts with unread messages for this device
+        let contactPredicate = #Predicate<Contact> {
+            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && !$0.isMuted && !$0.isBlocked
+        }
         let contactDescriptor = FetchDescriptor<Contact>(predicate: contactPredicate)
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
 
-        // Only fetch channels with unread messages
-        let channelPredicate = #Predicate<Channel> { $0.unreadCount > 0 && !$0.isMuted }
+        // Channels: exclude muted, include if unreadCount > 0 OR unreadMentionCount > 0
+        let mutedRawValue = NotificationLevel.muted.rawValue
+        let channelPredicate = #Predicate<Channel> {
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            ($0.unreadCount > 0 || $0.unreadMentionCount > 0)
+        }
         let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
         let channelsWithUnread = try modelContext.fetch(channelDescriptor)
-        let channelTotal = channelsWithUnread.reduce(0) { $0 + $1.unreadCount }
+        let channelTotal = channelsWithUnread.reduce(0) { total, channel in
+            if channel.notificationLevel == .mentionsOnly {
+                return total + channel.unreadMentionCount
+            }
+            return total + channel.unreadCount
+        }
 
-        // Only fetch room sessions with unread messages (excludes muted rooms)
-        let roomPredicate = #Predicate<RemoteNodeSession> { $0.unreadCount > 0 && !$0.isMuted }
+        // Rooms: exclude muted (no mention tracking for rooms)
+        let roomPredicate = #Predicate<RemoteNodeSession> {
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            $0.unreadCount > 0
+        }
         let roomDescriptor = FetchDescriptor<RemoteNodeSession>(predicate: roomPredicate)
         let roomsWithUnread = try modelContext.fetch(roomDescriptor)
         let roomTotal = roomsWithUnread.reduce(0) { $0 + $1.unreadCount }
@@ -1318,6 +1310,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.lastUptimeSeconds = dto.lastUptimeSeconds
             existing.lastNoiseFloor = dto.lastNoiseFloor
             existing.unreadCount = dto.unreadCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
             existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
             existing.neighborCount = dto.neighborCount
             existing.lastSyncTimestamp = dto.lastSyncTimestamp
@@ -1340,6 +1334,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 lastUptimeSeconds: dto.lastUptimeSeconds,
                 lastNoiseFloor: dto.lastNoiseFloor,
                 unreadCount: dto.unreadCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite,
                 lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
                 neighborCount: dto.neighborCount,
                 lastSyncTimestamp: dto.lastSyncTimestamp
@@ -1601,7 +1597,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.remoteNodeSessionNotFound
         }
 
-        session.isMuted = isMuted
+        session.notificationLevel = isMuted ? .muted : .all
+        try modelContext.save()
+    }
+
+    /// Sets the notification level for a remote node session
+    public func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { $0.id == targetID }
+        var descriptor = FetchDescriptor<RemoteNodeSession>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.remoteNodeSessionNotFound
+        }
+
+        session.notificationLevel = level
         try modelContext.save()
     }
 
@@ -1869,7 +1880,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {
@@ -2196,5 +2207,113 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             modelContext.insert(preview)
         }
         try modelContext.save()
+    }
+
+    // MARK: - Discovered Nodes
+
+    private let maxDiscoveredNodes = 1000
+
+    public func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        let targetDeviceID = deviceID
+        let publicKey = frame.publicKey
+        let predicate = #Predicate<DiscoveredNode> { node in
+            node.deviceID == targetDeviceID && node.publicKey == publicKey
+        }
+        var descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        let existing = try modelContext.fetch(descriptor)
+
+        let node: DiscoveredNode
+        let isNew: Bool
+        if let existingNode = existing.first {
+            existingNode.name = frame.name
+            existingNode.typeRawValue = frame.type.rawValue
+            existingNode.lastHeard = Date()
+            existingNode.lastAdvertTimestamp = frame.lastAdvertTimestamp
+            existingNode.latitude = frame.latitude
+            existingNode.longitude = frame.longitude
+            existingNode.outPathLength = frame.outPathLength
+            existingNode.outPath = frame.outPath
+            node = existingNode
+            isNew = false
+        } else {
+            node = DiscoveredNode(
+                deviceID: deviceID,
+                publicKey: frame.publicKey,
+                name: frame.name,
+                typeRawValue: frame.type.rawValue,
+                lastAdvertTimestamp: frame.lastAdvertTimestamp,
+                latitude: frame.latitude,
+                longitude: frame.longitude,
+                outPathLength: frame.outPathLength,
+                outPath: frame.outPath
+            )
+            modelContext.insert(node)
+            isNew = true
+
+            try enforceDiscoveredNodeCap(deviceID: deviceID)
+        }
+
+        try modelContext.save()
+        return (node: DiscoveredNodeDTO(from: node), isNew: isNew)
+    }
+
+    private func enforceDiscoveredNodeCap(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let countPredicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let countDescriptor = FetchDescriptor<DiscoveredNode>(predicate: countPredicate)
+        let count = try modelContext.fetchCount(countDescriptor)
+
+        if count > maxDiscoveredNodes {
+            var oldestDescriptor = FetchDescriptor<DiscoveredNode>(
+                predicate: countPredicate,
+                sortBy: [SortDescriptor(\.lastHeard, order: .forward)]
+            )
+            oldestDescriptor.fetchLimit = count - maxDiscoveredNodes
+            let toDelete = try modelContext.fetch(oldestDescriptor)
+            for node in toDelete {
+                modelContext.delete(node)
+            }
+            let logger = Logger(subsystem: "com.pocketmesh", category: "PersistenceStore")
+            logger.warning("DiscoveredNode cap exceeded, evicted \(toDelete.count) oldest nodes")
+        }
+    }
+
+    public func fetchDiscoveredNodes(deviceID: UUID) throws -> [DiscoveredNodeDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        let nodes = try modelContext.fetch(descriptor)
+        return nodes.map { DiscoveredNodeDTO(from: $0) }
+    }
+
+    public func deleteDiscoveredNode(id: UUID) throws {
+        let targetID = id
+        let predicate = #Predicate<DiscoveredNode> { $0.id == targetID }
+        var descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let node = try modelContext.fetch(descriptor).first {
+            modelContext.delete(node)
+            try modelContext.save()
+        }
+    }
+
+    public func clearDiscoveredNodes(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        let nodes = try modelContext.fetch(descriptor)
+        for node in nodes {
+            modelContext.delete(node)
+        }
+        try modelContext.save()
+    }
+
+    public func fetchContactPublicKeys(deviceID: UUID) throws -> Set<Data> {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<Contact> { $0.deviceID == targetDeviceID }
+        let descriptor = FetchDescriptor<Contact>(predicate: predicate)
+        let contacts = try modelContext.fetch(descriptor)
+        return Set(contacts.map { $0.publicKey })
     }
 }

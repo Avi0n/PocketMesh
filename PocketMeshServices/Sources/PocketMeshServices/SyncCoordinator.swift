@@ -96,6 +96,11 @@ public actor SyncCoordinator {
     /// Callback when non-message sync activity ends
     private var onSyncActivityEnded: (@Sendable () async -> Void)?
 
+    /// Tracks whether onSyncActivityEnded has been called for the current sync cycle.
+    /// Prevents double-callback when disconnect occurs mid-sync (both onDisconnected
+    /// and error path would otherwise call onSyncActivityEnded).
+    private var hasEndedSyncActivity = true
+
     /// Callback when sync phase changes (for SwiftUI observation)
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
@@ -170,6 +175,16 @@ public actor SyncCoordinator {
         self.onRoomMessageReceived = onRoomMessageReceived
     }
 
+    // MARK: - Sync Activity Tracking
+
+    /// Calls onSyncActivityEnded at most once per sync cycle.
+    /// Guards against double-callback when disconnect occurs mid-sync.
+    private func endSyncActivityOnce() async {
+        guard !hasEndedSyncActivity else { return }
+        hasEndedSyncActivity = true
+        await onSyncActivityEnded?()
+    }
+
     // MARK: - Notifications
 
     /// Notify that contacts data changed (triggers UI refresh)
@@ -183,7 +198,6 @@ public actor SyncCoordinator {
     /// Notify that conversations data changed (triggers UI refresh)
     @MainActor
     public func notifyConversationsChanged() {
-        logger.info("notifyConversationsChanged: version \(self.conversationsVersion) → \(self.conversationsVersion + 1)")
         conversationsVersion += 1
         onConversationsChanged?()
     }
@@ -254,6 +268,7 @@ public actor SyncCoordinator {
         do {
             // Set phase before triggering pill visibility
             await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
+            hasEndedSyncActivity = false
             await onSyncActivityStarted?()
 
             // Perform contacts and channels sync (activity should show pill)
@@ -292,12 +307,17 @@ public actor SyncCoordinator {
                 }
 
                 // Phase 2: Channels (foreground only)
+                logger.debug("About to check foreground state, provider exists: \(appStateProvider != nil)")
                 let shouldSyncChannels: Bool
                 if let provider = appStateProvider {
+                    logger.debug("Calling isInForeground...")
                     shouldSyncChannels = await provider.isInForeground
+                    logger.debug("isInForeground returned: \(shouldSyncChannels)")
                 } else {
+                    logger.debug("No appStateProvider, defaulting to foreground mode")
                     shouldSyncChannels = true
                 }
+                logger.debug("Proceeding with shouldSyncChannels=\(shouldSyncChannels)")
                 if shouldSyncChannels {
                     await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
                     let maxChannels = device?.maxChannels ?? 0
@@ -327,12 +347,12 @@ public actor SyncCoordinator {
                 }
             } catch {
                 // End sync activity on error during contacts/channels phase
-                await onSyncActivityEnded?()
+                await endSyncActivityOnce()
                 throw error
             }
 
             // End sync activity before messages phase (pill should hide)
-            await onSyncActivityEnded?()
+            await endSyncActivityOnce()
 
             // Phase 3: Messages (no pill for this phase)
             await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
@@ -447,11 +467,14 @@ public actor SyncCoordinator {
         }
 
         do {
+            // Defer advert-driven contact fetches during sync to avoid BLE contention
+            await services.advertisementService.setSyncingContacts(true)
+
             // 1. Wire message handlers FIRST (before events can arrive)
             await wireMessageHandlers(services: services, deviceID: deviceID)
 
-            // 2. NOW start event monitoring (handlers are ready)
-            await services.startEventMonitoring(deviceID: deviceID)
+            // 2. NOW start event monitoring (handlers are ready), but delay auto-fetch and advert monitoring until after sync
+            await services.startEventMonitoring(deviceID: deviceID, enableAutoFetch: false)
 
             // 3. Export device private key for direct message decryption
             do {
@@ -474,10 +497,16 @@ public actor SyncCoordinator {
                 forceFullSync: forceFullSync
             )
 
-            // 5. Wire discovery handlers (for ongoing contact discovery)
+            // 5. Start auto-fetch after full sync to reduce BLE contention
+            await services.messagePollingService.startAutoFetch(deviceID: deviceID)
+
+            // 6. Wire discovery handlers (for ongoing contact discovery)
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
 
-            // 6. Wait for any pending message handlers to complete
+            // 7. Flush deferred advert-driven contact fetches now that handlers are wired
+            await services.advertisementService.setSyncingContacts(false)
+
+            // 8. Wait for any pending message handlers to complete
             // Message events are processed asynchronously by the event monitor - we need to ensure
             // all handlers finish before resuming notifications, otherwise sync-time messages
             // may trigger notifications after suppression is lifted
@@ -507,6 +536,7 @@ public actor SyncCoordinator {
                 logger.info("Resuming message notifications (sync failed)")
                 services.notificationService.isSuppressingNotifications = false
             }
+            await services.advertisementService.setSyncingContacts(false)
             throw error
         }
     }
@@ -522,7 +552,7 @@ public actor SyncCoordinator {
         let currentState = await state
         if case .syncing(let progress) = currentState,
            progress.phase == .contacts || progress.phase == .channels {
-            await onSyncActivityEnded?()
+            await endSyncActivityOnce()
         }
 
         await setState(.idle)
@@ -779,7 +809,8 @@ public actor SyncCoordinator {
                         senderName: senderNodeName,
                         messageText: messageText,
                         messageID: messageDTO.id,
-                        isMuted: channel?.isMuted ?? false
+                        notificationLevel: channel?.notificationLevel ?? .all,
+                        hasSelfMention: hasSelfMention
                     )
                     await services.notificationService.updateBadgeCount()
 
@@ -825,7 +856,7 @@ public actor SyncCoordinator {
                         senderName: savedMessage.authorName,
                         messageText: savedMessage.text,
                         messageID: savedMessage.id,
-                        isMuted: session?.isMuted ?? false
+                        notificationLevel: session?.notificationLevel ?? .all
                     )
                     await services.notificationService.updateBadgeCount()
 

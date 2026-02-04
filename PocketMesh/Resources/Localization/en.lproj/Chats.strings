@@ -29,6 +29,18 @@
 /* Location: ChatsView.swift - Button to clear active filter */
 "chats.filter.clear" = "Clear Filter";
 
+/* Location: ChatsView.swift - Filter option for unread conversations */
+"chats.filter.unread" = "Unread";
+
+/* Location: ChatsView.swift - Filter option for direct messages */
+"chats.filter.directMessages" = "DMs";
+
+/* Location: ChatsView.swift - Filter option for channels */
+"chats.filter.channels" = "Channels";
+
+/* Location: ChatsView.swift - Filter option for favorites */
+"chats.filter.favorites" = "Favorites";
+
 // MARK: - Compose Menu
 
 /* Location: ChatsView.swift - Button to start a new direct chat */
@@ -101,6 +113,9 @@
 
 /* Location: MessageTimestampView.swift - Prefix for yesterday's date */
 "chats.timestamp.yesterday" = "Yesterday";
+
+/* Location: RelativeTimestampText.swift - Timestamp for messages under 1 minute old */
+"chats.timestamp.now" = "Now";
 
 // MARK: - Floating Action Buttons
 
@@ -180,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "This will remove the channel from your device and delete all local messages. This action cannot be undone.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Public Channel • Slot 0";
+"chats.channelInfo.channelType.public" = "Public Channel";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Hashtag Channel • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Hashtag Channel";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Private Channel • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Private Channel";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Slot";
@@ -212,6 +227,15 @@
 /* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
 "chats.channelInfo.manualSharingFooter" = "Share the channel name and this secret key for others to join manually.";
 
+/* Location: ChannelInfoSheet.swift - Clear messages button */
+"chats.channelInfo.clearMessagesButton" = "Clear Messages";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog title */
+"chats.channelInfo.clearMessagesConfirm.title" = "Clear Messages?";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message */
+"chats.channelInfo.clearMessagesConfirm.message" = "All messages in this channel will be permanently deleted. The channel will remain active.";
+
 /* Location: ChannelInfoSheet.swift - Delete channel button */
 "chats.channelInfo.deleteButton" = "Delete Channel";
 
@@ -223,6 +247,9 @@
 
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "Services not available";
+
+/* Location: ChatView.swift - Error when loading older messages fails */
+"chats.errors.loadOlderMessagesFailed" = "Failed to load older messages";
 
 // MARK: - Channel Options Sheet
 
@@ -308,6 +335,17 @@
 /* Location: MutedIndicator.swift - Accessibility label for muted indicator */
 "chats.row.muted" = "Muted";
 
+/* Location: MutedIndicator.swift - Accessibility label for mentions-only indicator */
+"chats.row.mentionsOnly" = "Mentions only";
+
+// MARK: - Notification Level Picker
+
+/* Location: NotificationLevelPicker.swift - Accessibility label for notification level picker */
+"chats.notificationLevel.label" = "Notification level";
+
+/* Location: NotificationLevelPicker.swift - Accessibility hint for notification level picker */
+"chats.notificationLevel.hint" = "Choose when to receive notifications";
+
 // MARK: - Swipe Actions
 
 /* Location: ConversationSwipeActionsModifier.swift - Swipe action to delete */
@@ -348,6 +386,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Conversations";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 
@@ -594,6 +637,9 @@
 /* Location: UnifiedMessageBubble.swift - Message status retrying */
 "chats.message.status.retrying" = "Retrying...";
 
+/* Location: UnifiedMessageBubble.swift - Message status retrying with attempt count - %d is current attempt, %d is max attempts */
+"chats.message.status.retryingAttempt" = "Retrying %d/%d";
+
 /* Location: UnifiedMessageBubble.swift - SNR quality excellent */
 "chats.signal.excellent" = "Excellent";
 
@@ -763,3 +809,11 @@
 
 /* Location: Various - Done button (use L10n.Localizable.Common.done) */
 "chats.common.done" = "Done";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Announce yourself to the mesh";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Tap here and send a Flood Advert to let nearby devices know you've joined.";

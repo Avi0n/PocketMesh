@@ -44,9 +44,9 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
-        .accessibilityLabel("Bluetooth connection status")
+        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
         .accessibilityValue(statusTitle)
-        .accessibilityHint("Double tap to connect device")
+        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.disconnected)
     }
 
     /// Menu shown when connected - tap to show device info and actions
@@ -74,18 +74,18 @@ struct BLEStatusIndicatorView: View {
                 Button {
                     sendAdvert(flood: false)
                 } label: {
-                    Label("Send Zero-Hop Advert", systemImage: "dot.radiowaves.right")
+                    Label(L10n.Settings.BleStatus.sendZeroHopAdvert, systemImage: "dot.radiowaves.right")
                 }
                 .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
-                .accessibilityHint("Broadcasts to direct neighbors only")
+                .accessibilityHint(L10n.Settings.BleStatus.SendZeroHopAdvert.hint)
 
                 Button {
                     sendAdvert(flood: true)
                 } label: {
-                    Label("Send Flood Advert", systemImage: "dot.radiowaves.left.and.right")
+                    Label(L10n.Settings.BleStatus.sendFloodAdvert, systemImage: "dot.radiowaves.left.and.right")
                 }
                 .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
-                .accessibilityHint("Floods advertisement across entire mesh")
+                .accessibilityHint(L10n.Settings.BleStatus.SendFloodAdvert.hint)
             }
 
             // Actions
@@ -93,7 +93,7 @@ struct BLEStatusIndicatorView: View {
                 Button {
                     showingDeviceSelection = true
                 } label: {
-                    Label("Change Device", systemImage: "gearshape")
+                    Label(L10n.Settings.BleStatus.changeDevice, systemImage: "gearshape")
                 }
 
                 Button(role: .destructive) {
@@ -101,7 +101,7 @@ struct BLEStatusIndicatorView: View {
                         await appState.disconnect()
                     }
                 } label: {
-                    Label("Disconnect", systemImage: "eject")
+                    Label(L10n.Settings.BleStatus.disconnect, systemImage: "eject")
                 }
             }
         } label: {
@@ -112,9 +112,9 @@ struct BLEStatusIndicatorView: View {
         .popoverTip(floodAdvertTip, arrowEdge: .top)
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
-        .accessibilityLabel("Bluetooth connection status")
+        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
         .accessibilityValue(statusTitle)
-        .accessibilityHint("Shows device connection options")
+        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.connected)
     }
 
     // MARK: - Computed Properties
@@ -146,13 +146,13 @@ struct BLEStatusIndicatorView: View {
     private var statusTitle: String {
         switch appState.connectionState {
         case .disconnected:
-            "Disconnected"
+            L10n.Settings.BleStatus.Status.disconnected
         case .connecting:
-            "Connecting..."
+            L10n.Settings.BleStatus.Status.connecting
         case .connected:
-            "Connected"
+            L10n.Settings.BleStatus.Status.connected
         case .ready:
-            "Ready"
+            L10n.Settings.BleStatus.Status.ready
         }
     }
 

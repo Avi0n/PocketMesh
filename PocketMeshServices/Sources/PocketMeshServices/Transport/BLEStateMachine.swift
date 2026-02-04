@@ -1,5 +1,6 @@
 // BLEStateMachine.swift
 @preconcurrency import CoreBluetooth
+import Dispatch
 import Foundation
 import os
 
@@ -8,7 +9,7 @@ import os
 /// All CoreBluetooth operations are modeled as state transitions. Each state
 /// owns its resources (continuations, timeouts), ensuring proper cleanup
 /// on any transition.
-public actor BLEStateMachine {
+public actor BLEStateMachine: BLEStateMachineProtocol {
 
     // MARK: - Logging
 
@@ -64,15 +65,18 @@ public actor BLEStateMachine {
     private let serviceDiscoveryTimeout: TimeInterval
     private let writeTimeout: TimeInterval
 
+    /// Delay between write operations for ESP32 compatibility (0 = no pacing)
+    private var writePacingDelay: TimeInterval = 0
+
+    /// Tracks consecutive queued writes for diagnostic logging
+    private var consecutiveQueuedWrites = 0
+    private let queuePressureThreshold = 3
+
     // MARK: - UUIDs
 
     private let nordicUARTServiceUUID = CBUUID(string: BLEServiceUUID.nordicUART)
     private let txCharacteristicUUID = CBUUID(string: BLEServiceUUID.txCharacteristic)
     private let rxCharacteristicUUID = CBUUID(string: BLEServiceUUID.rxCharacteristic)
-
-    // MARK: - State Restoration
-
-    private var pendingRestoredPeripheral: CBPeripheral?
 
     /// Pending write continuation (only one write at a time)
     private var pendingWriteContinuation: CheckedContinuation<Void, Error>?
@@ -108,15 +112,24 @@ public actor BLEStateMachine {
     ///   - connectionTimeout: Timeout for initial connection (default 10s)
     ///   - serviceDiscoveryTimeout: Timeout for service/characteristic discovery (default 40s for pairing dialog)
     ///   - writeTimeout: Timeout for write operations (default 5s)
+    ///   - writePacingDelay: Delay between write operations for ESP32 compatibility (default 0 = no pacing)
     public init(
         connectionTimeout: TimeInterval = 10.0,
         serviceDiscoveryTimeout: TimeInterval = 40.0,
-        writeTimeout: TimeInterval = 5.0
+        writeTimeout: TimeInterval = 5.0,
+        writePacingDelay: TimeInterval = 0
     ) {
         self.connectionTimeout = connectionTimeout
         self.serviceDiscoveryTimeout = serviceDiscoveryTimeout
         self.writeTimeout = writeTimeout
+        self.writePacingDelay = writePacingDelay
         self.delegateHandler = BLEDelegateHandler()
+    }
+
+    /// Sets the write pacing delay for ESP32 compatibility.
+    /// - Parameter delay: Delay in seconds between write operations (0 = no pacing)
+    public func setWritePacingDelay(_ delay: TimeInterval) {
+        writePacingDelay = delay
     }
 
     /// Activates the BLE state machine, creating the CBCentralManager.
@@ -127,6 +140,8 @@ public actor BLEStateMachine {
         logger.info("[BLE] Activating state machine, instance: \(instanceID), \(processContext)")
         initializeCentralManager()
     }
+
+    private let centralQueue = DispatchQueue(label: "com.pocketmesh.ble.central")
 
     private func initializeCentralManager() {
         // Set stateMachine reference BEFORE creating CBCentralManager.
@@ -141,7 +156,7 @@ public actor BLEStateMachine {
         ]
         self.centralManager = CBCentralManager(
             delegate: delegateHandler,
-            queue: .main,
+            queue: centralQueue,
             options: options
         )
     }
@@ -154,10 +169,14 @@ public actor BLEStateMachine {
         return false
     }
 
-    /// Whether the state machine is currently handling iOS auto-reconnect
+    /// Whether the state machine is currently handling iOS auto-reconnect or state restoration
     public var isAutoReconnecting: Bool {
-        if case .autoReconnecting = phase { return true }
-        return false
+        switch phase {
+        case .autoReconnecting, .restoringState:
+            return true
+        default:
+            return false
+        }
     }
 
     /// UUID of the currently connected device, or nil if not connected
@@ -179,6 +198,20 @@ public actor BLEStateMachine {
     public var currentPeripheralState: String? {
         guard let peripheral = phase.peripheral else { return nil }
         return peripheralStateString(peripheral.state)
+    }
+
+    /// Current CBCentralManager state name for diagnostic logging
+    public var centralManagerStateName: String {
+        guard let manager = centralManager else { return "notActivated" }
+        switch manager.state {
+        case .unknown: return "unknown"
+        case .resetting: return "resetting"
+        case .unsupported: return "unsupported"
+        case .unauthorized: return "unauthorized"
+        case .poweredOff: return "poweredOff"
+        case .poweredOn: return "poweredOn"
+        @unknown default: return "unknown(\(manager.state.rawValue))"
+        }
     }
 
     /// Checks if a device is connected to the system (possibly by another app).
@@ -283,11 +316,17 @@ public actor BLEStateMachine {
         try await discoverServices(on: peripheral)
 
         // Create data stream and transition to connected
-        let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
+        let (stream, continuation) = AsyncStream.makeStream(
+            of: Data.self,
+            bufferingPolicy: .bufferingOldest(512)
+        )
 
         guard case .subscribingToNotifications(_, let tx, let rx, _) = phase else {
             throw BLEError.connectionFailed("Unexpected state after service discovery")
         }
+
+        // Pass continuation to delegate handler for direct yielding (preserves ordering)
+        delegateHandler.setDataContinuation(continuation)
 
         transition(to: .connected(
             peripheral: peripheral,
@@ -318,8 +357,13 @@ public actor BLEStateMachine {
 
         // Wait for any pending write to complete (serializes concurrent sends)
         if pendingWriteContinuation != nil {
+            consecutiveQueuedWrites += 1
             let queueDepth = writeWaiters.count + 1
-            logger.debug("[BLE] Write queued, depth: \(queueDepth)")
+            if consecutiveQueuedWrites >= queuePressureThreshold {
+                logger.warning("[BLE] Write queue pressure: depth=\(queueDepth), consecutive=\(consecutiveQueuedWrites)")
+            } else {
+                logger.debug("[BLE] Write queued, depth: \(queueDepth)")
+            }
             await withCheckedContinuation { (waiter: CheckedContinuation<Void, Never>) in
                 writeWaiters.append(waiter)
             }
@@ -336,18 +380,30 @@ public actor BLEStateMachine {
                 guard !Task.isCancelled else { return }
                 if let pending = self.pendingWriteContinuation {
                     self.pendingWriteContinuation = nil
+                    self.consecutiveQueuedWrites = 0
                     pending.resume(throwing: BLEError.operationTimeout)
                     self.writeTimeoutTask = nil
-                    resumeNextWriteWaiter()
+                    self.resumeNextWriteWaiter()
                 }
             }
         }
     }
 
-    /// Resumes the next task waiting to write, if any.
-    private func resumeNextWriteWaiter() {
-        if !writeWaiters.isEmpty {
-            let waiter = writeWaiters.removeFirst()
+    /// Resumes the next task waiting to write after applying pacing delay.
+    /// - Parameter applyPacing: Whether to apply write pacing delay (default true)
+    private func resumeNextWriteWaiter(applyPacing: Bool = true) {
+        guard !writeWaiters.isEmpty else { return }
+
+        let waiter = writeWaiters.removeFirst()
+
+        if applyPacing && writePacingDelay > 0 {
+            Task { [writePacingDelay] in
+                try? await Task.sleep(for: .seconds(writePacingDelay))
+                // Always resume the waiter, even if the state machine was deallocated.
+                // The waiter will check connection state and fail appropriately.
+                waiter.resume()
+            }
+        } else {
             waiter.resume()
         }
     }
@@ -359,6 +415,9 @@ public actor BLEStateMachine {
         // Cancel write timeout task
         writeTimeoutTask?.cancel()
         writeTimeoutTask = nil
+
+        // Reset queue tracking
+        consecutiveQueuedWrites = 0
 
         // Cancel pending write
         if let pending = pendingWriteContinuation {
@@ -454,9 +513,24 @@ public actor BLEStateMachine {
 ///
 /// This class is necessary because actors cannot directly conform to
 /// Objective-C delegate protocols. All callbacks dispatch to the actor.
+///
+/// For data reception (`didUpdateValueFor`), data is yielded directly to an AsyncStream
+/// continuation rather than spawning Tasks. This preserves the ordering guaranteed by
+/// the serial CBCentralManager queue, avoiding the race conditions that occur when
+/// multiple unstructured Tasks compete for actor access with priority-based scheduling.
 final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate, @unchecked Sendable {
 
     weak var stateMachine: BLEStateMachine?
+
+    /// Lock-protected continuation for yielding received data directly.
+    /// Using OSAllocatedUnfairLock ensures thread-safe access from the CBCentralManager queue.
+    private let dataContinuationLock = OSAllocatedUnfairLock<AsyncStream<Data>.Continuation?>(initialState: nil)
+
+    /// Sets the data continuation for direct yielding from delegate callbacks.
+    /// Call this when transitioning to connected state.
+    func setDataContinuation(_ continuation: AsyncStream<Data>.Continuation?) {
+        dataContinuationLock.withLock { $0 = continuation }
+    }
 
     // MARK: - CBCentralManagerDelegate
 
@@ -514,8 +588,14 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard let sm = stateMachine else { return }
-        Task { await sm.handleDidUpdateValue(peripheral, characteristic: characteristic, error: error) }
+        // Yield data directly to preserve ordering from the serial CBCentralManager queue.
+        // Do NOT spawn a Task here - that breaks ordering guarantees.
+        guard error == nil,
+              let data = characteristic.value,
+              !data.isEmpty else {
+            return
+        }
+        _ = dataContinuationLock.withLock { $0?.yield(data) }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
@@ -555,9 +635,8 @@ extension BLEStateMachine {
                 continuation.resume()
             }
 
-            // Handle state restoration
-            if let peripheral = pendingRestoredPeripheral {
-                pendingRestoredPeripheral = nil
+            // Handle state restoration from phase
+            if case .restoringState(let peripheral) = phase {
                 handleRestoredPeripheral(peripheral)
             }
 
@@ -577,11 +656,21 @@ extension BLEStateMachine {
                 transition(to: .idle)
                 continuation.resume(throwing: BLEError.bluetoothUnauthorized)
             }
+            // Handle restoration failure
+            if case .restoringState(let peripheral) = phase {
+                transition(to: .idle)
+                onDisconnection?(peripheral.identifier, nil)
+            }
 
         case .unsupported:
             if case .waitingForBluetooth(let continuation) = phase {
                 transition(to: .idle)
                 continuation.resume(throwing: BLEError.bluetoothUnavailable)
+            }
+            // Handle restoration failure
+            if case .restoringState(let peripheral) = phase {
+                transition(to: .idle)
+                onDisconnection?(peripheral.identifier, nil)
             }
 
         default:
@@ -616,7 +705,14 @@ extension BLEStateMachine {
     func handleWillRestoreState(_ peripheral: CBPeripheral) {
         let pState = peripheralStateString(peripheral.state)
         logger.info("[BLE] State restoration callback: \(peripheral.identifier.uuidString.prefix(8)), state: \(pState)")
-        pendingRestoredPeripheral = peripheral
+
+        // If Bluetooth is already powered on, proceed directly to restoration.
+        // This handles the edge case where .poweredOn Task runs before this Task.
+        if centralManager.state == .poweredOn {
+            handleRestoredPeripheral(peripheral)
+        } else {
+            transition(to: .restoringState(peripheral: peripheral))
+        }
     }
 
     func handleDidConnect(_ peripheral: CBPeripheral) {
@@ -898,7 +994,13 @@ extension BLEStateMachine {
         logger.info("[BLE] Auto-reconnect notification subscription complete, elapsed: \(String(format: "%.2f", elapsed))s")
 
         // Create data stream and transition to connected
-        let (stream, continuation) = AsyncStream.makeStream(of: Data.self)
+        let (stream, continuation) = AsyncStream.makeStream(
+            of: Data.self,
+            bufferingPolicy: .bufferingOldest(512)
+        )
+
+        // Pass continuation to delegate handler for direct yielding (preserves ordering)
+        delegateHandler.setDataContinuation(continuation)
 
         transition(to: .connected(
             peripheral: peripheral,
@@ -911,26 +1013,15 @@ extension BLEStateMachine {
         onReconnection?(peripheral.identifier, stream)
     }
 
-    func handleDidUpdateValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
-        guard error == nil,
-              let data = characteristic.value,
-              !data.isEmpty else {
-            return
-        }
-
-        guard case .connected(_, _, _, let dataContinuation) = phase else {
-            return  // Not connected, ignore data
-        }
-
-        dataContinuation.yield(data)
-    }
-
     func handleDidWriteValue(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
         logger.info("[BLE] Did write value: \(peripheral.identifier.uuidString.prefix(8)), charUUID: \(characteristic.uuid.uuidString.prefix(8)), error: \(error?.localizedDescription ?? "none")")
 
         // Cancel the timeout task since write completed
         writeTimeoutTask?.cancel()
         writeTimeoutTask = nil
+
+        // Reset queue tracking on successful completion
+        consecutiveQueuedWrites = 0
 
         guard let continuation = pendingWriteContinuation else {
             return  // No pending write
@@ -944,7 +1035,7 @@ extension BLEStateMachine {
             continuation.resume()
         }
 
-        // Resume next task waiting to write
+        // Resume next task waiting to write (with pacing delay for ESP32 compatibility)
         resumeNextWriteWaiter()
     }
 }
@@ -983,7 +1074,12 @@ extension BLEStateMachine {
             timeoutTask.cancel()
 
         case .connected(_, _, _, let dataContinuation):
+            // Clear delegate handler's continuation first to stop data flow
+            delegateHandler.setDataContinuation(nil)
             dataContinuation.finish()
+
+        case .restoringState:
+            break  // No resources to clean up
 
         default:
             break
@@ -994,6 +1090,21 @@ extension BLEStateMachine {
     ///
     /// - Parameter error: The error to resume continuations with
     func cancelCurrentOperation(with error: Error) {
+        // Cancel any pending write operations
+        writeTimeoutTask?.cancel()
+        writeTimeoutTask = nil
+        consecutiveQueuedWrites = 0
+
+        if let pending = pendingWriteContinuation {
+            pendingWriteContinuation = nil
+            pending.resume(throwing: error)
+        }
+
+        // Resume all write waiters (they'll fail on the .connected check)
+        while !writeWaiters.isEmpty {
+            writeWaiters.removeFirst().resume()
+        }
+
         switch phase {
         case .waitingForBluetooth(let continuation):
             continuation.resume(throwing: error)
@@ -1014,7 +1125,7 @@ extension BLEStateMachine {
         case .connected(_, _, _, let dataContinuation):
             dataContinuation.finish()
 
-        case .idle, .autoReconnecting, .disconnecting:
+        case .idle, .autoReconnecting, .restoringState, .disconnecting:
             break
         }
 

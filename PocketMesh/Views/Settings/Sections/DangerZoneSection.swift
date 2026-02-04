@@ -79,7 +79,7 @@ struct DangerZoneSection: View {
 
                 // Wait briefly then disconnect
                 try await Task.sleep(for: .seconds(1))
-                await appState.disconnect()
+                await appState.disconnect(reason: .factoryReset)
                 dismiss()
             } catch {
                 showError = error.localizedDescription

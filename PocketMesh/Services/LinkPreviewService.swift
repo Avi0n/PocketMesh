@@ -22,11 +22,14 @@ final class LinkPreviewService: Sendable {
         try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
     }()
 
-    /// Extracts the first HTTP/HTTPS URL from text
+    /// Extracts the first HTTP/HTTPS URL from text, excluding URLs within mentions.
     /// - Parameter text: Message text to scan
-    /// - Returns: First HTTP(S) URL found, or nil
+    /// - Returns: First HTTP(S) URL found outside mentions, or nil
     static func extractFirstURL(from text: String) -> URL? {
         guard !text.isEmpty, let detector = urlDetector else { return nil }
+
+        // Find mention ranges to exclude (format: @[name])
+        let mentionRanges = extractMentionRanges(from: text)
 
         let range = NSRange(text.startIndex..., in: text)
         let matches = detector.matches(in: text, options: [], range: range)
@@ -37,10 +40,29 @@ final class LinkPreviewService: Sendable {
                   scheme == "http" || scheme == "https" else {
                 continue
             }
+
+            // Skip URLs that overlap with mention ranges
+            let urlRange = match.range
+            let overlapsWithMention = mentionRanges.contains { mentionRange in
+                NSIntersectionRange(urlRange, mentionRange).length > 0
+            }
+            if overlapsWithMention {
+                continue
+            }
+
             return url
         }
 
         return nil
+    }
+
+    /// Extracts ranges of all mentions in the text (format: @[name])
+    private static func extractMentionRanges(from text: String) -> [NSRange] {
+        guard let regex = try? NSRegularExpression(pattern: MentionUtilities.mentionPattern) else {
+            return []
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, range: range).map(\.range)
     }
 
     /// Fetches metadata for a URL using LinkPresentation framework

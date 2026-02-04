@@ -256,7 +256,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
     func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {}
-    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) async throws {}
+    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) throws {}
 
     // Contact Operations
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
@@ -282,9 +282,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func fetchUnseenMentionIDs(contactID: UUID) async throws -> [UUID] { [] }
     func fetchUnseenChannelMentionIDs(deviceID: UUID, channelIndex: UInt8) async throws -> [UUID] { [] }
     func deleteMessagesForContact(contactID: UUID) async throws {}
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
-    func confirmContact(id: UUID) async throws {}
 
     // Channel Operations
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
@@ -336,4 +334,17 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
     func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
     func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+
+    // Discovered Nodes
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        fatalError("Not implemented")
+    }
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] { [] }
+    func deleteDiscoveredNode(id: UUID) async throws {}
+    func clearDiscoveredNodes(deviceID: UUID) async throws {}
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> { Set() }
+
+    // Notification Level
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
 }

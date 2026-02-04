@@ -44,6 +44,10 @@ public final class NotificationService: NSObject {
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onNotificationTapped: (@MainActor @Sendable (_ contactID: UUID) async -> Void)?
 
+    /// Callback for when a channel notification is tapped
+    /// CRITICAL: Must be @MainActor - see onQuickReply comment.
+    public var onChannelNotificationTapped: (@MainActor @Sendable (_ deviceID: UUID, _ channelIndex: UInt8) async -> Void)?
+
     /// Callback for when a new contact discovered notification is tapped
     /// CRITICAL: Must be @MainActor - see onQuickReply comment.
     public var onNewContactNotificationTapped: (@MainActor @Sendable (_ contactID: UUID) async -> Void)?
@@ -289,9 +293,11 @@ public final class NotificationService: NSObject {
         senderName: String?,
         messageText: String,
         messageID: UUID,
-        isMuted: Bool = false
+        notificationLevel: NotificationLevel,
+        hasSelfMention: Bool
     ) async {
-        guard !isMuted else { return }
+        guard notificationLevel != .muted else { return }
+        guard notificationLevel != .mentionsOnly || hasSelfMention else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference (uses cached preferences)
@@ -347,9 +353,9 @@ public final class NotificationService: NSObject {
         senderName: String?,
         messageText: String,
         messageID: UUID,
-        isMuted: Bool = false
+        notificationLevel: NotificationLevel
     ) async {
-        guard !isMuted else { return }
+        guard notificationLevel != .muted else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference
@@ -784,6 +790,10 @@ extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate 
                 } else {
                     await onNotificationTapped?(contactID)
                 }
+            } else if let channelIndex = userInfo["channelIndex"] as? Int,
+                      let deviceIDString = userInfo["deviceID"] as? String,
+                      let deviceID = UUID(uuidString: deviceIDString) {
+                await onChannelNotificationTapped?(deviceID, UInt8(channelIndex))
             }
 
         default:

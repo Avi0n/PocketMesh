@@ -36,6 +36,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public private(set) var deletedContactIDs: [UUID] = []
     public private(set) var deletedChannelIDs: [UUID] = []
     public private(set) var deletedMessagesForContactIDs: [UUID] = []
+    public private(set) var deletedMessagesForChannelCalls: [(deviceID: UUID, channelIndex: UInt8)] = []
     public private(set) var updatedMessageStatuses: [(id: UUID, status: MessageStatus)] = []
     public private(set) var updatedMessageAcks: [(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?)] = []
 
@@ -251,7 +252,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         if let message = messages[id] {
             messages[id] = MessageDTO(
                 id: message.id,
@@ -290,7 +291,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         if let error = stubbedFetchContactError {
             throw error
         }
-        return contacts.values.filter { $0.deviceID == deviceID && !$0.isDiscovered }
+        return Array(contacts.values.filter { $0.deviceID == deviceID })
     }
 
     public func fetchConversations(deviceID: UUID) async throws -> [ContactDTO] {
@@ -298,7 +299,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             throw error
         }
         return contacts.values
-            .filter { $0.deviceID == deviceID && $0.lastMessageDate != nil && !$0.isDiscovered }
+            .filter { $0.deviceID == deviceID && $0.lastMessageDate != nil }
             .sorted { ($0.lastMessageDate ?? .distantPast) > ($1.lastMessageDate ?? .distantPast) }
     }
 
@@ -363,7 +364,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -407,7 +407,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: date,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: contact.unreadMentionCount
@@ -434,7 +433,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount + 1,
                 unreadMentionCount: contact.unreadMentionCount
@@ -461,7 +459,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: 0,
                 unreadMentionCount: contact.unreadMentionCount
@@ -526,7 +523,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: contact.unreadMentionCount + 1
@@ -553,7 +549,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: max(0, contact.unreadMentionCount - 1)
@@ -580,7 +575,6 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 isBlocked: contact.isBlocked,
                 isMuted: contact.isMuted,
                 isFavorite: contact.isFavorite,
-                isDiscovered: contact.isDiscovered,
                 lastMessageDate: contact.lastMessageDate,
                 unreadCount: contact.unreadCount,
                 unreadMentionCount: 0
@@ -600,7 +594,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: channel.unreadMentionCount + 1,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -617,7 +612,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: max(0, channel.unreadMentionCount - 1),
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -634,7 +630,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: 0,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -658,45 +655,11 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         messages = messages.filter { $0.value.contactID != contactID }
     }
 
-    public func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO] {
-        if let error = stubbedFetchContactError {
-            throw error
-        }
-        return contacts.values.filter { $0.deviceID == deviceID && $0.isDiscovered }
-    }
-
     public func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] {
         if let error = stubbedFetchContactError {
             throw error
         }
-        return contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked }
-    }
-
-    public func confirmContact(id: UUID) async throws {
-        if let contact = contacts[id] {
-            contacts[id] = ContactDTO(
-                id: contact.id,
-                deviceID: contact.deviceID,
-                publicKey: contact.publicKey,
-                name: contact.name,
-                typeRawValue: contact.typeRawValue,
-                flags: contact.flags,
-                outPathLength: contact.outPathLength,
-                outPath: contact.outPath,
-                lastAdvertTimestamp: contact.lastAdvertTimestamp,
-                latitude: contact.latitude,
-                longitude: contact.longitude,
-                lastModified: contact.lastModified,
-                nickname: contact.nickname,
-                isBlocked: contact.isBlocked,
-                isMuted: contact.isMuted,
-                isFavorite: contact.isFavorite,
-                isDiscovered: false,
-                lastMessageDate: contact.lastMessageDate,
-                unreadCount: contact.unreadCount,
-                unreadMentionCount: contact.unreadMentionCount
-            )
-        }
+        return Array(contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked })
     }
 
     // MARK: - Channel Operations
@@ -740,7 +703,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: existing.lastMessageDate,
                 unreadCount: existing.unreadCount,
                 unreadMentionCount: existing.unreadMentionCount,
-                isMuted: existing.isMuted
+                notificationLevel: existing.notificationLevel,
+                isFavorite: existing.isFavorite
             )
             return existing.id
         }
@@ -755,7 +719,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             lastMessageDate: nil,
             unreadCount: 0,
             unreadMentionCount: 0,
-            isMuted: false
+            notificationLevel: .all,
+            isFavorite: false
         )
         channels[id] = dto
         savedChannels.append(dto)
@@ -778,7 +743,12 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         channels.removeValue(forKey: id)
     }
 
-    public func updateChannelLastMessage(channelID: UUID, date: Date) async throws {
+    public func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {
+        deletedMessagesForChannelCalls.append((deviceID: deviceID, channelIndex: channelIndex))
+        messages = messages.filter { $0.value.deviceID != deviceID || $0.value.channelIndex != channelIndex }
+    }
+
+    public func updateChannelLastMessage(channelID: UUID, date: Date?) async throws {
         if let channel = channels[channelID] {
             channels[channelID] = ChannelDTO(
                 id: channel.id,
@@ -790,7 +760,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: date,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -807,7 +778,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount + 1,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -824,9 +796,32 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: 0,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
+    }
+
+    public func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {
+        if let channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount,
+                unreadMentionCount: channel.unreadMentionCount,
+                notificationLevel: level,
+                isFavorite: channel.isFavorite
+            )
+        }
+    }
+
+    public func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {
+        // Stub - sessions not tracked in mock
     }
 
     // MARK: - RxLogEntry Lookup
@@ -842,7 +837,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         if let channelIndex {
             // Channel message: match by channelHash and senderTimestamp
             return mockRxLogEntries.first { entry in
@@ -1110,6 +1105,71 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    // MARK: - Discovered Nodes
+
+    public var discoveredNodes: [UUID: DiscoveredNodeDTO] = [:]
+
+    public func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        if let existing = discoveredNodes.values.first(where: { $0.deviceID == deviceID && $0.publicKey == frame.publicKey }) {
+            let updated = DiscoveredNodeDTO(
+                id: existing.id,
+                deviceID: deviceID,
+                publicKey: frame.publicKey,
+                name: frame.name,
+                typeRawValue: frame.type.rawValue,
+                lastHeard: Date(),
+                lastAdvertTimestamp: frame.lastAdvertTimestamp,
+                latitude: frame.latitude,
+                longitude: frame.longitude,
+                outPathLength: frame.outPathLength,
+                outPath: frame.outPath
+            )
+            discoveredNodes[existing.id] = updated
+            return (node: updated, isNew: false)
+        }
+
+        let id = UUID()
+        let dto = DiscoveredNodeDTO(
+            id: id,
+            deviceID: deviceID,
+            publicKey: frame.publicKey,
+            name: frame.name,
+            typeRawValue: frame.type.rawValue,
+            lastHeard: Date(),
+            lastAdvertTimestamp: frame.lastAdvertTimestamp,
+            latitude: frame.latitude,
+            longitude: frame.longitude,
+            outPathLength: frame.outPathLength,
+            outPath: frame.outPath
+        )
+        discoveredNodes[id] = dto
+        return (node: dto, isNew: true)
+    }
+
+    public func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO] {
+        discoveredNodes.values.filter { $0.deviceID == deviceID }
+    }
+
+    public func deleteDiscoveredNode(id: UUID) async throws {
+        discoveredNodes.removeValue(forKey: id)
+    }
+
+    public func clearDiscoveredNodes(deviceID: UUID) async throws {
+        let keysToRemove = discoveredNodes.values
+            .filter { $0.deviceID == deviceID }
+            .map(\.id)
+        for key in keysToRemove {
+            discoveredNodes.removeValue(forKey: key)
+        }
+    }
+
+    public func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data> {
+        if let error = stubbedFetchContactError {
+            throw error
+        }
+        return Set(contacts.values.filter { $0.deviceID == deviceID }.map(\.publicKey))
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1121,6 +1181,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         mockRxLogEntries = []
         linkPreviews = [:]
         roomMessages = [:]
+        discoveredNodes = [:]
         savedMessages = []
         savedContacts = []
         savedChannels = []
@@ -1128,6 +1189,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         deletedContactIDs = []
         deletedChannelIDs = []
         deletedMessagesForContactIDs = []
+        deletedMessagesForChannelCalls = []
         updatedMessageStatuses = []
         updatedMessageAcks = []
         updatedRoomMessageStatuses = []

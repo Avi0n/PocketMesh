@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Loading placeholder shown while link preview is being fetched
 struct LinkPreviewLoadingCard: View {
+    private typealias Strings = L10n.Chats.Chats.Preview
     let url: URL
 
     private var domain: String {
@@ -14,7 +15,7 @@ struct LinkPreviewLoadingCard: View {
                 .controlSize(.small)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Loading preview...")
+                Text(Strings.loading)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

@@ -336,7 +336,15 @@ struct RxLogRowView: View {
                 parts.append(hex)
             }
         }
-        return "→ " + parts.joined(separator: " → ")
+
+        // Truncate long paths: show first 3 + ellipsis + last 3
+        if parts.count > 6 {
+            let first = parts.prefix(3).joined(separator: " → ")
+            let last = parts.suffix(3).joined(separator: " → ")
+            return "\(first) → … → \(last)"
+        }
+
+        return parts.joined(separator: " → ")
     }
 
     private var pathDetailString: String {

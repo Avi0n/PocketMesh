@@ -62,6 +62,10 @@ public enum BLEPhase: @unchecked Sendable {
         rx: CBCharacteristic?
     )
 
+    /// iOS state restoration received, waiting for Bluetooth power state.
+    /// Transitions to .autoReconnecting when Bluetooth powers on.
+    case restoringState(peripheral: CBPeripheral)
+
     /// Intentionally disconnecting
     case disconnecting(
         peripheral: CBPeripheral
@@ -80,6 +84,7 @@ public enum BLEPhase: @unchecked Sendable {
         case .subscribingToNotifications: "subscribingToNotifications"
         case .connected: "connected"
         case .autoReconnecting: "autoReconnecting"
+        case .restoringState: "restoringState"
         case .disconnecting: "disconnecting"
         }
     }
@@ -99,6 +104,7 @@ public enum BLEPhase: @unchecked Sendable {
              .subscribingToNotifications(let p, _, _, _),
              .connected(let p, _, _, _),
              .autoReconnecting(let p, _, _),
+             .restoringState(let p),
              .disconnecting(let p):
             return p
         case .idle, .waitingForBluetooth:

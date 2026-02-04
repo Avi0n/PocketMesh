@@ -24,12 +24,12 @@ struct ExpandableSettingsSection<Content: View>: View {
                 // Show error banner if something failed
                 if let error, !isLoaded() {
                     VStack(spacing: 12) {
-                        Label("Failed to load", systemImage: "exclamationmark.triangle")
+                        Label(L10n.Localizable.Common.Error.failedToLoad, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Button("Try Again") {
+                        Button(L10n.Localizable.Common.tryAgain) {
                             Task { await onLoad() }
                         }
                         .buttonStyle(.bordered)

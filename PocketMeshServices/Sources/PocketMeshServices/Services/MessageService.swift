@@ -411,15 +411,15 @@ public actor MessageService {
         // Capture initial routing state to detect changes
         let initialPathLength = contact.outPathLength
 
-        // Use MeshCoreSession's retry logic
+        // Run app-layer retry loop with UI notifications
         do {
-            let sentInfo = try await session.sendMessageWithRetry(
-                to: contact.publicKey,
+            let sentInfo = try await sendDirectMessageWithRetryLoop(
+                messageID: messageID,
+                contactID: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
                 text: text,
                 timestamp: Date(timeIntervalSince1970: TimeInterval(timestamp)),
-                maxAttempts: config.maxAttempts,
-                floodAfter: config.floodAfter,
-                maxFloodAttempts: config.maxFloodAttempts,
                 timeout: timeout > 0 ? timeout : nil
             )
 
@@ -609,25 +609,16 @@ public actor MessageService {
             throw MessageServiceError.sendFailed("Message not found")
         }
 
-        // Update message to show retry is starting
-        try await dataStore.updateMessageRetryStatus(
-            id: messageID,
-            status: .retrying,
-            retryAttempt: 0,
-            maxRetryAttempts: config.maxAttempts
-        )
-
-        // Notify UI that retry has started (triggers message list reload)
-        await retryStatusHandler?(messageID, 0, config.maxAttempts)
-
+        // Run app-layer retry loop with UI notifications
         do {
-            let sentInfo = try await session.sendMessageWithRetry(
-                to: contact.publicKey,
+            let sentInfo = try await sendDirectMessageWithRetryLoop(
+                messageID: messageID,
+                contactID: contact.id,
+                deviceID: contact.deviceID,
+                publicKey: contact.publicKey,
                 text: existingMessage.text,
                 timestamp: Date(timeIntervalSince1970: TimeInterval(existingMessage.timestamp)),
-                maxAttempts: config.maxAttempts,
-                floodAfter: config.floodAfter,
-                maxFloodAttempts: config.maxFloodAttempts
+                timeout: nil
             )
 
             if let sentInfo {
@@ -663,6 +654,121 @@ public actor MessageService {
             try await dataStore.updateMessageStatus(id: messageID, status: .failed)
             throw error
         }
+    }
+
+    // MARK: - Direct Message Retry Loop
+
+    /// Sends a direct message with app-layer retry logic and UI notifications.
+    ///
+    /// This function manages the retry loop at the app layer (instead of delegating to MeshCore)
+    /// to provide per-attempt UI feedback. On each attempt, it:
+    /// - Updates the message status in the database
+    /// - Notifies the UI via `retryStatusHandler`
+    /// - Switches to flood routing after `floodAfter` failed attempts
+    /// - Notifies UI of routing changes via `routingChangedHandler`
+    ///
+    /// - Parameters:
+    ///   - messageID: The message ID for status updates
+    ///   - contactID: The contact ID for routing change notifications
+    ///   - deviceID: The device ID for saving contact updates
+    ///   - publicKey: The full 32-byte destination public key
+    ///   - text: The message text
+    ///   - timestamp: The message timestamp (must remain constant across retries)
+    ///   - timeout: Optional custom timeout per attempt (nil = use device suggested)
+    ///
+    /// - Returns: `MessageSentInfo` if ACK received, `nil` if all attempts exhausted
+    /// - Throws: `MeshCoreError` if send fails with unrecoverable error
+    private func sendDirectMessageWithRetryLoop(
+        messageID: UUID,
+        contactID: UUID,
+        deviceID: UUID,
+        publicKey: Data,
+        text: String,
+        timestamp: Date,
+        timeout: TimeInterval?
+    ) async throws -> MessageSentInfo? {
+        var attempts = 0
+        var floodAttempts = 0
+        var isFloodMode = false
+
+        while attempts < config.maxAttempts && (!isFloodMode || floodAttempts < config.maxFloodAttempts) {
+            // Check for task cancellation
+            guard !Task.isCancelled else {
+                throw CancellationError()
+            }
+
+            // Update database and notify UI of retry status (only after first attempt fails)
+            if attempts > 0 {
+                try await dataStore.updateMessageRetryStatus(
+                    id: messageID,
+                    status: .retrying,
+                    retryAttempt: attempts - 1,
+                    maxRetryAttempts: config.maxAttempts - 1
+                )
+                await retryStatusHandler?(messageID, attempts - 1, config.maxAttempts - 1)
+            }
+
+            // Switch to flood routing after floodAfter direct attempts
+            if attempts == config.floodAfter && !isFloodMode {
+                logger.info("Resetting path to flood after \(attempts) failed attempts")
+                do {
+                    try await session.resetPath(publicKey: publicKey)
+                    isFloodMode = true
+
+                    // Notify UI of routing change and save updated contact
+                    if let updatedContact = try await session.getContact(publicKey: publicKey) {
+                        _ = try await dataStore.saveContact(deviceID: deviceID, from: updatedContact.toContactFrame())
+                    }
+                    await routingChangedHandler?(contactID, true)
+                } catch {
+                    logger.warning("Failed to reset path: \(error.localizedDescription), continuing...")
+                    // Continue anyway - device might handle it
+                    isFloodMode = true
+                }
+            }
+
+            if attempts > 0 {
+                logger.info("Retry sending message: attempt \(attempts + 1)/\(config.maxAttempts)")
+            }
+
+            // Send the message
+            let sentInfo = try await session.sendMessage(
+                to: publicKey.prefix(6),
+                text: text,
+                timestamp: timestamp,
+                attempt: UInt8(attempts)
+            )
+
+            // Wait for ACK with timeout
+            let ackTimeout = timeout ?? max(
+                config.minTimeout,
+                Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
+            )
+
+            let ackEvent = await session.waitForEvent(
+                matching: { event in
+                    if case .acknowledgement(let code, _) = event {
+                        return code == sentInfo.expectedAck
+                    }
+                    return false
+                },
+                timeout: ackTimeout
+            )
+
+            if ackEvent != nil {
+                logger.info("Message acknowledged on attempt \(attempts + 1)")
+                return sentInfo
+            }
+
+            // ACK timeout - increment counters and retry
+            attempts += 1
+            if isFloodMode {
+                floodAttempts += 1
+            }
+        }
+
+        logger.warning("Message delivery failed after \(attempts) attempts")
+        return nil
     }
 
     // MARK: - Routing Change Detection

@@ -127,6 +127,10 @@ public actor RemoteNodeService {
     /// Multiple requests per destination stored in order for FIFO fallback.
     private var pendingCLIRequests: [Data: [PendingCLIRequest]] = [:]
 
+    /// Pending raw CLI requests for passthrough (FIFO matching, single request per sender).
+    /// Used by CLI tool where any response should be delivered without content-based matching.
+    private var pendingRawCLIRequests: [Data: CheckedContinuation<String, Error>] = [:]
+
     /// Keep-alive timer tasks
     private var keepAliveTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -234,6 +238,15 @@ public actor RemoteNodeService {
     /// Handle CLI response from a contact message.
     private func handleCLIResponse(_ message: ContactMessage) {
         let prefix = Data(message.senderPublicKeyPrefix.prefix(6))
+
+        // Check raw CLI requests first (FIFO - single pending per sender)
+        // Used by CLI tool for passthrough where any response is accepted
+        if let continuation = pendingRawCLIRequests.removeValue(forKey: prefix) {
+            continuation.resume(returning: message.text)
+            return
+        }
+
+        // Fall back to content-based matching for structured requests
         guard var requests = pendingCLIRequests[prefix], !requests.isEmpty else {
             return
         }
@@ -310,7 +323,7 @@ public actor RemoteNodeService {
             lastUptimeSeconds: existing?.lastUptimeSeconds,
             lastNoiseFloor: existing?.lastNoiseFloor,
             unreadCount: existing?.unreadCount ?? 0,
-            isMuted: existing?.isMuted ?? false,
+            notificationLevel: existing?.notificationLevel ?? .all,
             lastRxAirtimeSeconds: existing?.lastRxAirtimeSeconds,
             neighborCount: existing?.neighborCount ?? 0
         )
@@ -530,6 +543,7 @@ public actor RemoteNodeService {
             } catch {
                 logger.error("handleLoginResult: failed to update session state: \(error)")
             }
+            continuation.resume(returning: result)
         } else {
             // Log failed login
             // Try to determine target type from existing session
@@ -539,9 +553,8 @@ public actor RemoteNodeService {
             } else {
                 await auditLogger.logLoginFailed(target: .repeater, publicKey: prefix, reason: "authentication failed")
             }
+            continuation.resume(throwing: RemoteNodeError.loginFailed("authentication failed"))
         }
-
-        continuation.resume(returning: result)
     }
 
     // MARK: - Keep-Alive (Room Servers)
@@ -810,6 +823,127 @@ public actor RemoteNodeService {
                     timedOut.continuation.resume(throwing: RemoteNodeError.timeout)
                 }
             }
+        }
+    }
+
+    /// Send a raw CLI command to a remote node using FIFO response matching (admin only).
+    /// Unlike `sendCLICommand`, this method accepts any response from the target node
+    /// without content-based matching. Used by CLI tool for passthrough commands.
+    /// - Parameters:
+    ///   - sessionID: The remote node session ID.
+    ///   - command: The CLI command to send.
+    ///   - timeout: Maximum time to wait for response (default 10 seconds).
+    /// - Returns: The raw response text from the remote node.
+    public func sendRawCLICommand(
+        sessionID: UUID,
+        command: String,
+        timeout: Duration = .seconds(10)
+    ) async throws -> String {
+        guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
+            throw RemoteNodeError.sessionNotFound
+        }
+
+        guard remoteSession.isAdmin else {
+            throw RemoteNodeError.permissionDenied
+        }
+
+        // Log CLI command (with password redaction)
+        await auditLogger.logCLICommand(publicKey: remoteSession.publicKey, command: command)
+
+        let destinationPrefix = Data(remoteSession.publicKey.prefix(6))
+
+        // Only one raw CLI request per sender at a time (FIFO matching)
+        guard pendingRawCLIRequests[destinationPrefix] == nil else {
+            throw RemoteNodeError.sessionError(.connectionLost(underlying: nil))
+        }
+
+        // Register continuation BEFORE sending to avoid race condition
+        // Use withTaskCancellationHandler to clean up pending request if caller cancels
+        let response = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pendingRawCLIRequests[destinationPrefix] = continuation
+
+                Task { [self] in
+                    // Send CLI command
+                    do {
+                        _ = try await session.sendCommand(to: remoteSession.publicKey, command: command)
+                    } catch {
+                        // Send failed - remove pending request and resume with error
+                        if let pending = pendingRawCLIRequests.removeValue(forKey: destinationPrefix) {
+                            let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
+                            pending.resume(throwing: RemoteNodeError.sessionError(meshError))
+                        }
+                        return
+                    }
+
+                    // Poll for response
+                    let (seconds, attoseconds) = timeout.components
+                    let deadline = Date().addingTimeInterval(TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18)
+                    while Date() < deadline {
+                        // Check if our request was already satisfied
+                        guard pendingRawCLIRequests[destinationPrefix] != nil else {
+                            return  // Request was matched and removed by handleCLIResponse
+                        }
+
+                        // Check for task cancellation
+                        if Task.isCancelled {
+                            if let cancelled = pendingRawCLIRequests.removeValue(forKey: destinationPrefix) {
+                                cancelled.resume(throwing: CancellationError())
+                            }
+                            return
+                        }
+
+                        // Poll device for pending messages
+                        _ = try? await session.getMessage()
+
+                        // Small delay between polls
+                        try? await Task.sleep(for: .milliseconds(500))
+                    }
+
+                    // Timeout - remove pending request and resume with error
+                    if let timedOut = pendingRawCLIRequests.removeValue(forKey: destinationPrefix) {
+                        timedOut.resume(throwing: RemoteNodeError.timeout)
+                    }
+                }
+            }
+        } onCancel: { [weak self] in
+            Task { [weak self] in
+                await self?.cancelPendingRawCLIRequest(for: destinationPrefix)
+            }
+        }
+
+        // Clear stored password after admin password change
+        await handlePasswordChangeIfNeeded(command: command, sessionID: sessionID)
+
+        return response
+    }
+
+    /// Clear stored password if command is an admin password change.
+    private func handlePasswordChangeIfNeeded(command: String, sessionID: UUID) async {
+        let lower = command.lowercased().trimmingCharacters(in: .whitespaces)
+
+        // Only admin password changes, not guest
+        guard lower.hasPrefix("password ") && !lower.contains("guest.password") else {
+            return
+        }
+
+        guard let session = try? await dataStore.fetchRemoteNodeSession(id: sessionID) else {
+            return
+        }
+
+        do {
+            try await keychainService.deletePassword(forNodeKey: session.publicKey)
+            logger.info("Cleared stored password after password change for session \(sessionID)")
+        } catch {
+            logger.warning("Failed to clear stored password for session \(sessionID): \(error)")
+            // Next login fails naturally - user re-enters password, overwrites stale credential
+        }
+    }
+
+    /// Cancel a pending raw CLI request when the calling task is cancelled.
+    private func cancelPendingRawCLIRequest(for prefix: Data) {
+        if let cancelled = pendingRawCLIRequests.removeValue(forKey: prefix) {
+            cancelled.resume(throwing: CancellationError())
         }
     }
 

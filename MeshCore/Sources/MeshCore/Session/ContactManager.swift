@@ -185,6 +185,13 @@ struct ContactManager {
             isDirty = false
         case .advertisement, .pathUpdate:
             isDirty = true
+        case .contactDeleted(let publicKey):
+            let contactId = publicKey.hexString
+            contacts.removeValue(forKey: contactId)
+            pendingContacts.removeValue(forKey: contactId)
+            isDirty = true
+        case .contactsFull:
+            isDirty = true
         default:
             break
         }

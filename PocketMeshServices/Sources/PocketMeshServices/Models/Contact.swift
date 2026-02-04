@@ -64,10 +64,6 @@ public final class Contact {
     /// Unread mention count (mentions of current user not yet seen)
     public var unreadMentionCount: Int = 0
 
-    /// Whether this contact was discovered via advertisement but not yet added to device
-    /// Contacts from NEW_ADVERT push have this set to true until explicitly added
-    public var isDiscovered: Bool
-
     /// Selected OCV preset name (nil = liIon default)
     public var ocvPreset: String?
 
@@ -94,7 +90,6 @@ public final class Contact {
         lastMessageDate: Date? = nil,
         unreadCount: Int = 0,
         unreadMentionCount: Int = 0,
-        isDiscovered: Bool = false,
         ocvPreset: String? = nil,
         customOCVArrayString: String? = nil
     ) {
@@ -117,7 +112,6 @@ public final class Contact {
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount
-        self.isDiscovered = isDiscovered
         self.ocvPreset = ocvPreset
         self.customOCVArrayString = customOCVArrayString
     }
@@ -135,7 +129,8 @@ public final class Contact {
             lastAdvertTimestamp: frame.lastAdvertTimestamp,
             latitude: frame.latitude,
             longitude: frame.longitude,
-            lastModified: frame.lastModified
+            lastModified: frame.lastModified,
+            isFavorite: (frame.flags & 0x01) != 0
         )
     }
 }
@@ -193,6 +188,7 @@ public extension Contact {
         self.latitude = frame.latitude
         self.longitude = frame.longitude
         self.lastModified = frame.lastModified
+        self.isFavorite = (frame.flags & 0x01) != 0
     }
 
     /// Converts to a protocol ContactFrame for sending to device
@@ -235,7 +231,6 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
     public let lastMessageDate: Date?
     public let unreadCount: Int
     public let unreadMentionCount: Int
-    public let isDiscovered: Bool
     public let ocvPreset: String?
     public let customOCVArrayString: String?
 
@@ -259,7 +254,6 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.lastMessageDate = contact.lastMessageDate
         self.unreadCount = contact.unreadCount
         self.unreadMentionCount = contact.unreadMentionCount
-        self.isDiscovered = contact.isDiscovered
         self.ocvPreset = contact.ocvPreset
         self.customOCVArrayString = contact.customOCVArrayString
     }
@@ -282,7 +276,6 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         isBlocked: Bool,
         isMuted: Bool,
         isFavorite: Bool,
-        isDiscovered: Bool,
         lastMessageDate: Date?,
         unreadCount: Int,
         unreadMentionCount: Int = 0,
@@ -305,7 +298,6 @@ public struct ContactDTO: Sendable, Equatable, Identifiable, Hashable {
         self.isBlocked = isBlocked
         self.isMuted = isMuted
         self.isFavorite = isFavorite
-        self.isDiscovered = isDiscovered
         self.lastMessageDate = lastMessageDate
         self.unreadCount = unreadCount
         self.unreadMentionCount = unreadMentionCount

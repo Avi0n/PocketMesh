@@ -40,7 +40,8 @@ struct RepeatDetailsSheet: View {
                         ForEach(repeats) { repeatEntry in
                             RepeatRowView(
                                 repeatEntry: repeatEntry,
-                                contacts: contacts
+                                repeaters: repeaters,
+                                userLocation: appState.locationService.currentLocation
                             )
                         }
                     }
@@ -77,6 +78,9 @@ struct RepeatDetailsSheet: View {
         isLoading = false
     }
 
+    private var repeaters: [ContactDTO] {
+        contacts.filter { $0.type == .repeater }
+    }
 }
 
 #Preview("With Repeats") {

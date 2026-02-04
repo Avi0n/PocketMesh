@@ -163,7 +163,7 @@ struct WiFiEditSheet: View {
         Task {
             do {
                 // Disconnect from current connection, then connect to new address
-                await appState.disconnect()
+                await appState.disconnect(reason: .wifiAddressChange)
                 try await appState.connectViaWiFi(host: ipAddress, port: portNumber, forceFullSync: true)
                 dismiss()
             } catch {

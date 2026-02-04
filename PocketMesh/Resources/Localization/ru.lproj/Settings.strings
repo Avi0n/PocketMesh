@@ -361,6 +361,54 @@
 "contacts.autoAddDescription" = "Автоматически добавлять узлы из полученных объявлений";
 
 
+// MARK: - Nodes Settings Section
+
+/* Section header for nodes settings */
+"nodes.header" = "Nodes";
+
+/* Label for auto-add mode picker */
+"nodes.autoAddMode" = "Auto-Add Mode";
+
+/* Auto-add mode: manual */
+"nodes.autoAddMode.manual" = "Manual";
+
+/* Auto-add mode: manual description */
+"nodes.autoAddMode.manualDescription" = "Review all nodes in Discover before adding";
+
+/* Auto-add mode: selected types */
+"nodes.autoAddMode.selectedTypes" = "Selected Types";
+
+/* Auto-add mode: selected types description */
+"nodes.autoAddMode.selectedTypesDescription" = "Auto-add only the types enabled below";
+
+/* Auto-add mode: all */
+"nodes.autoAddMode.all" = "All";
+
+/* Auto-add mode: all description */
+"nodes.autoAddMode.allDescription" = "Auto-add every discovered node";
+
+/* Section header for auto-add types */
+"nodes.autoAddTypes.header" = "Auto-Add Types";
+
+/* Toggle label for auto-add contacts */
+"nodes.autoAddContacts" = "Contacts";
+
+/* Toggle label for auto-add repeaters */
+"nodes.autoAddRepeaters" = "Repeaters";
+
+/* Toggle label for auto-add room servers */
+"nodes.autoAddRoomServers" = "Room Servers";
+
+/* Section header for storage settings */
+"nodes.storage.header" = "Storage";
+
+/* Toggle label for overwrite oldest */
+"nodes.overwriteOldest" = "Overwrite Oldest";
+
+/* Description for overwrite oldest toggle */
+"nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
@@ -630,6 +678,9 @@
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Пожалуйста, убедитесь, что ваше устройство подключено.";
 
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Убедитесь, что устройство подключено, и попробуйте снова.";
+
 
 // MARK: - Battery Curve Chart
 
@@ -656,3 +707,45 @@
 
 /* Footer explaining what the message display options show */
 "messages.footer" = "Показывать информацию о маршрутизации во входящих сообщениях.";
+
+
+// MARK: - BLE Status Indicator
+
+/* Menu item to send a zero-hop advertisement */
+"bleStatus.sendZeroHopAdvert" = "Отправить Zero-Hop объявление";
+
+/* Menu item to send a flood advertisement */
+"bleStatus.sendFloodAdvert" = "Отправить Flood объявление";
+
+/* Menu item to change the connected device */
+"bleStatus.changeDevice" = "Сменить устройство";
+
+/* Menu item to disconnect from the current device */
+"bleStatus.disconnect" = "Отключить";
+
+/* Status shown when device is disconnected */
+"bleStatus.status.disconnected" = "Отключено";
+
+/* Status shown when device is connecting */
+"bleStatus.status.connecting" = "Подключение...";
+
+/* Status shown when device is connected but not ready */
+"bleStatus.status.connected" = "Подключено";
+
+/* Status shown when device is ready */
+"bleStatus.status.ready" = "Готово";
+
+/* Accessibility label for BLE status indicator */
+"bleStatus.accessibilityLabel" = "Статус Bluetooth-подключения";
+
+/* Accessibility hint when disconnected */
+"bleStatus.accessibilityHint.disconnected" = "Дважды коснитесь для подключения устройства";
+
+/* Accessibility hint when connected */
+"bleStatus.accessibilityHint.connected" = "Показывает параметры подключения устройства";
+
+/* Accessibility hint for zero-hop advert button */
+"bleStatus.sendZeroHopAdvert.hint" = "Передаёт только прямым соседям";
+
+/* Accessibility hint for flood advert button */
+"bleStatus.sendFloodAdvert.hint" = "Распространяет объявление по всей сети mesh";

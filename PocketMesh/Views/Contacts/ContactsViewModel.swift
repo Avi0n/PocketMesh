@@ -60,10 +60,14 @@ final class ContactsViewModel {
     /// User's current location for distance sorting (optional)
     var userLocation: CLLocation?
 
+    /// Contact ID currently having its favorite status toggled (for loading UI)
+    var togglingFavoriteID: UUID?
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
     private var contactService: ContactService?
+    private var advertisementService: AdvertisementService?
 
     // MARK: - Initialization
 
@@ -73,12 +77,18 @@ final class ContactsViewModel {
     func configure(appState: AppState) {
         self.dataStore = appState.offlineDataStore
         self.contactService = appState.services?.contactService
+        self.advertisementService = appState.services?.advertisementService
     }
 
     /// Configure with services (for testing)
-    func configure(dataStore: DataStore, contactService: ContactService) {
+    func configure(
+        dataStore: DataStore,
+        contactService: ContactService,
+        advertisementService: AdvertisementService? = nil
+    ) {
         self.dataStore = dataStore
         self.contactService = contactService
+        self.advertisementService = advertisementService
     }
 
     // MARK: - Load Contacts
@@ -110,6 +120,15 @@ final class ContactsViewModel {
         syncProgress = nil
         errorMessage = nil
 
+        if let advertisementService {
+            await advertisementService.setSyncingContacts(true)
+        }
+        defer {
+            if let advertisementService {
+                Task { await advertisementService.setSyncingContacts(false) }
+            }
+        }
+
         // Set up progress handler
         await contactService.setSyncProgressHandler { [weak self] current, total in
             Task { @MainActor in
@@ -134,17 +153,17 @@ final class ContactsViewModel {
 
     // MARK: - Contact Actions
 
-    /// Toggle favorite status
+    /// Toggle favorite status on device and update local state
     func toggleFavorite(contact: ContactDTO) async {
         guard let contactService else { return }
 
-        do {
-            try await contactService.updateContactPreferences(
-                contactID: contact.id,
-                isFavorite: !contact.isFavorite
-            )
+        togglingFavoriteID = contact.id
+        defer { togglingFavoriteID = nil }
 
-            // Update local list
+        do {
+            try await contactService.setContactFavorite(contact.id, isFavorite: !contact.isFavorite)
+
+            // Reload to get updated state
             if contacts.contains(where: { $0.id == contact.id }) {
                 await loadContacts(deviceID: contact.deviceID)
             }

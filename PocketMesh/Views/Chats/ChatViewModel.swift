@@ -152,6 +152,23 @@ final class ChatViewModel {
     /// In-flight preview fetch tasks (prevents duplicate fetches)
     private var previewFetchTasks: [UUID: Task<Void, Never>] = [:]
 
+    // MARK: - Pagination State
+
+    /// Whether currently fetching older messages (exposed for UI binding)
+    private(set) var isLoadingOlder = false
+
+    /// Whether more messages exist beyond what's loaded
+    private var hasMoreMessages = true
+
+    /// Number of messages to fetch per page
+    private let pageSize = 50
+
+    /// Cached blocked contact names for channel filtering (set during initial load)
+    private var cachedBlockedNames: Set<String> = []
+
+    /// Total messages fetched from database (unfiltered, for accurate offset calculation)
+    private var totalFetchedCount = 0
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -160,8 +177,12 @@ final class ChatViewModel {
     private var notificationService: NotificationService?
     private var channelService: ChannelService?
     private var roomServerService: RoomServerService?
+    private var contactService: ContactService?
     private var syncCoordinator: SyncCoordinator?
     private weak var appState: AppState?
+
+    /// Contact ID currently having its favorite status toggled (for loading UI)
+    var togglingFavoriteID: UUID?
 
     // MARK: - Initialization
 
@@ -175,6 +196,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
         self.linkPreviewCache = linkPreviewCache
     }
@@ -187,6 +209,7 @@ final class ChatViewModel {
         self.notificationService = appState.services?.notificationService
         self.channelService = appState.services?.channelService
         self.roomServerService = appState.services?.roomServerService
+        self.contactService = appState.services?.contactService
         self.syncCoordinator = appState.syncCoordinator
     }
 
@@ -197,37 +220,42 @@ final class ChatViewModel {
         self.linkPreviewCache = linkPreviewCache
     }
 
-    // MARK: - Mute
+    // MARK: - Notification Level
 
-    /// Toggles mute state for a conversation with optimistic UI update
-    func toggleMute(_ conversation: Conversation) async {
+    /// Sets notification level for a conversation with optimistic UI update
+    func setNotificationLevel(_ conversation: Conversation, level: NotificationLevel) async {
         guard appState?.connectionState == .ready else { return }
-        let originalState = conversation.isMuted
-        let newState = !originalState
+        let originalLevel = conversation.notificationLevel
 
         // Optimistic UI update
-        updateConversationMuteState(conversation, isMuted: newState)
+        updateConversationNotificationLevel(conversation, level: level)
 
         do {
             switch conversation {
             case .direct(let contact):
-                try await dataStore?.setContactMuted(contact.id, isMuted: newState)
+                // Contacts still use boolean muted
+                try await dataStore?.setContactMuted(contact.id, isMuted: level == .muted)
             case .channel(let channel):
-                try await dataStore?.setChannelMuted(channel.id, isMuted: newState)
+                try await dataStore?.setChannelNotificationLevel(channel.id, level: level)
             case .room(let session):
-                try await dataStore?.setSessionMuted(session.id, isMuted: newState)
+                try await dataStore?.setSessionNotificationLevel(session.id, level: level)
             }
-            // Update badge on success
             await notificationService?.updateBadgeCount()
         } catch {
             // Rollback on failure
-            updateConversationMuteState(conversation, isMuted: originalState)
-            logger.error("Failed to toggle mute: \(error)")
+            updateConversationNotificationLevel(conversation, level: originalLevel)
+            logger.error("Failed to set notification level: \(error)")
         }
     }
 
-    /// Updates the mute state in the local conversations array
-    private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+    /// Toggles between muted and all (for swipe action)
+    func toggleMute(_ conversation: Conversation) async {
+        let newLevel: NotificationLevel = conversation.isMuted ? .all : .muted
+        await setNotificationLevel(conversation, level: newLevel)
+    }
+
+    /// Updates the notification level in the local conversations array
+    private func updateConversationNotificationLevel(_ conversation: Conversation, level: NotificationLevel) {
         invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
@@ -248,9 +276,8 @@ final class ChatViewModel {
                     lastModified: updated.lastModified,
                     nickname: updated.nickname,
                     isBlocked: updated.isBlocked,
-                    isMuted: isMuted,
+                    isMuted: level == .muted,
                     isFavorite: updated.isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -270,7 +297,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite
                 )
             }
@@ -292,7 +319,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
@@ -304,7 +331,21 @@ final class ChatViewModel {
 
     // MARK: - Favorite
 
-    /// Toggles favorite state for a conversation with optimistic UI update
+    /// Sets favorite state for a conversation with optimistic UI update
+    func setFavorite(_ conversation: Conversation, isFavorite: Bool) async {
+        guard appState?.connectionState == .ready else { return }
+        guard conversation.isFavorite != isFavorite else { return }
+
+        // Reuse existing toggle logic
+        await toggleFavorite(conversation)
+    }
+
+    /// Toggles favorite state for a conversation.
+    ///
+    /// For direct messages (contacts), this pushes the change to the device and waits
+    /// for confirmation before updating the UI. For channels and rooms (app-only),
+    /// this uses optimistic updates.
+    ///
     /// - Parameters:
     ///   - conversation: The conversation to toggle
     ///   - disableAnimation: When true, disables SwiftUI List animations to prevent
@@ -314,38 +355,83 @@ final class ChatViewModel {
         let originalState = conversation.isFavorite
         let newState = !originalState
 
-        // Optimistic UI update
-        if disableAnimation {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                updateConversationFavoriteState(conversation, isFavorite: newState)
-            }
-        } else {
-            updateConversationFavoriteState(conversation, isFavorite: newState)
-        }
+        switch conversation {
+        case .direct(let contact):
+            // Contacts sync with device - wait for confirmation
+            togglingFavoriteID = contact.id
+            defer { togglingFavoriteID = nil }
 
-        do {
-            switch conversation {
-            case .direct(let contact):
-                try await dataStore?.setContactFavorite(contact.id, isFavorite: newState)
-            case .channel(let channel):
-                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
-            case .room(let session):
-                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            do {
+                try await contactService?.setContactFavorite(contact.id, isFavorite: newState)
+                // Device confirmed - update local UI
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: newState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } catch {
+                logger.error("Failed to toggle contact favorite: \(error)")
             }
-        } catch {
-            // Rollback on failure
+
+        case .channel(let channel):
+            // Channels are app-only - optimistic update
             if disableAnimation {
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
                 }
             } else {
-                updateConversationFavoriteState(conversation, isFavorite: originalState)
+                updateConversationFavoriteState(conversation, isFavorite: newState)
             }
-            logger.error("Failed to toggle favorite: \(error)")
+
+            do {
+                try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle channel favorite: \(error)")
+            }
+
+        case .room(let session):
+            // Rooms are app-only - optimistic update
+            if disableAnimation {
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    updateConversationFavoriteState(conversation, isFavorite: newState)
+                }
+            } else {
+                updateConversationFavoriteState(conversation, isFavorite: newState)
+            }
+
+            do {
+                try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
+            } catch {
+                // Rollback on failure
+                if disableAnimation {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        updateConversationFavoriteState(conversation, isFavorite: originalState)
+                    }
+                } else {
+                    updateConversationFavoriteState(conversation, isFavorite: originalState)
+                }
+                logger.error("Failed to toggle room favorite: \(error)")
+            }
         }
     }
 
@@ -373,7 +459,6 @@ final class ChatViewModel {
                     isBlocked: updated.isBlocked,
                     isMuted: updated.isMuted,
                     isFavorite: isFavorite,
-                    isDiscovered: updated.isDiscovered,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     ocvPreset: updated.ocvPreset,
@@ -393,7 +478,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite
                 )
             }
@@ -415,7 +500,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
@@ -522,8 +607,16 @@ final class ChatViewModel {
         isLoading = true
         errorMessage = nil
 
+        // Reset pagination state for new conversation
+        hasMoreMessages = true
+        isLoadingOlder = false
+        cachedBlockedNames = []
+        totalFetchedCount = 0
+
         do {
-            messages = try await dataStore.fetchMessages(contactID: contact.id)
+            messages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
+            totalFetchedCount = messages.count
+            hasMoreMessages = messages.count == pageSize
             await buildDisplayItems()
 
             // Clear unread count and notify UI to refresh chat list
@@ -548,6 +641,7 @@ final class ChatViewModel {
         let previous = messages.last
         messages.append(message)
         messagesByID[message.id] = message
+        totalFetchedCount += 1
 
         // Build display item synchronously for immediate consistency
         let flags = Self.computeDisplayFlags(for: message, previous: previous)
@@ -562,6 +656,8 @@ final class ChatViewModel {
             containsSelfMention: message.containsSelfMention,
             mentionSeen: message.mentionSeen,
             heardRepeats: message.heardRepeats,
+            retryAttempt: message.retryAttempt,
+            maxRetryAttempts: message.maxRetryAttempts,
             previewState: .idle,
             loadedPreview: nil
         )
@@ -603,6 +699,8 @@ final class ChatViewModel {
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -682,9 +780,17 @@ final class ChatViewModel {
         isLoading = true
         errorMessage = nil
 
+        // Reset pagination state for new conversation
+        hasMoreMessages = true
+        isLoadingOlder = false
+        cachedBlockedNames = []
+        totalFetchedCount = 0
+
         do {
-            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index)
-            logger.info("loadChannelMessages: fetched \(fetchedMessages.count) messages")
+            var fetchedMessages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: pageSize, offset: 0)
+            let unfilteredCount = fetchedMessages.count
+            totalFetchedCount = unfilteredCount
+            logger.info("loadChannelMessages: fetched \(unfilteredCount) messages")
 
             // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
             let blockedNames: Set<String>
@@ -696,6 +802,9 @@ final class ChatViewModel {
                 blockedNames = []
             }
 
+            // Cache for pagination
+            cachedBlockedNames = blockedNames
+
             if !blockedNames.isEmpty {
                 fetchedMessages = fetchedMessages.filter { message in
                     guard let senderName = message.senderNodeName else { return true }
@@ -703,6 +812,8 @@ final class ChatViewModel {
                 }
             }
 
+            // Use unfiltered count to determine if more messages exist
+            hasMoreMessages = unfilteredCount == pageSize
             messages = fetchedMessages
             buildChannelSenders(deviceID: channel.deviceID)
             await buildDisplayItems()
@@ -721,6 +832,75 @@ final class ChatViewModel {
         logger.info("loadChannelMessages: done, isLoading=false, messages.count=\(self.messages.count)")
         hasLoadedOnce = true
         isLoading = false
+    }
+
+    // MARK: - Pagination
+
+    /// Load older messages when user scrolls near the top
+    func loadOlderMessages() async {
+        // Guard against duplicate fetches and end of history
+        guard !isLoadingOlder, hasMoreMessages else { return }
+        guard let dataStore else { return }
+
+        isLoadingOlder = true
+        defer { isLoadingOlder = false }
+
+        do {
+            let currentOffset = totalFetchedCount
+            var olderMessages: [MessageDTO]
+
+            if let contact = currentContact {
+                olderMessages = try await dataStore.fetchMessages(
+                    contactID: contact.id,
+                    limit: pageSize,
+                    offset: currentOffset
+                )
+            } else if let channel = currentChannel {
+                olderMessages = try await dataStore.fetchMessages(
+                    deviceID: channel.deviceID,
+                    channelIndex: channel.index,
+                    limit: pageSize,
+                    offset: currentOffset
+                )
+            } else {
+                return
+            }
+
+            // Use unfiltered count to determine if more messages exist
+            let unfilteredCount = olderMessages.count
+            totalFetchedCount += unfilteredCount
+            if unfilteredCount < pageSize {
+                hasMoreMessages = false
+            }
+
+            // Filter blocked senders for channel messages (use cached names from initial load)
+            if currentChannel != nil && !cachedBlockedNames.isEmpty {
+                olderMessages = olderMessages.filter { message in
+                    guard let senderName = message.senderNodeName else { return true }
+                    return !cachedBlockedNames.contains(senderName)
+                }
+            }
+
+            // Filter out messages already in array (race condition: appendMessageIfNew can add
+            // a message while this fetch is in-flight, causing duplicates)
+            let existingIDs = Set(messages.map(\.id))
+            olderMessages = olderMessages.filter { !existingIDs.contains($0.id) }
+
+            // Prepend older messages (they're chronologically earlier)
+            messages.insert(contentsOf: olderMessages, at: 0)
+
+            // Update lookup dictionary
+            for message in olderMessages {
+                messagesByID[message.id] = message
+            }
+
+            // Rebuild display items with new messages
+            await buildDisplayItems()
+
+        } catch {
+            errorMessage = L10n.Chats.Chats.Errors.loadOlderMessagesFailed
+            logger.error("Failed to load older messages: \(error)")
+        }
     }
 
     /// Send a channel message
@@ -815,7 +995,6 @@ final class ChatViewModel {
             isBlocked: false,
             isMuted: false,
             isFavorite: false,
-            isDiscovered: false,
             lastMessageDate: nil,
             unreadCount: 0
         )
@@ -877,6 +1056,8 @@ final class ChatViewModel {
 
                     if let lastMessage {
                         lastMessageCache[channel.id] = lastMessage
+                    } else {
+                        lastMessageCache.removeValue(forKey: channel.id)
                     }
                 } catch {
                     // Silently ignore errors for preview loading
@@ -910,6 +1091,10 @@ final class ChatViewModel {
         logger.info("retryMessage: starting retry for contact \(contact.displayName)")
 
         errorMessage = nil
+
+        // Update status to pending and reload immediately for instant "Sending" feedback
+        try? await dataStore?.updateMessageStatus(id: message.id, status: .pending)
+        await loadMessages(for: contact)
 
         do {
             // Retry the existing message (preserves message identity)
@@ -1180,6 +1365,8 @@ final class ChatViewModel {
                 containsSelfMention: message.containsSelfMention,
                 mentionSeen: message.mentionSeen,
                 heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
                 previewState: previewStates[message.id] ?? .idle,
                 loadedPreview: loadedPreviews[message.id]
             )
@@ -1312,6 +1499,8 @@ final class ChatViewModel {
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
             heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
             previewState: previewStates[messageID] ?? .idle,
             loadedPreview: loadedPreviews[messageID]
         )
@@ -1376,7 +1565,7 @@ final class ChatViewModel {
                 lastDeviceID = contact.deviceID
 
                 do {
-                    _ = try await messageService.sendExistingMessage(
+                    _ = try await messageService.retryDirectMessage(
                         messageID: queued.messageID,
                         to: contact
                     )
@@ -1393,5 +1582,18 @@ final class ChatViewModel {
                 await loadConversations(deviceID: deviceID)
             }
         } while !sendQueue.isEmpty
+    }
+}
+
+// MARK: - Environment Key
+
+private struct ChatViewModelKey: EnvironmentKey {
+    static let defaultValue: ChatViewModel? = nil
+}
+
+extension EnvironmentValues {
+    var chatViewModel: ChatViewModel? {
+        get { self[ChatViewModelKey.self] }
+        set { self[ChatViewModelKey.self] = newValue }
     }
 }

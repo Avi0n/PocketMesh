@@ -108,6 +108,9 @@ public final class AppState {
     /// Whether device pairing is in progress (ASK picker or connecting after selection)
     var isPairing = false
 
+    /// Whether the device's node storage is full (set by 0x90 push, cleared on delete/overwrite)
+    var isNodeStorageFull = false
+
     /// Current device battery info (nil if not fetched)
     var deviceBattery: BatteryInfo?
 
@@ -142,6 +145,9 @@ public final class AppState {
     /// Contact to navigate to
     var pendingChatContact: ContactDTO?
 
+    /// Channel to navigate to
+    var pendingChannel: ChannelDTO?
+
     /// Room session to navigate to
     var pendingRoomSession: RemoteNodeSessionDTO?
 
@@ -158,6 +164,14 @@ public final class AppState {
 
     /// Message event broadcaster for UI updates
     let messageEventBroadcaster = MessageEventBroadcaster()
+
+    // MARK: - CLI Tool
+
+    /// Persistent CLI tool view model (survives tab switches, reset on device disconnect)
+    var cliToolViewModel: CLIToolViewModel?
+
+    /// Tracks the device ID for CLI state - reset CLI when device changes
+    private var lastConnectedDeviceIDForCLI: UUID?
 
     // MARK: - Activity Tracking
 
@@ -334,12 +348,16 @@ public final class AppState {
             syncCoordinator = nil
             // Reset sync activity count to prevent stuck pill
             syncActivityCount = 0
+            // Reset CLI tool state on disconnect (preserves command history)
+            cliToolViewModel?.reset()
             // Hide ready toast on disconnect
             hideReadyToast()
             // Stop battery refresh loop on disconnect
             stopBatteryRefreshLoop()
             // Clear battery notification thresholds for next connection
             notifiedBatteryThresholds = []
+            // Reset node storage full flag (will be set again by 0x90 push if still full)
+            isNodeStorageFull = false
             // Update disconnected pill state (may show after delay)
             updateDisconnectedPillState()
             return
@@ -347,6 +365,14 @@ public final class AppState {
 
         // Hide disconnected pill when services are available (connected)
         hideDisconnectedPill()
+
+        // Reset CLI if device changed (handles device switch where onConnectionLost doesn't fire)
+        if let newDeviceID = connectedDevice?.id,
+           let oldDeviceID = lastConnectedDeviceIDForCLI,
+           newDeviceID != oldDeviceID {
+            cliToolViewModel?.reset()
+        }
+        lastConnectedDeviceIDForCLI = connectedDevice?.id
 
         // Announce reconnection for VoiceOver users
         if UIAccessibility.isVoiceOverRunning {
@@ -376,6 +402,9 @@ public final class AppState {
             },
             onEnded: { @MainActor [weak self] in
                 guard let self else { return }
+                // Guard against double-decrement: onDisconnected and sync error path
+                // can both call this if WiFi drops or device switch during sync
+                guard self.syncActivityCount > 0 else { return }
                 self.syncActivityCount -= 1
                 // Show "Ready" toast when all sync activity completes
                 if self.syncActivityCount == 0 {
@@ -404,6 +433,47 @@ public final class AppState {
             await MainActor.run {
                 self?.connectionManager.updateDevice(with: deviceDTO)
             }
+        }
+
+        // Wire auto-add config callback
+        // Updates connectedDevice.autoAddConfig when changed via SettingsService
+        await services.settingsService.setAutoAddConfigCallback { [weak self] config in
+            await MainActor.run {
+                self?.connectionManager.updateAutoAddConfig(config)
+                // Clear storage full flag when overwrite oldest is enabled (bit 0x01)
+                if config & 0x01 != 0 {
+                    self?.isNodeStorageFull = false
+                }
+            }
+        }
+
+        // Wire node storage full callback
+        // Updates isNodeStorageFull when 0x90 (contactsFull) or 0x8F (contactDeleted) push received
+        await services.advertisementService.setNodeStorageFullChangedHandler { [weak self] isFull in
+            await MainActor.run {
+                self?.isNodeStorageFull = isFull
+            }
+        }
+
+        // Wire contact updated callback for real-time Discover page updates
+        await services.advertisementService.setContactUpdatedHandler { @MainActor [weak self] in
+            self?.contactsVersion += 1
+        }
+
+        // Wire node deleted callback
+        // Clears isNodeStorageFull when user manually deletes a node (frees up space)
+        await services.contactService.setNodeDeletedHandler { [weak self] in
+            await MainActor.run {
+                self?.isNodeStorageFull = false
+            }
+        }
+
+        // Wire contact deleted cleanup callback
+        // Removes notifications and updates badge when device auto-deletes a contact via 0x8F
+        await services.advertisementService.setContactDeletedCleanupHandler { [weak self] contactID, _ in
+            guard let self else { return }
+            await self.services?.notificationService.removeDeliveredNotifications(forContactID: contactID)
+            await self.services?.notificationService.updateBadgeCount()
         }
 
         // Wire message event callbacks for real-time chat updates
@@ -504,9 +574,13 @@ public final class AppState {
         }
 
         // Configure badge count callback
-        services.notificationService.getBadgeCount = { [dataStore = services.dataStore] in
+        services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in
+            let deviceID = await MainActor.run { self?.currentDeviceID }
+            guard let deviceID else {
+                return (contacts: 0, channels: 0, rooms: 0)
+            }
             do {
-                return try await dataStore.getTotalUnreadCounts()
+                return try await dataStore.getTotalUnreadCounts(deviceID: deviceID)
             } catch {
                 return (contacts: 0, channels: 0, rooms: 0)
             }
@@ -590,8 +664,9 @@ public final class AppState {
     }
 
     /// Disconnect from device
-    func disconnect() async {
-        await connectionManager.disconnect()
+    /// - Parameter reason: The reason for disconnecting (for debugging)
+    func disconnect(reason: DisconnectReason = .userInitiated) async {
+        await connectionManager.disconnect(reason: reason)
     }
 
     /// Connect to a device via WiFi/TCP
@@ -783,6 +858,12 @@ public final class AppState {
         selectedTab = 0
     }
 
+    func navigateToChannel(with channel: ChannelDTO) {
+        tabBarVisibility = .hidden
+        pendingChannel = channel
+        selectedTab = 0
+    }
+
     func navigateToDiscovery() {
         pendingDiscoveryNavigation = true
         selectedTab = 1
@@ -803,6 +884,10 @@ public final class AppState {
 
     func clearPendingRoomNavigation() {
         pendingRoomSession = nil
+    }
+
+    func clearPendingChannelNavigation() {
+        pendingChannel = nil
     }
 
     func clearPendingDiscoveryNavigation() {
@@ -853,6 +938,19 @@ public final class AppState {
         return try await operation()
     }
 
+    #if DEBUG
+    /// Test helper: Simulates sync activity started callback
+    func simulateSyncStarted() {
+        syncActivityCount += 1
+    }
+
+    /// Test helper: Simulates sync activity ended callback (mirrors actual callback guard logic)
+    func simulateSyncEnded() {
+        guard syncActivityCount > 0 else { return }
+        syncActivityCount -= 1
+    }
+    #endif
+
     // MARK: - Notification Handlers
 
     private func setupNotificationHandlers() {
@@ -886,6 +984,14 @@ public final class AppState {
                 }
                 self.navigateToContactDetail(contact)
             }
+        }
+
+        // Channel notification tap handler
+        services.notificationService.onChannelNotificationTapped = { [weak self] deviceID, channelIndex in
+            guard let self else { return }
+
+            guard let channel = try? await services.dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) else { return }
+            self.navigateToChannel(with: channel)
         }
 
         // Quick reply handler

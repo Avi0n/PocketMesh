@@ -63,7 +63,7 @@ public protocol PersistenceStoreProtocol: Actor {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws
+    ) throws
 
     // MARK: - Contact Operations
 
@@ -138,14 +138,8 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete all messages for a contact
     func deleteMessagesForContact(contactID: UUID) async throws
 
-    /// Fetch discovered (pending) contacts
-    func fetchDiscoveredContacts(deviceID: UUID) async throws -> [ContactDTO]
-
     /// Fetch blocked contacts for a device
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO]
-
-    /// Mark a discovered contact as confirmed
-    func confirmContact(id: UUID) async throws
 
     // MARK: - Channel Operations
 
@@ -168,14 +162,23 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete a channel
     func deleteChannel(id: UUID) async throws
 
-    /// Update channel's last message info
-    func updateChannelLastMessage(channelID: UUID, date: Date) async throws
+    /// Delete all messages for a channel
+    func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws
+
+    /// Update channel's last message info (nil clears the date)
+    func updateChannelLastMessage(channelID: UUID, date: Date?) async throws
 
     /// Increment unread count for a channel
     func incrementChannelUnreadCount(channelID: UUID) async throws
 
     /// Clear unread count for a channel
     func clearChannelUnreadCount(channelID: UUID) async throws
+
+    /// Sets the notification level for a channel
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws
+
+    /// Sets the notification level for a remote node session
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws
 
     // MARK: - Saved Trace Paths
 
@@ -284,4 +287,24 @@ public protocol PersistenceStoreProtocol: Actor {
         retryAttempt: Int,
         maxRetryAttempts: Int
     ) async throws
+
+    // MARK: - Discovered Nodes
+
+    /// Insert or update a discovered node from an advertisement frame.
+    /// Updates lastHeard timestamp if node already exists.
+    /// - Returns: Tuple of (DiscoveredNodeDTO, isNew) where isNew is true only if node was newly created
+    func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool)
+
+    /// Fetch all discovered nodes for a device.
+    func fetchDiscoveredNodes(deviceID: UUID) async throws -> [DiscoveredNodeDTO]
+
+    /// Delete a discovered node by ID.
+    func deleteDiscoveredNode(id: UUID) async throws
+
+    /// Clear all discovered nodes for a device.
+    func clearDiscoveredNodes(deviceID: UUID) async throws
+
+    /// Batch fetch all contact public keys for efficient "added" state lookup.
+    /// Returns public keys of confirmed (non-discovered) contacts only.
+    func fetchContactPublicKeys(deviceID: UUID) async throws -> Set<Data>
 }

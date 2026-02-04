@@ -26,6 +26,11 @@ public actor AdvertisementService {
 
     /// Task monitoring for events
     private var eventMonitorTask: Task<Void, Never>?
+    private var currentDeviceID: UUID?
+
+    /// Whether contact fetches should be deferred (during sync)
+    private var isSyncingContacts = false
+    private var pendingUnknownContactKeys: Set<Data> = []
 
     /// Handler for new advertisement events (for UI updates)
     private var advertHandler: (@Sendable (ContactFrame) -> Void)?
@@ -50,6 +55,13 @@ public actor AdvertisementService {
 
     /// Handler for contact sync request events (when ADVERT received for unknown contact)
     private var contactSyncRequestHandler: (@Sendable (UUID) async -> Void)?
+
+    /// Handler for node storage full state changes (true = full, false = has space)
+    private var nodeStorageFullChangedHandler: (@Sendable (Bool) async -> Void)?
+
+    /// Handler for contact deleted cleanup (notifications, badge, session)
+    /// Parameters: contactID, publicKey
+    private var contactDeletedCleanupHandler: (@Sendable (UUID, Data) async -> Void)?
 
     // MARK: - Initialization
 
@@ -99,11 +111,22 @@ public actor AdvertisementService {
         contactSyncRequestHandler = handler
     }
 
+    /// Set handler for node storage full state changes (called when 0x90 or 0x8F push received)
+    public func setNodeStorageFullChangedHandler(_ handler: @escaping @Sendable (Bool) async -> Void) {
+        nodeStorageFullChangedHandler = handler
+    }
+
+    /// Set handler for contact deleted cleanup (called when device auto-deletes via 0x8F)
+    public func setContactDeletedCleanupHandler(_ handler: @escaping @Sendable (UUID, Data) async -> Void) {
+        contactDeletedCleanupHandler = handler
+    }
+
     // MARK: - Event Monitoring
 
     /// Start monitoring MeshCore events for advertisement-related notifications
     public func startEventMonitoring(deviceID: UUID) {
         eventMonitorTask?.cancel()
+        currentDeviceID = deviceID
 
         eventMonitorTask = Task { [weak self] in
             guard let self else { return }
@@ -120,6 +143,15 @@ public actor AdvertisementService {
     public func stopEventMonitoring() {
         eventMonitorTask?.cancel()
         eventMonitorTask = nil
+        currentDeviceID = nil
+    }
+
+    /// Toggle deferred contact fetching during sync.
+    public func setSyncingContacts(_ isSyncing: Bool) async {
+        isSyncingContacts = isSyncing
+        if !isSyncing {
+            await fetchPendingUnknownContacts()
+        }
     }
 
     /// Handle incoming MeshCore event
@@ -139,6 +171,12 @@ public actor AdvertisementService {
 
         case .traceData(let traceInfo):
             await handleTraceData(traceInfo: traceInfo, deviceID: deviceID)
+
+        case .contactDeleted(let publicKey):
+            await handleContactDeletedEvent(publicKey: publicKey, deviceID: deviceID)
+
+        case .contactsFull:
+            await handleContactsFullEvent()
 
         default:
             break
@@ -209,29 +247,73 @@ public actor AdvertisementService {
                     lastModified: UInt32(Date().timeIntervalSince1970)
                 )
                 _ = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                // Also track in DiscoveredNode for Discover page visibility
+                _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
                 advertHandler?(frame)
 
                 // Notify UI of contact update
                 await contactUpdatedHandler?()
             } else {
-                // Unknown contact - device has it but we don't (auto-add mode)
-                // Fetch just this contact from device and notify
-                logger.info("ADVERT received for unknown contact - fetching from device")
-                do {
-                    if let meshContact = try await session.getContact(publicKey: publicKey) {
-                        let frame = meshContact.toContactFrame()
-                        let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
-                        let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
-                        let contactType = ContactType(rawValue: meshContact.type) ?? .chat
-                        await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                if isSyncingContacts {
+                    pendingUnknownContactKeys.insert(publicKey)
+                    logger.info("ADVERT received for unknown contact during sync - deferring fetch")
+                } else {
+                    // Unknown contact - device has it but we don't (auto-add mode)
+                    // Fetch just this contact from device and notify
+                    logger.info("ADVERT received for unknown contact - fetching from device")
+                    do {
+                        if let meshContact = try await session.getContact(publicKey: publicKey) {
+                            let frame = meshContact.toContactFrame()
+                            let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                            // Also track in DiscoveredNode for Discover page visibility
+                            _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
+                            let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
+                            let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                            await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                        }
+                    } catch {
+                        logger.error("Failed to fetch new contact: \(error.localizedDescription)")
                     }
-                } catch {
-                    logger.error("Failed to fetch new contact: \(error.localizedDescription)")
+                    await contactSyncRequestHandler?(deviceID)
                 }
-                await contactSyncRequestHandler?(deviceID)
             }
         } catch {
             logger.error("Error handling advert event: \(error.localizedDescription)")
+        }
+    }
+
+    private func fetchPendingUnknownContacts() async {
+        guard !pendingUnknownContactKeys.isEmpty else { return }
+        guard let deviceID = currentDeviceID else {
+            logger.warning("No device ID available to fetch pending contacts")
+            return
+        }
+
+        let pendingKeys = pendingUnknownContactKeys
+        pendingUnknownContactKeys.removeAll()
+
+        for publicKey in pendingKeys {
+            do {
+                if let meshContact = try await session.getContact(publicKey: publicKey) {
+                    let frame = meshContact.toContactFrame()
+                    let contactID = try await dataStore.saveContact(deviceID: deviceID, from: frame)
+
+                    // Also track in DiscoveredNode for Discover page visibility
+                    _ = try? await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: frame)
+
+                    let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
+                    let contactType = ContactType(rawValue: meshContact.type) ?? .chat
+                    await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                    await contactSyncRequestHandler?(deviceID)
+                }
+            } catch {
+                pendingUnknownContactKeys.insert(publicKey)
+                logger.error("Failed to fetch deferred contact: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -240,18 +322,17 @@ public actor AdvertisementService {
         let contactFrame = contact.toContactFrame()
 
         do {
-            let (contactID, isNew) = try await dataStore.saveDiscoveredContact(deviceID: deviceID, from: contactFrame)
+            let (node, isNew) = try await dataStore.upsertDiscoveredNode(deviceID: deviceID, from: contactFrame)
             advertHandler?(contactFrame)
 
-            // Notify UI of contact update
+            // Notify UI of discovered node update
             await contactUpdatedHandler?()
 
             // Only post notification for NEW discoveries (not repeat adverts from same contact)
             if isNew {
-                let savedContact = try? await dataStore.fetchContact(id: contactID)
-                let contactName = savedContact?.displayName ?? "Unknown Contact"
-                let contactType = savedContact?.type ?? .chat
-                await newContactDiscoveredHandler?(contactName, contactID, contactType)
+                let contactName = node.name
+                let contactType = node.nodeType
+                await newContactDiscoveredHandler?(contactName, node.id, contactType)
             }
         } catch {
             logger.error("Error handling new advert event: \(error.localizedDescription)")
@@ -338,5 +419,45 @@ public actor AdvertisementService {
                 userInfo: ["traceInfo": traceInfo, "deviceID": deviceID]
             )
         }
+    }
+
+    /// Handle contact deleted event (0x8F) - device auto-deleted a contact via overwrite oldest
+    private func handleContactDeletedEvent(publicKey: Data, deviceID: UUID) async {
+        let pubKeyHex = publicKey.prefix(6).map { String(format: "%02X", $0) }.joined()
+        logger.info("Contact deleted by device: \(pubKeyHex)...")
+
+        do {
+            // Fetch contact by publicKey to get its UUID
+            guard let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) else {
+                logger.warning("Contact not found in local database for deletion: \(pubKeyHex)...")
+                return
+            }
+
+            let contactID = contact.id
+
+            // Delete associated messages first
+            try await dataStore.deleteMessagesForContact(contactID: contactID)
+
+            // Delete the contact
+            try await dataStore.deleteContact(id: contactID)
+            logger.debug("Deleted contact from local database")
+
+            // Trigger cleanup (notifications, badge, session)
+            await contactDeletedCleanupHandler?(contactID, publicKey)
+
+            // Storage now has room - clear the full flag
+            await nodeStorageFullChangedHandler?(false)
+
+            // Notify UI to refresh contacts list
+            await contactUpdatedHandler?()
+        } catch {
+            logger.error("Failed to delete contact: \(error.localizedDescription)")
+        }
+    }
+
+    /// Handle contacts full event (0x90) - device storage is full
+    private func handleContactsFullEvent() async {
+        logger.warning("Device node storage is full")
+        await nodeStorageFullChangedHandler?(true)
     }
 }

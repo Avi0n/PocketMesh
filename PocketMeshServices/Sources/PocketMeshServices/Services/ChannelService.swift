@@ -420,17 +420,45 @@ public actor ChannelService {
     ///   - deviceID: The device UUID
     ///   - index: The channel index
     public func clearChannel(deviceID: UUID, index: UInt8) async throws {
-        // Set empty name and zero secret to clear
-        try await setChannelWithSecret(
-            deviceID: deviceID,
-            index: index,
-            name: "",
-            secret: Data(repeating: 0, count: ProtocolLimits.channelSecretSize)
-        )
+        // Get channel ID before clearing, so we can reliably delete it
+        // (fetching after setChannelWithSecret may not find the empty-named channel)
+        let channelToDelete = try await dataStore.fetchChannel(deviceID: deviceID, index: index)
 
-        // Delete from local database
-        if let channel = try await dataStore.fetchChannel(deviceID: deviceID, index: index) {
+        // Set empty name and zero secret to clear on device
+        do {
+            try await session.setChannel(
+                index: index,
+                name: "",
+                secret: Data(repeating: 0, count: ProtocolLimits.channelSecretSize)
+            )
+        } catch let error as MeshCoreError {
+            throw ChannelServiceError.sessionError(error)
+        }
+
+        // Delete messages for this channel first
+        try await dataStore.deleteMessagesForChannel(deviceID: deviceID, channelIndex: index)
+
+        // Delete channel from local database using the ID we captured earlier
+        if let channel = channelToDelete {
             try await dataStore.deleteChannel(id: channel.id)
+        }
+
+        // Notify handler that channels changed
+        let channels = try await dataStore.fetchChannels(deviceID: deviceID)
+        channelUpdateHandler?(channels)
+    }
+
+    /// Clears all messages for a channel without deleting the channel itself.
+    /// Use this for a "Clear Messages" feature that keeps the channel active.
+    /// - Parameters:
+    ///   - deviceID: The device UUID
+    ///   - channelIndex: The channel index (0-7)
+    public func clearChannelMessages(deviceID: UUID, channelIndex: UInt8) async throws {
+        try await dataStore.deleteMessagesForChannel(deviceID: deviceID, channelIndex: channelIndex)
+
+        // Clear the last message date so the channel doesn't show a preview
+        if let channel = try await dataStore.fetchChannel(deviceID: deviceID, index: channelIndex) {
+            try await dataStore.updateChannelLastMessage(channelID: channel.id, date: nil)
         }
     }
 

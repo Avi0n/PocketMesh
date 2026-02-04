@@ -117,6 +117,16 @@ public protocol MeshCoreSessionProtocol: Actor {
     /// - Throws: `MeshCoreError` if the import fails.
     func importContact(cardData: Data) async throws
 
+    /// Updates a contact's flags on the device.
+    ///
+    /// Use this to modify contact flags (e.g., favorite bit) while preserving other contact data.
+    ///
+    /// - Parameters:
+    ///   - contact: The contact to update.
+    ///   - flags: The new flags value.
+    /// - Throws: `MeshCoreError` if the update fails.
+    func changeContactFlags(_ contact: MeshContact, flags: UInt8) async throws
+
     // MARK: - Channel Operations (used by ChannelService)
 
     /// Retrieves information about a channel.

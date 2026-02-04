@@ -63,6 +63,64 @@ public final class Device {
     /// Manual add contacts mode
     public var manualAddContacts: Bool
 
+    /// Auto-add configuration bitmask from device
+    public var autoAddConfig: UInt8 = 0
+
+    /// Computed auto-add mode based on manualAddContacts and autoAddConfig
+    public var autoAddMode: AutoAddMode {
+        AutoAddMode.mode(manualAddContacts: manualAddContacts, autoAddConfig: autoAddConfig)
+    }
+
+    /// Whether to auto-add Contact type nodes (bit 0x02)
+    public var autoAddContacts: Bool {
+        get { autoAddConfig & 0x02 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x02
+            } else {
+                autoAddConfig &= ~0x02
+            }
+        }
+    }
+
+    /// Whether to auto-add Repeater type nodes (bit 0x04)
+    public var autoAddRepeaters: Bool {
+        get { autoAddConfig & 0x04 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x04
+            } else {
+                autoAddConfig &= ~0x04
+            }
+        }
+    }
+
+    /// Whether to auto-add Room Server type nodes (bit 0x08)
+    public var autoAddRoomServers: Bool {
+        get { autoAddConfig & 0x08 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x08
+            } else {
+                autoAddConfig &= ~0x08
+            }
+        }
+    }
+
+    // Note: Sensor auto-add (0x10) not supported in this version - deferred per design doc
+
+    /// Whether to overwrite oldest non-favorite when storage is full (bit 0x01)
+    public var overwriteOldest: Bool {
+        get { autoAddConfig & 0x01 != 0 }
+        set {
+            if newValue {
+                autoAddConfig |= 0x01
+            } else {
+                autoAddConfig &= ~0x01
+            }
+        }
+    }
+
     /// Number of acknowledgments to send for direct messages (0=disabled, 1-2 typical)
     public var multiAcks: UInt8
 
@@ -116,6 +174,7 @@ public final class Device {
         longitude: Double = 0,
         blePin: UInt32 = 0,
         manualAddContacts: Bool = false,
+        autoAddConfig: UInt8 = 0,
         multiAcks: UInt8 = 2,
         telemetryModeBase: UInt8 = 2,
         telemetryModeLoc: UInt8 = 0,
@@ -147,6 +206,7 @@ public final class Device {
         self.longitude = longitude
         self.blePin = blePin
         self.manualAddContacts = manualAddContacts
+        self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
         self.telemetryModeBase = telemetryModeBase
         self.telemetryModeLoc = telemetryModeLoc
@@ -184,6 +244,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let longitude: Double
     public let blePin: UInt32
     public let manualAddContacts: Bool
+    public let autoAddConfig: UInt8
     public let multiAcks: UInt8
     public let telemetryModeBase: UInt8
     public let telemetryModeLoc: UInt8
@@ -195,6 +256,37 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let ocvPreset: String?
     public let customOCVArrayString: String?
     public let connectionMethods: [ConnectionMethod]
+
+    /// Computed auto-add mode based on manualAddContacts and autoAddConfig
+    public var autoAddMode: AutoAddMode {
+        AutoAddMode.mode(manualAddContacts: manualAddContacts, autoAddConfig: autoAddConfig)
+    }
+
+    /// Whether to auto-add Contact type nodes (bit 0x02)
+    public var autoAddContacts: Bool {
+        autoAddConfig & 0x02 != 0
+    }
+
+    /// Whether to auto-add Repeater type nodes (bit 0x04)
+    public var autoAddRepeaters: Bool {
+        autoAddConfig & 0x04 != 0
+    }
+
+    /// Whether to auto-add Room Server type nodes (bit 0x08)
+    public var autoAddRoomServers: Bool {
+        autoAddConfig & 0x08 != 0
+    }
+
+    /// Whether to overwrite oldest non-favorite when storage is full (bit 0x01)
+    public var overwriteOldest: Bool {
+        autoAddConfig & 0x01 != 0
+    }
+
+    /// Whether the device supports auto-add configuration (v1.12+)
+    /// Devices with older firmware only support manualAddContacts toggle
+    public var supportsAutoAddConfig: Bool {
+        firmwareVersionString.isAtLeast(major: 1, minor: 12)
+    }
 
     public init(
         id: UUID,
@@ -216,6 +308,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         longitude: Double,
         blePin: UInt32,
         manualAddContacts: Bool,
+        autoAddConfig: UInt8 = 0,
         multiAcks: UInt8,
         telemetryModeBase: UInt8,
         telemetryModeLoc: UInt8,
@@ -247,6 +340,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = longitude
         self.blePin = blePin
         self.manualAddContacts = manualAddContacts
+        self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
         self.telemetryModeBase = telemetryModeBase
         self.telemetryModeLoc = telemetryModeLoc
@@ -280,6 +374,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.longitude = device.longitude
         self.blePin = device.blePin
         self.manualAddContacts = device.manualAddContacts
+        self.autoAddConfig = device.autoAddConfig
         self.multiAcks = device.multiAcks
         self.telemetryModeBase = device.telemetryModeBase
         self.telemetryModeLoc = device.telemetryModeLoc
@@ -341,6 +436,45 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             longitude: selfInfo.longitude,
             blePin: blePin,
             manualAddContacts: selfInfo.manualAddContacts,
+            autoAddConfig: autoAddConfig,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
+        )
+    }
+
+    /// Returns a new DeviceDTO with updated auto-add config.
+    /// Used after auto-add settings are changed via SettingsService.
+    public func withAutoAddConfig(_ config: UInt8) -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: nodeName,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: frequency,
+            bandwidth: bandwidth,
+            spreadingFactor: spreadingFactor,
+            codingRate: codingRate,
+            txPower: txPower,
+            maxTxPower: maxTxPower,
+            latitude: latitude,
+            longitude: longitude,
+            blePin: blePin,
+            manualAddContacts: manualAddContacts,
+            autoAddConfig: config,
             multiAcks: multiAcks,
             telemetryModeBase: telemetryModeBase,
             telemetryModeLoc: telemetryModeLoc,
@@ -393,5 +527,28 @@ public extension Device {
     /// The 6-byte public key prefix used for identifying messages
     var publicKeyPrefix: Data {
         publicKey.prefix(6)
+    }
+}
+
+// MARK: - Version String Comparison
+
+extension String {
+    /// Checks if this version string is at least the specified version.
+    /// Handles formats like "v1.12.0", "1.12", "v1.12"
+    /// - Parameters:
+    ///   - major: Required major version
+    ///   - minor: Required minor version
+    /// - Returns: true if this version >= major.minor
+    func isAtLeast(major requiredMajor: Int, minor requiredMinor: Int) -> Bool {
+        let cleaned = trimmingCharacters(in: CharacterSet(charactersIn: "v"))
+        let components = cleaned.split(separator: ".")
+        guard components.count >= 2,
+              let major = Int(components[0]),
+              let minor = Int(components[1]) else {
+            return false
+        }
+        if major > requiredMajor { return true }
+        if major < requiredMajor { return false }
+        return minor >= requiredMinor
     }
 }

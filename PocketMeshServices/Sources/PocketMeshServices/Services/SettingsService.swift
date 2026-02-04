@@ -232,6 +232,10 @@ public actor SettingsService {
     /// Used to update ConnectionManager.connectedDevice for UI refresh.
     private var onDeviceUpdated: (@Sendable (MeshCore.SelfInfo) async -> Void)?
 
+    /// Callback invoked when auto-add config is successfully changed.
+    /// Used to update ConnectionManager.connectedDevice.autoAddConfig for UI refresh.
+    private var onAutoAddConfigUpdated: (@Sendable (UInt8) async -> Void)?
+
     public init(session: MeshCoreSession) {
         self.session = session
     }
@@ -241,6 +245,13 @@ public actor SettingsService {
         _ callback: @escaping @Sendable (MeshCore.SelfInfo) async -> Void
     ) {
         onDeviceUpdated = callback
+    }
+
+    /// Sets the callback for auto-add config updates.
+    public func setAutoAddConfigCallback(
+        _ callback: @escaping @Sendable (UInt8) async -> Void
+    ) {
+        onAutoAddConfigUpdated = callback
     }
 
     // MARK: - Radio Settings
@@ -538,6 +549,50 @@ public actor SettingsService {
 
         await onDeviceUpdated?(selfInfo)
         return selfInfo
+    }
+
+    // MARK: - Auto-Add Config
+
+    /// Get auto-add configuration from device
+    public func getAutoAddConfig() async throws -> UInt8 {
+        do {
+            return try await session.getAutoAddConfig()
+        } catch let error as MeshCoreError {
+            throw SettingsServiceError.sessionError(error)
+        }
+    }
+
+    /// Refresh auto-add config from device (for initial load)
+    /// Fetches current value and triggers callback to update connected device
+    public func refreshAutoAddConfig() async throws {
+        let config = try await getAutoAddConfig()
+        await onAutoAddConfigUpdated?(config)
+    }
+
+    /// Set auto-add configuration on device
+    public func setAutoAddConfig(_ config: UInt8) async throws {
+        do {
+            try await session.setAutoAddConfig(config)
+        } catch let error as MeshCoreError {
+            throw SettingsServiceError.sessionError(error)
+        }
+    }
+
+    /// Set auto-add configuration with verification
+    public func setAutoAddConfigVerified(_ config: UInt8) async throws -> UInt8 {
+        try await setAutoAddConfig(config)
+
+        let actualConfig = try await getAutoAddConfig()
+
+        guard actualConfig == config else {
+            throw SettingsServiceError.verificationFailed(
+                expected: "config=\(config)",
+                actual: "config=\(actualConfig)"
+            )
+        }
+
+        await onAutoAddConfigUpdated?(actualConfig)
+        return actualConfig
     }
 
     // MARK: - Stats

@@ -1,0 +1,242 @@
+import Foundation
+import Testing
+@testable import PocketMeshServices
+
+/// Tests for ConnectionManager.checkBLEConnectionHealth() - stale connection state detection.
+/// Verifies the fix from commit b2ab8f17 that detects when connectionState is stale after
+/// iOS terminates BLE connection while app is suspended.
+@Suite("ConnectionManager BLE Health Check Tests")
+@MainActor
+struct ConnectionManagerBLEHealthTests {
+
+    // MARK: - Test Helpers
+
+    private func createTestManager(
+        mockStateMachine: MockBLEStateMachine? = nil
+    ) throws -> (ConnectionManager, MockBLEStateMachine) {
+        let container = try PersistenceStore.createContainer(inMemory: true)
+        let mock = mockStateMachine ?? MockBLEStateMachine()
+        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
+        return (manager, mock)
+    }
+
+    // MARK: - Early Return Tests
+
+    @Test("returns early when transport type is WiFi")
+    func returnsEarlyForWiFiTransport() async throws {
+        let (manager, _) = try createTestManager()
+
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .wifi,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = UUID()
+
+        await manager.checkBLEConnectionHealth()
+
+        // Should not change state since WiFi transport is handled elsewhere
+        #expect(manager.connectionState == .ready)
+    }
+
+    @Test("returns early when shouldBeConnected is false")
+    func returnsEarlyWhenNotExpectingConnection() async throws {
+        let (manager, _) = try createTestManager()
+
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: false
+        )
+        manager.testLastConnectedDeviceID = UUID()
+
+        await manager.checkBLEConnectionHealth()
+
+        // Should not trigger cleanup since user doesn't expect to be connected
+        #expect(manager.connectionState == .ready)
+    }
+
+    @Test("returns early when no lastConnectedDeviceID")
+    func returnsEarlyWhenNoLastDevice() async throws {
+        let (manager, _) = try createTestManager()
+
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        // testLastConnectedDeviceID is nil by default
+
+        await manager.checkBLEConnectionHealth()
+
+        // Should not trigger cleanup without a device to reconnect to
+        #expect(manager.connectionState == .ready)
+    }
+
+    @Test("returns early when BLE is actually connected")
+    func returnsEarlyWhenBLEConnected() async throws {
+        let (manager, mock) = try createTestManager()
+
+        await mock.setStubbedIsConnected(true)
+
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = UUID()
+
+        await manager.checkBLEConnectionHealth()
+
+        // Should return early without cleanup since BLE is actually connected
+        #expect(manager.connectionState == .ready)
+    }
+
+    @Test("skips reconnect during iOS auto-reconnect")
+    func skipsWhenAutoReconnecting() async throws {
+        let (manager, mock) = try createTestManager()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(true)
+
+        manager.setTestState(
+            connectionState: .connecting,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = UUID()
+
+        await manager.checkBLEConnectionHealth()
+
+        // Should not interfere with iOS auto-reconnect
+        #expect(manager.connectionState == .connecting)
+    }
+
+    // MARK: - Stale State Detection Tests (Key Fix from b2ab8f17)
+
+    @Test("detects stale state when connectionState is .ready but BLE disconnected")
+    func detectsStaleReadyState() async throws {
+        let (manager, mock) = try createTestManager()
+        let deviceID = UUID()
+
+        // BLE is actually disconnected
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        // But connectionState thinks we're ready (stale state)
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        // After detecting stale state and cleanup, connectionState should be .disconnected
+        #expect(manager.connectionState == .disconnected)
+    }
+
+    @Test("detects stale state when connectionState is .connected but BLE disconnected")
+    func detectsStaleConnectedState() async throws {
+        let (manager, mock) = try createTestManager()
+        let deviceID = UUID()
+
+        // BLE is actually disconnected
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        // But connectionState thinks we're connected (stale state)
+        manager.setTestState(
+            connectionState: .connected,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        // After detecting stale state and cleanup, connectionState should be .disconnected
+        #expect(manager.connectionState == .disconnected)
+    }
+
+    @Test("does not trigger cleanup when already disconnected")
+    func noCleanupWhenAlreadyDisconnected() async throws {
+        let (manager, mock) = try createTestManager()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        // Already in disconnected state (not stale, expected state)
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        // State should remain disconnected, no double-cleanup needed
+        #expect(manager.connectionState == .disconnected)
+    }
+
+    // MARK: - Callback Verification Test
+
+    @Test("calls onConnectionLost when stale state detected")
+    func callsOnConnectionLostForStaleState() async throws {
+        let (manager, mock) = try createTestManager()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            shouldBeConnected: true
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        let tracker = ConnectionLostTracker()
+        manager.onConnectionLost = {
+            await tracker.markConnectionLost()
+        }
+
+        await manager.checkBLEConnectionHealth()
+
+        let wasCalled = await tracker.connectionLostCalled
+        #expect(wasCalled, "onConnectionLost should be called when stale state is detected")
+    }
+}
+
+// MARK: - Test Helpers
+
+private actor ConnectionLostTracker {
+    var connectionLostCalled = false
+
+    func markConnectionLost() {
+        connectionLostCalled = true
+    }
+}
+
+// MARK: - MockBLEStateMachine Test Helper Extensions
+
+extension MockBLEStateMachine {
+    func setStubbedIsConnected(_ value: Bool) {
+        stubbedIsConnected = value
+    }
+
+    func setStubbedIsAutoReconnecting(_ value: Bool) {
+        stubbedIsAutoReconnecting = value
+    }
+
+    func setStubbedIsDeviceConnectedToSystem(_ value: Bool) {
+        stubbedIsDeviceConnectedToSystem = value
+    }
+}
