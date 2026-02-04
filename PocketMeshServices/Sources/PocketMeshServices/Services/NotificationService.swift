@@ -293,9 +293,11 @@ public final class NotificationService: NSObject {
         senderName: String?,
         messageText: String,
         messageID: UUID,
-        isMuted: Bool = false
+        notificationLevel: NotificationLevel,
+        hasSelfMention: Bool
     ) async {
-        guard !isMuted else { return }
+        guard notificationLevel != .muted else { return }
+        guard notificationLevel != .mentionsOnly || hasSelfMention else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference (uses cached preferences)
@@ -351,9 +353,9 @@ public final class NotificationService: NSObject {
         senderName: String?,
         messageText: String,
         messageID: UUID,
-        isMuted: Bool = false
+        notificationLevel: NotificationLevel
     ) async {
-        guard !isMuted else { return }
+        guard notificationLevel != .muted else { return }
         guard isAuthorized && notificationsEnabled else { return }
 
         // Check granular preference

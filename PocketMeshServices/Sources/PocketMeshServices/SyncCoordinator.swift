@@ -809,7 +809,8 @@ public actor SyncCoordinator {
                         senderName: senderNodeName,
                         messageText: messageText,
                         messageID: messageDTO.id,
-                        isMuted: channel?.isMuted ?? false
+                        notificationLevel: channel?.notificationLevel ?? .all,
+                        hasSelfMention: hasSelfMention
                     )
                     await services.notificationService.updateBadgeCount()
 
@@ -855,7 +856,7 @@ public actor SyncCoordinator {
                         senderName: savedMessage.authorName,
                         messageText: savedMessage.text,
                         messageID: savedMessage.id,
-                        isMuted: session?.isMuted ?? false
+                        notificationLevel: session?.notificationLevel ?? .all
                     )
                     await services.notificationService.updateBadgeCount()
 
