@@ -1394,8 +1394,19 @@ final class ChatViewModel {
         // Load contact message previews
         for contact in conversations {
             do {
-                let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 1)
-                if let lastMessage = messages.last {
+                // Fetch extra messages in case recent ones are reactions
+                let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: 10)
+
+                // Find the last non-reaction message (skip outgoing reactions unless failed)
+                let lastMessage = messages.last { message in
+                    guard message.direction == .outgoing,
+                          ReactionParser.parseDM(message.text) != nil else {
+                        return true
+                    }
+                    return message.status == .failed
+                }
+
+                if let lastMessage {
                     lastMessageCache[contact.id] = lastMessage
                 }
             } catch {
@@ -1421,15 +1432,21 @@ final class ChatViewModel {
                     // Fetch extra messages in case recent ones are from blocked senders
                     let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
 
-                    // Filter out messages from blocked senders and get the last valid one
-                    let lastMessage: MessageDTO?
-                    if blockedNames.isEmpty {
-                        lastMessage = messages.last
-                    } else {
-                        lastMessage = messages.last { message in
-                            guard let senderName = message.senderNodeName else { return true }
-                            return !blockedNames.contains(senderName)
+                    // Filter out messages from blocked senders and outgoing reactions
+                    let lastMessage = messages.last { message in
+                        // Skip blocked senders
+                        if !blockedNames.isEmpty,
+                           let senderName = message.senderNodeName,
+                           blockedNames.contains(senderName) {
+                            return false
                         }
+                        // Skip outgoing reactions (unless failed)
+                        if message.direction == .outgoing,
+                           ReactionParser.parse(message.text) != nil,
+                           message.status != .failed {
+                            return false
+                        }
+                        return true
                     }
 
                     if let lastMessage {
