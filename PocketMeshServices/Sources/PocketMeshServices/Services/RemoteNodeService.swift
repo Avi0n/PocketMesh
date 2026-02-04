@@ -151,6 +151,15 @@ public actor RemoteNodeService {
     /// Called when ACK with unsynced count is received
     public var keepAliveResponseHandler: (@Sendable (UUID, Int) async -> Void)?
 
+    /// Handler for session connection state changes
+    /// Called when session isConnected state changes (sessionID, isConnected)
+    private var sessionStateChangedHandler: (@Sendable (UUID, Bool) async -> Void)?
+
+    /// Set the handler for session connection state changes.
+    public func setSessionStateChangedHandler(_ handler: @escaping @Sendable (UUID, Bool) async -> Void) {
+        sessionStateChangedHandler = handler
+    }
+
     // MARK: - Initialization
 
     public init(
@@ -314,7 +323,7 @@ public actor RemoteNodeService {
             lastUptimeSeconds: existing?.lastUptimeSeconds,
             lastNoiseFloor: existing?.lastNoiseFloor,
             unreadCount: existing?.unreadCount ?? 0,
-            isMuted: existing?.isMuted ?? false,
+            notificationLevel: existing?.notificationLevel ?? .all,
             lastRxAirtimeSeconds: existing?.lastRxAirtimeSeconds,
             neighborCount: existing?.neighborCount ?? 0
         )
@@ -522,6 +531,9 @@ public actor RemoteNodeService {
                     }
                 }
 
+                // Notify UI of session state change
+                await sessionStateChangedHandler?(remoteSession.id, true)
+
                 keepAliveIntervals[remoteSession.id] = Self.defaultKeepAliveInterval
 
                 // Start keep-alive for room servers
@@ -566,6 +578,14 @@ public actor RemoteNodeService {
                     continue
                 } catch {
                     self?.logger.warning("Keep-alive failed for session \(sessionID): \(error)")
+                    // Mark session as disconnected so UI can show banner
+                    try? await self?.dataStore.updateRemoteNodeSessionConnection(
+                        id: sessionID,
+                        isConnected: false,
+                        permissionLevel: .guest
+                    )
+                    // Notify UI of session state change
+                    await self?.sessionStateChangedHandler?(sessionID, false)
                     break
                 }
             }
@@ -674,6 +694,9 @@ public actor RemoteNodeService {
             isConnected: false,
             permissionLevel: .guest
         )
+
+        // Notify UI of session state change
+        await sessionStateChangedHandler?(sessionID, false)
     }
 
     // MARK: - Status
@@ -934,6 +957,9 @@ public actor RemoteNodeService {
             isConnected: false,
             permissionLevel: .guest
         )
+
+        // Notify UI of session state change
+        await sessionStateChangedHandler?(sessionID, false)
     }
 
     // MARK: - BLE Reconnection
@@ -966,6 +992,8 @@ public actor RemoteNodeService {
                             isConnected: false,
                             permissionLevel: .guest
                         )
+                        // Notify UI of session state change
+                        await self.sessionStateChangedHandler?(remoteSession.id, false)
                     }
                 }
             }
@@ -980,5 +1008,19 @@ public actor RemoteNodeService {
             task.cancel()
         }
         keepAliveTasks.removeAll()
+    }
+
+    /// Resume keep-alives for all connected room sessions (call on app foreground)
+    public func resumeRoomKeepAlives() async {
+        guard let sessions = try? await dataStore.fetchConnectedRemoteNodeSessions() else {
+            logger.warning("Failed to fetch connected sessions for keepalive resume")
+            return
+        }
+
+        for session in sessions where session.isRoom {
+            startKeepAlive(sessionID: session.id, publicKey: session.publicKey)
+        }
+
+        logger.info("Resumed keepalives for \(sessions.filter { $0.isRoom }.count) room sessions")
     }
 }

@@ -114,6 +114,50 @@ final class RoomConversationViewModel {
         await loadMessages(for: session)
     }
 
+    /// Refresh session state from database
+    func refreshSession() async {
+        guard let session, let dataStore else { return }
+
+        if let updated = try? await dataStore.fetchRemoteNodeSession(id: session.id) {
+            self.session = updated
+        }
+    }
+
+    /// Handle message event and update if relevant to current session
+    func handleEvent(_ event: MessageEvent) async {
+        guard let session else { return }
+
+        switch event {
+        case .roomMessageStatusUpdated(let messageID):
+            if messages.contains(where: { $0.id == messageID }) {
+                await loadMessages(for: session)
+            }
+
+        case .roomMessageFailed(let messageID):
+            if messages.contains(where: { $0.id == messageID }) {
+                await loadMessages(for: session)
+            }
+
+        default:
+            break
+        }
+    }
+
+    /// Retry sending a failed room message
+    func retryMessage(id: UUID) async {
+        guard let roomServerService else { return }
+
+        do {
+            let updatedMessage = try await roomServerService.retryMessage(id: id)
+            // Update local array
+            if let index = messages.firstIndex(where: { $0.id == id }) {
+                messages[index] = updatedMessage
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     // MARK: - Timestamp Helpers
 
     /// Determines if a timestamp should be shown for a message at the given index.

@@ -82,7 +82,7 @@ public protocol PersistenceStoreProtocol: Actor {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws
+    ) throws
 
     // MARK: - Contact Operations
 
@@ -181,14 +181,23 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete a channel
     func deleteChannel(id: UUID) async throws
 
-    /// Update channel's last message info
-    func updateChannelLastMessage(channelID: UUID, date: Date) async throws
+    /// Delete all messages for a channel
+    func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws
+
+    /// Update channel's last message info (nil clears the date)
+    func updateChannelLastMessage(channelID: UUID, date: Date?) async throws
 
     /// Increment unread count for a channel
     func incrementChannelUnreadCount(channelID: UUID) async throws
 
     /// Clear unread count for a channel
     func clearChannelUnreadCount(channelID: UUID) async throws
+
+    /// Sets the notification level for a channel
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws
+
+    /// Sets the notification level for a remote node session
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws
 
     // MARK: - Saved Trace Paths
 
@@ -267,6 +276,36 @@ public protocol PersistenceStoreProtocol: Actor {
         withinSeconds: Double,
         contactName: String?
     ) async throws -> RxLogEntryDTO?
+
+    // MARK: - Room Message Operations
+
+    /// Save a new room message
+    func saveRoomMessage(_ dto: RoomMessageDTO) async throws
+
+    /// Fetch a room message by ID
+    func fetchRoomMessage(id: UUID) async throws -> RoomMessageDTO?
+
+    /// Fetch room messages for a session
+    func fetchRoomMessages(sessionID: UUID, limit: Int?, offset: Int?) async throws -> [RoomMessageDTO]
+
+    /// Check for duplicate room message
+    func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool
+
+    /// Update room message status after send attempt
+    func updateRoomMessageStatus(
+        id: UUID,
+        status: MessageStatus,
+        ackCode: UInt32?,
+        roundTripTime: UInt32?
+    ) async throws
+
+    /// Update room message retry status
+    func updateRoomMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) async throws
 
     // MARK: - Discovered Nodes
 

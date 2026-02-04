@@ -1,6 +1,7 @@
 import Foundation
 import OSLog
 import PocketMeshServices
+import UIKit
 
 @MainActor
 @Observable
@@ -52,7 +53,7 @@ final class CLIToolViewModel {
 
     var promptText: String {
         if let seconds = remainingSeconds {
-            return "Logging in... (\(seconds)s)"
+            return L10n.Tools.Tools.Cli.loggingIn(seconds)
         }
 
         if isWaitingForResponse {
@@ -126,6 +127,7 @@ final class CLIToolViewModel {
         remoteSessions = []
         isWaitingForResponse = false
         pendingLoginContact = nil
+        hasShownWelcome = false
         clearTabState()
     }
 
@@ -324,5 +326,54 @@ final class CLIToolViewModel {
         if outputLines.count > Self.maxOutputLines {
             outputLines.removeFirst()
         }
+    }
+
+    // MARK: - Clipboard
+
+    /// Returns the full response block containing the given line.
+    /// A response block is all consecutive non-command lines.
+    func getResponseBlock(containing line: CLIOutputLine) -> String {
+        guard let index = outputLines.firstIndex(where: { $0.id == line.id }) else {
+            return line.text
+        }
+
+        // Command lines: strip prompt prefix (e.g., "local > " or "@node > ")
+        if line.type == .command {
+            if let range = line.text.range(of: "> ") {
+                return String(line.text[range.upperBound...])
+            }
+            return line.text
+        }
+
+        // Find start of block (walk back until we hit a .command or start)
+        var startIndex = index
+        while startIndex > 0 && outputLines[startIndex - 1].type != .command {
+            startIndex -= 1
+        }
+
+        // Find end of block (walk forward until we hit a .command or end)
+        var endIndex = index
+        while endIndex < outputLines.count - 1 && outputLines[endIndex + 1].type != .command {
+            endIndex += 1
+        }
+
+        return outputLines[startIndex...endIndex]
+            .map { line in
+                // Strip "> " prefix from MeshCore CLI responses
+                if line.text.hasPrefix("> ") {
+                    return String(line.text.dropFirst(2))
+                }
+                return line.text
+            }
+            .joined(separator: "\n")
+    }
+
+    /// Inserts clipboard text at the given cursor position.
+    func pasteFromClipboard(at cursorPosition: Int) {
+        guard let text = UIPasteboard.general.string else { return }
+
+        let safePosition = min(cursorPosition, currentInput.count)
+        let index = currentInput.index(currentInput.startIndex, offsetBy: safePosition)
+        currentInput.insert(contentsOf: text, at: index)
     }
 }

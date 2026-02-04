@@ -361,6 +361,54 @@
 "contacts.autoAddDescription" = "Knoten automatisch aus empfangenen Ankündigungen hinzufügen";
 
 
+// MARK: - Nodes Settings Section
+
+/* Section header for nodes settings */
+"nodes.header" = "Nodes";
+
+/* Label for auto-add mode picker */
+"nodes.autoAddMode" = "Auto-Add Mode";
+
+/* Auto-add mode: manual */
+"nodes.autoAddMode.manual" = "Manual";
+
+/* Auto-add mode: manual description */
+"nodes.autoAddMode.manualDescription" = "Review all nodes in Discover before adding";
+
+/* Auto-add mode: selected types */
+"nodes.autoAddMode.selectedTypes" = "Selected Types";
+
+/* Auto-add mode: selected types description */
+"nodes.autoAddMode.selectedTypesDescription" = "Auto-add only the types enabled below";
+
+/* Auto-add mode: all */
+"nodes.autoAddMode.all" = "All";
+
+/* Auto-add mode: all description */
+"nodes.autoAddMode.allDescription" = "Auto-add every discovered node";
+
+/* Section header for auto-add types */
+"nodes.autoAddTypes.header" = "Auto-Add Types";
+
+/* Toggle label for auto-add contacts */
+"nodes.autoAddContacts" = "Contacts";
+
+/* Toggle label for auto-add repeaters */
+"nodes.autoAddRepeaters" = "Repeaters";
+
+/* Toggle label for auto-add room servers */
+"nodes.autoAddRoomServers" = "Room Servers";
+
+/* Section header for storage settings */
+"nodes.storage.header" = "Storage";
+
+/* Toggle label for overwrite oldest */
+"nodes.overwriteOldest" = "Overwrite Oldest";
+
+/* Description for overwrite oldest toggle */
+"nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
@@ -629,6 +677,9 @@
 
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Bitte stelle sicher, dass dein Gerät verbunden ist.";
+
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Bitte stelle sicher, dass das Gerät verbunden ist, und versuche es erneut.";
 
 
 // MARK: - Battery Curve Chart

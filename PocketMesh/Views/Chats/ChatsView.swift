@@ -575,6 +575,10 @@ struct ChatsView: View {
                 deviceID: channel.deviceID,
                 index: channel.index
             )
+            await appState.services?.notificationService.removeDeliveredNotifications(
+                forChannelIndex: channel.index,
+                deviceID: channel.deviceID
+            )
             await appState.services?.notificationService.updateBadgeCount()
         } catch {
             chatsViewLogger.error("Failed to delete channel: \(error)")

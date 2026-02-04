@@ -7,6 +7,7 @@ struct CLIInputAccessoryView: View {
     let onTabComplete: () -> Void
     let onMoveLeft: () -> Void
     let onMoveRight: () -> Void
+    let onPaste: () -> Void
     let onSessions: () -> Void
     let onCancel: () -> Void
     let onDismiss: () -> Void
@@ -39,6 +40,11 @@ struct CLIInputAccessoryView: View {
                 Image(systemName: "arrow.right")
             }
             .accessibilityLabel(L10n.Tools.Tools.Cli.cursorRight)
+
+            Button(action: onPaste) {
+                Image(systemName: "doc.on.clipboard")
+            }
+            .accessibilityLabel(L10n.Tools.Tools.Cli.paste)
 
             Color.clear.frame(width: 24)
 
@@ -90,6 +96,7 @@ struct CLIInputAccessoryView: View {
         onTabComplete: {},
         onMoveLeft: {},
         onMoveRight: {},
+        onPaste: {},
         onSessions: {},
         onCancel: {},
         onDismiss: {}

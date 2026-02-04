@@ -1010,7 +1010,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         let targetID = id
         let predicate = #Predicate<Message> { message in
             message.id == targetID
@@ -1131,6 +1131,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.isEnabled = dto.isEnabled
             existing.lastMessageDate = dto.lastMessageDate
             existing.unreadCount = dto.unreadCount
+            existing.unreadMentionCount = dto.unreadMentionCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
         } else {
             let channel = Channel(
                 id: dto.id,
@@ -1140,7 +1143,10 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 secret: dto.secret,
                 isEnabled: dto.isEnabled,
                 lastMessageDate: dto.lastMessageDate,
-                unreadCount: dto.unreadCount
+                unreadCount: dto.unreadCount,
+                unreadMentionCount: dto.unreadMentionCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite
             )
             modelContext.insert(channel)
         }
@@ -1160,8 +1166,18 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Update channel's last message info
-    public func updateChannelLastMessage(channelID: UUID, date: Date) throws {
+    /// Delete all messages for a channel
+    public func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) throws {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        try modelContext.delete(model: Message.self, where: #Predicate {
+            $0.deviceID == targetDeviceID && $0.channelIndex == targetChannelIndex
+        })
+        try modelContext.save()
+    }
+
+    /// Update channel's last message info (nil clears the date)
+    public func updateChannelLastMessage(channelID: UUID, date: Date?) throws {
         let targetID = channelID
         let predicate = #Predicate<Channel> { channel in
             channel.id == targetID
@@ -1234,7 +1250,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.channelNotFound
         }
 
-        channel.isMuted = isMuted
+        channel.notificationLevel = isMuted ? .muted : .all
+        try modelContext.save()
+    }
+
+    /// Sets the notification level for a channel
+    public func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) throws {
+        let targetID = channelID
+        let predicate = #Predicate<Channel> { $0.id == targetID }
+        var descriptor = FetchDescriptor<Channel>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let channel = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.channelNotFound
+        }
+
+        channel.notificationLevel = level
         try modelContext.save()
     }
 
@@ -1269,17 +1300,27 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let contactsWithUnread = try modelContext.fetch(contactDescriptor)
         let contactTotal = contactsWithUnread.reduce(0) { $0 + $1.unreadCount }
 
-        // Only fetch channels with unread messages for this device
+        // Channels: exclude muted, include if unreadCount > 0 OR unreadMentionCount > 0
+        let mutedRawValue = NotificationLevel.muted.rawValue
         let channelPredicate = #Predicate<Channel> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && !$0.isMuted
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            ($0.unreadCount > 0 || $0.unreadMentionCount > 0)
         }
         let channelDescriptor = FetchDescriptor<Channel>(predicate: channelPredicate)
         let channelsWithUnread = try modelContext.fetch(channelDescriptor)
-        let channelTotal = channelsWithUnread.reduce(0) { $0 + $1.unreadCount }
+        let channelTotal = channelsWithUnread.reduce(0) { total, channel in
+            if channel.notificationLevel == .mentionsOnly {
+                return total + channel.unreadMentionCount
+            }
+            return total + channel.unreadCount
+        }
 
-        // Only fetch room sessions with unread messages for this device
+        // Rooms: exclude muted (no mention tracking for rooms)
         let roomPredicate = #Predicate<RemoteNodeSession> {
-            $0.deviceID == targetDeviceID && $0.unreadCount > 0 && !$0.isMuted
+            $0.deviceID == targetDeviceID &&
+            $0.notificationLevelRawValue != mutedRawValue &&
+            $0.unreadCount > 0
         }
         let roomDescriptor = FetchDescriptor<RemoteNodeSession>(predicate: roomPredicate)
         let roomsWithUnread = try modelContext.fetch(roomDescriptor)
@@ -1405,6 +1446,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.lastUptimeSeconds = dto.lastUptimeSeconds
             existing.lastNoiseFloor = dto.lastNoiseFloor
             existing.unreadCount = dto.unreadCount
+            existing.notificationLevel = dto.notificationLevel
+            existing.isFavorite = dto.isFavorite
             existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
             existing.neighborCount = dto.neighborCount
             existing.lastSyncTimestamp = dto.lastSyncTimestamp
@@ -1427,6 +1470,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 lastUptimeSeconds: dto.lastUptimeSeconds,
                 lastNoiseFloor: dto.lastNoiseFloor,
                 unreadCount: dto.unreadCount,
+                notificationLevel: dto.notificationLevel,
+                isFavorite: dto.isFavorite,
                 lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
                 neighborCount: dto.neighborCount,
                 lastSyncTimestamp: dto.lastSyncTimestamp
@@ -1574,9 +1619,76 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             authorName: dto.authorName,
             text: dto.text,
             timestamp: dto.timestamp,
-            isFromSelf: dto.isFromSelf
+            isFromSelf: dto.isFromSelf,
+            status: dto.status
         )
+        message.ackCode = dto.ackCode
+        message.roundTripTime = dto.roundTripTime
+        message.retryAttempt = dto.retryAttempt
+        message.maxRetryAttempts = dto.maxRetryAttempts
         modelContext.insert(message)
+        try modelContext.save()
+    }
+
+    /// Fetch a room message by ID
+    public func fetchRoomMessage(id: UUID) throws -> RoomMessageDTO? {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return nil
+        }
+        return RoomMessageDTO(from: message)
+    }
+
+    /// Update room message status after send attempt
+    public func updateRoomMessageStatus(
+        id: UUID,
+        status: MessageStatus,
+        ackCode: UInt32? = nil,
+        roundTripTime: UInt32? = nil
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return
+        }
+        message.statusRawValue = status.rawValue
+        if let ackCode {
+            message.ackCode = ackCode
+        }
+        if let roundTripTime {
+            message.roundTripTime = roundTripTime
+        }
+        try modelContext.save()
+    }
+
+    /// Update room message retry status
+    public func updateRoomMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<RoomMessage> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return
+        }
+        message.statusRawValue = status.rawValue
+        message.retryAttempt = retryAttempt
+        message.maxRetryAttempts = maxRetryAttempts
         try modelContext.save()
     }
 
@@ -1621,7 +1733,22 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             throw PersistenceStoreError.remoteNodeSessionNotFound
         }
 
-        session.isMuted = isMuted
+        session.notificationLevel = isMuted ? .muted : .all
+        try modelContext.save()
+    }
+
+    /// Sets the notification level for a remote node session
+    public func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { $0.id == targetID }
+        var descriptor = FetchDescriptor<RemoteNodeSession>(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else {
+            throw PersistenceStoreError.remoteNodeSessionNotFound
+        }
+
+        session.notificationLevel = level
         try modelContext.save()
     }
 
@@ -1889,7 +2016,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {

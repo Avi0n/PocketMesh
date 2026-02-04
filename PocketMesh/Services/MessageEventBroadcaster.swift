@@ -13,6 +13,8 @@ public enum MessageEvent: Sendable, Equatable {
     case heardRepeatRecorded(messageID: UUID, count: Int)
     case reactionReceived(messageID: UUID, summary: String)
     case routingChanged(contactID: UUID, isFlood: Bool)
+    case roomMessageStatusUpdated(messageID: UUID)
+    case roomMessageFailed(messageID: UUID)
     case unknownSender(keyPrefix: Data)
     case error(String)
 }
@@ -35,6 +37,9 @@ public final class MessageEventBroadcaster {
 
     /// Count of new messages (triggers view updates)
     var newMessageCount: Int = 0
+
+    /// Count of session state changes (triggers view updates for connection status)
+    var sessionStateChanged: Int = 0
 
     /// Reference to message service for handling send confirmations
     var messageService: MessageService?
@@ -86,6 +91,20 @@ public final class MessageEventBroadcaster {
         self.newMessageCount += 1
     }
 
+    /// Handle room message status update
+    func handleRoomMessageStatusUpdated(messageID: UUID) {
+        logger.info("dispatch: roomMessageStatusUpdated for \(messageID)")
+        self.latestEvent = .roomMessageStatusUpdated(messageID: messageID)
+        self.newMessageCount += 1
+    }
+
+    /// Handle room message delivery failure
+    func handleRoomMessageFailed(messageID: UUID) {
+        logger.info("dispatch: roomMessageFailed for \(messageID)")
+        self.latestEvent = .roomMessageFailed(messageID: messageID)
+        self.newMessageCount += 1
+    }
+
     // MARK: - Status Event Handlers
 
     /// Handle acknowledgement/status update
@@ -116,7 +135,7 @@ public final class MessageEventBroadcaster {
 
     /// Called when a heard repeat is recorded for a sent channel message
     func handleHeardRepeatRecorded(messageID: UUID, count: Int) {
-        logger.info("[REPEAT-DEBUG] handleHeardRepeatRecorded called: messageID=\(messageID), count=\(count), newMessageCount will be \(self.newMessageCount + 1)")
+        logger.info("[REPEAT-DEBUG] handleHeardRepeatRecorded: messageID=\(messageID), count=\(count)")
         self.latestEvent = .heardRepeatRecorded(messageID: messageID, count: count)
         self.newMessageCount += 1
     }
@@ -137,6 +156,12 @@ public final class MessageEventBroadcaster {
     /// Handle error notification
     func handleError(_ message: String) {
         self.latestEvent = .error(message)
+    }
+
+    /// Handle session connection state change
+    func handleSessionStateChanged(sessionID: UUID, isConnected: Bool) {
+        logger.info("dispatch: sessionStateChanged for \(sessionID), isConnected: \(isConnected)")
+        self.sessionStateChanged += 1
     }
 
     // MARK: - Status Response Handling

@@ -681,6 +681,9 @@
 /* Alert message when max retries exceeded */
 "alert.retry.ensureConnected" = "Please ensure your device is connected.";
 
+/* Fallback message for retry alerts when error description is unavailable */
+"alert.retry.fallbackMessage" = "Please ensure device is connected and try again.";
+
 
 // MARK: - Battery Curve Chart
 

@@ -227,37 +227,42 @@ final class ChatViewModel {
         self.linkPreviewCache = linkPreviewCache
     }
 
-    // MARK: - Mute
+    // MARK: - Notification Level
 
-    /// Toggles mute state for a conversation with optimistic UI update
-    func toggleMute(_ conversation: Conversation) async {
+    /// Sets notification level for a conversation with optimistic UI update
+    func setNotificationLevel(_ conversation: Conversation, level: NotificationLevel) async {
         guard appState?.connectionState == .ready else { return }
-        let originalState = conversation.isMuted
-        let newState = !originalState
+        let originalLevel = conversation.notificationLevel
 
         // Optimistic UI update
-        updateConversationMuteState(conversation, isMuted: newState)
+        updateConversationNotificationLevel(conversation, level: level)
 
         do {
             switch conversation {
             case .direct(let contact):
-                try await dataStore?.setContactMuted(contact.id, isMuted: newState)
+                // Contacts still use boolean muted
+                try await dataStore?.setContactMuted(contact.id, isMuted: level == .muted)
             case .channel(let channel):
-                try await dataStore?.setChannelMuted(channel.id, isMuted: newState)
+                try await dataStore?.setChannelNotificationLevel(channel.id, level: level)
             case .room(let session):
-                try await dataStore?.setSessionMuted(session.id, isMuted: newState)
+                try await dataStore?.setSessionNotificationLevel(session.id, level: level)
             }
-            // Update badge on success
             await notificationService?.updateBadgeCount()
         } catch {
             // Rollback on failure
-            updateConversationMuteState(conversation, isMuted: originalState)
-            logger.error("Failed to toggle mute: \(error)")
+            updateConversationNotificationLevel(conversation, level: originalLevel)
+            logger.error("Failed to set notification level: \(error)")
         }
     }
 
-    /// Updates the mute state in the local conversations array
-    private func updateConversationMuteState(_ conversation: Conversation, isMuted: Bool) {
+    /// Toggles between muted and all (for swipe action)
+    func toggleMute(_ conversation: Conversation) async {
+        let newLevel: NotificationLevel = conversation.isMuted ? .all : .muted
+        await setNotificationLevel(conversation, level: newLevel)
+    }
+
+    /// Updates the notification level in the local conversations array
+    private func updateConversationNotificationLevel(_ conversation: Conversation, level: NotificationLevel) {
         invalidateConversationCache()
         switch conversation {
         case .direct(let contact):
@@ -278,7 +283,7 @@ final class ChatViewModel {
                     lastModified: updated.lastModified,
                     nickname: updated.nickname,
                     isBlocked: updated.isBlocked,
-                    isMuted: isMuted,
+                    isMuted: level == .muted,
                     isFavorite: updated.isFavorite,
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
@@ -299,7 +304,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite
                 )
             }
@@ -321,7 +326,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: isMuted,
+                    notificationLevel: level,
                     isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
@@ -332,6 +337,15 @@ final class ChatViewModel {
     }
 
     // MARK: - Favorite
+
+    /// Sets favorite state for a conversation with optimistic UI update
+    func setFavorite(_ conversation: Conversation, isFavorite: Bool) async {
+        guard appState?.connectionState == .ready else { return }
+        guard conversation.isFavorite != isFavorite else { return }
+
+        // Reuse existing toggle logic
+        await toggleFavorite(conversation)
+    }
 
     /// Toggles favorite state for a conversation.
     ///
@@ -471,7 +485,7 @@ final class ChatViewModel {
                     lastMessageDate: updated.lastMessageDate,
                     unreadCount: updated.unreadCount,
                     unreadMentionCount: updated.unreadMentionCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite
                 )
             }
@@ -493,7 +507,7 @@ final class ChatViewModel {
                     lastUptimeSeconds: updated.lastUptimeSeconds,
                     lastNoiseFloor: updated.lastNoiseFloor,
                     unreadCount: updated.unreadCount,
-                    isMuted: updated.isMuted,
+                    notificationLevel: updated.notificationLevel,
                     isFavorite: isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
@@ -562,10 +576,11 @@ final class ChatViewModel {
 
     /// Load room sessions for a device
     func loadRoomSessions(deviceID: UUID) async {
-        guard let roomServerService else { return }
+        guard let dataStore else { return }
 
         do {
-            roomSessions = try await roomServerService.fetchRoomSessions(deviceID: deviceID)
+            let sessions = try await dataStore.fetchRemoteNodeSessions(deviceID: deviceID)
+            roomSessions = sessions.filter { $0.isRoom }
             invalidateConversationCache()
         } catch {
             // Silently handle - rooms are optional
@@ -976,6 +991,11 @@ final class ChatViewModel {
             // Hide sent reaction messages (unless failed)
             let isDM = currentContact != nil
             olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
+
+            // Filter out messages already in array (race condition: appendMessageIfNew can add
+            // a message while this fetch is in-flight, causing duplicates)
+            let existingIDs = Set(messages.map(\.id))
+            olderMessages = olderMessages.filter { !existingIDs.contains($0.id) }
 
             // Prepend older messages (they're chronologically earlier)
             messages.insert(contentsOf: olderMessages, at: 0)
@@ -1456,6 +1476,8 @@ final class ChatViewModel {
 
                     if let lastMessage {
                         lastMessageCache[channel.id] = lastMessage
+                    } else {
+                        lastMessageCache.removeValue(forKey: channel.id)
                     }
                 } catch {
                     // Silently ignore errors for preview loading
@@ -2032,5 +2054,18 @@ final class ChatViewModel {
                 await loadConversations(deviceID: deviceID)
             }
         } while !sendQueue.isEmpty
+    }
+}
+
+// MARK: - Environment Key
+
+private struct ChatViewModelKey: EnvironmentKey {
+    static let defaultValue: ChatViewModel? = nil
+}
+
+extension EnvironmentValues {
+    var chatViewModel: ChatViewModel? {
+        get { self[ChatViewModelKey.self] }
+        set { self[ChatViewModelKey.self] = newValue }
     }
 }

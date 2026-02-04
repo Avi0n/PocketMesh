@@ -37,7 +37,7 @@ final class ConversationFilteringTests: XCTestCase {
     private func makeChannel(
         name: String,
         unreadCount: Int = 0,
-        isMuted: Bool = false,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false
     ) -> ChannelDTO {
         ChannelDTO(
@@ -49,7 +49,7 @@ final class ConversationFilteringTests: XCTestCase {
             isEnabled: true,
             lastMessageDate: Date(),
             unreadCount: unreadCount,
-            isMuted: isMuted,
+            notificationLevel: notificationLevel,
             isFavorite: isFavorite
         )
     }
@@ -57,7 +57,7 @@ final class ConversationFilteringTests: XCTestCase {
     private func makeRoom(
         name: String,
         unreadCount: Int = 0,
-        isMuted: Bool = false,
+        notificationLevel: NotificationLevel = .all,
         isFavorite: Bool = false
     ) -> RemoteNodeSessionDTO {
         RemoteNodeSessionDTO(
@@ -69,7 +69,7 @@ final class ConversationFilteringTests: XCTestCase {
             isConnected: true,
             lastConnectedDate: Date(),
             unreadCount: unreadCount,
-            isMuted: isMuted,
+            notificationLevel: notificationLevel,
             isFavorite: isFavorite
         )
     }
@@ -191,7 +191,7 @@ final class ConversationFilteringTests: XCTestCase {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice", unreadCount: 5, isMuted: false)),
             .direct(makeContact(name: "Bob", unreadCount: 3, isMuted: true)),
-            .channel(makeChannel(name: "General", unreadCount: 2, isMuted: false))
+            .channel(makeChannel(name: "General", unreadCount: 2, notificationLevel: .all))
         ]
 
         let result = conversations.filtered(by: .unread, searchText: "")

@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshServices
+import UIKit
 
 /// Terminal font optimized for mobile screens
 private let terminalFont = Font.caption.monospaced()
@@ -91,6 +92,13 @@ private struct CLIToolContent: View {
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                             .id(line.id)
+                            .contextMenu {
+                                Button {
+                                    UIPasteboard.general.string = viewModel.getResponseBlock(containing: line)
+                                } label: {
+                                    Label(L10n.Tools.Tools.RxLog.copy, systemImage: "doc.on.doc")
+                                }
+                            }
                     }
 
                     inlinePrompt
@@ -117,7 +125,7 @@ private struct CLIToolContent: View {
                         .id("suggestions")
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 8)
             }
@@ -219,6 +227,13 @@ private struct CLIToolContent: View {
                         } else if cursorPosition < viewModel.currentInput.count {
                             cursorPosition += 1
                         }
+                    },
+                    onPaste: {
+                        viewModel.pasteFromClipboard(at: cursorPosition)
+                        cursorPosition = min(
+                            cursorPosition + (UIPasteboard.general.string?.count ?? 0),
+                            viewModel.currentInput.count
+                        )
                     },
                     onSessions: { viewModel.executeCommand("session list") },
                     onCancel: { viewModel.cancelCurrentCommand() },

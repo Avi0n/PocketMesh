@@ -59,6 +59,8 @@ public enum L10n {
         }
       }
       public enum ChannelInfo {
+        /// Location: ChannelInfoSheet.swift - Clear messages button
+        public static let clearMessagesButton = L10n.tr("Chats", "chats.channelInfo.clearMessagesButton", fallback: "Clear Messages")
         /// Location: ChannelInfoSheet.swift - Button to copy secret key
         public static let copy = L10n.tr("Chats", "chats.channelInfo.copy", fallback: "Copy")
         /// Location: ChannelInfoSheet.swift - Delete channel button
@@ -82,16 +84,18 @@ public enum L10n {
         /// Location: ChannelInfoSheet.swift - Navigation title
         public static let title = L10n.tr("Chats", "chats.channelInfo.title", fallback: "Channel Info")
         public enum ChannelType {
-          /// Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number
-          public static func hashtag(_ p1: Int) -> String {
-            return L10n.tr("Chats", "chats.channelInfo.channelType.hashtag", p1, fallback: "Hashtag Channel • Slot %d")
-          }
-          /// Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number
-          public static func `private`(_ p1: Int) -> String {
-            return L10n.tr("Chats", "chats.channelInfo.channelType.private", p1, fallback: "Private Channel • Slot %d")
-          }
+          /// Location: ChannelInfoSheet.swift - Channel type label for hashtag channel
+          public static let hashtag = L10n.tr("Chats", "chats.channelInfo.channelType.hashtag", fallback: "Hashtag Channel")
+          /// Location: ChannelInfoSheet.swift - Channel type label for private channel
+          public static let `private` = L10n.tr("Chats", "chats.channelInfo.channelType.private", fallback: "Private Channel")
           /// Location: ChannelInfoSheet.swift - Channel type label for public channel
-          public static let `public` = L10n.tr("Chats", "chats.channelInfo.channelType.public", fallback: "Public Channel • Slot 0")
+          public static let `public` = L10n.tr("Chats", "chats.channelInfo.channelType.public", fallback: "Public Channel")
+        }
+        public enum ClearMessagesConfirm {
+          /// Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message
+          public static let message = L10n.tr("Chats", "chats.channelInfo.clearMessagesConfirm.message", fallback: "All messages in this channel will be permanently deleted. The channel will remain active.")
+          /// Location: ChannelInfoSheet.swift - Clear messages confirmation dialog title
+          public static let title = L10n.tr("Chats", "chats.channelInfo.clearMessagesConfirm.title", fallback: "Clear Messages?")
         }
         public enum DeleteConfirm {
           /// Location: ChannelInfoSheet.swift - Confirmation dialog message
@@ -540,6 +544,12 @@ public enum L10n {
           public static let placeholder = L10n.tr("Chats", "chats.newChat.search.placeholder", fallback: "Search contacts")
         }
       }
+      public enum NotificationLevel {
+        /// Location: NotificationLevelPicker.swift - Accessibility hint for notification level picker
+        public static let hint = L10n.tr("Chats", "chats.notificationLevel.hint", fallback: "Choose when to receive notifications")
+        /// Location: NotificationLevelPicker.swift - Accessibility label for notification level picker
+        public static let label = L10n.tr("Chats", "chats.notificationLevel.label", fallback: "Notification level")
+      }
       public enum Path {
         /// Location: MessagePathSheet.swift - Accessibility label for copy button
         public static let copyAccessibility = L10n.tr("Chats", "chats.path.copyAccessibility", fallback: "Copy path to clipboard")
@@ -651,6 +661,8 @@ public enum L10n {
       public enum Row {
         /// Location: ConversationRow.swift, ChannelConversationRow.swift, RoomConversationRow.swift - Accessibility label for favorite indicator
         public static let favorite = L10n.tr("Chats", "chats.row.favorite", fallback: "Favorite")
+        /// Location: MutedIndicator.swift - Accessibility label for mentions-only indicator
+        public static let mentionsOnly = L10n.tr("Chats", "chats.row.mentionsOnly", fallback: "Mentions only")
         /// Location: MutedIndicator.swift - Accessibility label for muted indicator
         public static let muted = L10n.tr("Chats", "chats.row.muted", fallback: "Muted")
         /// Location: ConversationRow.swift, ChannelConversationRow.swift - Default text when no messages exist
@@ -706,6 +718,10 @@ public enum L10n {
         /// Location: UnifiedMessageBubble.swift - SNR quality very poor
         public static let veryPoor = L10n.tr("Chats", "chats.signal.veryPoor", fallback: "Very Poor")
       }
+      public enum Suggestions {
+        /// Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup
+        public static let accessibilityLabel = L10n.tr("Chats", "chats.suggestions.accessibilityLabel", fallback: "Mention suggestions")
+      }
       public enum SwipeAction {
         /// Location: ConversationSwipeActionsModifier.swift - Swipe action to delete
         public static let delete = L10n.tr("Chats", "chats.swipeAction.delete", fallback: "Delete")
@@ -723,6 +739,14 @@ public enum L10n {
         public static let now = L10n.tr("Chats", "chats.timestamp.now", fallback: "Now")
         /// Location: MessageTimestampView.swift - Prefix for yesterday's date
         public static let yesterday = L10n.tr("Chats", "chats.timestamp.yesterday", fallback: "Yesterday")
+      }
+      public enum Tip {
+        public enum FloodAdvert {
+          /// Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action
+          public static let message = L10n.tr("Chats", "chats.tip.floodAdvert.message", fallback: "Tap here and send a Flood Advert to let nearby devices know you've joined.")
+          /// Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement
+          public static let title = L10n.tr("Chats", "chats.tip.floodAdvert.title", fallback: "Announce yourself to the mesh")
+        }
       }
     }
     public enum Reactions {
@@ -1513,6 +1537,8 @@ public enum L10n {
         public static let saved = L10n.tr("Contacts", "contacts.trace.saved", fallback: "Saved")
         /// Location: TracePathView.swift - Purpose: Navigation title
         public static let title = L10n.tr("Contacts", "contacts.trace.title", fallback: "Trace Path")
+        /// Location: TracePathView.swift - Purpose: View mode picker label
+        public static let viewMode = L10n.tr("Contacts", "contacts.trace.viewMode", fallback: "View Mode")
         public enum Error {
           /// Location: TracePathViewModel.swift - Purpose: All traces failed error
           public static func allFailed(_ p1: Int) -> String {
@@ -1636,6 +1662,10 @@ public enum L10n {
   }
   public enum Localizable {
     public enum Accessibility {
+      /// Accessibility value for toggle in Off state
+      public static let off = L10n.tr("Localizable", "accessibility.off", fallback: "Off")
+      /// Accessibility value for toggle in On state
+      public static let on = L10n.tr("Localizable", "accessibility.on", fallback: "On")
       /// VoiceOver announcement when viewing cached data while disconnected from device
       public static let viewingCachedData = L10n.tr("Localizable", "accessibility.viewingCachedData", fallback: "Viewing cached data. Connect to device for updates.")
     }
@@ -1674,6 +1704,34 @@ public enum L10n {
       public static let save = L10n.tr("Localizable", "common.save", fallback: "Save")
       /// Button to retry a failed operation
       public static let tryAgain = L10n.tr("Localizable", "common.tryAgain", fallback: "Try Again")
+      public enum Error {
+        /// API error with message - %@ is the error message
+        public static func apiError(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "common.error.apiError", String(describing: p1), fallback: "API error: %@")
+        }
+        /// Generic connection error title
+        public static let connectionError = L10n.tr("Localizable", "common.error.connectionError", fallback: "Connection error")
+        /// Error label when content fails to load
+        public static let failedToLoad = L10n.tr("Localizable", "common.error.failedToLoad", fallback: "Failed to load")
+        /// Invalid response from API
+        public static let invalidResponse = L10n.tr("Localizable", "common.error.invalidResponse", fallback: "Invalid response from elevation API")
+        /// Network error with underlying error description - %@ is the error description
+        public static func networkError(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "common.error.networkError", String(describing: p1), fallback: "Network error: %@")
+        }
+        /// No data returned from API
+        public static let noElevationData = L10n.tr("Localizable", "common.error.noElevationData", fallback: "No elevation data returned")
+      }
+      public enum Status {
+        /// Location: SyncingPillView.swift - Status shown when connecting to device
+        public static let connecting = L10n.tr("Localizable", "common.status.connecting", fallback: "Connecting")
+        /// Location: SyncingPillView.swift - Status shown when device is disconnected
+        public static let disconnected = L10n.tr("Localizable", "common.status.disconnected", fallback: "Disconnected")
+        /// Location: SyncingPillView.swift - Status shown when device is ready
+        public static let ready = L10n.tr("Localizable", "common.status.ready", fallback: "Ready")
+        /// Location: SyncingPillView.swift - Status shown when syncing data
+        public static let syncing = L10n.tr("Localizable", "common.status.syncing", fallback: "Syncing")
+      }
     }
     public enum NodeType {
       /// Node type for a person or contact
@@ -2087,6 +2145,10 @@ public enum L10n {
         public static let details = L10n.tr("RemoteNodes", "remoteNodes.room.details", fallback: "Details")
         /// Location: RoomConversationView.swift - Disconnected status
         public static let disconnected = L10n.tr("RemoteNodes", "remoteNodes.room.disconnected", fallback: "Disconnected")
+        /// Location: RoomConversationView.swift - Disconnected banner text
+        public static let disconnectedBanner = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedBanner", fallback: "Disconnected")
+        /// Location: RoomConversationView.swift - Accessibility hint for disconnected banner
+        public static let disconnectedHint = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedHint", fallback: "Return to chat list to reconnect")
         /// Location: RoomConversationView.swift - Identification section header
         public static let identification = L10n.tr("RemoteNodes", "remoteNodes.room.identification", fallback: "Identification")
         /// Location: RoomConversationView.swift - Room info sheet title
@@ -2395,6 +2457,8 @@ public enum L10n {
         public static let connectionError = L10n.tr("Settings", "alert.retry.connectionError", fallback: "Connection Error")
         /// Alert message when max retries exceeded
         public static let ensureConnected = L10n.tr("Settings", "alert.retry.ensureConnected", fallback: "Please ensure your device is connected.")
+        /// Fallback message for retry alerts when error description is unavailable
+        public static let fallbackMessage = L10n.tr("Settings", "alert.retry.fallbackMessage", fallback: "Please ensure device is connected and try again.")
         /// Button to retry the operation
         public static let retry = L10n.tr("Settings", "alert.retry.retry", fallback: "Retry")
         /// Alert title when max retries exceeded
@@ -2987,6 +3051,10 @@ public enum L10n {
         public static let jumpToBottom = L10n.tr("Tools", "tools.cli.jumpToBottom", fallback: "Jump to bottom")
         /// Location: CLIToolViewModel.swift - Local commands not implemented
         public static let localNotImplemented = L10n.tr("Tools", "tools.cli.localNotImplemented", fallback: "Local commands not yet implemented")
+        /// Location: CLIToolViewModel.swift - Login countdown
+        public static func loggingIn(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.cli.loggingIn", p1, fallback: "Logging in... (%ds)")
+        }
         /// Location: CLIToolView.swift - Login failed
         public static let loginFailed = L10n.tr("Tools", "tools.cli.loginFailed", fallback: "Login failed:")
         /// Location: CLIToolView.swift - Login failed reason
@@ -3013,6 +3081,8 @@ public enum L10n {
         public static let passwordPrompt = L10n.tr("Tools", "tools.cli.passwordPrompt", fallback: "Password:")
         /// Location: CLIToolView.swift - Password required error
         public static let passwordRequired = L10n.tr("Tools", "tools.cli.passwordRequired", fallback: "Password required")
+        /// Location: CLIInputAccessoryView.swift - Paste button
+        public static let paste = L10n.tr("Tools", "tools.cli.paste", fallback: "Paste")
         /// Location: CLIToolView.swift - Prompt suffix
         public static let promptSuffix = L10n.tr("Tools", "tools.cli.promptSuffix", fallback: ">")
         /// Location: CLIToolViewModel.swift - Reboot command confirmation

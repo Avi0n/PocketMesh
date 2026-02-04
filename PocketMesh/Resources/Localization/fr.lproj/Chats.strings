@@ -195,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Cela supprimera le canal de votre appareil et effacera tous les messages locaux. Cette action est irréversible.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Canal public • Emplacement 0";
+"chats.channelInfo.channelType.public" = "Canal public";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Canal hashtag • Emplacement %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Canal hashtag";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Canal privé • Emplacement %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Canal privé";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Emplacement";
@@ -226,6 +226,15 @@
 
 /* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
 "chats.channelInfo.manualSharingFooter" = "Partagez le nom du canal et cette clé secrète pour que d'autres puissent le rejoindre manuellement.";
+
+/* Location: ChannelInfoSheet.swift - Clear messages button */
+"chats.channelInfo.clearMessagesButton" = "Effacer les messages";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog title */
+"chats.channelInfo.clearMessagesConfirm.title" = "Effacer les messages ?";
+
+/* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message */
+"chats.channelInfo.clearMessagesConfirm.message" = "Tous les messages de ce canal seront supprimés définitivement. Le canal restera actif.";
 
 /* Location: ChannelInfoSheet.swift - Delete channel button */
 "chats.channelInfo.deleteButton" = "Supprimer le canal";
@@ -366,6 +375,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Conversations";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 
@@ -830,3 +844,11 @@
 
 /* Location: EmojiPickerSheet.swift - Search placeholder */
 "reactions.emoji.searchPlaceholder" = "Rechercher des emojis";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Annoncez-vous sur le réseau";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Appuyez ici et envoyez une annonce pour signaler aux appareils à proximité que vous avez rejoint le réseau.";

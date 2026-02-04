@@ -121,7 +121,7 @@ struct TelemetrySettingsSection: View {
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(
-                    message: error.errorDescription ?? "Connection error",
+                    message: error.errorDescription ?? L10n.Localizable.Common.Error.connectionError,
                     onRetry: { saveTelemetry(base: base, location: location, environment: environment) },
                     onMaxRetriesExceeded: { dismiss() }
                 )

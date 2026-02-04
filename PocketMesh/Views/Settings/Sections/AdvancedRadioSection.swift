@@ -190,7 +190,7 @@ struct AdvancedRadioSection: View {
                 return  // Skip the isApplying = false at the end
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(
-                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
                     onRetry: { applySettings() },
                     onMaxRetriesExceeded: { dismiss() }
                 )

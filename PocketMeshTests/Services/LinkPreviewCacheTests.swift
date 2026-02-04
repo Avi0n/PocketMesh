@@ -256,7 +256,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?) async throws {}
     func updateMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
     func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) async throws {}
-    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) async throws {}
+    func updateMessageLinkPreview(id: UUID, url: String?, title: String?, imageData: Data?, iconData: Data?, fetched: Bool) throws {}
 
     // Contact Operations
     func fetchContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
@@ -291,7 +291,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     @discardableResult func saveChannel(deviceID: UUID, from info: ChannelInfo) async throws -> UUID { UUID() }
     func saveChannel(_ dto: ChannelDTO) async throws {}
     func deleteChannel(id: UUID) async throws {}
-    func updateChannelLastMessage(channelID: UUID, date: Date) async throws {}
+    func updateChannelLastMessage(channelID: UUID, date: Date?) async throws {}
     func incrementChannelUnreadCount(channelID: UUID) async throws {}
     func clearChannelUnreadCount(channelID: UUID) async throws {}
 
@@ -327,6 +327,14 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     // RxLogEntry Lookup
     func findRxLogEntry(channelIndex: UInt8?, senderTimestamp: UInt32, withinSeconds: Double, contactName: String?) async throws -> RxLogEntryDTO? { nil }
 
+    // Room Message Operations
+    func saveRoomMessage(_ dto: RoomMessageDTO) async throws {}
+    func fetchRoomMessage(id: UUID) async throws -> RoomMessageDTO? { nil }
+    func fetchRoomMessages(sessionID: UUID, limit: Int?, offset: Int?) async throws -> [RoomMessageDTO] { [] }
+    func isDuplicateRoomMessage(sessionID: UUID, deduplicationKey: String) async throws -> Bool { false }
+    func updateRoomMessageStatus(id: UUID, status: MessageStatus, ackCode: UInt32?, roundTripTime: UInt32?) async throws {}
+    func updateRoomMessageRetryStatus(id: UUID, status: MessageStatus, retryAttempt: Int, maxRetryAttempts: Int) async throws {}
+
     // Discovered Nodes
     func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) async throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
         fatalError("Not implemented")
@@ -344,4 +352,11 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func deleteReactionsForMessage(messageID: UUID) async throws {}
     func findChannelMessageForReaction(deviceID: UUID, channelIndex: UInt8, parsedReaction: ParsedReaction, localNodeName: String?, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
     func findDMMessageForReaction(deviceID: UUID, contactID: UUID, messageHash: String, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
+
+    // Notification Level
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {}
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {}
+
+    // Channel Message Deletion
+    func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {}
 }

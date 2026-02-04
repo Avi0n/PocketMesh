@@ -32,8 +32,41 @@
 /* Button to retry a failed operation */
 "common.tryAgain" = "Opnieuw proberen";
 
+/* Error label when content fails to load */
+"common.error.failedToLoad" = "Laden mislukt";
+
+/* Generic connection error title */
+"common.error.connectionError" = "Verbindingsfout";
+
+/* Network error with underlying error description - %@ is the error description */
+"common.error.networkError" = "Netwerkfout: %@";
+
+/* Invalid response from API */
+"common.error.invalidResponse" = "Ongeldige reactie van de hoogte-API";
+
+/* API error with message - %@ is the error message */
+"common.error.apiError" = "API-fout: %@";
+
+/* No data returned from API */
+"common.error.noElevationData" = "Geen hoogtegegevens geretourneerd";
+
 /* Standard remove button for removing items from a list or group */
 "common.remove" = "Verwijderen";
+
+
+// MARK: - Connection Status
+
+/* Location: SyncingPillView.swift - Status shown when syncing data */
+"common.status.syncing" = "Synchroniseren";
+
+/* Location: SyncingPillView.swift - Status shown when connecting to device */
+"common.status.connecting" = "Verbinden";
+
+/* Location: SyncingPillView.swift - Status shown when device is ready */
+"common.status.ready" = "Gereed";
+
+/* Location: SyncingPillView.swift - Status shown when device is disconnected */
+"common.status.disconnected" = "Verbroken";
 
 
 // MARK: - Tab Bar

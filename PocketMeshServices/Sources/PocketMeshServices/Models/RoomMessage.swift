@@ -34,6 +34,21 @@ public final class RoomMessage {
     /// Format: "\(timestamp)-\(authorPrefixHex)-\(contentHashPrefix)"
     public var deduplicationKey: String
 
+    /// Message delivery status (uses MessageStatus enum)
+    public var statusRawValue: Int = MessageStatus.delivered.rawValue
+
+    /// ACK code returned by MeshCore when message was sent
+    public var ackCode: UInt32?
+
+    /// Round-trip time in milliseconds when ACK received
+    public var roundTripTime: UInt32?
+
+    /// Current retry attempt number
+    public var retryAttempt: Int = 0
+
+    /// Maximum retry attempts configured
+    public var maxRetryAttempts: Int = 0
+
     public init(
         id: UUID = UUID(),
         sessionID: UUID,
@@ -41,7 +56,8 @@ public final class RoomMessage {
         authorName: String? = nil,
         text: String,
         timestamp: UInt32,
-        isFromSelf: Bool = false
+        isFromSelf: Bool = false,
+        status: MessageStatus = .delivered
     ) {
         self.id = id
         self.sessionID = sessionID
@@ -51,6 +67,7 @@ public final class RoomMessage {
         self.timestamp = timestamp
         self.createdAt = Date()
         self.isFromSelf = isFromSelf
+        self.statusRawValue = status.rawValue
         self.deduplicationKey = Self.generateDeduplicationKey(
             timestamp: timestamp,
             authorKeyPrefix: authorKeyPrefix,
@@ -70,6 +87,11 @@ public extension RoomMessage {
     /// Date representation of timestamp
     var date: Date {
         Date(timeIntervalSince1970: TimeInterval(timestamp))
+    }
+
+    /// Delivery status
+    var status: MessageStatus {
+        MessageStatus(rawValue: statusRawValue) ?? .delivered
     }
 }
 
@@ -103,6 +125,11 @@ public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
     public let createdAt: Date
     public let isFromSelf: Bool
     public let deduplicationKey: String
+    public let statusRawValue: Int
+    public let ackCode: UInt32?
+    public let roundTripTime: UInt32?
+    public let retryAttempt: Int
+    public let maxRetryAttempts: Int
 
     public init(from model: RoomMessage) {
         self.id = model.id
@@ -114,6 +141,11 @@ public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
         self.createdAt = model.createdAt
         self.isFromSelf = model.isFromSelf
         self.deduplicationKey = model.deduplicationKey
+        self.statusRawValue = model.statusRawValue
+        self.ackCode = model.ackCode
+        self.roundTripTime = model.roundTripTime
+        self.retryAttempt = model.retryAttempt
+        self.maxRetryAttempts = model.maxRetryAttempts
     }
 
     public init(
@@ -124,7 +156,12 @@ public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
         text: String,
         timestamp: UInt32,
         createdAt: Date = Date(),
-        isFromSelf: Bool = false
+        isFromSelf: Bool = false,
+        status: MessageStatus = .delivered,
+        ackCode: UInt32? = nil,
+        roundTripTime: UInt32? = nil,
+        retryAttempt: Int = 0,
+        maxRetryAttempts: Int = 0
     ) {
         self.id = id
         self.sessionID = sessionID
@@ -134,6 +171,11 @@ public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
         self.timestamp = timestamp
         self.createdAt = createdAt
         self.isFromSelf = isFromSelf
+        self.statusRawValue = status.rawValue
+        self.ackCode = ackCode
+        self.roundTripTime = roundTripTime
+        self.retryAttempt = retryAttempt
+        self.maxRetryAttempts = maxRetryAttempts
         self.deduplicationKey = RoomMessage.generateDeduplicationKey(
             timestamp: timestamp,
             authorKeyPrefix: authorKeyPrefix,
@@ -147,5 +189,9 @@ public struct RoomMessageDTO: Sendable, Equatable, Identifiable, Hashable {
 
     public var date: Date {
         Date(timeIntervalSince1970: TimeInterval(timestamp))
+    }
+
+    public var status: MessageStatus {
+        MessageStatus(rawValue: statusRawValue) ?? .delivered
     }
 }

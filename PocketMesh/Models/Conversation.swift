@@ -51,15 +51,19 @@ enum Conversation: Identifiable, Hashable {
         }
     }
 
-    var isMuted: Bool {
+    var notificationLevel: NotificationLevel {
         switch self {
         case .direct(let contact):
-            return contact.isMuted
+            return contact.isMuted ? .muted : .all
         case .channel(let channel):
-            return channel.isMuted
+            return channel.notificationLevel
         case .room(let session):
-            return session.isMuted
+            return session.notificationLevel
         }
+    }
+
+    var isMuted: Bool {
+        notificationLevel == .muted
     }
 
     var isFavorite: Bool {

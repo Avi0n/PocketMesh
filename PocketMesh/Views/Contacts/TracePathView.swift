@@ -49,7 +49,7 @@ struct TracePathView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Picker("View Mode", selection: $viewMode) {
+                Picker(L10n.Contacts.Contacts.Trace.viewMode, selection: $viewMode) {
                     ForEach(TracePathViewMode.allCases, id: \.self) { mode in
                         Text(mode.label).tag(mode)
                     }

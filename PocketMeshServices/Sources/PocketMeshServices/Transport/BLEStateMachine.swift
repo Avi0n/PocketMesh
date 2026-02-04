@@ -9,7 +9,7 @@ import os
 /// All CoreBluetooth operations are modeled as state transitions. Each state
 /// owns its resources (continuations, timeouts), ensuring proper cleanup
 /// on any transition.
-public actor BLEStateMachine {
+public actor BLEStateMachine: BLEStateMachineProtocol {
 
     // MARK: - Logging
 
@@ -198,6 +198,20 @@ public actor BLEStateMachine {
     public var currentPeripheralState: String? {
         guard let peripheral = phase.peripheral else { return nil }
         return peripheralStateString(peripheral.state)
+    }
+
+    /// Current CBCentralManager state name for diagnostic logging
+    public var centralManagerStateName: String {
+        guard let manager = centralManager else { return "notActivated" }
+        switch manager.state {
+        case .unknown: return "unknown"
+        case .resetting: return "resetting"
+        case .unsupported: return "unsupported"
+        case .unauthorized: return "unauthorized"
+        case .poweredOff: return "poweredOff"
+        case .poweredOn: return "poweredOn"
+        @unknown default: return "unknown(\(manager.state.rawValue))"
+        }
     }
 
     /// Checks if a device is connected to the system (possibly by another app).
