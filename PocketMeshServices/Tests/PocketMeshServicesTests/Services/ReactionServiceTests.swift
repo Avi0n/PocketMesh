@@ -377,4 +377,121 @@ struct ReactionServiceTests {
 
         #expect(matchesChannel0.count == 1)
     }
+
+    // MARK: - DM Reaction Tests
+
+    @Test("Builds DM wire format")
+    func buildsDMWireFormat() async {
+        let service = ReactionService()
+        let text = service.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: 1704067200
+        )
+        #expect(text.hasPrefix("👍 ["))
+        #expect(text.hasSuffix("]"))
+        #expect(!text.contains("@["))
+    }
+
+    @Test("Indexes DM message and finds by hash")
+    func indexesDMMessageAndFinds() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let contactID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        _ = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID,
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        let hash = ReactionParser.generateMessageHash(text: "Hello world", timestamp: timestamp)
+        let foundID = await service.findDMTargetMessage(
+            messageHash: hash,
+            contactID: contactID
+        )
+
+        #expect(foundID == messageID)
+    }
+
+    @Test("DM pending reactions match when message indexed")
+    func dmPendingReactionsMatch() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let contactID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        let reactionText = service.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+
+        let parsed = ReactionParser.parseDM(reactionText)!
+
+        await service.queuePendingDMReaction(
+            parsed: parsed,
+            contactID: contactID,
+            senderName: "Alice",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        let matches = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID,
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matches.count == 1)
+        #expect(matches.first?.parsed.emoji == "👍")
+    }
+
+    @Test("DM reactions scoped by contact")
+    func dmReactionsScopedByContact() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let contactID1 = UUID()
+        let contactID2 = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        let reactionText = service.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parseDM(reactionText)!
+
+        // Queue for contact1
+        await service.queuePendingDMReaction(
+            parsed: parsed,
+            contactID: contactID1,
+            senderName: "Alice",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Index for contact2 - should NOT match
+        let matchesContact2 = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID2,
+            text: "Hello world",
+            timestamp: timestamp
+        )
+        #expect(matchesContact2.isEmpty)
+
+        // Index for contact1 - should match
+        let matchesContact1 = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID1,
+            text: "Hello world",
+            timestamp: timestamp
+        )
+        #expect(matchesContact1.count == 1)
+    }
 }

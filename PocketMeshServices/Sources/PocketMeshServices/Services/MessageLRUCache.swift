@@ -13,6 +13,17 @@ public struct MessageCacheKey: Hashable, Sendable {
     }
 }
 
+/// Key for DM message lookup in LRU cache
+public struct DMCacheKey: Hashable, Sendable {
+    public let contactID: UUID
+    public let messageHash: String
+
+    public init(contactID: UUID, messageHash: String) {
+        self.contactID = contactID
+        self.messageHash = messageHash
+    }
+}
+
 /// Candidate message for reaction matching
 public struct MessageCandidate: Sendable, Equatable {
     public let messageID: UUID
@@ -32,6 +43,10 @@ public struct MessageCandidate: Sendable, Equatable {
 public actor MessageLRUCache {
     private var cache: [MessageCacheKey: [MessageCandidate]] = [:]
     private var order: [MessageCacheKey] = []
+
+    private var dmCache: [DMCacheKey: [MessageCandidate]] = [:]
+    private var dmOrder: [DMCacheKey] = []
+
     private let capacity: Int
     private let maxCandidatesPerKey: Int
 
@@ -81,9 +96,52 @@ public actor MessageLRUCache {
         return cache[key] ?? []
     }
 
+    /// Indexes a DM message for later lookup
+    public func indexDM(messageID: UUID, contactID: UUID, text: String, timestamp: UInt32) {
+        let hash = ReactionParser.generateMessageHash(text: text, timestamp: timestamp)
+        let key = DMCacheKey(contactID: contactID, messageHash: hash)
+        let candidate = MessageCandidate(messageID: messageID, text: text, timestamp: timestamp)
+
+        // Update LRU order
+        if let existingIndex = dmOrder.firstIndex(of: key) {
+            dmOrder.remove(at: existingIndex)
+        }
+        dmOrder.append(key)
+
+        // Evict oldest key if at capacity
+        if dmOrder.count > capacity, let oldest = dmOrder.first {
+            dmOrder.removeFirst()
+            dmCache.removeValue(forKey: oldest)
+        }
+
+        // Add candidate to key's list
+        var candidates = dmCache[key] ?? []
+
+        // Remove existing candidate with same messageID (re-indexing)
+        candidates.removeAll { $0.messageID == messageID }
+
+        // Append new candidate
+        candidates.append(candidate)
+
+        // Prune to max candidates (keep most recent)
+        if candidates.count > maxCandidatesPerKey {
+            candidates = Array(candidates.suffix(maxCandidatesPerKey))
+        }
+
+        dmCache[key] = candidates
+    }
+
+    /// Looks up DM candidates by cache key
+    public func lookupDM(contactID: UUID, messageHash: String) -> [MessageCandidate] {
+        let key = DMCacheKey(contactID: contactID, messageHash: messageHash)
+        return dmCache[key] ?? []
+    }
+
     /// Clears the cache
     public func clear() {
         cache.removeAll()
         order.removeAll()
+        dmCache.removeAll()
+        dmOrder.removeAll()
     }
 }

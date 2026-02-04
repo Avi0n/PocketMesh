@@ -12,6 +12,16 @@ public struct PendingReaction: Sendable {
     public let receivedAt: Date
 }
 
+/// A DM reaction waiting for its target message to be indexed
+public struct PendingDMReaction: Sendable {
+    public let parsed: ParsedDMReaction
+    public let contactID: UUID
+    public let senderName: String
+    public let rawText: String
+    public let deviceID: UUID
+    public let receivedAt: Date
+}
+
 /// Service for handling emoji reactions on channel messages
 public actor ReactionService {
     private let logger = Logger(subsystem: "PocketMeshServices", category: "ReactionService")
@@ -28,6 +38,14 @@ public actor ReactionService {
         let targetSender: String
         let messageHash: String
     }
+
+    private struct PendingDMReactionKey: Hashable {
+        let contactID: UUID
+        let messageHash: String
+    }
+
+    private var pendingDMReactions: [PendingDMReactionKey: [PendingDMReaction]] = [:]
+    private var pendingDMOrder: [PendingDMReactionKey] = []
 
     public init(messageCache: MessageLRUCache = MessageLRUCache()) {
         self.messageCache = messageCache
@@ -78,6 +96,19 @@ public actor ReactionService {
     ) -> String {
         let hash = ReactionParser.generateMessageHash(text: targetText, timestamp: targetTimestamp)
         return "\(emoji) @[\(targetSender)] [\(hash)]"
+    }
+
+    /// Builds DM reaction wire format (shorter, no sender)
+    public nonisolated func buildDMReactionText(
+        emoji: String,
+        targetText: String,
+        targetTimestamp: UInt32
+    ) -> String {
+        ReactionParser.buildDMReactionText(
+            emoji: emoji,
+            targetText: targetText,
+            targetTimestamp: targetTimestamp
+        )
     }
 
     /// Finds target message ID for a parsed reaction using hash-based lookup
@@ -134,11 +165,80 @@ public actor ReactionService {
     /// Clears all pending reactions (call on disconnect)
     public func clearPendingReactions() {
         let count = pendingReactions.values.reduce(0) { $0 + $1.count }
+        let dmCount = pendingDMReactions.values.reduce(0) { $0 + $1.count }
         pendingReactions.removeAll()
         pendingOrder.removeAll()
-        if count > 0 {
-            logger.debug("Cleared \(count) pending reaction(s)")
+        pendingDMReactions.removeAll()
+        pendingDMOrder.removeAll()
+        if count + dmCount > 0 {
+            logger.debug("Cleared \(count + dmCount) pending reaction(s)")
         }
+    }
+
+    // MARK: - DM Reactions
+
+    /// Indexes a DM message for reaction matching and returns any pending reactions that now match
+    public func indexDMMessage(
+        id: UUID,
+        contactID: UUID,
+        text: String,
+        timestamp: UInt32
+    ) async -> [PendingDMReaction] {
+        await messageCache.indexDM(
+            messageID: id,
+            contactID: contactID,
+            text: text,
+            timestamp: timestamp
+        )
+
+        // Check pending queue for matching reactions
+        let hash = ReactionParser.generateMessageHash(text: text, timestamp: timestamp)
+        let key = PendingDMReactionKey(contactID: contactID, messageHash: hash)
+
+        guard let matched = pendingDMReactions.removeValue(forKey: key) else {
+            return []
+        }
+
+        pendingDMOrder.removeAll { $0 == key }
+
+        logger.debug("Matched \(matched.count) pending DM reaction(s) to message \(id)")
+
+        return matched
+    }
+
+    /// Finds target DM message ID by hash and contact
+    public func findDMTargetMessage(messageHash: String, contactID: UUID) async -> UUID? {
+        let candidates = await messageCache.lookupDM(contactID: contactID, messageHash: messageHash)
+        return candidates.max(by: { $0.indexedAt < $1.indexedAt })?.messageID
+    }
+
+    /// Queues a DM reaction that couldn't find its target message
+    public func queuePendingDMReaction(
+        parsed: ParsedDMReaction,
+        contactID: UUID,
+        senderName: String,
+        rawText: String,
+        deviceID: UUID
+    ) {
+        let key = PendingDMReactionKey(contactID: contactID, messageHash: parsed.messageHash)
+        let pending = PendingDMReaction(
+            parsed: parsed,
+            contactID: contactID,
+            senderName: senderName,
+            rawText: rawText,
+            deviceID: deviceID,
+            receivedAt: Date()
+        )
+
+        if pendingDMReactions[key] != nil {
+            pendingDMReactions[key]!.append(pending)
+        } else {
+            pendingDMReactions[key] = [pending]
+            pendingDMOrder.append(key)
+        }
+
+        evictDMIfNeeded()
+        logger.debug("Queued pending DM reaction \(parsed.emoji)")
     }
 
     private func evictIfNeeded() {
@@ -157,6 +257,26 @@ public actor ReactionService {
                 }
             } else {
                 pendingOrder.removeFirst()
+            }
+        }
+    }
+
+    private func evictDMIfNeeded() {
+        var totalCount = pendingDMReactions.values.reduce(0) { $0 + $1.count }
+
+        while totalCount > Self.maxPendingReactions, let oldestKey = pendingDMOrder.first {
+            if var entries = pendingDMReactions[oldestKey], !entries.isEmpty {
+                entries.removeFirst()
+                totalCount -= 1
+
+                if entries.isEmpty {
+                    pendingDMReactions.removeValue(forKey: oldestKey)
+                    pendingDMOrder.removeFirst()
+                } else {
+                    pendingDMReactions[oldestKey] = entries
+                }
+            } else {
+                pendingDMOrder.removeFirst()
             }
         }
     }
