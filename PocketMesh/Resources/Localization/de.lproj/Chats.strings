@@ -195,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Der Kanal wird von deinem Gerät entfernt und alle lokalen Nachrichten werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Öffentlicher Kanal • Slot 0";
+"chats.channelInfo.channelType.public" = "Öffentlicher Kanal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Hashtag-Kanal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Hashtag-Kanal";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Privater Kanal • Slot %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Privater Kanal";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Slot";

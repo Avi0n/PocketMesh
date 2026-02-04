@@ -21,8 +21,9 @@ struct ChannelInfoSheet: View {
     @State private var errorMessage: String?
     @State private var copyHapticTrigger = 0
 
-    init(channel: ChannelDTO, onDelete: @escaping () -> Void) {
+    init(channel: ChannelDTO, onClearMessages: @escaping () -> Void, onDelete: @escaping () -> Void) {
         self.channel = channel
+        self.onClearMessages = onClearMessages
         self.onDelete = onDelete
         self._notificationLevel = State(initialValue: channel.notificationLevel)
         self._isFavorite = State(initialValue: channel.isFavorite)
@@ -51,9 +52,6 @@ struct ChannelInfoSheet: View {
                     }
                 }
 
-                // Channel Info Section
-                channelInfoSection
-
                 // QR Code Section (only for private channels with secrets)
                 if channel.hasSecret && !channel.isPublicChannel {
                     qrCodeSection
@@ -78,7 +76,7 @@ struct ChannelInfoSheet: View {
             .navigationTitle(L10n.Chats.Chats.ChannelInfo.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.Chats.Chats.Common.done) {
                         dismiss()
                     }
@@ -114,7 +112,6 @@ struct ChannelInfoSheet: View {
             Text(L10n.Chats.Chats.ChannelInfo.DeleteConfirm.message)
         }
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
-        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Channel Header Section
@@ -140,27 +137,13 @@ struct ChannelInfoSheet: View {
         }
     }
 
-    // MARK: - Channel Info Section
-
-    private var channelInfoSection: some View {
-        Section {
-            LabeledContent(L10n.Chats.Chats.ChannelInfo.slot, value: "\(channel.index)")
-
-            if let lastMessage = channel.lastMessageDate {
-                LabeledContent(L10n.Chats.Chats.ChannelInfo.lastMessage) {
-                    Text(lastMessage, style: .relative)
-                }
-            }
-        }
-    }
-
     private var channelTypeLabel: String {
         if channel.isPublicChannel {
             return L10n.Chats.Chats.ChannelInfo.ChannelType.`public`
         } else if channel.name.hasPrefix("#") {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag(Int(channel.index))
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag
         } else {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`(Int(channel.index))
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`
         }
     }
 

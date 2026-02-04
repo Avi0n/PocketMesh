@@ -194,13 +194,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Канал будет удалён с твоего устройства вместе со всеми локальными сообщениями. Это действие нельзя отменить.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Публичный канал • Слот 0";
+"chats.channelInfo.channelType.public" = "Публичный канал";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Хэштег-канал • Слот %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Хэштег-канал";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Приватный канал • Слот %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Приватный канал";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Слот";
