@@ -811,22 +811,22 @@ struct PersistenceStoreTests {
         try await store.incrementChannelUnreadCount(channelID: channelID)
 
         // Default (all) - should count all unreads
-        var counts = try await store.getTotalUnreadCounts()
+        var counts = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(counts.channels == 2)
 
         // Muted - should exclude from badge
         try await store.setChannelNotificationLevel(channelID, level: .muted)
-        counts = try await store.getTotalUnreadCounts()
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(counts.channels == 0)
 
         // Mentions only with no mentions - should show 0
         try await store.setChannelNotificationLevel(channelID, level: .mentionsOnly)
-        counts = try await store.getTotalUnreadCounts()
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(counts.channels == 0)
 
         // Mentions only with mentions - should show mention count
         try await store.incrementChannelUnreadMentionCount(channelID: channelID)
-        counts = try await store.getTotalUnreadCounts()
+        counts = try await store.getTotalUnreadCounts(deviceID: device.id)
         #expect(counts.channels == 1)
     }
 }
