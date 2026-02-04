@@ -45,7 +45,7 @@ struct RoomConversationRow: View {
 
                     UnreadBadges(
                         unreadCount: session.unreadCount,
-                        isMuted: session.isMuted
+                        notificationLevel: session.notificationLevel
                     )
                 }
             }

@@ -42,7 +42,7 @@ struct ChannelConversationRow: View {
                     UnreadBadges(
                         unreadCount: channel.unreadCount,
                         unreadMentionCount: channel.unreadMentionCount,
-                        isMuted: channel.isMuted
+                        notificationLevel: channel.notificationLevel
                     )
                 }
             }
