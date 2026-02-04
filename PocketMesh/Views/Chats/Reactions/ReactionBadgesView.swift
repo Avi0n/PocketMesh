@@ -7,6 +7,8 @@ struct ReactionBadgesView: View {
     let onTapReaction: (String) -> Void
     let onLongPress: () -> Void
 
+    @State private var longPressTriggered = false
+
     private var reactions: [(emoji: String, count: Int)] {
         ReactionParser.parseSummary(summary)
     }
@@ -54,10 +56,14 @@ struct ReactionBadgesView: View {
             .simultaneousGesture(
                 LongPressGesture(minimumDuration: 0.3)
                     .onEnded { _ in
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        longPressTriggered.toggle()
                         onLongPress()
                     }
             )
+            .sensoryFeedback(.impact(weight: .medium), trigger: longPressTriggered)
+            .accessibilityAction(named: L10n.Chats.Reactions.viewDetails) {
+                onLongPress()
+            }
         }
     }
 }
@@ -79,7 +85,7 @@ private struct ReactionBadge: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
         .background(AppColors.Message.incomingBubble, in: .capsule)
-        .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 2))
+        .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 2))
     }
 }
 
@@ -93,7 +99,7 @@ private struct OverflowBadge: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .background(AppColors.Message.incomingBubble, in: .capsule)
-            .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 2))
+            .overlay(Capsule().strokeBorder(Color(.systemBackground), lineWidth: 2))
     }
 }
 

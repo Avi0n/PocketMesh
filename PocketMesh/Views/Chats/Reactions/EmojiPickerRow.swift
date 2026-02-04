@@ -21,17 +21,15 @@ struct EmojiPickerRow: View {
                 .accessibilityLabel(emojiAccessibilityName(emoji))
             }
 
-            Button {
+            Button(L10n.Chats.Reactions.moreEmojis, systemImage: "plus") {
                 onOpenKeyboard()
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
             }
+            .font(.title2)
+            .foregroundStyle(.secondary)
+            .labelStyle(.iconOnly)
             .buttonStyle(.plain)
             .frame(width: 44, height: 44)
             .background(.ultraThinMaterial, in: .circle)
-            .accessibilityLabel(L10n.Chats.Reactions.moreEmojis)
         }
         .padding(.horizontal)
     }

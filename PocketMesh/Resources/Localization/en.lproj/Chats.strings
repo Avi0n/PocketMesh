@@ -665,6 +665,9 @@
 /* Location: EmojiPickerRow.swift - Label for more emojis button */
 "reactions.more_emojis" = "More emojis";
 
+/* Location: ReactionBadgesView.swift - VoiceOver accessibility action to view reaction details */
+"reactions.view_details" = "View reaction details";
+
 /* Location: ReactionDetailsSheet.swift - Navigation title */
 "reactions.details_title" = "Reactions";
 

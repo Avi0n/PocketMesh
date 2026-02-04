@@ -47,6 +47,7 @@ struct ReactionDetailsSheet: View {
                     senderListView
                 }
             }
+            .navigationTitle(L10n.Chats.Reactions.title)
             .task {
                 await loadReactions()
             }
@@ -126,6 +127,7 @@ private struct EmojiTab: View {
         .padding(.vertical, 8)
         .background(isSelected ? Color.accentColor : Color.clear, in: .capsule)
         .foregroundStyle(isSelected ? .white : .primary)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

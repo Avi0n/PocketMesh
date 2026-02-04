@@ -87,6 +87,7 @@ struct UnifiedMessageBubble: View {
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     @State private var showingReactionDetails = false
+    @State private var longPressTriggered = false
 
     init(
         message: MessageDTO,
@@ -147,9 +148,10 @@ struct UnifiedMessageBubble: View {
                     // Message bubble with text and optional routing footer
                     messageBubbleContent
                         .onLongPressGesture(minimumDuration: 0.3) {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            longPressTriggered.toggle()
                             onLongPress?()
                         }
+                        .sensoryFeedback(.impact(weight: .medium), trigger: longPressTriggered)
 
                     // Reaction badges (for messages with reactions)
                     if let summary = message.reactionSummary, !summary.isEmpty {

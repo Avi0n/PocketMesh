@@ -752,6 +752,8 @@ public enum L10n {
       public static let sendFailed = L10n.tr("Chats", "reactions.send_failed", fallback: "Could not send reaction")
       /// Location: ReactionDetailsSheet.swift - Navigation title
       public static let title = L10n.tr("Chats", "reactions.title", fallback: "Reactions")
+      /// Location: ReactionBadgesView.swift - VoiceOver accessibility action to view reaction details
+      public static let viewDetails = L10n.tr("Chats", "reactions.view_details", fallback: "View reaction details")
       public enum Emoji {
         /// Location: EmojiPickerSheet.swift - Search placeholder
         public static let searchPlaceholder = L10n.tr("Chats", "reactions.emoji.searchPlaceholder", fallback: "Search emojis")
