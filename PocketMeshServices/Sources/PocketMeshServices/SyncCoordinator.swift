@@ -645,8 +645,153 @@ public actor SyncCoordinator {
                 return
             }
 
+            // Check if this is a DM reaction
+            if let parsed = ReactionParser.parseDM(message.text),
+               let contact {
+                // Try to find target in cache first
+                if let targetMessageID = await services.reactionService.findDMTargetMessage(
+                    messageHash: parsed.messageHash,
+                    contactID: contact.id
+                ) {
+                    let senderName = contact.displayName
+                    let exists = try? await services.dataStore.reactionExists(
+                        messageID: targetMessageID,
+                        senderName: senderName,
+                        emoji: parsed.emoji
+                    )
+
+                    if exists != true {
+                        let reactionDTO = ReactionDTO(
+                            messageID: targetMessageID,
+                            emoji: parsed.emoji,
+                            senderName: senderName,
+                            messageHash: parsed.messageHash,
+                            rawText: message.text,
+                            contactID: contact.id,
+                            deviceID: deviceID
+                        )
+                        try? await services.dataStore.saveReaction(reactionDTO)
+
+                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
+                            let summary = ReactionParser.buildSummary(from: reactions)
+                            try? await services.dataStore.updateMessageReactionSummary(
+                                messageID: targetMessageID,
+                                summary: summary
+                            )
+                            await self.onReactionReceived?(targetMessageID, summary)
+                        }
+
+                        self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessageID)")
+                    }
+
+                    return  // Don't save as regular message
+                }
+
+                // Try persistence fallback
+                let now = UInt32(Date().timeIntervalSince1970)
+                let windowSize: UInt32 = 300
+                let windowStart = now > windowSize ? now - windowSize : 0
+                let windowEnd = now + windowSize
+
+                if let targetMessage = try? await services.dataStore.findDMMessageForReaction(
+                    deviceID: deviceID,
+                    contactID: contact.id,
+                    messageHash: parsed.messageHash,
+                    timestampWindow: windowStart...windowEnd,
+                    limit: 200
+                ) {
+                    let senderName = contact.displayName
+                    let exists = try? await services.dataStore.reactionExists(
+                        messageID: targetMessage.id,
+                        senderName: senderName,
+                        emoji: parsed.emoji
+                    )
+
+                    if exists != true {
+                        let reactionDTO = ReactionDTO(
+                            messageID: targetMessage.id,
+                            emoji: parsed.emoji,
+                            senderName: senderName,
+                            messageHash: parsed.messageHash,
+                            rawText: message.text,
+                            contactID: contact.id,
+                            deviceID: deviceID
+                        )
+                        try? await services.dataStore.saveReaction(reactionDTO)
+
+                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessage.id) {
+                            let summary = ReactionParser.buildSummary(from: reactions)
+                            try? await services.dataStore.updateMessageReactionSummary(
+                                messageID: targetMessage.id,
+                                summary: summary
+                            )
+                            await self.onReactionReceived?(targetMessage.id, summary)
+                        }
+
+                        self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessage.id) (from DB)")
+                    }
+
+                    return
+                }
+
+                // Queue as pending if target not found
+                await services.reactionService.queuePendingDMReaction(
+                    parsed: parsed,
+                    contactID: contact.id,
+                    senderName: contact.displayName,
+                    rawText: message.text,
+                    deviceID: deviceID
+                )
+
+                self.logger.debug("Queued pending DM reaction \(parsed.emoji)")
+                return  // Don't save as regular message
+            }
+
             do {
                 try await services.dataStore.saveMessage(messageDTO)
+
+                // Index DM message for reaction targeting
+                if let contact {
+                    let pendingMatches = await services.reactionService.indexDMMessage(
+                        id: messageDTO.id,
+                        contactID: contact.id,
+                        text: message.text,
+                        timestamp: timestamp
+                    )
+
+                    // Process pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await services.dataStore.reactionExists(
+                            messageID: messageDTO.id,
+                            senderName: pending.senderName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: messageDTO.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                contactID: contact.id,
+                                deviceID: deviceID
+                            )
+                            try? await services.dataStore.saveReaction(reactionDTO)
+
+                            if let reactions = try? await services.dataStore.fetchReactions(for: messageDTO.id) {
+                                let summary = ReactionParser.buildSummary(from: reactions)
+                                try? await services.dataStore.updateMessageReactionSummary(
+                                    messageID: messageDTO.id,
+                                    summary: summary
+                                )
+                                await self.onReactionReceived?(messageDTO.id, summary)
+                            }
+
+                            self.logger.debug("Processed pending DM reaction \(pending.parsed.emoji)")
+                        }
+                    }
+                }
 
                 // Update contact's last message date
                 if let contactID = contact?.id {
