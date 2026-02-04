@@ -93,7 +93,7 @@ public actor ReactionService {
     }
 
     /// Builds reaction wire format text for sending
-    /// Format: `{emoji} @[{sender}] [xxxxxxxx]`
+    /// Format: `{emoji}@[{sender}]\n{hash}`
     public nonisolated func buildReactionText(
         emoji: String,
         targetSender: String,
@@ -101,7 +101,7 @@ public actor ReactionService {
         targetTimestamp: UInt32
     ) -> String {
         let hash = ReactionParser.generateMessageHash(text: targetText, timestamp: targetTimestamp)
-        return "\(emoji) @[\(targetSender)] [\(hash)]"
+        return "\(emoji)@[\(targetSender)]\n\(hash)"
     }
 
     /// Builds DM reaction wire format (shorter, no sender)

@@ -9,7 +9,7 @@ struct ReactionParserTests {
 
     @Test("Parses simple reaction with thumbs up")
     func parsesSimpleReaction() {
-        let text = "👍 @[AlphaNode] [7f3a9c12]"
+        let text = "👍@[AlphaNode]\n7f3a9c12"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -20,7 +20,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with heart emoji")
     func parsesHeartReaction() {
-        let text = "❤️ @[BetaNode] [e4d8b1a0]"
+        let text = "❤️@[BetaNode]\ne4d8b1a0"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -31,7 +31,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with uppercase identifier and normalizes to lowercase")
     func parsesUppercaseIdentifier() {
-        let text = "👍 @[Node] [ABCDEF12]"
+        let text = "👍@[Node]\nABCDEF12"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -40,7 +40,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with mixed case identifier")
     func parsesMixedCaseIdentifier() {
-        let text = "👍 @[Node] [AbCdEf12]"
+        let text = "👍@[Node]\nAbCdEf12"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -81,7 +81,7 @@ struct ReactionParserTests {
 
     @Test("Crockford O is decoded as 0")
     func crockfordODecodesAsZero() {
-        let text = "👍 @[Node] [OOOOOOOO]"
+        let text = "👍@[Node]\nOOOOOOOO"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -90,11 +90,11 @@ struct ReactionParserTests {
 
     @Test("Crockford I/L are decoded as 1")
     func crockfordILDecodeAsOne() {
-        let textI = "👍 @[Node] [iiiiiiii]"
+        let textI = "👍@[Node]\niiiiiiii"
         let resultI = ReactionParser.parse(textI)
         #expect(resultI?.messageHash == "11111111")
 
-        let textL = "👍 @[Node] [LLLLLLLL]"
+        let textL = "👍@[Node]\nLLLLLLLL"
         let resultL = ReactionParser.parse(textL)
         #expect(resultL?.messageHash == "11111111")
     }
@@ -103,7 +103,7 @@ struct ReactionParserTests {
 
     @Test("Parses sender name containing colon")
     func parsesSenderWithColon() {
-        let text = "👍 @[Node:Alpha] [a1b2c3d4]"
+        let text = "👍@[Node:Alpha]\na1b2c3d4"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -120,43 +120,43 @@ struct ReactionParserTests {
 
     @Test("Returns nil for missing identifier")
     func returnsNilForMissingHash() {
-        let text = "👍 @[Node]"
+        let text = "👍@[Node]"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for missing @ symbol")
     func returnsNilForMissingAt() {
-        let text = "👍 [Node] [a1b2c3d4]"
+        let text = "👍 [Node]\na1b2c3d4"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for missing brackets around sender")
     func returnsNilForMissingBrackets() {
-        let text = "👍 @Node [a1b2c3d4]"
+        let text = "👍@Node\na1b2c3d4"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for invalid identifier length")
     func returnsNilForInvalidHashLength() {
-        let text = "👍 @[Node] [abc]"
+        let text = "👍@[Node]\nabc"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for invalid Crockford characters (U)")
     func returnsNilForInvalidCrockfordU() {
-        let text = "👍 @[Node] [uuuuuuuu]"
+        let text = "👍@[Node]\nuuuuuuuu"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for empty sender")
     func returnsNilForEmptySender() {
-        let text = "👍 @[] [a1b2c3d4]"
+        let text = "👍@[]\na1b2c3d4"
         #expect(ReactionParser.parse(text) == nil)
     }
 
     @Test("Returns nil for text not starting with emoji")
     func returnsNilForNonEmojiStart() {
-        let text = "A @[Node] [a1b2c3d4]"
+        let text = "A@[Node]\na1b2c3d4"
         #expect(ReactionParser.parse(text) == nil)
     }
 
@@ -164,7 +164,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with skin tone modifier")
     func parsesEmojiWithSkinTone() {
-        let text = "👍🏽 @[Node] [a1b2c3d4]"
+        let text = "👍🏽@[Node]\na1b2c3d4"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -173,7 +173,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with family ZWJ emoji")
     func parsesFamilyEmoji() {
-        let text = "👨‍👩‍👧 @[Node] [a1b2c3d4]"
+        let text = "👨‍👩‍👧@[Node]\na1b2c3d4"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -182,7 +182,7 @@ struct ReactionParserTests {
 
     @Test("Parses reaction with flag emoji")
     func parsesFlagEmoji() {
-        let text = "🇺🇸 @[Node] [a1b2c3d4]"
+        let text = "🇺🇸@[Node]\na1b2c3d4"
         let result = ReactionParser.parse(text)
 
         #expect(result != nil)
@@ -243,7 +243,7 @@ struct ReactionParserTests {
             emoji: "👍",
             senderName: "TestNode",
             messageHash: "a1b2c3d4",
-            rawText: "👍 @[TestNode] [a1b2c3d4]",
+            rawText: "👍@[TestNode]\na1b2c3d4",
             contactID: contactID,
             deviceID: deviceID
         )
@@ -262,7 +262,7 @@ struct ReactionParserTests {
             emoji: "👍",
             senderName: "TestNode",
             messageHash: "a1b2c3d4",
-            rawText: "👍 @[TestNode] [a1b2c3d4]",
+            rawText: "👍@[TestNode]\na1b2c3d4",
             channelIndex: 5,
             deviceID: deviceID
         )
@@ -275,7 +275,7 @@ struct ReactionParserTests {
 
     @Test("Parses DM reaction format without sender")
     func parsesDMReaction() {
-        let text = "👍 [7f3a9c12]"
+        let text = "👍\n7f3a9c12"
         let result = ReactionParser.parseDM(text)
 
         #expect(result != nil)
@@ -285,7 +285,7 @@ struct ReactionParserTests {
 
     @Test("Parses DM reaction with heart emoji")
     func parsesDMHeartReaction() {
-        let text = "❤️ [e4d8b1a0]"
+        let text = "❤️\ne4d8b1a0"
         let result = ReactionParser.parseDM(text)
 
         #expect(result != nil)
@@ -300,7 +300,7 @@ struct ReactionParserTests {
 
     @Test("DM parser rejects channel format")
     func dmParserRejectsChannelFormat() {
-        let text = "👍 @[Node] [abcd1234]"
+        let text = "👍@[Node]\nabcd1234"
         #expect(ReactionParser.parseDM(text) == nil)
     }
 
@@ -311,14 +311,14 @@ struct ReactionParserTests {
             targetText: "Hello world",
             targetTimestamp: 1704067200
         )
-        #expect(text.hasPrefix("👍 ["))
-        #expect(text.hasSuffix("]"))
+        #expect(text.hasPrefix("👍\n"))
+        #expect(text.count == 10) // emoji (grapheme cluster) + newline + 8 char hash
         #expect(!text.contains("@["))
     }
 
     @Test("Parses DM reaction with uppercase hash and normalizes to lowercase")
     func parsesDMUppercaseHash() {
-        let text = "👍 [ABCDEF12]"
+        let text = "👍\nABCDEF12"
         let result = ReactionParser.parseDM(text)
 
         #expect(result != nil)
@@ -327,19 +327,19 @@ struct ReactionParserTests {
 
     @Test("DM parser rejects invalid Crockford characters")
     func dmParserRejectsInvalidCrockford() {
-        let text = "👍 [uuuuuuuu]"
+        let text = "👍\nuuuuuuuu"
         #expect(ReactionParser.parseDM(text) == nil)
     }
 
     @Test("DM parser rejects non-emoji start")
     func dmParserRejectsNonEmojiStart() {
-        let text = "A [a1b2c3d4]"
+        let text = "A\na1b2c3d4"
         #expect(ReactionParser.parseDM(text) == nil)
     }
 
     @Test("DM parser handles skin tone modifier emoji")
     func dmParserHandlesSkinToneEmoji() {
-        let text = "👍🏽 [a1b2c3d4]"
+        let text = "👍🏽\na1b2c3d4"
         let result = ReactionParser.parseDM(text)
 
         #expect(result != nil)

@@ -99,28 +99,27 @@ public struct ParsedDMReaction: Sendable, Equatable {
 }
 
 /// Parses reaction wire format using end-to-start strategy.
-/// Format: `{emoji} @[{sender}] [xxxxxxxx]`
+/// Format: `{emoji}@[{sender}]\nxxxxxxxx`
 public enum ReactionParser {
 
     /// Parses reaction text, returns nil if format doesn't match
     public static func parse(_ text: String) -> ParsedReaction? {
-        // Step 1: Match identifier suffix ` [XXXXXXXX]` at end (8 Crockford Base32 chars, case-insensitive)
-        let idPattern = #/ \[([0-9A-Za-z]{8})\]$/#
-        guard let idMatch = text.firstMatch(of: idPattern) else {
+        // Step 1: Split on last newline to get hash
+        guard let newlineIndex = text.lastIndex(of: "\n") else {
             return nil
         }
 
-        let rawHash = String(idMatch.1)
-        guard isValidCrockfordBase32(rawHash) else {
+        let rawHash = String(text[text.index(after: newlineIndex)...])
+        guard rawHash.count == 8, isValidCrockfordBase32(rawHash) else {
             return nil
         }
         let messageHash = normalizeCrockfordBase32(rawHash)
 
-        // Remove identifier suffix
-        let withoutHash = String(text[..<idMatch.range.lowerBound])
+        // Remove hash suffix (everything before the newline)
+        let withoutHash = String(text[..<newlineIndex])
 
-        // Step 2: Find ` @[` to locate sender start
-        guard let atBracketIndex = withoutHash.range(of: " @[") else {
+        // Step 2: Find `@[` to locate sender start
+        guard let atBracketIndex = withoutHash.range(of: "@[") else {
             return nil
         }
 
@@ -152,27 +151,26 @@ public enum ReactionParser {
     }
 
     /// Parses DM reaction text, returns nil if format doesn't match.
-    /// Format: `{emoji} [xxxxxxxx]` (no sender field)
+    /// Format: `{emoji}\nxxxxxxxx` (no sender field)
     public static func parseDM(_ text: String) -> ParsedDMReaction? {
-        // Reject channel format (contains ` @[`)
-        if text.contains(" @[") {
+        // Reject channel format (contains `@[`)
+        if text.contains("@[") {
             return nil
         }
 
-        // Match pattern: emoji followed by ` [XXXXXXXX]`
-        let pattern = #/ \[([0-9A-Za-z]{8})\]$/#
-        guard let hashMatch = text.firstMatch(of: pattern) else {
+        // Split on newline to get hash
+        guard let newlineIndex = text.lastIndex(of: "\n") else {
             return nil
         }
 
-        let rawHash = String(hashMatch.1)
-        guard isValidCrockfordBase32(rawHash) else {
+        let rawHash = String(text[text.index(after: newlineIndex)...])
+        guard rawHash.count == 8, isValidCrockfordBase32(rawHash) else {
             return nil
         }
         let messageHash = normalizeCrockfordBase32(rawHash)
 
-        // Extract emoji (everything before the space and bracket)
-        let emoji = String(text[..<hashMatch.range.lowerBound])
+        // Extract emoji (everything before the newline)
+        let emoji = String(text[..<newlineIndex])
 
         // Validate emoji is not empty and starts with emoji character
         guard !emoji.isEmpty, emoji.first?.isEmoji == true else {
@@ -183,14 +181,14 @@ public enum ReactionParser {
     }
 
     /// Builds DM reaction text in wire format.
-    /// Format: `{emoji} [{hash}]`
+    /// Format: `{emoji}\n{hash}`
     public static func buildDMReactionText(
         emoji: String,
         targetText: String,
         targetTimestamp: UInt32
     ) -> String {
         let hash = generateMessageHash(text: targetText, timestamp: targetTimestamp)
-        return "\(emoji) [\(hash)]"
+        return "\(emoji)\n\(hash)"
     }
 
     /// Generates message identifier for reaction wire format (8-char Crockford Base32)

@@ -17,12 +17,11 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        // Verify format: {emoji} @[{sender}] [XXXXXXXX]
-        #expect(text.hasPrefix("👍 @[AlphaNode] ["))
-        #expect(text.hasSuffix("]"))
+        // Verify format: {emoji}@[{sender}]\n{hash}
+        #expect(text.hasPrefix("👍@[AlphaNode]\n"))
 
-        // Verify 8-char Crockford Base32 identifier is present (lowercase)
-        let idPattern = #/\[([0-9a-hj-km-np-tv-z]{8})\]$/#
+        // Verify 8-char Crockford Base32 identifier is present (lowercase) at end
+        let idPattern = #/\n([0-9a-hj-km-np-tv-z]{8})$/#
         #expect(text.firstMatch(of: idPattern) != nil)
     }
 
@@ -38,8 +37,8 @@ struct ReactionServiceTests {
             targetTimestamp: timestamp
         )
 
-        #expect(text.hasPrefix("❤️ @[Node] ["))
-        #expect(text.hasSuffix("]"))
+        #expect(text.hasPrefix("❤️@[Node]\n"))
+        #expect(text.hasSuffix(text.suffix(8))) // ends with 8-char hash
     }
 
     @Test("Generated identifier is consistent")
@@ -388,8 +387,8 @@ struct ReactionServiceTests {
             targetText: "Hello world",
             targetTimestamp: 1704067200
         )
-        #expect(text.hasPrefix("👍 ["))
-        #expect(text.hasSuffix("]"))
+        #expect(text.hasPrefix("👍\n"))
+        #expect(text.count == 10) // emoji + newline + 8 char hash
         #expect(!text.contains("@["))
     }
 
