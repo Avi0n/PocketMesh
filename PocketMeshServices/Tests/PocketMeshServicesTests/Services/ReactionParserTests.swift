@@ -345,4 +345,24 @@ struct ReactionParserTests {
         #expect(result != nil)
         #expect(result?.emoji == "👍🏽")
     }
+
+    @Test("DM round-trip: build then parse produces same emoji and hash")
+    func dmRoundTrip() {
+        let originalEmoji = "👍"
+        let targetText = "Hello world"
+        let timestamp: UInt32 = 1704067200
+
+        let text = ReactionParser.buildDMReactionText(
+            emoji: originalEmoji,
+            targetText: targetText,
+            targetTimestamp: timestamp
+        )
+
+        let parsed = ReactionParser.parseDM(text)
+        #expect(parsed != nil)
+        #expect(parsed?.emoji == originalEmoji)
+
+        let expectedHash = ReactionParser.generateMessageHash(text: targetText, timestamp: timestamp)
+        #expect(parsed?.messageHash == expectedHash)
+    }
 }

@@ -494,4 +494,91 @@ struct ReactionServiceTests {
         )
         #expect(matchesContact1.count == 1)
     }
+
+    @Test("DM returns nil when no candidates in cache")
+    func dmReturnsNilWhenNoCandidates() async {
+        let service = ReactionService()
+        let contactID = UUID()
+
+        let foundID = await service.findDMTargetMessage(
+            messageHash: "abcd1234",
+            contactID: contactID
+        )
+
+        #expect(foundID == nil)
+    }
+
+    @Test("DM hash mismatch prevents false match")
+    func dmHashMismatchPreventsFalseMatch() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let contactID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue a reaction for "Hello world"
+        let reactionText = service.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parseDM(reactionText)!
+
+        await service.queuePendingDMReaction(
+            parsed: parsed,
+            contactID: contactID,
+            senderName: "Alice",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Index a different message (different hash)
+        let matches = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID,
+            text: "Different text",
+            timestamp: timestamp
+        )
+
+        // Should NOT match because hash is different
+        #expect(matches.isEmpty)
+    }
+
+    @Test("Clear removes DM pending reactions")
+    func clearRemovesDMPending() async {
+        let service = ReactionService()
+        let messageID = UUID()
+        let contactID = UUID()
+        let deviceID = UUID()
+        let timestamp: UInt32 = 1704067200
+
+        // Queue a DM reaction
+        let reactionText = service.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: timestamp
+        )
+        let parsed = ReactionParser.parseDM(reactionText)!
+
+        await service.queuePendingDMReaction(
+            parsed: parsed,
+            contactID: contactID,
+            senderName: "Alice",
+            rawText: reactionText,
+            deviceID: deviceID
+        )
+
+        // Clear all pending
+        await service.clearPendingReactions()
+
+        // Index the target message - should return nothing
+        let matches = await service.indexDMMessage(
+            id: messageID,
+            contactID: contactID,
+            text: "Hello world",
+            timestamp: timestamp
+        )
+
+        #expect(matches.isEmpty)
+    }
 }
