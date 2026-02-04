@@ -22,6 +22,12 @@ public struct PendingDMReaction: Sendable {
     public let receivedAt: Date
 }
 
+/// Result of persisting a reaction
+public struct ReactionPersistResult: Sendable {
+    public let messageID: UUID
+    public let summary: String
+}
+
 /// Service for handling emoji reactions on channel messages
 public actor ReactionService {
     private let logger = Logger(subsystem: "PocketMeshServices", category: "ReactionService")
@@ -173,6 +179,40 @@ public actor ReactionService {
         if count + dmCount > 0 {
             logger.debug("Cleared \(count + dmCount) pending reaction(s)")
         }
+    }
+
+    // MARK: - Persistence
+
+    /// Persists a reaction and updates the message's reaction summary.
+    /// Logs errors instead of silently discarding them.
+    public func persistReactionAndUpdateSummary(
+        _ reaction: ReactionDTO,
+        using dataStore: PersistenceStore
+    ) async -> ReactionPersistResult? {
+        do {
+            try await dataStore.saveReaction(reaction)
+        } catch {
+            logger.error("Failed to save reaction for message \(reaction.messageID): \(error.localizedDescription)")
+            return nil
+        }
+
+        let reactions: [ReactionDTO]
+        do {
+            reactions = try await dataStore.fetchReactions(for: reaction.messageID)
+        } catch {
+            logger.error("Failed to fetch reactions for message \(reaction.messageID): \(error.localizedDescription)")
+            return nil
+        }
+
+        let summary = ReactionParser.buildSummary(from: reactions)
+        do {
+            try await dataStore.updateMessageReactionSummary(messageID: reaction.messageID, summary: summary)
+        } catch {
+            logger.error("Failed to update reaction summary for message \(reaction.messageID): \(error.localizedDescription)")
+            return nil
+        }
+
+        return ReactionPersistResult(messageID: reaction.messageID, summary: summary)
     }
 
     // MARK: - DM Reactions

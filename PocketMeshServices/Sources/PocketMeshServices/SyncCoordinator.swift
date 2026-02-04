@@ -632,7 +632,8 @@ public actor SyncCoordinator {
                 maxRetryAttempts: 0,
                 containsSelfMention: hasSelfMention,
                 mentionSeen: false,
-                timestampCorrected: timestampCorrected
+                timestampCorrected: timestampCorrected,
+                senderTimestamp: timestampCorrected ? timestamp : nil
             )
 
             // Check for duplicate before saving
@@ -670,15 +671,11 @@ public actor SyncCoordinator {
                             contactID: contact.id,
                             deviceID: deviceID
                         )
-                        try? await services.dataStore.saveReaction(reactionDTO)
-
-                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
-                            let summary = ReactionParser.buildSummary(from: reactions)
-                            try? await services.dataStore.updateMessageReactionSummary(
-                                messageID: targetMessageID,
-                                summary: summary
-                            )
-                            await self.onReactionReceived?(targetMessageID, summary)
+                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                            reactionDTO,
+                            using: services.dataStore
+                        ) {
+                            await self.onReactionReceived?(result.messageID, result.summary)
                         }
 
                         self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessageID)")
@@ -717,15 +714,11 @@ public actor SyncCoordinator {
                             contactID: contact.id,
                             deviceID: deviceID
                         )
-                        try? await services.dataStore.saveReaction(reactionDTO)
-
-                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessage.id) {
-                            let summary = ReactionParser.buildSummary(from: reactions)
-                            try? await services.dataStore.updateMessageReactionSummary(
-                                messageID: targetMessage.id,
-                                summary: summary
-                            )
-                            await self.onReactionReceived?(targetMessage.id, summary)
+                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                            reactionDTO,
+                            using: services.dataStore
+                        ) {
+                            await self.onReactionReceived?(result.messageID, result.summary)
                         }
 
                         self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessage.id) (from DB)")
@@ -777,15 +770,11 @@ public actor SyncCoordinator {
                                 contactID: contact.id,
                                 deviceID: deviceID
                             )
-                            try? await services.dataStore.saveReaction(reactionDTO)
-
-                            if let reactions = try? await services.dataStore.fetchReactions(for: messageDTO.id) {
-                                let summary = ReactionParser.buildSummary(from: reactions)
-                                try? await services.dataStore.updateMessageReactionSummary(
-                                    messageID: messageDTO.id,
-                                    summary: summary
-                                )
-                                await self.onReactionReceived?(messageDTO.id, summary)
+                            if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: services.dataStore
+                            ) {
+                                await self.onReactionReceived?(result.messageID, result.summary)
                             }
 
                             self.logger.debug("Processed pending DM reaction \(pending.parsed.emoji)")
@@ -900,7 +889,8 @@ public actor SyncCoordinator {
                 maxRetryAttempts: 0,
                 containsSelfMention: hasSelfMention,
                 mentionSeen: false,
-                timestampCorrected: timestampCorrected
+                timestampCorrected: timestampCorrected,
+                senderTimestamp: timestampCorrected ? timestamp : nil
             )
 
             // Check for duplicate before saving
@@ -939,16 +929,11 @@ public actor SyncCoordinator {
                             channelIndex: message.channelIndex,
                             deviceID: deviceID
                         )
-                        try? await services.dataStore.saveReaction(reactionDTO)
-
-                        // Update summary and notify UI
-                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
-                            let summary = ReactionParser.buildSummary(from: reactions)
-                            try? await services.dataStore.updateMessageReactionSummary(
-                                messageID: targetMessageID,
-                                summary: summary
-                            )
-                            await self.onReactionReceived?(targetMessageID, summary)
+                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                            reactionDTO,
+                            using: services.dataStore
+                        ) {
+                            await self.onReactionReceived?(result.messageID, result.summary)
                         }
 
                         self.logger.debug("Saved reaction \(parsed.emoji) to message \(targetMessageID)")
@@ -989,15 +974,11 @@ public actor SyncCoordinator {
                             channelIndex: message.channelIndex,
                             deviceID: deviceID
                         )
-                        try? await services.dataStore.saveReaction(reactionDTO)
-
-                        if let reactions = try? await services.dataStore.fetchReactions(for: targetMessageID) {
-                            let summary = ReactionParser.buildSummary(from: reactions)
-                            try? await services.dataStore.updateMessageReactionSummary(
-                                messageID: targetMessageID,
-                                summary: summary
-                            )
-                            await self.onReactionReceived?(targetMessageID, summary)
+                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                            reactionDTO,
+                            using: services.dataStore
+                        ) {
+                            await self.onReactionReceived?(result.messageID, result.summary)
                         }
 
                         let targetSenderName: String?
@@ -1015,7 +996,7 @@ public actor SyncCoordinator {
                                 channelIndex: message.channelIndex,
                                 senderName: targetSenderName,
                                 text: targetMessage.text,
-                                timestamp: targetMessage.timestamp
+                                timestamp: targetMessage.reactionTimestamp
                             )
                         }
 
@@ -1040,13 +1021,14 @@ public actor SyncCoordinator {
                 try await services.dataStore.saveMessage(messageDTO)
 
                 // Index message for reaction matching and process any pending reactions
+                // Use original timestamp for indexing so pending reactions can match
                 if let senderName = senderNodeName {
                     let pendingMatches = await services.reactionService.indexMessage(
                         id: messageDTO.id,
                         channelIndex: message.channelIndex,
                         senderName: senderName,
                         text: messageText,
-                        timestamp: finalTimestamp
+                        timestamp: timestamp
                     )
 
                     // Process any pending reactions that now have their target
@@ -1067,15 +1049,11 @@ public actor SyncCoordinator {
                                 channelIndex: pending.channelIndex,
                                 deviceID: pending.deviceID
                             )
-                            try? await services.dataStore.saveReaction(reactionDTO)
-
-                            if let reactions = try? await services.dataStore.fetchReactions(for: messageDTO.id) {
-                                let summary = ReactionParser.buildSummary(from: reactions)
-                                try? await services.dataStore.updateMessageReactionSummary(
-                                    messageID: messageDTO.id,
-                                    summary: summary
-                                )
-                                await self.onReactionReceived?(messageDTO.id, summary)
+                            if let result = await services.reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: services.dataStore
+                            ) {
+                                await self.onReactionReceived?(result.messageID, result.summary)
                             }
                         }
                     }

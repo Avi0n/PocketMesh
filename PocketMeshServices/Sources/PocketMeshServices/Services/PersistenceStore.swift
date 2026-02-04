@@ -645,9 +645,12 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
-    /// Delete all messages for a contact using batch delete
+    /// Delete all messages and reactions for a contact using batch delete
     public func deleteMessagesForContact(contactID: UUID) throws {
         let targetContactID: UUID? = contactID
+        try modelContext.delete(model: Reaction.self, where: #Predicate {
+            $0.contactID == targetContactID
+        })
         try modelContext.delete(model: Message.self, where: #Predicate {
             $0.contactID == targetContactID
         })
@@ -736,7 +739,9 @@ public actor PersistenceStore: PersistenceStoreProtocol {
 
         for candidate in candidates {
             let direction = candidate.direction == .outgoing ? "outgoing" : "incoming"
-            let candidateHash = ReactionParser.generateMessageHash(text: candidate.text, timestamp: candidate.timestamp)
+            // Use senderTimestamp if available (for incoming messages with corrected timestamps)
+            let reactionTimestamp = candidate.senderTimestamp ?? candidate.timestamp
+            let candidateHash = ReactionParser.generateMessageHash(text: candidate.text, timestamp: reactionTimestamp)
             logger.debug("[REACTION-MATCH] Candidate: direction=\(direction), senderNodeName=\(candidate.senderNodeName ?? "nil"), hash=\(candidateHash), text=\(candidate.text.prefix(30))")
 
             if candidate.direction == .outgoing {
@@ -751,12 +756,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 }
             }
 
-            let hash = ReactionParser.generateMessageHash(
-                text: candidate.text,
-                timestamp: candidate.timestamp
-            )
-            guard hash == parsedReaction.messageHash else {
-                logger.debug("[REACTION-MATCH] Hash mismatch: \(hash) != \(parsedReaction.messageHash)")
+            guard candidateHash == parsedReaction.messageHash else {
+                logger.debug("[REACTION-MATCH] Hash mismatch: \(candidateHash) != \(parsedReaction.messageHash)")
                 continue
             }
 
@@ -804,13 +805,25 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         logger.debug("[DM-REACTION-MATCH] Found \(candidates.count) candidates")
 
         for candidate in candidates {
+            // Skip messages that are themselves reactions
+            if ReactionParser.parseDM(candidate.text) != nil {
+                logger.debug("[DM-REACTION-MATCH] Skipping candidate (is reaction): \(candidate.text.prefix(30))")
+                continue
+            }
+
+            // Use senderTimestamp if available (for incoming messages with corrected timestamps)
+            let reactionTimestamp = candidate.senderTimestamp ?? candidate.timestamp
+            let direction = candidate.direction == .outgoing ? "outgoing" : "incoming"
             let candidateHash = ReactionParser.generateMessageHash(
                 text: candidate.text,
-                timestamp: candidate.timestamp
+                timestamp: reactionTimestamp
             )
+            logger.debug("[DM-REACTION-MATCH] Candidate: direction=\(direction), timestamp=\(candidate.timestamp), senderTimestamp=\(candidate.senderTimestamp ?? 0), hash=\(candidateHash), text=\(candidate.text.prefix(30))")
             if candidateHash == messageHash {
                 logger.debug("[DM-REACTION-MATCH] Found match: \(candidate.id)")
                 return MessageDTO(from: candidate)
+            } else {
+                logger.debug("[DM-REACTION-MATCH] Hash mismatch: \(candidateHash) != \(messageHash)")
             }
         }
 
@@ -867,7 +880,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             deduplicationKey: nil,
             containsSelfMention: dto.containsSelfMention,
             mentionSeen: dto.mentionSeen,
-            timestampCorrected: dto.timestampCorrected
+            timestampCorrected: dto.timestampCorrected,
+            senderTimestamp: dto.senderTimestamp
         )
         modelContext.insert(message)
         try modelContext.save()
@@ -1014,13 +1028,14 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         }
     }
 
-    /// Delete a message
+    /// Delete a message and its reactions
     public func deleteMessage(id: UUID) throws {
         let targetID = id
         let predicate = #Predicate<Message> { message in
             message.id == targetID
         }
         if let message = try modelContext.fetch(FetchDescriptor(predicate: predicate)).first {
+            try deleteReactionsForMessage(messageID: id)
             modelContext.delete(message)
             try modelContext.save()
         }
@@ -2367,5 +2382,13 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         guard let message = try modelContext.fetch(descriptor).first else { return }
         message.reactionSummary = summary
         try modelContext.save()
+    }
+
+    /// Deletes all reactions for a message
+    public func deleteReactionsForMessage(messageID: UUID) throws {
+        let targetMessageID = messageID
+        try modelContext.delete(model: Reaction.self, where: #Predicate {
+            $0.messageID == targetMessageID
+        })
     }
 }

@@ -63,7 +63,6 @@ struct EmojiPickerSheet: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(emoji.label.isEmpty ? emoji.unicode : emoji.label)
-        .sensoryFeedback(.selection, trigger: emoji.id)
     }
 }
 

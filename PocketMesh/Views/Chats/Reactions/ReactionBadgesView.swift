@@ -19,6 +19,13 @@ struct ReactionBadgesView: View {
         max(0, reactions.count - 3)
     }
 
+    private func emojiAccessibilityName(_ emoji: String) -> String {
+        let cfstr = NSMutableString(string: emoji) as CFMutableString
+        CFStringTransform(cfstr, nil, kCFStringTransformToUnicodeName, false)
+        let name = cfstr as String
+        return name.replacing("\\N{", with: "").replacing("}", with: "").lowercased()
+    }
+
     var body: some View {
         if !reactions.isEmpty {
             HStack(spacing: 0) {
@@ -29,6 +36,8 @@ struct ReactionBadgesView: View {
                         ReactionBadge(emoji: reaction.emoji, count: reaction.count)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.Chats.Reactions.badge(emojiAccessibilityName(reaction.emoji), reaction.count))
+                    .accessibilityHint(L10n.Chats.Reactions.badgeHint)
                 }
 
                 if overflowCount > 0 {
@@ -38,6 +47,8 @@ struct ReactionBadgesView: View {
                         OverflowBadge(count: overflowCount)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.Chats.Reactions.moreBadge(overflowCount))
+                    .accessibilityHint(L10n.Chats.Reactions.moreBadgeHint)
                 }
             }
             .simultaneousGesture(

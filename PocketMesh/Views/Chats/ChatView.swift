@@ -173,6 +173,10 @@ struct ChatView: View {
                 Task {
                     await viewModel.loadMessages(for: contact)
                 }
+            case .reactionReceived(let messageID, let summary):
+                if viewModel.messages.contains(where: { $0.id == messageID }) {
+                    viewModel.updateReactionSummary(for: messageID, summary: summary)
+                }
             default:
                 break
             }

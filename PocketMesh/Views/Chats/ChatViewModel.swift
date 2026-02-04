@@ -602,10 +602,61 @@ final class ChatViewModel {
         totalFetchedCount = 0
 
         do {
-            messages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
-            totalFetchedCount = messages.count
-            hasMoreMessages = messages.count == pageSize
+            var fetchedMessages = try await dataStore.fetchMessages(contactID: contact.id, limit: pageSize, offset: 0)
+            let unfilteredCount = fetchedMessages.count
+            totalFetchedCount = unfilteredCount
+
+            // Hide sent reaction messages (unless failed)
+            fetchedMessages = fetchedMessages.filter { message in
+                guard message.direction == .outgoing,
+                      ReactionParser.parseDM(message.text) != nil else {
+                    return true
+                }
+                return message.status == .failed
+            }
+
+            messages = fetchedMessages
+            hasMoreMessages = unfilteredCount == pageSize
             await buildDisplayItems()
+
+            // Index loaded messages for reaction matching and process any pending reactions
+            if let reactionService = appState?.services?.reactionService {
+                for message in fetchedMessages {
+                    let pendingMatches = await reactionService.indexDMMessage(
+                        id: message.id,
+                        contactID: contact.id,
+                        text: message.text,
+                        timestamp: message.reactionTimestamp
+                    )
+
+                    // Process any pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await dataStore.reactionExists(
+                            messageID: message.id,
+                            senderName: pending.senderName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: message.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                contactID: contact.id,
+                                deviceID: contact.deviceID
+                            )
+                            if let result = await reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: dataStore
+                            ) {
+                                updateReactionSummary(for: result.messageID, summary: result.summary)
+                            }
+                        }
+                    }
+                }
+            }
 
             // Clear unread count and notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
@@ -858,15 +909,11 @@ final class ChatViewModel {
                                     channelIndex: pending.channelIndex,
                                     deviceID: deviceID
                                 )
-                                try? await dataStore.saveReaction(reactionDTO)
-
-                                if let reactions = try? await dataStore.fetchReactions(for: message.id) {
-                                    let summary = ReactionParser.buildSummary(from: reactions)
-                                    try? await dataStore.updateMessageReactionSummary(
-                                        messageID: message.id,
-                                        summary: summary
-                                    )
-                                    updateReactionSummary(for: message.id, summary: summary)
+                                if let result = await reactionService.persistReactionAndUpdateSummary(
+                                    reactionDTO,
+                                    using: dataStore
+                                ) {
+                                    updateReactionSummary(for: result.messageID, summary: result.summary)
                                 }
                             }
                         }
@@ -937,11 +984,19 @@ final class ChatViewModel {
                 }
             }
 
-            // Hide sent reaction messages for channel messages (unless failed)
+            // Hide sent reaction messages (unless failed)
             if currentChannel != nil {
                 olderMessages = olderMessages.filter { message in
                     guard message.direction == .outgoing,
                           ReactionParser.parse(message.text) != nil else {
+                        return true
+                    }
+                    return message.status == .failed
+                }
+            } else if currentContact != nil {
+                olderMessages = olderMessages.filter { message in
+                    guard message.direction == .outgoing,
+                          ReactionParser.parseDM(message.text) != nil else {
                         return true
                     }
                     return message.status == .failed
@@ -998,16 +1053,52 @@ final class ChatViewModel {
                                     channelIndex: pending.channelIndex,
                                     deviceID: deviceID
                                 )
-                                try? await dataStore.saveReaction(reactionDTO)
-
-                                if let reactions = try? await dataStore.fetchReactions(for: message.id) {
-                                    let summary = ReactionParser.buildSummary(from: reactions)
-                                    try? await dataStore.updateMessageReactionSummary(
-                                        messageID: message.id,
-                                        summary: summary
-                                    )
-                                    updateReactionSummary(for: message.id, summary: summary)
+                                if let result = await reactionService.persistReactionAndUpdateSummary(
+                                    reactionDTO,
+                                    using: dataStore
+                                ) {
+                                    updateReactionSummary(for: result.messageID, summary: result.summary)
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Index older DM messages for reaction matching and process pending reactions
+            if let contact = currentContact,
+               let reactionService = appState?.services?.reactionService {
+                for message in olderMessages {
+                    let pendingMatches = await reactionService.indexDMMessage(
+                        id: message.id,
+                        contactID: contact.id,
+                        text: message.text,
+                        timestamp: message.reactionTimestamp
+                    )
+
+                    // Process any pending reactions that now have their target
+                    for pending in pendingMatches {
+                        let exists = try? await dataStore.reactionExists(
+                            messageID: message.id,
+                            senderName: pending.senderName,
+                            emoji: pending.parsed.emoji
+                        )
+
+                        if exists != true {
+                            let reactionDTO = ReactionDTO(
+                                messageID: message.id,
+                                emoji: pending.parsed.emoji,
+                                senderName: pending.senderName,
+                                messageHash: pending.parsed.messageHash,
+                                rawText: pending.rawText,
+                                contactID: contact.id,
+                                deviceID: contact.deviceID
+                            )
+                            if let result = await reactionService.persistReactionAndUpdateSummary(
+                                reactionDTO,
+                                using: dataStore
+                            ) {
+                                updateReactionSummary(for: result.messageID, summary: result.summary)
                             }
                         }
                     }
@@ -1125,7 +1216,7 @@ final class ChatViewModel {
             emoji: emoji,
             targetSender: targetSenderName,
             targetText: message.text,
-            targetTimestamp: message.timestamp
+            targetTimestamp: message.reactionTimestamp
         )
 
         do {
@@ -1140,7 +1231,7 @@ final class ChatViewModel {
             // Optimistic local update
             let messageHash = ReactionParser.generateMessageHash(
                 text: message.text,
-                timestamp: message.timestamp
+                timestamp: message.reactionTimestamp
             )
             let reactionDTO = ReactionDTO(
                 messageID: message.id,
@@ -1151,15 +1242,11 @@ final class ChatViewModel {
                 channelIndex: channelIndex,
                 deviceID: message.deviceID
             )
-            try? await dataStore.saveReaction(reactionDTO)
-
-            if let reactions = try? await dataStore.fetchReactions(for: message.id) {
-                let summary = ReactionParser.buildSummary(from: reactions)
-                try? await dataStore.updateMessageReactionSummary(
-                    messageID: message.id,
-                    summary: summary
-                )
-                updateReactionSummary(for: message.id, summary: summary)
+            if let result = await reactionService.persistReactionAndUpdateSummary(
+                reactionDTO,
+                using: dataStore
+            ) {
+                updateReactionSummary(for: result.messageID, summary: result.summary)
             }
         } catch {
             logger.error("Failed to send channel reaction: \(error)")
@@ -1186,8 +1273,9 @@ final class ChatViewModel {
         let reactionText = reactionService.buildDMReactionText(
             emoji: emoji,
             targetText: message.text,
-            targetTimestamp: message.timestamp
+            targetTimestamp: message.reactionTimestamp
         )
+        logger.debug("[DM-REACTION-SEND] Building reaction: timestamp=\(message.timestamp), senderTimestamp=\(message.senderTimestamp ?? 0), reactionTimestamp=\(message.reactionTimestamp), text=\(message.text.prefix(30))")
 
         do {
             // Send as DM to the contact
@@ -1201,7 +1289,7 @@ final class ChatViewModel {
             // Optimistic local update
             let messageHash = ReactionParser.generateMessageHash(
                 text: message.text,
-                timestamp: message.timestamp
+                timestamp: message.reactionTimestamp
             )
             let reactionDTO = ReactionDTO(
                 messageID: message.id,
@@ -1212,15 +1300,11 @@ final class ChatViewModel {
                 contactID: contactID,
                 deviceID: message.deviceID
             )
-            try? await dataStore.saveReaction(reactionDTO)
-
-            if let reactions = try? await dataStore.fetchReactions(for: message.id) {
-                let summary = ReactionParser.buildSummary(from: reactions)
-                try? await dataStore.updateMessageReactionSummary(
-                    messageID: message.id,
-                    summary: summary
-                )
-                updateReactionSummary(for: message.id, summary: summary)
+            if let result = await reactionService.persistReactionAndUpdateSummary(
+                reactionDTO,
+                using: dataStore
+            ) {
+                updateReactionSummary(for: result.messageID, summary: result.summary)
             }
         } catch {
             logger.error("Failed to send DM reaction: \(error)")

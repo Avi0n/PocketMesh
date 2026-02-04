@@ -6,7 +6,8 @@ import SwiftData
 public final class Reaction {
     #Index<Reaction>(
         [\.messageID],
-        [\.deviceID, \.contactID, \.messageID]
+        [\.deviceID, \.contactID, \.messageID],
+        [\.messageID, \.senderName, \.emoji]
     )
 
     @Attribute(.unique)
