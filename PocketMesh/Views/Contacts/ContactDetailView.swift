@@ -636,7 +636,7 @@ struct ContactDetailView: View {
     private var pathDisplayWithNames: String {
         let pathData = currentContact.outPath
         let pathLength = Int(max(0, currentContact.outPathLength))
-        guard pathLength > 0 else { return "Direct" }
+        guard pathLength > 0 else { return L10n.Contacts.Contacts.Route.direct }
 
         let relevantPath = pathData.prefix(pathLength)
         return relevantPath.map { byte in

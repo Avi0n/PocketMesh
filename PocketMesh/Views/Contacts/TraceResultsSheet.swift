@@ -272,14 +272,14 @@ struct TraceResultsSheet: View {
                     Text(formatDistance(distance))
                         .font(.body.monospacedDigit())
                     if viewModel.isDistanceUsingFallback {
-                        Button("Distance info", systemImage: "info.circle") {
+                        Button(L10n.Contacts.Contacts.Results.distanceInfo, systemImage: "info.circle") {
                             showingDistanceInfo = true
                         }
                         .labelStyle(.iconOnly)
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel("Partial distance")
-                        .accessibilityHint("Double tap to learn why device location is excluded")
+                        .accessibilityLabel(L10n.Contacts.Contacts.Results.partialDistanceLabel)
+                        .accessibilityHint(L10n.Contacts.Contacts.Results.partialDistanceHint)
                     }
                 }
             } else {
@@ -309,14 +309,14 @@ struct TraceResultsSheet: View {
             List {
                 if viewModel.isDistanceUsingFallback {
                     Section {
-                        Text("Distance shown is between repeaters only. Your device's distance to the first repeater is not included because device location is unavailable.")
+                        Text(L10n.Contacts.Contacts.Results.partialDistanceExplanation)
                     } header: {
-                        Label("Partial Distance", systemImage: "location.slash")
+                        Label(L10n.Contacts.Contacts.Results.partialDistanceHeader, systemImage: "location.slash")
                     }
                     Section {
-                        Text("Enable location services or set a location for your device to see the full path distance.")
+                        Text(L10n.Contacts.Contacts.Results.fullPathTip)
                     } header: {
-                        Label("To Include Full Path", systemImage: "lightbulb")
+                        Label(L10n.Contacts.Contacts.Results.fullPathHeader, systemImage: "lightbulb")
                     }
                 } else if result.hops.filter({ !$0.isStartNode && !$0.isEndNode }).count < 2 {
                     Section {

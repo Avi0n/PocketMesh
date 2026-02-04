@@ -115,7 +115,7 @@ struct RadioPresetSection: View {
             } catch let error as SettingsServiceError where error.isRetryable {
                 selectedPresetID = currentPreset?.id // Revert
                 retryAlert.show(
-                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
                     onRetry: { applyPreset(id: id) },
                     onMaxRetriesExceeded: { dismiss() }
                 )

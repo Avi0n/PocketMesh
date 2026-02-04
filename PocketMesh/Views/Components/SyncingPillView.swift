@@ -2,6 +2,7 @@ import SwiftUI
 
 /// A pill-shaped indicator that appears at the top of the app during sync and connection operations
 struct SyncingPillView: View {
+    private typealias Strings = L10n.Localizable.Common.Status
     let state: StatusPillState
     var onDisconnectedTap: (() -> Void)?
 
@@ -68,13 +69,13 @@ struct SyncingPillView: View {
         case .failed(let message):
             message
         case .syncing:
-            "Syncing"
+            Strings.syncing
         case .connecting:
-            "Connecting"
+            Strings.connecting
         case .ready:
-            "Ready"
+            Strings.ready
         case .disconnected:
-            "Disconnected"
+            Strings.disconnected
         case .hidden:
             ""
         }

@@ -53,7 +53,7 @@ final class CLIToolViewModel {
 
     var promptText: String {
         if let seconds = remainingSeconds {
-            return "Logging in... (\(seconds)s)"
+            return L10n.Tools.Tools.Cli.loggingIn(seconds)
         }
 
         if isWaitingForResponse {
