@@ -87,6 +87,17 @@ public struct ParsedReaction: Sendable, Equatable {
     }
 }
 
+/// Parsed DM reaction data (shorter format without sender)
+public struct ParsedDMReaction: Sendable, Equatable {
+    public let emoji: String
+    public let messageHash: String  // 8 Crockford Base32 chars (lowercase)
+
+    public init(emoji: String, messageHash: String) {
+        self.emoji = emoji
+        self.messageHash = messageHash
+    }
+}
+
 /// Parses reaction wire format using end-to-start strategy.
 /// Format: `{emoji} @[{sender}] [xxxxxxxx]`
 public enum ReactionParser {
@@ -138,6 +149,48 @@ public enum ReactionParser {
             targetSender: sender,
             messageHash: messageHash
         )
+    }
+
+    /// Parses DM reaction text, returns nil if format doesn't match.
+    /// Format: `{emoji} [xxxxxxxx]` (no sender field)
+    public static func parseDM(_ text: String) -> ParsedDMReaction? {
+        // Reject channel format (contains ` @[`)
+        if text.contains(" @[") {
+            return nil
+        }
+
+        // Match pattern: emoji followed by ` [XXXXXXXX]`
+        let pattern = #/ \[([0-9A-Za-z]{8})\]$/#
+        guard let hashMatch = text.firstMatch(of: pattern) else {
+            return nil
+        }
+
+        let rawHash = String(hashMatch.1)
+        guard isValidCrockfordBase32(rawHash) else {
+            return nil
+        }
+        let messageHash = normalizeCrockfordBase32(rawHash)
+
+        // Extract emoji (everything before the space and bracket)
+        let emoji = String(text[..<hashMatch.range.lowerBound])
+
+        // Validate emoji is not empty and starts with emoji character
+        guard !emoji.isEmpty, emoji.first?.isEmoji == true else {
+            return nil
+        }
+
+        return ParsedDMReaction(emoji: emoji, messageHash: messageHash)
+    }
+
+    /// Builds DM reaction text in wire format.
+    /// Format: `{emoji} [{hash}]`
+    public static func buildDMReactionText(
+        emoji: String,
+        targetText: String,
+        targetTimestamp: UInt32
+    ) -> String {
+        let hash = generateMessageHash(text: targetText, timestamp: targetTimestamp)
+        return "\(emoji) [\(hash)]"
     }
 
     /// Generates message identifier for reaction wire format (8-char Crockford Base32)

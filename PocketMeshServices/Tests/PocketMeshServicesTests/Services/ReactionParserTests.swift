@@ -270,4 +270,79 @@ struct ReactionParserTests {
         #expect(dto.channelIndex == 5)
         #expect(dto.contactID == nil)
     }
+
+    // MARK: - DM Reaction Format Tests
+
+    @Test("Parses DM reaction format without sender")
+    func parsesDMReaction() {
+        let text = "👍 [7f3a9c12]"
+        let result = ReactionParser.parseDM(text)
+
+        #expect(result != nil)
+        #expect(result?.emoji == "👍")
+        #expect(result?.messageHash == "7f3a9c12")
+    }
+
+    @Test("Parses DM reaction with heart emoji")
+    func parsesDMHeartReaction() {
+        let text = "❤️ [e4d8b1a0]"
+        let result = ReactionParser.parseDM(text)
+
+        #expect(result != nil)
+        #expect(result?.emoji == "❤️")
+    }
+
+    @Test("Returns nil for DM format missing hash")
+    func returnsNilForDMMissingHash() {
+        let text = "👍"
+        #expect(ReactionParser.parseDM(text) == nil)
+    }
+
+    @Test("DM parser rejects channel format")
+    func dmParserRejectsChannelFormat() {
+        let text = "👍 @[Node] [abcd1234]"
+        #expect(ReactionParser.parseDM(text) == nil)
+    }
+
+    @Test("Builds DM reaction text correctly")
+    func buildsDMReactionText() {
+        let text = ReactionParser.buildDMReactionText(
+            emoji: "👍",
+            targetText: "Hello world",
+            targetTimestamp: 1704067200
+        )
+        #expect(text.hasPrefix("👍 ["))
+        #expect(text.hasSuffix("]"))
+        #expect(!text.contains("@["))
+    }
+
+    @Test("Parses DM reaction with uppercase hash and normalizes to lowercase")
+    func parsesDMUppercaseHash() {
+        let text = "👍 [ABCDEF12]"
+        let result = ReactionParser.parseDM(text)
+
+        #expect(result != nil)
+        #expect(result?.messageHash == "abcdef12")
+    }
+
+    @Test("DM parser rejects invalid Crockford characters")
+    func dmParserRejectsInvalidCrockford() {
+        let text = "👍 [uuuuuuuu]"
+        #expect(ReactionParser.parseDM(text) == nil)
+    }
+
+    @Test("DM parser rejects non-emoji start")
+    func dmParserRejectsNonEmojiStart() {
+        let text = "A [a1b2c3d4]"
+        #expect(ReactionParser.parseDM(text) == nil)
+    }
+
+    @Test("DM parser handles skin tone modifier emoji")
+    func dmParserHandlesSkinToneEmoji() {
+        let text = "👍🏽 [a1b2c3d4]"
+        let result = ReactionParser.parseDM(text)
+
+        #expect(result != nil)
+        #expect(result?.emoji == "👍🏽")
+    }
 }
