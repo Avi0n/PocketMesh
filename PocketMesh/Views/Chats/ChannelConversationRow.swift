@@ -11,7 +11,7 @@ struct ChannelConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                         .font(.headline)
                         .lineLimit(1)
 
@@ -23,7 +23,7 @@ struct ChannelConversationRow: View {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
-                            .accessibilityLabel("Favorite")
+                            .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
                     }
 
                     if let date = channel.lastMessageDate {
@@ -32,7 +32,7 @@ struct ChannelConversationRow: View {
                 }
 
                 HStack {
-                    Text(viewModel.lastMessagePreview(for: channel) ?? "No messages yet")
+                    Text(viewModel.lastMessagePreview(for: channel) ?? L10n.Chats.Chats.Row.noMessages)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

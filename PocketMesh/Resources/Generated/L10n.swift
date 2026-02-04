@@ -714,6 +714,10 @@ public enum L10n {
         /// Location: UnifiedMessageBubble.swift - SNR quality very poor
         public static let veryPoor = L10n.tr("Chats", "chats.signal.veryPoor", fallback: "Very Poor")
       }
+      public enum Suggestions {
+        /// Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup
+        public static let accessibilityLabel = L10n.tr("Chats", "chats.suggestions.accessibilityLabel", fallback: "Mention suggestions")
+      }
       public enum SwipeAction {
         /// Location: ConversationSwipeActionsModifier.swift - Swipe action to delete
         public static let delete = L10n.tr("Chats", "chats.swipeAction.delete", fallback: "Delete")

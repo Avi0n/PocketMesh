@@ -376,6 +376,11 @@
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Conversaciones";
 
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
+
 // MARK: - Create Private Channel View
 
 /* Location: CreatePrivateChannelView.swift - Title when sharing created channel */

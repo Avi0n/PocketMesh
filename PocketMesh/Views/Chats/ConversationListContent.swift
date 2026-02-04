@@ -119,7 +119,7 @@ struct ConversationListContent: View {
                         conversationRow(for: conversation)
                     }
                 }
-                .accessibilityLabel("Favorites")
+                .accessibilityLabel(L10n.Chats.Chats.Section.favorites)
                 .accessibilityHidden(favoriteConversations.isEmpty)
 
                 Section {
@@ -127,7 +127,7 @@ struct ConversationListContent: View {
                         conversationRow(for: conversation)
                     }
                 }
-                .accessibilityLabel("Conversations")
+                .accessibilityLabel(L10n.Chats.Chats.Section.conversations)
                 .accessibilityHidden(otherConversations.isEmpty)
             }
             .listStyle(.plain)
@@ -139,7 +139,7 @@ struct ConversationListContent: View {
                         navigationRow(for: conversation, onNavigate: onNavigate, onRequestRoomAuth: onRequestRoomAuth)
                     }
                 }
-                .accessibilityLabel("Favorites")
+                .accessibilityLabel(L10n.Chats.Chats.Section.favorites)
                 .accessibilityHidden(favoriteConversations.isEmpty)
 
                 Section {
@@ -147,7 +147,7 @@ struct ConversationListContent: View {
                         navigationRow(for: conversation, onNavigate: onNavigate, onRequestRoomAuth: onRequestRoomAuth)
                     }
                 }
-                .accessibilityLabel("Conversations")
+                .accessibilityLabel(L10n.Chats.Chats.Section.conversations)
                 .accessibilityHidden(otherConversations.isEmpty)
             }
             .listStyle(.plain)
