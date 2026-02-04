@@ -1,10 +1,13 @@
 import Foundation
 import SwiftData
 
-/// Represents an emoji reaction to a channel message.
+/// Represents an emoji reaction to a channel or DM message.
 @Model
 public final class Reaction {
-    #Index<Reaction>([\.messageID])
+    #Index<Reaction>(
+        [\.messageID],
+        [\.deviceID, \.contactID, \.messageID]
+    )
 
     @Attribute(.unique)
     public var id: UUID
@@ -27,8 +30,11 @@ public final class Reaction {
     /// When we received this reaction
     public var receivedAt: Date
 
-    /// Channel index where received
-    public var channelIndex: UInt8
+    /// Channel index where received (nil for DM reactions)
+    public var channelIndex: UInt8?
+
+    /// Contact ID for DM reactions (nil for channel reactions)
+    public var contactID: UUID?
 
     /// Device ID this belongs to
     public var deviceID: UUID
@@ -41,7 +47,8 @@ public final class Reaction {
         messageHash: String,
         rawText: String,
         receivedAt: Date = Date(),
-        channelIndex: UInt8,
+        channelIndex: UInt8? = nil,
+        contactID: UUID? = nil,
         deviceID: UUID
     ) {
         self.id = id
@@ -52,6 +59,7 @@ public final class Reaction {
         self.rawText = rawText
         self.receivedAt = receivedAt
         self.channelIndex = channelIndex
+        self.contactID = contactID
         self.deviceID = deviceID
     }
 }
@@ -66,7 +74,8 @@ public struct ReactionDTO: Sendable, Equatable, Hashable, Identifiable {
     public let messageHash: String
     public let rawText: String
     public let receivedAt: Date
-    public let channelIndex: UInt8
+    public let channelIndex: UInt8?
+    public let contactID: UUID?
     public let deviceID: UUID
 
     public init(from reaction: Reaction) {
@@ -78,6 +87,7 @@ public struct ReactionDTO: Sendable, Equatable, Hashable, Identifiable {
         self.rawText = reaction.rawText
         self.receivedAt = reaction.receivedAt
         self.channelIndex = reaction.channelIndex
+        self.contactID = reaction.contactID
         self.deviceID = reaction.deviceID
     }
 
@@ -89,7 +99,8 @@ public struct ReactionDTO: Sendable, Equatable, Hashable, Identifiable {
         messageHash: String,
         rawText: String,
         receivedAt: Date = Date(),
-        channelIndex: UInt8,
+        channelIndex: UInt8? = nil,
+        contactID: UUID? = nil,
         deviceID: UUID
     ) {
         self.id = id
@@ -100,6 +111,7 @@ public struct ReactionDTO: Sendable, Equatable, Hashable, Identifiable {
         self.rawText = rawText
         self.receivedAt = receivedAt
         self.channelIndex = channelIndex
+        self.contactID = contactID
         self.deviceID = deviceID
     }
 

@@ -2275,6 +2275,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             rawText: dto.rawText,
             receivedAt: dto.receivedAt,
             channelIndex: dto.channelIndex,
+            contactID: dto.contactID,
             deviceID: dto.deviceID
         )
         modelContext.insert(reaction)
