@@ -1133,10 +1133,56 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     // MARK: - Reactions
 
     public var reactions: [UUID: [ReactionDTO]] = [:]
+    public private(set) var savedReactions: [ReactionDTO] = []
+    public private(set) var deletedReactionsForMessageIDs: [UUID] = []
 
     public func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO] {
         let messageReactions = reactions[messageID] ?? []
         return Array(messageReactions.sorted { $0.receivedAt > $1.receivedAt }.prefix(limit))
+    }
+
+    public func saveReaction(_ dto: ReactionDTO) async throws {
+        savedReactions.append(dto)
+        reactions[dto.messageID, default: []].append(dto)
+    }
+
+    public func reactionExists(messageID: UUID, senderName: String, emoji: String) async throws -> Bool {
+        let messageReactions = reactions[messageID] ?? []
+        return messageReactions.contains { $0.senderName == senderName && $0.emoji == emoji }
+    }
+
+    public func updateMessageReactionSummary(messageID: UUID, summary: String?) async throws {
+        if let message = messages[messageID] {
+            messages[messageID] = MessageDTO(
+                id: message.id,
+                deviceID: message.deviceID,
+                contactID: message.contactID,
+                channelIndex: message.channelIndex,
+                text: message.text,
+                timestamp: message.timestamp,
+                createdAt: message.createdAt,
+                direction: message.direction,
+                status: message.status,
+                textType: message.textType,
+                ackCode: message.ackCode,
+                pathLength: message.pathLength,
+                snr: message.snr,
+                senderKeyPrefix: message.senderKeyPrefix,
+                senderNodeName: message.senderNodeName,
+                isRead: message.isRead,
+                replyToID: message.replyToID,
+                roundTripTime: message.roundTripTime,
+                heardRepeats: message.heardRepeats,
+                retryAttempt: message.retryAttempt,
+                maxRetryAttempts: message.maxRetryAttempts,
+                reactionSummary: summary
+            )
+        }
+    }
+
+    public func deleteReactionsForMessage(messageID: UUID) async throws {
+        deletedReactionsForMessageIDs.append(messageID)
+        reactions.removeValue(forKey: messageID)
     }
 
     // MARK: - Test Helpers
@@ -1154,9 +1200,11 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         savedMessages = []
         savedContacts = []
         savedChannels = []
+        savedReactions = []
         deletedContactIDs = []
         deletedChannelIDs = []
         deletedMessagesForContactIDs = []
+        deletedReactionsForMessageIDs = []
         updatedMessageStatuses = []
         updatedMessageAcks = []
     }

@@ -2390,5 +2390,6 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.delete(model: Reaction.self, where: #Predicate {
             $0.messageID == targetMessageID
         })
+        try modelContext.save()
     }
 }
