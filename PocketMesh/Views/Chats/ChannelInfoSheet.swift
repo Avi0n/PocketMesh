@@ -20,6 +20,8 @@ struct ChannelInfoSheet: View {
     @State private var showingClearMessagesConfirmation = false
     @State private var errorMessage: String?
     @State private var copyHapticTrigger = 0
+    @State private var notificationTask: Task<Void, Never>?
+    @State private var favoriteTask: Task<Void, Never>?
 
     init(channel: ChannelDTO, onClearMessages: @escaping () -> Void, onDelete: @escaping () -> Void) {
         self.channel = channel
@@ -42,14 +44,20 @@ struct ChannelInfoSheet: View {
                     availableLevels: NotificationLevel.channelLevels
                 )
                 .onChange(of: notificationLevel) { _, newValue in
-                    Task {
+                    notificationTask?.cancel()
+                    notificationTask = Task {
                         await viewModel?.setNotificationLevel(.channel(channel), level: newValue)
                     }
                 }
                 .onChange(of: isFavorite) { _, newValue in
-                    Task {
+                    favoriteTask?.cancel()
+                    favoriteTask = Task {
                         await viewModel?.setFavorite(.channel(channel), isFavorite: newValue)
                     }
+                }
+                .onDisappear {
+                    notificationTask?.cancel()
+                    favoriteTask?.cancel()
                 }
 
                 // QR Code Section (only for private channels with secrets)
@@ -76,7 +84,7 @@ struct ChannelInfoSheet: View {
             .navigationTitle(L10n.Chats.Chats.ChannelInfo.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.Chats.Chats.Common.done) {
                         dismiss()
                     }

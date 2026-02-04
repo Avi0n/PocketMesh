@@ -15,7 +15,7 @@ struct NotificationLevelIndicator: View {
             Image(systemName: "at")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .accessibilityLabel("Mentions only")
+                .accessibilityLabel(L10n.Chats.Chats.Row.mentionsOnly)
         case .all:
             EmptyView()
         }

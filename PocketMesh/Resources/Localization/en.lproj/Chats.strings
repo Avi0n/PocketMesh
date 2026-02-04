@@ -335,6 +335,17 @@
 /* Location: MutedIndicator.swift - Accessibility label for muted indicator */
 "chats.row.muted" = "Muted";
 
+/* Location: MutedIndicator.swift - Accessibility label for mentions-only indicator */
+"chats.row.mentionsOnly" = "Mentions only";
+
+// MARK: - Notification Level Picker
+
+/* Location: NotificationLevelPicker.swift - Accessibility label for notification level picker */
+"chats.notificationLevel.label" = "Notification level";
+
+/* Location: NotificationLevelPicker.swift - Accessibility hint for notification level picker */
+"chats.notificationLevel.hint" = "Choose when to receive notifications";
+
 // MARK: - Swipe Actions
 
 /* Location: ConversationSwipeActionsModifier.swift - Swipe action to delete */

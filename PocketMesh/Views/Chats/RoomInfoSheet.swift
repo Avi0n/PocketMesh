@@ -1,6 +1,8 @@
 import SwiftUI
 import PocketMeshServices
 
+private typealias Strings = L10n.RemoteNodes.RemoteNodes.Room
+
 struct RoomInfoSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.chatViewModel) private var viewModel
@@ -9,6 +11,8 @@ struct RoomInfoSheet: View {
 
     @State private var notificationLevel: NotificationLevel
     @State private var isFavorite: Bool
+    @State private var notificationTask: Task<Void, Never>?
+    @State private var favoriteTask: Task<Void, Never>?
 
     init(session: RemoteNodeSessionDTO) {
         self.session = session
@@ -34,35 +38,41 @@ struct RoomInfoSheet: View {
                     availableLevels: NotificationLevel.roomLevels
                 )
                 .onChange(of: notificationLevel) { _, newValue in
-                    Task {
+                    notificationTask?.cancel()
+                    notificationTask = Task {
                         await viewModel?.setNotificationLevel(.room(session), level: newValue)
                     }
                 }
                 .onChange(of: isFavorite) { _, newValue in
-                    Task {
+                    favoriteTask?.cancel()
+                    favoriteTask = Task {
                         await viewModel?.setFavorite(.room(session), isFavorite: newValue)
                     }
                 }
+                .onDisappear {
+                    notificationTask?.cancel()
+                    favoriteTask?.cancel()
+                }
 
-                Section("Details") {
-                    LabeledContent("Name", value: session.name)
-                    LabeledContent("Permission", value: session.permissionLevel.displayName)
+                Section(Strings.details) {
+                    LabeledContent(L10n.RemoteNodes.RemoteNodes.name, value: session.name)
+                    LabeledContent(Strings.permission, value: session.permissionLevel.displayName)
                     if session.isConnected {
-                        LabeledContent("Status", value: "Connected")
+                        LabeledContent(Strings.status, value: Strings.connected)
                     }
                 }
 
                 if let lastConnected = session.lastConnectedDate {
-                    Section("Activity") {
-                        LabeledContent("Last Connected") {
+                    Section(Strings.activity) {
+                        LabeledContent(Strings.lastConnected) {
                             Text(lastConnected, format: .relative(presentation: .named))
                         }
                     }
                 }
 
-                Section("Identification") {
+                Section(Strings.identification) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Public Key")
+                        Text(Strings.publicKey)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(session.publicKeyHex)
@@ -71,11 +81,11 @@ struct RoomInfoSheet: View {
                     }
                 }
             }
-            .navigationTitle("Room Info")
+            .navigationTitle(Strings.infoTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L10n.Localizable.Common.done) { dismiss() }
                 }
             }
         }

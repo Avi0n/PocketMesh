@@ -22,9 +22,9 @@ struct NotificationLevelPicker: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Notification level")
+        .accessibilityLabel(L10n.Chats.Chats.NotificationLevel.label)
         .accessibilityValue(selection.accessibilityDescription)
-        .accessibilityHint("Choose when to receive notifications")
+        .accessibilityHint(L10n.Chats.Chats.NotificationLevel.hint)
     }
 }
 
@@ -43,7 +43,13 @@ private struct NotificationLevelPill: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.accentColor : Color(.tertiarySystemFill))
+            .background {
+                if isSelected {
+                    Color.accentColor
+                } else {
+                    Color(uiColor: .tertiarySystemFill)
+                }
+            }
             .foregroundStyle(isSelected ? .white : .primary)
             .clipShape(.rect(cornerRadius: 10))
         }

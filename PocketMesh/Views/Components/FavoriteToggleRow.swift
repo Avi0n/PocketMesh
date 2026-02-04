@@ -8,7 +8,7 @@ struct FavoriteToggleRow: View {
             Image(systemName: isFavorite ? "star.fill" : "star")
                 .foregroundStyle(isFavorite ? .yellow : .secondary)
 
-            Text("Favorite")
+            Text(L10n.Chats.Chats.Row.favorite)
 
             Spacer()
 
@@ -16,7 +16,7 @@ struct FavoriteToggleRow: View {
                 .labelsHidden()
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Favorite")
-        .accessibilityValue(isFavorite ? "On" : "Off")
+        .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
+        .accessibilityValue(isFavorite ? L10n.Localizable.Accessibility.on : L10n.Localizable.Accessibility.off)
     }
 }
