@@ -338,5 +338,10 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
 
     // Reactions
     func fetchReactions(for messageID: UUID, limit: Int) async throws -> [ReactionDTO] { [] }
+    func saveReaction(_ dto: ReactionDTO) async throws {}
+    func reactionExists(messageID: UUID, senderName: String, emoji: String) async throws -> Bool { false }
+    func updateMessageReactionSummary(messageID: UUID, summary: String?) async throws {}
+    func deleteReactionsForMessage(messageID: UUID) async throws {}
     func findChannelMessageForReaction(deviceID: UUID, channelIndex: UInt8, parsedReaction: ParsedReaction, localNodeName: String?, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
+    func findDMMessageForReaction(deviceID: UUID, contactID: UUID, messageHash: String, timestampWindow: ClosedRange<UInt32>, limit: Int) async throws -> MessageDTO? { nil }
 }
