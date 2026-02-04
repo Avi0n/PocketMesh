@@ -1064,28 +1064,15 @@ final class ChatViewModel {
         }
     }
 
-    /// Send a reaction emoji to a channel message
+    /// Send a reaction emoji to a message (channel or DM)
     func sendReaction(emoji: String, to message: MessageDTO) async {
-        guard let channelIndex = message.channelIndex,
-              let reactionService = appState?.services?.reactionService,
+        guard let reactionService = appState?.services?.reactionService,
               let messageService,
               let dataStore else {
             return
         }
 
-        // Determine target sender name:
-        // - For outgoing messages (user's own): use local node name
-        // - For incoming messages: use senderNodeName
         let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
-        let targetSenderName: String
-        if message.isOutgoing {
-            targetSenderName = localNodeName
-        } else {
-            guard let senderName = message.senderNodeName else {
-                return
-            }
-            targetSenderName = senderName
-        }
 
         // Check if user already reacted with this emoji
         if let alreadyReacted = try? await dataStore.reactionExists(
@@ -1097,7 +1084,43 @@ final class ChatViewModel {
             return
         }
 
-        // Build reaction wire format
+        // Handle channel vs DM
+        if let channelIndex = message.channelIndex {
+            await sendChannelReaction(
+                emoji: emoji,
+                to: message,
+                channelIndex: channelIndex,
+                localNodeName: localNodeName
+            )
+        } else if let contactID = message.contactID {
+            await sendDMReaction(
+                emoji: emoji,
+                to: message,
+                contactID: contactID,
+                localNodeName: localNodeName
+            )
+        }
+    }
+
+    private func sendChannelReaction(
+        emoji: String,
+        to message: MessageDTO,
+        channelIndex: UInt8,
+        localNodeName: String
+    ) async {
+        guard let reactionService = appState?.services?.reactionService,
+              let messageService,
+              let dataStore else { return }
+
+        // Determine target sender name
+        let targetSenderName: String
+        if message.isOutgoing {
+            targetSenderName = localNodeName
+        } else {
+            guard let senderName = message.senderNodeName else { return }
+            targetSenderName = senderName
+        }
+
         let reactionText = reactionService.buildReactionText(
             emoji: emoji,
             targetSender: targetSenderName,
@@ -1105,7 +1128,6 @@ final class ChatViewModel {
             targetTimestamp: message.timestamp
         )
 
-        // Send as channel message
         do {
             _ = try await messageService.sendChannelMessage(
                 text: reactionText,
@@ -1113,11 +1135,13 @@ final class ChatViewModel {
                 deviceID: message.deviceID
             )
 
-            // Record emoji usage for recents
             recentEmojisStore.recordUsage(emoji)
 
-            // Optimistic local update: save reaction and update target message
-            let messageHash = ReactionParser.generateMessageHash(text: message.text, timestamp: message.timestamp)
+            // Optimistic local update
+            let messageHash = ReactionParser.generateMessageHash(
+                text: message.text,
+                timestamp: message.timestamp
+            )
             let reactionDTO = ReactionDTO(
                 messageID: message.id,
                 emoji: emoji,
@@ -1129,14 +1153,77 @@ final class ChatViewModel {
             )
             try? await dataStore.saveReaction(reactionDTO)
 
-            // Update reaction summary
             if let reactions = try? await dataStore.fetchReactions(for: message.id) {
                 let summary = ReactionParser.buildSummary(from: reactions)
-                try? await dataStore.updateMessageReactionSummary(messageID: message.id, summary: summary)
+                try? await dataStore.updateMessageReactionSummary(
+                    messageID: message.id,
+                    summary: summary
+                )
                 updateReactionSummary(for: message.id, summary: summary)
             }
         } catch {
-            logger.error("Failed to send reaction: \(error)")
+            logger.error("Failed to send channel reaction: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func sendDMReaction(
+        emoji: String,
+        to message: MessageDTO,
+        contactID: UUID,
+        localNodeName: String
+    ) async {
+        guard let reactionService = appState?.services?.reactionService,
+              let messageService,
+              let dataStore else { return }
+
+        // Fetch the contact for sending
+        guard let contact = try? await dataStore.fetchContact(id: contactID) else {
+            logger.error("Failed to fetch contact for DM reaction")
+            return
+        }
+
+        let reactionText = reactionService.buildDMReactionText(
+            emoji: emoji,
+            targetText: message.text,
+            targetTimestamp: message.timestamp
+        )
+
+        do {
+            // Send as DM to the contact
+            _ = try await messageService.sendDirectMessage(
+                text: reactionText,
+                to: contact
+            )
+
+            recentEmojisStore.recordUsage(emoji)
+
+            // Optimistic local update
+            let messageHash = ReactionParser.generateMessageHash(
+                text: message.text,
+                timestamp: message.timestamp
+            )
+            let reactionDTO = ReactionDTO(
+                messageID: message.id,
+                emoji: emoji,
+                senderName: localNodeName,
+                messageHash: messageHash,
+                rawText: reactionText,
+                contactID: contactID,
+                deviceID: message.deviceID
+            )
+            try? await dataStore.saveReaction(reactionDTO)
+
+            if let reactions = try? await dataStore.fetchReactions(for: message.id) {
+                let summary = ReactionParser.buildSummary(from: reactions)
+                try? await dataStore.updateMessageReactionSummary(
+                    messageID: message.id,
+                    summary: summary
+                )
+                updateReactionSummary(for: message.id, summary: summary)
+            }
+        } catch {
+            logger.error("Failed to send DM reaction: \(error)")
             errorMessage = error.localizedDescription
         }
     }

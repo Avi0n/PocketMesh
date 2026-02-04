@@ -151,10 +151,10 @@ struct UnifiedMessageBubble: View {
                             onLongPress?()
                         }
 
-                    // Reaction badges for channel messages (right after bubble)
-                    if message.channelIndex != nil {
+                    // Reaction badges (for messages with reactions)
+                    if let summary = message.reactionSummary, !summary.isEmpty {
                         ReactionBadgesView(
-                            summary: message.reactionSummary,
+                            summary: summary,
                             onTapReaction: { emoji in
                                 onReaction?(emoji)
                             },
