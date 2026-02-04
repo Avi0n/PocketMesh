@@ -127,6 +127,7 @@ final class CLIToolViewModel {
         remoteSessions = []
         isWaitingForResponse = false
         pendingLoginContact = nil
+        hasShownWelcome = false
         clearTabState()
     }
 
