@@ -8,6 +8,7 @@ struct RoomConversationView: View {
 
     @State private var session: RemoteNodeSessionDTO
     @State private var viewModel = RoomConversationViewModel()
+    @State private var chatViewModel = ChatViewModel()
     @State private var showingRoomInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
@@ -43,9 +44,11 @@ struct RoomConversationView: View {
             }
             .sheet(isPresented: $showingRoomInfo) {
                 RoomInfoSheet(session: session)
+                    .environment(\.chatViewModel, chatViewModel)
             }
             .task {
                 viewModel.configure(appState: appState)
+                chatViewModel.configure(appState: appState)
                 await viewModel.loadMessages(for: session)
             }
             .onChange(of: appState.messageEventBroadcaster.newMessageCount) { _, _ in
@@ -160,64 +163,6 @@ struct RoomConversationView: View {
         .frame(maxWidth: .infinity)
         .padding()
         .background(.bar)
-    }
-}
-
-// MARK: - Room Info Sheet
-
-private struct RoomInfoSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    let session: RemoteNodeSessionDTO
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    HStack {
-                        Spacer()
-                        NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 80)
-                        Spacer()
-                    }
-                    .listRowBackground(Color.clear)
-                }
-
-                Section(L10n.RemoteNodes.RemoteNodes.Room.details) {
-                    LabeledContent(L10n.RemoteNodes.RemoteNodes.name, value: session.name)
-                    LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.permission, value: session.permissionLevel.displayName)
-                    if session.isConnected {
-                        LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.status, value: L10n.RemoteNodes.RemoteNodes.Room.connected)
-                    }
-                }
-
-                if let lastConnected = session.lastConnectedDate {
-                    Section(L10n.RemoteNodes.RemoteNodes.Room.activity) {
-                        LabeledContent(L10n.RemoteNodes.RemoteNodes.Room.lastConnected) {
-                            Text(lastConnected, format: .relative(presentation: .named))
-                        }
-                    }
-                }
-
-                Section(L10n.RemoteNodes.RemoteNodes.Room.identification) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(L10n.RemoteNodes.RemoteNodes.Room.publicKey)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(session.publicKeyHex)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                    }
-                }
-            }
-            .navigationTitle(L10n.RemoteNodes.RemoteNodes.Room.infoTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.RemoteNodes.RemoteNodes.done) { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium, .large])
     }
 }
 

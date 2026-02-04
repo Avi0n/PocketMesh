@@ -194,13 +194,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Це видалить канал з твого пристрою та видалить усі локальні повідомлення. Цю дію неможливо скасувати.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Публічний канал • Слот 0";
+"chats.channelInfo.channelType.public" = "Публічний канал";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Хештег-канал • Слот %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Хештег-канал";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Приватний канал • Слот %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Приватний канал";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Слот";
@@ -374,6 +374,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Розмови";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 

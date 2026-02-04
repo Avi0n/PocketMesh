@@ -252,7 +252,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws {
+    ) throws {
         if let message = messages[id] {
             messages[id] = MessageDTO(
                 id: message.id,
@@ -594,7 +594,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: channel.unreadMentionCount + 1,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -611,7 +612,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: max(0, channel.unreadMentionCount - 1),
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -628,7 +630,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: 0,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -700,7 +703,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: existing.lastMessageDate,
                 unreadCount: existing.unreadCount,
                 unreadMentionCount: existing.unreadMentionCount,
-                isMuted: existing.isMuted
+                notificationLevel: existing.notificationLevel,
+                isFavorite: existing.isFavorite
             )
             return existing.id
         }
@@ -715,7 +719,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             lastMessageDate: nil,
             unreadCount: 0,
             unreadMentionCount: 0,
-            isMuted: false
+            notificationLevel: .all,
+            isFavorite: false
         )
         channels[id] = dto
         savedChannels.append(dto)
@@ -755,7 +760,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: date,
                 unreadCount: channel.unreadCount,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -772,7 +778,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: channel.unreadCount + 1,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
     }
@@ -789,9 +796,32 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
                 lastMessageDate: channel.lastMessageDate,
                 unreadCount: 0,
                 unreadMentionCount: channel.unreadMentionCount,
-                isMuted: channel.isMuted
+                notificationLevel: channel.notificationLevel,
+                isFavorite: channel.isFavorite
             )
         }
+    }
+
+    public func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws {
+        if let channel = channels[channelID] {
+            channels[channelID] = ChannelDTO(
+                id: channel.id,
+                deviceID: channel.deviceID,
+                index: channel.index,
+                name: channel.name,
+                secret: channel.secret,
+                isEnabled: channel.isEnabled,
+                lastMessageDate: channel.lastMessageDate,
+                unreadCount: channel.unreadCount,
+                unreadMentionCount: channel.unreadMentionCount,
+                notificationLevel: level,
+                isFavorite: channel.isFavorite
+            )
+        }
+    }
+
+    public func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws {
+        // Stub - sessions not tracked in mock
     }
 
     // MARK: - RxLogEntry Lookup
@@ -807,7 +837,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         senderTimestamp: UInt32,
         withinSeconds: Double,
         contactName: String? = nil
-    ) async throws -> RxLogEntryDTO? {
+    ) throws -> RxLogEntryDTO? {
         if let channelIndex {
             // Channel message: match by channelHash and senderTimestamp
             return mockRxLogEntries.first { entry in

@@ -12,13 +12,13 @@ struct ChannelConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text(channel.name.isEmpty ? "Channel \(channel.index)" : channel.name)
+                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
                         .font(.headline)
                         .lineLimit(1)
 
                     Spacer()
 
-                    MutedIndicator(isMuted: channel.isMuted)
+                    NotificationLevelIndicator(level: channel.notificationLevel)
 
                     if channel.isFavorite {
                         Image(systemName: "star.fill")
@@ -43,7 +43,7 @@ struct ChannelConversationRow: View {
                     UnreadBadges(
                         unreadCount: channel.unreadCount,
                         unreadMentionCount: channel.unreadMentionCount,
-                        isMuted: channel.isMuted
+                        notificationLevel: channel.notificationLevel
                     )
                 }
             }

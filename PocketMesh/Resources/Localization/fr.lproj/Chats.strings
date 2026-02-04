@@ -195,13 +195,13 @@
 "chats.channelInfo.deleteConfirm.message" = "Cela supprimera le canal de votre appareil et effacera tous les messages locaux. Cette action est irréversible.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
-"chats.channelInfo.channelType.public" = "Canal public • Emplacement 0";
+"chats.channelInfo.channelType.public" = "Canal public";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number */
-"chats.channelInfo.channelType.hashtag" = "Canal hashtag • Emplacement %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for hashtag channel */
+"chats.channelInfo.channelType.hashtag" = "Canal hashtag";
 
-/* Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number */
-"chats.channelInfo.channelType.private" = "Canal privé • Emplacement %d";
+/* Location: ChannelInfoSheet.swift - Channel type label for private channel */
+"chats.channelInfo.channelType.private" = "Canal privé";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
 "chats.channelInfo.slot" = "Emplacement";
@@ -375,6 +375,11 @@
 
 /* Location: ConversationListContent.swift - Section accessibility label for other conversations */
 "chats.section.conversations" = "Conversations";
+
+// MARK: - Mention Suggestions
+
+/* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
+"chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
 // MARK: - Create Private Channel View
 

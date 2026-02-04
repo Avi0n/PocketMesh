@@ -314,7 +314,7 @@ public actor RemoteNodeService {
             lastUptimeSeconds: existing?.lastUptimeSeconds,
             lastNoiseFloor: existing?.lastNoiseFloor,
             unreadCount: existing?.unreadCount ?? 0,
-            isMuted: existing?.isMuted ?? false,
+            notificationLevel: existing?.notificationLevel ?? .all,
             lastRxAirtimeSeconds: existing?.lastRxAirtimeSeconds,
             neighborCount: existing?.neighborCount ?? 0
         )

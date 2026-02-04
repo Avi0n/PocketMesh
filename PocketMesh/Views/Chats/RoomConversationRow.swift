@@ -16,7 +16,7 @@ struct RoomConversationRow: View {
 
                     Spacer()
 
-                    MutedIndicator(isMuted: session.isMuted)
+                    NotificationLevelIndicator(level: session.notificationLevel)
 
                     if session.isFavorite {
                         Image(systemName: "star.fill")
@@ -45,7 +45,7 @@ struct RoomConversationRow: View {
 
                     UnreadBadges(
                         unreadCount: session.unreadCount,
-                        isMuted: session.isMuted
+                        notificationLevel: session.notificationLevel
                     )
                 }
             }

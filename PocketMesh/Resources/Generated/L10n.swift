@@ -84,16 +84,12 @@ public enum L10n {
         /// Location: ChannelInfoSheet.swift - Navigation title
         public static let title = L10n.tr("Chats", "chats.channelInfo.title", fallback: "Channel Info")
         public enum ChannelType {
-          /// Location: ChannelInfoSheet.swift - Channel type label for hashtag channel - %d is slot number
-          public static func hashtag(_ p1: Int) -> String {
-            return L10n.tr("Chats", "chats.channelInfo.channelType.hashtag", p1, fallback: "Hashtag Channel • Slot %d")
-          }
-          /// Location: ChannelInfoSheet.swift - Channel type label for private channel - %d is slot number
-          public static func `private`(_ p1: Int) -> String {
-            return L10n.tr("Chats", "chats.channelInfo.channelType.private", p1, fallback: "Private Channel • Slot %d")
-          }
+          /// Location: ChannelInfoSheet.swift - Channel type label for hashtag channel
+          public static let hashtag = L10n.tr("Chats", "chats.channelInfo.channelType.hashtag", fallback: "Hashtag Channel")
+          /// Location: ChannelInfoSheet.swift - Channel type label for private channel
+          public static let `private` = L10n.tr("Chats", "chats.channelInfo.channelType.private", fallback: "Private Channel")
           /// Location: ChannelInfoSheet.swift - Channel type label for public channel
-          public static let `public` = L10n.tr("Chats", "chats.channelInfo.channelType.public", fallback: "Public Channel • Slot 0")
+          public static let `public` = L10n.tr("Chats", "chats.channelInfo.channelType.public", fallback: "Public Channel")
         }
         public enum ClearMessagesConfirm {
           /// Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message
@@ -544,6 +540,12 @@ public enum L10n {
           public static let placeholder = L10n.tr("Chats", "chats.newChat.search.placeholder", fallback: "Search contacts")
         }
       }
+      public enum NotificationLevel {
+        /// Location: NotificationLevelPicker.swift - Accessibility hint for notification level picker
+        public static let hint = L10n.tr("Chats", "chats.notificationLevel.hint", fallback: "Choose when to receive notifications")
+        /// Location: NotificationLevelPicker.swift - Accessibility label for notification level picker
+        public static let label = L10n.tr("Chats", "chats.notificationLevel.label", fallback: "Notification level")
+      }
       public enum Path {
         /// Location: MessagePathSheet.swift - Accessibility label for copy button
         public static let copyAccessibility = L10n.tr("Chats", "chats.path.copyAccessibility", fallback: "Copy path to clipboard")
@@ -655,6 +657,8 @@ public enum L10n {
       public enum Row {
         /// Location: ConversationRow.swift, ChannelConversationRow.swift, RoomConversationRow.swift - Accessibility label for favorite indicator
         public static let favorite = L10n.tr("Chats", "chats.row.favorite", fallback: "Favorite")
+        /// Location: MutedIndicator.swift - Accessibility label for mentions-only indicator
+        public static let mentionsOnly = L10n.tr("Chats", "chats.row.mentionsOnly", fallback: "Mentions only")
         /// Location: MutedIndicator.swift - Accessibility label for muted indicator
         public static let muted = L10n.tr("Chats", "chats.row.muted", fallback: "Muted")
         /// Location: ConversationRow.swift, ChannelConversationRow.swift - Default text when no messages exist
@@ -709,6 +713,10 @@ public enum L10n {
         public static let poor = L10n.tr("Chats", "chats.signal.poor", fallback: "Poor")
         /// Location: UnifiedMessageBubble.swift - SNR quality very poor
         public static let veryPoor = L10n.tr("Chats", "chats.signal.veryPoor", fallback: "Very Poor")
+      }
+      public enum Suggestions {
+        /// Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup
+        public static let accessibilityLabel = L10n.tr("Chats", "chats.suggestions.accessibilityLabel", fallback: "Mention suggestions")
       }
       public enum SwipeAction {
         /// Location: ConversationSwipeActionsModifier.swift - Swipe action to delete
@@ -1590,6 +1598,10 @@ public enum L10n {
   }
   public enum Localizable {
     public enum Accessibility {
+      /// Accessibility value for toggle in Off state
+      public static let off = L10n.tr("Localizable", "accessibility.off", fallback: "Off")
+      /// Accessibility value for toggle in On state
+      public static let on = L10n.tr("Localizable", "accessibility.on", fallback: "On")
       /// VoiceOver announcement when viewing cached data while disconnected from device
       public static let viewingCachedData = L10n.tr("Localizable", "accessibility.viewingCachedData", fallback: "Viewing cached data. Connect to device for updates.")
     }

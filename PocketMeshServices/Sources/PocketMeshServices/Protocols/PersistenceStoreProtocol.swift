@@ -63,7 +63,7 @@ public protocol PersistenceStoreProtocol: Actor {
         imageData: Data?,
         iconData: Data?,
         fetched: Bool
-    ) async throws
+    ) throws
 
     // MARK: - Contact Operations
 
@@ -173,6 +173,12 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Clear unread count for a channel
     func clearChannelUnreadCount(channelID: UUID) async throws
+
+    /// Sets the notification level for a channel
+    func setChannelNotificationLevel(_ channelID: UUID, level: NotificationLevel) async throws
+
+    /// Sets the notification level for a remote node session
+    func setSessionNotificationLevel(_ sessionID: UUID, level: NotificationLevel) async throws
 
     // MARK: - Saved Trace Paths
 

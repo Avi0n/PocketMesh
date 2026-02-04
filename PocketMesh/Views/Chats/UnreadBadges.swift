@@ -1,12 +1,17 @@
+import PocketMeshServices
 import SwiftUI
 
 struct UnreadBadges: View {
     let unreadCount: Int
     var unreadMentionCount: Int = 0
-    var isMuted: Bool = false
+    var notificationLevel: NotificationLevel = .all
 
-    private var badgeColor: Color {
-        isMuted ? .secondary : .blue
+    private var mentionBadgeColor: Color {
+        notificationLevel == .muted ? .secondary : .blue
+    }
+
+    private var unreadBadgeColor: Color {
+        notificationLevel == .all ? .blue : .secondary
     }
 
     var body: some View {
@@ -16,7 +21,7 @@ struct UnreadBadges: View {
                     .font(.caption.bold())
                     .foregroundStyle(.white)
                     .frame(width: 18, height: 18)
-                    .background(badgeColor, in: .circle)
+                    .background(mentionBadgeColor, in: .circle)
             }
 
             if unreadCount > 0 {
@@ -26,7 +31,7 @@ struct UnreadBadges: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(badgeColor, in: .capsule)
+                    .background(unreadBadgeColor, in: .capsule)
             }
         }
     }

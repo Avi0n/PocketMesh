@@ -45,7 +45,7 @@ struct ConversationRow: View {
                     UnreadBadges(
                         unreadCount: contact.unreadCount,
                         unreadMentionCount: contact.unreadMentionCount,
-                        isMuted: contact.isMuted
+                        notificationLevel: contact.isMuted ? .muted : .all
                     )
                 }
             }

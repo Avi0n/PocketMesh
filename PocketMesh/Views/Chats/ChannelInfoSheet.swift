@@ -6,17 +6,30 @@ import CoreImage.CIFilterBuiltins
 struct ChannelInfoSheet: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chatViewModel) private var viewModel
 
     let channel: ChannelDTO
     let onClearMessages: () -> Void
     let onDelete: () -> Void
 
+    @State private var notificationLevel: NotificationLevel
+    @State private var isFavorite: Bool
     @State private var isDeleting = false
     @State private var isClearingMessages = false
     @State private var showingDeleteConfirmation = false
     @State private var showingClearMessagesConfirmation = false
     @State private var errorMessage: String?
     @State private var copyHapticTrigger = 0
+    @State private var notificationTask: Task<Void, Never>?
+    @State private var favoriteTask: Task<Void, Never>?
+
+    init(channel: ChannelDTO, onClearMessages: @escaping () -> Void, onDelete: @escaping () -> Void) {
+        self.channel = channel
+        self.onClearMessages = onClearMessages
+        self.onDelete = onDelete
+        self._notificationLevel = State(initialValue: channel.notificationLevel)
+        self._isFavorite = State(initialValue: channel.isFavorite)
+    }
 
     var body: some View {
         NavigationStack {
@@ -24,8 +37,28 @@ struct ChannelInfoSheet: View {
                 // Channel Header Section
                 channelHeaderSection
 
-                // Channel Info Section
-                channelInfoSection
+                // Quick Actions Section
+                ConversationQuickActionsSection(
+                    notificationLevel: $notificationLevel,
+                    isFavorite: $isFavorite,
+                    availableLevels: NotificationLevel.channelLevels
+                )
+                .onChange(of: notificationLevel) { _, newValue in
+                    notificationTask?.cancel()
+                    notificationTask = Task {
+                        await viewModel?.setNotificationLevel(.channel(channel), level: newValue)
+                    }
+                }
+                .onChange(of: isFavorite) { _, newValue in
+                    favoriteTask?.cancel()
+                    favoriteTask = Task {
+                        await viewModel?.setFavorite(.channel(channel), isFavorite: newValue)
+                    }
+                }
+                .onDisappear {
+                    notificationTask?.cancel()
+                    favoriteTask?.cancel()
+                }
 
                 // QR Code Section (only for private channels with secrets)
                 if channel.hasSecret && !channel.isPublicChannel {
@@ -112,27 +145,13 @@ struct ChannelInfoSheet: View {
         }
     }
 
-    // MARK: - Channel Info Section
-
-    private var channelInfoSection: some View {
-        Section {
-            LabeledContent(L10n.Chats.Chats.ChannelInfo.slot, value: "\(channel.index)")
-
-            if let lastMessage = channel.lastMessageDate {
-                LabeledContent(L10n.Chats.Chats.ChannelInfo.lastMessage) {
-                    Text(lastMessage, style: .relative)
-                }
-            }
-        }
-    }
-
     private var channelTypeLabel: String {
         if channel.isPublicChannel {
             return L10n.Chats.Chats.ChannelInfo.ChannelType.`public`
         } else if channel.name.hasPrefix("#") {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag(Int(channel.index))
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag
         } else {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`(Int(channel.index))
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`
         }
     }
 
