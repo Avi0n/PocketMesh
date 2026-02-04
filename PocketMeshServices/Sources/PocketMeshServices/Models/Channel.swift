@@ -33,12 +33,27 @@ public final class Channel {
     /// Unread mention count (mentions of current user not yet seen)
     public var unreadMentionCount: Int = 0
 
-    /// Notification level for this channel (stored as raw value for SwiftData)
-    public var notificationLevelRawValue: Int = NotificationLevel.all.rawValue
+    /// Notification level for this channel (stored as raw value for SwiftData).
+    /// Default is -1 (unmigrated) to enable migration from legacy isMuted property.
+    public var notificationLevelRawValue: Int = -1
 
-    /// Notification level computed property
+    /// Legacy isMuted property from V1 schema (maps to old "isMuted" column).
+    /// Used for one-time migration to notificationLevelRawValue.
+    @Attribute(originalName: "isMuted")
+    public var legacyIsMuted: Bool?
+
+    /// Notification level computed property with automatic migration from legacy isMuted
     public var notificationLevel: NotificationLevel {
-        get { NotificationLevel(rawValue: notificationLevelRawValue) ?? .all }
+        get {
+            // Check if migration is needed
+            if notificationLevelRawValue == -1 {
+                // Migrate from legacy isMuted
+                let migratedLevel: NotificationLevel = (legacyIsMuted == true) ? .muted : .all
+                notificationLevelRawValue = migratedLevel.rawValue
+                return migratedLevel
+            }
+            return NotificationLevel(rawValue: notificationLevelRawValue) ?? .all
+        }
         set { notificationLevelRawValue = newValue.rawValue }
     }
 
