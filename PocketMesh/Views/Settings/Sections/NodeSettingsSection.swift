@@ -122,7 +122,7 @@ struct NodeSettingsSection: View {
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
                 retryAlert.show(
-                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
                     onRetry: { saveNodeName() },
                     onMaxRetriesExceeded: { dismiss() }
                 )
@@ -155,7 +155,7 @@ struct NodeSettingsSection: View {
             } catch let error as SettingsServiceError where error.isRetryable {
                 shareLocation = !share // Revert
                 retryAlert.show(
-                    message: error.errorDescription ?? "Please ensure device is connected and try again.",
+                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
                     onRetry: { updateShareLocation(share) },
                     onMaxRetriesExceeded: { dismiss() }
                 )

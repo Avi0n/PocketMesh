@@ -190,7 +190,7 @@ struct NodesSettingsSection: View {
             } catch let error as SettingsServiceError where error.isRetryable {
                 loadFromDevice()
                 retryAlert.show(
-                    message: error.errorDescription ?? "Connection error",
+                    message: error.errorDescription ?? L10n.Localizable.Common.Error.connectionError,
                     onRetry: { applySettings() },
                     onMaxRetriesExceeded: { dismiss() }
                 )

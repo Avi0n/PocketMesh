@@ -402,6 +402,9 @@
 /* Location: AddContactSheet.swift - Purpose: Node list full error */
 "contacts.add.error.nodeListFull" = "Список вузлів заповнений (макс. %d вузлів)";
 
+/* Location: AddContactSheet.swift, DiscoveryView.swift - Purpose: Node list full error without max count */
+"contacts.add.error.nodeListFullSimple" = "Node list is full";
+
 // MARK: - Contact QR Share Sheet
 
 /* Location: ContactQRShareSheet.swift - Purpose: Navigation title */
@@ -464,6 +467,12 @@
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "Додати";
+
+/* Location: DiscoveryView.swift - Purpose: Button label when node is already added */
+"contacts.discovery.added" = "Added";
+
+/* Location: DiscoveryView.swift - Purpose: Accessibility label for added button */
+"contacts.discovery.addedAccessibility" = "Already added to contacts";
 
 /* Location: DiscoveryView.swift - Purpose: Services not available error */
 "contacts.discovery.error.servicesUnavailable" = "Сервіси недоступні";
@@ -684,6 +693,9 @@
 
 /* Location: TracePathView.swift - Purpose: Navigation title */
 "contacts.trace.title" = "Трасування шляху";
+
+/* Location: TracePathView.swift - Purpose: View mode picker label */
+"contacts.trace.viewMode" = "Режим перегляду";
 
 /* Location: TracePathView.swift - Purpose: List view mode */
 "contacts.trace.mode.list" = "Список";

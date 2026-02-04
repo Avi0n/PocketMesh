@@ -801,3 +801,11 @@
 
 /* Location: UnifiedMessageBubble.swift - Accessibility label for hop count display - %d is count */
 "chats.message.hopCount.accessibilityLabel" = "Número de saltos: %d";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Anúnciate en la red mesh";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Toca aquí y envía un Anuncio de Inundación para que los dispositivos cercanos sepan que te has unido.";

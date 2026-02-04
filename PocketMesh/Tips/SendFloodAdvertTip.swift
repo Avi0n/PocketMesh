@@ -6,11 +6,11 @@ struct SendFloodAdvertTip: Tip {
     static let hasCompletedOnboarding = Tips.Event(id: "hasCompletedOnboarding")
 
     var title: Text {
-        Text("Announce yourself to the mesh")
+        Text(L10n.Chats.Chats.Tip.FloodAdvert.title)
     }
 
     var message: Text? {
-        Text("Tap here and send a Flood Advert to let nearby devices know you've joined.")
+        Text(L10n.Chats.Chats.Tip.FloodAdvert.message)
     }
 
     var image: Image? {

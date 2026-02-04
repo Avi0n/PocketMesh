@@ -32,8 +32,41 @@
 /* Button to retry a failed operation */
 "common.tryAgain" = "Попробовать снова";
 
+/* Error label when content fails to load */
+"common.error.failedToLoad" = "Не удалось загрузить";
+
+/* Generic connection error title */
+"common.error.connectionError" = "Ошибка подключения";
+
+/* Network error with underlying error description - %@ is the error description */
+"common.error.networkError" = "Ошибка сети: %@";
+
+/* Invalid response from API */
+"common.error.invalidResponse" = "Недействительный ответ от API высот";
+
+/* API error with message - %@ is the error message */
+"common.error.apiError" = "Ошибка API: %@";
+
+/* No data returned from API */
+"common.error.noElevationData" = "Данные о высоте не получены";
+
 /* Standard remove button for removing items from a list or group */
 "common.remove" = "Удалить";
+
+
+// MARK: - Connection Status
+
+/* Location: SyncingPillView.swift - Status shown when syncing data */
+"common.status.syncing" = "Синхронизация";
+
+/* Location: SyncingPillView.swift - Status shown when connecting to device */
+"common.status.connecting" = "Подключение";
+
+/* Location: SyncingPillView.swift - Status shown when device is ready */
+"common.status.ready" = "Готово";
+
+/* Location: SyncingPillView.swift - Status shown when device is disconnected */
+"common.status.disconnected" = "Отключено";
 
 
 // MARK: - Tab Bar

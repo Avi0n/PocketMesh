@@ -736,6 +736,14 @@ public enum L10n {
         /// Location: MessageTimestampView.swift - Prefix for yesterday's date
         public static let yesterday = L10n.tr("Chats", "chats.timestamp.yesterday", fallback: "Yesterday")
       }
+      public enum Tip {
+        public enum FloodAdvert {
+          /// Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action
+          public static let message = L10n.tr("Chats", "chats.tip.floodAdvert.message", fallback: "Tap here and send a Flood Advert to let nearby devices know you've joined.")
+          /// Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement
+          public static let title = L10n.tr("Chats", "chats.tip.floodAdvert.title", fallback: "Announce yourself to the mesh")
+        }
+      }
     }
   }
   public enum Contacts {
@@ -1465,6 +1473,8 @@ public enum L10n {
         public static let saved = L10n.tr("Contacts", "contacts.trace.saved", fallback: "Saved")
         /// Location: TracePathView.swift - Purpose: Navigation title
         public static let title = L10n.tr("Contacts", "contacts.trace.title", fallback: "Trace Path")
+        /// Location: TracePathView.swift - Purpose: View mode picker label
+        public static let viewMode = L10n.tr("Contacts", "contacts.trace.viewMode", fallback: "View Mode")
         public enum Error {
           /// Location: TracePathViewModel.swift - Purpose: All traces failed error
           public static func allFailed(_ p1: Int) -> String {
@@ -1630,6 +1640,34 @@ public enum L10n {
       public static let save = L10n.tr("Localizable", "common.save", fallback: "Save")
       /// Button to retry a failed operation
       public static let tryAgain = L10n.tr("Localizable", "common.tryAgain", fallback: "Try Again")
+      public enum Error {
+        /// API error with message - %@ is the error message
+        public static func apiError(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "common.error.apiError", String(describing: p1), fallback: "API error: %@")
+        }
+        /// Generic connection error title
+        public static let connectionError = L10n.tr("Localizable", "common.error.connectionError", fallback: "Connection error")
+        /// Error label when content fails to load
+        public static let failedToLoad = L10n.tr("Localizable", "common.error.failedToLoad", fallback: "Failed to load")
+        /// Invalid response from API
+        public static let invalidResponse = L10n.tr("Localizable", "common.error.invalidResponse", fallback: "Invalid response from elevation API")
+        /// Network error with underlying error description - %@ is the error description
+        public static func networkError(_ p1: Any) -> String {
+          return L10n.tr("Localizable", "common.error.networkError", String(describing: p1), fallback: "Network error: %@")
+        }
+        /// No data returned from API
+        public static let noElevationData = L10n.tr("Localizable", "common.error.noElevationData", fallback: "No elevation data returned")
+      }
+      public enum Status {
+        /// Location: SyncingPillView.swift - Status shown when connecting to device
+        public static let connecting = L10n.tr("Localizable", "common.status.connecting", fallback: "Connecting")
+        /// Location: SyncingPillView.swift - Status shown when device is disconnected
+        public static let disconnected = L10n.tr("Localizable", "common.status.disconnected", fallback: "Disconnected")
+        /// Location: SyncingPillView.swift - Status shown when device is ready
+        public static let ready = L10n.tr("Localizable", "common.status.ready", fallback: "Ready")
+        /// Location: SyncingPillView.swift - Status shown when syncing data
+        public static let syncing = L10n.tr("Localizable", "common.status.syncing", fallback: "Syncing")
+      }
     }
     public enum NodeType {
       /// Node type for a person or contact
@@ -2345,6 +2383,8 @@ public enum L10n {
         public static let connectionError = L10n.tr("Settings", "alert.retry.connectionError", fallback: "Connection Error")
         /// Alert message when max retries exceeded
         public static let ensureConnected = L10n.tr("Settings", "alert.retry.ensureConnected", fallback: "Please ensure your device is connected.")
+        /// Fallback message for retry alerts when error description is unavailable
+        public static let fallbackMessage = L10n.tr("Settings", "alert.retry.fallbackMessage", fallback: "Please ensure device is connected and try again.")
         /// Button to retry the operation
         public static let retry = L10n.tr("Settings", "alert.retry.retry", fallback: "Retry")
         /// Alert title when max retries exceeded
@@ -2935,6 +2975,10 @@ public enum L10n {
         public static let jumpToBottom = L10n.tr("Tools", "tools.cli.jumpToBottom", fallback: "Jump to bottom")
         /// Location: CLIToolViewModel.swift - Local commands not implemented
         public static let localNotImplemented = L10n.tr("Tools", "tools.cli.localNotImplemented", fallback: "Local commands not yet implemented")
+        /// Location: CLIToolViewModel.swift - Login countdown
+        public static func loggingIn(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.cli.loggingIn", p1, fallback: "Logging in... (%ds)")
+        }
         /// Location: CLIToolView.swift - Login failed
         public static let loginFailed = L10n.tr("Tools", "tools.cli.loginFailed", fallback: "Login failed:")
         /// Location: CLIToolView.swift - Login failed reason

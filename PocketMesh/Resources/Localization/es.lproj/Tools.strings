@@ -427,5 +427,193 @@
 /* Location: ClearanceStatusView.swift - Clearance percentage, %lld is percent */
 "tools.lineOfSight.clearancePercent" = "%lld%% de despeje";
 
+// MARK: - CLI Tool View
+
+/* Location: CLIToolView.swift - Tool selection label */
+"tools.cli" = "CLI";
+
+/* Location: CLIToolView.swift - Disconnected state title */
+"tools.cli.notConnected" = "No conectado";
+
+/* Location: CLIToolView.swift - Disconnected state description */
+"tools.cli.notConnectedDescription" = "Conéctate a una radio mesh para usar la CLI.";
+
+/* Location: CLIToolView.swift - Prompt suffix */
+"tools.cli.promptSuffix" = ">";
+
+/* Location: CLIToolView.swift - Waiting indicator */
+"tools.cli.waiting" = "...";
+
+/* Location: CLIToolView.swift - Disconnected prompt */
+"tools.cli.disconnected" = "desconectado";
+
+/* Location: CLIToolView.swift - Help command output header */
+"tools.cli.helpHeader" = "Comandos disponibles:";
+
+/* Location: CLIToolView.swift - Session list header */
+"tools.cli.sessionListHeader" = "Sesiones activas:";
+
+/* Location: CLIToolView.swift - Local session label */
+"tools.cli.sessionLocal" = "local";
+
+/* Location: CLIToolView.swift - No sessions message */
+"tools.cli.noSessions" = "Sin sesiones activas";
+
+/* Location: CLIToolView.swift - History empty message */
+"tools.cli.historyEmpty" = "Sin historial de comandos";
+
+/* Location: CLIToolView.swift - Unknown command error */
+"tools.cli.unknownCommand" = "Comando desconocido:";
+
+/* Location: CLIToolView.swift - Login success */
+"tools.cli.loginSuccess" = "Conectado a";
+
+/* Location: CLIToolView.swift - Login failed */
+"tools.cli.loginFailed" = "Error de inicio de sesión:";
+
 /* Location: CLIToolView.swift - Login failed reason */
 "tools.cli.loginFailedAuth" = "Autenticación fallida";
+
+/* Location: CLIToolView.swift - Node not found error */
+"tools.cli.nodeNotFound" = "Nodo no encontrado:";
+
+/* Location: CLIToolView.swift - Password required error */
+"tools.cli.passwordRequired" = "Contraseña requerida";
+
+/* Location: CLIToolViewModel.swift - Password prompt */
+"tools.cli.passwordPrompt" = "Contraseña:";
+
+/* Location: CLIToolViewModel.swift - Login countdown */
+"tools.cli.loggingIn" = "Iniciando sesión... (%ds)";
+
+/* Location: CLIToolView.swift - Logout success */
+"tools.cli.logoutSuccess" = "Sesión cerrada";
+
+/* Location: CLIToolView.swift - Not logged in error */
+"tools.cli.notLoggedIn" = "No conectado a ningún repetidor";
+
+/* Location: CLIToolView.swift - Session switched */
+"tools.cli.sessionSwitched" = "Cambiado a";
+
+/* Location: CLIToolView.swift - Session not found */
+"tools.cli.sessionNotFound" = "Sesión no encontrada:";
+
+/* Location: CLIToolView.swift - Command timeout */
+"tools.cli.timeout" = "Tiempo de espera agotado";
+
+/* Location: CLIToolView.swift - Command cancelled */
+"tools.cli.cancelled" = "Comando cancelado";
+
+/* Location: CLIToolView.swift - Login from local only */
+"tools.cli.loginFromLocalOnly" = "Inicio de sesión solo disponible desde sesión local";
+
+/* Location: CLIToolView.swift - Login usage */
+"tools.cli.loginUsage" = "Uso: login [-f] <node>";
+
+/* Location: CLIToolView.swift - Accessory button: history up */
+"tools.cli.historyUp" = "Comando anterior";
+
+/* Location: CLIToolView.swift - Accessory button: history down */
+"tools.cli.historyDown" = "Comando siguiente";
+
+/* Location: CLIToolView.swift - Accessory button: tab complete */
+"tools.cli.tabComplete" = "Autocompletar";
+
+/* Location: CLIInputAccessoryView.swift - Cursor left button */
+"tools.cli.cursorLeft" = "Mover cursor a la izquierda";
+
+/* Location: CLIInputAccessoryView.swift - Cursor right button */
+"tools.cli.cursorRight" = "Mover cursor a la derecha";
+
+/* Location: CLIInputAccessoryView.swift - Paste button */
+"tools.cli.paste" = "Pegar";
+
+/* Location: CLIToolView.swift - Accessory button: clear */
+"tools.cli.clear" = "Borrar";
+
+/* Location: CLIToolView.swift - Accessory button: sessions */
+"tools.cli.sessions" = "Sesiones";
+
+/* Location: CLIToolView.swift - Accessory button: dismiss */
+"tools.cli.dismiss" = "Ocultar teclado";
+
+/* Location: CLIToolView.swift - Default device name */
+"tools.cli.defaultDevice" = "Dispositivo";
+
+/* Location: CLIToolViewModel.swift - Help: login command */
+"tools.cli.helpLogin" = "  login [-f] <node>\n    Conectar al repetidor (-f: olvidar contraseña guardada)";
+
+/* Location: CLIToolViewModel.swift - Help: logout command */
+"tools.cli.helpLogout" = "  logout\n    Finalizar sesión remota";
+
+/* Location: CLIToolViewModel.swift - Help: session list command */
+"tools.cli.helpSessionList" = "  session list\n    Mostrar sesiones activas";
+
+/* Location: CLIToolViewModel.swift - Help: session local command */
+"tools.cli.helpSessionLocal" = "  session local\n    Cambiar a sesión local";
+
+/* Location: CLIToolViewModel.swift - Help: session name command */
+"tools.cli.helpSessionName" = "  session <name>\n    Cambiar a sesión";
+
+/* Location: CLIToolViewModel.swift - Help: session shortcut */
+"tools.cli.helpSessionShortcut" = "  s<n>\n    Cambiar a sesión n (ej., s1, s2)";
+
+/* Location: CLIToolViewModel.swift - Help: clear command */
+"tools.cli.helpClear" = "  clear\n    Limpiar terminal";
+
+/* Location: CLIToolViewModel.swift - Help: help command */
+"tools.cli.helpHelp" = "  help\n    Mostrar esta ayuda";
+
+/* Location: CLIToolViewModel.swift - Help: nodes command */
+"tools.cli.helpNodes" = "  nodes\n    Mostrar lista de repetidores y salas";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands header */
+"tools.cli.helpRepeaterHeader" = "Comandos del repetidor (passthrough):";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 1 */
+"tools.cli.helpRepeaterList1" = "  ver, clock, reboot, advert, neighbors";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 2 */
+"tools.cli.helpRepeaterList2" = "  get/set <param>, password <new>";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 3 */
+"tools.cli.helpRepeaterList3" = "  log start/stop/erase";
+
+/* Location: CLIToolViewModel.swift - Help: repeater commands list 4 */
+"tools.cli.helpRepeaterList4" = "  setperm, tempradio, neighbor.remove";
+
+/* Location: CLIToolViewModel.swift - Local commands not implemented */
+"tools.cli.localNotImplemented" = "Comandos locales aún no implementados";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 1 */
+"tools.cli.welcomeLine1" = "PocketMesh CLI";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 2 */
+"tools.cli.welcomeConnected" = "Conectado a %@";
+
+/* Location: CLIToolViewModel.swift - Welcome banner line 3 */
+"tools.cli.welcomeHint" = "Escribe 'help' para ver los comandos disponibles.";
+
+/* Location: CLIToolView.swift - Jump to bottom button */
+"tools.cli.jumpToBottom" = "Ir al final";
+
+/* Location: CLIToolView.swift - Accessibility label for command input */
+"tools.cli.commandInput" = "Entrada de comando";
+
+/* Location: CLIToolView.swift - Accessibility label for command prompt */
+"tools.cli.commandPrompt" = "Línea de comandos";
+
+/* Location: CLIInputAccessoryView.swift - Cancel operation button label */
+"tools.cli.cancelOperation" = "Cancelar operación";
+
+/* Location: CLIToolViewModel.swift - Command timeout (post-login) */
+"tools.cli.commandTimeout" = "Tiempo de solicitud agotado";
+
+/* Location: CLIToolViewModel.swift - Reboot command confirmation */
+"tools.cli.rebootSent" = "Comando de reinicio enviado";
+
+/* Accessibility label for completion suggestions container */
+"tools.cli.completionSuggestions" = "Sugerencias de autocompletado";
+
+/* Accessibility value for completion suggestions - %lld is count, %@ is selected */
+"tools.cli.completionSuggestionsValue" = "%lld disponibles, %@ seleccionado";

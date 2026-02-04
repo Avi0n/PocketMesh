@@ -63,8 +63,14 @@ struct LocationPickerView: View {
 
                     if let coord = selectedCoordinate {
                         VStack(spacing: 4) {
-                            Text("Latitude: \(coord.latitude, format: .number.precision(.fractionLength(6)))")
-                            Text("Longitude: \(coord.longitude, format: .number.precision(.fractionLength(6)))")
+                            CoordinateText(
+                                label: L10n.Settings.LocationPicker.latitude,
+                                value: coord.latitude
+                            )
+                            CoordinateText(
+                                label: L10n.Settings.LocationPicker.longitude,
+                                value: coord.longitude
+                            )
                         }
                         .font(.caption.monospacedDigit())
                         .padding()
@@ -248,5 +254,14 @@ private struct GlassButtonModifier: ViewModifier {
                 content.buttonStyle(.bordered)
             }
         }
+    }
+}
+
+private struct CoordinateText: View {
+    let label: String
+    let value: Double
+
+    var body: some View {
+        Text("\(label) \(value, format: .number.precision(.fractionLength(6)))")
     }
 }

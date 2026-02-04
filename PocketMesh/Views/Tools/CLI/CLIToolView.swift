@@ -125,7 +125,7 @@ private struct CLIToolContent: View {
                         .id("suggestions")
                     }
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 8)
             }

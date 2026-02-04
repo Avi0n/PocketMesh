@@ -33,8 +33,41 @@
 /* Button to retry a failed operation */
 "common.tryAgain" = "Réessayer";
 
+/* Error label when content fails to load */
+"common.error.failedToLoad" = "Échec du chargement";
+
+/* Generic connection error title */
+"common.error.connectionError" = "Erreur de connexion";
+
+/* Network error with underlying error description - %@ is the error description */
+"common.error.networkError" = "Erreur réseau : %@";
+
+/* Invalid response from API */
+"common.error.invalidResponse" = "Réponse invalide de l'API d'élévation";
+
+/* API error with message - %@ is the error message */
+"common.error.apiError" = "Erreur API : %@";
+
+/* No data returned from API */
+"common.error.noElevationData" = "Aucune donnée d'élévation retournée";
+
 /* Standard remove button for removing items from a list or group */
 "common.remove" = "Retirer";
+
+
+// MARK: - Connection Status
+
+/* Location: SyncingPillView.swift - Status shown when syncing data */
+"common.status.syncing" = "Synchronisation";
+
+/* Location: SyncingPillView.swift - Status shown when connecting to device */
+"common.status.connecting" = "Connexion";
+
+/* Location: SyncingPillView.swift - Status shown when device is ready */
+"common.status.ready" = "Prêt";
+
+/* Location: SyncingPillView.swift - Status shown when device is disconnected */
+"common.status.disconnected" = "Déconnecté";
 
 
 // MARK: - Tab Bar

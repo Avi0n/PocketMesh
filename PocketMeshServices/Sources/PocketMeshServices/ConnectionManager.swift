@@ -548,6 +548,18 @@ public final class ConnectionManager {
         // Only check BLE connections
         guard currentTransportType == nil || currentTransportType == .bluetooth else { return }
 
+        let deviceShort = lastConnectedDeviceID?.uuidString.prefix(8) ?? "none"
+        let bleState = await stateMachine.centralManagerStateName
+        let blePhase = await stateMachine.currentPhaseName
+        logger.info("""
+            [BLE] Foreground health check - \
+            shouldBeConnected: \(shouldBeConnected), \
+            lastDevice: \(deviceShort), \
+            connectionState: \(String(describing: connectionState)), \
+            bleState: \(bleState), \
+            blePhase: \(blePhase)
+            """)
+
         // Check if user expects to be connected
         guard shouldBeConnected,
               let deviceID = lastConnectedDeviceID else { return }
@@ -749,7 +761,15 @@ public final class ConnectionManager {
     /// Activates the connection manager on app launch.
     /// Call this once during app initialization.
     public func activate() async {
-        logger.info("Activating ConnectionManager")
+        let lastDeviceShort = lastConnectedDeviceID?.uuidString.prefix(8) ?? "none"
+        let bleState = await stateMachine.centralManagerStateName
+        logger.info("""
+            Activating ConnectionManager - \
+            userExplicitlyDisconnected: \(userExplicitlyDisconnected), \
+            lastConnectedDeviceID: \(lastDeviceShort), \
+            connectionState: \(String(describing: connectionState)), \
+            bleState: \(bleState)
+            """)
 
         #if targetEnvironment(simulator)
         // Skip auto-reconnect if user explicitly disconnected

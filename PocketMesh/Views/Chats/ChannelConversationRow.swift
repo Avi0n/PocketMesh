@@ -2,6 +2,7 @@ import SwiftUI
 import PocketMeshServices
 
 struct ChannelConversationRow: View {
+    private typealias Strings = L10n.Chats.Chats.Row
     let channel: ChannelDTO
     let viewModel: ChatViewModel
 
@@ -23,7 +24,7 @@ struct ChannelConversationRow: View {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
-                            .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
+                            .accessibilityLabel(Strings.favorite)
                     }
 
                     if let date = channel.lastMessageDate {
@@ -32,7 +33,7 @@ struct ChannelConversationRow: View {
                 }
 
                 HStack {
-                    Text(viewModel.lastMessagePreview(for: channel) ?? L10n.Chats.Chats.Row.noMessages)
+                    Text(viewModel.lastMessagePreview(for: channel) ?? Strings.noMessages)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

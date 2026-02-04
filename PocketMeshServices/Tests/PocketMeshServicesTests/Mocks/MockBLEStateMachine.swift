@@ -12,6 +12,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     public var stubbedConnectedDeviceID: UUID?
     public var stubbedCurrentPhaseName: String = "idle"
     public var stubbedCurrentPeripheralState: String?
+    public var stubbedCentralManagerStateName: String = "poweredOn"
     public var stubbedIsDeviceConnectedToSystem: Bool = false
 
     // MARK: - Protocol Properties
@@ -21,6 +22,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     public var connectedDeviceID: UUID? { stubbedConnectedDeviceID }
     public var currentPhaseName: String { stubbedCurrentPhaseName }
     public var currentPeripheralState: String? { stubbedCurrentPeripheralState }
+    public var centralManagerStateName: String { stubbedCentralManagerStateName }
 
     // MARK: - Recorded Invocations
 
@@ -68,6 +70,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         stubbedConnectedDeviceID = nil
         stubbedCurrentPhaseName = "idle"
         stubbedCurrentPeripheralState = nil
+        stubbedCentralManagerStateName = "poweredOn"
         stubbedIsDeviceConnectedToSystem = false
         activateCallCount = 0
         isDeviceConnectedToSystemCalls = []

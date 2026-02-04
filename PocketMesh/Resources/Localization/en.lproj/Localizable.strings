@@ -34,8 +34,41 @@
 /* Button to retry a failed operation */
 "common.tryAgain" = "Try Again";
 
+/* Error label when content fails to load */
+"common.error.failedToLoad" = "Failed to load";
+
+/* Generic connection error title */
+"common.error.connectionError" = "Connection error";
+
+/* Network error with underlying error description - %@ is the error description */
+"common.error.networkError" = "Network error: %@";
+
+/* Invalid response from API */
+"common.error.invalidResponse" = "Invalid response from elevation API";
+
+/* API error with message - %@ is the error message */
+"common.error.apiError" = "API error: %@";
+
+/* No data returned from API */
+"common.error.noElevationData" = "No elevation data returned";
+
 /* Standard remove button for removing items from a list or group */
 "common.remove" = "Remove";
+
+
+// MARK: - Connection Status
+
+/* Location: SyncingPillView.swift - Status shown when syncing data */
+"common.status.syncing" = "Syncing";
+
+/* Location: SyncingPillView.swift - Status shown when connecting to device */
+"common.status.connecting" = "Connecting";
+
+/* Location: SyncingPillView.swift - Status shown when device is ready */
+"common.status.ready" = "Ready";
+
+/* Location: SyncingPillView.swift - Status shown when device is disconnected */
+"common.status.disconnected" = "Disconnected";
 
 
 // MARK: - Tab Bar

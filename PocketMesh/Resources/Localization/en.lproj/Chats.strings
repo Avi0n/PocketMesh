@@ -809,3 +809,11 @@
 
 /* Location: Various - Done button (use L10n.Localizable.Common.done) */
 "chats.common.done" = "Done";
+
+// MARK: - Tips
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
+"chats.tip.floodAdvert.title" = "Announce yourself to the mesh";
+
+/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
+"chats.tip.floodAdvert.message" = "Tap here and send a Flood Advert to let nearby devices know you've joined.";

@@ -15,10 +15,14 @@ enum ElevationServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .networkError(let error): return "Network error: \(error.localizedDescription)"
-        case .invalidResponse: return "Invalid response from elevation API"
-        case .apiError(let message): return "API error: \(message)"
-        case .noData: return "No elevation data returned"
+        case .networkError(let error):
+            return L10n.Localizable.Common.Error.networkError(error.localizedDescription)
+        case .invalidResponse:
+            return L10n.Localizable.Common.Error.invalidResponse
+        case .apiError(let message):
+            return L10n.Localizable.Common.Error.apiError(message)
+        case .noData:
+            return L10n.Localizable.Common.Error.noElevationData
         }
     }
 }

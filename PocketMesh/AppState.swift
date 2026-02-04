@@ -169,6 +169,9 @@ public final class AppState {
     /// Persistent CLI tool view model (survives tab switches, reset on device disconnect)
     var cliToolViewModel: CLIToolViewModel?
 
+    /// Tracks the device ID for CLI state - reset CLI when device changes
+    private var lastConnectedDeviceIDForCLI: UUID?
+
     // MARK: - Activity Tracking
 
     /// Counter for sync/settings operations (on-demand) - shows pill
@@ -361,6 +364,14 @@ public final class AppState {
 
         // Hide disconnected pill when services are available (connected)
         hideDisconnectedPill()
+
+        // Reset CLI if device changed (handles device switch where onConnectionLost doesn't fire)
+        if let newDeviceID = connectedDevice?.id,
+           let oldDeviceID = lastConnectedDeviceIDForCLI,
+           newDeviceID != oldDeviceID {
+            cliToolViewModel?.reset()
+        }
+        lastConnectedDeviceIDForCLI = connectedDevice?.id
 
         // Announce reconnection for VoiceOver users
         if UIAccessibility.isVoiceOverRunning {

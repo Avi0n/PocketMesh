@@ -483,6 +483,9 @@
 /* Location: CLIToolViewModel.swift - Password prompt */
 "tools.cli.passwordPrompt" = "Password:";
 
+/* Location: CLIToolViewModel.swift - Login countdown */
+"tools.cli.loggingIn" = "Logging in... (%ds)";
+
 /* Location: CLIToolView.swift - Logout success */
 "tools.cli.logoutSuccess" = "Logged out";
 

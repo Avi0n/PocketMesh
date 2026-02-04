@@ -200,6 +200,20 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
         return peripheralStateString(peripheral.state)
     }
 
+    /// Current CBCentralManager state name for diagnostic logging
+    public var centralManagerStateName: String {
+        guard let manager = centralManager else { return "notActivated" }
+        switch manager.state {
+        case .unknown: return "unknown"
+        case .resetting: return "resetting"
+        case .unsupported: return "unsupported"
+        case .unauthorized: return "unauthorized"
+        case .poweredOff: return "poweredOff"
+        case .poweredOn: return "poweredOn"
+        @unknown default: return "unknown(\(manager.state.rawValue))"
+        }
+    }
+
     /// Checks if a device is connected to the system (possibly by another app).
     /// Call this BEFORE attempting connection when in `.idle` phase.
     /// - Parameter deviceID: The UUID of the device to check

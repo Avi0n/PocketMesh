@@ -694,6 +694,9 @@
 /* Location: TracePathView.swift - Purpose: Navigation title */
 "contacts.trace.title" = "Trace Path";
 
+/* Location: TracePathView.swift - Purpose: View mode picker label */
+"contacts.trace.viewMode" = "View Mode";
+
 /* Location: TracePathView.swift - Purpose: List view mode */
 "contacts.trace.mode.list" = "List";
 

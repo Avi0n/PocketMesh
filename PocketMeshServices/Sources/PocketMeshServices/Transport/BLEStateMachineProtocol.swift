@@ -23,6 +23,9 @@ public protocol BLEStateMachineProtocol: Actor {
     /// Current peripheral state for diagnostic logging (nil if no peripheral)
     var currentPeripheralState: String? { get }
 
+    /// Current CBCentralManager state name for diagnostic logging
+    var centralManagerStateName: String { get }
+
     // MARK: - Methods
 
     /// Checks if a device is connected to the system (possibly by another app).
