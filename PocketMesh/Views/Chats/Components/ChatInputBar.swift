@@ -11,7 +11,7 @@ struct ChatInputBar: View {
     let onSend: () -> Void
 
     private var characterCount: Int {
-        text.utf8.count
+        text.count
     }
 
     private var isOverLimit: Bool {

@@ -276,7 +276,7 @@ public actor MessageService {
         }
 
         // Validate message length
-        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -386,7 +386,7 @@ public actor MessageService {
         }
 
         // Validate message length
-        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -483,7 +483,7 @@ public actor MessageService {
             throw MessageServiceError.invalidRecipient
         }
 
-        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -843,7 +843,7 @@ public actor MessageService {
         textType: TextType = .plain
     ) async throws -> (id: UUID, timestamp: UInt32) {
         // Validate message length
-        guard text.utf8.count <= ProtocolLimits.maxMessageLength else {
+        guard text.count <= ProtocolLimits.maxChannelMessageTotalLength else {
             throw MessageServiceError.messageTooLong
         }
 
