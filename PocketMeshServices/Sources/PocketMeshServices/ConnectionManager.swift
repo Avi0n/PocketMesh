@@ -999,7 +999,7 @@ public final class ConnectionManager {
                 }
 
                 if !isRegistered {
-                    logger.warning("Device not found in ASK paired accessories")
+                    await logDeviceNotFoundDiagnostics(deviceID: deviceID, context: "connect(to:) ASK paired accessories mismatch")
                     throw ConnectionError.deviceNotFound
                 }
             }
@@ -1260,6 +1260,7 @@ public final class ConnectionManager {
                 $0.bluetoothIdentifier == deviceID
             }
             if !isRegistered {
+                await logDeviceNotFoundDiagnostics(deviceID: deviceID, context: "switchDevice ASK paired accessories mismatch")
                 throw ConnectionError.deviceNotFound
             }
         }
@@ -1472,6 +1473,10 @@ public final class ConnectionManager {
             } catch {
                 lastError = error
 
+                if isDeviceNotFoundError(error) {
+                    await logDeviceNotFoundDiagnostics(deviceID: deviceID, context: "connectWithRetry attempt \(attempt)")
+                }
+
                 // Diagnostic: Log BLE state on each failed attempt
                 let blePhase = await stateMachine.currentPhaseName
                 let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
@@ -1526,6 +1531,9 @@ public final class ConnectionManager {
 
             } catch {
                 lastError = error
+                if isDeviceNotFoundError(error) {
+                    await logDeviceNotFoundDiagnostics(deviceID: deviceID, context: "connectAfterPairing attempt \(attempt)")
+                }
                 logger.warning("Connection attempt \(attempt) failed: \(error.localizedDescription)")
 
                 // Clean up resources but keep state as .connecting
@@ -1627,6 +1635,28 @@ public final class ConnectionManager {
         currentTransportType = .bluetooth
         connectionState = .ready
         logger.info("Connection complete - device ready")
+    }
+
+    private func logDeviceNotFoundDiagnostics(deviceID: UUID, context: String) async {
+        let bleState = await stateMachine.centralManagerStateName
+        let blePhase = await stateMachine.currentPhaseName
+        let lastDeviceShort = lastConnectedDeviceID?.uuidString.prefix(8) ?? "none"
+        let pairedAccessories = accessorySetupKit.pairedAccessories
+        let pairedSummary = pairedAccessories.prefix(5).compactMap { accessory -> String? in
+            guard let id = accessory.bluetoothIdentifier else { return nil }
+            return "\(accessory.displayName)(\(id.uuidString.prefix(8)))"
+        }
+        let pairedSummaryText = pairedSummary.isEmpty ? "none" : pairedSummary.joined(separator: ", ")
+
+        logger.warning(
+            "[BLE] Device not found diagnostics (\(context)) - device: \(deviceID.uuidString.prefix(8)), lastDevice: \(lastDeviceShort), shouldBeConnected: \(shouldBeConnected), userExplicitlyDisconnected: \(userExplicitlyDisconnected), bleState: \(bleState), blePhase: \(blePhase), askActive: \(accessorySetupKit.isSessionActive), pairedCount: \(pairedAccessories.count), paired: \(pairedSummaryText)"
+        )
+    }
+
+    private func isDeviceNotFoundError(_ error: Error) -> Bool {
+        if case ConnectionError.deviceNotFound = error { return true }
+        if case BLEError.deviceNotFound = error { return true }
+        return false
     }
 
     /// Creates a Device from MeshCore types
