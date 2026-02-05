@@ -1,5 +1,6 @@
 // BLEStateMachineProtocol.swift
 
+@preconcurrency import CoreBluetooth
 import Foundation
 
 /// Protocol for BLE state machine operations used by ConnectionManager.
@@ -42,6 +43,9 @@ public protocol BLEStateMachineProtocol: Actor {
 
     /// Sets a handler called when Bluetooth powers on
     func setBluetoothPoweredOnHandler(_ handler: @escaping @Sendable () -> Void)
+
+    /// Sets a handler for Bluetooth state changes
+    func setBluetoothStateChangeHandler(_ handler: @escaping @Sendable (CBManagerState) -> Void)
 
     /// Sets the delay between write operations for pacing.
     func setWritePacingDelay(_ delay: TimeInterval)

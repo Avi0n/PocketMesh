@@ -89,6 +89,18 @@ public enum BLEPhase: @unchecked Sendable {
         }
     }
 
+    /// Whether this phase is part of the service/characteristic discovery chain.
+    /// Used by `cleanupPhaseResources` to preserve the discovery timeout when
+    /// transitioning within the chain.
+    public var isDiscoveryChain: Bool {
+        switch self {
+        case .discoveringServices, .discoveringCharacteristics, .subscribingToNotifications:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Whether this phase represents an active operation (not idle)
     public var isActive: Bool {
         if case .idle = self { return false }

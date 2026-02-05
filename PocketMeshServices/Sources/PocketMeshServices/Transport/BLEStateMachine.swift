@@ -526,6 +526,8 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
 
     weak var stateMachine: BLEStateMachine?
 
+    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "BLEDelegateHandler")
+
     /// Lock-protected continuation for yielding received data directly.
     /// Using OSAllocatedUnfairLock ensures thread-safe access from the CBCentralManager queue.
     private let dataContinuationLock = OSAllocatedUnfairLock<AsyncStream<Data>.Continuation?>(initialState: nil)
@@ -594,9 +596,12 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         // Yield data directly to preserve ordering from the serial CBCentralManager queue.
         // Do NOT spawn a Task here - that breaks ordering guarantees.
-        guard error == nil,
-              let data = characteristic.value,
-              !data.isEmpty else {
+        if let error {
+            logger.warning("[BLE] didUpdateValueFor error: \(peripheral.identifier.uuidString.prefix(8)), char: \(characteristic.uuid.uuidString.prefix(8)), error: \(error.localizedDescription)")
+            return
+        }
+        guard let data = characteristic.value, !data.isEmpty else {
+            logger.debug("[BLE] didUpdateValueFor: empty data from \(peripheral.identifier.uuidString.prefix(8)), char: \(characteristic.uuid.uuidString.prefix(8))")
             return
         }
         _ = dataContinuationLock.withLock { $0?.yield(data) }
@@ -695,20 +700,19 @@ extension BLEStateMachine {
             await handleAutoReconnectDiscoveryTimeout(for: peripheral)
         }
 
+        transition(to: .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil))
+
         if peripheral.state == .connected {
             // Already connected, just need to rediscover services
-            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
             peripheral.discoverServices([nordicUARTServiceUUID])
         } else if peripheral.state == .connecting {
             // Connection in progress, wait for didConnect
-            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
         } else {
             // Not connected, try to reconnect
             let options: [String: Any] = [
                 CBConnectPeripheralOptionNotifyOnDisconnectionKey: true,
                 CBConnectPeripheralOptionEnableAutoReconnect: true
             ]
-            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
             centralManager.connect(peripheral, options: options)
         }
     }
@@ -758,20 +762,21 @@ extension BLEStateMachine {
 
         timeoutTask.cancel()
 
-        phase = .discoveringServices(
-            peripheral: peripheral,
-            continuation: continuation
-        )
-
-        peripheral.delegate = delegateHandler
-        peripheral.discoverServices([nordicUARTServiceUUID])
-
-        // Start timeout for service discovery (40s to allow for pairing dialog)
+        // Arm discovery timeout before starting discovery so the callback
+        // window between discoverServices() and timeout creation is closed.
         serviceDiscoveryTimeoutTask = Task {
             try? await Task.sleep(for: .seconds(serviceDiscoveryTimeout))
             guard !Task.isCancelled else { return }
             await handleServiceDiscoveryTimeout(for: peripheral)
         }
+
+        transition(to: .discoveringServices(
+            peripheral: peripheral,
+            continuation: continuation
+        ))
+
+        peripheral.delegate = delegateHandler
+        peripheral.discoverServices([nordicUARTServiceUUID])
     }
 
     func handleDidFailToConnect(_ peripheral: CBPeripheral, error: Error?) {
@@ -822,12 +827,9 @@ extension BLEStateMachine {
         if isReconnecting {
             logger.info("[BLE] iOS auto-reconnect started: \(deviceID.uuidString.prefix(8)), will attempt automatic reconnection")
 
-            // Clean up current state but preserve peripheral for reconnection
-            if case .connected(_, _, _, let dataContinuation) = phase {
-                dataContinuation.finish()
-            }
-
-            phase = .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil)
+            // Clean up current state but preserve peripheral for reconnection.
+            // transition() handles dataContinuation cleanup when leaving .connected.
+            transition(to: .autoReconnecting(peripheral: peripheral, tx: nil, rx: nil))
 
             // Notify handler so UI can show "connecting" state
             onAutoReconnecting?(deviceID)
@@ -896,11 +898,11 @@ extension BLEStateMachine {
             return
         }
 
-        phase = .discoveringCharacteristics(
+        transition(to: .discoveringCharacteristics(
             peripheral: peripheral,
             service: service,
             continuation: continuation
-        )
+        ))
 
         peripheral.discoverCharacteristics([txCharacteristicUUID, rxCharacteristicUUID], for: service)
     }
@@ -931,7 +933,7 @@ extension BLEStateMachine {
             }
 
             // Store tx/rx in phase for use when notification subscription completes
-            phase = .autoReconnecting(peripheral: peripheral, tx: tx, rx: rx)
+            transition(to: .autoReconnecting(peripheral: peripheral, tx: tx, rx: rx))
 
             // Subscribe to notifications to complete reconnection
             peripheral.setNotifyValue(true, for: rx)
@@ -960,12 +962,12 @@ extension BLEStateMachine {
             return
         }
 
-        phase = .subscribingToNotifications(
+        transition(to: .subscribingToNotifications(
             peripheral: peripheral,
             tx: tx,
             rx: rx,
             continuation: continuation
-        )
+        ))
 
         peripheral.setNotifyValue(true, for: rx)
     }
@@ -1084,7 +1086,7 @@ extension BLEStateMachine {
         logger.info("[BLE] Transition: \(oldPhase.name) → \(newPhase.name), device: \(deviceID), elapsed: \(String(format: "%.2f", elapsed))s")
 
         // Clean up old phase resources (except continuations - caller handles those)
-        cleanupPhaseResources(oldPhase)
+        cleanupPhaseResources(oldPhase, newPhase: newPhase)
 
         phase = newPhase
         phaseStartTime = Date()
@@ -1092,14 +1094,26 @@ extension BLEStateMachine {
     }
 
     /// Cleans up non-continuation resources owned by a phase.
-    private func cleanupPhaseResources(_ phase: BLEPhase) {
-        // Cancel any pending discovery timeouts
-        serviceDiscoveryTimeoutTask?.cancel()
-        serviceDiscoveryTimeoutTask = nil
-        autoReconnectDiscoveryTimeoutTask?.cancel()
-        autoReconnectDiscoveryTimeoutTask = nil
+    ///
+    /// Timeout cancellation is phase-aware:
+    /// - Discovery timeout is preserved when transitioning within the discovery chain
+    /// - Auto-reconnect timeout is preserved when staying in auto-reconnect
+    private func cleanupPhaseResources(_ oldPhase: BLEPhase, newPhase: BLEPhase) {
+        // Only cancel discovery timeout when leaving the discovery chain
+        if !newPhase.isDiscoveryChain {
+            serviceDiscoveryTimeoutTask?.cancel()
+            serviceDiscoveryTimeoutTask = nil
+        }
 
-        switch phase {
+        // Only cancel auto-reconnect timeout when leaving auto-reconnect
+        if case .autoReconnecting = newPhase {
+            // preserve
+        } else {
+            autoReconnectDiscoveryTimeoutTask?.cancel()
+            autoReconnectDiscoveryTimeoutTask = nil
+        }
+
+        switch oldPhase {
         case .connecting(_, _, let timeoutTask):
             timeoutTask.cancel()
 
@@ -1107,9 +1121,6 @@ extension BLEStateMachine {
             // Clear delegate handler's continuation first to stop data flow
             delegateHandler.setDataContinuation(nil)
             dataContinuation.finish()
-
-        case .restoringState:
-            break  // No resources to clean up
 
         default:
             break

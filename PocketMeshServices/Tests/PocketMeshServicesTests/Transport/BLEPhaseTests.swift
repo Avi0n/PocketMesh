@@ -20,6 +20,18 @@ struct BLEPhaseTests {
         #expect(phase.name == "idle")
     }
 
+    // MARK: - isDiscoveryChain Tests
+
+    @Test("idle is not part of discovery chain")
+    func idleIsNotDiscoveryChain() {
+        #expect(BLEPhase.idle.isDiscoveryChain == false)
+    }
+
+    // Note: discoveringServices, discoveringCharacteristics, and subscribingToNotifications
+    // require CBPeripheral instances which can't be created in unit tests.
+    // Their isDiscoveryChain == true is verified implicitly through integration tests
+    // and the switch statement exhaustiveness check.
+
     // MARK: - isActive Tests
 
     @Test("idle phase is not active")

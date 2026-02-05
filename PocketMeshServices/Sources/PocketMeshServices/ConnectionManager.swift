@@ -1,3 +1,4 @@
+@preconcurrency import CoreBluetooth
 import Foundation
 import SwiftData
 import MeshCore
@@ -751,6 +752,14 @@ public final class ConnectionManager {
 
                     self.logger.info("[BLE] Bluetooth powered on: attempting reconnection to \(deviceID.uuidString.prefix(8))")
                     try? await self.connect(to: deviceID)
+                }
+            }
+
+            // Handle Bluetooth state changes for diagnostics
+            await stateMachine.setBluetoothStateChangeHandler { [weak self] state in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.handleBluetoothStateChange(state)
                 }
             }
         }
@@ -1775,6 +1784,23 @@ public final class ConnectionManager {
 
         // iOS auto-reconnect handles normal disconnects via handleIOSAutoReconnect()
         // Bluetooth power-cycle handled via onBluetoothPoweredOn callback
+    }
+
+    /// Logs Bluetooth state changes for diagnostics.
+    /// Disconnect logic is NOT duplicated here — BLEStateMachine already handles
+    /// `.poweredOff` via `cancelCurrentOperation` which fires `onDisconnection`.
+    private func handleBluetoothStateChange(_ state: CBManagerState) {
+        let stateName: String
+        switch state {
+        case .unknown: stateName = "unknown"
+        case .resetting: stateName = "resetting"
+        case .unsupported: stateName = "unsupported"
+        case .unauthorized: stateName = "unauthorized"
+        case .poweredOff: stateName = "poweredOff"
+        case .poweredOn: stateName = "poweredOn"
+        @unknown default: stateName = "unknown(\(state.rawValue))"
+        }
+        logger.info("[BLE] Bluetooth state changed: \(stateName), connectionState: \(String(describing: self.connectionState)), shouldBeConnected: \(self.shouldBeConnected)")
     }
 
     /// Handles entering iOS auto-reconnect phase.

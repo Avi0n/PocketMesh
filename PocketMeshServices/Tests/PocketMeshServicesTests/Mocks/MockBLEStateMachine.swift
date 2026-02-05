@@ -1,3 +1,4 @@
+@preconcurrency import CoreBluetooth
 import Foundation
 @testable import PocketMeshServices
 
@@ -33,6 +34,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
 
     private var autoReconnectingHandler: (@Sendable (UUID) -> Void)?
     private var bluetoothPoweredOnHandler: (@Sendable () -> Void)?
+    private var bluetoothStateChangeHandler: (@Sendable (CBManagerState) -> Void)?
 
     // MARK: - Initialization
 
@@ -57,6 +59,10 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         bluetoothPoweredOnHandler = handler
     }
 
+    public func setBluetoothStateChangeHandler(_ handler: @escaping @Sendable (CBManagerState) -> Void) {
+        bluetoothStateChangeHandler = handler
+    }
+
     public func setWritePacingDelay(_ delay: TimeInterval) {
         // No-op for testing
     }
@@ -76,6 +82,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         isDeviceConnectedToSystemCalls = []
         autoReconnectingHandler = nil
         bluetoothPoweredOnHandler = nil
+        bluetoothStateChangeHandler = nil
     }
 
     /// Simulates auto-reconnecting event
@@ -86,5 +93,10 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     /// Simulates Bluetooth powered on event
     public func simulateBluetoothPoweredOn() {
         bluetoothPoweredOnHandler?()
+    }
+
+    /// Simulates a Bluetooth state change event
+    public func simulateBluetoothStateChange(_ state: CBManagerState) {
+        bluetoothStateChangeHandler?(state)
     }
 }
