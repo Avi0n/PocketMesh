@@ -14,7 +14,19 @@ struct ChatsView: View {
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
 
-    @State private var selectedRoute: ChatRoute?
+    // Local state for split view selection - synced with appState for cross-tab navigation
+    @State private var splitSelectedRoute: ChatRoute?
+
+    private var selectedRouteBinding: Binding<ChatRoute?> {
+        Binding(
+            get: { splitSelectedRoute },
+            set: { newValue in
+                splitSelectedRoute = newValue
+                appState.chatsSelectedRoute = newValue
+            }
+        )
+    }
+
     @State private var navigationPath = NavigationPath()
     @State private var activeRoute: ChatRoute?
     @State private var lastSelectedRoomIsConnected: Bool?
@@ -23,6 +35,9 @@ struct ChatsView: View {
     @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var roomToDelete: RemoteNodeSessionDTO?
     @State private var showRoomDeleteAlert = false
+    // Invariant: both splitSelectedRoute and appState.chatsSelectedRoute must be
+    // cleared before mutating this ID. A NavigationSplitView rebuild resets @State,
+    // which can sync nil back to shared state if routes aren't cleared first.
     @State private var sidebarListID = UUID()
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
@@ -144,6 +159,15 @@ struct ChatsView: View {
                 handlePendingChannelNavigation()
             }
             .onChange(of: appState.pendingRoomSession) { _, _ in
+                handlePendingRoomNavigation()
+            }
+            // onChange(of: appState.pendingChatContact) doesn't fire for TabView-cached
+        // views when the property changes while another tab is selected, because SwiftUI
+        // may not track @Observable property access for off-screen tab content. This
+        // trigger is bumped by ContentView on tab switch to re-check pending navigation.
+        .onChange(of: appState.pendingNavigationTrigger) { _, _ in
+                handlePendingNavigation()
+                handlePendingChannelNavigation()
                 handlePendingRoomNavigation()
             }
             .onChange(of: appState.servicesVersion) { _, _ in
@@ -272,11 +296,21 @@ struct ChatsView: View {
                 splitSidebarContent
             }
         } detail: {
-            NavigationStack {
-                splitDetailContent
-            }
+            ChatsSplitDetailView(viewModel: viewModel)
         }
         .id(sidebarListID)
+        .onChange(of: appState.chatsSelectedRoute) { _, newRoute in
+            if splitSelectedRoute != newRoute {
+                splitSelectedRoute = newRoute
+            }
+        }
+        .onAppear {
+            if appState.pendingChatContact != nil || appState.pendingChannel != nil || appState.pendingRoomSession != nil {
+                handlePendingNavigation()
+                handlePendingChannelNavigation()
+                handlePendingRoomNavigation()
+            }
+        }
     }
 
     private var splitSidebarContent: some View {
@@ -286,7 +320,7 @@ struct ChatsView: View {
                     viewModel: viewModel,
                     favoriteConversations: filteredFavorites,
                     otherConversations: filteredOthers,
-                    selection: $selectedRoute,
+                    selection: selectedRouteBinding,
                     onDeleteConversation: handleDeleteConversation
                 )
             },
@@ -301,7 +335,16 @@ struct ChatsView: View {
                 handlePendingRoomNavigation()
             }
         )
-        .onChange(of: selectedRoute) { oldValue, newValue in
+        .onChange(of: splitSelectedRoute) { oldValue, newValue in
+            // Keep appState in sync, but don't overwrite a programmatically set route with nil
+            // This handles the case where splitSelectedRoute is for a new conversation (not in sidebar)
+            if appState.chatsSelectedRoute != newValue {
+                // Only sync to appState if we're setting a value OR if appState doesn't have a pending route
+                if newValue != nil || appState.chatsSelectedRoute == nil {
+                    appState.chatsSelectedRoute = newValue
+                }
+            }
+
             // Reload conversations when navigating away (but not when clearing for deletion)
             if oldValue != nil {
                 let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
@@ -314,7 +357,8 @@ struct ChatsView: View {
 
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
-                selectedRoute = nil
+                splitSelectedRoute = nil
+                appState.chatsSelectedRoute = nil
                 lastSelectedRoomIsConnected = nil
                 routeBeingDeleted = nil
                 return
@@ -324,23 +368,6 @@ struct ChatsView: View {
                 guard case .room(let session) = newValue else { return nil }
                 return session.isConnected
             }()
-        }
-    }
-
-    @ViewBuilder
-    private var splitDetailContent: some View {
-        switch selectedRoute {
-        case .direct(let contact):
-            ChatView(contact: contact, parentViewModel: viewModel)
-                .id(contact.id)
-        case .channel(let channel):
-            ChannelChatView(channel: channel, parentViewModel: viewModel)
-                .id(channel.id)
-        case .room(let session):
-            RoomConversationView(session: session)
-                .id(session.id)
-        case .none:
-            ContentUnavailableView(L10n.Chats.Chats.EmptyState.selectConversation, systemImage: "message")
         }
     }
 
@@ -425,8 +452,8 @@ struct ChatsView: View {
             viewModel.removeConversation(routeBeingDeleted.toConversation())
         }
 
-        if let selectedRoute {
-            self.selectedRoute = selectedRoute.refreshedPayload(from: viewModel.allConversations)
+        if let splitSelectedRoute {
+            self.splitSelectedRoute = splitSelectedRoute.refreshedPayload(from: viewModel.allConversations)
         }
         if let activeRoute {
             self.activeRoute = activeRoute.refreshedPayload(from: viewModel.allConversations)
@@ -434,14 +461,15 @@ struct ChatsView: View {
 
         if shouldUseSplitView,
            lastSelectedRoomIsConnected == true,
-           case .room(let session) = self.selectedRoute,
+           case .room(let session) = self.splitSelectedRoute,
            !session.isConnected {
             roomToAuthenticate = session
-            self.selectedRoute = nil
+            self.splitSelectedRoute = nil
+            appState.chatsSelectedRoute = nil
         }
 
         lastSelectedRoomIsConnected = {
-            guard case .room(let session) = self.selectedRoute else { return nil }
+            guard case .room(let session) = self.splitSelectedRoute else { return nil }
             return session.isConnected
         }()
     }
@@ -464,7 +492,8 @@ struct ChatsView: View {
 
     private func navigate(to route: ChatRoute) {
         if shouldUseSplitView {
-            selectedRoute = route
+            splitSelectedRoute = route
+            appState.chatsSelectedRoute = route
             return
         }
 
@@ -495,8 +524,9 @@ struct ChatsView: View {
     }
 
     private func deleteDirectConversation(_ contact: ContactDTO) {
-        if shouldUseSplitView && selectedRoute == .direct(contact) {
-            selectedRoute = nil
+        if shouldUseSplitView && splitSelectedRoute == .direct(contact) {
+            splitSelectedRoute = nil
+            appState.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.direct(contact))
@@ -515,8 +545,9 @@ struct ChatsView: View {
     }
 
     private func deleteChannelConversation(_ channel: ChannelDTO) {
-        if shouldUseSplitView && selectedRoute == .channel(channel) {
-            selectedRoute = nil
+        if shouldUseSplitView && splitSelectedRoute == .channel(channel) {
+            splitSelectedRoute = nil
+            appState.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.channel(channel))
@@ -549,8 +580,9 @@ struct ChatsView: View {
             await appState.services?.notificationService.updateBadgeCount()
 
             await MainActor.run {
-                if shouldUseSplitView && selectedRoute == .room(session) {
-                    selectedRoute = nil
+                if shouldUseSplitView && splitSelectedRoute == .room(session) {
+                    splitSelectedRoute = nil
+                    appState.chatsSelectedRoute = nil
                 }
 
                 viewModel.removeConversation(.room(session))
@@ -639,6 +671,33 @@ struct ChatsView: View {
                 await MainActor.run {
                     hashtagToJoin = HashtagJoinRequest(id: fullName)
                 }
+            }
+        }
+    }
+}
+
+/// Separate view for the split detail pane that directly observes appState
+/// This ensures SwiftUI properly tracks the dependency on chatsSelectedRoute
+private struct ChatsSplitDetailView: View {
+    @Environment(\.appState) private var appState
+    let viewModel: ChatViewModel
+
+    var body: some View {
+        NavigationStack {
+            if let route = appState.chatsSelectedRoute {
+                switch route {
+                case .direct(let contact):
+                    ChatView(contact: contact, parentViewModel: viewModel)
+                        .id(contact.id)
+                case .channel(let channel):
+                    ChannelChatView(channel: channel, parentViewModel: viewModel)
+                        .id(channel.id)
+                case .room(let session):
+                    RoomConversationView(session: session)
+                        .id(session.id)
+                }
+            } else {
+                ContentUnavailableView(L10n.Chats.Chats.EmptyState.selectConversation, systemImage: "message")
             }
         }
     }
