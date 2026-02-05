@@ -145,9 +145,6 @@ public final class AppState {
     /// Contact to navigate to
     var pendingChatContact: ContactDTO?
 
-    /// Trigger for ChatsView to re-check pending navigation (incremented on tab switch)
-    var pendingNavigationTrigger: Int = 0
-
     /// Channel to navigate to
     var pendingChannel: ChannelDTO?
 
@@ -162,9 +159,6 @@ public final class AppState {
 
     /// Message to scroll to after navigation (for reaction notifications)
     var pendingScrollToMessageID: UUID?
-
-    /// Selected route for Chats split view (iPad) - persists across tab switches
-    var chatsSelectedRoute: ChatRoute?
 
     /// Whether flood advert tip donation is pending (waiting for valid tab)
     var pendingFloodAdvertTipDonation = false
@@ -895,11 +889,6 @@ public final class AppState {
 
     func clearPendingNavigation() {
         pendingChatContact = nil
-    }
-
-    /// Triggers ChatsView to re-check pending navigation (called on tab switch)
-    func triggerPendingChatNavigation() {
-        pendingNavigationTrigger += 1
     }
 
     func clearPendingRoomNavigation() {

@@ -161,15 +161,7 @@ struct MainTabView: View {
                 }
             }
         }
-        .onChange(of: appState.selectedTab) { oldTab, newTab in
-            // Handle pending chat navigation when switching to Chats tab
-            if newTab == 0 && oldTab != 0 {
-                // Yield to give SwiftUI a runloop cycle to activate the tab's observation tracking
-                Task { @MainActor in
-                    await Task.yield()
-                    appState.triggerPendingChatNavigation()
-                }
-            }
+        .onChange(of: appState.selectedTab) { _, newTab in
             // Donate pending flood advert tip when returning to a valid tab
             if appState.pendingFloodAdvertTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
                 Task {
