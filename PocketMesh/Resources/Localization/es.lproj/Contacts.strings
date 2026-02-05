@@ -224,6 +224,24 @@
 /* Location: ContactDetailView.swift - Purpose: Share via advert button */
 "contacts.detail.shareViaAdvert" = "Compartir contacto vía anuncio";
 
+/* Location: ContactDetailView.swift - Purpose: Ping repeater button */
+"contacts.detail.pingRepeater" = "Ping al repetidor";
+
+/* Location: ContactDetailView.swift - Purpose: Ping no response message */
+"contacts.detail.pingNoResponse" = "Sin respuesta";
+
+/* Location: ContactDetailView.swift - Purpose: Ping success accessibility label */
+"contacts.detail.pingSuccessLabel" = "Ping exitoso, %1$d milisegundos, %2$d decibelios allí, %3$d de vuelta";
+
+/* Location: ContactDetailView.swift - Purpose: Ping failure accessibility label */
+"contacts.detail.pingFailureLabel" = "Ping fallido: %@";
+
+/* Location: ContactDetailView.swift - Purpose: Ping success VoiceOver announcement */
+"contacts.detail.pingSuccessAnnouncement" = "Ping exitoso, %d milisegundos";
+
+/* Location: ContactDetailView.swift - Purpose: Ping failure VoiceOver announcement */
+"contacts.detail.pingFailureAnnouncement" = "Ping fallido";
+
 // MARK: - Contact Detail Info Section
 
 /* Location: ContactDetailView.swift - Purpose: Info section header */

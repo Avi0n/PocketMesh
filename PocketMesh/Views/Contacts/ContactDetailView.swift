@@ -1,6 +1,47 @@
-import SwiftUI
+import Accessibility
 import MapKit
+import MeshCore
+import os
 import PocketMeshServices
+import SwiftUI
+
+/// Result of a ping operation
+enum PingResult {
+    case success(latencyMs: Int, snrThere: Double, snrBack: Double)
+    case error(String)
+}
+
+/// Displays ping result with latency and bidirectional SNR
+struct PingResultRow: View {
+    let result: PingResult
+
+    var body: some View {
+        switch result {
+        case .success(let latencyMs, let snrThere, let snrBack):
+            let snrFormat = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(2))
+            Label {
+                Text("\(latencyMs) ms  ·  SNR ↑ \(snrThere, format: snrFormat) dB  ↓ \(snrBack, format: snrFormat) dB")
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(L10n.Contacts.Contacts.Detail.pingSuccessLabel(latencyMs, Int(snrThere), Int(snrBack)))
+        case .error(let message):
+            Label {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(.orange)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(L10n.Contacts.Contacts.Detail.pingFailureLabel(message))
+        }
+    }
+}
 
 /// Detailed view for a single contact
 struct ContactDetailView: View {
@@ -45,6 +86,11 @@ struct ContactDetailView: View {
     @State private var navigateToSettings = false
     // QR sharing state
     @State private var showQRShareSheet = false
+    // Ping state
+    @State private var isPinging = false
+    @State private var pingResult: PingResult?
+
+    private let pingLogger = Logger(subsystem: "com.pocketmesh", category: "Ping")
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact
@@ -263,6 +309,79 @@ struct ContactDetailView: View {
         }
     }
 
+    private func pingRepeater() async {
+        guard !isPinging else { return }
+        isPinging = true
+        pingResult = nil
+
+        let startTime = ContinuousClock.now
+        let tag = UInt32.random(in: 0..<UInt32.max)
+
+        do {
+            guard let services = appState.services else {
+                throw NSError(domain: "PingError", code: 1)
+            }
+
+            // Send trace to repeater's 6-byte public key prefix (empty path = direct ping)
+            let pathData = Data(currentContact.publicKey.prefix(6))
+            let sentInfo = try await services.binaryProtocolService.sendTrace(
+                tag: tag,
+                path: pathData
+            )
+
+            // Wait for trace response with timeout
+            let timeoutMs = sentInfo.suggestedTimeoutMs
+            let response = try await waitForTraceResponse(tag: tag, timeout: Int(timeoutMs))
+
+            let elapsed = ContinuousClock.now - startTime
+            let latencyMs = Int(Double(elapsed.components.seconds) * 1000 +
+                               Double(elapsed.components.attoseconds) / 1e15)
+
+            // "There" SNR = second-to-last path node (destination's reception of outgoing trace)
+            let snrThere = response.path.dropLast().last?.snr ?? 0
+
+            // "Back" SNR = last path node (our reception of the response)
+            let snrBack = response.path.last?.snr ?? 0
+
+            pingResult = .success(latencyMs: latencyMs, snrThere: snrThere, snrBack: snrBack)
+            let announcement = L10n.Contacts.Contacts.Detail.pingSuccessAnnouncement(latencyMs)
+            AccessibilityNotification.Announcement(announcement).post()
+        } catch {
+            pingLogger.error("Ping failed: \(error.localizedDescription)")
+            pingResult = .error(L10n.Contacts.Contacts.Detail.pingNoResponse)
+            let announcement = L10n.Contacts.Contacts.Detail.pingFailureAnnouncement
+            AccessibilityNotification.Announcement(announcement).post()
+        }
+
+        isPinging = false
+    }
+
+    private func waitForTraceResponse(tag: UInt32, timeout: Int) async throws -> TraceInfo {
+        try await withThrowingTaskGroup(of: TraceInfo.self) { group in
+            // Task 1: Listen for trace response
+            group.addTask {
+                for await notification in NotificationCenter.default.notifications(named: .traceDataReceived) {
+                    if let traceInfo = notification.userInfo?["traceInfo"] as? TraceInfo,
+                       traceInfo.tag == tag {
+                        return traceInfo
+                    }
+                }
+                throw CancellationError()
+            }
+
+            // Task 2: Timeout
+            group.addTask {
+                try await Task.sleep(for: .milliseconds(timeout))
+                throw NSError(domain: "PingError", code: 2, userInfo: nil)
+            }
+
+            // Return first successful result, cancel the other
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
+
     private func refreshContact() async {
         if let updated = try? await appState.services?.dataStore.fetchContact(id: currentContact.id) {
             currentContact = updated
@@ -402,6 +521,28 @@ struct ContactDetailView: View {
                 Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
             }
             .radioDisabled(for: appState.connectionState)
+
+            // Ping Repeater (repeater-only)
+            if currentContact.type == .repeater {
+                Button {
+                    Task { await pingRepeater() }
+                } label: {
+                    HStack {
+                        Label(L10n.Contacts.Contacts.Detail.pingRepeater, systemImage: "wave.3.right")
+                        if isPinging {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isPinging)
+                .radioDisabled(for: appState.connectionState)
+
+                // Ping result row
+                if let result = pingResult {
+                    PingResultRow(result: result)
+                }
+            }
         }
     }
 

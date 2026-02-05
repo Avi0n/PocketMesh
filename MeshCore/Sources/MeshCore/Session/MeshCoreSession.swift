@@ -2258,6 +2258,33 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         trackContactChanges(event: event)
         await routeBinaryResponse(event: event)
         await dispatcher.dispatch(event)
+
+        // The firmware sends traceData (0x89) separately, but it may not always arrive
+        // over BLE (e.g. queue contention). Fall back to constructing TraceInfo from the
+        // rxLogData when present. The over-the-air trace payload format is:
+        // [tag:4][authCode:4][flags:1][path_hashes:...]
+        // Hop SNRs are in rxLogData.pathNodes, local reception SNR is in rxLogData.snr.
+        if case .rxLogData(let logData) = event, logData.payloadType == .trace,
+           logData.packetPayload.count >= 9 {
+            let payload = logData.packetPayload
+            let tag = payload.readUInt32LE(at: 0)
+            let authCode = payload.readUInt32LE(at: 4)
+            let flags = payload[8]
+
+            var path = logData.pathNodes.map {
+                TraceNode(hashBytes: nil, snr: Double(Int8(bitPattern: $0)) / 4.0)
+            }
+            if let snr = logData.snr {
+                path.append(TraceNode(hashBytes: nil, snr: snr))
+            }
+
+            let traceInfo = TraceInfo(
+                tag: tag, authCode: authCode, flags: flags,
+                pathLength: UInt8(logData.pathNodes.count), path: path
+            )
+            logger.debug("Synthesized traceData from rxLogData: tag=\(tag), hops=\(path.count)")
+            await dispatcher.dispatch(.traceData(traceInfo))
+        }
     }
 
     /// Routes a generic binary response to a typed event based on pending request type.

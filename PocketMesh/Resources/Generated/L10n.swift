@@ -955,6 +955,24 @@ public enum L10n {
         public static let openInMaps = L10n.tr("Contacts", "contacts.detail.openInMaps", fallback: "Open in Maps")
         /// Location: ContactDetailView.swift - Purpose: Footer for path routing
         public static let pathFooter = L10n.tr("Contacts", "contacts.detail.pathFooter", fallback: "Messages route through the path shown. Reset Path to use flood routing instead.")
+        /// Location: ContactDetailView.swift - Purpose: Ping failure VoiceOver announcement
+        public static let pingFailureAnnouncement = L10n.tr("Contacts", "contacts.detail.pingFailureAnnouncement", fallback: "Ping failed")
+        /// Location: ContactDetailView.swift - Purpose: Ping failure accessibility label
+        public static func pingFailureLabel(_ p1: Any) -> String {
+          return L10n.tr("Contacts", "contacts.detail.pingFailureLabel", String(describing: p1), fallback: "Ping failed: %@")
+        }
+        /// Location: ContactDetailView.swift - Purpose: Ping no response message
+        public static let pingNoResponse = L10n.tr("Contacts", "contacts.detail.pingNoResponse", fallback: "No response")
+        /// Location: ContactDetailView.swift - Purpose: Ping repeater button
+        public static let pingRepeater = L10n.tr("Contacts", "contacts.detail.pingRepeater", fallback: "Ping Repeater")
+        /// Location: ContactDetailView.swift - Purpose: Ping success VoiceOver announcement
+        public static func pingSuccessAnnouncement(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.detail.pingSuccessAnnouncement", p1, fallback: "Ping successful, %d milliseconds")
+        }
+        /// Location: ContactDetailView.swift - Purpose: Ping success accessibility label
+        public static func pingSuccessLabel(_ p1: Int, _ p2: Int, _ p3: Int) -> String {
+          return L10n.tr("Contacts", "contacts.detail.pingSuccessLabel", p1, p2, p3, fallback: "Ping successful, %1$d milliseconds, %2$d decibels there, %3$d back")
+        }
         /// Location: ContactDetailView.swift - Purpose: Public key label
         public static let publicKey = L10n.tr("Contacts", "contacts.detail.publicKey", fallback: "Public Key")
         /// Location: ContactDetailView.swift - Purpose: Remove from favorites button
