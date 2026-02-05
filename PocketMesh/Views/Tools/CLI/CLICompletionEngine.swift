@@ -11,7 +11,7 @@ final class CLICompletionEngine {
     ]
 
     private static let localOnlyCommands = [
-        "login", "nodes"
+        "login", "nodes", "channels"
     ]
 
     // Per MeshCore CLI Reference - commands available via remote session

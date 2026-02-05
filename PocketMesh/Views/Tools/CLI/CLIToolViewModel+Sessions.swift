@@ -277,7 +277,85 @@ extension CLIToolViewModel {
         }
     }
 
-    func sendLocalCommand(_ command: String) async {
-        appendOutput(L10n.Tools.Tools.Cli.localNotImplemented, type: .error)
+    // MARK: - Local Command Handlers
+
+    func handleNodesCommand() async {
+        guard let dataStore, let deviceID else {
+            appendOutput(L10n.Tools.Tools.Cli.notConnected, type: .error)
+            return
+        }
+
+        let contacts: [ContactDTO]
+        do {
+            contacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        } catch {
+            Self.logger.error("Failed to fetch contacts: \(error)")
+            appendOutput(L10n.Tools.Tools.Cli.noNodes, type: .response)
+            return
+        }
+
+        let nodes = contacts
+            .filter { $0.type == .repeater || $0.type == .room }
+            .sorted { lhs, rhs in
+                if lhs.type != rhs.type {
+                    return lhs.type == .repeater
+                }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+
+        guard !nodes.isEmpty else {
+            appendOutput(L10n.Tools.Tools.Cli.noNodes, type: .response)
+            return
+        }
+
+        appendOutput(L10n.Tools.Tools.Cli.nodesHeader(nodes.count), type: .response)
+        for node in nodes {
+            let typeLabel = node.type == .repeater
+                ? L10n.Contacts.Contacts.NodeKind.repeater
+                : L10n.Contacts.Contacts.NodeKind.room
+            let route = formatRoute(node)
+            let padded = node.name.padding(toLength: 20, withPad: " ", startingAt: 0)
+            let label = typeLabel.padding(toLength: 10, withPad: " ", startingAt: 0)
+            appendOutput("  \(padded) \(label)\(route)", type: .response)
+        }
+    }
+
+    func handleChannelsCommand() async {
+        guard let dataStore, let deviceID else {
+            appendOutput(L10n.Tools.Tools.Cli.notConnected, type: .error)
+            return
+        }
+
+        let channels: [ChannelDTO]
+        do {
+            channels = try await dataStore.fetchChannels(deviceID: deviceID)
+        } catch {
+            Self.logger.error("Failed to fetch channels: \(error)")
+            appendOutput(L10n.Tools.Tools.Cli.noChannels, type: .response)
+            return
+        }
+
+        guard !channels.isEmpty else {
+            appendOutput(L10n.Tools.Tools.Cli.noChannels, type: .response)
+            return
+        }
+
+        let sorted = channels.sorted { $0.index < $1.index }
+
+        appendOutput(L10n.Tools.Tools.Cli.channelsHeader(sorted.count), type: .response)
+        for channel in sorted {
+            let name = channel.name.isEmpty ? "(\(L10n.Tools.Tools.Cli.channelEmpty))" : channel.name
+            appendOutput("  [\(channel.index)] \(name)", type: .response)
+        }
+    }
+
+    private func formatRoute(_ contact: ContactDTO) -> String {
+        if contact.isFloodRouted {
+            return L10n.Contacts.Contacts.Route.flood
+        } else if contact.outPathLength == 0 {
+            return L10n.Contacts.Contacts.Route.direct
+        } else {
+            return L10n.Contacts.Contacts.Route.hops(Int(contact.outPathLength))
+        }
     }
 }

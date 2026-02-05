@@ -3005,6 +3005,12 @@ public enum L10n {
         public static let cancelled = L10n.tr("Tools", "tools.cli.cancelled", fallback: "Command cancelled")
         /// Location: CLIInputAccessoryView.swift - Cancel operation button label
         public static let cancelOperation = L10n.tr("Tools", "tools.cli.cancelOperation", fallback: "Cancel operation")
+        /// Location: CLIToolViewModel+Sessions.swift - Channel empty name placeholder
+        public static let channelEmpty = L10n.tr("Tools", "tools.cli.channelEmpty", fallback: "empty")
+        /// Location: CLIToolViewModel+Sessions.swift - Channels header with count
+        public static func channelsHeader(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.cli.channelsHeader", p1, fallback: "Channels (%lld):")
+        }
         /// Location: CLIToolView.swift - Accessory button: clear
         public static let clear = L10n.tr("Tools", "tools.cli.clear", fallback: "Clear")
         /// Location: CLIToolView.swift - Accessibility label for command input
@@ -3029,6 +3035,8 @@ public enum L10n {
         public static let disconnected = L10n.tr("Tools", "tools.cli.disconnected", fallback: "disconnected")
         /// Location: CLIToolView.swift - Accessory button: dismiss
         public static let dismiss = L10n.tr("Tools", "tools.cli.dismiss", fallback: "Dismiss keyboard")
+        /// Location: CLIToolViewModel.swift - Help: channels command
+        public static let helpChannels = L10n.tr("Tools", "tools.cli.helpChannels", fallback: "  channels\n    Show list of channels with device slot numbers")
         /// Location: CLIToolViewModel.swift - Help: clear command
         public static let helpClear = L10n.tr("Tools", "tools.cli.helpClear", fallback: "  clear\n    Clear terminal")
         /// Location: CLIToolView.swift - Help command output header
@@ -3067,8 +3075,6 @@ public enum L10n {
         public static let historyUp = L10n.tr("Tools", "tools.cli.historyUp", fallback: "Previous command")
         /// Location: CLIToolView.swift - Jump to bottom button
         public static let jumpToBottom = L10n.tr("Tools", "tools.cli.jumpToBottom", fallback: "Jump to bottom")
-        /// Location: CLIToolViewModel.swift - Local commands not implemented
-        public static let localNotImplemented = L10n.tr("Tools", "tools.cli.localNotImplemented", fallback: "Local commands not yet implemented")
         /// Location: CLIToolViewModel.swift - Login countdown
         public static func loggingIn(_ p1: Int) -> String {
           return L10n.tr("Tools", "tools.cli.loggingIn", p1, fallback: "Logging in... (%ds)")
@@ -3085,8 +3091,16 @@ public enum L10n {
         public static let loginUsage = L10n.tr("Tools", "tools.cli.loginUsage", fallback: "Usage: login [-f] <node>")
         /// Location: CLIToolView.swift - Logout success
         public static let logoutSuccess = L10n.tr("Tools", "tools.cli.logoutSuccess", fallback: "Logged out")
+        /// Location: CLIToolViewModel+Sessions.swift - No channels found
+        public static let noChannels = L10n.tr("Tools", "tools.cli.noChannels", fallback: "No channels found")
         /// Location: CLIToolView.swift - Node not found error
         public static let nodeNotFound = L10n.tr("Tools", "tools.cli.nodeNotFound", fallback: "Node not found:")
+        /// Location: CLIToolViewModel+Sessions.swift - Nodes header with count
+        public static func nodesHeader(_ p1: Int) -> String {
+          return L10n.tr("Tools", "tools.cli.nodesHeader", p1, fallback: "Nodes (%lld):")
+        }
+        /// Location: CLIToolViewModel+Sessions.swift - No nodes found
+        public static let noNodes = L10n.tr("Tools", "tools.cli.noNodes", fallback: "No nodes found")
         /// Location: CLIToolView.swift - No sessions message
         public static let noSessions = L10n.tr("Tools", "tools.cli.noSessions", fallback: "No active sessions")
         /// Location: CLIToolView.swift - Disconnected state title

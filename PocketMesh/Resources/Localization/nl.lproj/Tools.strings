@@ -567,6 +567,9 @@
 /* Location: CLIToolViewModel.swift - Help: nodes command */
 "tools.cli.helpNodes" = "  nodes\n    Lijst van repeaters en kamers tonen";
 
+/* Location: CLIToolViewModel.swift - Help: channels command */
+"tools.cli.helpChannels" = "  channels\n    Lijst van kanalen met apparaatslotnummers tonen";
+
 /* Location: CLIToolViewModel.swift - Help: repeater commands header */
 "tools.cli.helpRepeaterHeader" = "Repeater-opdrachten (doorgifte):";
 
@@ -582,8 +585,20 @@
 /* Location: CLIToolViewModel.swift - Help: repeater commands list 4 */
 "tools.cli.helpRepeaterList4" = "  setperm, tempradio, neighbor.remove";
 
-/* Location: CLIToolViewModel.swift - Local commands not implemented */
-"tools.cli.localNotImplemented" = "Lokale opdrachten nog niet geïmplementeerd";
+/* Location: CLIToolViewModel+Sessions.swift - Nodes header with count */
+"tools.cli.nodesHeader" = "Knooppunten (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channels header with count */
+"tools.cli.channelsHeader" = "Kanalen (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - No nodes found */
+"tools.cli.noNodes" = "Geen knooppunten gevonden";
+
+/* Location: CLIToolViewModel+Sessions.swift - No channels found */
+"tools.cli.noChannels" = "Geen kanalen gevonden";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channel empty name placeholder */
+"tools.cli.channelEmpty" = "leeg";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 1 */
 "tools.cli.welcomeLine1" = "PocketMesh CLI";

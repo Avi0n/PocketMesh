@@ -238,7 +238,8 @@ final class CLIToolViewModel {
         case "session": handleSessionCommand(args)
         case "login": await handleLogin(args)
         case "logout": await handleLogout()
-        case "nodes" where activeSession?.isLocal == true: await sendLocalCommand(raw)
+        case "nodes" where activeSession?.isLocal == true: await handleNodesCommand()
+        case "channels" where activeSession?.isLocal == true: await handleChannelsCommand()
         default: await handleUnknownCommand(cmd, raw: raw)
         }
     }
@@ -273,6 +274,7 @@ final class CLIToolViewModel {
 
         if activeSession?.isLocal == true {
             appendOutput(L10n.Tools.Tools.Cli.helpNodes, type: .response)
+            appendOutput(L10n.Tools.Tools.Cli.helpChannels, type: .response)
         } else if activeSession != nil {
             appendOutput("", type: .response)
             appendOutput(L10n.Tools.Tools.Cli.helpRepeaterHeader, type: .response)

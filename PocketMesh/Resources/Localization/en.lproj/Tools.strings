@@ -567,6 +567,9 @@
 /* Location: CLIToolViewModel.swift - Help: nodes command */
 "tools.cli.helpNodes" = "  nodes\n    Show list of repeaters and rooms";
 
+/* Location: CLIToolViewModel.swift - Help: channels command */
+"tools.cli.helpChannels" = "  channels\n    Show list of channels with device slot numbers";
+
 /* Location: CLIToolViewModel.swift - Help: repeater commands header */
 "tools.cli.helpRepeaterHeader" = "Repeater commands (passthrough):";
 
@@ -582,8 +585,20 @@
 /* Location: CLIToolViewModel.swift - Help: repeater commands list 4 */
 "tools.cli.helpRepeaterList4" = "  setperm, tempradio, neighbor.remove";
 
-/* Location: CLIToolViewModel.swift - Local commands not implemented */
-"tools.cli.localNotImplemented" = "Local commands not yet implemented";
+/* Location: CLIToolViewModel+Sessions.swift - Nodes header with count */
+"tools.cli.nodesHeader" = "Nodes (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channels header with count */
+"tools.cli.channelsHeader" = "Channels (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - No nodes found */
+"tools.cli.noNodes" = "No nodes found";
+
+/* Location: CLIToolViewModel+Sessions.swift - No channels found */
+"tools.cli.noChannels" = "No channels found";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channel empty name placeholder */
+"tools.cli.channelEmpty" = "empty";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 1 */
 "tools.cli.welcomeLine1" = "PocketMesh CLI";

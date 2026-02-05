@@ -567,6 +567,9 @@
 /* Location: CLIToolViewModel.swift - Help: nodes command */
 "tools.cli.helpNodes" = "  nodes\n    Показати список ретрансляторів і кімнат";
 
+/* Location: CLIToolViewModel.swift - Help: channels command */
+"tools.cli.helpChannels" = "  channels\n    Показати список каналів з номерами слотів пристрою";
+
 /* Location: CLIToolViewModel.swift - Help: repeater commands header */
 "tools.cli.helpRepeaterHeader" = "Команди ретранслятора (passthrough):";
 
@@ -582,8 +585,20 @@
 /* Location: CLIToolViewModel.swift - Help: repeater commands list 4 */
 "tools.cli.helpRepeaterList4" = "  setperm, tempradio, neighbor.remove";
 
-/* Location: CLIToolViewModel.swift - Local commands not implemented */
-"tools.cli.localNotImplemented" = "Локальні команди ще не реалізовані";
+/* Location: CLIToolViewModel+Sessions.swift - Nodes header with count */
+"tools.cli.nodesHeader" = "Вузли (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channels header with count */
+"tools.cli.channelsHeader" = "Канали (%lld):";
+
+/* Location: CLIToolViewModel+Sessions.swift - No nodes found */
+"tools.cli.noNodes" = "Вузли не знайдено";
+
+/* Location: CLIToolViewModel+Sessions.swift - No channels found */
+"tools.cli.noChannels" = "Канали не знайдено";
+
+/* Location: CLIToolViewModel+Sessions.swift - Channel empty name placeholder */
+"tools.cli.channelEmpty" = "порожній";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 1 */
 "tools.cli.welcomeLine1" = "PocketMesh CLI";
