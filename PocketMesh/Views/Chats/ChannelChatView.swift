@@ -95,12 +95,12 @@ struct ChannelChatView: View {
         }
         .sheet(item: $selectedMessageForRepeats) { message in
             RepeatDetailsSheet(message: message)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedMessageForPath) { message in
             MessagePathSheet(message: message)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedMessageForActions) { message in
