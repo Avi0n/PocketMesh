@@ -51,7 +51,7 @@ final class CLICompletionEngine {
         "rxdelay", "txdelay", "direct.txdelay",
         "bridge.enabled", "bridge.delay", "bridge.source",
         "bridge.baud", "bridge.secret", "bridge.type",
-        "adc.multiplier", "public.key", "prv.key", "role", "freq"
+        "adc.multiplier", "public.key", "role", "freq"
     ]
 
     // MARK: - Node Names
