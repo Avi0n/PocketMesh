@@ -1,5 +1,7 @@
-import SwiftUI
+import CoreLocation
+import OSLog
 import PocketMeshServices
+import SwiftUI
 
 /// Actions available from the message actions sheet
 enum MessageAction: Equatable {
@@ -7,14 +9,13 @@ enum MessageAction: Equatable {
     case reply
     case copy
     case sendAgain
-    case repeatDetails
-    case viewPath
     case delete
 }
 
 /// Sheet-based message actions UI (ElementX style)
 /// Replaces native context menus for unified experience across channel and direct messages
 struct MessageActionsSheet: View {
+    @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
 
     let message: MessageDTO
@@ -28,6 +29,11 @@ struct MessageActionsSheet: View {
 
     @State private var longPressHapticTrigger = 0
     @State private var showEmojiPicker = false
+    @State private var isDetailExpanded = false
+    @State private var selectedDetent: PresentationDetent = .medium
+    @State private var repeats: [MessageRepeatDTO]?
+    @State private var contacts: [ContactDTO] = []
+    @State private var pathViewModel = MessagePathViewModel()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,20 +45,42 @@ struct MessageActionsSheet: View {
 
             Divider()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    actionsSection
-                    detailsSection
-                    deleteSection
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        actionsSection
+                        detailsSection
+                        deleteSection
+                    }
+                }
+                .onChange(of: isDetailExpanded) { _, expanded in
+                    if expanded {
+                        withAnimation {
+                            proxy.scrollTo("expandedContent", anchor: .top)
+                        }
+                    }
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
         .onAppear {
             longPressHapticTrigger += 1
         }
         .sensoryFeedback(.impact(flexibility: .solid), trigger: longPressHapticTrigger)
+        .task {
+            guard let services = appState.services else { return }
+            if availability.canShowRepeatDetails {
+                do {
+                    contacts = try await services.dataStore.fetchContacts(deviceID: message.deviceID)
+                } catch {
+                    contacts = []
+                }
+                repeats = await services.heardRepeatsService.refreshRepeats(for: message.id)
+            } else if availability.canViewPath {
+                await pathViewModel.loadContacts(services: services, deviceID: message.deviceID)
+            }
+        }
     }
 
     // MARK: - Header
@@ -118,27 +146,11 @@ struct MessageActionsSheet: View {
             action: .copy
         )
 
-        if availability.canShowRepeatDetails {
-            actionButton(
-                L10n.Chats.Chats.Message.Action.repeatDetails,
-                icon: "arrow.triangle.branch",
-                action: .repeatDetails
-            )
-        }
-
         if availability.canSendAgain {
             actionButton(
                 L10n.Chats.Chats.Message.Action.sendAgain,
                 icon: "arrow.uturn.forward",
                 action: .sendAgain
-            )
-        }
-
-        if availability.canViewPath {
-            actionButton(
-                L10n.Chats.Chats.Message.Action.viewPath,
-                icon: "point.topleft.down.to.point.bottomright.curvepath",
-                action: .viewPath
             )
         }
     }
@@ -182,6 +194,10 @@ struct MessageActionsSheet: View {
     @ViewBuilder
     private var detailsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if availability.canShowRepeatDetails || availability.canViewPath {
+                expandableDetailRow
+            }
+
             Text(L10n.Chats.Chats.Message.Action.details)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -194,6 +210,64 @@ struct MessageActionsSheet: View {
             } else {
                 incomingDetailsRows
             }
+        }
+    }
+
+    private var expandableDetailRow: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation {
+                    isDetailExpanded.toggle()
+                    selectedDetent = isDetailExpanded ? .large : .medium
+                }
+            } label: {
+                HStack {
+                    Label(
+                        availability.canShowRepeatDetails
+                            ? L10n.Chats.Chats.Message.Action.repeatDetails
+                            : L10n.Chats.Chats.Message.Action.viewPath,
+                        systemImage: availability.canShowRepeatDetails
+                            ? "arrow.triangle.branch"
+                            : "point.topleft.down.to.point.bottomright.curvepath"
+                    )
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(isDetailExpanded ? 90 : 0))
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
+                .padding()
+                .contentShape(.rect)
+            }
+            .foregroundStyle(.primary)
+            .accessibilityValue(isDetailExpanded ? "expanded" : "collapsed")
+
+            if isDetailExpanded {
+                Divider()
+                    .padding(.horizontal)
+                expandedContent
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                    .id("expandedContent")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var expandedContent: some View {
+        if availability.canShowRepeatDetails {
+            RepeatDetailsContent(
+                repeats: repeats,
+                contacts: contacts,
+                userLocation: appState.locationService.currentLocation
+            )
+        } else if availability.canViewPath {
+            MessagePathContent(
+                message: message,
+                viewModel: pathViewModel,
+                receiverName: appState.connectedDevice?.nodeName ?? L10n.Chats.Chats.Path.Receiver.you,
+                userLocation: appState.locationService.currentLocation
+            )
         }
     }
 

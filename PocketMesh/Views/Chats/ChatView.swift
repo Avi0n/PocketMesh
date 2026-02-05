@@ -39,7 +39,6 @@ struct ChatView: View {
         return reachableMentionIDs.first
     }
 
-    @State private var selectedMessageForPath: MessageDTO?
     @State private var selectedMessageForActions: MessageDTO?
     @State private var recentEmojisStore = RecentEmojisStore()
     @FocusState private var isInputFocused: Bool
@@ -79,11 +78,6 @@ struct ChatView: View {
                 ContactDetailView(contact: contact, showFromDirectChat: true)
             }
         })
-        .sheet(item: $selectedMessageForPath) { message in
-            MessagePathSheet(message: message)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
         .sheet(item: $selectedMessageForActions) { message in
             MessageActionsSheet(
                 message: message,
@@ -401,10 +395,6 @@ struct ChatView: View {
             UIPasteboard.general.string = message.text
         case .sendAgain:
             sendAgain(message)
-        case .repeatDetails:
-            break // Not applicable for direct messages
-        case .viewPath:
-            selectedMessageForPath = message
         case .delete:
             deleteMessage(message)
         }

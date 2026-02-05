@@ -39,8 +39,6 @@ struct ChannelChatView: View {
         return reachableMentionIDs.first
     }
 
-    @State private var selectedMessageForRepeats: MessageDTO?
-    @State private var selectedMessageForPath: MessageDTO?
     @State private var selectedMessageForActions: MessageDTO?
     @State private var recentEmojisStore = RecentEmojisStore()
     @FocusState private var isInputFocused: Bool
@@ -92,16 +90,6 @@ struct ChannelChatView: View {
                 }
             )
             .environment(\.chatViewModel, viewModel)
-        }
-        .sheet(item: $selectedMessageForRepeats) { message in
-            RepeatDetailsSheet(message: message)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(item: $selectedMessageForPath) { message in
-            MessagePathSheet(message: message)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
         }
         .sheet(item: $selectedMessageForActions) { message in
             MessageActionsSheet(
@@ -397,10 +385,6 @@ struct ChannelChatView: View {
         }
     }
 
-    private func showRepeatDetails(for message: MessageDTO) {
-        selectedMessageForRepeats = message
-    }
-
     private func retryMessage(_ message: MessageDTO) {
         Task {
             await viewModel.retryChannelMessage(message)
@@ -427,10 +411,6 @@ struct ChannelChatView: View {
             UIPasteboard.general.string = message.text
         case .sendAgain:
             sendAgain(message)
-        case .repeatDetails:
-            showRepeatDetails(for: message)
-        case .viewPath:
-            selectedMessageForPath = message
         case .delete:
             deleteMessage(message)
         }
