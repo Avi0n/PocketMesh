@@ -29,7 +29,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .wifi,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = UUID()
 
@@ -46,7 +46,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,
-            shouldBeConnected: false
+            connectionIntent: .none
         )
         manager.testLastConnectedDeviceID = UUID()
 
@@ -63,7 +63,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         // testLastConnectedDeviceID is nil by default
 
@@ -82,7 +82,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = UUID()
 
@@ -102,7 +102,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .connecting,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = UUID()
 
@@ -128,7 +128,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = deviceID
 
@@ -152,7 +152,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .connected,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = deviceID
 
@@ -175,7 +175,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .disconnected,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = deviceID
 
@@ -199,7 +199,7 @@ struct ConnectionManagerBLEHealthTests {
         manager.setTestState(
             connectionState: .ready,
             currentTransportType: .bluetooth,
-            shouldBeConnected: true
+            connectionIntent: .wantsConnection()
         )
         manager.testLastConnectedDeviceID = deviceID
 
