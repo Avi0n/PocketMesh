@@ -632,6 +632,12 @@ public final class ConnectionManager {
             return
         }
 
+        // Don't attempt reconnection when Bluetooth is off
+        if bleState == "poweredOff" {
+            logger.info("[BLE] Skipping foreground reconnect: Bluetooth is powered off")
+            return
+        }
+
         // Detect stale connection state: app thinks connected but BLE is actually disconnected
         // This happens when iOS terminates the BLE connection while app is suspended
         if connectionState == .ready || connectionState == .connected {
