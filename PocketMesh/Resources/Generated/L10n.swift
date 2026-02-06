@@ -2172,7 +2172,7 @@ public enum L10n {
         /// Location: RoomConversationView.swift - Disconnected banner text
         public static let disconnectedBanner = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedBanner", fallback: "Disconnected")
         /// Location: RoomConversationView.swift - Accessibility hint for disconnected banner
-        public static let disconnectedHint = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedHint", fallback: "Return to chat list to reconnect")
+        public static let disconnectedHint = L10n.tr("RemoteNodes", "remoteNodes.room.disconnectedHint", fallback: "Tap to reconnect")
         /// Location: RoomConversationView.swift - Identification section header
         public static let identification = L10n.tr("RemoteNodes", "remoteNodes.room.identification", fallback: "Identification")
         /// Location: RoomConversationView.swift - Room info sheet title
@@ -2187,6 +2187,8 @@ public enum L10n {
         public static let publicKey = L10n.tr("RemoteNodes", "remoteNodes.room.publicKey", fallback: "Public Key")
         /// Location: RoomConversationView.swift - Input placeholder
         public static let publicMessage = L10n.tr("RemoteNodes", "remoteNodes.room.publicMessage", fallback: "Public Message")
+        /// Location: RoomConversationView.swift - VoiceOver announcement when room reconnects
+        public static let reconnected = L10n.tr("RemoteNodes", "remoteNodes.room.reconnected", fallback: "Room reconnected")
         /// Location: RoomConversationView.swift - Status label
         public static let status = L10n.tr("RemoteNodes", "remoteNodes.room.status", fallback: "Status")
         /// Location: RoomConversationView.swift - Read-only banner
@@ -2966,10 +2968,16 @@ public enum L10n {
       public static let trustedOnlyDescription = L10n.tr("Settings", "telemetry.trustedOnlyDescription", fallback: "Limit telemetry to selected contacts")
     }
     public enum TrustedContacts {
+      /// Apply button label
+      public static let apply = L10n.tr("Settings", "trustedContacts.apply", fallback: "Apply")
+      /// Toggle label for showing only favorite contacts
+      public static let favoritesOnly = L10n.tr("Settings", "trustedContacts.favoritesOnly", fallback: "Favorites Only")
       /// Title for empty state when no contacts exist
       public static let noContacts = L10n.tr("Settings", "trustedContacts.noContacts", fallback: "No Contacts")
       /// Description for empty state
       public static let noContactsDescription = L10n.tr("Settings", "trustedContacts.noContactsDescription", fallback: "Add contacts to select trusted ones")
+      /// Search prompt for trusted contacts list
+      public static let searchPrompt = L10n.tr("Settings", "trustedContacts.searchPrompt", fallback: "Search Contacts")
       /// Navigation title for trusted contacts picker
       public static let title = L10n.tr("Settings", "trustedContacts.title", fallback: "Trusted Contacts")
     }

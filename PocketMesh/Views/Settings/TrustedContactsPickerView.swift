@@ -5,38 +5,83 @@ import PocketMeshServices
 struct TrustedContactsPickerView: View {
     @Environment(\.appState) private var appState
     @State private var contacts: [ContactDTO] = []
-    @State private var trustedManager = TrustedContactsManager()
+    @State private var searchText = ""
+    @State private var showFavoritesOnly = false
+    @State private var pendingTrustedIDs: Set<UUID> = []
+    @State private var initialTrustedIDs: Set<UUID> = []
+    @State private var isApplying = false
+    @State private var showError: String?
+    @State private var successTrigger = 0
+
+    private var settingsModified: Bool {
+        pendingTrustedIDs != initialTrustedIDs
+    }
+
+    private var canApply: Bool {
+        appState.connectionState == .ready && settingsModified && !isApplying
+    }
+
+    private var filteredContacts: [ContactDTO] {
+        var result = contacts
+        if showFavoritesOnly {
+            result = result.filter(\.isFavorite)
+        }
+        if !searchText.isEmpty {
+            result = result.filter { $0.displayName.localizedStandardContains(searchText) }
+        }
+        return result
+    }
 
     var body: some View {
         List {
-            if contacts.isEmpty {
-                ContentUnavailableView(
-                    L10n.Settings.TrustedContacts.noContacts,
-                    systemImage: "person.2.slash",
-                    description: Text(L10n.Settings.TrustedContacts.noContactsDescription)
-                )
-            } else {
-                ForEach(contacts) { contact in
-                    let isTrusted = trustedManager.isTrusted(publicKeyPrefix: Data(contact.publicKey.prefix(6)))
+            Section {
+                Toggle(L10n.Settings.TrustedContacts.favoritesOnly, isOn: $showFavoritesOnly)
+            }
 
-                    Button {
-                        toggleTrusted(contact)
-                    } label: {
-                        HStack {
-                            Text(contact.displayName)
-                            Spacer()
-                            if isTrusted {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.tint)
+            Section {
+                if filteredContacts.isEmpty {
+                    ContentUnavailableView(
+                        L10n.Settings.TrustedContacts.noContacts,
+                        systemImage: "person.2.slash",
+                        description: Text(L10n.Settings.TrustedContacts.noContactsDescription)
+                    )
+                } else {
+                    ForEach(filteredContacts) { contact in
+                        Button {
+                            if pendingTrustedIDs.contains(contact.id) {
+                                pendingTrustedIDs.remove(contact.id)
+                            } else {
+                                pendingTrustedIDs.insert(contact.id)
+                            }
+                        } label: {
+                            HStack {
+                                Text(contact.displayName)
+                                Spacer()
+                                if pendingTrustedIDs.contains(contact.id) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
                             }
                         }
+                        .foregroundStyle(.primary)
                     }
-                    .foregroundStyle(.primary)
                 }
             }
         }
+        .disabled(isApplying)
+        .searchable(text: $searchText, prompt: L10n.Settings.TrustedContacts.searchPrompt)
         .navigationTitle(L10n.Settings.TrustedContacts.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { applyChanges() } label: {
+                    Text(L10n.Settings.TrustedContacts.apply)
+                }
+                .disabled(!canApply)
+            }
+        }
+        .sensoryFeedback(.success, trigger: successTrigger)
+        .errorAlert($showError)
         .task {
             await loadContacts()
         }
@@ -47,17 +92,42 @@ struct TrustedContactsPickerView: View {
               let contactService = appState.services?.contactService else { return }
         do {
             contacts = try await contactService.getContacts(deviceID: deviceID)
+                .filter { $0.type == .chat }
+            let trusted = Set(
+                contacts
+                    .filter { ContactService.hasTelemetryPermissions(flags: $0.flags) }
+                    .map(\.id)
+            )
+            initialTrustedIDs = trusted
+            pendingTrustedIDs = trusted
         } catch {
-            // Silently fail
+            // User can navigate back and retry
         }
     }
 
-    private func toggleTrusted(_ contact: ContactDTO) {
-        let prefix = Data(contact.publicKey.prefix(6))
-        if trustedManager.isTrusted(publicKeyPrefix: prefix) {
-            trustedManager.removeTrusted(publicKeyPrefix: prefix)
-        } else {
-            trustedManager.addTrusted(publicKeyPrefix: prefix)
+    private func applyChanges() {
+        guard !isApplying else { return }
+        guard let contactService = appState.services?.contactService else { return }
+
+        isApplying = true
+        Task {
+            do {
+                let toGrant = pendingTrustedIDs.subtracting(initialTrustedIDs)
+                let toRevoke = initialTrustedIDs.subtracting(pendingTrustedIDs)
+
+                for id in toGrant {
+                    try await contactService.setTelemetryPermissions(id, granted: true)
+                }
+                for id in toRevoke {
+                    try await contactService.setTelemetryPermissions(id, granted: false)
+                }
+
+                initialTrustedIDs = pendingTrustedIDs
+                successTrigger += 1
+            } catch {
+                showError = error.localizedDescription
+            }
+            isApplying = false
         }
     }
 }

@@ -545,6 +545,81 @@ public actor ContactService {
         try await dataStore.saveContact(updated)
     }
 
+    // MARK: - Telemetry Permissions
+
+    /// Whether a contact has telemetry permission flags set (bits 1-3).
+    public static func hasTelemetryPermissions(flags: UInt8) -> Bool {
+        (flags & 0x0E) != 0
+    }
+
+    /// Sets telemetry permission flags on a contact's device record.
+    /// Bits 1-3 of contact.flags control base/location/environment permissions.
+    /// Bit 0 (favourite) is preserved.
+    ///
+    /// - Parameters:
+    ///   - contactID: The contact's UUID.
+    ///   - granted: Whether to grant telemetry permissions.
+    /// - Throws: `ContactServiceError` if the device update fails.
+    public func setTelemetryPermissions(_ contactID: UUID, granted: Bool) async throws {
+        guard let existing = try await dataStore.fetchContact(id: contactID) else {
+            throw ContactServiceError.contactNotFound
+        }
+
+        // Set or clear bits 1-3, preserving bit 0 (favourite)
+        let newFlags: UInt8 = granted
+            ? existing.flags | 0x0E
+            : existing.flags & ~0x0E
+
+        // Build MeshContact for device update
+        let meshContact = MeshContact(
+            id: existing.publicKey.hexString(),
+            publicKey: existing.publicKey,
+            type: existing.typeRawValue,
+            flags: existing.flags,
+            outPathLength: existing.outPathLength,
+            outPath: existing.outPath,
+            advertisedName: existing.name,
+            lastAdvertisement: Date(timeIntervalSince1970: TimeInterval(existing.lastAdvertTimestamp)),
+            latitude: existing.latitude,
+            longitude: existing.longitude,
+            lastModified: Date(timeIntervalSince1970: TimeInterval(existing.lastModified))
+        )
+
+        // Push to device and wait for confirmation
+        do {
+            try await session.changeContactFlags(meshContact, flags: newFlags)
+        } catch let error as MeshCoreError {
+            throw ContactServiceError.sessionError(error)
+        }
+
+        // Device confirmed - update local storage
+        let updated = ContactDTO(
+            from: Contact(
+                id: existing.id,
+                deviceID: existing.deviceID,
+                publicKey: existing.publicKey,
+                name: existing.name,
+                typeRawValue: existing.typeRawValue,
+                flags: newFlags,
+                outPathLength: existing.outPathLength,
+                outPath: existing.outPath,
+                lastAdvertTimestamp: existing.lastAdvertTimestamp,
+                latitude: existing.latitude,
+                longitude: existing.longitude,
+                lastModified: existing.lastModified,
+                nickname: existing.nickname,
+                isBlocked: existing.isBlocked,
+                isFavorite: existing.isFavorite,
+                lastMessageDate: existing.lastMessageDate,
+                unreadCount: existing.unreadCount,
+                ocvPreset: existing.ocvPreset,
+                customOCVArrayString: existing.customOCVArrayString
+            )
+        )
+
+        try await dataStore.saveContact(updated)
+    }
+
     // MARK: - Favorites Migration
 
     private static let favoritesMigrationKey = "hasMigratedContactFavorites"

@@ -213,6 +213,15 @@
 /* Description for empty state */
 "trustedContacts.noContactsDescription" = "Add contacts to select trusted ones";
 
+/* Search prompt for trusted contacts list */
+"trustedContacts.searchPrompt" = "Search Contacts";
+
+/* Toggle label for showing only favorite contacts */
+"trustedContacts.favoritesOnly" = "Favorites Only";
+
+/* Apply button label */
+"trustedContacts.apply" = "Apply";
+
 
 // MARK: - About Section
 
