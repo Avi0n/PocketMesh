@@ -24,6 +24,24 @@ struct NodesSettingsSection: View {
         device?.supportsAutoAddConfig ?? false
     }
 
+    private var settingsModified: Bool {
+        guard let device else { return false }
+        if device.supportsAutoAddConfig {
+            return autoAddMode != device.autoAddMode ||
+                autoAddContacts != device.autoAddContacts ||
+                autoAddRepeaters != device.autoAddRepeaters ||
+                autoAddRoomServers != device.autoAddRoomServers ||
+                overwriteOldest != device.overwriteOldest
+        } else {
+            let deviceMode: AutoAddMode = device.manualAddContacts ? .manual : .all
+            return autoAddMode != deviceMode
+        }
+    }
+
+    private var canApply: Bool {
+        appState.connectionState == .ready && settingsModified && !isApplying && !showSuccess
+    }
+
     /// Combined hash of all node settings for change detection
     private var deviceNodeSettingsHash: Int {
         var hasher = Hasher()
@@ -81,13 +99,14 @@ struct NodesSettingsSection: View {
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         Text(L10n.Settings.AdvancedRadio.apply)
+                            .foregroundStyle(canApply ? Color.accentColor : .secondary)
                             .transition(.opacity)
                     }
                     Spacer()
                 }
                 .animation(.default, value: showSuccess)
             }
-            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess)
+            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess || !settingsModified)
         } header: {
             Text(L10n.Settings.Nodes.header)
         } footer: {

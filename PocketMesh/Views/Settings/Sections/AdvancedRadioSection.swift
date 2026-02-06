@@ -25,6 +25,19 @@ struct AdvancedRadioSection: View {
         frequency != nil && bandwidth != nil && spreadingFactor != nil && codingRate != nil && txPower != nil
     }
 
+    private var settingsModified: Bool {
+        guard let device = appState.connectedDevice else { return false }
+        return frequency != Double(device.frequency) / 1000.0 ||
+            bandwidth != RadioOptions.nearestBandwidth(to: device.bandwidth) ||
+            spreadingFactor != Int(device.spreadingFactor) ||
+            codingRate != Int(device.codingRate) ||
+            txPower != Int(device.txPower)
+    }
+
+    private var canApply: Bool {
+        appState.connectionState == .ready && settingsModified && !isApplying && !showSuccess
+    }
+
     /// Combined hash of all radio settings for change detection
     private var deviceRadioSettingsHash: Int {
         var hasher = Hasher()
@@ -112,13 +125,14 @@ struct AdvancedRadioSection: View {
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         Text(L10n.Settings.AdvancedRadio.apply)
+                            .foregroundStyle(canApply ? Color.accentColor : .secondary)
                             .transition(.opacity)
                     }
                     Spacer()
                 }
                 .animation(.default, value: showSuccess)
             }
-            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess)
+            .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess || !settingsModified)
             }
         } header: {
             Text(L10n.Settings.AdvancedRadio.header)

@@ -85,7 +85,6 @@ struct RadioPresetOnboardingView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(isApplying || selectedPresetID == appliedPresetID || selectedPresetID == nil)
-                .opacity(selectedPresetID != appliedPresetID && selectedPresetID != nil ? 1 : 0)
             }
 
             Spacer()

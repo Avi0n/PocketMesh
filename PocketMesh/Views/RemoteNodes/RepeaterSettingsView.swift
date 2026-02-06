@@ -273,6 +273,7 @@ struct RepeaterSettingsView: View {
                         ProgressView()
                     } else {
                         Text(L10n.RemoteNodes.RemoteNodes.Settings.applyRadioSettings)
+                            .foregroundStyle(viewModel.radioSettingsModified ? Color.accentColor : .secondary)
                     }
                     Spacer()
                 }
@@ -383,6 +384,7 @@ struct RepeaterSettingsView: View {
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         Text(L10n.RemoteNodes.RemoteNodes.Settings.applyIdentitySettings)
+                            .foregroundStyle(viewModel.identitySettingsModified ? Color.accentColor : .secondary)
                             .transition(.opacity)
                     }
                     Spacer()
@@ -512,6 +514,7 @@ struct RepeaterSettingsView: View {
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         Text(L10n.RemoteNodes.RemoteNodes.Settings.applyBehaviorSettings)
+                            .foregroundStyle(viewModel.behaviorSettingsModified ? Color.accentColor : .secondary)
                             .transition(.opacity)
                     }
                     Spacer()
