@@ -1,6 +1,5 @@
 import Accessibility
 import MapKit
-import MeshCore
 import os
 import PocketMeshServices
 import SwiftUI
@@ -9,6 +8,11 @@ import SwiftUI
 enum PingResult {
     case success(latencyMs: Int, snrThere: Double, snrBack: Double)
     case error(String)
+}
+
+private enum PingError: Error {
+    case notConnected
+    case timeout
 }
 
 /// Displays ping result with latency and bidirectional SNR
@@ -319,29 +323,45 @@ struct ContactDetailView: View {
 
         do {
             guard let services = appState.services else {
-                throw NSError(domain: "PingError", code: 1)
+                throw PingError.notConnected
             }
 
-            // Send trace to repeater's 6-byte public key prefix (empty path = direct ping)
             let pathData = Data(currentContact.publicKey.prefix(6))
-            let sentInfo = try await services.binaryProtocolService.sendTrace(
-                tag: tag,
-                path: pathData
-            )
 
-            // Wait for trace response with timeout
-            let timeoutMs = sentInfo.suggestedTimeoutMs
-            let response = try await waitForTraceResponse(tag: tag, timeout: Int(timeoutMs))
+            // Task group: listener starts BEFORE sendTrace to avoid race with fast responses
+            let (snrThere, snrBack) = try await withThrowingTaskGroup(
+                of: (snrThere: Double, snrBack: Double).self
+            ) { group in
+                // Listen for 0x88 rxLogData trace response (arrives before 0x89 traceData)
+                group.addTask {
+                    for await notification in NotificationCenter.default.notifications(named: .rxLogTraceReceived) {
+                        if let notifTag = notification.userInfo?["tag"] as? UInt32, notifTag == tag {
+                            let localSnr = notification.userInfo?["localSnr"] as? Double
+                            let remoteSnr = notification.userInfo?["remoteSnr"] as? Double
+                            return (snrThere: remoteSnr ?? 0, snrBack: localSnr ?? 0)
+                        }
+                    }
+                    throw CancellationError()
+                }
+
+                // Send trace (listeners are already active above)
+                let sentInfo = try await services.binaryProtocolService.sendTrace(tag: tag, path: pathData)
+
+                // Timeout using actual suggested timeout from device
+                group.addTask {
+                    try await Task.sleep(for: .milliseconds(sentInfo.suggestedTimeoutMs))
+                    throw PingError.timeout
+                }
+
+                guard let result = try await group.next() else {
+                    throw PingError.timeout
+                }
+                group.cancelAll()
+                return result
+            }
 
             let elapsed = ContinuousClock.now - startTime
-            let latencyMs = Int(Double(elapsed.components.seconds) * 1000 +
-                               Double(elapsed.components.attoseconds) / 1e15)
-
-            // "There" SNR = last intermediate node with a non-zero SNR (destination's reception of outgoing trace)
-            let snrThere = response.path.dropLast().last(where: { $0.snr != 0 })?.snr ?? 0
-
-            // "Back" SNR = last path node (our reception of the response)
-            let snrBack = response.path.last?.snr ?? 0
+            let latencyMs = Int(elapsed / .milliseconds(1))
 
             pingResult = .success(latencyMs: latencyMs, snrThere: snrThere, snrBack: snrBack)
             let announcement = L10n.Contacts.Contacts.Detail.pingSuccessAnnouncement(latencyMs)
@@ -354,32 +374,6 @@ struct ContactDetailView: View {
         }
 
         isPinging = false
-    }
-
-    private func waitForTraceResponse(tag: UInt32, timeout: Int) async throws -> TraceInfo {
-        try await withThrowingTaskGroup(of: TraceInfo.self) { group in
-            // Task 1: Listen for trace response
-            group.addTask {
-                for await notification in NotificationCenter.default.notifications(named: .traceDataReceived) {
-                    if let traceInfo = notification.userInfo?["traceInfo"] as? TraceInfo,
-                       traceInfo.tag == tag {
-                        return traceInfo
-                    }
-                }
-                throw CancellationError()
-            }
-
-            // Task 2: Timeout
-            group.addTask {
-                try await Task.sleep(for: .milliseconds(timeout))
-                throw NSError(domain: "PingError", code: 2, userInfo: nil)
-            }
-
-            // Return first successful result, cancel the other
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
     }
 
     private func refreshContact() async {

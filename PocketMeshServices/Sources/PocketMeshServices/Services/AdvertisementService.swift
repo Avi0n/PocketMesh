@@ -63,6 +63,9 @@ public actor AdvertisementService {
     /// Parameters: contactID, publicKey
     private var contactDeletedCleanupHandler: (@Sendable (UUID, Data) async -> Void)?
 
+    /// Cache local reception SNR from rxLogData for trace responses (tag → SNR)
+    private var traceLocalSnr: [UInt32: Double] = [:]
+
     // MARK: - Initialization
 
     public init(session: MeshCoreSession, dataStore: PersistenceStore) {
@@ -173,7 +176,24 @@ public actor AdvertisementService {
             await handleTraceData(traceInfo: traceInfo, deviceID: deviceID)
 
         case .rxLogData(let logData) where logData.payloadType == .trace:
-            await handleRxLogTraceData(logData: logData, deviceID: deviceID)
+            if logData.packetPayload.count >= 4, let snr = logData.snr {
+                let tag = logData.packetPayload.readUInt32LE(at: 0)
+                traceLocalSnr[tag] = snr
+                let remoteSnr: Double? = logData.pathNodes.last.map {
+                    Double(Int8(bitPattern: $0)) / 4.0
+                }
+                await MainActor.run {
+                    var userInfo: [String: Any] = ["tag": tag, "localSnr": snr, "deviceID": deviceID]
+                    if let remoteSnr {
+                        userInfo["remoteSnr"] = remoteSnr
+                    }
+                    NotificationCenter.default.post(
+                        name: .rxLogTraceReceived,
+                        object: nil,
+                        userInfo: userInfo
+                    )
+                }
+            }
 
         case .contactDeleted(let publicKey):
             await handleContactDeletedEvent(publicKey: publicKey, deviceID: deviceID)
@@ -413,39 +433,19 @@ public actor AdvertisementService {
 
     /// Handle trace data response
     private func handleTraceData(traceInfo: TraceInfo, deviceID: UUID) async {
+        let localSnr = traceLocalSnr.removeValue(forKey: traceInfo.tag)
         logger.info("Received trace data: tag=\(traceInfo.tag), hops=\(traceInfo.path.count)")
-        // Post notification for ViewModel to handle
         await MainActor.run {
+            var userInfo: [String: Any] = ["traceInfo": traceInfo, "deviceID": deviceID]
+            if let localSnr {
+                userInfo["localSnr"] = localSnr
+            }
             NotificationCenter.default.post(
                 name: .traceDataReceived,
                 object: nil,
-                userInfo: ["traceInfo": traceInfo, "deviceID": deviceID]
+                userInfo: userInfo
             )
         }
-    }
-
-    /// Synthesize trace data from rxLogData when the dedicated 0x89 notification doesn't arrive.
-    private func handleRxLogTraceData(logData: ParsedRxLogData, deviceID: UUID) async {
-        let payload = logData.packetPayload
-        guard payload.count >= 9 else { return }
-
-        let tag = payload.readUInt32LE(at: 0)
-        let authCode = payload.readUInt32LE(at: 4)
-        let flags = payload[8]
-
-        let path = Parsers.TraceData.synthesizeNodes(
-            snrBytes: logData.pathNodes,
-            payload: payload,
-            flags: flags,
-            finalSnr: logData.snr
-        )
-
-        let traceInfo = TraceInfo(
-            tag: tag, authCode: authCode, flags: flags,
-            pathLength: UInt8(logData.pathNodes.count), path: path
-        )
-        logger.info("Synthesized traceData from rxLogData: tag=\(tag), hops=\(path.count)")
-        await handleTraceData(traceInfo: traceInfo, deviceID: deviceID)
     }
 
     /// Handle contact deleted event (0x8F) - device auto-deleted a contact via overwrite oldest

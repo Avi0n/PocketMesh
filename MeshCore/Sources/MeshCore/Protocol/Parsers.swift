@@ -1087,55 +1087,6 @@ public enum Parsers {
                 path: path
             ))
         }
-
-        /// Synthesize trace nodes from rxLogData components.
-        /// Derives hop count from the payload hash bytes (outbound path truth),
-        /// not from snrBytes count (return path, which may be shorter).
-        ///
-        /// - Parameters:
-        ///   - snrBytes: Per-hop SNR bytes from rxLogData.pathNodes
-        ///   - payload: The over-the-air trace payload: [tag:4][authCode:4][flags:1][path_hashes:...]
-        ///   - flags: The flags byte (bits 0-1 = path_sz)
-        ///   - finalSnr: Reception SNR at destination (appended as destination node)
-        public static func synthesizeNodes(
-            snrBytes: [UInt8],
-            payload: Data,
-            flags: UInt8,
-            finalSnr: Double?
-        ) -> [TraceNode] {
-            let pathSz = Int(flags & 0x03)
-            let hashSize = 1 << pathSz  // 1, 2, 4, or 8 bytes per hop
-
-            // Hop count from payload hash bytes (ground truth for outbound path)
-            let hashBytesAvailable = max(0, payload.count - 9)
-            let hopCountFromPayload = hashBytesAvailable / hashSize
-            let hopCount = hopCountFromPayload > 0 ? hopCountFromPayload : snrBytes.count
-
-            var path: [TraceNode] = []
-            for i in 0..<hopCount {
-                let snr: Double = i < snrBytes.count
-                    ? Double(Int8(bitPattern: snrBytes[i])) / 4.0
-                    : 0
-
-                let hashOffset = 9 + i * hashSize
-                let hashEnd = hashOffset + hashSize
-                let hashBytes: Data?
-                if hashEnd <= payload.count {
-                    let bytes = Data(payload[hashOffset..<hashEnd])
-                    hashBytes = bytes.allSatisfy({ $0 == 0xFF }) ? nil : bytes
-                } else {
-                    hashBytes = nil
-                }
-
-                path.append(TraceNode(hashBytes: hashBytes, snr: snr))
-            }
-
-            if let finalSnr {
-                path.append(TraceNode(hashBytes: nil, snr: finalSnr))
-            }
-
-            return path
-        }
     }
 
     // MARK: - RawData
