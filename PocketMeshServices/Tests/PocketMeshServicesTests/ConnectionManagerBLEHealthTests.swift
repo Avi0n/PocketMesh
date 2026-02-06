@@ -213,6 +213,42 @@ struct ConnectionManagerBLEHealthTests {
         let wasCalled = await tracker.connectionLostCalled
         #expect(wasCalled, "onConnectionLost should be called when stale state is detected")
     }
+
+    // MARK: - Intent Preservation Tests
+
+    @Test("preserves wantsConnection intent after resyncFailed disconnect")
+    func preservesIntentAfterResyncFailed() async throws {
+        let (manager, mock) = try createTestManager()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        // Simulate state where we were connected and user wants connection
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection()
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        // Disconnect due to resync failure (internal reason)
+        await manager.disconnect(reason: .resyncFailed)
+
+        // Intent should be preserved — user never asked to disconnect
+        #expect(manager.connectionIntent.wantsConnection,
+                "connectionIntent should remain .wantsConnection after resyncFailed disconnect")
+
+        // Health check should proceed past the guard and attempt reconnection
+        // (it won't actually connect since there's no real BLE, but it shouldn't
+        // bail out at the intent check)
+        await manager.checkBLEConnectionHealth()
+
+        // After health check, state should still reflect wanting connection
+        #expect(manager.connectionIntent.wantsConnection,
+                "connectionIntent should still be .wantsConnection after health check")
+    }
 }
 
 // MARK: - Test Helpers

@@ -1106,9 +1106,15 @@ public final class ConnectionManager {
 
         cancelResyncLoop()
 
-        // Mark as intentional disconnect to suppress auto-reconnect
-        connectionIntent = .userDisconnected
-        connectionIntent.persist()
+        // Only clear user intent for user-initiated disconnects
+        switch reason {
+        case .userInitiated, .forgetDevice, .deviceRemovedFromSettings, .factoryReset, .switchingDevice:
+            connectionIntent = .userDisconnected
+            connectionIntent.persist()
+        case .resyncFailed, .wifiAddressChange, .wifiReconnectPrep, .pairingFailed:
+            // Preserve .wantsConnection so health check can retry
+            break
+        }
 
         // Stop event monitoring
         await services?.stopEventMonitoring()
