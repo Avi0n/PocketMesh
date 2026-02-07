@@ -660,6 +660,36 @@
 /* Location: SavedPathsSheet.swift - Purpose: Trend stable */
 "contacts.savedPaths.trend.stable" = "stable";
 
+// MARK: - Trace Path List Accessibility
+
+/* Location: TracePathListView.swift - Accessibility hint when trace is running */
+"contacts.trace.list.runningHint" = "Trace en cours";
+
+// MARK: - Trace Path Cluster View
+
+/* Location: TracePathClusterView.swift - Accessibility label for cluster annotation */
+"contacts.trace.map.cluster.label" = "%d répéteurs";
+
+/* Location: TracePathClusterView.swift - Accessibility hint for cluster annotation */
+"contacts.trace.map.cluster.hint" = "Touchez deux fois pour zoomer";
+
+// MARK: - Trace Path Repeater Pin View
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for repeater in path */
+"contacts.trace.map.pin.inPathLabel" = "Répéteur : %1$@, saut %2$d dans le chemin";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for removable last hop */
+"contacts.trace.map.pin.removableHint" = "Touchez deux fois pour retirer du chemin";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for non-removable hop */
+"contacts.trace.map.pin.notRemovableHint" = "Ce saut ne peut pas être retiré. Seul le dernier saut peut être retiré.";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for available repeater */
+"contacts.trace.map.pin.availableLabel" = "Répéteur : %@";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for adding repeater to path */
+"contacts.trace.map.pin.addHint" = "Touchez deux fois pour ajouter au chemin";
+
 // MARK: - Saved Path Detail
 
 /* Location: SavedPathDetailView.swift - Purpose: Path section header */

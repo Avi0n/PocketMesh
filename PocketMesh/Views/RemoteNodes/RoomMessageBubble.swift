@@ -99,7 +99,7 @@ struct RoomMessageBubble: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L10n.Chats.Chats.Message.Status.retry)
-                    .accessibilityHint("Double-tap to resend this message")
+                    .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Room.Message.retryHint)
                 }
 
                 Text(statusText)
@@ -136,11 +136,11 @@ struct RoomMessageBubble: View {
     private var accessibilityStatusLabel: String {
         switch message.status {
         case .failed:
-            return "Message failed to send. Double tap retry button to resend."
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.failedLabel
         case .pending, .sending, .retrying:
-            return "Sending message"
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.sendingLabel
         default:
-            return "Message delivered"
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.deliveredLabel
         }
     }
 }

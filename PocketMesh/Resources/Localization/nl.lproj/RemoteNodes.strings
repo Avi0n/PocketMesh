@@ -106,17 +106,26 @@
 /* Location: RepeaterSettingsView.swift - Bandwidth label */
 "remoteNodes.settings.bandwidthKHz" = "Bandbreedte (kHz)";
 
+/* Location: RepeaterSettingsView.swift - Bandwidth accessibility label - %@ is bandwidth value */
+"remoteNodes.settings.accessibility.bandwidthLabel" = "%@ kilohertz";
+
 /* Location: RepeaterSettingsView.swift - Bandwidth accessibility hint */
 "remoteNodes.settings.bandwidthHint" = "Lagere waarden vergroten bereik maar verlagen snelheid";
 
 /* Location: RepeaterSettingsView.swift - Spreading factor label */
 "remoteNodes.settings.spreadingFactor" = "Spreidingsfactor";
 
+/* Location: RepeaterSettingsView.swift - Spreading factor accessibility label - %d is SF value */
+"remoteNodes.settings.accessibility.spreadingFactorLabel" = "Spreidingsfactor %d";
+
 /* Location: RepeaterSettingsView.swift - Spreading factor accessibility hint */
 "remoteNodes.settings.spreadingFactorHint" = "Hogere waarden vergroten bereik maar verlagen snelheid";
 
 /* Location: RepeaterSettingsView.swift - Coding rate label */
 "remoteNodes.settings.codingRate" = "Coderingssnelheid";
+
+/* Location: RepeaterSettingsView.swift - Coding rate accessibility label - %d is CR value */
+"remoteNodes.settings.accessibility.codingRateLabel" = "Coderingssnelheid %d";
 
 /* Location: RepeaterSettingsView.swift - Coding rate accessibility hint */
 "remoteNodes.settings.codingRateHint" = "Hogere waarden voegen foutcorrectie toe maar verlagen snelheid";
@@ -419,6 +428,20 @@
 
 /* Location: RoomConversationView.swift - Accessibility hint for disconnected banner */
 "remoteNodes.room.disconnectedHint" = "Tap to reconnect";
+
+// MARK: - Room Message Bubble
+
+/* Location: RoomMessageBubble.swift - Accessibility hint for retry button */
+"remoteNodes.room.message.retryHint" = "Dubbeltik om dit bericht opnieuw te verzenden";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for failed message status */
+"remoteNodes.room.message.status.failedLabel" = "Bericht kon niet worden verzonden. Dubbeltik op de knop opnieuw proberen om opnieuw te verzenden.";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for sending message status */
+"remoteNodes.room.message.status.sendingLabel" = "Bericht wordt verzonden";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for delivered message status */
+"remoteNodes.room.message.status.deliveredLabel" = "Bericht afgeleverd";
 
 // MARK: - Shared
 

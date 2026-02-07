@@ -378,6 +378,10 @@
 
 // MARK: - Mention Suggestions
 
+"chats.mention.accessibility.label" = "Wspomnij %@";
+"chats.mention.accessibility.hintChannel" = "Nadawca kanału. Stuknij dwukrotnie, aby wspomnieć";
+"chats.mention.accessibility.hintContact" = "Zapisany kontakt. Stuknij dwukrotnie, aby wspomnieć";
+
 /* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
 "chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
@@ -754,6 +758,9 @@
 "chats.repeats.unknownRepeater" = "<nieznany przekaźnik>";
 
 // MARK: - Tap to Load Preview
+
+"chats.linkPreview.accessibility.label" = "%1$@, z %2$@, link";
+"chats.linkPreview.accessibility.hint" = "Otwiera w przeglądarce";
 
 /* Location: TapToLoadPreview.swift - Loading state text */
 "chats.preview.loading" = "Ładowanie podglądu...";

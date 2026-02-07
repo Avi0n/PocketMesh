@@ -174,6 +174,18 @@
 /* Button to scan for new devices */
 "deviceSelection.scanForDevices" = "Пошук пристроїв";
 
+/* Accessibility label for a device connected to another app - %1$@ is device name */
+"deviceSelection.accessibility.connectedElsewhereLabel" = "%1$@, підключено до іншого додатку";
+
+/* Accessibility label for a device - %1$@ is device name, %2$@ is connection type */
+"deviceSelection.accessibility.deviceLabel" = "%1$@, %2$@";
+
+/* Accessibility hint for a device connected to another app */
+"deviceSelection.accessibility.connectedElsewhereHint" = "Цей пристрій використовується іншим додатком. Підключення може спричинити проблеми зі зв'язком.";
+
+/* Accessibility hint for selecting a device */
+"deviceSelection.accessibility.selectHint" = "Натисніть двічі, щоб вибрати";
+
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Підключено до іншого застосунку";
 
@@ -264,6 +276,24 @@
 /* Label for coding rate picker */
 "advancedRadio.codingRate" = "Швидкість кодування";
 
+/* Accessibility label for bandwidth picker options - %@ is formatted bandwidth value */
+"advancedRadio.accessibility.bandwidthLabel" = "%@ кілогерц";
+
+/* Accessibility label for spreading factor picker options - %d is the factor value */
+"advancedRadio.accessibility.spreadingFactorLabel" = "Фактор розширення %d";
+
+/* Accessibility label for coding rate picker options - %d is the rate value */
+"advancedRadio.accessibility.codingRateLabel" = "Швидкість кодування %d";
+
+/* Accessibility hint for bandwidth picker */
+"advancedRadio.accessibility.bandwidthHint" = "Менші значення збільшують дальність, але знижують швидкість";
+
+/* Accessibility hint for spreading factor picker */
+"advancedRadio.accessibility.spreadingFactorHint" = "Більші значення збільшують дальність, але знижують швидкість";
+
+/* Accessibility hint for coding rate picker */
+"advancedRadio.accessibility.codingRateHint" = "Більші значення покращують корекцію помилок, але знижують швидкість";
+
 /* Label for TX power input */
 "advancedRadio.txPower" = "Потужність TX (дБм)";
 
@@ -281,6 +311,15 @@
 
 
 // MARK: - Battery Curve Section
+
+/* Accessibility label for voltage text field - %d is the percentage level */
+"batteryCurve.accessibility.voltageLabel" = "Напруга при %d відсотках";
+
+/* Accessibility value for voltage text field - %d is the millivolt value */
+"batteryCurve.accessibility.voltageValue" = "%d мілівольт";
+
+/* Accessibility hint for voltage text field */
+"batteryCurve.accessibility.voltageHint" = "Введіть очікувану напругу при цьому рівні заряду";
 
 /* Section header for battery curve */
 "batteryCurve.header" = "Крива батареї";

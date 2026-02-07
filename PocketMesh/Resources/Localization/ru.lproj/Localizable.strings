@@ -53,6 +53,8 @@
 /* Standard remove button for removing items from a list or group */
 "common.remove" = "Удалить";
 
+"common.accessibility.connectHint" = "Нажмите дважды, чтобы подключить устройство";
+
 
 // MARK: - Connection Status
 

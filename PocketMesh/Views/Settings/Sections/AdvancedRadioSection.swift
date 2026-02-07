@@ -73,34 +73,34 @@ struct AdvancedRadioSection: View {
                 ForEach(RadioOptions.bandwidthsHz, id: \.self) { bwHz in
                     Text(RadioOptions.formatBandwidth(bwHz))
                         .tag(bwHz as UInt32?)
-                        .accessibilityLabel("\(RadioOptions.formatBandwidth(bwHz)) kilohertz")
+                        .accessibilityLabel(L10n.Settings.AdvancedRadio.Accessibility.bandwidthLabel(RadioOptions.formatBandwidth(bwHz)))
                 }
             }
             .pickerStyle(.menu)
             .tint(.primary)
-            .accessibilityHint("Lower values increase range but decrease speed")
+            .accessibilityHint(L10n.Settings.AdvancedRadio.Accessibility.bandwidthHint)
 
             Picker(L10n.Settings.AdvancedRadio.spreadingFactor, selection: $spreadingFactor) {
                 ForEach(RadioOptions.spreadingFactors, id: \.self) { spreadFactorOption in
                     Text(spreadFactorOption, format: .number)
                         .tag(spreadFactorOption as Int?)
-                        .accessibilityLabel("Spreading factor \(spreadFactorOption)")
+                        .accessibilityLabel(L10n.Settings.AdvancedRadio.Accessibility.spreadingFactorLabel(spreadFactorOption))
                 }
             }
             .pickerStyle(.menu)
             .tint(.primary)
-            .accessibilityHint("Higher values increase range but decrease speed")
+            .accessibilityHint(L10n.Settings.AdvancedRadio.Accessibility.spreadingFactorHint)
 
             Picker(L10n.Settings.AdvancedRadio.codingRate, selection: $codingRate) {
                 ForEach(RadioOptions.codingRates, id: \.self) { codeRateOption in
                     Text("\(codeRateOption)")
                         .tag(codeRateOption as Int?)
-                        .accessibilityLabel("Coding rate \(codeRateOption)")
+                        .accessibilityLabel(L10n.Settings.AdvancedRadio.Accessibility.codingRateLabel(codeRateOption))
                 }
             }
             .pickerStyle(.menu)
             .tint(.primary)
-            .accessibilityHint("Higher values add error correction but decrease speed")
+            .accessibilityHint(L10n.Settings.AdvancedRadio.Accessibility.codingRateHint)
 
             HStack {
                 Text(L10n.Settings.AdvancedRadio.txPower)

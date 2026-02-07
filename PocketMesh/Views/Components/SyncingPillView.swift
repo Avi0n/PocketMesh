@@ -12,7 +12,7 @@ struct SyncingPillView: View {
                 pillBody
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Double tap to connect device")
+            .accessibilityHint(L10n.Localizable.Common.Accessibility.connectHint)
         } else {
             pillBody
         }

@@ -106,17 +106,23 @@
 /* Location: RepeaterSettingsView.swift - Bandwidth label */
 "remoteNodes.settings.bandwidthKHz" = "Смуга пропускання (кГц)";
 
+"remoteNodes.settings.accessibility.bandwidthLabel" = "%@ кілогерц";
+
 /* Location: RepeaterSettingsView.swift - Bandwidth accessibility hint */
 "remoteNodes.settings.bandwidthHint" = "Менші значення збільшують дальність, але зменшують швидкість";
 
 /* Location: RepeaterSettingsView.swift - Spreading factor label */
 "remoteNodes.settings.spreadingFactor" = "Фактор розширення";
 
+"remoteNodes.settings.accessibility.spreadingFactorLabel" = "Фактор розширення %d";
+
 /* Location: RepeaterSettingsView.swift - Spreading factor accessibility hint */
 "remoteNodes.settings.spreadingFactorHint" = "Більші значення збільшують дальність, але зменшують швидкість";
 
 /* Location: RepeaterSettingsView.swift - Coding rate label */
 "remoteNodes.settings.codingRate" = "Швидкість кодування";
+
+"remoteNodes.settings.accessibility.codingRateLabel" = "Швидкість кодування %d";
 
 /* Location: RepeaterSettingsView.swift - Coding rate accessibility hint */
 "remoteNodes.settings.codingRateHint" = "Більші значення додають корекцію помилок, але зменшують швидкість";
@@ -419,6 +425,20 @@
 
 /* Location: RoomConversationView.swift - Accessibility hint for disconnected banner */
 "remoteNodes.room.disconnectedHint" = "Tap to reconnect";
+
+// MARK: - Room Message Bubble
+
+/* Location: RoomMessageBubble.swift - Accessibility hint for retry button */
+"remoteNodes.room.message.retryHint" = "Натисніть двічі, щоб повторно надіслати це повідомлення";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for failed message status */
+"remoteNodes.room.message.status.failedLabel" = "Не вдалося надіслати повідомлення. Натисніть двічі кнопку повтору, щоб надіслати знову.";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for sending message status */
+"remoteNodes.room.message.status.sendingLabel" = "Надсилання повідомлення";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for delivered message status */
+"remoteNodes.room.message.status.deliveredLabel" = "Повідомлення доставлено";
 
 // MARK: - Shared
 

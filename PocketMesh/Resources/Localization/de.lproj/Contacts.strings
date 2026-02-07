@@ -707,6 +707,36 @@
 /* Location: SavedPathDetailView.swift - Purpose: Hop label */
 "contacts.pathDetail.hop" = "Sprung %d";
 
+// MARK: - Trace Path List Accessibility
+
+/* Location: TracePathListView.swift - Accessibility hint when trace is running */
+"contacts.trace.list.runningHint" = "Trace wird ausgeführt";
+
+// MARK: - Trace Path Cluster View
+
+/* Location: TracePathClusterView.swift - Accessibility label for cluster annotation */
+"contacts.trace.map.cluster.label" = "%d Repeater";
+
+/* Location: TracePathClusterView.swift - Accessibility hint for cluster annotation */
+"contacts.trace.map.cluster.hint" = "Doppeltippen zum Heranzoomen";
+
+// MARK: - Trace Path Repeater Pin View
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for repeater in path */
+"contacts.trace.map.pin.inPathLabel" = "Repeater: %1$@, Hop %2$d im Pfad";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for removable last hop */
+"contacts.trace.map.pin.removableHint" = "Doppeltippen, um aus dem Pfad zu entfernen";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for non-removable hop */
+"contacts.trace.map.pin.notRemovableHint" = "Dieser Hop kann nicht entfernt werden. Nur der letzte Hop kann entfernt werden.";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for available repeater */
+"contacts.trace.map.pin.availableLabel" = "Repeater: %@";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for adding repeater to path */
+"contacts.trace.map.pin.addHint" = "Doppeltippen, um zum Pfad hinzuzufügen";
+
 // MARK: - Trace Path View
 
 /* Location: TracePathView.swift - Purpose: Navigation title */

@@ -543,6 +543,23 @@
 /* Location: DiscoveryView.swift - Purpose: Search empty state description */
 "contacts.discovery.empty.search.description" = "Жоден виявлений вузол не відповідає '%@'";
 
+// MARK: - Trace Path List Accessibility
+
+"contacts.trace.list.runningHint" = "Трасування виконується";
+
+// MARK: - Trace Path Cluster View
+
+"contacts.trace.map.cluster.label" = "Ретрансляторів: %d";
+"contacts.trace.map.cluster.hint" = "Натисніть двічі для збільшення";
+
+// MARK: - Trace Path Repeater Pin View
+
+"contacts.trace.map.pin.inPathLabel" = "Ретранслятор: %1$@, перехід %2$d у маршруті";
+"contacts.trace.map.pin.removableHint" = "Натисніть двічі, щоб видалити з маршруту";
+"contacts.trace.map.pin.notRemovableHint" = "Цей перехід не можна видалити. Можна видалити лише останній перехід.";
+"contacts.trace.map.pin.availableLabel" = "Ретранслятор: %@";
+"contacts.trace.map.pin.addHint" = "Натисніть двічі, щоб додати до маршруту";
+
 // MARK: - Path Editing Sheet
 
 /* Location: PathEditingSheet.swift - Purpose: Navigation title */

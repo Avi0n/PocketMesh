@@ -174,6 +174,18 @@
 /* Button to scan for new devices */
 "deviceSelection.scanForDevices" = "Scannen naar apparaten";
 
+/* Accessibility label for device connected elsewhere - %1$@ is device name */
+"deviceSelection.accessibility.connectedElsewhereLabel" = "%1$@, verbonden met een andere app";
+
+/* Accessibility label for available device - %1$@ is device name, %2$@ is connection type */
+"deviceSelection.accessibility.deviceLabel" = "%1$@, %2$@";
+
+/* Accessibility hint for device connected elsewhere */
+"deviceSelection.accessibility.connectedElsewhereHint" = "Dit apparaat wordt gebruikt door een andere app. Verbinden kan communicatieproblemen veroorzaken.";
+
+/* Accessibility hint for selectable device */
+"deviceSelection.accessibility.selectHint" = "Dubbeltik om te selecteren";
+
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Elders verbonden";
 
@@ -270,6 +282,24 @@
 /* Placeholder for TX power text field */
 "advancedRadio.txPowerPlaceholder" = "dBm";
 
+/* Accessibility label for bandwidth picker - %@ is bandwidth value */
+"advancedRadio.accessibility.bandwidthLabel" = "%@ kilohertz";
+
+/* Accessibility label for spreading factor picker - %d is SF value */
+"advancedRadio.accessibility.spreadingFactorLabel" = "Spreidingsfactor %d";
+
+/* Accessibility label for coding rate picker - %d is CR value */
+"advancedRadio.accessibility.codingRateLabel" = "Coderingssnelheid %d";
+
+/* Accessibility hint for bandwidth picker */
+"advancedRadio.accessibility.bandwidthHint" = "Lagere waarden vergroten het bereik maar verlagen de snelheid";
+
+/* Accessibility hint for spreading factor picker */
+"advancedRadio.accessibility.spreadingFactorHint" = "Hogere waarden vergroten het bereik maar verlagen de snelheid";
+
+/* Accessibility hint for coding rate picker */
+"advancedRadio.accessibility.codingRateHint" = "Hogere waarden verbeteren foutcorrectie maar verlagen de snelheid";
+
 /* Button to apply radio settings */
 "advancedRadio.apply" = "Radio-instellingen toepassen";
 
@@ -279,6 +309,15 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Ongeldige invoerwaarden of apparaat niet verbonden";
 
+
+/* Accessibility label for voltage text field at specific battery percent - %d is percent */
+"batteryCurve.accessibility.voltageLabel" = "Spanning bij %d procent";
+
+/* Accessibility value for voltage in millivolts - %d is millivolts */
+"batteryCurve.accessibility.voltageValue" = "%d millivolt";
+
+/* Accessibility hint for voltage text field */
+"batteryCurve.accessibility.voltageHint" = "Voer de verwachte spanning in bij dit laadniveau";
 
 // MARK: - Battery Curve Section
 

@@ -159,6 +159,18 @@
 /* Footer text prompting user to select a device */
 "deviceSelection.selectToReconnect" = "Wähle ein Gerät zum Wiederverbinden";
 
+/* Accessibility label for a device connected to another app - %1$@ is device name */
+"deviceSelection.accessibility.connectedElsewhereLabel" = "%1$@, mit einer anderen App verbunden";
+
+/* Accessibility label for a device - %1$@ is device name, %2$@ is connection type */
+"deviceSelection.accessibility.deviceLabel" = "%1$@, %2$@";
+
+/* Accessibility hint for a device connected to another app */
+"deviceSelection.accessibility.connectedElsewhereHint" = "Dieses Gerät wird von einer anderen App verwendet. Das Verbinden kann zu Kommunikationsproblemen führen.";
+
+/* Accessibility hint for selecting a device */
+"deviceSelection.accessibility.selectHint" = "Doppeltippen zum Auswählen";
+
 /* Button to connect via WiFi */
 "deviceSelection.connectViaWifi" = "Über WLAN verbinden";
 
@@ -270,6 +282,24 @@
 /* Placeholder for TX power text field */
 "advancedRadio.txPowerPlaceholder" = "dBm";
 
+/* Accessibility label for bandwidth picker options - %@ is formatted bandwidth value */
+"advancedRadio.accessibility.bandwidthLabel" = "%@ Kilohertz";
+
+/* Accessibility label for spreading factor picker options - %d is the factor value */
+"advancedRadio.accessibility.spreadingFactorLabel" = "Spreizfaktor %d";
+
+/* Accessibility label for coding rate picker options - %d is the rate value */
+"advancedRadio.accessibility.codingRateLabel" = "Codierungsrate %d";
+
+/* Accessibility hint for bandwidth picker */
+"advancedRadio.accessibility.bandwidthHint" = "Niedrigere Werte erhöhen die Reichweite, verringern aber die Geschwindigkeit";
+
+/* Accessibility hint for spreading factor picker */
+"advancedRadio.accessibility.spreadingFactorHint" = "Höhere Werte erhöhen die Reichweite, verringern aber die Geschwindigkeit";
+
+/* Accessibility hint for coding rate picker */
+"advancedRadio.accessibility.codingRateHint" = "Höhere Werte verbessern die Fehlerkorrektur, verringern aber die Geschwindigkeit";
+
 /* Button to apply radio settings */
 "advancedRadio.apply" = "Funkeinstellungen anwenden";
 
@@ -281,6 +311,15 @@
 
 
 // MARK: - Battery Curve Section
+
+/* Accessibility label for voltage text field - %d is the percentage level */
+"batteryCurve.accessibility.voltageLabel" = "Spannung bei %d Prozent";
+
+/* Accessibility value for voltage text field - %d is the millivolt value */
+"batteryCurve.accessibility.voltageValue" = "%d Millivolt";
+
+/* Accessibility hint for voltage text field */
+"batteryCurve.accessibility.voltageHint" = "Erwartete Spannung bei diesem Ladezustand eingeben";
 
 /* Section header for battery curve */
 "batteryCurve.header" = "Akkukurve";

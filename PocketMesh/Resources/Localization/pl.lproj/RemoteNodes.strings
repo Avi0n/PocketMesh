@@ -106,17 +106,23 @@
 /* Location: RepeaterSettingsView.swift - Bandwidth label */
 "remoteNodes.settings.bandwidthKHz" = "Szerokość pasma (kHz)";
 
+"remoteNodes.settings.accessibility.bandwidthLabel" = "%@ kiloherców";
+
 /* Location: RepeaterSettingsView.swift - Bandwidth accessibility hint */
 "remoteNodes.settings.bandwidthHint" = "Niższe wartości zwiększają zasięg, ale zmniejszają prędkość";
 
 /* Location: RepeaterSettingsView.swift - Spreading factor label */
 "remoteNodes.settings.spreadingFactor" = "Współczynnik rozpraszania";
 
+"remoteNodes.settings.accessibility.spreadingFactorLabel" = "Współczynnik rozpraszania %d";
+
 /* Location: RepeaterSettingsView.swift - Spreading factor accessibility hint */
 "remoteNodes.settings.spreadingFactorHint" = "Wyższe wartości zwiększają zasięg, ale zmniejszają prędkość";
 
 /* Location: RepeaterSettingsView.swift - Coding rate label */
 "remoteNodes.settings.codingRate" = "Współczynnik kodowania";
+
+"remoteNodes.settings.accessibility.codingRateLabel" = "Szybkość kodowania %d";
 
 /* Location: RepeaterSettingsView.swift - Coding rate accessibility hint */
 "remoteNodes.settings.codingRateHint" = "Wyższe wartości dodają korekcję błędów, ale zmniejszają prędkość";
@@ -419,6 +425,20 @@
 
 /* Location: RoomConversationView.swift - Accessibility hint for disconnected banner */
 "remoteNodes.room.disconnectedHint" = "Tap to reconnect";
+
+// MARK: - Room Message Bubble
+
+/* Location: RoomMessageBubble.swift - Accessibility hint for retry button */
+"remoteNodes.room.message.retryHint" = "Stuknij dwukrotnie, aby ponownie wysłać tę wiadomość";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for failed message status */
+"remoteNodes.room.message.status.failedLabel" = "Nie udało się wysłać wiadomości. Stuknij dwukrotnie przycisk ponów, aby wysłać ponownie.";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for sending message status */
+"remoteNodes.room.message.status.sendingLabel" = "Wysyłanie wiadomości";
+
+/* Location: RoomMessageBubble.swift - Accessibility label for delivered message status */
+"remoteNodes.room.message.status.deliveredLabel" = "Wiadomość dostarczona";
 
 // MARK: - Shared
 

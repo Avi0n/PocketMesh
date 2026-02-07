@@ -321,10 +321,10 @@ private struct DeviceRow: View {
         .opacity(isConnectedElsewhere ? 0.6 : 1.0)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(isConnectedElsewhere
-            ? "\(device.name), connected to another app"
-            : "\(device.name), \(connectionDescription)")
+            ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereLabel(device.name)
+            : L10n.Settings.DeviceSelection.Accessibility.deviceLabel(device.name, connectionDescription))
         .accessibilityHint(isConnectedElsewhere
-            ? "This device is in use by another app. Connecting may cause communication issues."
-            : "Double tap to select")
+            ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereHint
+            : L10n.Settings.DeviceSelection.Accessibility.selectHint)
     }
 }

@@ -377,6 +377,10 @@
 
 // MARK: - Mention Suggestions
 
+"chats.mention.accessibility.label" = "Упомянуть %@";
+"chats.mention.accessibility.hintChannel" = "Отправитель канала. Нажмите дважды, чтобы упомянуть";
+"chats.mention.accessibility.hintContact" = "Сохранённый контакт. Нажмите дважды, чтобы упомянуть";
+
 /* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
 "chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
@@ -771,6 +775,9 @@
 
 /* Location: TapToLoadPreview.swift - Idle accessibility hint */
 "chats.preview.tapHint" = "Загружает заголовок и изображение с сайта";
+
+"chats.linkPreview.accessibility.label" = "%1$@, с %2$@, ссылка";
+"chats.linkPreview.accessibility.hint" = "Открывает в браузере";
 
 // MARK: - Common Buttons (using Localizable.strings common keys where possible)
 

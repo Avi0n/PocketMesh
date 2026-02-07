@@ -378,6 +378,15 @@
 
 // MARK: - Mention Suggestions
 
+/* Location: MentionSuggestionRow.swift - Accessibility label for mention row */
+"chats.mention.accessibility.label" = "Mentionner %@";
+
+/* Location: MentionSuggestionRow.swift - Accessibility hint for channel sender mention */
+"chats.mention.accessibility.hintChannel" = "Expéditeur du canal. Touchez deux fois pour mentionner";
+
+/* Location: MentionSuggestionRow.swift - Accessibility hint for saved contact mention */
+"chats.mention.accessibility.hintContact" = "Contact enregistré. Touchez deux fois pour mentionner";
+
 /* Location: MentionSuggestionView.swift - Accessibility label for mention suggestions popup */
 "chats.suggestions.accessibilityLabel" = "Mention suggestions";
 
@@ -752,6 +761,12 @@
 
 /* Location: RepeatRowView.swift - Unknown repeater name */
 "chats.repeats.unknownRepeater" = "<répéteur inconnu>";
+
+/* Location: LinkPreviewCard.swift - Accessibility label for link preview */
+"chats.linkPreview.accessibility.label" = "%1$@, de %2$@, lien";
+
+/* Location: LinkPreviewCard.swift - Accessibility hint for link preview */
+"chats.linkPreview.accessibility.hint" = "S'ouvre dans le navigateur";
 
 // MARK: - Tap to Load Preview
 

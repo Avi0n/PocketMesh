@@ -174,6 +174,18 @@
 /* Button to scan for new devices */
 "deviceSelection.scanForDevices" = "Scan for Devices";
 
+/* Accessibility label for a device connected to another app - %1$@ is device name */
+"deviceSelection.accessibility.connectedElsewhereLabel" = "%1$@, connected to another app";
+
+/* Accessibility label for a device - %1$@ is device name, %2$@ is connection type */
+"deviceSelection.accessibility.deviceLabel" = "%1$@, %2$@";
+
+/* Accessibility hint for a device connected to another app */
+"deviceSelection.accessibility.connectedElsewhereHint" = "This device is in use by another app. Connecting may cause communication issues.";
+
+/* Accessibility hint for selecting a device */
+"deviceSelection.accessibility.selectHint" = "Double tap to select";
+
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Connected elsewhere";
 
@@ -270,6 +282,24 @@
 /* Placeholder for TX power text field */
 "advancedRadio.txPowerPlaceholder" = "dBm";
 
+/* Accessibility label for bandwidth picker options - %@ is formatted bandwidth value */
+"advancedRadio.accessibility.bandwidthLabel" = "%@ kilohertz";
+
+/* Accessibility label for spreading factor picker options - %d is the factor value */
+"advancedRadio.accessibility.spreadingFactorLabel" = "Spreading factor %d";
+
+/* Accessibility label for coding rate picker options - %d is the rate value */
+"advancedRadio.accessibility.codingRateLabel" = "Coding rate %d";
+
+/* Accessibility hint for bandwidth picker */
+"advancedRadio.accessibility.bandwidthHint" = "Lower values increase range but decrease speed";
+
+/* Accessibility hint for spreading factor picker */
+"advancedRadio.accessibility.spreadingFactorHint" = "Higher values increase range but decrease speed";
+
+/* Accessibility hint for coding rate picker */
+"advancedRadio.accessibility.codingRateHint" = "Higher values add error correction but decrease speed";
+
 /* Button to apply radio settings */
 "advancedRadio.apply" = "Apply Radio Settings";
 
@@ -281,6 +311,15 @@
 
 
 // MARK: - Battery Curve Section
+
+/* Accessibility label for voltage text field - %d is the percentage level */
+"batteryCurve.accessibility.voltageLabel" = "Voltage at %d percent";
+
+/* Accessibility value for voltage text field - %d is the millivolt value */
+"batteryCurve.accessibility.voltageValue" = "%d millivolts";
+
+/* Accessibility hint for voltage text field */
+"batteryCurve.accessibility.voltageHint" = "Enter the expected voltage at this charge level";
 
 /* Section header for battery curve */
 "batteryCurve.header" = "Battery Curve";

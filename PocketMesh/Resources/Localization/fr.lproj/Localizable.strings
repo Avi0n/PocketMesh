@@ -108,6 +108,9 @@
 
 // MARK: - Accessibility
 
+/* Location: SyncingPillView.swift - Accessibility hint for disconnected state */
+"common.accessibility.connectHint" = "Touchez deux fois pour connecter l'appareil";
+
 /* VoiceOver announcement when viewing cached data while disconnected from device */
 "accessibility.viewingCachedData" = "Affichage des données en cache. Connectez-vous à l'appareil pour les mises à jour.";
 

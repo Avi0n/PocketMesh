@@ -65,8 +65,8 @@ final class TracePathClusterView: MKAnnotationView {
         countLabel.text = "\(count)"
 
         isAccessibilityElement = true
-        accessibilityLabel = "\(count) repeaters"
-        accessibilityHint = "Double tap to zoom in"
+        accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Cluster.label(count)
+        accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Cluster.hint
         accessibilityTraits = .button
     }
 

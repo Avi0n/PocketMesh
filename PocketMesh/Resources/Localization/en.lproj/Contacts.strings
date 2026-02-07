@@ -822,6 +822,36 @@
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
 "contacts.trace.list.noFavorites.description" = "Mark repeaters as favorites in the Nodes tab to see them here.";
 
+// MARK: - Trace Path List Accessibility
+
+/* Location: TracePathListView.swift - Accessibility hint when trace is running */
+"contacts.trace.list.runningHint" = "Trace is in progress";
+
+// MARK: - Trace Path Cluster View
+
+/* Location: TracePathClusterView.swift - Accessibility label for cluster annotation - %d is count */
+"contacts.trace.map.cluster.label" = "%d repeaters";
+
+/* Location: TracePathClusterView.swift - Accessibility hint for cluster annotation */
+"contacts.trace.map.cluster.hint" = "Double tap to zoom in";
+
+// MARK: - Trace Path Repeater Pin View
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for repeater in path - %1$@ is name, %2$d is hop number */
+"contacts.trace.map.pin.inPathLabel" = "Repeater: %1$@, hop %2$d in path";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for removable last hop */
+"contacts.trace.map.pin.removableHint" = "Double tap to remove from path";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for non-removable hop */
+"contacts.trace.map.pin.notRemovableHint" = "This hop cannot be removed. Only the last hop can be removed.";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility label for available repeater - %@ is name */
+"contacts.trace.map.pin.availableLabel" = "Repeater: %@";
+
+/* Location: TracePathRepeaterPinView.swift - Accessibility hint for adding repeater to path */
+"contacts.trace.map.pin.addHint" = "Double tap to add to path";
+
 // MARK: - Trace Path Map View
 
 /* Location: TracePathMapView.swift - Purpose: Hops count in results banner */

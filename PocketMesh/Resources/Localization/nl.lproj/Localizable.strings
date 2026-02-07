@@ -54,6 +54,12 @@
 "common.remove" = "Verwijderen";
 
 
+// MARK: - Accessibility
+
+/* Accessibility hint for connect device button */
+"common.accessibility.connectHint" = "Dubbeltik om apparaat te verbinden";
+
+
 // MARK: - Connection Status
 
 /* Location: SyncingPillView.swift - Status shown when syncing data */

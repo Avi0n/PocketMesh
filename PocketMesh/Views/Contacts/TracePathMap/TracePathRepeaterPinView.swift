@@ -156,17 +156,17 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         isAccessibilityElement = true
         if inPath {
             if isLastHop {
-                accessibilityLabel = "Repeater: \(repeater.displayName), hop \(hopIndex ?? 0) in path"
-                accessibilityHint = "Double tap to remove from path"
+                accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.inPathLabel(repeater.displayName, hopIndex ?? 0)
+                accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.removableHint
                 accessibilityTraits = [.button, .selected]
             } else {
-                accessibilityLabel = "Repeater: \(repeater.displayName), hop \(hopIndex ?? 0) in path"
-                accessibilityHint = "This hop cannot be removed. Only the last hop can be removed."
+                accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.inPathLabel(repeater.displayName, hopIndex ?? 0)
+                accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.notRemovableHint
                 accessibilityTraits = [.button, .selected, .notEnabled]
             }
         } else {
-            accessibilityLabel = "Repeater: \(repeater.displayName)"
-            accessibilityHint = "Double tap to add to path"
+            accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.availableLabel(repeater.displayName)
+            accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.addHint
             accessibilityTraits = .button
         }
     }

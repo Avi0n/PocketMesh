@@ -160,9 +160,9 @@ struct VoltageField: View {
                 .onChange(of: value) { _, _ in
                     onValueChanged()
                 }
-                .accessibilityLabel("Voltage at \(percent) percent")
-                .accessibilityValue("\(value) millivolts")
-                .accessibilityHint("Enter the expected voltage at this charge level")
+                .accessibilityLabel(L10n.Settings.BatteryCurve.Accessibility.voltageLabel(percent))
+                .accessibilityValue(L10n.Settings.BatteryCurve.Accessibility.voltageValue(value))
+                .accessibilityHint(L10n.Settings.BatteryCurve.Accessibility.voltageHint)
 
             Text(L10n.Settings.BatteryCurve.mv)
                 .font(.caption)

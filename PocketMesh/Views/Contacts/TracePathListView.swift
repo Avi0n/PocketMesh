@@ -273,7 +273,7 @@ struct TracePathListView: View {
                     .accessibilityLabel(viewModel.batchEnabled
                         ? L10n.Contacts.Contacts.Trace.List.runningBatchLabel(viewModel.currentTraceIndex, viewModel.batchSize)
                         : L10n.Contacts.Contacts.Trace.List.runningLabel)
-                    .accessibilityHint("Trace is in progress")
+                    .accessibilityHint(L10n.Contacts.Contacts.Trace.List.runningHint)
                 } else {
                     Button {
                         Task {

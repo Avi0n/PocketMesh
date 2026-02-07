@@ -174,6 +174,18 @@
 /* Button to scan for new devices */
 "deviceSelection.scanForDevices" = "Rechercher des appareils";
 
+/* Accessibility label for a device connected to another app - %1$@ is device name */
+"deviceSelection.accessibility.connectedElsewhereLabel" = "%1$@, connecté à une autre application";
+
+/* Accessibility label for a device - %1$@ is device name, %2$@ is connection type */
+"deviceSelection.accessibility.deviceLabel" = "%1$@, %2$@";
+
+/* Accessibility hint for a device connected to another app */
+"deviceSelection.accessibility.connectedElsewhereHint" = "Cet appareil est utilisé par une autre application. La connexion peut causer des problèmes de communication.";
+
+/* Accessibility hint for selecting a device */
+"deviceSelection.accessibility.selectHint" = "Touchez deux fois pour sélectionner";
+
 /* Label shown when device is connected to another app */
 "deviceSelection.connectedElsewhere" = "Connecté ailleurs";
 
@@ -270,6 +282,24 @@
 /* Placeholder for TX power text field */
 "advancedRadio.txPowerPlaceholder" = "dBm";
 
+/* Accessibility label for bandwidth picker options - %@ is formatted bandwidth value */
+"advancedRadio.accessibility.bandwidthLabel" = "%@ kilohertz";
+
+/* Accessibility label for spreading factor picker options - %d is the factor value */
+"advancedRadio.accessibility.spreadingFactorLabel" = "Facteur d'étalement %d";
+
+/* Accessibility label for coding rate picker options - %d is the rate value */
+"advancedRadio.accessibility.codingRateLabel" = "Taux de codage %d";
+
+/* Accessibility hint for bandwidth picker */
+"advancedRadio.accessibility.bandwidthHint" = "Les valeurs plus basses augmentent la portée mais réduisent la vitesse";
+
+/* Accessibility hint for spreading factor picker */
+"advancedRadio.accessibility.spreadingFactorHint" = "Les valeurs plus élevées augmentent la portée mais réduisent la vitesse";
+
+/* Accessibility hint for coding rate picker */
+"advancedRadio.accessibility.codingRateHint" = "Les valeurs plus élevées améliorent la correction d'erreurs mais réduisent la vitesse";
+
 /* Button to apply radio settings */
 "advancedRadio.apply" = "Appliquer les réglages radio";
 
@@ -279,6 +309,15 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Valeurs d'entrée invalides ou appareil non connecté";
 
+
+/* Accessibility label for voltage text field - %d is the percentage level */
+"batteryCurve.accessibility.voltageLabel" = "Tension à %d pour cent";
+
+/* Accessibility value for voltage text field - %d is the millivolt value */
+"batteryCurve.accessibility.voltageValue" = "%d millivolts";
+
+/* Accessibility hint for voltage text field */
+"batteryCurve.accessibility.voltageHint" = "Entrez la tension attendue à ce niveau de charge";
 
 // MARK: - Battery Curve Section
 

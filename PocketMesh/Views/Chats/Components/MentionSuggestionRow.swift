@@ -18,9 +18,9 @@ struct MentionSuggestionRow: View {
         .padding(.vertical, 8)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Mention \(contact.displayName)")
+        .accessibilityLabel(L10n.Chats.Chats.Mention.Accessibility.label(contact.displayName))
         .accessibilityHint(contact.publicKey.isEmpty
-            ? "Channel sender. Double tap to mention"
-            : "Saved contact. Double tap to mention")
+            ? L10n.Chats.Chats.Mention.Accessibility.hintChannel
+            : L10n.Chats.Chats.Mention.Accessibility.hintContact)
     }
 }

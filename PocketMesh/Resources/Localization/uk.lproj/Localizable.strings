@@ -65,6 +65,8 @@
 
 // MARK: - Accessibility (from English source)
 
+"common.accessibility.connectHint" = "Натисніть двічі, щоб підключити пристрій";
+
 /* VoiceOver announcement when viewing cached data while disconnected from device */
 "accessibility.viewingCachedData" = "Перегляд кешованих даних. Підключись до пристрою для оновлень.";
 

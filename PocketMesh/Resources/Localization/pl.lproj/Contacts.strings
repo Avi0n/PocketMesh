@@ -660,6 +660,23 @@
 /* Location: SavedPathsSheet.swift - Purpose: Trend stable */
 "contacts.savedPaths.trend.stable" = "stabilny";
 
+// MARK: - Trace Path List Accessibility
+
+"contacts.trace.list.runningHint" = "Trace w toku";
+
+// MARK: - Trace Path Cluster View
+
+"contacts.trace.map.cluster.label" = "Repeaterów: %d";
+"contacts.trace.map.cluster.hint" = "Stuknij dwukrotnie, aby przybliżyć";
+
+// MARK: - Trace Path Repeater Pin View
+
+"contacts.trace.map.pin.inPathLabel" = "Repeater: %1$@, skok %2$d w ścieżce";
+"contacts.trace.map.pin.removableHint" = "Stuknij dwukrotnie, aby usunąć ze ścieżki";
+"contacts.trace.map.pin.notRemovableHint" = "Tego skoku nie można usunąć. Tylko ostatni skok może zostać usunięty.";
+"contacts.trace.map.pin.availableLabel" = "Repeater: %@";
+"contacts.trace.map.pin.addHint" = "Stuknij dwukrotnie, aby dodać do ścieżki";
+
 // MARK: - Saved Path Detail
 
 /* Location: SavedPathDetailView.swift - Purpose: Path section header */

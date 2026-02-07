@@ -73,8 +73,8 @@ struct LinkPreviewCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title ?? domain), from \(domain), link")
-        .accessibilityHint("Opens in browser")
+        .accessibilityLabel(L10n.Chats.Chats.LinkPreview.Accessibility.label(title ?? domain, domain))
+        .accessibilityHint(L10n.Chats.Chats.LinkPreview.Accessibility.hint)
     }
 }
 
