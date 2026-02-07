@@ -889,6 +889,32 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return try await requestStatus(from: publicKey)
     }
 
+    // MARK: - Keep-Alive
+
+    /// Sends a keep-alive request to a room server with the client's sync watermark.
+    ///
+    /// The companion radio passes the payload through to the mesh layer, producing:
+    /// `[tag(4)][REQ_TYPE_KEEP_ALIVE(1)][sync_since(4)]` — 9 bytes total.
+    ///
+    /// The room server uses `sync_since` as a force-resync hint to update the client's
+    /// message watermark. The normal push-and-ACK cycle also advances `sync_since`
+    /// independently, so this serves as a correction mechanism.
+    ///
+    /// - Parameters:
+    ///   - publicKey: The full 32-byte public key of the room server.
+    ///   - syncSince: The client's last-received message timestamp (little-endian on wire).
+    /// - Returns: Information about the sent message.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    public func sendKeepAlive(to publicKey: Data, syncSince: UInt32) async throws -> MessageSentInfo {
+        var syncSinceLE = syncSince.littleEndian
+        let payload = withUnsafeBytes(of: &syncSinceLE) { Data($0) }
+        let data = PacketBuilder.binaryRequest(to: publicKey, type: .keepAlive, payload: payload)
+        return try await sendAndWait(data) { event in
+            if case .messageSent(let info) = event { return info }
+            return nil
+        }
+    }
+
     // MARK: - Device Configuration Commands
 
     /// Gets the current device time.

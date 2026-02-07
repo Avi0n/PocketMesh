@@ -538,7 +538,16 @@ public final class AppState {
         // Wire session state change handler for room connection status UI updates
         await services.remoteNodeService.setSessionStateChangedHandler { [weak self] sessionID, isConnected in
             await MainActor.run {
+                self?.conversationsVersion += 1
                 self?.messageEventBroadcaster.handleSessionStateChanged(sessionID: sessionID, isConnected: isConnected)
+            }
+        }
+
+        // Wire room connection recovery handler
+        await services.roomServerService.setConnectionRecoveryHandler { [weak self] sessionID in
+            await MainActor.run {
+                self?.conversationsVersion += 1
+                self?.messageEventBroadcaster.handleSessionStateChanged(sessionID: sessionID, isConnected: true)
             }
         }
 
@@ -837,8 +846,8 @@ public final class AppState {
         // Update badge count from database
         await services?.notificationService.updateBadgeCount()
 
-        // Resume room keepalives for connected sessions
-        await services?.remoteNodeService.resumeRoomKeepAlives()
+        // Room keepalives are managed by RoomConversationView lifecycle
+        // (started on view appear, stopped on disappear, restarted via scenePhase)
 
         // Check for missed battery thresholds and restart polling if connected
         if services != nil {

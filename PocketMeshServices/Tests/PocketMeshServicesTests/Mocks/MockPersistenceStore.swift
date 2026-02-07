@@ -1101,6 +1101,26 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         linkPreviews[dto.url] = dto
     }
 
+    // MARK: - Room Session State
+
+    public private(set) var markedDisconnectedSessionIDs: [UUID] = []
+    public private(set) var markedConnectedSessionIDs: [UUID] = []
+    public private(set) var updatedRoomActivitySessionIDs: [UUID] = []
+
+    public func markSessionDisconnected(_ sessionID: UUID) throws {
+        markedDisconnectedSessionIDs.append(sessionID)
+    }
+
+    @discardableResult
+    public func markRoomSessionConnected(_ sessionID: UUID) throws -> Bool {
+        markedConnectedSessionIDs.append(sessionID)
+        return true
+    }
+
+    public func updateRoomActivity(_ sessionID: UUID, syncTimestamp: UInt32?) throws {
+        updatedRoomActivitySessionIDs.append(sessionID)
+    }
+
     // MARK: - Room Message Operations
 
     public var roomMessages: [UUID: RoomMessageDTO] = [:]

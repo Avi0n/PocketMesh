@@ -1451,6 +1451,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
             existing.neighborCount = dto.neighborCount
             existing.lastSyncTimestamp = dto.lastSyncTimestamp
+            existing.lastMessageDate = dto.lastMessageDate
             try modelContext.save()
             return existing
         } else {
@@ -1474,7 +1475,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 isFavorite: dto.isFavorite,
                 lastRxAirtimeSeconds: dto.lastRxAirtimeSeconds,
                 neighborCount: dto.neighborCount,
-                lastSyncTimestamp: dto.lastSyncTimestamp
+                lastSyncTimestamp: dto.lastSyncTimestamp,
+                lastMessageDate: dto.lastMessageDate
             )
             modelContext.insert(session)
             try modelContext.save()
@@ -1573,10 +1575,30 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.save()
     }
 
-    /// Update the last sync timestamp for a room session.
-    /// Call this when messages are received to track sync progress.
-    /// Only updates if the new timestamp is greater than the current one.
-    public func updateRoomLastSyncTimestamp(_ sessionID: UUID, timestamp: UInt32) throws {
+    /// Mark a room session as connected. Called when an incoming message proves
+    /// the session is active. Only sets isConnected; does not change permissionLevel.
+    /// - Returns: true if the session was actually changed (was disconnected, now connected).
+    @discardableResult
+    public func markRoomSessionConnected(_ sessionID: UUID) throws -> Bool {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let session = try modelContext.fetch(descriptor).first else { return false }
+        guard !session.isConnected else { return false }
+
+        session.isConnected = true
+        try modelContext.save()
+        return true
+    }
+
+    /// Mark a session as disconnected without changing permission level.
+    /// Use for transient disconnections (BLE drop, keep-alive failure, re-auth failure).
+    /// Only logout() should reset permissionLevel to .guest.
+    public func markSessionDisconnected(_ sessionID: UUID) throws {
         let targetID = sessionID
         let predicate = #Predicate<RemoteNodeSession> { session in
             session.id == targetID
@@ -1585,11 +1607,32 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let session = try modelContext.fetch(descriptor).first {
-            // Only update if newer than current
-            if timestamp > session.lastSyncTimestamp {
-                session.lastSyncTimestamp = timestamp
-                try modelContext.save()
+            session.isConnected = false
+            try modelContext.save()
+        }
+    }
+
+    /// Update room activity timestamps.
+    /// - Parameters:
+    ///   - sessionID: The room session ID
+    ///   - syncTimestamp: Optional sender-clock timestamp for sync bookmark advancement.
+    ///     Only provided on the receive path. Omit on the send path to avoid clock skew
+    ///     issues where local send timestamps could advance the sync bookmark past
+    ///     messages the server hasn't delivered yet.
+    public func updateRoomActivity(_ sessionID: UUID, syncTimestamp: UInt32? = nil) throws {
+        let targetID = sessionID
+        let predicate = #Predicate<RemoteNodeSession> { session in
+            session.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let session = try modelContext.fetch(descriptor).first {
+            if let syncTimestamp, syncTimestamp > session.lastSyncTimestamp {
+                session.lastSyncTimestamp = syncTimestamp
             }
+            session.lastMessageDate = Date()
+            try modelContext.save()
         }
     }
 

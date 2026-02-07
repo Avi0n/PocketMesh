@@ -74,6 +74,10 @@ public struct LoginResult: Sendable {
         self.aclPermissions = aclPermissions
         self.publicKeyPrefix = publicKeyPrefix
     }
+
+    public var permissionLevel: RoomPermissionLevel {
+        isAdmin ? .admin : (RoomPermissionLevel(rawValue: aclPermissions ?? 0) ?? .guest)
+    }
 }
 
 // MARK: - Login Timeout Configuration
@@ -325,7 +329,9 @@ public actor RemoteNodeService {
             unreadCount: existing?.unreadCount ?? 0,
             notificationLevel: existing?.notificationLevel ?? .all,
             lastRxAirtimeSeconds: existing?.lastRxAirtimeSeconds,
-            neighborCount: existing?.neighborCount ?? 0
+            neighborCount: existing?.neighborCount ?? 0,
+            lastSyncTimestamp: existing?.lastSyncTimestamp ?? 0,
+            lastMessageDate: existing?.lastMessageDate
         )
     }
 
@@ -511,8 +517,7 @@ public actor RemoteNodeService {
                 let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
                 await auditLogger.logLoginSuccess(target: targetType, publicKey: prefix, isAdmin: result.isAdmin)
 
-                let permission: RoomPermissionLevel = result.isAdmin ? .admin :
-                    (RoomPermissionLevel(rawValue: result.aclPermissions ?? 0) ?? .guest)
+                let permission = result.permissionLevel
 
                 logger.info("handleLoginResult: updating session \(remoteSession.id) isConnected=true, permission=\(permission.rawValue)")
 
@@ -535,11 +540,6 @@ public actor RemoteNodeService {
                 await sessionStateChangedHandler?(remoteSession.id, true)
 
                 keepAliveIntervals[remoteSession.id] = Self.defaultKeepAliveInterval
-
-                // Start keep-alive for room servers
-                if remoteSession.isRoom {
-                    startKeepAlive(sessionID: remoteSession.id, publicKey: remoteSession.publicKey)
-                }
             } catch {
                 logger.error("handleLoginResult: failed to update session state: \(error)")
             }
@@ -560,34 +560,32 @@ public actor RemoteNodeService {
     // MARK: - Keep-Alive (Room Servers)
 
     /// Start periodic keep-alive for a room server session.
+    /// Sends an immediate keep-alive on start (for connectivity check + sync_since update),
+    /// then continues at the configured interval.
     private func startKeepAlive(sessionID: UUID, publicKey: Data) {
         stopKeepAlive(sessionID: sessionID)
 
         let interval = keepAliveIntervals[sessionID] ?? Self.defaultKeepAliveInterval
 
-        let task = Task { [weak self] in
+        let task = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-
-                guard !Task.isCancelled else { break }
-
                 do {
-                    try await self?.sendKeepAliveIfDirectRouted(sessionID: sessionID, publicKey: publicKey)
+                    try await sendKeepAliveIfDirectRouted(sessionID: sessionID, publicKey: publicKey)
                 } catch RemoteNodeError.floodRouted {
-                    self?.logger.info("Skipping keep-alive for flood-routed session \(sessionID)")
-                    continue
+                    logger.info("Skipping keep-alive for flood-routed session \(sessionID)")
                 } catch {
-                    self?.logger.warning("Keep-alive failed for session \(sessionID): \(error)")
-                    // Mark session as disconnected so UI can show banner
-                    try? await self?.dataStore.updateRemoteNodeSessionConnection(
-                        id: sessionID,
-                        isConnected: false,
-                        permissionLevel: .guest
-                    )
-                    // Notify UI of session state change
-                    await self?.sessionStateChangedHandler?(sessionID, false)
+                    logger.warning("Keep-alive failed for session \(sessionID): \(error)")
+                    do {
+                        try await dataStore.markSessionDisconnected(sessionID)
+                    } catch {
+                        logger.error("Failed to persist disconnected state for session \(sessionID): \(error)")
+                    }
+                    await sessionStateChangedHandler?(sessionID, false)
                     break
                 }
+
+                try? await Task.sleep(for: interval)
+                guard !Task.isCancelled else { break }
             }
         }
 
@@ -621,9 +619,9 @@ public actor RemoteNodeService {
         let targetType: CommandAuditLogger.Target = remoteSession.isRoom ? .room : .repeater
         await auditLogger.logKeepAlive(target: targetType, publicKey: publicKey)
 
-        // Send status request as keep-alive
+        // Send keep-alive with sync_since for force-resync hint
         do {
-            _ = try await session.requestStatus(from: publicKey)
+            _ = try await session.sendKeepAlive(to: publicKey, syncSince: remoteSession.lastSyncTimestamp)
         } catch let error as MeshCoreError {
             throw RemoteNodeError.sessionError(error)
         }
@@ -635,6 +633,16 @@ public actor RemoteNodeService {
             throw RemoteNodeError.sessionNotFound
         }
         try await sendKeepAliveIfDirectRouted(sessionID: sessionID, publicKey: remoteSession.publicKey)
+    }
+
+    /// Start keep-alive for a room session (called when room view appears).
+    public func startSessionKeepAlive(sessionID: UUID, publicKey: Data) {
+        startKeepAlive(sessionID: sessionID, publicKey: publicKey)
+    }
+
+    /// Stop keep-alive for a room session (called when room view disappears).
+    public func stopSessionKeepAlive(sessionID: UUID) {
+        stopKeepAlive(sessionID: sessionID)
     }
 
     // MARK: - History Sync
@@ -952,47 +960,103 @@ public actor RemoteNodeService {
     /// Mark session as disconnected without sending logout.
     public func disconnect(sessionID: UUID) async {
         stopKeepAlive(sessionID: sessionID)
-        try? await dataStore.updateRemoteNodeSessionConnection(
-            id: sessionID,
-            isConnected: false,
-            permissionLevel: .guest
-        )
+        do {
+            try await dataStore.markSessionDisconnected(sessionID)
+        } catch {
+            logger.error("Failed to persist disconnected state for session \(sessionID): \(error)")
+        }
 
         // Notify UI of session state change
         await sessionStateChangedHandler?(sessionID, false)
     }
 
+    // MARK: - BLE Disconnection
+
+    /// Called when BLE connection is lost.
+    /// Marks all connected sessions as disconnected, stops keep-alive timers,
+    /// and notifies UI via `sessionStateChangedHandler`.
+    /// Returns the set of session IDs that were connected, for re-auth on reconnect.
+    public func handleBLEDisconnection() async -> Set<UUID> {
+        let connectedSessions: [RemoteNodeSessionDTO]
+        do {
+            connectedSessions = try await dataStore.fetchConnectedRemoteNodeSessions()
+        } catch {
+            logger.error("Failed to fetch connected sessions for BLE disconnection: \(error)")
+            return []
+        }
+
+        guard !connectedSessions.isEmpty else { return [] }
+
+        logger.info("BLE disconnection: marking \(connectedSessions.count) session(s) disconnected")
+        var sessionIDs: Set<UUID> = []
+
+        for session in connectedSessions {
+            sessionIDs.insert(session.id)
+            stopKeepAlive(sessionID: session.id)
+            do {
+                try await dataStore.markSessionDisconnected(session.id)
+            } catch {
+                logger.error("Failed to mark session \(session.id) disconnected: \(error)")
+            }
+            await sessionStateChangedHandler?(session.id, false)
+        }
+
+        return sessionIDs
+    }
+
     // MARK: - BLE Reconnection
 
     /// Called when BLE connection is re-established.
-    /// Re-authenticates all previously connected sessions in parallel.
-    public func handleBLEReconnection() async {
+    /// Re-authenticates sessions that were connected before BLE loss.
+    /// - Parameter sessionIDs: Session IDs from `handleBLEDisconnection()`.
+    ///   If empty (e.g., after app restart), no sessions are re-authenticated;
+    ///   the user can manually reconnect.
+    public func handleBLEReconnection(sessionIDs: Set<UUID>) async {
         guard !isReauthenticating else {
             logger.info("Skipping re-auth: already in progress")
             return
         }
 
-        guard let connectedSessions = try? await dataStore.fetchConnectedRemoteNodeSessions(),
-              !connectedSessions.isEmpty else {
-            return
+        guard !sessionIDs.isEmpty else { return }
+
+        // Fetch current session state for each ID
+        var sessionsToReauth: [RemoteNodeSessionDTO] = []
+        for id in sessionIDs {
+            if let session = try? await dataStore.fetchRemoteNodeSession(id: id) {
+                sessionsToReauth.append(session)
+            } else {
+                logger.warning("Session \(id) not found for re-auth, skipping")
+            }
         }
 
+        guard !sessionsToReauth.isEmpty else { return }
+
+        logger.info("BLE reconnection: re-authenticating \(sessionsToReauth.count) session(s)")
         isReauthenticating = true
         defer { isReauthenticating = false }
 
         await withTaskGroup(of: Void.self) { group in
-            for remoteSession in connectedSessions {
+            for remoteSession in sessionsToReauth {
                 group.addTask { [self] in
+                    let previousPermission = remoteSession.permissionLevel
                     do {
-                        _ = try await self.login(sessionID: remoteSession.id)
+                        let result = try await self.login(sessionID: remoteSession.id)
+                        let newPermission = result.permissionLevel
+                        if newPermission < previousPermission {
+                            self.logger.warning(
+                                "Re-auth returned degraded permission for session \(remoteSession.id): "
+                                + "\(previousPermission) -> \(newPermission), marking disconnected"
+                            )
+                            try? await self.dataStore.markSessionDisconnected(remoteSession.id)
+                            await self.sessionStateChangedHandler?(remoteSession.id, false)
+                        }
                     } catch {
                         self.logger.warning("Re-auth failed for session \(remoteSession.id): \(error)")
-                        try? await self.dataStore.updateRemoteNodeSessionConnection(
-                            id: remoteSession.id,
-                            isConnected: false,
-                            permissionLevel: .guest
-                        )
-                        // Notify UI of session state change
+                        do {
+                            try await self.dataStore.markSessionDisconnected(remoteSession.id)
+                        } catch {
+                            self.logger.error("Failed to persist disconnected state for session \(remoteSession.id): \(error)")
+                        }
                         await self.sessionStateChangedHandler?(remoteSession.id, false)
                     }
                 }
@@ -1010,17 +1074,4 @@ public actor RemoteNodeService {
         keepAliveTasks.removeAll()
     }
 
-    /// Resume keep-alives for all connected room sessions (call on app foreground)
-    public func resumeRoomKeepAlives() async {
-        guard let sessions = try? await dataStore.fetchConnectedRemoteNodeSessions() else {
-            logger.warning("Failed to fetch connected sessions for keepalive resume")
-            return
-        }
-
-        for session in sessions where session.isRoom {
-            startKeepAlive(sessionID: session.id, publicKey: session.publicKey)
-        }
-
-        logger.info("Resumed keepalives for \(sessions.filter { $0.isRoom }.count) room sessions")
-    }
 }

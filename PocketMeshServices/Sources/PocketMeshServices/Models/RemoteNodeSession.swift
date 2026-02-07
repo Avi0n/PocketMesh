@@ -86,6 +86,11 @@ public final class RemoteNodeSession {
     /// Value of 0 means no messages synced yet (request all).
     public var lastSyncTimestamp: UInt32
 
+    /// Device-local date of last message activity (send or receive).
+    /// Used for sorting in the chat list. Separate from lastSyncTimestamp
+    /// which tracks the sender's clock for sync purposes.
+    public var lastMessageDate: Date?
+
     public init(
         id: UUID = UUID(),
         deviceID: UUID,
@@ -105,7 +110,8 @@ public final class RemoteNodeSession {
         isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
-        lastSyncTimestamp: UInt32 = 0
+        lastSyncTimestamp: UInt32 = 0,
+        lastMessageDate: Date? = nil
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -126,6 +132,7 @@ public final class RemoteNodeSession {
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
+        self.lastMessageDate = lastMessageDate
     }
 }
 
@@ -190,6 +197,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public let lastRxAirtimeSeconds: UInt32?
     public let neighborCount: Int
     public let lastSyncTimestamp: UInt32
+    public let lastMessageDate: Date?
 
     public init(from model: RemoteNodeSession) {
         self.id = model.id
@@ -211,6 +219,11 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastRxAirtimeSeconds = model.lastRxAirtimeSeconds
         self.neighborCount = model.neighborCount
         self.lastSyncTimestamp = model.lastSyncTimestamp
+        // Backward compat: fall back to sync timestamp for pre-migration data
+        self.lastMessageDate = model.lastMessageDate
+            ?? (model.lastSyncTimestamp > 0
+                ? Date(timeIntervalSince1970: TimeInterval(model.lastSyncTimestamp))
+                : nil)
     }
 
     /// Memberwise initializer for creating DTOs directly
@@ -233,7 +246,8 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         isFavorite: Bool = false,
         lastRxAirtimeSeconds: UInt32? = nil,
         neighborCount: Int = 0,
-        lastSyncTimestamp: UInt32 = 0
+        lastSyncTimestamp: UInt32 = 0,
+        lastMessageDate: Date? = nil
     ) {
         self.id = id
         self.deviceID = deviceID
@@ -254,6 +268,7 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
         self.lastRxAirtimeSeconds = lastRxAirtimeSeconds
         self.neighborCount = neighborCount
         self.lastSyncTimestamp = lastSyncTimestamp
+        self.lastMessageDate = lastMessageDate
     }
 
     public var publicKeyPrefix: Data { publicKey.prefix(6) }
@@ -269,11 +284,4 @@ public struct RemoteNodeSessionDTO: Sendable, Equatable, Identifiable, Hashable 
     public var canPost: Bool { isRoom && permissionLevel.canPost }
 
     public var isAdmin: Bool { permissionLevel.isAdmin }
-
-    /// Converts lastSyncTimestamp to Date for sorting.
-    /// Returns nil if no messages have been synced (timestamp is 0).
-    public var lastMessageDate: Date? {
-        guard lastSyncTimestamp > 0 else { return nil }
-        return Date(timeIntervalSince1970: TimeInterval(lastSyncTimestamp))
-    }
 }

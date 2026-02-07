@@ -277,6 +277,19 @@ public protocol PersistenceStoreProtocol: Actor {
         contactName: String?
     ) async throws -> RxLogEntryDTO?
 
+    // MARK: - Room Session State
+
+    /// Mark a session as disconnected without changing permission level.
+    /// Use for transient disconnections (BLE drop, keep-alive failure, re-auth failure).
+    func markSessionDisconnected(_ sessionID: UUID) async throws
+
+    /// Mark a room session as connected. Returns true if the state actually changed.
+    @discardableResult
+    func markRoomSessionConnected(_ sessionID: UUID) async throws -> Bool
+
+    /// Update room activity timestamps (sort date and optional sync bookmark).
+    func updateRoomActivity(_ sessionID: UUID, syncTimestamp: UInt32?) async throws
+
     // MARK: - Room Message Operations
 
     /// Save a new room message
@@ -351,5 +364,10 @@ public extension PersistenceStoreProtocol {
     /// Fetch reactions with default limit of 100
     func fetchReactions(for messageID: UUID) async throws -> [ReactionDTO] {
         try await fetchReactions(for: messageID, limit: 100)
+    }
+
+    /// Update room activity with nil sync timestamp (sort date only)
+    func updateRoomActivity(_ sessionID: UUID) async throws {
+        try await updateRoomActivity(sessionID, syncTimestamp: nil)
     }
 }

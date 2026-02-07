@@ -602,8 +602,8 @@ struct PersistenceStoreTests {
         #expect(fetched?.role == .roomServer)
     }
 
-    @Test("Update room last sync timestamp")
-    func updateRoomLastSyncTimestamp() async throws {
+    @Test("Update room activity advances sync timestamp and sets lastMessageDate")
+    func updateRoomActivity() async throws {
         let store = try await createTestStore()
         let device = createTestDevice()
         try await store.saveDevice(device)
@@ -611,21 +611,26 @@ struct PersistenceStoreTests {
         let session = createTestRoomSession(deviceID: device.id)
         try await store.saveRemoteNodeSessionDTO(session)
 
-        // Update timestamp to 1000
-        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 1000)
+        // Update with sync timestamp
+        try await store.updateRoomActivity(session.id, syncTimestamp: 1000)
 
         var fetched = try await store.fetchRemoteNodeSession(id: session.id)
         #expect(fetched?.lastSyncTimestamp == 1000)
+        #expect(fetched?.lastMessageDate != nil)
 
-        // Update to higher timestamp
-        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 2000)
+        let firstDate = fetched?.lastMessageDate
+
+        // Update to higher sync timestamp
+        try await store.updateRoomActivity(session.id, syncTimestamp: 2000)
 
         fetched = try await store.fetchRemoteNodeSession(id: session.id)
         #expect(fetched?.lastSyncTimestamp == 2000)
+        #expect(fetched?.lastMessageDate != nil)
+        #expect(fetched!.lastMessageDate! >= firstDate!)
     }
 
-    @Test("Update room last sync timestamp ignores older values")
-    func updateRoomLastSyncTimestampIgnoresOlder() async throws {
+    @Test("Update room activity ignores older sync timestamps")
+    func updateRoomActivityIgnoresOlderSyncTimestamp() async throws {
         let store = try await createTestStore()
         let device = createTestDevice()
         try await store.saveDevice(device)
@@ -634,16 +639,199 @@ struct PersistenceStoreTests {
         try await store.saveRemoteNodeSessionDTO(session)
 
         // Set initial timestamp
-        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 5000)
+        try await store.updateRoomActivity(session.id, syncTimestamp: 5000)
 
         var fetched = try await store.fetchRemoteNodeSession(id: session.id)
         #expect(fetched?.lastSyncTimestamp == 5000)
 
-        // Try to update with older timestamp - should be ignored
-        try await store.updateRoomLastSyncTimestamp(session.id, timestamp: 3000)
+        // Try to update with older timestamp - sync timestamp should be ignored
+        try await store.updateRoomActivity(session.id, syncTimestamp: 3000)
 
         fetched = try await store.fetchRemoteNodeSession(id: session.id)
-        #expect(fetched?.lastSyncTimestamp == 5000)  // Should still be 5000
+        #expect(fetched?.lastSyncTimestamp == 5000)
+        // But lastMessageDate should still be updated
+        #expect(fetched?.lastMessageDate != nil)
+    }
+
+    @Test("Update room activity without sync timestamp does not change lastSyncTimestamp")
+    func updateRoomActivityWithoutSyncTimestamp() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        let session = createTestRoomSession(deviceID: device.id)
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        // Set initial sync timestamp
+        try await store.updateRoomActivity(session.id, syncTimestamp: 5000)
+
+        // Call without sync timestamp (send path)
+        try await store.updateRoomActivity(session.id)
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.lastSyncTimestamp == 5000)
+        #expect(fetched?.lastMessageDate != nil)
+    }
+
+    @Test("Mark room session connected changes isConnected and returns true")
+    func markRoomSessionConnected() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        // Create a disconnected session with admin permission
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: false,
+            permissionLevel: .admin,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        let result = try await store.markRoomSessionConnected(session.id)
+        #expect(result == true)
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.isConnected == true)
+        // Permission level must not be changed
+        #expect(fetched?.permissionLevel == .admin)
+    }
+
+    @Test("Mark room session connected returns false when already connected")
+    func markRoomSessionConnectedAlreadyConnected() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: true,
+            permissionLevel: .guest,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        let result = try await store.markRoomSessionConnected(session.id)
+        #expect(result == false)
+    }
+
+    @Test("Mark session disconnected preserves permission level")
+    func markSessionDisconnectedPreservesPermissionLevel() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: true,
+            permissionLevel: .admin,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        try await store.markSessionDisconnected(session.id)
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.isConnected == false)
+        #expect(fetched?.permissionLevel == .admin)
+    }
+
+    @Test("Mark session disconnected is no-op when already disconnected")
+    func markSessionDisconnectedAlreadyDisconnected() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: false,
+            permissionLevel: .admin,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        try await store.markSessionDisconnected(session.id)
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.isConnected == false)
+        #expect(fetched?.permissionLevel == .admin)
+    }
+
+    @Test("Disconnect then recover preserves permission level")
+    func disconnectThenRecoverPreservesPermissionLevel() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: true,
+            permissionLevel: .admin,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        try await store.markSessionDisconnected(session.id)
+        _ = try await store.markRoomSessionConnected(session.id)
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.isConnected == true)
+        #expect(fetched?.permissionLevel == .admin)
+    }
+
+    @Test("Update remote node session connection can reset permission to guest")
+    func updateRemoteNodeSessionConnectionResetsPermissionToGuest() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        var session = createTestRoomSession(deviceID: device.id)
+        session = RemoteNodeSessionDTO(
+            id: session.id,
+            deviceID: session.deviceID,
+            publicKey: session.publicKey,
+            name: session.name,
+            role: session.role,
+            isConnected: true,
+            permissionLevel: .admin,
+            lastSyncTimestamp: session.lastSyncTimestamp
+        )
+        try await store.saveRemoteNodeSessionDTO(session)
+
+        try await store.updateRemoteNodeSessionConnection(
+            id: session.id,
+            isConnected: false,
+            permissionLevel: .guest
+        )
+
+        let fetched = try await store.fetchRemoteNodeSession(id: session.id)
+        #expect(fetched?.isConnected == false)
+        #expect(fetched?.permissionLevel == .guest)
     }
 
     // MARK: - RoomMessage Tests

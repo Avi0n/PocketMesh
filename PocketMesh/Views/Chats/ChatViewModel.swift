@@ -339,7 +339,8 @@ final class ChatViewModel {
                     isFavorite: updated.isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp
+                    lastSyncTimestamp: updated.lastSyncTimestamp,
+                    lastMessageDate: updated.lastMessageDate
                 )
             }
         }
@@ -520,7 +521,8 @@ final class ChatViewModel {
                     isFavorite: isFavorite,
                     lastRxAirtimeSeconds: updated.lastRxAirtimeSeconds,
                     neighborCount: updated.neighborCount,
-                    lastSyncTimestamp: updated.lastSyncTimestamp
+                    lastSyncTimestamp: updated.lastSyncTimestamp,
+                    lastMessageDate: updated.lastMessageDate
                 )
             }
         }

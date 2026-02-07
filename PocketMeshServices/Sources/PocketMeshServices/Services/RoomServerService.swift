@@ -40,6 +40,9 @@ public actor RoomServerService {
     /// Handler for status update events (broadcasts to UI)
     public var statusUpdateHandler: (@Sendable (UUID, MessageStatus) async -> Void)?
 
+    /// Handler called when an incoming message recovers a disconnected room session
+    public var connectionRecoveryHandler: (@Sendable (UUID) async -> Void)?
+
     /// Tracks message IDs currently being retried to prevent concurrent retry attempts
     private var inFlightRetries: Set<UUID> = []
 
@@ -73,6 +76,11 @@ public actor RoomServerService {
     /// Set handler for status update events
     public func setStatusUpdateHandler(_ handler: @escaping @Sendable (UUID, MessageStatus) async -> Void) {
         statusUpdateHandler = handler
+    }
+
+    /// Set handler for connection recovery events
+    public func setConnectionRecoveryHandler(_ handler: @escaping @Sendable (UUID) async -> Void) {
+        connectionRecoveryHandler = handler
     }
 
     // MARK: - Room Management
@@ -250,21 +258,24 @@ public actor RoomServerService {
                     }
                     await statusUpdateHandler?(messageID, .delivered)
                 } else {
-                    // All retries exhausted
+                    // All retries exhausted — radio transmitted but no ACK received.
+                    // Mark as sent (not failed) since the message likely reached the room server.
                     do {
                         try await dataStore.updateRoomMessageStatus(
                             id: messageID,
-                            status: .failed,
+                            status: .sent,
                             ackCode: nil,
                             roundTripTime: nil
                         )
                     } catch {
-                        logger.error("Failed to update message status to failed: \(error)")
+                        logger.error("Failed to update message status to sent: \(error)")
                     }
-                    await statusUpdateHandler?(messageID, .failed)
+                    await statusUpdateHandler?(messageID, .sent)
                 }
+                // Update sort date only (no sync bookmark — avoids clock skew issues)
+                try? await dataStore.updateRoomActivity(sessionID)
             } catch {
-                // Send failed with error
+                // Send failed with error — do not update activity
                 do {
                     try await dataStore.updateRoomMessageStatus(
                         id: messageID,
@@ -278,9 +289,6 @@ public actor RoomServerService {
                 await statusUpdateHandler?(messageID, .failed)
                 logger.warning("Room message send failed: \(error)")
             }
-
-            // Update sync timestamp with our own message's timestamp
-            try? await dataStore.updateRoomLastSyncTimestamp(sessionID, timestamp: messageDTO.timestamp)
         }
 
         // Return pending message immediately so UI can display it
@@ -328,7 +336,7 @@ public actor RoomServerService {
             let sentInfo = try await session.sendMessageWithRetry(
                 to: remoteSession.publicKey,  // Full 32-byte key required
                 text: message.text,
-                timestamp: message.date,
+                timestamp: Date(),
                 maxAttempts: config.maxAttempts,
                 floodAfter: config.floodAfter,
                 maxFloodAttempts: config.maxFloodAttempts
@@ -348,18 +356,22 @@ public actor RoomServerService {
                 }
                 await statusUpdateHandler?(id, .delivered)
             } else {
+                // All retries exhausted — radio transmitted but no ACK received.
+                // Mark as sent (not failed) since the message likely reached the room server.
                 do {
                     try await dataStore.updateRoomMessageStatus(
                         id: id,
-                        status: .failed,
+                        status: .sent,
                         ackCode: nil,
                         roundTripTime: nil
                     )
                 } catch {
-                    logger.error("Failed to update message status to failed: \(error)")
+                    logger.error("Failed to update message status to sent: \(error)")
                 }
-                await statusUpdateHandler?(id, .failed)
+                await statusUpdateHandler?(id, .sent)
             }
+            // Update sort date so room moves to top of conversation list
+            try? await dataStore.updateRoomActivity(message.sessionID)
         } catch {
             do {
                 try await dataStore.updateRoomMessageStatus(
@@ -411,6 +423,14 @@ public actor RoomServerService {
             return nil  // Not from a known room
         }
 
+        // Receiving any message (even duplicate) proves session is active
+        if !remoteSession.isConnected {
+            let recovered = (try? await dataStore.markRoomSessionConnected(remoteSession.id)) ?? false
+            if recovered {
+                await connectionRecoveryHandler?(remoteSession.id)
+            }
+        }
+
         // Generate deduplication key
         let dedupKey = RoomMessage.generateDeduplicationKey(
             timestamp: timestamp,
@@ -452,8 +472,8 @@ public actor RoomServerService {
 
         try await dataStore.saveRoomMessage(messageDTO)
 
-        // Update last sync timestamp to track sync progress
-        try await dataStore.updateRoomLastSyncTimestamp(remoteSession.id, timestamp: timestamp)
+        // Update sync bookmark and sort date
+        try await dataStore.updateRoomActivity(remoteSession.id, syncTimestamp: timestamp)
 
         // Increment unread count if not from self
         if !isFromSelf {

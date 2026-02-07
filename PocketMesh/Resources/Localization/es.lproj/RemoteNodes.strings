@@ -384,6 +384,9 @@
 /* Location: RoomConversationView.swift - Read-only banner */
 "remoteNodes.room.viewOnlyBanner" = "Solo vista - únete como miembro para publicar";
 
+/* Location: RoomConversationView.swift - Hint text for read-only banner */
+"remoteNodes.room.viewOnlyHint" = "Tap to log in";
+
 /* Location: RoomConversationView.swift - Room info sheet title */
 "remoteNodes.room.infoTitle" = "Info de la sala";
 
@@ -415,7 +418,7 @@
 "remoteNodes.room.disconnectedBanner" = "Disconnected";
 
 /* Location: RoomConversationView.swift - Accessibility hint for disconnected banner */
-"remoteNodes.room.disconnectedHint" = "Return to chat list to reconnect";
+"remoteNodes.room.disconnectedHint" = "Tap to reconnect";
 
 // MARK: - Shared
 

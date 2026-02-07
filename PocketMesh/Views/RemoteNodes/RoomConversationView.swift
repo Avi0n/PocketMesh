@@ -5,11 +5,13 @@ import PocketMeshServices
 struct RoomConversationView: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var session: RemoteNodeSessionDTO
     @State private var viewModel = RoomConversationViewModel()
     @State private var chatViewModel = ChatViewModel()
     @State private var showingRoomInfo = false
+    @State private var roomToAuthenticate: RemoteNodeSessionDTO?
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
@@ -32,21 +34,27 @@ struct RoomConversationView: View {
                     readOnlyBanner
                 }
             }
+            .animation(.default, value: session.isConnected)
             .ignoreKeyboardOnIPad()
             .environment(keyboardObserver)
             .navigationHeader(title: session.name, subtitle: connectionStatus)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
+                    Button(L10n.RemoteNodes.RemoteNodes.Room.infoTitle, systemImage: "info.circle") {
                         showingRoomInfo = true
-                    } label: {
-                        Image(systemName: "info.circle")
                     }
                 }
             }
             .sheet(isPresented: $showingRoomInfo) {
                 RoomInfoSheet(session: session)
                     .environment(\.chatViewModel, chatViewModel)
+            }
+            .sheet(item: $roomToAuthenticate) { sessionToAuth in
+                RoomAuthenticationSheet(session: sessionToAuth) { authenticatedSession in
+                    roomToAuthenticate = nil
+                    session = authenticatedSession
+                }
+                .presentationSizing(.page)
             }
             .task {
                 viewModel.configure(appState: appState)
@@ -81,6 +89,35 @@ struct RoomConversationView: View {
             }
             .refreshable {
                 await viewModel.refreshMessages()
+            }
+            .task(id: session.isConnected) {
+                guard session.isConnected else { return }
+                await appState.services?.remoteNodeService.startSessionKeepAlive(
+                    sessionID: session.id, publicKey: session.publicKey
+                )
+            }
+            .onChange(of: session.isConnected) { _, isConnected in
+                if isConnected {
+                    AccessibilityNotification.Announcement(
+                        L10n.RemoteNodes.RemoteNodes.Room.reconnected
+                    ).post()
+                }
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active, session.isConnected {
+                    Task {
+                        await appState.services?.remoteNodeService.startSessionKeepAlive(
+                            sessionID: session.id, publicKey: session.publicKey
+                        )
+                    }
+                }
+            }
+            .onDisappear {
+                Task {
+                    await appState.services?.remoteNodeService.stopSessionKeepAlive(
+                        sessionID: session.id
+                    )
+                }
             }
     }
 
@@ -177,31 +214,57 @@ struct RoomConversationView: View {
     }
 
     private var readOnlyBanner: some View {
-        HStack {
-            Image(systemName: "eye")
-            Text(L10n.RemoteNodes.RemoteNodes.Room.viewOnlyBanner)
-        }
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(.bar)
+        RoomStatusBanner(
+            icon: "eye",
+            title: L10n.RemoteNodes.RemoteNodes.Room.viewOnlyBanner,
+            hint: L10n.RemoteNodes.RemoteNodes.Room.viewOnlyHint,
+            style: AnyShapeStyle(.secondary),
+            isBold: false,
+            action: { roomToAuthenticate = session }
+        )
     }
 
     private var disconnectedBanner: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-            Text(L10n.RemoteNodes.RemoteNodes.Room.disconnectedBanner)
+        RoomStatusBanner(
+            icon: "exclamationmark.triangle.fill",
+            title: L10n.RemoteNodes.RemoteNodes.Room.disconnectedBanner,
+            hint: L10n.RemoteNodes.RemoteNodes.Room.disconnectedHint,
+            style: AnyShapeStyle(.orange),
+            isBold: true,
+            action: { roomToAuthenticate = session }
+        )
+    }
+}
+
+// MARK: - Room Status Banner
+
+private struct RoomStatusBanner: View {
+    let icon: String
+    let title: String
+    let hint: String
+    let style: AnyShapeStyle
+    let isBold: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                HStack {
+                    Image(systemName: icon)
+                    Text(title)
+                }
+                .bold(isBold)
+                Text(hint)
+                    .font(.caption)
+            }
+            .font(.subheadline)
+            .foregroundStyle(style)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(.bar)
         }
-        .font(.subheadline)
-        .bold()
-        .foregroundStyle(.orange)
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(.bar)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Room.disconnectedBanner)
-        .accessibilityHint(L10n.RemoteNodes.RemoteNodes.Room.disconnectedHint)
+        .accessibilityLabel(title)
+        .accessibilityHint(hint)
     }
 }
 

@@ -279,6 +279,11 @@ public final class ConnectionManager {
     /// Note: @Sendable @MainActor ensures safe cross-isolation callback
     public var onResyncFailed: (@Sendable @MainActor () -> Void)?
 
+    /// Session IDs that need re-authentication after BLE reconnect.
+    /// Populated by `handleBLEDisconnection()`, consumed by `rebuildSession()`.
+    /// Empty after app restart, so rooms show "Tap to reconnect" instead of auto-connecting.
+    private var sessionsAwaitingReauth: Set<UUID> = []
+
     // MARK: - Persistence Keys
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
@@ -418,6 +423,12 @@ public final class ConnectionManager {
         stopWiFiHeartbeat()
 
         cancelResyncLoop()
+
+        // Mark room sessions disconnected before tearing down services
+        let remoteNodeService = services?.remoteNodeService
+        if let remoteNodeService {
+            _ = await remoteNodeService.handleBLEDisconnection()
+        }
 
         // Reset sync state before destroying services to prevent stuck "Syncing" pill
         if let services {
@@ -1120,6 +1131,13 @@ public final class ConnectionManager {
         case .resyncFailed, .wifiAddressChange, .wifiReconnectPrep, .pairingFailed:
             // Preserve .wantsConnection so health check can retry
             break
+        }
+
+        // Mark room sessions disconnected before tearing down services
+        let remoteNodeService = services?.remoteNodeService
+        if let remoteNodeService {
+            _ = await remoteNodeService.handleBLEDisconnection()
+            sessionsAwaitingReauth = []
         }
 
         // Stop event monitoring
@@ -1834,6 +1852,12 @@ public final class ConnectionManager {
 
         cancelResyncLoop()
 
+        // Mark room sessions disconnected before tearing down services
+        let remoteNodeService = services?.remoteNodeService
+        if let remoteNodeService {
+            _ = await remoteNodeService.handleBLEDisconnection()
+        }
+
         await services?.stopEventMonitoring()
         connectionState = .disconnected
         connectedDevice = nil
@@ -1876,6 +1900,12 @@ public final class ConnectionManager {
     }
 
     func teardownSessionForReconnect() async {
+        // Mark room sessions disconnected before tearing down services.
+        let remoteNodeService = services?.remoteNodeService
+        if let remoteNodeService {
+            sessionsAwaitingReauth = await remoteNodeService.handleBLEDisconnection()
+        }
+
         await services?.stopEventMonitoring()
         cancelResyncLoop()
 
@@ -1964,6 +1994,11 @@ public final class ConnectionManager {
 
         // User may have disconnected while sync was in progress
         guard connectionIntent.wantsConnection else { return }
+
+        // Re-authenticate room sessions that were connected before BLE loss
+        let sessionIDs = sessionsAwaitingReauth
+        sessionsAwaitingReauth = []
+        await newServices.remoteNodeService.handleBLEReconnection(sessionIDs: sessionIDs)
 
         currentTransportType = .bluetooth
         connectionState = .ready

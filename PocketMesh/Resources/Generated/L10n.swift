@@ -2193,6 +2193,8 @@ public enum L10n {
         public static let status = L10n.tr("RemoteNodes", "remoteNodes.room.status", fallback: "Status")
         /// Location: RoomConversationView.swift - Read-only banner
         public static let viewOnlyBanner = L10n.tr("RemoteNodes", "remoteNodes.room.viewOnlyBanner", fallback: "View only - join as member to post")
+        /// Location: RoomConversationView.swift - Hint text for read-only banner
+        public static let viewOnlyHint = L10n.tr("RemoteNodes", "remoteNodes.room.viewOnlyHint", fallback: "Tap to log in")
       }
       public enum Settings {
         /// Location: RepeaterSettingsView.swift - Advert interval (0-hop) label
