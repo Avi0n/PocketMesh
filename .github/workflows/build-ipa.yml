@@ -71,6 +71,7 @@ jobs:
       - name: Update acknowledgements
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
+          mkdir -p PocketMesh.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
           xcodebuild -resolvePackageDependencies -project PocketMesh.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages
           swift-package-list PocketMesh.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path PocketMesh
           rm -rf SourcePackages
