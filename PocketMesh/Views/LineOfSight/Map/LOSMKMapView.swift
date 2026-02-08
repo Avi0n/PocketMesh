@@ -10,6 +10,7 @@ struct LOSMKMapView: UIViewRepresentable {
     let repeaterTarget: RepeaterPoint?
     let relocatingPoint: PointID?
     let mapType: MKMapType
+    let showLabels: Bool
 
     @Binding var cameraRegion: MKCoordinateRegion?
     let cameraRegionVersion: Int
@@ -74,6 +75,7 @@ struct LOSMKMapView: UIViewRepresentable {
         coordinator.onRepeaterTap = onRepeaterTap
         coordinator.onMapTap = onMapTap
         coordinator.relocatingPoint = relocatingPoint
+        coordinator.showLabels = showLabels
 
         // Update map type
         mapView.mapType = mapType
@@ -110,7 +112,9 @@ struct LOSMKMapView: UIViewRepresentable {
            let region = cameraRegion {
             coordinator.lastAppliedRegionVersion = cameraRegionVersion
             coordinator.hasPendingProgrammaticRegion = true
-            mapView.setRegion(region, animated: coordinator.lastAppliedRegion != nil)
+            let animated = coordinator.lastAppliedRegion != nil
+            mapView.setRegion(region, animated: animated)
+
             coordinator.lastAppliedRegion = region
         }
     }
@@ -279,7 +283,7 @@ struct LOSMKMapView: UIViewRepresentable {
                 let info = selectionState[repeaterAnnotation.repeater.id]
                 let selectedAs = info?.selectedAs
                 let opacity = coordinator.markerOpacity(for: selectedAs)
-                view.configure(selectedAs: selectedAs, opacity: opacity)
+                view.configure(selectedAs: selectedAs, opacity: opacity, showLabel: coordinator.showLabels)
             }
 
             if let pointAnnotation = annotation as? LOSPointAnnotation,
@@ -317,6 +321,7 @@ struct LOSMKMapView: UIViewRepresentable {
         var onRepeaterTap: ((ContactDTO) -> Void)?
         var onMapTap: ((CLLocationCoordinate2D) -> Void)?
         var relocatingPoint: PointID?
+        var showLabels = true
 
         var isUpdatingFromSwiftUI = false
         var lastAppliedRegion: MKCoordinateRegion?
@@ -388,7 +393,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
                 let info = selectionState[repeaterAnnotation.repeater.id]
                 let selectedAs = info?.selectedAs
-                view.configure(selectedAs: selectedAs, opacity: markerOpacity(for: selectedAs))
+                view.configure(selectedAs: selectedAs, opacity: markerOpacity(for: selectedAs), showLabel: showLabels)
 
                 view.onTap = { [weak self] in
                     self?.onRepeaterTap?(repeaterAnnotation.repeater)

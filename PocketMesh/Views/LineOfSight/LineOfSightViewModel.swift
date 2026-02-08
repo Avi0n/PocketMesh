@@ -286,23 +286,41 @@ final class LineOfSightViewModel {
         setCameraRegion(fitting: coordinates)
     }
 
-    func zoomToShowBothPoints() {
+    func zoomToShowBothPoints(bottomInsetFraction: Double = 0) {
         guard let pointA, let pointB else { return }
-        setCameraRegion(fitting: [pointA.coordinate, pointB.coordinate])
+        setCameraRegion(
+            fitting: [pointA.coordinate, pointB.coordinate],
+            bottomInsetFraction: bottomInsetFraction
+        )
     }
 
-    private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D], paddingMultiplier: Double = 1.5) {
+    private func setCameraRegion(
+        fitting coordinates: [CLLocationCoordinate2D],
+        paddingMultiplier: Double = 1.5,
+        bottomInsetFraction: Double = 0
+    ) {
         guard !coordinates.isEmpty else { return }
         let lats = coordinates.map(\.latitude)
         let lons = coordinates.map(\.longitude)
         let latDelta = max(0.01, (lats.max()! - lats.min()!) * paddingMultiplier)
         let lonDelta = max(0.01, (lons.max()! - lons.min()!) * paddingMultiplier)
+
+        var centerLat = (lats.min()! + lats.max()!) / 2
+        var adjustedLatDelta = latDelta
+
+        // Expand region south so content fits above the bottom sheet
+        if bottomInsetFraction > 0, bottomInsetFraction < 1 {
+            let southExtra = latDelta * bottomInsetFraction / (1 - bottomInsetFraction)
+            adjustedLatDelta = latDelta + southExtra
+            centerLat -= southExtra / 2
+        }
+
         cameraRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(
-                latitude: (lats.min()! + lats.max()!) / 2,
+                latitude: centerLat,
                 longitude: (lons.min()! + lons.max()!) / 2
             ),
-            span: MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
+            span: MKCoordinateSpan(latitudeDelta: adjustedLatDelta, longitudeDelta: lonDelta)
         )
         cameraRegionVersion += 1
     }

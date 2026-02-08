@@ -18,6 +18,8 @@ final class LOSRepeaterPinView: MKAnnotationView {
     private let triangleImageView = UIImageView()
     private let selectionRing = UIView()
     private var pointBadge: UILabel?
+    private var nameLabel: UILabel?
+    private var nameLabelContainer: UIView?
 
     // MARK: - Initialization
 
@@ -110,7 +112,7 @@ final class LOSRepeaterPinView: MKAnnotationView {
 
     // MARK: - Configuration
 
-    func configure(selectedAs: PointID?, opacity: CGFloat) {
+    func configure(selectedAs: PointID?, opacity: CGFloat, showLabel: Bool = false) {
         let isSelected = selectedAs != nil
 
         // Clustering: selected pins always visible, others cluster
@@ -133,6 +135,13 @@ final class LOSRepeaterPinView: MKAnnotationView {
         }
 
         alpha = opacity
+
+        // Name label
+        if showLabel, let repeaterAnnotation = annotation as? LOSRepeaterAnnotation {
+            showNameLabel(repeaterAnnotation.repeater.displayName)
+        } else {
+            hideNameLabel()
+        }
 
         // Accessibility
         isAccessibilityElement = true
@@ -185,6 +194,51 @@ final class LOSRepeaterPinView: MKAnnotationView {
         pointBadge?.isHidden = true
     }
 
+    // MARK: - Name Label
+
+    private func showNameLabel(_ name: String) {
+        if nameLabelContainer == nil {
+            let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
+            blur.translatesAutoresizingMaskIntoConstraints = false
+            blur.layer.cornerRadius = 8
+            blur.clipsToBounds = true
+
+            let label = UILabel()
+            label.translatesAutoresizingMaskIntoConstraints = false
+            let baseFont = UIFont.systemFont(
+                ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize,
+                weight: .medium
+            )
+            label.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
+            label.adjustsFontForContentSizeCategory = true
+            label.textColor = .label
+            label.textAlignment = .center
+            blur.contentView.addSubview(label)
+
+            addSubview(blur)
+
+            NSLayoutConstraint.activate([
+                label.topAnchor.constraint(equalTo: blur.contentView.topAnchor, constant: 4),
+                label.bottomAnchor.constraint(equalTo: blur.contentView.bottomAnchor, constant: -4),
+                label.leadingAnchor.constraint(equalTo: blur.contentView.leadingAnchor, constant: 8),
+                label.trailingAnchor.constraint(equalTo: blur.contentView.trailingAnchor, constant: -8),
+
+                blur.centerXAnchor.constraint(equalTo: circleView.centerXAnchor),
+                blur.bottomAnchor.constraint(equalTo: circleView.topAnchor, constant: -4),
+            ])
+
+            nameLabelContainer = blur
+            nameLabel = label
+        }
+
+        nameLabel?.text = name
+        nameLabelContainer?.isHidden = false
+    }
+
+    private func hideNameLabel() {
+        nameLabelContainer?.isHidden = true
+    }
+
     // MARK: - Reuse
 
     override func prepareForReuse() {
@@ -192,6 +246,7 @@ final class LOSRepeaterPinView: MKAnnotationView {
         onTap = nil
         selectionRing.isHidden = true
         hidePointBadge()
+        hideNameLabel()
         alpha = 1.0
         accessibilityLabel = nil
         clusteringIdentifier = Self.clusteringID

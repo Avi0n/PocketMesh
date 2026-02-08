@@ -69,6 +69,7 @@ struct LineOfSightView: View {
     @State private var isResultsExpanded = false
     @State private var isRFSettingsExpanded = false
     @State private var showingMapStyleMenu = false
+    @State private var showLabels = true
     @State private var copyHapticTrigger = 0
     @ScaledMetric(relativeTo: .body) private var iconButtonSize: CGFloat = 16
 
@@ -336,6 +337,11 @@ struct LineOfSightView: View {
 
     // MARK: - Map Layer
 
+    private var collapsedSheetFraction: Double {
+        guard showAnalysisSheet else { return 0 }
+        return 0.30
+    }
+
     private var mapLayer: some View {
         LOSMKMapView(
             repeaters: viewModel.repeatersWithLocation,
@@ -344,6 +350,7 @@ struct LineOfSightView: View {
             repeaterTarget: viewModel.repeaterPoint,
             relocatingPoint: viewModel.relocatingPoint,
             mapType: mapStyleSelection.mkMapType,
+            showLabels: showLabels,
             cameraRegion: $viewModel.cameraRegion,
             cameraRegionVersion: viewModel.cameraRegionVersion,
             selectionState: { [viewModel] in viewModel.selectionState },
@@ -373,8 +380,23 @@ struct LineOfSightView: View {
             },
             showingLayersMenu: $showingMapStyleMenu
         ) {
+            labelToggleButton
             dropPinButton
         }
+    }
+
+    private var labelToggleButton: some View {
+        Button {
+            showLabels.toggle()
+        } label: {
+            Image(systemName: "character.textbox")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(showLabels ? .blue : .primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
     }
 
     private var dropPinButton: some View {
@@ -1207,17 +1229,15 @@ struct LineOfSightView: View {
                     sheetDetent = analysisSheetDetentExpanded
                 }
             }
-            if viewModel.shouldAutoZoomOnNextResult {
-                viewModel.shouldAutoZoomOnNextResult = false
-                viewModel.zoomToShowBothPoints()
-            }
         case .relayResult:
-            if viewModel.shouldAutoZoomOnNextResult {
-                viewModel.shouldAutoZoomOnNextResult = false
-                viewModel.zoomToShowBothPoints()
-            }
-        default:
             break
+        default:
+            return
+        }
+
+        if viewModel.shouldAutoZoomOnNextResult {
+            viewModel.shouldAutoZoomOnNextResult = false
+            viewModel.zoomToShowBothPoints(bottomInsetFraction: collapsedSheetFraction)
         }
     }
 
