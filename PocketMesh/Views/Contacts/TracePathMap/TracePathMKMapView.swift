@@ -180,10 +180,7 @@ struct TracePathMKMapView: UIViewRepresentable {
         /// Pending region update task for cancellation
         private var pendingRegionTask: Task<Void, Never>?
 
-        lazy var mapView: MKMapView = {
-            let map = MKMapView()
-            return map
-        }()
+        lazy var mapView: MKMapView = NoDoubleTapMapView()
 
         init(setCameraRegion: @escaping (MKCoordinateRegion?) -> Void) {
             self.setCameraRegion = setCameraRegion
