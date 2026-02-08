@@ -34,7 +34,7 @@ struct ContentView: View {
                 Button(L10n.Localizable.Common.tryAgain) {
                     Task {
                         if let deviceID = appState.pendingReconnectDeviceID {
-                            try? await appState.connectionManager.connect(to: deviceID)
+                            try? await appState.connectionManager.connect(to: deviceID, forceReconnect: true)
                         }
                     }
                 }

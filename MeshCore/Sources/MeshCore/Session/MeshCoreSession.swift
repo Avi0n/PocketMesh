@@ -613,26 +613,64 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         let events = await dispatcher.subscribe()
         try await transport.send(data)
 
-        var receivedContacts: [MeshContact] = []
+        // Manual timeout pattern (not withTimeout) because:
+        // 1. Uses injected clock for testability
+        // 2. Throws MeshCoreError.timeout for consistency with other session methods
+        // 3. Defers contactManager mutations until after the task group
+        //    to avoid actor-isolation issues in the @Sendable closure.
+        let (contacts, modifiedDate): ([MeshContact], Date?) = try await withThrowingTaskGroup(
+            of: ([MeshContact], Date?).self
+        ) { group in
+            group.addTask {
+                var receivedContacts: [MeshContact] = []
+                var finalModifiedDate: Date?
 
-        for await event in events {
-            switch event {
-            case .contactsStart(let count):
-                receivedContacts.reserveCapacity(count)
-            case .contact(let contact):
-                receivedContacts.append(contact)
-                contactManager.store(contact)
-            case .contactsEnd(let modifiedDate):
-                contactManager.markClean(lastModified: modifiedDate)
-                return receivedContacts
-            case .error(let code):
-                throw MeshCoreError.deviceError(code: code ?? 0)
-            default:
-                continue
+                for await event in events {
+                    if Task.isCancelled {
+                        throw CancellationError()
+                    }
+
+                    switch event {
+                    case .contactsStart(let count):
+                        receivedContacts.reserveCapacity(count)
+                    case .contact(let contact):
+                        receivedContacts.append(contact)
+                    case .contactsEnd(let modifiedDate):
+                        finalModifiedDate = modifiedDate
+                        return (receivedContacts, finalModifiedDate)
+                    case .error(let code):
+                        throw MeshCoreError.deviceError(code: code ?? 0)
+                    default:
+                        continue
+                    }
+                }
+
+                throw MeshCoreError.timeout
             }
+
+            group.addTask { [clock = self.clock] in
+                try await clock.sleep(for: .seconds(60))
+                throw MeshCoreError.timeout
+            }
+
+            defer { group.cancelAll() }
+
+            guard let result = try await group.next() else {
+                throw MeshCoreError.timeout
+            }
+
+            return result
         }
 
-        throw MeshCoreError.timeout
+        // Update contact manager on the actor after the race completes
+        for contact in contacts {
+            contactManager.store(contact)
+        }
+        if let modifiedDate {
+            contactManager.markClean(lastModified: modifiedDate)
+        }
+
+        return contacts
     }
 
     /// Fetches a single contact from the device by public key.

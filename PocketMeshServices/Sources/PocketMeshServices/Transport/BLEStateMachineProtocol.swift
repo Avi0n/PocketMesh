@@ -49,4 +49,8 @@ public protocol BLEStateMachineProtocol: Actor {
 
     /// Sets the delay between write operations for pacing.
     func setWritePacingDelay(_ delay: TimeInterval)
+
+    /// Gracefully shuts down the state machine, resuming all pending operations.
+    /// Call before dropping the last reference to the actor.
+    func shutdown()
 }

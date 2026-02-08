@@ -1,6 +1,15 @@
 {
-  "originHash" : "7102575be6b54dd064d1c7542a11ed3c6eb83fc995eabb3306cebbe2205adfa3",
+  "originHash" : "28b821da60a0715db9c9afdb1718e38d1d4ba0388f44454b0d41b609a566ff33",
   "pins" : [
+    {
+      "identity" : "emojibase-bindings",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/matrix-org/emojibase-bindings",
+      "state" : {
+        "revision" : "d1ed54c3bf63caa8fb48a30e16e465ac148f26f6",
+        "version" : "1.5.0"
+      }
+    },
     {
       "identity" : "swift-docc-plugin",
       "kind" : "remoteSourceControl",

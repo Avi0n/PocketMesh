@@ -14,13 +14,20 @@ final class BLEReconnectionCoordinator {
 
     weak var delegate: BLEReconnectionDelegate?
 
+    /// The device ID currently being auto-reconnected, used to reject completions
+    /// for a stale device when the user has manually connected to a different one.
+    private(set) var reconnectingDeviceID: UUID?
+
     private var timeoutTask: Task<Void, Never>?
+
+    /// Incremented each time a reconnection cycle starts, used to detect stale retries.
+    private var reconnectGeneration = 0
 
     /// UI timeout duration before transitioning from "connecting" to "disconnected".
     /// iOS auto-reconnect continues in the background even after this fires.
     private let uiTimeoutDuration: TimeInterval
 
-    init(uiTimeoutDuration: TimeInterval = 10) {
+    init(uiTimeoutDuration: TimeInterval = 15) {
         self.uiTimeoutDuration = uiTimeoutDuration
     }
 
@@ -35,11 +42,15 @@ final class BLEReconnectionCoordinator {
             return
         }
 
+        // C3 fix: set connecting state BEFORE awaiting teardown so that
+        // handleReconnectionComplete() sees .connecting even if it runs
+        // during the teardown await.
+        delegate.setConnectionState(.connecting)
+        reconnectingDeviceID = deviceID
+        reconnectGeneration += 1
+
         // Tear down session layer (it's invalid now)
         await delegate.teardownSessionForReconnect()
-
-        // Show "connecting" state with pulsing blue icon
-        delegate.setConnectionState(.connecting)
 
         // Start UI timeout
         cancelTimeout()
@@ -55,13 +66,23 @@ final class BLEReconnectionCoordinator {
     func handleReconnectionComplete(deviceID: UUID) async {
         guard let delegate else { return }
 
-        cancelTimeout()
-
         guard delegate.connectionIntent.wantsConnection else {
+            cancelTimeout()
             logger.info("Ignoring reconnection: user disconnected")
+            reconnectingDeviceID = nil
             await delegate.disconnectTransport()
             return
         }
+
+        // Reject stale device completions without canceling the active timeout,
+        // so the current reconnect retains its timeout fallback
+        if let expectedID = reconnectingDeviceID, expectedID != deviceID {
+            logger.warning("[BLE] Ignoring auto-reconnect completion for \(deviceID.uuidString.prefix(8)): expecting \(expectedID.uuidString.prefix(8))")
+            return
+        }
+
+        // This completion is for our device — safe to cancel timeout
+        cancelTimeout()
 
         // Accept both disconnected (normal) and connecting (auto-reconnect in progress)
         let state = delegate.connectionState
@@ -70,13 +91,29 @@ final class BLEReconnectionCoordinator {
             return
         }
 
+        reconnectGeneration += 1
+        let expectedGeneration = reconnectGeneration
+
+        reconnectingDeviceID = nil
         delegate.setConnectionState(.connecting)
 
         do {
             try await delegate.rebuildSession(deviceID: deviceID)
         } catch {
-            logger.error("[BLE] Auto-reconnect session rebuild failed: \(error.localizedDescription)")
-            await delegate.handleReconnectionFailure()
+            logger.warning("[BLE] Auto-reconnect session rebuild failed: \(error.localizedDescription) - retrying in 2s")
+            await retryRebuild(deviceID: deviceID, expectedGeneration: expectedGeneration)
+        }
+    }
+
+    /// Restarts the UI timeout without tearing down the session.
+    /// Used when user taps Connect while iOS auto-reconnect is already in progress.
+    func restartTimeout(deviceID: UUID) {
+        reconnectingDeviceID = deviceID
+        cancelTimeout()
+        timeoutTask = Task { [weak self, uiTimeoutDuration] in
+            try? await Task.sleep(for: .seconds(uiTimeoutDuration))
+            guard !Task.isCancelled, let self else { return }
+            await self.handleUITimeout(deviceID: deviceID)
         }
     }
 
@@ -86,9 +123,41 @@ final class BLEReconnectionCoordinator {
         timeoutTask = nil
     }
 
+    /// Clears the reconnecting device ID, used when manual connect supersedes auto-reconnect.
+    func clearReconnectingDevice() {
+        reconnectingDeviceID = nil
+    }
+
+    /// Retries a failed session rebuild after a short delay, aborting if the reconnect
+    /// generation has changed or the user disconnected during the wait.
+    private func retryRebuild(deviceID: UUID, expectedGeneration: Int) async {
+        guard let delegate else { return }
+
+        try? await Task.sleep(for: .seconds(2))
+
+        guard expectedGeneration == reconnectGeneration else {
+            logger.info("New reconnect cycle started during rebuild retry delay - aborting stale retry")
+            return
+        }
+        guard delegate.connectionIntent.wantsConnection else {
+            logger.info("User disconnected during rebuild retry delay")
+            await delegate.handleReconnectionFailure()
+            return
+        }
+
+        do {
+            try await delegate.rebuildSession(deviceID: deviceID)
+            logger.info("[BLE] Auto-reconnect session rebuild succeeded on retry")
+        } catch {
+            logger.error("[BLE] Auto-reconnect session rebuild failed on retry: \(error.localizedDescription)")
+            await delegate.handleReconnectionFailure()
+        }
+    }
+
     private func handleUITimeout(deviceID: UUID) async {
         guard let delegate, delegate.connectionState == .connecting else { return }
 
+        reconnectingDeviceID = nil
         logger.warning(
             "[BLE] Auto-reconnect UI timeout (\(uiTimeoutDuration)s) fired - transitioning UI to disconnected (iOS reconnect continues in background)"
         )

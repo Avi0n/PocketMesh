@@ -14,6 +14,8 @@ extension WiFiTransportError: @retroactive LocalizedError {
             "Not connected to device."
         case .sendFailed(let reason):
             "Failed to send data: \(reason)"
+        case .sendTimeout:
+            "Send operation timed out."
         case .invalidHost:
             "Invalid IP address."
         case .invalidPort:

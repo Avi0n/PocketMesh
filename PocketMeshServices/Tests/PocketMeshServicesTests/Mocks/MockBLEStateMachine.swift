@@ -67,6 +67,12 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         // No-op for testing
     }
 
+    public private(set) var shutdownCallCount = 0
+
+    public func shutdown() {
+        shutdownCallCount += 1
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all stubs and recorded invocations

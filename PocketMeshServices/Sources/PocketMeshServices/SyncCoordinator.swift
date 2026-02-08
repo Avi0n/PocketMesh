@@ -110,6 +110,10 @@ public actor SyncCoordinator {
     /// and error path would otherwise call onSyncActivityEnded).
     private var hasEndedSyncActivity = true
 
+    /// Watchdog task that force-clears notification suppression after 120s.
+    /// Prevents stuck suppression if sync completes abnormally without clearing it.
+    private var suppressionWatchdogTask: Task<Void, Never>?
+
     /// Callback when sync phase changes (for SwiftUI observation)
     /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
     nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
@@ -196,7 +200,29 @@ public actor SyncCoordinator {
     private func endSyncActivityOnce() async {
         guard !hasEndedSyncActivity else { return }
         hasEndedSyncActivity = true
+        logger.info("[Sync] Calling onSyncActivityEnded")
         await onSyncActivityEnded?()
+    }
+
+    // MARK: - Notification Suppression Watchdog
+
+    private func startSuppressionWatchdog(services: ServiceContainer) {
+        suppressionWatchdogTask?.cancel()
+        suppressionWatchdogTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(120))
+            guard !Task.isCancelled, let self else { return }
+            let isSuppressing = await services.notificationService.isSuppressingNotifications
+            guard isSuppressing else { return }
+            self.logger.warning("[Sync] Notification suppression watchdog fired after 120s - force clearing")
+            await MainActor.run {
+                services.notificationService.isSuppressingNotifications = false
+            }
+        }
+    }
+
+    private func cancelSuppressionWatchdog() {
+        suppressionWatchdogTask?.cancel()
+        suppressionWatchdogTask = nil
     }
 
     // MARK: - Notifications
@@ -347,6 +373,7 @@ public actor SyncCoordinator {
             // Set phase before triggering pill visibility
             await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
             hasEndedSyncActivity = false
+            logger.info("[Sync] Calling onSyncActivityStarted")
             await onSyncActivityStarted?()
 
             // Perform contacts and channels sync (activity should show pill)
@@ -355,6 +382,7 @@ public actor SyncCoordinator {
                 let device = try await dataStore.fetchDevice(id: deviceID)
 
                 // Phase 1: Contacts (incremental unless forced full)
+                logger.info("[Sync] Phase start: contacts")
                 let lastContactSync: Date? = forceFullSync ? nil : {
                     guard let timestamp = device?.lastContactSync, timestamp > 0 else { return nil }
                     return Date(timeIntervalSince1970: Double(timestamp))
@@ -362,7 +390,8 @@ public actor SyncCoordinator {
 
                 let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
                 let syncType = contactResult.isIncremental ? "incremental" : "full"
-                logger.info("Synced \(contactResult.contactsReceived) contacts (\(syncType)\(forceFullSync ? ", forced" : ""))")
+                let forced = forceFullSync ? ", forced" : ""
+                logger.info("[Sync] Phase end: contacts - \(contactResult.contactsReceived) (\(syncType)\(forced))")
                 await notifyContactsChanged()
 
                 // Update lastContactSync watermark for future incremental syncs
@@ -397,11 +426,12 @@ public actor SyncCoordinator {
                 }
                 logger.debug("Proceeding with shouldSyncChannels=\(shouldSyncChannels)")
                 if shouldSyncChannels {
+                    logger.info("[Sync] Phase start: channels")
                     await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
                     let maxChannels = device?.maxChannels ?? 0
 
                     let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
-                    logger.info("Synced \(channelResult.channelsSynced) channels (device capacity: \(maxChannels))")
+                    logger.info("[Sync] Phase end: channels - \(channelResult.channelsSynced) synced (device capacity: \(maxChannels))")
 
                     // Retry failed channels once if there are retryable errors
                     if !channelResult.isComplete {
@@ -438,9 +468,10 @@ public actor SyncCoordinator {
             await endSyncActivityOnce()
 
             // Phase 3: Messages (no pill for this phase)
+            logger.info("[Sync] Phase start: messages")
             await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
             let messageCount = try await messagePollingService.pollAllMessages()
-            logger.info("Polled \(messageCount) messages")
+            logger.info("[Sync] Phase end: messages - \(messageCount) polled")
             await notifyConversationsChanged()
 
             // Complete
@@ -480,6 +511,7 @@ public actor SyncCoordinator {
             logger.info("Suppressing message notifications during resync")
             services.notificationService.isSuppressingNotifications = true
         }
+        startSuppressionWatchdog(services: services)
 
         do {
             try await performFullSync(
@@ -501,6 +533,7 @@ public actor SyncCoordinator {
                 logger.warning("Resync: some handlers did not complete in time")
             }
 
+            cancelSuppressionWatchdog()
             await MainActor.run {
                 logger.info("Resuming message notifications (resync complete)")
                 services.notificationService.isSuppressingNotifications = false
@@ -515,6 +548,7 @@ public actor SyncCoordinator {
                 logger.warning("Resync: some handlers did not complete in time (error path)")
             }
 
+            cancelSuppressionWatchdog()
             await MainActor.run {
                 logger.info("Resuming message notifications (resync failed)")
                 services.notificationService.isSuppressingNotifications = false
@@ -557,6 +591,7 @@ public actor SyncCoordinator {
             logger.info("Suppressing message notifications during sync")
             services.notificationService.isSuppressingNotifications = true
         }
+        startSuppressionWatchdog(services: services)
 
         do {
             // Defer advert-driven contact fetches during sync to avoid BLE contention
@@ -609,6 +644,7 @@ public actor SyncCoordinator {
             }
 
             // Resume notifications on success - synchronously before return
+            cancelSuppressionWatchdog()
             await MainActor.run {
                 logger.info("Resuming message notifications (sync complete)")
                 services.notificationService.isSuppressingNotifications = false
@@ -624,6 +660,7 @@ public actor SyncCoordinator {
             }
 
             // Resume notifications on error - synchronously before throw
+            cancelSuppressionWatchdog()
             await MainActor.run {
                 logger.info("Resuming message notifications (sync failed)")
                 services.notificationService.isSuppressingNotifications = false
@@ -638,6 +675,11 @@ public actor SyncCoordinator {
     /// If disconnect occurs mid-sync (during contacts or channels phase), we must call
     /// onSyncActivityEnded to decrement the activity count, otherwise the pill stays stuck.
     public func onDisconnected(services: ServiceContainer) async {
+        let currentState = await state
+        logger.warning(
+            "[Sync] onDisconnected called - syncState: \(String(describing: currentState)), hasEndedSyncActivity: \(hasEndedSyncActivity)"
+        )
+
         await deduplicationCache.clear()
         // Note: pending reactions are NOT cleared on disconnect - they persist for the app session
         // This handles temporary BLE disconnects without losing queued reactions
@@ -645,7 +687,6 @@ public actor SyncCoordinator {
         lastUnresolvedChannelSummaryAt = nil
 
         // If we're mid-sync in contacts or channels phase, end the activity to hide the pill
-        let currentState = await state
         if case .syncing(let progress) = currentState,
            progress.phase == .contacts || progress.phase == .channels {
             await endSyncActivityOnce()
@@ -655,6 +696,7 @@ public actor SyncCoordinator {
 
         // Safety net: ensure suppression is cleared on disconnect
         // Handles edge cases like connection dropping mid-sync or force-quit
+        cancelSuppressionWatchdog()
         await MainActor.run {
             services.notificationService.isSuppressingNotifications = false
         }

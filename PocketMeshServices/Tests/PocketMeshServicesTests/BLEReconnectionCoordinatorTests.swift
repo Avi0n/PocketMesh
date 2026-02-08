@@ -139,6 +139,27 @@ struct BLEReconnectionCoordinatorTests {
         #expect(delegate.handleReconnectionFailureCallCount == 1)
     }
 
+    @Test("stale device completion does not cancel active timeout")
+    func staleDeviceDoesNotCancelTimeout() async throws {
+        let activeDevice = UUID()
+        let staleDevice = UUID()
+        let (coordinator, delegate) = createCoordinator(uiTimeoutDuration: 0.1)
+        delegate.connectionIntent = .wantsConnection()
+        delegate.connectionState = .ready
+
+        await coordinator.handleEnteringAutoReconnect(deviceID: activeDevice)
+        #expect(delegate.connectionState == .connecting)
+
+        // Stale completion for a different device should be rejected
+        await coordinator.handleReconnectionComplete(deviceID: staleDevice)
+
+        // Timeout should still fire because it was not canceled
+        try await Task.sleep(for: .milliseconds(250))
+
+        #expect(delegate.connectionState == .disconnected, "Timeout should still fire after stale completion")
+        #expect(delegate.rebuildSessionCalls.isEmpty, "Should not rebuild for stale device")
+    }
+
     // MARK: - UI Timeout Tests
 
     @Test("UI timeout transitions to disconnected after duration")
@@ -160,15 +181,16 @@ struct BLEReconnectionCoordinatorTests {
 
     @Test("UI timeout is cancelled when reconnection completes")
     func uiTimeoutCancelledOnReconnection() async throws {
+        let deviceID = UUID()
         let (coordinator, delegate) = createCoordinator(uiTimeoutDuration: 0.1)
         delegate.connectionIntent = .wantsConnection()
         delegate.connectionState = .ready
 
-        await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
+        await coordinator.handleEnteringAutoReconnect(deviceID: deviceID)
         #expect(delegate.connectionState == .connecting)
 
-        // Complete reconnection before timeout
-        await coordinator.handleReconnectionComplete(deviceID: UUID())
+        // Complete reconnection before timeout (same device)
+        await coordinator.handleReconnectionComplete(deviceID: deviceID)
 
         // Wait past timeout duration
         try await Task.sleep(for: .milliseconds(250))
@@ -176,6 +198,38 @@ struct BLEReconnectionCoordinatorTests {
         // Should be .connecting from reconnection complete, not .disconnected from timeout
         #expect(delegate.connectionState == .connecting)
         #expect(delegate.notifyConnectionLostCallCount == 0)
+    }
+
+    // MARK: - Stale Retry Tests
+
+    @Test("stale rebuild retry is aborted when new reconnect cycle starts during delay")
+    func staleRetryAbortedOnNewCycle() async throws {
+        let deviceID = UUID()
+        let (coordinator, delegate) = createCoordinator()
+        delegate.connectionIntent = .wantsConnection()
+        delegate.connectionState = .disconnected
+        delegate.rebuildSessionShouldThrow = true
+
+        // Start first reconnection — rebuild will fail, triggering 2s retry delay
+        let firstReconnectTask = Task {
+            await coordinator.handleReconnectionComplete(deviceID: deviceID)
+        }
+
+        // Wait for first rebuild to fail and enter the 2s sleep
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(delegate.rebuildSessionCalls.count == 1, "First rebuild should have been attempted")
+
+        // Start a new reconnect cycle during the delay — this bumps the generation counter
+        delegate.rebuildSessionShouldThrow = false
+        await coordinator.handleReconnectionComplete(deviceID: deviceID)
+
+        // Wait for the first task's stale retry to wake and be aborted
+        await firstReconnectTask.value
+
+        // Should have exactly 2 rebuild calls: first (failed) + new cycle (succeeded).
+        // The stale retry should have been aborted by the generation check.
+        #expect(delegate.rebuildSessionCalls.count == 2, "Stale retry should have been aborted")
+        #expect(delegate.handleReconnectionFailureCallCount == 0, "No failure handler since new cycle succeeded")
     }
 
     // MARK: - cancelTimeout Tests

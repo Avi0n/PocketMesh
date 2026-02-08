@@ -8,6 +8,7 @@ public enum WiFiTransportError: Error, Sendable, Equatable {
     case connectionTimeout
     case notConnected
     case sendFailed(String)
+    case sendTimeout
     case invalidHost
     case invalidPort
     case notConfigured
@@ -191,14 +192,50 @@ public actor WiFiTransport: MeshTransport {
 
         let frame = WiFiFrameCodec.encode(data)
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            connection.send(content: frame, completion: .contentProcessed { error in
-                if let error {
-                    continuation.resume(throwing: WiFiTransportError.sendFailed(error.localizedDescription))
-                } else {
-                    continuation.resume()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                // Lock-protected continuation prevents double-resume when both
+                // contentProcessed and onCancel fire (matches BLETransport pattern)
+                let state = OSAllocatedUnfairLock<CheckedContinuation<Void, Error>?>(initialState: nil)
+
+                try await withTaskCancellationHandler {
+                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                        let alreadyCancelled = state.withLock { stored -> Bool in
+                            if Task.isCancelled {
+                                return true
+                            }
+                            stored = continuation
+                            return false
+                        }
+                        if alreadyCancelled {
+                            continuation.resume(throwing: WiFiTransportError.sendTimeout)
+                            return
+                        }
+
+                        connection.send(content: frame, completion: .contentProcessed { error in
+                            if let cont = state.withLock({ let cont = $0; $0 = nil; return cont }) {
+                                if let error {
+                                    cont.resume(throwing: WiFiTransportError.sendFailed(error.localizedDescription))
+                                } else {
+                                    cont.resume()
+                                }
+                            }
+                        })
+                    }
+                } onCancel: {
+                    if let cont = state.withLock({ let cont = $0; $0 = nil; return cont }) {
+                        cont.resume(throwing: WiFiTransportError.sendTimeout)
+                    }
                 }
-            })
+            }
+
+            group.addTask {
+                try await Task.sleep(for: Self.writeTimeout)
+                throw WiFiTransportError.sendTimeout
+            }
+
+            try await group.next()
+            group.cancelAll()
         }
     }
 
@@ -264,11 +301,12 @@ public actor WiFiTransport: MeshTransport {
                 }
 
                 if let error {
-                    await self.logger.error("Receive error: \(error.localizedDescription)")
+                    self.logger.error("Receive error: \(error.localizedDescription)")
                     return
                 }
 
                 if !isComplete {
+                    guard await self._isConnected else { return }
                     await self.startReceiving()
                 }
             }
