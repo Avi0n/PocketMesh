@@ -908,6 +908,10 @@ public actor MessageService {
 
         // Increment send count
         _ = try await dataStore.incrementMessageSendCount(id: messageID)
+
+        // Reset heard repeats so the count reflects only the new send
+        try await dataStore.updateMessageHeardRepeats(id: messageID, heardRepeats: 0)
+        try await dataStore.deleteMessageRepeats(messageID: messageID)
     }
 
     // MARK: - ACK Handling

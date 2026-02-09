@@ -1006,6 +1006,10 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return [] // Stub
     }
 
+    public func deleteMessageRepeats(messageID: UUID) async throws {
+        // Stub - no-op
+    }
+
     public func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool {
         return false // Stub
     }

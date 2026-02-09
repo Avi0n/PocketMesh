@@ -2238,6 +2238,21 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         return results.map { MessageRepeatDTO(from: $0) }
     }
 
+    /// Deletes all repeats for a given message.
+    public func deleteMessageRepeats(messageID: UUID) throws {
+        let targetMessageID = messageID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.messageID == targetMessageID
+        }
+        let descriptor = FetchDescriptor(predicate: predicate)
+
+        let results = try modelContext.fetch(descriptor)
+        for repeat_ in results {
+            modelContext.delete(repeat_)
+        }
+        try modelContext.save()
+    }
+
     /// Checks if a repeat already exists for the given RX log entry.
     public func messageRepeatExists(rxLogEntryID: UUID) throws -> Bool {
         let targetID: UUID? = rxLogEntryID

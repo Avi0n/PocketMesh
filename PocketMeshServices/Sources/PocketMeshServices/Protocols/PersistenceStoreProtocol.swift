@@ -230,6 +230,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Fetch all repeats for a message
     func fetchMessageRepeats(messageID: UUID) async throws -> [MessageRepeatDTO]
 
+    /// Delete all repeats for a message
+    func deleteMessageRepeats(messageID: UUID) async throws
+
     /// Check if a repeat exists for the given RX log entry
     func messageRepeatExists(rxLogEntryID: UUID) async throws -> Bool
 
