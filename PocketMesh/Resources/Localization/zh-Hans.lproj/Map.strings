@@ -20,7 +20,7 @@
 "map.emptyState.title" = "地图上无联系人";
 
 /* Location: MapView.swift - Purpose: Empty state description */
-"map.emptyState.description" = "带有位置数据的联系人将在网状网络上发现后显示在此处。";
+"map.emptyState.description" = "带有位置数据的联系人将在Mesh网络上发现后显示在此处";
 
 // MARK: - Map Controls
 
@@ -100,10 +100,10 @@
 // MARK: - Contact Detail Sheet Actions
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry */
-"map.detail.action.telemetry" = "遥测";
+"map.detail.action.telemetry" = "遥测数据";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Sheet title for telemetry authentication */
-"map.detail.action.telemetryAccessTitle" = "遥测访问权限";
+"map.detail.action.telemetryAccessTitle" = "遥测数据访问权限";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Button to access repeater admin settings */
 "map.detail.action.adminAccess" = "管理员访问权限";
@@ -120,7 +120,7 @@
 "map.nodeKind.chatContact" = "聊天联系人";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type */
-"map.nodeKind.repeater" = "中继器";
+"map.nodeKind.repeater" = "转发节点";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type */
 "map.nodeKind.room" = "房间";
@@ -137,7 +137,7 @@
 "map.callout.nodeKind.contact" = "联系人";
 
 /* Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout */
-"map.callout.nodeKind.repeater" = "中继器";
+"map.callout.nodeKind.repeater" = "转发节点";
 
 /* Location: ContactCalloutContent.swift - Purpose: Display name for room in callout */
 "map.callout.nodeKind.room" = "房间";
@@ -148,7 +148,7 @@
 "map.annotation.favorite" = "收藏";
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for repeater nodes */
-"map.annotation.repeater" = "中继器";
+"map.annotation.repeater" = "转发节点";
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
 "map.annotation.room" = "房间";
