@@ -16,7 +16,7 @@
 "selectSetting" = "选择设置";
 
 /* Footer text for advanced settings row */
-"advancedSettings.footer" = "无线电调谐、遥测、联系人设置和设备管理";
+"advancedSettings.footer" = "无线电、遥测数据、联系人设置和设备管理";
 
 /* Label for advanced settings navigation row */
 "advancedSettings.title" = "高级设置";
@@ -132,7 +132,7 @@
 "publicKey.header" = "32 字节 Ed25519 公钥";
 
 /* Footer explaining public key's purpose */
-"publicKey.footer" = "此密钥在网状网络上唯一标识您的设备";
+"publicKey.footer" = "此密钥在Mesh网络上唯一标识您的设备";
 
 /* Section header for base64 representation */
 "publicKey.base64.header" = "Base64";
@@ -295,7 +295,7 @@
 "advancedRadio.apply" = "应用无线电设置";
 
 /* Footer warning about incorrect radio settings */
-"advancedRadio.footer" = "警告：不正确的设置可能会阻止与网状网络设备的通信。";
+"advancedRadio.footer" = "警告：不正确的设置可能会阻止与Mesh网络设备的通信。";
 
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "输入值无效或未连接到设备";
@@ -435,7 +435,7 @@
 "nodes.autoAddContacts" = "联系人";
 
 /* Toggle label for auto-add repeaters */
-"nodes.autoAddRepeaters" = "中继器";
+"nodes.autoAddRepeaters" = "转发节点";
 
 /* Toggle label for auto-add room servers */
 "nodes.autoAddRoomServers" = "房间服务器";
@@ -557,7 +557,7 @@
 "node.shareLocationPublicly" = "公开分享位置";
 
 /* Footer explaining node visibility */
-"node.footer" = "您的节点名称在共享时对其他网状网络用户可见。";
+"node.footer" = "您的节点名称在共享时对其他Mesh网络用户可见。";
 
 /* Alert title for editing node name */
 "node.alert.editName.title" = "编辑节点名称";
@@ -568,7 +568,7 @@
 "location.header" = "位置";
 
 /* Footer for location settings section */
-"location.footer" = "当启用公开分享位置时，您的位置将在发送广播时通过网状网络广播。启用自动更新位置将在发送广播前自动更新您的设备位置。";
+"location.footer" = "当启用公开分享位置时，您的位置将在发送广播时通过Mesh网络广播。启用自动更新位置将在发送广播前自动更新您的设备位置。";
 
 /* Toggle label for auto-update location */
 "location.autoUpdate" = "自动更新位置";
@@ -631,7 +631,7 @@
 // MARK: - Telemetry Settings Section
 
 /* Section header for telemetry settings */
-"telemetry.header" = "遥测";
+"telemetry.header" = "遥测数据";
 
 /* Toggle label for allowing telemetry requests */
 "telemetry.allowRequests" = "允许遥测请求";
@@ -643,7 +643,7 @@
 "telemetry.includeLocation" = "包含位置";
 
 /* Description for include location toggle */
-"telemetry.includeLocationDescription" = "在遥测中共享 GPS 坐标";
+"telemetry.includeLocationDescription" = "在遥测数据中共享 GPS 坐标";
 
 /* Toggle label for including environment sensors */
 "telemetry.includeEnvironment" = "包含环境传感器";
@@ -655,7 +655,7 @@
 "telemetry.trustedOnly" = "仅与信任联系人共享";
 
 /* Description for trusted contacts toggle */
-"telemetry.trustedOnlyDescription" = "将遥测限制为选定的联系人";
+"telemetry.trustedOnlyDescription" = "将遥测数据限制給选定的联系人";
 
 /* Link to manage trusted contacts */
 "telemetry.manageTrusted" = "管理信任联系人";
@@ -795,7 +795,7 @@
 "bleStatus.accessibilityHint.connected" = "显示设备连接选项";
 
 /* Accessibility hint for zero-hop advert button */
-"bleStatus.sendZeroHopAdvert.hint" = "仅广播到直接邻居";
+"bleStatus.sendZeroHopAdvert.hint" = "仅广播到直连邻居";
 
 /* Accessibility hint for flood advert button */
-"bleStatus.sendFloodAdvert.hint" = "在整个网状网络上泛洪广播";
+"bleStatus.sendFloodAdvert.hint" = "在整个网络上泛洪广播";
