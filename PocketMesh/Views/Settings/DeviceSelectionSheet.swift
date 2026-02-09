@@ -34,6 +34,16 @@ private enum SelectableDevice: Identifiable, Equatable {
             nil
         }
     }
+
+    /// Whether this device connects only via WiFi (no BLE).
+    var isWiFiOnly: Bool {
+        switch self {
+        case .saved(let device):
+            !device.connectionMethods.isEmpty && device.connectionMethods.allSatisfy(\.isWiFi)
+        case .accessory:
+            false
+        }
+    }
 }
 
 /// Sheet for selecting and reconnecting to previously paired devices
@@ -46,6 +56,9 @@ struct DeviceSelectionSheet: View {
     @State private var showingWiFiConnection = false
     @State private var editingWiFiDevice: SelectableDevice?
     @State private var devicesConnectedElsewhere: Set<UUID> = []
+    @State private var deviceRSSI: [UUID: (rssi: Int, lastSeen: Date)] = [:]
+    @State private var deviceSignalTier: [UUID: Int] = [:]
+    @State private var scanSettled = false
 
     var body: some View {
         NavigationStack {
@@ -92,6 +105,7 @@ struct DeviceSelectionSheet: View {
             }
             .task {
                 await loadDevices()
+                await startBLEScanning()
             }
         }
     }
@@ -102,13 +116,18 @@ struct DeviceSelectionSheet: View {
         List {
             Section {
                 ForEach(devices) { device in
+                    let tier = device.isWiFiOnly ? nil : deviceSignalTier[device.id]
+                    let isDisabledByBLE = !device.isWiFiOnly && scanSettled && deviceRSSI[device.id] == nil
                     DeviceRow(
                         device: device,
                         isSelected: selectedDevice?.id == device.id,
-                        isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id)
+                        isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
+                        signalTier: tier,
+                        scanSettled: device.isWiFiOnly ? false : scanSettled
                     )
                         .contentShape(.rect)
                         .onTapGesture {
+                            guard !isDisabledByBLE else { return }
                             selectedDevice = device
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -188,6 +207,58 @@ struct DeviceSelectionSheet: View {
 
     // MARK: - Actions
 
+    private func startBLEScanning() async {
+        let stream = appState.connectionManager.startBLEScanning()
+
+        // Settle after 3 seconds — devices not found by then are grayed out
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            scanSettled = true
+
+            // If selected device became unreachable, clear selection
+            if let selected = selectedDevice,
+               !selected.isWiFiOnly,
+               deviceRSSI[selected.id] == nil {
+                selectedDevice = nil
+            }
+        }
+
+        // Expire stale RSSI entries every 2 seconds
+        Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                let cutoff = Date.now.addingTimeInterval(-4)
+                for (id, entry) in deviceRSSI where entry.lastSeen < cutoff {
+                    deviceRSSI.removeValue(forKey: id)
+                    deviceSignalTier.removeValue(forKey: id)
+                }
+                // Clear selection if the selected device became stale
+                if let selected = selectedDevice,
+                   !selected.isWiFiOnly,
+                   deviceRSSI[selected.id] == nil {
+                    selectedDevice = nil
+                }
+            }
+        }
+
+        for await (deviceID, rssi) in stream {
+            // Filter invalid RSSI values (0, positive, or -127 indicate unavailable)
+            guard rssi < 0, rssi != -127 else { continue }
+
+            let smoothed: Int
+            if let existing = deviceRSSI[deviceID] {
+                smoothed = Int(0.2 * Double(rssi) + 0.8 * Double(existing.rssi))
+            } else {
+                smoothed = rssi
+            }
+            deviceRSSI[deviceID] = (rssi: smoothed, lastSeen: .now)
+            deviceSignalTier[deviceID] = updatedSignalTier(
+                currentTier: deviceSignalTier[deviceID],
+                smoothedRSSI: smoothed
+            )
+        }
+    }
+
     private func loadDevices() async {
         // Try to load from SwiftData first
         do {
@@ -235,6 +306,26 @@ struct DeviceSelectionSheet: View {
         }
     }
 
+    /// Computes the signal tier with hysteresis to prevent flickering at boundaries.
+    /// Requires crossing the threshold by 3 dBm before changing tiers.
+    private func updatedSignalTier(currentTier: Int?, smoothedRSSI: Int) -> Int {
+        let hysteresis = 3
+        switch currentTier {
+        case 2: // green — drop only if clearly below threshold
+            return smoothedRSSI < -60 - hysteresis ? (smoothedRSSI < -80 - hysteresis ? 0 : 1) : 2
+        case 1: // yellow — need margin to move up or down
+            if smoothedRSSI >= -60 + hysteresis { return 2 }
+            if smoothedRSSI < -80 - hysteresis { return 0 }
+            return 1
+        case 0: // red — need margin to move up
+            return smoothedRSSI >= -80 + hysteresis ? (smoothedRSSI >= -60 + hysteresis ? 2 : 1) : 0
+        default: // first reading, no hysteresis
+            if smoothedRSSI >= -60 { return 2 }
+            if smoothedRSSI >= -80 { return 1 }
+            return 0
+        }
+    }
+
     private func deleteDevice(_ device: SelectableDevice) {
         guard case .saved(let deviceDTO) = device else { return }
 
@@ -260,6 +351,12 @@ private struct DeviceRow: View {
     let device: SelectableDevice
     let isSelected: Bool
     let isConnectedElsewhere: Bool
+    let signalTier: Int?
+    let scanSettled: Bool
+
+    private var isUnreachable: Bool {
+        scanSettled && signalTier == nil
+    }
 
     private var transportIcon: String {
         guard let method = device.primaryConnectionMethod else {
@@ -310,6 +407,12 @@ private struct DeviceRow: View {
 
             Spacer()
 
+            if let signalTier {
+                Image(systemName: "cellularbars", variableValue: signalLevel)
+                    .foregroundStyle(signalColor)
+                    .font(.body)
+            }
+
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.tint)
@@ -318,7 +421,7 @@ private struct DeviceRow: View {
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
-        .opacity(isConnectedElsewhere ? 0.6 : 1.0)
+        .opacity(isConnectedElsewhere || isUnreachable ? 0.4 : 1.0)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(isConnectedElsewhere
             ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereLabel(device.name)
@@ -326,5 +429,15 @@ private struct DeviceRow: View {
         .accessibilityHint(isConnectedElsewhere
             ? L10n.Settings.DeviceSelection.Accessibility.connectedElsewhereHint
             : L10n.Settings.DeviceSelection.Accessibility.selectHint)
+    }
+
+    // MARK: - Signal Tier Helpers
+
+    private var signalLevel: Double {
+        switch signalTier { case 2: 1.0; case 1: 0.66; default: 0.33 }
+    }
+
+    private var signalColor: Color {
+        switch signalTier { case 2: .green; case 1: .yellow; default: .red }
     }
 }
