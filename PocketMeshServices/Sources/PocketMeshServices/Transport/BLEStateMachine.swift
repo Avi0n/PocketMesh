@@ -113,6 +113,7 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
     // MARK: - Scanning (orthogonal to connection lifecycle)
 
     private var isCurrentlyScanning = false
+    private var pendingScanRequest = false
     private var onDeviceDiscovered: (@Sendable (UUID, Int) -> Void)?
 
     // MARK: - Callbacks
@@ -294,9 +295,11 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
     public func startScanning() {
         activate()
         guard centralManager.state == .poweredOn else {
-            logger.info("[BLE] Cannot start scanning: Bluetooth not powered on")
+            logger.info("[BLE] Cannot start scanning: Bluetooth not powered on, will start when ready")
+            pendingScanRequest = true
             return
         }
+        pendingScanRequest = false
         guard !isCurrentlyScanning else { return }
         isCurrentlyScanning = true
         logger.info("[BLE] Starting BLE scan for device discovery")
@@ -308,6 +311,7 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
 
     /// Stops an active BLE scan.
     public func stopScanning() {
+        pendingScanRequest = false
         guard isCurrentlyScanning else { return }
         isCurrentlyScanning = false
         logger.info("[BLE] Stopping BLE scan")
@@ -821,6 +825,11 @@ extension BLEStateMachine {
             // Handle state restoration from phase
             if case .restoringState(let peripheral) = phase {
                 handleRestoredPeripheral(peripheral)
+            }
+
+            // Fulfill pending scan request
+            if pendingScanRequest {
+                startScanning()
             }
 
             // Notify handler for power-on events
