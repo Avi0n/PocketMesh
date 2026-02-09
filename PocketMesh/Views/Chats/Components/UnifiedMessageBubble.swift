@@ -279,11 +279,6 @@ struct UnifiedMessageBubble: View {
                     if showIncomingHopCount && !isDirect {
                         hopCountFooter
                     }
-                    if showIncomingHopCount && !isDirect && showIncomingPath {
-                        Text("·")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
                     if showIncomingPath {
                         pathFooter
                     }
