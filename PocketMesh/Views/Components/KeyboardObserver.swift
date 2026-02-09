@@ -106,8 +106,14 @@ final class KeyboardObserver {
         let windowBounds = keyWindow.bounds
         let intersection = windowBounds.intersection(keyboardInWindow)
 
-        // Return overlap height, or 0 if no overlap
-        return intersection.isNull ? 0 : intersection.height
+        guard !intersection.isNull else { return 0 }
+
+        // Subtract bottom safe area inset (home indicator) because the input bar
+        // is already positioned above it by the safe area system. Without this,
+        // the home indicator height is double-counted, creating a visible gap
+        // between the input bar and keyboard on iPad.
+        let bottomSafeArea = keyWindow.safeAreaInsets.bottom
+        return max(0, intersection.height - bottomSafeArea)
     }
 
     private func handleKeyboardHide() {
