@@ -275,8 +275,8 @@ public actor MessageService {
             throw MessageServiceError.invalidRecipient
         }
 
-        // Validate message length
-        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
+        // Validate message length (byte count matches firmware buffer limits)
+        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -385,8 +385,8 @@ public actor MessageService {
             throw MessageServiceError.invalidRecipient
         }
 
-        // Validate message length
-        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
+        // Validate message length (byte count matches firmware buffer limits)
+        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -483,7 +483,7 @@ public actor MessageService {
             throw MessageServiceError.invalidRecipient
         }
 
-        guard text.count <= ProtocolLimits.maxDirectMessageLength else {
+        guard text.utf8.count <= ProtocolLimits.maxDirectMessageLength else {
             throw MessageServiceError.messageTooLong
         }
 
@@ -842,8 +842,8 @@ public actor MessageService {
         deviceID: UUID,
         textType: TextType = .plain
     ) async throws -> (id: UUID, timestamp: UInt32) {
-        // Validate message length
-        guard text.count <= ProtocolLimits.maxChannelMessageTotalLength else {
+        // Validate message length (byte count matches firmware buffer limits)
+        guard text.utf8.count <= ProtocolLimits.maxChannelMessageTotalLength else {
             throw MessageServiceError.messageTooLong
         }
 

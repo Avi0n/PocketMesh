@@ -30,6 +30,11 @@ struct JoinPrivateChannelView: View {
             Section {
                 TextField(L10n.Chats.Chats.CreatePrivate.channelName, text: $channelName)
                     .textContentType(.name)
+                    .onChange(of: channelName) { _, newValue in
+                        if newValue.utf8.count > ProtocolLimits.maxUsableNameBytes {
+                            channelName = newValue.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+                        }
+                    }
 
                 TextField(L10n.Chats.Chats.JoinPrivate.secretKeyPlaceholder, text: $secretKeyHex)
                     .textContentType(.password)

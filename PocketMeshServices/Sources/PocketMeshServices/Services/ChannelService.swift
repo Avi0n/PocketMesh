@@ -398,12 +398,13 @@ public actor ChannelService {
         passphrase: String
     ) async throws {
         let secret = Self.hashSecret(passphrase)
+        let truncatedName = name.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
 
         do {
-            try await session.setChannel(index: index, name: name, secret: secret)
+            try await session.setChannel(index: index, name: truncatedName, secret: secret)
 
             // Save to local database
-            let channelInfo = ChannelInfo(index: index, name: name, secret: secret)
+            let channelInfo = ChannelInfo(index: index, name: truncatedName, secret: secret)
             _ = try await dataStore.saveChannel(deviceID: deviceID, from: channelInfo)
 
             // Notify handler of update
@@ -430,11 +431,13 @@ public actor ChannelService {
             throw ChannelServiceError.secretHashingFailed
         }
 
+        let truncatedName = name.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+
         do {
-            try await session.setChannel(index: index, name: name, secret: secret)
+            try await session.setChannel(index: index, name: truncatedName, secret: secret)
 
             // Save to local database
-            let channelInfo = ChannelInfo(index: index, name: name, secret: secret)
+            let channelInfo = ChannelInfo(index: index, name: truncatedName, secret: secret)
             _ = try await dataStore.saveChannel(deviceID: deviceID, from: channelInfo)
 
             // Notify handler of update

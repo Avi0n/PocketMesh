@@ -147,11 +147,34 @@ extension Data {
 }
 
 extension String {
+    /// Returns the longest prefix of the string whose UTF-8 encoding fits within `maxBytes`.
+    ///
+    /// Never splits multi-byte characters. Returns the empty string when `maxBytes` is zero or negative.
+    ///
+    /// - Parameter maxBytes: Maximum number of UTF-8 bytes allowed.
+    /// - Returns: A substring (as `String`) whose UTF-8 byte count is at most `maxBytes`.
+    public func utf8Prefix(maxBytes: Int) -> String {
+        guard maxBytes > 0 else { return "" }
+
+        var byteCount = 0
+        var endIndex = startIndex
+        for character in self {
+            let charBytes = character.utf8.count
+            if byteCount + charBytes > maxBytes { break }
+            byteCount += charBytes
+            endIndex = index(after: endIndex)
+        }
+        return String(self[startIndex..<endIndex])
+    }
+
     /// Returns the UTF-8 bytes of the string, padded or truncated to the specified length.
     ///
-    /// - Parameter length: The target length.
+    /// Truncation is UTF-8-safe: multi-byte characters are never split.
+    ///
+    /// - Parameter length: The target length in bytes.
     /// - Returns: Data of exactly the specified length.
     public func utf8PaddedOrTruncated(to length: Int) -> Data {
-        Data(utf8).paddedOrTruncated(to: length)
+        let truncated = utf8Prefix(maxBytes: length)
+        return Data(truncated.utf8).paddedOrTruncated(to: length)
     }
 }

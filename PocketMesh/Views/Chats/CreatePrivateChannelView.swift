@@ -57,6 +57,11 @@ struct CreatePrivateChannelView: View {
             Section {
                 TextField(L10n.Chats.Chats.CreatePrivate.channelName, text: $channelName)
                     .textContentType(.name)
+                    .onChange(of: channelName) { _, newValue in
+                        if newValue.utf8.count > ProtocolLimits.maxUsableNameBytes {
+                            channelName = newValue.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+                        }
+                    }
             } header: {
                 Text(L10n.Chats.Chats.CreatePrivate.Section.details)
             }

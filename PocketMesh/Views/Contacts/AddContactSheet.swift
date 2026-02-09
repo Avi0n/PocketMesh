@@ -196,6 +196,11 @@ private struct NameInputSection: View {
             TextField(L10n.Contacts.Contacts.Add.contactName, text: $contactName)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
+                .onChange(of: contactName) { _, newValue in
+                    if newValue.utf8.count > ProtocolLimits.maxUsableNameBytes {
+                        contactName = newValue.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+                    }
+                }
         } header: {
             Text(L10n.Contacts.Contacts.Add.name)
         }

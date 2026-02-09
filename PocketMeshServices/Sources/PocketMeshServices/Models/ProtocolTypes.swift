@@ -142,15 +142,18 @@ public enum ProtocolLimits {
     public static let channelSecretSize = 16
     public static let maxMessageLength = 160
 
-    /// Maximum characters for direct messages (app-enforced limit per MeshCore spec)
+    /// Maximum usable bytes for names (firmware char[32] minus null terminator)
+    public static let maxUsableNameBytes = 31
+
+    /// Maximum bytes for direct messages (app-enforced limit per MeshCore spec)
     public static let maxDirectMessageLength = 150
 
     /// Total limit for channel messages including "NodeName: " prefix
     public static let maxChannelMessageTotalLength = 147
 
-    /// Max user text length for channel messages, accounting for node name prefix
-    public static func maxChannelMessageLength(nodeNameLength: Int) -> Int {
-        max(0, maxChannelMessageTotalLength - nodeNameLength - 2)
+    /// Max user text bytes for channel messages, accounting for node name prefix
+    public static func maxChannelMessageLength(nodeNameByteCount: Int) -> Int {
+        max(0, maxChannelMessageTotalLength - nodeNameByteCount - 2)
     }
 }
 

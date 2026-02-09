@@ -423,7 +423,7 @@ struct ChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: L10n.Chats.Chats.Input.Placeholder.directMessage,
-            maxCharacters: ProtocolLimits.maxDirectMessageLength,
+            maxBytes: ProtocolLimits.maxDirectMessageLength,
             contacts: viewModel.allContacts
         ) {
             // Force scroll to bottom on user send (before message is added)

@@ -54,6 +54,11 @@ struct NodeSettingsSection: View {
         }
         .alert(L10n.Settings.Node.Alert.EditName.title, isPresented: $isEditingName) {
             TextField(L10n.Settings.Node.name, text: $nodeName)
+                .onChange(of: nodeName) { _, newValue in
+                    if newValue.utf8.count > ProtocolLimits.maxUsableNameBytes {
+                        nodeName = newValue.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+                    }
+                }
             Button(L10n.Localizable.Common.cancel, role: .cancel) { }
             Button(L10n.Localizable.Common.save) {
                 saveNodeName()

@@ -7,20 +7,20 @@ struct ChatInputBar: View {
     @Binding var text: String
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
-    let maxCharacters: Int
+    let maxBytes: Int
     let onSend: () -> Void
 
-    private var characterCount: Int {
-        text.count
+    private var byteCount: Int {
+        text.utf8.count
     }
 
     private var isOverLimit: Bool {
-        characterCount > maxCharacters
+        byteCount > maxBytes
     }
 
     private var shouldShowCharacterCount: Bool {
-        // Show when within 20 characters of limit or over limit
-        characterCount >= maxCharacters - 20
+        // Show when within 20 bytes of limit or over limit
+        byteCount >= maxBytes - 20
     }
 
     var body: some View {
@@ -55,11 +55,11 @@ struct ChatInputBar: View {
     }
 
     private var characterCountLabel: some View {
-        Text("\(characterCount)/\(maxCharacters)")
+        Text("\(byteCount)/\(maxBytes)")
             .font(.caption2)
             .monospacedDigit()
             .foregroundStyle(isOverLimit ? .red : .secondary)
-            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(characterCount, maxCharacters))
+            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(byteCount, maxBytes))
     }
 
     @ViewBuilder
@@ -96,7 +96,7 @@ struct ChatInputBar: View {
 
     private var sendAccessibilityHint: String {
         if isOverLimit {
-            return L10n.Chats.Chats.Input.removeCharacters(characterCount - maxCharacters)
+            return L10n.Chats.Chats.Input.removeCharacters(byteCount - maxBytes)
         } else if appState.connectionState != .ready {
             return L10n.Chats.Chats.Input.requiresConnection
         } else if canSend {

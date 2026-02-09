@@ -114,7 +114,9 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (N bytes): Name string (UTF-8 encoded)
     public static func setName(_ name: String) -> Data {
         var data = Data([CommandCode.setName.rawValue])
-        data.append(name.data(using: .utf8) ?? Data())
+        // Firmware uses char[32]; truncate to 31 bytes to leave room for null terminator
+        let truncated = name.utf8Prefix(maxBytes: 31)
+        data.append(truncated.data(using: .utf8) ?? Data())
         return data
     }
 
@@ -481,12 +483,8 @@ public enum PacketBuilder: Sendable {
     ) -> Data {
         var data = Data([CommandCode.setChannel.rawValue, index])
 
-        // Pad name to 32 bytes
-        var nameData = (name.data(using: .utf8) ?? Data()).prefix(32)
-        while nameData.count < 32 {
-            nameData.append(0)
-        }
-        data.append(nameData)
+        // Pad name to 32 bytes (UTF-8-safe truncation)
+        data.append(name.utf8PaddedOrTruncated(to: 32))
 
         // Secret must be 16 bytes
         data.append(secret.prefix(16))

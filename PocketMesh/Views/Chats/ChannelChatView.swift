@@ -435,8 +435,8 @@ struct ChannelChatView: View {
     // MARK: - Input Bar
 
     private var maxChannelMessageLength: Int {
-        let nodeNameLength = appState.connectedDevice?.nodeName.count ?? 0
-        return ProtocolLimits.maxChannelMessageLength(nodeNameLength: nodeNameLength)
+        let nodeNameByteCount = appState.connectedDevice?.nodeName.utf8.count ?? 0
+        return ProtocolLimits.maxChannelMessageLength(nodeNameByteCount: nodeNameByteCount)
     }
 
     private var inputBar: some View {
@@ -444,7 +444,7 @@ struct ChannelChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate,
-            maxCharacters: maxChannelMessageLength,
+            maxBytes: maxChannelMessageLength,
             contacts: viewModel.allContacts
         ) {
             // Force scroll to bottom on user send (before message is added)

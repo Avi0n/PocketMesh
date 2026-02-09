@@ -298,8 +298,9 @@ public actor SettingsService {
 
     /// Set the publicly visible node name
     public func setNodeName(_ name: String) async throws {
+        let truncated = name.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
         do {
-            try await session.setName(name)
+            try await session.setName(truncated)
         } catch let error as MeshCoreError {
             throw SettingsServiceError.sessionError(error)
         }
@@ -405,13 +406,14 @@ public actor SettingsService {
     /// Set node name with verification
     /// Returns the verified self info for UI update
     public func setNodeNameVerified(_ name: String) async throws -> MeshCore.SelfInfo {
-        try await setNodeName(name)
+        let truncated = name.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+        try await setNodeName(truncated)
 
         let selfInfo = try await getSelfInfo()
 
-        guard selfInfo.name == name else {
+        guard selfInfo.name == truncated else {
             throw SettingsServiceError.verificationFailed(
-                expected: name,
+                expected: truncated,
                 actual: selfInfo.name
             )
         }

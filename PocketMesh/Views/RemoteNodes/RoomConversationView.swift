@@ -203,7 +203,7 @@ struct RoomConversationView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: L10n.RemoteNodes.RemoteNodes.Room.publicMessage,
-            maxCharacters: ProtocolLimits.maxDirectMessageLength
+            maxBytes: ProtocolLimits.maxDirectMessageLength
         ) {
             // Force scroll to bottom on user send (before message is added)
             scrollToBottomRequest += 1
