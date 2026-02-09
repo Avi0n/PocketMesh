@@ -28,7 +28,7 @@ public final class Device {
     public var buildDate: String
 
     /// Maximum number of contacts supported
-    public var maxContacts: UInt8
+    public var maxContacts: UInt16
 
     /// Maximum number of channels supported
     public var maxChannels: UInt8
@@ -162,7 +162,7 @@ public final class Device {
         firmwareVersionString: String = "",
         manufacturerName: String = "",
         buildDate: String = "",
-        maxContacts: UInt8 = 100,
+        maxContacts: UInt16 = 100,
         maxChannels: UInt8 = 8,
         frequency: UInt32 = 915_000,
         bandwidth: UInt32 = 250_000,
@@ -232,7 +232,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let firmwareVersionString: String
     public let manufacturerName: String
     public let buildDate: String
-    public let maxContacts: UInt8
+    public let maxContacts: UInt16
     public let maxChannels: UInt8
     public let frequency: UInt32
     public let bandwidth: UInt32
@@ -296,7 +296,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         firmwareVersionString: String,
         manufacturerName: String,
         buildDate: String,
-        maxContacts: UInt8,
+        maxContacts: UInt16,
         maxChannels: UInt8,
         frequency: UInt32,
         bandwidth: UInt32,
@@ -499,7 +499,7 @@ public extension Device {
         self.firmwareVersionString = info.version
         self.manufacturerName = info.model
         self.buildDate = info.firmwareBuild
-        self.maxContacts = UInt8(min(info.maxContacts, 255))
+        self.maxContacts = UInt16(info.maxContacts)
         self.maxChannels = UInt8(min(info.maxChannels, 255))
         self.blePin = info.blePin
     }
