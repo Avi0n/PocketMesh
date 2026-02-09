@@ -30,7 +30,7 @@
 "remoteNodes.auth.typeRoom" = "房间";
 
 /* Location: NodeAuthenticationSheet.swift - Repeater type value */
-"remoteNodes.auth.typeRepeater" = "中继器";
+"remoteNodes.auth.typeRepeater" = "转发节点";
 
 /* Location: NodeAuthenticationSheet.swift - Authentication section header */
 "remoteNodes.auth.authentication" = "身份验证";
@@ -45,7 +45,7 @@
 "remoteNodes.auth.errorPrefix" = "错误：%@";
 
 /* Location: NodeAuthenticationSheet.swift - Password too long warning for repeaters */
-"remoteNodes.auth.passwordTooLongRepeaters" = "MeshCore 中继器仅接受最多 %d 个字符的密码。多余字符将被忽略。";
+"remoteNodes.auth.passwordTooLongRepeaters" = "MeshCore 转发节点仅接受最多 %d 个字符的密码。多余字符将被忽略。";
 
 /* Location: NodeAuthenticationSheet.swift - Password too long warning for rooms */
 "remoteNodes.auth.passwordTooLongRooms" = "MeshCore 房间仅接受最多 %d 个字符的密码。多余字符将被忽略。";
@@ -62,7 +62,7 @@
 // MARK: - Repeater Settings
 
 /* Location: RepeaterSettingsView.swift - Navigation title */
-"remoteNodes.settings.title" = "中继器设置";
+"remoteNodes.settings.title" = "转发节点设置";
 
 /* Location: RepeaterSettingsView.swift - Done button (used in multiple places) */
 "remoteNodes.settings.done" = "完成";
@@ -89,7 +89,7 @@
 "remoteNodes.settings.radioParameters" = "无线电参数";
 
 /* Location: RepeaterSettingsView.swift - Radio restart warning */
-"remoteNodes.settings.radioRestartWarning" = "应用这些更改将重启中继器";
+"remoteNodes.settings.radioRestartWarning" = "应用这些更改将重启转发节点";
 
 /* Location: RepeaterSettingsView.swift - Frequency label */
 "remoteNodes.settings.frequencyMHz" = "频率（MHz）";
@@ -164,7 +164,7 @@
 "remoteNodes.settings.behavior" = "行为";
 
 /* Location: RepeaterSettingsView.swift - Repeater mode toggle */
-"remoteNodes.settings.repeaterMode" = "中继器模式";
+"remoteNodes.settings.repeaterMode" = "转发节点模式";
 
 /* Location: RepeaterSettingsView.swift - Advert interval (0-hop) label */
 "remoteNodes.settings.advertInterval0Hop" = "广播间隔（0 跳）";
@@ -200,7 +200,7 @@
 "remoteNodes.settings.changePassword" = "更改密码";
 
 /* Location: RepeaterSettingsView.swift - Security footer text */
-"remoteNodes.settings.securityFooter" = "更改管理员身份验证密码。";
+"remoteNodes.settings.securityFooter" = "更改管理员身份验证密码";
 
 /* Location: RepeaterSettingsView.swift - Device actions section header */
 "remoteNodes.settings.deviceActions" = "设备操作";
@@ -215,13 +215,13 @@
 "remoteNodes.settings.rebootDevice" = "重启设备";
 
 /* Location: RepeaterSettingsView.swift - Reboot confirmation dialog title */
-"remoteNodes.settings.rebootConfirmTitle" = "重启中继器？";
+"remoteNodes.settings.rebootConfirmTitle" = "重启转发节点？";
 
 /* Location: RepeaterSettingsView.swift - Reboot confirmation dialog button */
 "remoteNodes.settings.reboot" = "重启";
 
 /* Location: RepeaterSettingsView.swift - Reboot confirmation message */
-"remoteNodes.settings.rebootMessage" = "中继器将重启并暂时不可用。";
+"remoteNodes.settings.rebootMessage" = "转发节点将重启并暂时不可用";
 
 // MARK: - Repeater Settings ViewModel Messages
 
@@ -262,7 +262,7 @@
 "remoteNodes.settings.timeSynced" = "时间已同步";
 
 /* Location: RepeaterSettingsViewModel.swift - Clock ahead error */
-"remoteNodes.settings.clockAheadError" = "中继器时钟早于手机时间。如果过远，请重启中继器然后再次同步时间。";
+"remoteNodes.settings.clockAheadError" = "转发节点时钟早于手机时间。如果过远，请重启转发节点然后再次同步时间。";
 
 /* Location: RepeaterSettingsViewModel.swift - Sync time failure */
 "remoteNodes.settings.syncTimeFailed" = "同步时间失败";
@@ -271,13 +271,13 @@
 "remoteNodes.settings.unexpectedResponse" = "意外响应：%@";
 
 /* Location: RepeaterSettingsViewModel.swift - Not connected error */
-"remoteNodes.settings.notConnected" = "未连接到中继器";
+"remoteNodes.settings.notConnected" = "未连接到转发节点";
 
 /* Location: RepeaterSettingsViewModel.swift - Timeout error */
 "remoteNodes.settings.timeout" = "命令超时";
 
 /* Location: RepeaterSettingsViewModel.swift - No service error */
-"remoteNodes.settings.noService" = "中继器服务不可用";
+"remoteNodes.settings.noService" = "转发节点服务不可用";
 
 /* Location: RepeaterSettingsViewModel.swift - Advert interval validation error */
 "remoteNodes.settings.advertIntervalValidation" = "接受 0（禁用）或 60-240 分钟";
@@ -291,7 +291,7 @@
 // MARK: - Repeater Status
 
 /* Location: RepeaterStatusView.swift - Navigation title */
-"remoteNodes.status.title" = "中继器状态";
+"remoteNodes.status.title" = "转发节点状态";
 
 /* Location: RepeaterStatusView.swift - Status section header */
 "remoteNodes.status.statusSection" = "状态";
@@ -309,7 +309,7 @@
 "remoteNodes.status.lastSnr" = "最后信噪比";
 
 /* Location: RepeaterStatusView.swift - Noise floor label */
-"remoteNodes.status.noiseFloor" = "噪声底";
+"remoteNodes.status.noiseFloor" = "无线电底噪";
 
 /* Location: RepeaterStatusView.swift - Packets sent label */
 "remoteNodes.status.packetsSent" = "已发送数据包";
@@ -327,7 +327,7 @@
 "remoteNodes.status.batteryCurve" = "电池曲线";
 
 /* Location: RepeaterStatusView.swift - Telemetry section header */
-"remoteNodes.status.telemetry" = "遥测";
+"remoteNodes.status.telemetry" = "遥测数据";
 
 /* Location: RepeaterStatusView.swift - No sensor data empty state */
 "remoteNodes.status.noSensorData" = "无传感器数据";
