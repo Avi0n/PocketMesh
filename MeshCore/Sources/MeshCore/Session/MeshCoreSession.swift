@@ -1143,8 +1143,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// - Returns: The auto-add config bitmask.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getAutoAddConfig() async throws -> UInt8 {
-        try await sendAndWait(PacketBuilder.getAutoAddConfig()) { event in
+        try await sendAndWaitWithError(PacketBuilder.getAutoAddConfig()) { event in
             if case .autoAddConfig(let config) = event { return config }
             return nil
         }
