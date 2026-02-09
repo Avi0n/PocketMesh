@@ -41,7 +41,7 @@
 "contacts.nodeKind.chatContact" = "聊天联系人";
 
 /* Location: Multiple files - Purpose: Repeater contact type label */
-"contacts.nodeKind.repeater" = "中继器";
+"contacts.nodeKind.repeater" = "转发节点";
 
 /* Location: Multiple files - Purpose: Room contact type label */
 "contacts.nodeKind.room" = "房间";
@@ -55,7 +55,7 @@
 "contacts.route.flood" = "泛洪";
 
 /* Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Direct routing label */
-"contacts.route.direct" = "直接";
+"contacts.route.direct" = "直连";
 
 /* Location: ContactRowView.swift - Purpose: Hops count display */
 "contacts.route.hops" = "%d 跳";
@@ -121,7 +121,7 @@
 "contacts.list.cannotRefresh" = "无法刷新";
 
 /* Location: ContactsListView.swift - Purpose: Refresh alert message */
-"contacts.list.connectToSync" = "连接到您的设备以同步联系人。";
+"contacts.list.connectToSync" = "连接到您的设备以同步联系人";
 
 /* Location: ContactsListView.swift - Purpose: Location alert title */
 "contacts.list.locationUnavailable" = "位置不可用";
@@ -130,7 +130,7 @@
 "contacts.list.openSettings" = "打开设置";
 
 /* Location: ContactsListView.swift - Purpose: Location alert message */
-"contacts.list.distanceRequiresLocation" = "距离排序需要位置访问权限。";
+"contacts.list.distanceRequiresLocation" = "距离排序需要位置访问权限";
 
 /* Location: ContactsListView.swift - Purpose: VoiceOver offline announcement */
 "contacts.list.offlineAnnouncement" = "正在查看缓存联系人。连接设备以获取更新。";
@@ -141,19 +141,19 @@
 "contacts.list.empty.favorites.title" = "暂无收藏";
 
 /* Location: ContactsListView.swift - Purpose: No favorites empty description */
-"contacts.list.empty.favorites.description" = "向右滑动任何节点将其添加到您的收藏。";
+"contacts.list.empty.favorites.description" = "向右滑动任何节点将其添加到您的收藏";
 
 /* Location: ContactsListView.swift - Purpose: No contacts empty title */
 "contacts.list.empty.contacts.title" = "无联系人";
 
 /* Location: ContactsListView.swift - Purpose: No contacts empty description */
-"contacts.list.empty.contacts.description" = "联系人将在网状网络上发现后显示。如果自动添加联系人已关闭，请在右上角菜单中检查发现。";
+"contacts.list.empty.contacts.description" = "成功发现 Mesh 网络上的联系人后，他们会显示在这里，如果未自动添加，请前往右上角菜单手动开启发现功能";
 
 /* Location: ContactsListView.swift - Purpose: No network nodes empty title */
 "contacts.list.empty.network.title" = "无网络节点";
 
 /* Location: ContactsListView.swift - Purpose: No network nodes empty description */
-"contacts.list.empty.network.description" = "中继器和房间服务器将在网状网络上发现后显示。";
+"contacts.list.empty.network.description" = "转发节点和房间服务器在 Mesh 网络中被发现后，会在此处列出";
 
 /* Location: ContactsListView.swift - Purpose: No search results title */
 "contacts.list.empty.search.title" = "无结果";
@@ -201,10 +201,10 @@
 "contacts.detail.joinRoom" = "加入房间";
 
 /* Location: ContactDetailView.swift - Purpose: Telemetry button */
-"contacts.detail.telemetry" = "遥测";
+"contacts.detail.telemetry" = "遥测数据";
 
 /* Location: ContactDetailView.swift - Purpose: Telemetry access sheet title */
-"contacts.detail.telemetryAccess" = "遥测访问权限";
+"contacts.detail.telemetryAccess" = "遥测数据访问权限";
 
 /* Location: ContactDetailView.swift - Purpose: Admin access button */
 "contacts.detail.adminAccess" = "管理员访问权限";
@@ -225,7 +225,7 @@
 "contacts.detail.shareViaAdvert" = "通过广播分享联系人";
 
 /* Location: ContactDetailView.swift - Purpose: Ping repeater button */
-"contacts.detail.pingRepeater" = "Ping 中继器";
+"contacts.detail.pingRepeater" = "Ping 转发节点";
 
 /* Location: ContactDetailView.swift - Purpose: Ping no response message */
 "contacts.detail.pingNoResponse" = "无响应";
@@ -309,7 +309,7 @@
 "contacts.detail.routeFlood" = "路由：泛洪";
 
 /* Location: ContactDetailView.swift - Purpose: Accessibility label for direct route */
-"contacts.detail.routeDirect" = "路由：直接";
+"contacts.detail.routeDirect" = "路由：直连";
 
 /* Location: ContactDetailView.swift - Purpose: Accessibility label prefix for route */
 "contacts.detail.routePrefix" = "路由：%@";
@@ -345,7 +345,7 @@
 "contacts.detail.alert.block.title" = "屏蔽联系人";
 
 /* Location: ContactDetailView.swift - Purpose: Block contact alert message */
-"contacts.detail.alert.block.message" = "您将不会收到来自 %@ 的消息。来自此用户的对话将从您的聊天列表中隐藏，其频道消息也不会出现。取消屏蔽将撤销这些操作并显示他们发送的任何消息。";
+"contacts.detail.alert.block.message" = "屏蔽后，你将不再接收来自 %@ 的消息。与他的对话会被隐藏，其频道消息也不会显示。取消屏蔽即可恢复。";
 
 /* Location: ContactDetailView.swift - Purpose: Delete contact alert title */
 "contacts.detail.alert.delete.title" = "删除%@";
@@ -371,7 +371,7 @@
 "contacts.blocked.empty.title" = "无已屏蔽联系人";
 
 /* Location: BlockedContactsView.swift - Purpose: Empty state description */
-"contacts.blocked.empty.description" = "您屏蔽的联系人将显示在此处。";
+"contacts.blocked.empty.description" = "您屏蔽的联系人将显示在此处";
 
 // MARK: - Add Contact Sheet
 
@@ -461,7 +461,7 @@
 "contacts.scan.permission.title" = "需要相机访问权限";
 
 /* Location: ScanContactQRView.swift - Purpose: Camera permission description */
-"contacts.scan.permission.description" = "请在设置中启用相机访问权限以扫描二维码。";
+"contacts.scan.permission.description" = "请在设置中启用相机访问权限以扫描二维码";
 
 /* Location: ScanContactQRView.swift - Purpose: Invalid QR format error */
 "contacts.scan.error.invalidFormat" = "无效的二维码格式";
@@ -481,7 +481,7 @@
 "contacts.discovery.empty.title" = "无发现的节点";
 
 /* Location: DiscoveryView.swift - Purpose: Empty state description */
-"contacts.discovery.empty.description" = "节点将在发现其广播后显示在此处。";
+"contacts.discovery.empty.description" = "节点将在发现其广播后显示在此处";
 
 /* Location: DiscoveryView.swift - Purpose: Add button */
 "contacts.discovery.add" = "添加";
@@ -517,7 +517,7 @@
 "contacts.discovery.clear.title" = "清除所有发现的节点？";
 
 /* Location: DiscoveryView.swift - Purpose: Clear confirmation message */
-"contacts.discovery.clear.message" = "发现的节点将从此列表中移除，但可以在网状网络上重新发现。";
+"contacts.discovery.clear.message" = "发现的节点将从此列表中移除，但可以在Mesh网络上重新发现。";
 
 /* Location: DiscoveryView.swift - Purpose: Clear confirmation button */
 "contacts.discovery.clear.confirm" = "清除";
@@ -549,28 +549,28 @@
 "contacts.pathEdit.title" = "编辑路径";
 
 /* Location: PathEditingSheet.swift - Purpose: Description with contact name */
-"contacts.pathEdit.description" = "自定义消息到达 %@ 的路由。";
+"contacts.pathEdit.description" = "自定义消息到达 %@ 的路由";
 
 /* Location: PathEditingSheet.swift - Purpose: Current path section header */
 "contacts.pathEdit.currentPath" = "当前路径";
 
 /* Location: PathEditingSheet.swift - Purpose: Empty path footer */
-"contacts.pathEdit.emptyFooter" = "未设置路径（直接或泛洪路由）";
+"contacts.pathEdit.emptyFooter" = "未设置路径直连或泛洪路由）";
 
 /* Location: PathEditingSheet.swift - Purpose: Path instructions footer */
 "contacts.pathEdit.instructionsFooter" = "拖动以重新排序。点击以移除。";
 
 /* Location: PathEditingSheet.swift - Purpose: Add repeater section header */
-"contacts.pathEdit.addRepeater" = "添加中继器";
+"contacts.pathEdit.addRepeater" = "添加转发节点";
 
 /* Location: PathEditingSheet.swift - Purpose: No repeaters empty title */
-"contacts.pathEdit.noRepeaters.title" = "无可用中继器";
+"contacts.pathEdit.noRepeaters.title" = "无可用转发节点";
 
 /* Location: PathEditingSheet.swift - Purpose: No repeaters empty description */
-"contacts.pathEdit.noRepeaters.description" = "中继器将在您的网状网络中发现后显示在此处。";
+"contacts.pathEdit.noRepeaters.description" = "在您的 Mesh 网络中发现转发节点后，它们会显示在这里";
 
 /* Location: PathEditingSheet.swift - Purpose: Add repeater footer */
-"contacts.pathEdit.addFooter" = "点击中继器将其添加到路径。";
+"contacts.pathEdit.addFooter" = "点击转发节点将其添加到路径";
 
 /* Location: PathEditingSheet.swift - Purpose: Add to path accessibility label */
 "contacts.pathEdit.addToPath" = "将 %@ 添加到路径";
@@ -579,12 +579,12 @@
 "contacts.pathEdit.hopWithName" = "第 %d/%d 跳：%@";
 
 /* Location: PathEditingSheet.swift - Purpose: Hop accessibility with hex */
-"contacts.pathEdit.hopWithHex" = "第 %d/%d 跳：中继器 %@";
+"contacts.pathEdit.hopWithHex" = "第 %d/%d 跳：转发节点 %@";
 
 // MARK: - Path Discovery Results
 
 /* Location: PathManagementViewModel.swift - Purpose: Direct path result */
-"contacts.pathDiscovery.direct" = "直接";
+"contacts.pathDiscovery.direct" = "直连";
 
 /* Location: PathManagementViewModel.swift - Purpose: Hop count result singular */
 "contacts.pathDiscovery.hops.singular" = "1 跳";
@@ -610,7 +610,7 @@
 "contacts.savedPaths.deleteTitle" = "删除路径";
 
 /* Location: SavedPathsSheet.swift - Purpose: Delete dialog message */
-"contacts.savedPaths.deleteMessage" = "删除\"%@\"？这将移除路径和所有运行历史。";
+"contacts.savedPaths.deleteMessage" = "删除\"%@\"？这将移除路径和所有运行历史";
 
 /* Location: SavedPathsSheet.swift - Purpose: Rename alert title */
 "contacts.savedPaths.renameTitle" = "重命名路径";
@@ -622,7 +622,7 @@
 "contacts.savedPaths.empty.title" = "无已保存路径";
 
 /* Location: SavedPathsSheet.swift - Purpose: Empty state description */
-"contacts.savedPaths.empty.description" = "运行追踪后保存路径以稍后快速重新运行。";
+"contacts.savedPaths.empty.description" = "运行追踪后保存路径以稍后快速重新运行";
 
 /* Location: SavedPathsSheet.swift - Purpose: Run count singular */
 "contacts.savedPaths.runs.singular" = "1 次运行";
@@ -728,7 +728,7 @@
 "contacts.trace.clearPath" = "清除路径";
 
 /* Location: TracePathView.swift - Purpose: Clear path dialog message */
-"contacts.trace.clearPathMessage" = "从路径中移除所有中继器？";
+"contacts.trace.clearPathMessage" = "从路径中移除所有转发节点？";
 
 /* Location: TracePathView.swift - Purpose: Trace failed alert title */
 "contacts.trace.failed" = "追踪失败";
@@ -751,13 +751,13 @@
 "contacts.trace.list.paste" = "从剪贴板粘贴";
 
 /* Location: TracePathListView.swift - Purpose: Code input footer */
-"contacts.trace.list.codeFooter" = "按回车键以添加中继器";
+"contacts.trace.list.codeFooter" = "按回车键以添加转发节点";
 
 /* Location: TracePathListView.swift - Purpose: Repeaters section label */
-"contacts.trace.list.repeaters" = "中继器";
+"contacts.trace.list.repeaters" = "转发节点";
 
 /* Location: TracePathListView.swift - Purpose: Empty path instruction */
-"contacts.trace.list.emptyPath" = "点击上方的中继器以开始构建您的路径";
+"contacts.trace.list.emptyPath" = "点击上方的转发节点以开始构建您的路径";
 
 /* Location: TracePathListView.swift - Purpose: Outbound path section header */
 "contacts.trace.list.outboundPath" = "出站路径";
@@ -772,7 +772,7 @@
 "contacts.trace.list.batchTrace" = "批量追踪";
 
 /* Location: TracePathListView.swift - Purpose: Batch trace toggle description */
-"contacts.trace.list.batchTraceDescription" = "运行多次追踪并平均结果";
+"contacts.trace.list.batchTraceDescription" = "运行多次追踪并取平均结果";
 
 /* Location: TracePathListView.swift - Purpose: Traces count label */
 "contacts.trace.list.traces" = "追踪：";
@@ -781,7 +781,7 @@
 "contacts.trace.list.copyPath" = "复制路径";
 
 /* Location: TracePathListView.swift - Purpose: Range warning footer */
-"contacts.trace.list.rangeWarning" = "您必须在中继器的范围内才能接收响应。";
+"contacts.trace.list.rangeWarning" = "你需要处于转发节点的信号覆盖范围内才能收到响应";
 
 /* Location: TracePathListView.swift - Purpose: Running trace progress */
 "contacts.trace.list.runningTrace" = "正在运行追踪";
@@ -817,10 +817,10 @@
 "contacts.trace.list.favoritesOnly" = "仅收藏";
 
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty title */
-"contacts.trace.list.noFavorites.title" = "无收藏的中继器";
+"contacts.trace.list.noFavorites.title" = "无收藏的转发节点";
 
 /* Location: TracePathListView.swift - Purpose: No favorite repeaters empty description */
-"contacts.trace.list.noFavorites.description" = "在节点标签中将中继器标记为收藏以在此处查看。";
+"contacts.trace.list.noFavorites.description" = "在节点标签中将转发节点标记为收藏以在此处查看";
 
 // MARK: - Trace Path List Accessibility
 
@@ -830,7 +830,7 @@
 // MARK: - Trace Path Cluster View
 
 /* Location: TracePathClusterView.swift - Accessibility label for cluster annotation - %d is count */
-"contacts.trace.map.cluster.label" = "%d 个中继器";
+"contacts.trace.map.cluster.label" = "%d 个转发节点";
 
 /* Location: TracePathClusterView.swift - Accessibility hint for cluster annotation */
 "contacts.trace.map.cluster.hint" = "双击以放大";
@@ -838,7 +838,7 @@
 // MARK: - Trace Path Repeater Pin View
 
 /* Location: TracePathRepeaterPinView.swift - Accessibility label for repeater in path - %1$@ is name, %2$d is hop number */
-"contacts.trace.map.pin.inPathLabel" = "中继器：%1$@，路径中第 %2$d 跳";
+"contacts.trace.map.pin.inPathLabel" = "转发节点：%1$@，路径中第 %2$d 跳";
 
 /* Location: TracePathRepeaterPinView.swift - Accessibility hint for removable last hop */
 "contacts.trace.map.pin.removableHint" = "双击以从路径中移除";
@@ -847,7 +847,7 @@
 "contacts.trace.map.pin.notRemovableHint" = "此跳无法移除。只有最后一跳可以移除。";
 
 /* Location: TracePathRepeaterPinView.swift - Accessibility label for available repeater - %@ is name */
-"contacts.trace.map.pin.availableLabel" = "中继器：%@";
+"contacts.trace.map.pin.availableLabel" = "转发节点：%@";
 
 /* Location: TracePathRepeaterPinView.swift - Accessibility hint for adding repeater to path */
 "contacts.trace.map.pin.addHint" = "双击以添加到路径";
@@ -858,10 +858,10 @@
 "contacts.trace.map.hops" = "%d 跳";
 
 /* Location: TracePathMapView.swift - Purpose: Empty state title */
-"contacts.trace.map.empty.title" = "无位置的中继器";
+"contacts.trace.map.empty.title" = "无位置信息的转发节点";
 
 /* Location: TracePathMapView.swift - Purpose: Empty state description */
-"contacts.trace.map.empty.description" = "使用列表视图以构建没有位置数据的中继器路径。";
+"contacts.trace.map.empty.description" = "使用列表视图以构建没有位置数据的转发路径";
 
 /* Location: TracePathMapView.swift - Purpose: Clear button */
 "contacts.trace.map.clear" = "清除";
@@ -885,7 +885,7 @@
 "contacts.trace.map.savedTitle" = "路径已保存";
 
 /* Location: TracePathMapView.swift - Purpose: Path saved alert message */
-"contacts.trace.map.savedMessage" = "路径已成功保存。";
+"contacts.trace.map.savedMessage" = "路径已成功保存";
 
 /* Location: TracePathMapView.swift - Purpose: Save failed alert title */
 "contacts.trace.map.saveFailedTitle" = "保存失败";
@@ -950,13 +950,13 @@
 "contacts.results.distanceInfoTitlePartial" = "距离信息";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance explanation */
-"contacts.results.partialDistanceExplanation" = "显示的距离仅在中继器之间。由于设备位置不可用，因此不包括您的设备到第一个中继器的距离。";
+"contacts.results.partialDistanceExplanation" = "显示的距离仅在转发节点之间。由于设备位置不可用，因此不包括您的设备到第一个转发节点的距离。";
 
 /* Location: TraceResultsSheet.swift - Purpose: Partial distance section header */
 "contacts.results.partialDistanceHeader" = "部分距离";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path tip */
-"contacts.results.fullPathTip" = "启用定位服务或为您的设备设置位置以查看完整路径距离。";
+"contacts.results.fullPathTip" = "启用定位服务或为您的设备设置位置以查看完整路径距离";
 
 /* Location: TraceResultsSheet.swift - Purpose: Full path section header */
 "contacts.results.fullPathHeader" = "以包含完整路径";
@@ -968,16 +968,16 @@
 "contacts.results.partialDistanceHint" = "双击以了解为何排除设备位置";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance needs repeaters message */
-"contacts.results.needsRepeaters" = "距离计算需要路径中至少有 2 个中继器。";
+"contacts.results.needsRepeaters" = "距离计算需要路径中至少有 2 个转发节点";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance error message */
-"contacts.results.distanceError" = "无法计算距离。所有中继器都有坐标，但发生了错误。";
+"contacts.results.distanceError" = "无法计算距离。所有转发节点都有坐标，但发生了错误。";
 
 /* Location: TraceResultsSheet.swift - Purpose: Distance missing locations message */
-"contacts.results.missingLocations" = "由于以下中继器没有设置位置坐标，因此无法计算距离。";
+"contacts.results.missingLocations" = "由于以下转发节点没有设置位置坐标，因此无法计算距离";
 
 /* Location: TraceResultsSheet.swift - Purpose: Repeaters without locations section */
-"contacts.results.repeatersWithoutLocations" = "无位置的中继器";
+"contacts.results.repeatersWithoutLocations" = "无位置信息的转发节点";
 
 /* Location: TraceResultsSheet.swift - Purpose: Save path button */
 "contacts.results.savePath" = "保存路径";
@@ -994,7 +994,7 @@
 "contacts.results.hop.received" = "已接收响应";
 
 /* Location: TraceResultsSheet.swift - Purpose: Repeated label */
-"contacts.results.hop.repeated" = "已中继";
+"contacts.results.hop.repeated" = "已转发";
 
 /* Location: TraceResultsSheet.swift - Purpose: Average SNR display */
 "contacts.results.hop.avgSNR" = "平均信噪比：%@ dB（%@ – %@）";
