@@ -83,11 +83,16 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
         // Visual setup
         tableView.separatorStyle = .none
+
+        // Flipped table (scaleX: 1, y: -1) inverts top/bottom, so automatic
+        // content-inset adjustment applies safe-area padding to the wrong edges.
+        // SwiftUI's .safeAreaInset already handles the input bar, so disable UIKit's.
+        tableView.contentInsetAdjustmentBehavior = .never
+
         if #available(iOS 26.0, *) {
             // Clear and non-opaque allows Liquid Glass effects on nav/input bars
             tableView.backgroundColor = .clear
             tableView.isOpaque = false
-            tableView.contentInsetAdjustmentBehavior = .always
 
             // Scroll edge effects don't work correctly with flipped table transform.
             // Hide both - the nav bar and input bar provide their own Liquid Glass blur.
