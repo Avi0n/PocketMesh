@@ -99,6 +99,10 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
     /// Tracks the auto-reconnect discovery timeout task so it can be cancelled on success
     private var autoReconnectDiscoveryTimeoutTask: Task<Void, Never>?
 
+    /// Periodic RSSI read task that keeps the BLE connection alive in background.
+    /// Without periodic BLE activity, iOS may drop idle connections.
+    private var rssiKeepaliveTask: Task<Void, Never>?
+
     /// Tracks whether CBCentralManager has been created
     private var isActivated = false
 
@@ -354,6 +358,7 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
             rx: rx,
             dataContinuation: continuation
         ))
+        startRSSIKeepalive(for: peripheral)
 
         logger.info("Connection complete for device: \(deviceID)")
         return stream
@@ -708,6 +713,10 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
             return
         }
         _ = dataContinuationLock.withLock { $0?.yield(data) }
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
+        // No-op. The round-trip itself keeps the BLE connection alive in background.
     }
 
     func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
@@ -1236,6 +1245,7 @@ extension BLEStateMachine {
             rx: rx,
             dataContinuation: continuation
         ))
+        startRSSIKeepalive(for: peripheral)
 
         logger.info("[BLE] iOS auto-reconnect complete: \(peripheral.identifier.uuidString.prefix(8))")
         onReconnection?(peripheral.identifier, stream)
@@ -1296,6 +1306,19 @@ extension BLEStateMachine {
         return oldPhase
     }
 
+    /// Starts a periodic RSSI read to keep the BLE connection alive in background.
+    /// iOS may drop idle BLE connections; the RSSI round-trip signals active use.
+    private func startRSSIKeepalive(for peripheral: CBPeripheral) {
+        rssiKeepaliveTask?.cancel()
+        rssiKeepaliveTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                peripheral.readRSSI()
+            }
+        }
+    }
+
     /// Cleans up non-continuation resources owned by a phase.
     ///
     /// Timeout cancellation is phase-aware:
@@ -1321,6 +1344,8 @@ extension BLEStateMachine {
             timeoutTask.cancel()
 
         case .connected(_, _, _, let dataContinuation):
+            rssiKeepaliveTask?.cancel()
+            rssiKeepaliveTask = nil
             // Clear delegate handler's continuation first to stop data flow
             delegateHandler.setDataContinuation(nil)
             dataContinuation.finish()
