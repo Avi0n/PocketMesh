@@ -315,6 +315,7 @@ struct ChatsView: View {
             if case .room(let session) = newValue, !session.isConnected {
                 roomToAuthenticate = session
                 selectedRoute = nil
+                appState.chatsSelectedRoute = nil
                 lastSelectedRoomIsConnected = nil
                 routeBeingDeleted = nil
                 return
@@ -324,12 +325,18 @@ struct ChatsView: View {
                 guard case .room(let session) = newValue else { return nil }
                 return session.isConnected
             }()
+
+            // Sync sidebar selection to AppState for detail pane (non-nil only;
+            // nil cases are handled explicitly by deletion methods and disconnected room path)
+            if let newValue {
+                appState.chatsSelectedRoute = newValue
+            }
         }
     }
 
     @ViewBuilder
     private var splitDetailContent: some View {
-        switch selectedRoute {
+        switch appState.chatsSelectedRoute {
         case .direct(let contact):
             ChatView(contact: contact, parentViewModel: viewModel)
                 .id(contact.id)
@@ -465,6 +472,7 @@ struct ChatsView: View {
     private func navigate(to route: ChatRoute) {
         if shouldUseSplitView {
             selectedRoute = route
+            appState.chatsSelectedRoute = route
             return
         }
 
@@ -497,6 +505,7 @@ struct ChatsView: View {
     private func deleteDirectConversation(_ contact: ContactDTO) {
         if shouldUseSplitView && selectedRoute == .direct(contact) {
             selectedRoute = nil
+            appState.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.direct(contact))
@@ -517,6 +526,7 @@ struct ChatsView: View {
     private func deleteChannelConversation(_ channel: ChannelDTO) {
         if shouldUseSplitView && selectedRoute == .channel(channel) {
             selectedRoute = nil
+            appState.chatsSelectedRoute = nil
         }
 
         viewModel.removeConversation(.channel(channel))
@@ -551,6 +561,7 @@ struct ChatsView: View {
             await MainActor.run {
                 if shouldUseSplitView && selectedRoute == .room(session) {
                     selectedRoute = nil
+                    appState.chatsSelectedRoute = nil
                 }
 
                 viewModel.removeConversation(.room(session))

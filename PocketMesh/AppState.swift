@@ -145,6 +145,9 @@ public final class AppState {
     /// Contact to navigate to
     var pendingChatContact: ContactDTO?
 
+    /// The currently selected route in the Chats split view detail pane
+    var chatsSelectedRoute: ChatRoute?
+
     /// Channel to navigate to
     var pendingChannel: ChannelDTO?
 
@@ -881,12 +884,14 @@ public final class AppState {
         tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
         pendingChatContact = contact
         pendingScrollToMessageID = scrollToMessageID
+        chatsSelectedRoute = .direct(contact)
         selectedTab = 0
     }
 
     func navigateToRoom(with session: RemoteNodeSessionDTO) {
         tabBarVisibility = .hidden  // Hide tab bar BEFORE switching tabs
         pendingRoomSession = session
+        chatsSelectedRoute = .room(session)
         selectedTab = 0
     }
 
@@ -894,6 +899,7 @@ public final class AppState {
         tabBarVisibility = .hidden
         pendingChannel = channel
         pendingScrollToMessageID = scrollToMessageID
+        chatsSelectedRoute = .channel(channel)
         selectedTab = 0
     }
 
