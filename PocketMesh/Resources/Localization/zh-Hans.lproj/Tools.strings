@@ -21,7 +21,7 @@
 "tools.rxLog" = "接收日志";
 
 /* Location: ToolsView.swift - Tool selection label */
-"tools.noiseFloor" = "噪声底";
+"tools.noiseFloor" = "底噪测量";
 
 /* Location: ToolsView.swift - Empty state when no tool selected */
 "tools.selectTool" = "选择工具";
@@ -29,16 +29,16 @@
 // MARK: - RX Log View
 
 /* Location: RxLogView.swift - Empty state title when listening */
-"tools.rxLog.listening" = "正在监听...";
+"tools.rxLog.listening" = "正在测量...";
 
 /* Location: RxLogView.swift - Empty state description */
-"tools.rxLog.listeningDescription" = "RF 数据包将在到达时显示在此处。";
+"tools.rxLog.listeningDescription" = "RF 数据包将在到达时显示在此处";
 
 /* Location: RxLogView.swift - Disconnected state title */
 "tools.rxLog.notConnected" = "未连接";
 
 /* Location: RxLogView.swift - Disconnected state description */
-"tools.rxLog.notConnectedDescription" = "连接到网状无线电以查看 RF 数据包。";
+"tools.rxLog.notConnectedDescription" = "连接无线电以查看 RF 数据包";
 
 /* Location: RxLogView.swift - Live status indicator */
 "tools.rxLog.live" = "实时";
@@ -74,7 +74,7 @@
 "tools.rxLog.delete" = "删除";
 
 /* Location: RxLogView.swift - Direct route label */
-"tools.rxLog.direct" = "直接";
+"tools.rxLog.direct" = "直连";
 
 /* Location: RxLogView.swift - Path detail for single hop */
 "tools.rxLog.hopSingular" = "跳";
@@ -139,7 +139,7 @@
 "tools.rxLog.filter.floodOnly" = "仅泛洪";
 
 /* Location: RxLogViewModel.swift - Route filter: direct only */
-"tools.rxLog.filter.directOnly" = "仅直接";
+"tools.rxLog.filter.directOnly" = "仅直连";
 
 /* Location: RxLogViewModel.swift - Decrypt filter: decrypted */
 "tools.rxLog.filter.decrypted" = "已解密";
@@ -150,13 +150,13 @@
 // MARK: - Noise Floor View
 
 /* Location: NoiseFloorView.swift - Disconnected state description */
-"tools.noiseFloor.notConnectedDescription" = "连接到网状无线电以测量噪声底。";
+"tools.noiseFloor.notConnectedDescription" = "连接无线电以测量环境底噪";
 
 /* Location: NoiseFloorView.swift - Collecting data title */
 "tools.noiseFloor.collectingData" = "正在收集数据...";
 
 /* Location: NoiseFloorView.swift - Collecting data description */
-"tools.noiseFloor.collectingDataDescription" = "噪声底读数将在收集后显示。";
+"tools.noiseFloor.collectingDataDescription" = "底噪读数将在收集后显示";
 
 /* Location: NoiseFloorView.swift - Unit label */
 "tools.noiseFloor.dBm" = "dBm";
@@ -168,10 +168,10 @@
 "tools.noiseFloor.noReading" = "无可用读数";
 
 /* Location: NoiseFloorView.swift - Chart accessibility, %lld readings, %lld min, %lld max, %lld avg, %@ trend */
-"tools.noiseFloor.chartAccessibility" = "噪声底历史：%lld 个读数，最小 %lld dBm，最大 %lld dBm，平均 %lld dBm，趋势 %@";
+"tools.noiseFloor.chartAccessibility" = "底噪历史：%lld 个读数，最小 %lld dBm，最大 %lld dBm，平均 %lld dBm，趋势 %@";
 
 /* Location: NoiseFloorView.swift - Chart accessibility when empty */
-"tools.noiseFloor.chartAccessibilityEmpty" = "噪声底历史图表，无数据";
+"tools.noiseFloor.chartAccessibilityEmpty" = "底噪历史图表，无数据";
 
 /* Location: NoiseFloorView.swift - Statistics section title */
 "tools.noiseFloor.statistics" = "统计";
@@ -241,7 +241,7 @@
 "tools.lineOfSight.pointB" = "B 点";
 
 /* Location: LineOfSightView.swift - Repeater annotation */
-"tools.lineOfSight.repeater" = "中继器";
+"tools.lineOfSight.repeater" = "转发节点";
 
 /* Location: LineOfSightView.swift - Drop pin mode enabled */
 "tools.lineOfSight.cancelDropPin" = "取消放置图钉";
@@ -307,7 +307,7 @@
 "tools.lineOfSight.totalHeight" = "总高度";
 
 /* Location: LineOfSightView.swift - Add repeater button */
-"tools.lineOfSight.addRepeater" = "添加中继器";
+"tools.lineOfSight.addRepeater" = "添加转发节点";
 
 /* Location: LineOfSightView.swift - Analyze button */
 "tools.lineOfSight.analyze" = "分析视距";
@@ -352,7 +352,7 @@
 "tools.lineOfSight.retry" = "重试";
 
 /* Location: LineOfSightView.swift - Repeater location map item name */
-"tools.lineOfSight.repeaterLocation" = "中继器位置";
+"tools.lineOfSight.repeaterLocation" = "转发节点位置";
 
 /* Location: LOSRepeaterPinView.swift - Accessibility hint for repeater pins */
 "tools.lineOfSight.repeaterPin.accessibilityHint" = "双击以选择为分析点";
@@ -361,7 +361,7 @@
 "tools.lineOfSight.pointPin.accessibilityHint" = "视距分析点";
 
 /* Location: LOSRepeaterTargetPinView.swift - Accessibility hint for repeater target */
-"tools.lineOfSight.repeaterTarget.accessibilityHint" = "中继器放置标记";
+"tools.lineOfSight.repeaterTarget.accessibilityHint" = "转发节点放置标记";
 
 // MARK: - Terrain Profile Canvas
 
@@ -439,7 +439,7 @@
 "tools.cli.notConnected" = "未连接";
 
 /* Location: CLIToolView.swift - Disconnected state description */
-"tools.cli.notConnectedDescription" = "连接到网状无线电以使用 CLI。";
+"tools.cli.notConnectedDescription" = "连接无线电以使用 CLI";
 
 /* Location: CLIToolView.swift - Prompt suffix */
 "tools.cli.promptSuffix" = ">";
@@ -493,7 +493,7 @@
 "tools.cli.logoutSuccess" = "已注销";
 
 /* Location: CLIToolView.swift - Not logged in error */
-"tools.cli.notLoggedIn" = "未登录到任何中继器";
+"tools.cli.notLoggedIn" = "未登录到任何转发节点";
 
 /* Location: CLIToolView.swift - Session switched */
 "tools.cli.sessionSwitched" = "已切换到";
@@ -544,7 +544,7 @@
 "tools.cli.defaultDevice" = "设备";
 
 /* Location: CLIToolViewModel.swift - Help: login command */
-"tools.cli.helpLogin" = "  login [-f] <节点>\n    登录到中继器（-f：忘记保存的密码）";
+"tools.cli.helpLogin" = "  login [-f] <节点>\n    登录到转发节点（-f：忘记保存的密码）";
 
 /* Location: CLIToolViewModel.swift - Help: logout command */
 "tools.cli.helpLogout" = "  logout\n    结束远程会话";
@@ -568,13 +568,13 @@
 "tools.cli.helpHelp" = "  help\n    显示此帮助";
 
 /* Location: CLIToolViewModel.swift - Help: nodes command */
-"tools.cli.helpNodes" = "  nodes\n    显示中继器和房间列表";
+"tools.cli.helpNodes" = "  nodes\n    显示转发节点和房间列表";
 
 /* Location: CLIToolViewModel.swift - Help: channels command */
-"tools.cli.helpChannels" = "  channels\n    显示包含设备插槽号的频道列表";
+"tools.cli.helpChannels" = "  channels\n    显示包含设备位置的频道列表";
 
 /* Location: CLIToolViewModel.swift - Help: repeater commands header */
-"tools.cli.helpRepeaterHeader" = "中继器命令（透传）：";
+"tools.cli.helpRepeaterHeader" = "转发节点命令（透传）：";
 
 /* Location: CLIToolViewModel.swift - Help: repeater commands list 1 */
 "tools.cli.helpRepeaterList1" = "  ver、clock、reboot、advert、neighbors";
@@ -610,7 +610,7 @@
 "tools.cli.welcomeConnected" = "已连接到 %@";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 3 */
-"tools.cli.welcomeHint" = "输入 'help' 以查看可用命令。";
+"tools.cli.welcomeHint" = "输入 'help' 以查看可用命令";
 
 /* Location: CLIToolView.swift - Jump to bottom button */
 "tools.cli.jumpToBottom" = "跳转到底部";

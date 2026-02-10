@@ -19,7 +19,7 @@
 "welcome.feature.multiHop.title" = "多跳路由";
 
 /* Location: WelcomeView.swift - Feature description for multi-hop routing */
-"welcome.feature.multiHop.description" = "您的消息在网状网络中找到路径";
+"welcome.feature.multiHop.description" = "您的消息在Mesh网络中找到路径";
 
 /* Location: WelcomeView.swift - Feature title for community network */
 "welcome.feature.community.title" = "社区网络";
@@ -75,7 +75,7 @@
 "permissions.locationAlert.openSettings" = "打开设置";
 
 /* Location: PermissionsView.swift - Alert message explaining denied location permission */
-"permissions.locationAlert.message" = "位置权限先前被拒绝。请在设置中启用它以与网状网络联系人共享您的位置。";
+"permissions.locationAlert.message" = "位置权限先前被拒绝。请在设置中启用它以与Mesh网络联系人共享您的位置。";
 
 // MARK: - Device Scan View
 
@@ -157,10 +157,10 @@
 "troubleshooting.factoryReset.clearPairing" = "清除之前的配对";
 
 /* Location: DeviceScanView.swift - Footer when no pairings found */
-"troubleshooting.factoryReset.noPairings" = "未找到之前的配对。";
+"troubleshooting.factoryReset.noPairings" = "未找到之前的配对";
 
 /* Location: DeviceScanView.swift - Footer showing pairing count - uses stringsdict */
-"troubleshooting.factoryReset.pairingsFound" = "找到 %d 个之前的配对。";
+"troubleshooting.factoryReset.pairingsFound" = "找到 %d 个之前的配对";
 
 /* Location: DeviceScanView.swift - Section header for system settings info */
 "troubleshooting.systemSettings.header" = "系统设置";
@@ -174,7 +174,7 @@
 // MARK: - Mesh Animation View
 
 /* Location: MeshAnimationView.swift - Accessibility label for mesh visualization */
-"meshAnimation.accessibilityLabel" = "网状网络可视化";
+"meshAnimation.accessibilityLabel" = "网络可视化";
 
 // MARK: - Radio Preset Onboarding View
 

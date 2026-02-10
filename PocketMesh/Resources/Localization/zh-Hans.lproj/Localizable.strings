@@ -101,7 +101,7 @@
 "alert.couldNotConnect.title" = "无法连接";
 
 /* Default message when device connection fails */
-"alert.connectionFailed.defaultMessage" = "无法连接到设备。";
+"alert.connectionFailed.defaultMessage" = "无法连接到设备";
 
 /* Message suggesting another app may be connected to the device */
 "alert.couldNotConnect.otherAppMessage" = "请确保没有其他应用连接到该设备，然后重试。";
@@ -131,7 +131,7 @@
 "nodeType.contact" = "联系人";
 
 /* Node type for a mesh network repeater device */
-"nodeType.repeater" = "中继器";
+"nodeType.repeater" = "转发节点";
 
 /* Node type for a group chat room */
 "nodeType.room" = "房间";
@@ -161,7 +161,7 @@
 "notifications.discovery.contact" = "发现新联系人";
 
 /* Notification title when a new repeater node is discovered on the mesh network */
-"notifications.discovery.repeater" = "发现新中继器";
+"notifications.discovery.repeater" = "发现新转发节点";
 
 /* Notification title when a new room is discovered on the mesh network */
 "notifications.discovery.room" = "发现新房间";

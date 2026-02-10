@@ -93,10 +93,10 @@
 "chats.alert.cannotRefresh.title" = "无法刷新";
 
 /* Location: ChatsView.swift - Alert message for offline refresh */
-"chats.alert.cannotRefresh.message" = "连接您的设备以获取最新消息。";
+"chats.alert.cannotRefresh.message" = "连接您的设备以获取最新消息";
 
 /* Location: ChatsView.swift - VoiceOver announcement when viewing cached data offline */
-"chats.accessibility.offlineAnnouncement" = "正在查看缓存数据。连接设备以获取更新。";
+"chats.accessibility.offlineAnnouncement" = "正在查看缓存数据,连接设备以获取更新.";
 
 // MARK: - Room Deletion
 
@@ -107,7 +107,7 @@
 "chats.alert.leaveRoom.confirm" = "离开";
 
 /* Location: ChatsView.swift - Alert message explaining what leaving a room does */
-"chats.alert.leaveRoom.message" = "这将从您的聊天列表中移除该房间，删除所有房间消息，并移除相关联系人。";
+"chats.alert.leaveRoom.message" = "退出后，此房间将从您的聊天列表消失，所有历史消息将被删除，相关联系人也将移除.";
 
 // MARK: - Message Timestamps
 
@@ -137,13 +137,13 @@
 "chats.alert.unableToSend.title" = "无法发送";
 
 /* Location: ChatView.swift - Alert message when message send fails */
-"chats.alert.unableToSend.message" = "请确保您的设备已连接并重试。";
+"chats.alert.unableToSend.message" = "请确保您的设备已连接并重试";
 
 /* Location: ChatView.swift - Connection status for flood routed contacts */
 "chats.connectionStatus.floodRouting" = "泛洪路由";
 
 /* Location: ChatView.swift - Connection status format for direct path - %d is hop count */
-"chats.connectionStatus.direct" = "直接 • %d 跳";
+"chats.connectionStatus.direct" = "直连 • %d 跳";
 
 /* Location: ChatView.swift - Connection status when route is unknown */
 "chats.connectionStatus.unknown" = "未知路由";
@@ -192,7 +192,7 @@
 "chats.channelInfo.deleteConfirm.title" = "删除频道";
 
 /* Location: ChannelInfoSheet.swift - Confirmation dialog message */
-"chats.channelInfo.deleteConfirm.message" = "这将从您的设备中移除该频道并删除所有本地消息。此操作无法撤销。";
+"chats.channelInfo.deleteConfirm.message" = "频道将从本设备移除，所有本地消息将被永久删除.此操作不可撤销.";
 
 /* Location: ChannelInfoSheet.swift - Channel type label for public channel */
 "chats.channelInfo.channelType.public" = "公共频道";
@@ -204,7 +204,7 @@
 "chats.channelInfo.channelType.private" = "私人频道";
 
 /* Location: ChannelInfoSheet.swift - Label for channel slot */
-"chats.channelInfo.slot" = "插槽";
+"chats.channelInfo.slot" = "频道位";
 
 /* Location: ChannelInfoSheet.swift - Label for last message date */
 "chats.channelInfo.lastMessage" = "最后消息";
@@ -225,7 +225,7 @@
 "chats.channelInfo.manualSharing" = "手动分享";
 
 /* Location: ChannelInfoSheet.swift - Footer explaining manual sharing */
-"chats.channelInfo.manualSharingFooter" = "分享频道名称和此密钥以便其他人手动加入。";
+"chats.channelInfo.manualSharingFooter" = "分享频道名称和此密钥以便其他人手动加入.";
 
 /* Location: ChannelInfoSheet.swift - Clear messages button */
 "chats.channelInfo.clearMessagesButton" = "清除消息";
@@ -234,13 +234,13 @@
 "chats.channelInfo.clearMessagesConfirm.title" = "清除消息？";
 
 /* Location: ChannelInfoSheet.swift - Clear messages confirmation dialog message */
-"chats.channelInfo.clearMessagesConfirm.message" = "此频道中的所有消息将被永久删除。频道将保持活动状态。";
+"chats.channelInfo.clearMessagesConfirm.message" = "此频道中的所有消息将被永久删除,频道将保持活动状态.";
 
 /* Location: ChannelInfoSheet.swift - Delete channel button */
 "chats.channelInfo.deleteButton" = "删除频道";
 
 /* Location: ChannelInfoSheet.swift - Footer explaining delete action */
-"chats.channelInfo.deleteFooter" = "删除将从您的设备中移除此频道。如果您有密钥，稍后可以重新加入。";
+"chats.channelInfo.deleteFooter" = "删除将从您的设备中移除此频道，如果您有密钥，稍后可以重新加入.";
 
 /* Location: ChannelInfoSheet.swift - Error when device not connected */
 "chats.error.noDeviceConnected" = "未连接设备";
@@ -296,10 +296,10 @@
 "chats.channelOptions.section.public" = "公共频道";
 
 /* Location: ChannelOptionsSheet.swift - Footer when all slots are in use */
-"chats.channelOptions.footer.noSlots" = "所有频道插槽都在使用中。删除现有频道以添加新频道。";
+"chats.channelOptions.footer.noSlots" = "所有频道都在使用中，删除现有频道以添加新频道";
 
 /* Location: ChannelOptionsSheet.swift - Footer when public channel already exists */
-"chats.channelOptions.footer.hasPublic" = "公共频道已在插槽0上配置。";
+"chats.channelOptions.footer.hasPublic" = "公共频道已在频道0上配置";
 
 // MARK: - New Chat View
 
@@ -307,7 +307,7 @@
 "chats.newChat.emptyState.title" = "无联系人";
 
 /* Location: NewChatView.swift - Empty state description */
-"chats.newChat.emptyState.description" = "联系人将在发现后显示";
+"chats.newChat.emptyState.description" = "成功发现周围的联系人后，他们会显示在这里";
 
 /* Location: NewChatView.swift - Navigation title */
 "chats.newChat.title" = "新聊天";
@@ -316,10 +316,10 @@
 "chats.newChat.search.placeholder" = "搜索联系人";
 
 /* Location: NewChatView.swift - Contact type label for direct contacts */
-"chats.newChat.contactType.direct" = "直接";
+"chats.newChat.contactType.direct" = "直连";
 
 /* Location: NewChatView.swift - Contact type label for repeaters */
-"chats.newChat.contactType.repeater" = "中继器";
+"chats.newChat.contactType.repeater" = "转发节点";
 
 /* Location: NewChatView.swift - Contact type label for rooms */
 "chats.newChat.contactType.room" = "房间";
@@ -369,7 +369,7 @@
 "chats.room.connected" = "已连接";
 
 /* Location: RoomConversationRow.swift - Prompt to reconnect to room */
-"chats.room.tapToReconnect" = "点击以重新连接";
+"chats.room.tapToReconnect" = "点此重连";
 
 // MARK: - Room Authentication Sheet
 
@@ -419,7 +419,7 @@
 "chats.createPrivate.section.secret" = "生成的密钥";
 
 /* Location: CreatePrivateChannelView.swift - Footer explaining generated secret */
-"chats.createPrivate.secretFooter" = "已生成随机密钥。创建频道后，您可以通过二维码分享。";
+"chats.createPrivate.secretFooter" = "已生成随机密钥,创建频道后，您可以通过二维码分享.";
 
 /* Location: CreatePrivateChannelView.swift - Button to create channel */
 "chats.createPrivate.createButton" = "创建频道";
@@ -428,7 +428,7 @@
 "chats.createPrivate.section.shareManually" = "手动分享";
 
 /* Location: CreatePrivateChannelView.swift - Footer explaining manual sharing */
-"chats.createPrivate.shareManuallyFooter" = "与他人分享频道名称和此密钥。他们需要两者才能加入。";
+"chats.createPrivate.shareManuallyFooter" = "与他人分享频道名称和此密钥,他们需要两者才能加入.";
 
 // MARK: - Join Private Channel View
 
@@ -439,7 +439,7 @@
 "chats.joinPrivate.error.invalidSecret" = "密钥必须是正好32个十六进制字符（0-9、A-F）";
 
 /* Location: JoinPrivateChannelView.swift - Footer explaining how to join */
-"chats.joinPrivate.footer" = "输入频道创建者分享的频道名称和密钥。";
+"chats.joinPrivate.footer" = "输入频道创建者分享的频道名称和密钥";
 
 /* Location: JoinPrivateChannelView.swift - Button to join channel */
 "chats.joinPrivate.joinButton" = "加入频道";
@@ -456,7 +456,7 @@
 "chats.joinPublic.channelName" = "公共频道";
 
 /* Location: JoinPublicChannelView.swift - Description of public channel */
-"chats.joinPublic.description" = "公共频道是插槽0上的开放广播频道。网状网络上的所有设备都可以在此频道上发送和接收消息。";
+"chats.joinPublic.description" = "公共频道是频道0上的开放广播频道,Mesh上的所有设备都可以在此频道上发送和接收消息.";
 
 /* Location: JoinPublicChannelView.swift - Button to add public channel */
 "chats.joinPublic.addButton" = "添加公共频道";
@@ -473,10 +473,10 @@
 "chats.joinHashtag.section.header" = "标签频道";
 
 /* Location: JoinHashtagChannelView.swift - Footer explaining hashtag channels */
-"chats.joinHashtag.footer" = "标签频道是公共的。任何人都可以通过输入相同的名称加入。仅允许小写字母、数字和连字符。";
+"chats.joinHashtag.footer" = "标签频道是公共的,任何人都可以通过输入相同的名称加入,仅允许小写字母、数字和连字符.";
 
 /* Location: JoinHashtagChannelView.swift - Description about encryption */
-"chats.joinHashtag.encryptionDescription" = "频道名称用于生成加密密钥。具有相同名称的任何人都可以读取消息。";
+"chats.joinHashtag.encryptionDescription" = "频道名称用于生成加密密钥,具有相同名称的任何人都可以读取消息.";
 
 /* Location: JoinHashtagChannelView.swift - Button format for existing channel - %@ is channel name */
 "chats.joinHashtag.goToButton" = "前往#%@";
@@ -511,28 +511,28 @@
 "chats.joinFromMessage.noDevice.title" = "未连接设备";
 
 /* Location: JoinHashtagFromMessageView.swift - No device connected description - %@ is channel name */
-"chats.joinFromMessage.noDevice.description" = "连接设备以加入%@。";
+"chats.joinFromMessage.noDevice.description" = "请先连接您的设备，才能加入 %@";
 
 /* Location: JoinHashtagFromMessageView.swift - No slots available title */
-"chats.joinFromMessage.noSlots.title" = "无可用插槽";
+"chats.joinFromMessage.noSlots.title" = "无可用频道";
 
 /* Location: JoinHashtagFromMessageView.swift - No slots available description - %@ is channel name */
-"chats.joinFromMessage.noSlots.description" = "所有频道插槽已满。删除现有频道以加入%@。";
+"chats.joinFromMessage.noSlots.description" = "频道数量已达上限,请先退出一个频道，再尝试加入 %@";
 
 /* Location: JoinHashtagFromMessageView.swift - Description of hashtag channels */
-"chats.joinFromMessage.description" = "标签频道是公共的。任何人都可以通过输入相同的名称加入。";
+"chats.joinFromMessage.description" = "标签频道是公共的,任何人都可以通过输入相同的名称加入.";
 
 /* Location: JoinHashtagFromMessageView.swift - Button to join channel - %@ is channel name */
 "chats.joinFromMessage.joinButton" = "加入%@";
 
 /* Location: JoinHashtagFromMessageView.swift - Error for no available slots */
-"chats.joinFromMessage.error.noSlots" = "无可用插槽。";
+"chats.joinFromMessage.error.noSlots" = "无法加入，频道已满";
 
 /* Location: JoinHashtagFromMessageView.swift - Error for invalid channel name */
-"chats.joinFromMessage.error.invalidName" = "无效的频道名称格式。";
+"chats.joinFromMessage.error.invalidName" = "无效的频道名称格式";
 
 /* Location: JoinHashtagFromMessageView.swift - Error when channel created but couldn't be loaded */
-"chats.joinFromMessage.error.loadFailed" = "频道已创建但无法加载。";
+"chats.joinFromMessage.error.loadFailed" = "频道已创建但无法加载";
 
 // MARK: - Scan Channel QR View
 
@@ -555,7 +555,7 @@
 "chats.scanQR.permissionDenied.title" = "需要相机访问权限";
 
 /* Location: ScanChannelQRView.swift - Camera permission denied message */
-"chats.scanQR.permissionDenied.message" = "请在设置中启用相机访问权限以扫描二维码。";
+"chats.scanQR.permissionDenied.message" = "请在设置中启用相机访问权限以扫描二维码";
 
 /* Location: ScanChannelQRView.swift - Button to open settings */
 "chats.scanQR.openSettings" = "打开设置";
@@ -587,10 +587,10 @@
 "chats.message.info.heardRepeats" = "已听到：%d %@";
 
 /* Location: UnifiedMessageBubble.swift - Singular form of repeat */
-"chats.message.repeat.singular" = "次中继";
+"chats.message.repeat.singular" = "跳";
 
 /* Location: UnifiedMessageBubble.swift - Plural form of repeats */
-"chats.message.repeat.plural" = "次中继";
+"chats.message.repeat.plural" = "跳";
 
 /* Location: UnifiedMessageBubble.swift - Context menu text showing sent time - %@ is formatted date */
 "chats.message.info.sent" = "已发送：%@";
@@ -665,10 +665,10 @@
 "chats.signal.veryPoor" = "很差";
 
 /* Location: UnifiedMessageBubble.swift - Hop count direct */
-"chats.message.hops.direct" = "直接";
+"chats.message.hops.direct" = "直连";
 
 /* Location: UnifiedMessageBubble.swift - Path footer for direct messages (no hops) */
-"chats.message.path.direct" = "直接";
+"chats.message.path.direct" = "直连";
 
 /* Location: UnifiedMessageBubble.swift - Fallback path showing hop count - %d is number */
 "chats.message.path.hops" = "%d 跳";
@@ -688,7 +688,7 @@
 "reactions.badge" = "%@ %d";
 
 /* Location: ReactionBadgesView.swift - Accessibility hint for reaction badge */
-"reactions.badge_hint" = "双击以添加您的反应，长按以查看详情";
+"reactions.badge_hint" = "双击可添加反应，长按查看详情";
 
 /* Location: ReactionBadgesView.swift - Accessibility label for overflow badge - %d is count */
 "reactions.more_badge" = "还有 %d 种反应类型";
@@ -743,7 +743,7 @@
 "chats.input.removeCharacters" = "删除 %d 个字符以发送";
 
 /* Location: ChatInputBar.swift - Accessibility hint when not connected */
-"chats.input.requiresConnection" = "需要无线电连接";
+"chats.input.requiresConnection" = "请先开启设备连接";
 
 /* Location: ChatInputBar.swift - Accessibility hint when ready to send */
 "chats.input.tapToSend" = "点击以发送您的消息";
@@ -803,18 +803,18 @@
 // MARK: - Repeat Details Sheet
 
 /* Location: RepeatDetailsSheet.swift - Empty state title */
-"chats.repeats.emptyState.title" = "暂无中继";
+"chats.repeats.emptyState.title" = "暂无转发节点";
 
 /* Location: RepeatDetailsSheet.swift - Empty state description */
-"chats.repeats.emptyState.description" = "中继将在您的消息通过网状网络传播时显示在此处。";
+"chats.repeats.emptyState.description" = "转发节点将在您的消息通过Mesh网络传播时显示在此处";
 
 /* Location: RepeatDetailsSheet.swift - Navigation title */
-"chats.repeats.title" = "中继详情";
+"chats.repeats.title" = "转发详情";
 
 // MARK: - Repeat Row View
 
 /* Location: RepeatRowView.swift - Accessibility label format - %@ is repeater name */
-"chats.repeats.row.accessibility" = "来自 %@ 的中继";
+"chats.repeats.row.accessibility" = "来自 %@ 的转发";
 
 /* Location: RepeatRowView.swift - Accessibility value format - %@ is quality, %@ is SNR, %@ is RSSI */
 "chats.repeats.row.accessibilityValue" = "%@ 信号，信噪比 %@，信号强度 %@";
@@ -826,7 +826,7 @@
 "chats.repeats.hop.plural" = "%d 跳";
 
 /* Location: RepeatRowView.swift - Unknown repeater name */
-"chats.repeats.unknownRepeater" = "<未知中继器>";
+"chats.repeats.unknownRepeater" = "<未知转发节点>";
 
 // MARK: - Link Preview Card
 
@@ -884,19 +884,19 @@
 "reactions.emoji.category.frequent" = "常用";
 
 /* Location: EmojiProvider.swift - People category */
-"reactions.emoji.category.people" = "表情与人物";
+"reactions.emoji.category.people" = "表情";
 
 /* Location: EmojiProvider.swift - Nature category */
-"reactions.emoji.category.nature" = "动物与自然";
+"reactions.emoji.category.nature" = "自然";
 
 /* Location: EmojiProvider.swift - Foods category */
-"reactions.emoji.category.foods" = "食物与饮品";
+"reactions.emoji.category.foods" = "食物";
 
 /* Location: EmojiProvider.swift - Activity category */
 "reactions.emoji.category.activity" = "活动";
 
 /* Location: EmojiProvider.swift - Places category */
-"reactions.emoji.category.places" = "旅行与地点";
+"reactions.emoji.category.places" = "旅行";
 
 /* Location: EmojiProvider.swift - Objects category */
 "reactions.emoji.category.objects" = "物品";
@@ -921,7 +921,7 @@
 // MARK: - Tips
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
-"chats.tip.floodAdvert.title" = "向网状网络宣布您的存在";
+"chats.tip.floodAdvert.title" = "向Mesh网络广播您的存在";
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
-"chats.tip.floodAdvert.message" = "点击此处并发送泛洪广播，让附近的设备知道您已加入。";
+"chats.tip.floodAdvert.message" = "点击此处发送泛洪广播，让附近的设备知道您已加入.";
