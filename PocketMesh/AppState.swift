@@ -634,12 +634,8 @@ public final class AppState {
         // Configure notification interaction handlers
         configureNotificationHandlers()
 
-        // Fetch battery and initialize thresholds before starting periodic checks
-        // We fetch directly here (not via fetchDeviceBattery) to avoid calling
-        // checkBatteryThresholds before thresholds are initialized
-        deviceBattery = try? await services.settingsService.getBattery()
-        await initializeBatteryThresholds()
-        startBatteryRefreshLoop()
+        // Defer battery bootstrap so connection setup is not blocked by device request timeouts.
+        scheduleBatteryBootstrap(for: services)
     }
 
     // MARK: - Device Actions
@@ -732,6 +728,25 @@ public final class AppState {
         } catch {
             // Silently fail - battery info is optional
             deviceBattery = nil
+        }
+    }
+
+    /// Starts battery bootstrap in the background so connection completion is not blocked.
+    private func scheduleBatteryBootstrap(for services: ServiceContainer) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            guard let activeServices = self.services, activeServices === services else { return }
+
+            do {
+                self.deviceBattery = try await services.settingsService.getBattery()
+            } catch {
+                self.logger.debug("Deferred battery bootstrap failed: \(error.localizedDescription, privacy: .public)")
+                self.deviceBattery = nil
+            }
+
+            guard let activeServices = self.services, activeServices === services else { return }
+            await self.initializeBatteryThresholds()
+            self.startBatteryRefreshLoop()
         }
     }
 
