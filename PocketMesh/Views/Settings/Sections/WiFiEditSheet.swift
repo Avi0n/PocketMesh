@@ -54,6 +54,7 @@ struct WiFiEditSheet: View {
                     HStack {
                         TextField(L10n.Settings.WifiEdit.ipPlaceholder, text: $ipAddress)
                             .keyboardType(.decimalPad)
+                            .environment(\.locale, Locale(identifier: "en_US"))
                             .textContentType(.none)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .ipAddress)

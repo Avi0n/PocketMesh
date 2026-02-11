@@ -95,6 +95,7 @@ struct WiFiConnectionSheet: View {
                     HStack {
                         TextField(L10n.Onboarding.WifiConnection.IpAddress.placeholder, text: $ipAddress)
                             .keyboardType(.decimalPad)
+                            .environment(\.locale, Locale(identifier: "en_US"))
                             .textContentType(.none)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .ip)
