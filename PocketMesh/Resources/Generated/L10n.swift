@@ -2429,6 +2429,10 @@ public enum L10n {
         public static let battery = L10n.tr("RemoteNodes", "remoteNodes.status.battery", fallback: "Battery")
         /// Location: RepeaterStatusView.swift - Battery curve section label
         public static let batteryCurve = L10n.tr("RemoteNodes", "remoteNodes.status.batteryCurve", fallback: "Battery Curve")
+        /// Location: RepeaterStatusView.swift - Channel header for grouped telemetry
+        public static func channel(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.channel", p1, fallback: "Channel %d")
+        }
         /// Location: RepeaterStatusView.swift - Hours ago format
         public static func hoursAgo(_ p1: Int) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.status.hoursAgo", p1, fallback: "%dh ago")

@@ -225,6 +225,17 @@ struct RepeaterStatusView: View {
                     if viewModel.cachedDataPoints.isEmpty {
                         Text(L10n.RemoteNodes.RemoteNodes.Status.noSensorData)
                             .foregroundStyle(.secondary)
+                    } else if viewModel.hasMultipleChannels {
+                        ForEach(viewModel.groupedDataPoints, id: \.channel) { group in
+                            Section {
+                                ForEach(group.dataPoints, id: \.self) { dataPoint in
+                                    TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)
+                                }
+                            } header: {
+                                Text(L10n.RemoteNodes.RemoteNodes.Status.channel(Int(group.channel)))
+                                    .fontWeight(.semibold)
+                            }
+                        }
                     } else {
                         ForEach(viewModel.cachedDataPoints, id: \.self) { dataPoint in
                             TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)

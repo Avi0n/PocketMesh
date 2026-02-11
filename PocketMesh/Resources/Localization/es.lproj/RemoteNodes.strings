@@ -376,6 +376,9 @@
 /* Location: RepeaterStatusViewModel.swift - OCV save failed */
 "remoteNodes.status.ocvSaveFailed" = "Error al guardar: %@";
 
+/* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
+"remoteNodes.status.channel" = "Canal %d";
+
 // MARK: - Room Conversation
 
 /* Location: RoomConversationView.swift - Disconnected status */
