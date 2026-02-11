@@ -235,14 +235,7 @@ struct RepeaterStatusView: View {
                         .foregroundStyle(.secondary)
                 }
             } label: {
-                HStack {
-                    Text(L10n.RemoteNodes.RemoteNodes.Status.telemetry)
-                    Spacer()
-                    if viewModel.telemetryLoaded {
-                        Text("\(viewModel.cachedDataPoints.count)")
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Text(L10n.RemoteNodes.RemoteNodes.Status.telemetry)
             }
             .onChange(of: viewModel.telemetryExpanded) { _, isExpanded in
                 if isExpanded && !viewModel.telemetryLoaded {
