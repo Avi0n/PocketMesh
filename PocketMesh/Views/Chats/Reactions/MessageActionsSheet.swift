@@ -17,6 +17,7 @@ enum MessageAction: Equatable {
 struct MessageActionsSheet: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let message: MessageDTO
     let senderName: String
@@ -40,13 +41,18 @@ struct MessageActionsSheet: View {
 
             Divider()
 
-            emojiSection
-
-            Divider()
+            if !dynamicTypeSize.isAccessibilitySize {
+                emojiSection
+                Divider()
+            }
 
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
+                        if dynamicTypeSize.isAccessibilitySize {
+                            emojiSection
+                            Divider()
+                        }
                         actionsSection
                         detailsSection
                         deleteSection
@@ -61,7 +67,7 @@ struct MessageActionsSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -87,23 +93,36 @@ struct MessageActionsSheet: View {
 
     private var messagePreviewHeader: some View {
         VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(senderName)
-                    .font(.subheadline)
-                    .bold()
-                Spacer()
-                Text(message.isOutgoing ? message.date : message.createdAt,
-                     format: .dateTime.hour().minute())
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    Text(senderName)
+                        .font(.subheadline)
+                        .bold()
+                    Spacer()
+                    messageTimestamp
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(senderName)
+                        .font(.subheadline)
+                        .bold()
+                    messageTimestamp
+                }
             }
 
             Text(message.text)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
         }
         .padding()
+    }
+
+    private var messageTimestamp: some View {
+        Text(message.isOutgoing ? message.date : message.createdAt,
+             format: .dateTime.hour().minute())
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
     }
 
     // MARK: - Emoji Section
