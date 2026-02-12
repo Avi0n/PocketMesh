@@ -110,6 +110,7 @@ final class NodeConfigImportViewModel {
 
     /// Apply the imported config to the device.
     func applyConfig(appState: AppState) {
+        guard !isApplying else { return }
         guard let config = importedConfig,
               let service = appState.services?.nodeConfigService,
               let deviceID = appState.connectedDevice?.id else { return }
@@ -126,7 +127,7 @@ final class NodeConfigImportViewModel {
                     sections: sections,
                     deviceID: deviceID
                 ) { progress in
-                    Task { @MainActor [self] in
+                    Task { @MainActor in
                         self.applyProgress = Double(progress.current) / Double(max(1, progress.total))
                         self.applyStepDescription = progress.step
                     }
@@ -135,6 +136,7 @@ final class NodeConfigImportViewModel {
                 if let settingsService = appState.services?.settingsService {
                     try? await settingsService.refreshDeviceInfo()
                 }
+                isApplying = false
                 importComplete = true
                 try? await Task.sleep(for: .seconds(1.5))
                 guard !Task.isCancelled else { return }
@@ -166,5 +168,6 @@ final class NodeConfigImportViewModel {
         applyStepDescription = ""
         applyError = nil
         importComplete = false
+        isApplying = false
     }
 }

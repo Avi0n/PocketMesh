@@ -32,10 +32,14 @@ final class NodeConfigExportViewModel {
                 .replacing(/[^a-zA-Z0-9_-]/, with: "_")
                 .replacing(/^_+|_+$/, with: "")
 
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-            let timestamp = formatter.string(from: Date())
+            let timestamp = Date.now.formatted(
+                .verbatim(
+                    "\(year: .defaultDigits)-\(month: .twoDigits)-\(day: .twoDigits)-\(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased))\(minute: .twoDigits)\(second: .twoDigits)",
+                    locale: Locale(identifier: "en_US_POSIX"),
+                    timeZone: .current,
+                    calendar: .init(identifier: .gregorian)
+                )
+            )
             let filename = "\(sanitized)_meshcore_config_\(timestamp)"
 
             exportedDocument = NodeConfigDocument(data: data, filename: filename)

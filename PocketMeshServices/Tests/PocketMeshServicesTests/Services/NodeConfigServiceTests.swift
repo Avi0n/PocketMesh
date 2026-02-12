@@ -214,8 +214,8 @@ struct NodeConfigServiceTests {
         let count = await service.testableCountImportSteps(config: config, sections: sections)
 
         // privateKey(1) + name(1) + position(1) + otherSettings(1)
-        // + channels(2) + contacts(1) + radio(1) + txPower(1) = 9
-        #expect(count == 9)
+        // + channels(2+1 read) + contacts(1) + radio(1) + txPower(1) = 10
+        #expect(count == 10)
     }
 
     @Test("countImportSteps skips disabled sections")
@@ -241,8 +241,8 @@ struct NodeConfigServiceTests {
         let service = await makeUntestableService()
         let count = await service.testableCountImportSteps(config: config, sections: sections)
 
-        // Only channels: 1
-        #expect(count == 1)
+        // Only channels: 1 channel + 1 read = 2
+        #expect(count == 2)
     }
 
     @Test("countImportSteps is zero for empty config")
@@ -390,7 +390,7 @@ private actor TestableNodeConfigService {
         if sections.nodeIdentity && config.name != nil { count += 1 }
         if sections.positionSettings && config.positionSettings != nil { count += 1 }
         if sections.otherSettings && config.otherSettings != nil { count += 1 }
-        if sections.channels { count += config.channels?.count ?? 0 }
+        if sections.channels { count += (config.channels?.count ?? 0) + 1 }
         if sections.contacts { count += config.contacts?.count ?? 0 }
         if sections.radioSettings && config.radioSettings != nil { count += 2 }
         return count
