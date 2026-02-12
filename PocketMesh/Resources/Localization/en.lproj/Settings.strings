@@ -828,3 +828,112 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Floods advertisement across entire mesh";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Device Configuration";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Export or import device settings, channels, and contacts as a JSON file.";
+
+/* Export navigation row label */
+"configExport.export" = "Export Config";
+
+/* Export screen navigation title */
+"configExport.title" = "Export Configuration";
+
+/* Export full config button */
+"configExport.exportFull" = "Export Full Config";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Export Selected Sections";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Customize Export";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Select All";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Node Identity (Name & Keys)";
+"configExport.nodeIdentity.description" = "Device name, public key, and private key";
+"configExport.radioSettings" = "Radio Settings";
+"configExport.radioSettings.description" = "Frequency, bandwidth, spreading factor, coding rate, TX power";
+"configExport.positionSettings" = "Position";
+"configExport.positionSettings.description" = "Latitude and longitude";
+"configExport.otherSettings" = "Other Settings";
+"configExport.otherSettings.description" = "Contact permissions, location sharing";
+"configExport.channels" = "Channels";
+"configExport.channels.description" = "All channels and their encryption keys";
+"configExport.contacts" = "Contacts";
+"configExport.contacts.description" = "Names, keys, and last known positions";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Import Configuration";
+
+/* Select file button */
+"configImport.selectFile" = "Select JSON File";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Cannot access the selected file.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Apply Configuration?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "This will merge the selected settings into %@. Existing channels and contacts will be updated or added.";
+
+/* Apply button label */
+"configImport.applyButton" = "Apply to Device";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Add to Device";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Overwrite Settings";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Add to Device?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Overwrite Settings?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "This will add channels and contacts to %@. Existing data will not be removed.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "This will overwrite the selected settings on %@. Current values will be replaced.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "This will overwrite settings and add channels/contacts on %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Keep devices close together during import";
+
+/* Import cancelled */
+"configImport.cancelled" = "Import was cancelled.";
+
+/* Import success */
+"configImport.importSuccess" = "Configuration imported successfully";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "This will replace the node's cryptographic identity";
+
+"configImport.current" = "Current: %@";
+"configImport.new" = "New: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "Will add/update %d channels on device";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Import Config";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Changing radio settings will disconnect from the current mesh network";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "Will add/update %d contacts on device";

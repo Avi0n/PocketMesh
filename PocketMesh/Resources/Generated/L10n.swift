@@ -2725,6 +2725,124 @@ public enum L10n {
       /// Chart Y axis label
       public static let voltage = L10n.tr("Settings", "chart.voltage", fallback: "Voltage (V)")
     }
+    public enum ConfigExport {
+      /// Channels
+      public static let channels = L10n.tr("Settings", "configExport.channels", fallback: "Channels")
+      /// Contacts
+      public static let contacts = L10n.tr("Settings", "configExport.contacts", fallback: "Contacts")
+      /// Customize export disclosure label
+      public static let customize = L10n.tr("Settings", "configExport.customize", fallback: "Customize Export")
+      /// Export navigation row label
+      public static let export = L10n.tr("Settings", "configExport.export", fallback: "Export Config")
+      /// Export full config button
+      public static let exportFull = L10n.tr("Settings", "configExport.exportFull", fallback: "Export Full Config")
+      /// Export selected sections button
+      public static let exportSelected = L10n.tr("Settings", "configExport.exportSelected", fallback: "Export Selected Sections")
+      /// Toggle labels for export sections
+      public static let nodeIdentity = L10n.tr("Settings", "configExport.nodeIdentity", fallback: "Node Identity (Name & Keys)")
+      /// Other Settings
+      public static let otherSettings = L10n.tr("Settings", "configExport.otherSettings", fallback: "Other Settings")
+      /// Position
+      public static let positionSettings = L10n.tr("Settings", "configExport.positionSettings", fallback: "Position")
+      /// Radio Settings
+      public static let radioSettings = L10n.tr("Settings", "configExport.radioSettings", fallback: "Radio Settings")
+      /// Section footer explaining config export/import
+      public static let sectionFooter = L10n.tr("Settings", "configExport.sectionFooter", fallback: "Export or import device settings, channels, and contacts as a JSON file.")
+      /// Section title for config export/import
+      public static let sectionTitle = L10n.tr("Settings", "configExport.sectionTitle", fallback: "Device Configuration")
+      /// Select all toggle label
+      public static let selectAll = L10n.tr("Settings", "configExport.selectAll", fallback: "Select All")
+      /// Export screen navigation title
+      public static let title = L10n.tr("Settings", "configExport.title", fallback: "Export Configuration")
+      public enum Channels {
+        /// All channels and their encryption keys
+        public static let description = L10n.tr("Settings", "configExport.channels.description", fallback: "All channels and their encryption keys")
+      }
+      public enum Contacts {
+        /// Names, keys, and last known positions
+        public static let description = L10n.tr("Settings", "configExport.contacts.description", fallback: "Names, keys, and last known positions")
+      }
+      public enum NodeIdentity {
+        /// Device name, public key, and private key
+        public static let description = L10n.tr("Settings", "configExport.nodeIdentity.description", fallback: "Device name, public key, and private key")
+      }
+      public enum OtherSettings {
+        /// Contact permissions, location sharing
+        public static let description = L10n.tr("Settings", "configExport.otherSettings.description", fallback: "Contact permissions, location sharing")
+      }
+      public enum PositionSettings {
+        /// Latitude and longitude
+        public static let description = L10n.tr("Settings", "configExport.positionSettings.description", fallback: "Latitude and longitude")
+      }
+      public enum RadioSettings {
+        /// Frequency, bandwidth, spreading factor, coding rate, TX power
+        public static let description = L10n.tr("Settings", "configExport.radioSettings.description", fallback: "Frequency, bandwidth, spreading factor, coding rate, TX power")
+      }
+    }
+    public enum ConfigImport {
+      /// Apply button label
+      public static let applyButton = L10n.tr("Settings", "configImport.applyButton", fallback: "Apply to Device")
+      /// Apply button label (additive only — channels/contacts)
+      public static let applyButtonAdd = L10n.tr("Settings", "configImport.applyButtonAdd", fallback: "Add to Device")
+      /// Apply button label (overwrite settings)
+      public static let applyButtonOverwrite = L10n.tr("Settings", "configImport.applyButtonOverwrite", fallback: "Overwrite Settings")
+      /// Import cancelled
+      public static let cancelled = L10n.tr("Settings", "configImport.cancelled", fallback: "Import was cancelled.")
+      /// Cannot access file error
+      public static let cannotAccess = L10n.tr("Settings", "configImport.cannotAccess", fallback: "Cannot access the selected file.")
+      /// Channel count (param: integer)
+      public static func channelCount(_ p1: Int) -> String {
+        return L10n.tr("Settings", "configImport.channelCount", p1, fallback: "Will add/update %d channels on device")
+      }
+      /// Confirmation alert message (param: device name)
+      public static func confirmMessage(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.confirmMessage", String(describing: p1), fallback: "This will merge the selected settings into %@. Existing channels and contacts will be updated or added.")
+      }
+      /// Confirmation alert message (additive only, param: device name)
+      public static func confirmMessageAdd(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.confirmMessageAdd", String(describing: p1), fallback: "This will add channels and contacts to %@. Existing data will not be removed.")
+      }
+      /// Confirmation alert message (mixed, param: device name)
+      public static func confirmMessageMixed(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.confirmMessageMixed", String(describing: p1), fallback: "This will overwrite settings and add channels/contacts on %@.")
+      }
+      /// Confirmation alert message (overwrite only, param: device name)
+      public static func confirmMessageOverwrite(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.confirmMessageOverwrite", String(describing: p1), fallback: "This will overwrite the selected settings on %@. Current values will be replaced.")
+      }
+      /// Confirmation alert title
+      public static let confirmTitle = L10n.tr("Settings", "configImport.confirmTitle", fallback: "Apply Configuration?")
+      /// Confirmation alert title (additive only)
+      public static let confirmTitleAdd = L10n.tr("Settings", "configImport.confirmTitleAdd", fallback: "Add to Device?")
+      /// Confirmation alert title (overwrite settings)
+      public static let confirmTitleOverwrite = L10n.tr("Settings", "configImport.confirmTitleOverwrite", fallback: "Overwrite Settings?")
+      /// Contact count (param: integer)
+      public static func contactCount(_ p1: Int) -> String {
+        return L10n.tr("Settings", "configImport.contactCount", p1, fallback: "Will add/update %d contacts on device")
+      }
+      /// Current: %@
+      public static func current(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.current", String(describing: p1), fallback: "Current: %@")
+      }
+      /// Import navigation row label
+      public static let importConfig = L10n.tr("Settings", "configImport.importConfig", fallback: "Import Config")
+      /// Import success
+      public static let importSuccess = L10n.tr("Settings", "configImport.importSuccess", fallback: "Configuration imported successfully")
+      /// New: %@
+      public static func new(_ p1: Any) -> String {
+        return L10n.tr("Settings", "configImport.new", String(describing: p1), fallback: "New: %@")
+      }
+      /// Private key warning
+      public static let privateKeyWarning = L10n.tr("Settings", "configImport.privateKeyWarning", fallback: "This will replace the node's cryptographic identity")
+      /// Proximity warning
+      public static let proximityWarning = L10n.tr("Settings", "configImport.proximityWarning", fallback: "Keep devices close together during import")
+      /// Radio settings change warning
+      public static let radioWarning = L10n.tr("Settings", "configImport.radioWarning", fallback: "Changing radio settings will disconnect from the current mesh network")
+      /// Select file button
+      public static let selectFile = L10n.tr("Settings", "configImport.selectFile", fallback: "Select JSON File")
+      /// Import screen navigation title
+      public static let title = L10n.tr("Settings", "configImport.title", fallback: "Import Configuration")
+    }
     public enum Contacts {
       /// Toggle label for auto-add nodes
       public static let autoAdd = L10n.tr("Settings", "contacts.autoAdd", fallback: "Auto-Add Nodes")

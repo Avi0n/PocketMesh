@@ -824,3 +824,112 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS устройства";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Конфигурация устройства";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Экспорт или импорт настроек устройства, каналов и контактов в формате JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Экспорт конфигурации";
+
+/* Export screen navigation title */
+"configExport.title" = "Экспорт конфигурации";
+
+/* Export full config button */
+"configExport.exportFull" = "Экспортировать полную конфигурацию";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Экспортировать выбранные разделы";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Настроить экспорт";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Выбрать всё";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Идентификация узла (Имя и ключи)";
+"configExport.nodeIdentity.description" = "Имя устройства, открытый ключ и закрытый ключ";
+"configExport.radioSettings" = "Настройки радио";
+"configExport.radioSettings.description" = "Частота, полоса пропускания, коэффициент расширения, скорость кодирования, мощность TX";
+"configExport.positionSettings" = "Позиция";
+"configExport.positionSettings.description" = "Широта и долгота";
+"configExport.otherSettings" = "Прочие настройки";
+"configExport.otherSettings.description" = "Разрешения контактов, обмен местоположением";
+"configExport.channels" = "Каналы";
+"configExport.channels.description" = "Все каналы и их ключи шифрования";
+"configExport.contacts" = "Контакты";
+"configExport.contacts.description" = "Имена, ключи и последние известные позиции";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Импорт конфигурации";
+
+/* Select file button */
+"configImport.selectFile" = "Выбрать JSON-файл";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Не удаётся открыть выбранный файл.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Применить конфигурацию?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Выбранные настройки будут объединены с %@. Существующие каналы и контакты будут обновлены или добавлены.";
+
+/* Apply button label */
+"configImport.applyButton" = "Применить к устройству";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Добавить на устройство";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Перезаписать настройки";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Добавить на устройство?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Перезаписать настройки?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Каналы и контакты будут добавлены в %@. Существующие данные не будут удалены.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Выбранные настройки на %@ будут перезаписаны. Текущие значения будут заменены.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Настройки будут перезаписаны, каналы и контакты добавлены на %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Держите устройства рядом во время импорта";
+
+/* Import cancelled */
+"configImport.cancelled" = "Импорт был отменён.";
+
+/* Import success */
+"configImport.importSuccess" = "Конфигурация успешно импортирована";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "Криптографическая идентификация узла будет заменена";
+
+"configImport.current" = "Текущее: %@";
+"configImport.new" = "Новое: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "Будет добавлено/обновлено %d каналов на устройстве";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Импорт конфигурации";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Изменение настроек радио приведёт к отключению от текущей mesh-сети";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "Будет добавлено/обновлено %d контактов на устройстве";

@@ -1,0 +1,287 @@
+import SwiftUI
+import PocketMeshServices
+
+struct NodeConfigImportView: View {
+    @Environment(\.appState) private var appState
+    @State private var viewModel = NodeConfigImportViewModel()
+
+    var body: some View {
+        Group {
+            if let config = viewModel.importedConfig {
+                ImportPreviewList(viewModel: viewModel, config: config, appState: appState)
+            } else {
+                SelectFileList(viewModel: viewModel)
+            }
+        }
+        .navigationTitle(L10n.Settings.ConfigImport.title)
+        .fileImporter(
+            isPresented: $viewModel.showFilePicker,
+            allowedContentTypes: [.json]
+        ) { result in
+            switch result {
+            case .success(let url):
+                viewModel.parseFile(at: url)
+                Task { await viewModel.loadCurrentDeviceState(appState: appState) }
+            case .failure(let error):
+                viewModel.parseError = error.localizedDescription
+            }
+        }
+        .alert(
+            viewModel.confirmTitle,
+            isPresented: $viewModel.showConfirmation
+        ) {
+            Button(viewModel.applyButtonLabel) {
+                viewModel.applyConfig(appState: appState)
+            }
+            Button(L10n.Localizable.Common.cancel, role: .cancel) {}
+        } message: {
+            Text(viewModel.confirmMessage(deviceName: appState.connectedDevice?.nodeName ?? "device"))
+        }
+    }
+}
+
+// MARK: - Select File
+
+private struct SelectFileList: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+
+    var body: some View {
+        List {
+            Section {
+                Button(L10n.Settings.ConfigImport.selectFile) {
+                    viewModel.showFilePicker = true
+                }
+            }
+
+            if let error = viewModel.parseError {
+                Section {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Import Preview
+
+private struct ImportPreviewList: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let config: MeshCoreNodeConfig
+    let appState: AppState
+
+    var body: some View {
+        List {
+            if config.name != nil || config.privateKey != nil {
+                NodeIdentitySection(viewModel: viewModel, config: config)
+            }
+
+            if let radio = config.radioSettings {
+                RadioSettingsSection(viewModel: viewModel, radio: radio, currentRadio: viewModel.currentRadio)
+            }
+
+            if let position = config.positionSettings {
+                PositionSection(viewModel: viewModel, position: position, currentPosition: viewModel.currentPosition)
+            }
+
+            if config.otherSettings != nil {
+                Section {
+                    Toggle(L10n.Settings.ConfigExport.otherSettings, isOn: $viewModel.sections.otherSettings)
+                }
+            }
+
+            if let channels = config.channels {
+                ChannelsSection(viewModel: viewModel, channels: channels)
+            }
+
+            if let contacts = config.contacts {
+                ContactsSection(viewModel: viewModel, contacts: contacts)
+            }
+
+            Section {
+                Label(L10n.Settings.ConfigImport.proximityWarning, systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            ApplySection(viewModel: viewModel)
+
+            if let error = viewModel.applyError {
+                Section {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            if viewModel.importComplete && !viewModel.isApplying {
+                Section {
+                    Label(L10n.Settings.ConfigImport.importSuccess, systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Section Views
+
+private struct NodeIdentitySection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let config: MeshCoreNodeConfig
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.sections.nodeIdentity) {
+                VStack(alignment: .leading) {
+                    Text(L10n.Settings.ConfigExport.nodeIdentity)
+                    if let newName = config.name {
+                        DiffRow(
+                            current: viewModel.currentName ?? "\u{2014}",
+                            new: newName
+                        )
+                    }
+                    if config.privateKey != nil {
+                        Label(L10n.Settings.ConfigImport.privateKeyWarning, systemImage: "exclamationmark.shield")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct RadioSettingsSection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let radio: MeshCoreNodeConfig.RadioSettings
+    let currentRadio: MeshCoreNodeConfig.RadioSettings?
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.sections.radioSettings) {
+                VStack(alignment: .leading) {
+                    Text(L10n.Settings.ConfigExport.radioSettings)
+                    DiffRow(
+                        current: currentRadio.map { RadioFormatter.format($0) } ?? "\u{2014}",
+                        new: RadioFormatter.format(radio)
+                    )
+                    if let current = currentRadio, current != radio {
+                        Label(L10n.Settings.ConfigImport.radioWarning, systemImage: "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct PositionSection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let position: MeshCoreNodeConfig.PositionSettings
+    let currentPosition: MeshCoreNodeConfig.PositionSettings?
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.sections.positionSettings) {
+                VStack(alignment: .leading) {
+                    Text(L10n.Settings.ConfigExport.positionSettings)
+                    DiffRow(
+                        current: currentPosition.map { "\($0.latitude), \($0.longitude)" } ?? "\u{2014}",
+                        new: "\(position.latitude), \(position.longitude)"
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct ChannelsSection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let channels: [MeshCoreNodeConfig.ChannelConfig]
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.sections.channels) {
+                VStack(alignment: .leading) {
+                    Text(L10n.Settings.ConfigExport.channels)
+                    Text(L10n.Settings.ConfigImport.channelCount(channels.count))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+private struct ContactsSection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+    let contacts: [MeshCoreNodeConfig.ContactConfig]
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $viewModel.sections.contacts) {
+                VStack(alignment: .leading) {
+                    Text(L10n.Settings.ConfigExport.contacts)
+                    Text(L10n.Settings.ConfigImport.contactCount(contacts.count))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+private struct ApplySection: View {
+    @Bindable var viewModel: NodeConfigImportViewModel
+
+    var body: some View {
+        Section {
+            if viewModel.isApplying {
+                VStack {
+                    ProgressView(value: viewModel.applyProgress)
+                    Text(viewModel.applyStepDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    Button(L10n.Localizable.Common.cancel, role: .cancel) {
+                        viewModel.cancelImport()
+                    }
+                }
+            } else if !viewModel.importComplete {
+                Button(viewModel.applyButtonLabel) {
+                    viewModel.showConfirmation = true
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Diff Row
+
+private struct DiffRow: View {
+    let current: String
+    let new: String
+
+    private var hasChanged: Bool { current != new }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text(L10n.Settings.ConfigImport.current(current))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            Text(L10n.Settings.ConfigImport.new(new))
+                .font(.footnote)
+                .foregroundStyle(hasChanged ? .primary : .secondary)
+        }
+    }
+}
+
+// MARK: - Radio Formatter
+
+private enum RadioFormatter {
+    static func format(_ radio: MeshCoreNodeConfig.RadioSettings) -> String {
+        let freqMHz = (Double(radio.frequency) / 1000).formatted(.number.precision(.fractionLength(0...3)))
+        let bwKHz = (Double(radio.bandwidth) / 1000).formatted(.number.precision(.fractionLength(0...1)))
+        return "\(freqMHz) MHz, BW \(bwKHz) kHz, SF \(radio.spreadingFactor), CR \(radio.codingRate)"
+    }
+}

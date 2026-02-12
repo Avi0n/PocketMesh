@@ -35,6 +35,9 @@ struct AdvancedSettingsView: View {
                     isDisabled: appState.connectionState != .ready
                 )
 
+                // Config Export/Import
+                ConfigExportImportSection()
+
                 // Danger Zone
                 DangerZoneSection()
             }
