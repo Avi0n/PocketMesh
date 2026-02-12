@@ -1782,6 +1782,36 @@ public final class ConnectionManager {
         logger.info("Device forgotten")
     }
 
+    /// Forgets a device by ID, removing it from paired accessories and local storage.
+    /// Best-effort cleanup — does not throw. Use after factory reset when the device
+    /// may have already disconnected.
+    public func forgetDevice(id: UUID) async {
+        logger.info("Forgetting device by ID: \(id)")
+
+        // Remove from paired accessories (most important — without this, re-pairing fails)
+        if let accessory = accessorySetupKit.accessory(for: id) {
+            do {
+                try await accessorySetupKit.removeAccessory(accessory)
+            } catch {
+                logger.warning("Failed to remove accessory from ASK: \(error.localizedDescription)")
+            }
+        }
+
+        // Always disconnect — even if BLE already dropped, this cancels any pending
+        // auto-reconnect, sets connectionIntent, and cleans up state.
+        await disconnect(reason: .factoryReset)
+
+        // Delete from SwiftData
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        do {
+            try await dataStore.deleteDevice(id: id)
+        } catch {
+            logger.warning("Failed to delete device data from SwiftData: \(error.localizedDescription)")
+        }
+
+        logger.info("Device forgotten by ID: \(id)")
+    }
+
     /// Clears all stale pairings from AccessorySetupKit.
     /// Use when a device has been factory-reset but iOS still has the old pairing.
     public func clearStalePairings() async {

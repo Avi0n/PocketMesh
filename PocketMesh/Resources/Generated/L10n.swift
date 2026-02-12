@@ -2875,7 +2875,7 @@ public enum L10n {
           /// Button to confirm reset
           public static let confirm = L10n.tr("Settings", "dangerZone.alert.reset.confirm", fallback: "Reset")
           /// Alert message for factory reset
-          public static let message = L10n.tr("Settings", "dangerZone.alert.reset.message", fallback: "This will erase ALL data on the device including contacts, messages, and settings. This cannot be undone.")
+          public static let message = L10n.tr("Settings", "dangerZone.alert.reset.message", fallback: "This will erase all device data including contacts, messages, and settings. Tap Remove when prompted to unpair the device.")
           /// Alert title for factory reset confirmation
           public static let title = L10n.tr("Settings", "dangerZone.alert.reset.title", fallback: "Factory Reset")
         }

@@ -496,7 +496,7 @@
 "dangerZone.alert.reset.confirm" = "Reset";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "This will erase ALL data on the device including contacts, messages, and settings. This cannot be undone.";
+"dangerZone.alert.reset.message" = "This will erase all device data including contacts, messages, and settings. Tap Remove when prompted to unpair the device.";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Services not available";

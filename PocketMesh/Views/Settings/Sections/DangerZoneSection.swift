@@ -72,19 +72,27 @@ struct DangerZoneSection: View {
             return
         }
 
+        guard let deviceID = appState.connectedDevice?.id else {
+            showError = L10n.Settings.DangerZone.Error.servicesUnavailable
+            return
+        }
+
         isResetting = true
         Task {
+            defer { isResetting = false }
+
+            // Send reset command. The device typically reboots before responding,
+            // so a timeout/connection error here is expected — not a failure.
             do {
                 try await settingsService.factoryReset()
-
-                // Wait briefly then disconnect
                 try await Task.sleep(for: .seconds(1))
-                await appState.disconnect(reason: .factoryReset)
-                dismiss()
             } catch {
-                showError = error.localizedDescription
+                // Expected: device reboots before sending OK response
             }
-            isResetting = false
+
+            // Always clean up: remove from ASK, disconnect, delete from SwiftData
+            await appState.connectionManager.forgetDevice(id: deviceID)
+            dismiss()
         }
     }
 }
