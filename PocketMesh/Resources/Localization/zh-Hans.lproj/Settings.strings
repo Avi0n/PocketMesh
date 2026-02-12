@@ -799,3 +799,112 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "在整个网络上泛洪广播";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "设备配置";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "将设备设置、频道和联系人导出或导入为 JSON 文件。";
+
+/* Export navigation row label */
+"configExport.export" = "导出配置";
+
+/* Export screen navigation title */
+"configExport.title" = "导出配置";
+
+/* Export full config button */
+"configExport.exportFull" = "导出完整配置";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "导出所选部分";
+
+/* Customize export disclosure label */
+"configExport.customize" = "自定义导出";
+
+/* Select all toggle label */
+"configExport.selectAll" = "全选";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "节点身份（名称和密钥）";
+"configExport.nodeIdentity.description" = "设备名称、公钥和私钥";
+"configExport.radioSettings" = "无线电设置";
+"configExport.radioSettings.description" = "频率、带宽、扩频因子、编码率、发射功率";
+"configExport.positionSettings" = "位置";
+"configExport.positionSettings.description" = "纬度和经度";
+"configExport.otherSettings" = "其他设置";
+"configExport.otherSettings.description" = "联系人权限、位置共享";
+"configExport.channels" = "频道";
+"configExport.channels.description" = "所有频道及其加密密钥";
+"configExport.contacts" = "联系人";
+"configExport.contacts.description" = "姓名、密钥和最后已知位置";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "导入配置";
+
+/* Select file button */
+"configImport.selectFile" = "选择 JSON 文件";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "无法访问所选文件。";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "应用配置？";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "所选设置将合并到 %@。现有频道和联系人将被更新或添加。";
+
+/* Apply button label */
+"configImport.applyButton" = "应用到设备";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "添加到设备";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "覆盖设置";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "添加到设备？";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "覆盖设置？";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "频道和联系人将添加到 %@。现有数据不会被删除。";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "%@ 上的所选设置将被覆盖。当前值将被替换。";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "设置将被覆盖，频道和联系人将添加到 %@。";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "导入期间请保持设备靠近";
+
+/* Import cancelled */
+"configImport.cancelled" = "导入已取消。";
+
+/* Import success */
+"configImport.importSuccess" = "配置导入成功";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "这将替换节点的加密身份";
+
+"configImport.current" = "当前：%@";
+"configImport.new" = "新值：%@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "将在设备上添加/更新 %d 个频道";
+
+/* Import navigation row label */
+"configImport.importConfig" = "导入配置";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "更改无线电设置将断开与当前 mesh 网络的连接";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "将在设备上添加/更新 %d 个联系人";

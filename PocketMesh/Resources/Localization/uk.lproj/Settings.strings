@@ -824,3 +824,112 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS пристрою";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Конфігурація пристрою";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Експорт або імпорт налаштувань пристрою, каналів та контактів у форматі JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Експорт конфігурації";
+
+/* Export screen navigation title */
+"configExport.title" = "Експорт конфігурації";
+
+/* Export full config button */
+"configExport.exportFull" = "Експортувати повну конфігурацію";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Експортувати вибрані розділи";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Налаштувати експорт";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Вибрати все";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Ідентифікація вузла (Назва та ключі)";
+"configExport.nodeIdentity.description" = "Назва пристрою, відкритий ключ та закритий ключ";
+"configExport.radioSettings" = "Налаштування радіо";
+"configExport.radioSettings.description" = "Частота, смуга пропускання, коефіцієнт розширення, швидкість кодування, потужність TX";
+"configExport.positionSettings" = "Позиція";
+"configExport.positionSettings.description" = "Широта та довгота";
+"configExport.otherSettings" = "Інші налаштування";
+"configExport.otherSettings.description" = "Дозволи контактів, обмін місцезнаходженням";
+"configExport.channels" = "Канали";
+"configExport.channels.description" = "Усі канали та їхні ключі шифрування";
+"configExport.contacts" = "Контакти";
+"configExport.contacts.description" = "Імена, ключі та останні відомі позиції";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Імпорт конфігурації";
+
+/* Select file button */
+"configImport.selectFile" = "Вибрати JSON-файл";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Неможливо відкрити вибраний файл.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Застосувати конфігурацію?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Вибрані налаштування буде об'єднано з %@. Наявні канали та контакти буде оновлено або додано.";
+
+/* Apply button label */
+"configImport.applyButton" = "Застосувати до пристрою";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Додати до пристрою";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Перезаписати налаштування";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Додати до пристрою?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Перезаписати налаштування?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Канали та контакти буде додано до %@. Наявні дані не буде видалено.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Вибрані налаштування на %@ буде перезаписано. Поточні значення буде замінено.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Налаштування буде перезаписано, а канали/контакти додано на %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Тримайте пристрої поруч під час імпорту";
+
+/* Import cancelled */
+"configImport.cancelled" = "Імпорт було скасовано.";
+
+/* Import success */
+"configImport.importSuccess" = "Конфігурацію успішно імпортовано";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "Криптографічну ідентифікацію вузла буде замінено";
+
+"configImport.current" = "Поточне: %@";
+"configImport.new" = "Нове: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "Буде додано/оновлено %d каналів на пристрої";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Імпорт конфігурації";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Зміна налаштувань радіо призведе до від'єднання від поточної mesh-мережі";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "Буде додано/оновлено %d контактів на пристрої";

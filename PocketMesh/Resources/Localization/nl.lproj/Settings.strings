@@ -824,3 +824,112 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "Apparaat GPS";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Apparaatconfiguratie";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Exporteer of importeer apparaatinstellingen, kanalen en contacten als JSON-bestand.";
+
+/* Export navigation row label */
+"configExport.export" = "Configuratie exporteren";
+
+/* Export screen navigation title */
+"configExport.title" = "Configuratie exporteren";
+
+/* Export full config button */
+"configExport.exportFull" = "Volledige configuratie exporteren";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Geselecteerde secties exporteren";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Export aanpassen";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Alles selecteren";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Knoopidentiteit (Naam & sleutels)";
+"configExport.nodeIdentity.description" = "Apparaatnaam, publieke sleutel en privésleutel";
+"configExport.radioSettings" = "Radio-instellingen";
+"configExport.radioSettings.description" = "Frequentie, bandbreedte, spreidingsfactor, coderingssnelheid, TX-vermogen";
+"configExport.positionSettings" = "Positie";
+"configExport.positionSettings.description" = "Breedtegraad en lengtegraad";
+"configExport.otherSettings" = "Overige instellingen";
+"configExport.otherSettings.description" = "Contactpermissies, locatie delen";
+"configExport.channels" = "Kanalen";
+"configExport.channels.description" = "Alle kanalen en hun versleutelingssleutels";
+"configExport.contacts" = "Contacten";
+"configExport.contacts.description" = "Namen, sleutels en laatst bekende posities";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Configuratie importeren";
+
+/* Select file button */
+"configImport.selectFile" = "JSON-bestand selecteren";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Kan het geselecteerde bestand niet openen.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Configuratie toepassen?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "De geselecteerde instellingen worden samengevoegd in %@. Bestaande kanalen en contacten worden bijgewerkt of toegevoegd.";
+
+/* Apply button label */
+"configImport.applyButton" = "Toepassen op apparaat";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Toevoegen aan apparaat";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Instellingen overschrijven";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Toevoegen aan apparaat?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Instellingen overschrijven?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Kanalen en contacten worden toegevoegd aan %@. Bestaande gegevens worden niet verwijderd.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "De geselecteerde instellingen op %@ worden overschreven. Huidige waarden worden vervangen.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Instellingen worden overschreven en kanalen/contacten worden toegevoegd op %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Houd apparaten dicht bij elkaar tijdens het importeren";
+
+/* Import cancelled */
+"configImport.cancelled" = "Import is geannuleerd.";
+
+/* Import success */
+"configImport.importSuccess" = "Configuratie succesvol geïmporteerd";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "De cryptografische identiteit van de knoop wordt vervangen";
+
+"configImport.current" = "Huidig: %@";
+"configImport.new" = "Nieuw: %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "%d kanalen worden toegevoegd/bijgewerkt op het apparaat";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Configuratie importeren";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Wijziging van radio-instellingen verbreekt de verbinding met het huidige mesh-netwerk";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "%d contacten worden toegevoegd/bijgewerkt op het apparaat";

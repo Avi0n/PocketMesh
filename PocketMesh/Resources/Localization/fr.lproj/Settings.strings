@@ -824,3 +824,112 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS de l'appareil";
+
+// MARK: - Config Export/Import
+
+/* Section title for config export/import */
+"configExport.sectionTitle" = "Configuration de l'appareil";
+
+/* Section footer explaining config export/import */
+"configExport.sectionFooter" = "Exporter ou importer les paramètres de l'appareil, canaux et contacts en fichier JSON.";
+
+/* Export navigation row label */
+"configExport.export" = "Exporter la configuration";
+
+/* Export screen navigation title */
+"configExport.title" = "Exporter la configuration";
+
+/* Export full config button */
+"configExport.exportFull" = "Exporter la configuration complète";
+
+/* Export selected sections button */
+"configExport.exportSelected" = "Exporter les sections sélectionnées";
+
+/* Customize export disclosure label */
+"configExport.customize" = "Personnaliser l'exportation";
+
+/* Select all toggle label */
+"configExport.selectAll" = "Tout sélectionner";
+
+/* Toggle labels for export sections */
+"configExport.nodeIdentity" = "Identité du nœud (Nom et clés)";
+"configExport.nodeIdentity.description" = "Nom de l'appareil, clé publique et clé privée";
+"configExport.radioSettings" = "Paramètres radio";
+"configExport.radioSettings.description" = "Fréquence, bande passante, facteur d'étalement, taux de codage, puissance TX";
+"configExport.positionSettings" = "Position";
+"configExport.positionSettings.description" = "Latitude et longitude";
+"configExport.otherSettings" = "Autres paramètres";
+"configExport.otherSettings.description" = "Autorisations des contacts, partage de position";
+"configExport.channels" = "Canaux";
+"configExport.channels.description" = "Tous les canaux et leurs clés de chiffrement";
+"configExport.contacts" = "Contacts";
+"configExport.contacts.description" = "Noms, clés et dernières positions connues";
+
+
+// MARK: - Config Import
+
+/* Import screen navigation title */
+"configImport.title" = "Importer la configuration";
+
+/* Select file button */
+"configImport.selectFile" = "Sélectionner un fichier JSON";
+
+/* Cannot access file error */
+"configImport.cannotAccess" = "Impossible d'accéder au fichier sélectionné.";
+
+/* Confirmation alert title */
+"configImport.confirmTitle" = "Appliquer la configuration ?";
+
+/* Confirmation alert message (param: device name) */
+"configImport.confirmMessage" = "Les paramètres sélectionnés seront fusionnés dans %@. Les canaux et contacts existants seront mis à jour ou ajoutés.";
+
+/* Apply button label */
+"configImport.applyButton" = "Appliquer à l'appareil";
+
+/* Apply button label (additive only — channels/contacts) */
+"configImport.applyButtonAdd" = "Ajouter à l'appareil";
+
+/* Apply button label (overwrite settings) */
+"configImport.applyButtonOverwrite" = "Écraser les paramètres";
+
+/* Confirmation alert title (additive only) */
+"configImport.confirmTitleAdd" = "Ajouter à l'appareil ?";
+
+/* Confirmation alert title (overwrite settings) */
+"configImport.confirmTitleOverwrite" = "Écraser les paramètres ?";
+
+/* Confirmation alert message (additive only, param: device name) */
+"configImport.confirmMessageAdd" = "Les canaux et contacts seront ajoutés à %@. Les données existantes ne seront pas supprimées.";
+
+/* Confirmation alert message (overwrite only, param: device name) */
+"configImport.confirmMessageOverwrite" = "Les paramètres sélectionnés sur %@ seront écrasés. Les valeurs actuelles seront remplacées.";
+
+/* Confirmation alert message (mixed, param: device name) */
+"configImport.confirmMessageMixed" = "Les paramètres seront écrasés et les canaux/contacts ajoutés sur %@.";
+
+/* Proximity warning */
+"configImport.proximityWarning" = "Garder les appareils proches pendant l'importation";
+
+/* Import cancelled */
+"configImport.cancelled" = "L'importation a été annulée.";
+
+/* Import success */
+"configImport.importSuccess" = "Configuration importée avec succès";
+
+/* Private key warning */
+"configImport.privateKeyWarning" = "L'identité cryptographique du nœud sera remplacée";
+
+"configImport.current" = "Actuel : %@";
+"configImport.new" = "Nouveau : %@";
+
+/* Channel count (param: integer) */
+"configImport.channelCount" = "%d canaux seront ajoutés/mis à jour sur l'appareil";
+
+/* Import navigation row label */
+"configImport.importConfig" = "Importer la configuration";
+
+/* Radio settings change warning */
+"configImport.radioWarning" = "Modifier les paramètres radio déconnectera du réseau mesh actuel";
+
+/* Contact count (param: integer) */
+"configImport.contactCount" = "%d contacts seront ajoutés/mis à jour sur l'appareil";
