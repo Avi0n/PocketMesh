@@ -89,6 +89,9 @@ public final class ServiceContainer {
     /// Service for handling emoji reactions on channel messages
     public let reactionService: ReactionService
 
+    /// Service for exporting/importing node configuration
+    public let nodeConfigService: NodeConfigService
+
     // MARK: - Remote Node Services
 
     /// Service for remote node session management
@@ -154,6 +157,12 @@ public final class ServiceContainer {
         self.debugLogBuffer = DebugLogBuffer(persistenceStore: dataStore)
         DebugLogBuffer.shared = debugLogBuffer
         self.reactionService = ReactionService()
+        self.nodeConfigService = NodeConfigService(
+            session: session,
+            settingsService: settingsService,
+            channelService: channelService,
+            dataStore: dataStore
+        )
 
         // Higher-level services (depend on other services)
         self.remoteNodeService = RemoteNodeService(
@@ -190,6 +199,9 @@ public final class ServiceContainer {
 
         // Wire contact service to sync coordinator for UI refresh notifications
         await contactService.setSyncCoordinator(syncCoordinator)
+
+        // Wire node config service to sync coordinator for contact import notifications
+        await nodeConfigService.setSyncCoordinator(syncCoordinator)
 
         // Wire contact service cleanup handler for notification/badge/cache/session updates
         await contactService.setCleanupHandler { [weak self] contactID, reason, publicKey in

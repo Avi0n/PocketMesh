@@ -1,0 +1,72 @@
+import SwiftUI
+import PocketMeshServices
+import UniformTypeIdentifiers
+import OSLog
+
+@Observable
+@MainActor
+final class NodeConfigExportViewModel {
+    var sections = ConfigSections()
+    var isExporting = false
+    var exportedDocument: NodeConfigDocument?
+    var showFileExporter = false
+    var errorMessage: String?
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeConfigExportVM")
+
+    func exportConfig(appState: AppState) async {
+        guard let service = appState.services?.nodeConfigService else { return }
+
+        isExporting = true
+        errorMessage = nil
+
+        do {
+            let config = try await service.exportConfig(sections: sections)
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let data = try encoder.encode(config)
+
+            let nodeName = appState.connectedDevice?.nodeName ?? config.name ?? "unknown"
+            let sanitized = nodeName
+                .replacing(/[^a-zA-Z0-9_-]/, with: "_")
+                .replacing(/^_+|_+$/, with: "")
+
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+            let timestamp = formatter.string(from: Date())
+            let filename = "\(sanitized)_meshcore_config_\(timestamp)"
+
+            exportedDocument = NodeConfigDocument(data: data, filename: filename)
+            showFileExporter = true
+        } catch {
+            logger.error("Export failed: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+        }
+
+        isExporting = false
+    }
+}
+
+/// Wraps exported JSON data for `.fileExporter`
+struct NodeConfigDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+
+    let data: Data
+    let filename: String
+
+    init(data: Data, filename: String) {
+        self.data = data
+        self.filename = filename
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        data = configuration.file.regularFileContents ?? Data()
+        filename = "config"
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}

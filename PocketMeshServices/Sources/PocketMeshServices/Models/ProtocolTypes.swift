@@ -133,6 +133,7 @@ public enum ProtocolError: UInt8, Sendable, Error {
 /// Protocol size limits and constants
 public enum ProtocolLimits {
     public static let publicKeySize = 32
+    public static let privateKeySize = 64
     public static let maxPathSize = 64
     public static let maxFrameSize = 250
     public static let signatureSize = 64
