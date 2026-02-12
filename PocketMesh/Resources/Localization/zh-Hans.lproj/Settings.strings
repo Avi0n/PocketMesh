@@ -482,7 +482,7 @@
 "dangerZone.alert.reset.confirm" = "重置";
 
 /* Alert message for factory reset */
-"dangerZone.alert.reset.message" = "这将擦除设备上的所有数据，包括联系人、消息和设置。出现提示时，请轻点"移除"以取消配对设备。";
+"dangerZone.alert.reset.message" = "这将擦除设备上的所有数据，包括联系人、消息和设置。出现提示时，请轻点\U201C移除\U201D以取消配对设备。";
 
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "服务不可用";
