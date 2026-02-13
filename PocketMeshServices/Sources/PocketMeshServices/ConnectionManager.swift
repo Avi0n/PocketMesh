@@ -362,6 +362,7 @@ public final class ConnectionManager {
 
     private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
     private let lastDeviceNameKey = "com.pocketmesh.lastConnectedDeviceName"
+    private let lastDisconnectDiagnosticKey = "com.pocketmesh.lastDisconnectDiagnostic"
 
     // MARK: - Simulator Support
 
@@ -415,6 +416,11 @@ public final class ConnectionManager {
     /// Whether the disconnected pill should be suppressed (user explicitly disconnected)
     public var shouldSuppressDisconnectedPill: Bool {
         connectionIntent.isUserDisconnected
+    }
+
+    /// Most recent disconnect diagnostic summary persisted across app launches.
+    public var lastDisconnectDiagnostic: String? {
+        UserDefaults.standard.string(forKey: lastDisconnectDiagnosticKey)
     }
 
     /// Checks if a device is connected to the system by another app.
@@ -1487,6 +1493,16 @@ public final class ConnectionManager {
         // Clear state
         await cleanupConnection()
 
+        persistDisconnectDiagnostic(
+            "source=disconnect(reason), " +
+            "reason=\(reason.rawValue), " +
+            "transport=\(transportName), " +
+            "device=\(activeDevice), " +
+            "initialState=\(initialState), " +
+            "finalState=\(String(describing: connectionState)), " +
+            "intent=\(connectionIntent)"
+        )
+
         logger.info(
             "Disconnected (" +
             "reason: \(reason.rawValue), " +
@@ -2308,6 +2324,7 @@ public final class ConnectionManager {
 
     /// Handles unexpected connection loss
     private func handleConnectionLoss(deviceID: UUID, error: Error?) async {
+        let stateBeforeLoss = connectionState
         var errorInfo = "none"
         if let error = error as NSError? {
             errorInfo = "domain=\(error.domain), code=\(error.code), desc=\(error.localizedDescription)"
@@ -2338,6 +2355,15 @@ public final class ConnectionManager {
         connectedDevice = nil
         services = nil
         session = nil
+
+        persistDisconnectDiagnostic(
+            "source=handleConnectionLoss, " +
+            "device=\(deviceID.uuidString.prefix(8)), " +
+            "stateBefore=\(String(describing: stateBeforeLoss)), " +
+            "error=\(errorInfo), " +
+            "intent=\(connectionIntent)"
+        )
+
         // Keep transport reference for iOS auto-reconnect to use
 
         // Notify UI layer of connection loss
@@ -2371,7 +2397,21 @@ public final class ConnectionManager {
     // MARK: - BLEReconnectionDelegate
 
     func setConnectionState(_ state: ConnectionState) {
+        let previousState = connectionState
         connectionState = state
+        if state == .disconnected, previousState != .disconnected {
+            let transportName = switch currentTransportType {
+            case .bluetooth: "bluetooth"
+            case .wifi: "wifi"
+            case nil: "none"
+            }
+            persistDisconnectDiagnostic(
+                "source=reconnectionCoordinator.setConnectionState, " +
+                "previousState=\(String(describing: previousState)), " +
+                "transport=\(transportName), " +
+                "intent=\(connectionIntent)"
+            )
+        }
     }
 
     func setConnectedDevice(_ device: DeviceDTO?) {
@@ -2536,6 +2576,11 @@ public final class ConnectionManager {
         connectionState = .disconnected
         connectedDevice = nil
         await cleanupResources()
+    }
+
+    private func persistDisconnectDiagnostic(_ summary: String) {
+        let timestamp = Date().ISO8601Format()
+        UserDefaults.standard.set("\(timestamp) \(summary)", forKey: lastDisconnectDiagnosticKey)
     }
 
     // MARK: - State Invariants

@@ -98,6 +98,10 @@ enum LogExportService {
             "State: \(stateString)"
         ]
 
+        if let diagnostic = appState.connectionManager.lastDisconnectDiagnostic {
+            lines.append("Last Disconnect Diagnostic: \(diagnostic)")
+        }
+
         if let device = appState.connectedDevice {
             lines.append("Device: \(device.nodeName) (\(device.id.uuidString.prefix(8))...)")
 
