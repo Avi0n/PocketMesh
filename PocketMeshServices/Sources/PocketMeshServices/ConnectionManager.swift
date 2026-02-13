@@ -161,6 +161,12 @@ public enum DevicePlatform: Sendable {
     ]
 }
 
+/// Result of removing unfavorited nodes from the device
+public struct RemoveUnfavoritedResult: Sendable {
+    public let removed: Int
+    public let total: Int
+}
+
 /// Manages the connection lifecycle for mesh devices.
 ///
 /// `ConnectionManager` owns the transport, session, and services. It handles:
@@ -1810,6 +1816,73 @@ public final class ConnectionManager {
         }
 
         logger.info("Device forgotten by ID: \(id)")
+    }
+
+    /// Returns the number of non-favorite contacts for the current device.
+    public func unfavoritedNodeCount() async throws -> Int {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        return allContacts.filter { !$0.isFavorite }.count
+    }
+
+    /// Removes all non-favorite contacts from the device and app, along with their messages.
+    /// For room/repeater contacts, also removes the associated RemoteNodeSession.
+    /// - Returns: Count of removed vs total non-favorite contacts
+    /// - Throws: `ConnectionError.notConnected` if no device is connected
+    public func removeUnfavoritedNodes() async throws -> RemoveUnfavoritedResult {
+        guard let deviceID = connectedDevice?.id else {
+            throw ConnectionError.notConnected
+        }
+
+        guard let services else {
+            throw ConnectionError.notConnected
+        }
+
+        let dataStore = PersistenceStore(modelContainer: modelContainer)
+        let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
+        let unfavorited = allContacts.filter { !$0.isFavorite }
+
+        if unfavorited.isEmpty {
+            return RemoveUnfavoritedResult(removed: 0, total: 0)
+        }
+
+        var removedCount = 0
+
+        for contact in unfavorited {
+            try Task.checkCancellation()
+
+            do {
+                try await services.contactService.removeContact(
+                    deviceID: deviceID,
+                    publicKey: contact.publicKey
+                )
+                removedCount += 1
+            } catch ContactServiceError.contactNotFound {
+                // Contact exists locally but not on device — run full local cleanup
+                do {
+                    try await services.contactService.removeLocalContact(
+                        contactID: contact.id,
+                        publicKey: contact.publicKey
+                    )
+                    removedCount += 1
+                    logger.info("Contact not found on device, cleaned up locally: \(contact.name)")
+                } catch {
+                    logger.warning("Failed to clean up local data for \(contact.name): \(error.localizedDescription)")
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // Connection error — stop the loop, report partial progress
+                logger.warning("Failed to remove contact \(contact.name): \(error.localizedDescription)")
+                return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
+            }
+        }
+
+        return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
     }
 
     /// Clears all stale pairings from AccessorySetupKit.

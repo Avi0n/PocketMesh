@@ -487,6 +487,33 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "服务不可用";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "移除非收藏节点";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "正在移除…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "节点已移除";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "移除非收藏节点";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "移除节点";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "移除结果";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "这将从设备和应用中永久删除 %d 个未标记为收藏的节点及其消息。";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "已移除 %d 个节点（共 %d 个）。连接已中断——请再次点击按钮以移除剩余节点。";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "没有可移除的非收藏节点。";
+
 // MARK: - Diagnostics Section
 
 /* Section header for diagnostics */

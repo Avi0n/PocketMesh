@@ -501,6 +501,33 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Servicios no disponibles";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Eliminar nodos no favoritos";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Eliminando…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Nodos eliminados";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Eliminar nodos no favoritos";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Eliminar nodos";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Resultado de la eliminación";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Esto eliminará permanentemente %d nodos no marcados como favoritos del dispositivo y la app, junto con sus mensajes.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Se eliminaron %d de %d nodos. La conexión se interrumpió; toca el botón de nuevo para reintentar la eliminación de los nodos restantes.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "No hay nodos no favoritos para eliminar.";
+
 
 // MARK: - Diagnostics Section
 

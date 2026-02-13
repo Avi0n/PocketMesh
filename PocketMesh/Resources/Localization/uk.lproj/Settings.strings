@@ -501,6 +501,33 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Сервіси недоступні";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Видалити необрані вузли";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Видалення…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Вузли видалено";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Видалити необрані вузли";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Видалити вузли";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Результат видалення";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Це назавжди видалить %d вузлів, не позначених як обрані, з пристрою та додатка, разом з їхніми повідомленнями.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Видалено %d з %d вузлів. З'єднання було перервано — натисніть кнопку ще раз, щоб видалити решту вузлів.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Немає необраних вузлів для видалення.";
+
 
 // MARK: - Diagnostics Section
 

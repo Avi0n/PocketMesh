@@ -501,6 +501,33 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Dienste nicht verfügbar";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Nicht-favorisierte Knoten entfernen";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Wird entfernt …";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Knoten entfernt";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Nicht-favorisierte Knoten entfernen";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Knoten entfernen";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Ergebnis der Entfernung";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Dadurch werden %d nicht als Favorit markierte Knoten dauerhaft vom Gerät und der App gelöscht, einschließlich ihrer Nachrichten.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "%d von %d Knoten entfernt. Die Verbindung wurde unterbrochen – tippen Sie erneut auf die Schaltfläche, um die verbleibenden Knoten zu entfernen.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Keine nicht-favorisierten Knoten zum Entfernen vorhanden.";
+
 
 // MARK: - Diagnostics Section
 

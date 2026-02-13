@@ -501,6 +501,33 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Services niet beschikbaar";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Niet-favoriete knooppunten verwijderen";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Verwijderen…";
+
+/* Label shown after successful removal */
+"dangerZone.removed" = "Knooppunten verwijderd";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Niet-favoriete knooppunten verwijderen";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Knooppunten verwijderen";
+
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Verwijderresultaat";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Dit verwijdert permanent %d knooppunten die niet als favoriet zijn gemarkeerd van het apparaat en de app, inclusief hun berichten.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "%d van %d knooppunten verwijderd. De verbinding werd onderbroken — tik opnieuw op de knop om de overige knooppunten te verwijderen.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Geen niet-favoriete knooppunten om te verwijderen.";
+
 
 // MARK: - Diagnostics Section
 
