@@ -42,18 +42,17 @@ platform :ios do
     )
 
     # Get latest build number from TestFlight and increment
+    min_build_number = 70
     begin
       latest_build = latest_testflight_build_number(
         api_key: api_key,
         app_identifier: "io.pocketmesh.app"
       )
-      # Ensure build number never goes backwards (fastlane 2.232.0 bug set it to 10, actual max was 62)
-      latest_build = [latest_build, 62].max
-      increment_build_number(build_number: latest_build + 1)
+      next_build = [latest_build + 1, min_build_number].max
+      increment_build_number(build_number: next_build)
     rescue => ex
-      # No builds exist yet, start from 1
-      UI.message("No TestFlight builds found, starting from build 1")
-      increment_build_number(build_number: 1)
+      UI.message("No TestFlight builds found, starting from build #{min_build_number}")
+      increment_build_number(build_number: min_build_number)
     end
 
     # Build the app
