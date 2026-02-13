@@ -501,6 +501,27 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Usługi niedostępne";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Usuń niefaworyzowane węzły";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Usuwanie…";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Usuń niefaworyzowane węzły";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Usuń węzły";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Spowoduje to trwałe usunięcie %d węzłów nieoznaczonych jako ulubione z urządzenia i aplikacji, wraz z ich wiadomościami.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Usunięto %d z %d węzłów. Połączenie zostało przerwane — pozostałe węzły zostaną usunięte przy następnej próbie.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Brak niefaworyzowanych węzłów do usunięcia.";
+
 
 // MARK: - Diagnostics Section
 

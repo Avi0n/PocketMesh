@@ -501,6 +501,27 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Services non disponibles";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Supprimer les nœuds non favoris";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Suppression…";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Supprimer les nœuds non favoris";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Supprimer les nœuds";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Cela supprimera définitivement %d nœuds non marqués comme favoris de l'appareil et de l'app, ainsi que leurs messages.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "%d nœuds sur %d supprimés. La connexion a été interrompue — les nœuds restants seront supprimés lors de la prochaine tentative.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Aucun nœud non favori à supprimer.";
+
 
 // MARK: - Diagnostics Section
 

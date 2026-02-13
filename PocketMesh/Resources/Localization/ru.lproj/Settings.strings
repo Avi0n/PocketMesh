@@ -501,6 +501,27 @@
 /* Error when services are not available */
 "dangerZone.error.servicesUnavailable" = "Сервисы недоступны";
 
+/* Button to remove non-favorite nodes */
+"dangerZone.removeUnfavorited" = "Удалить неизбранные узлы";
+
+/* Text shown while removing unfavorited nodes */
+"dangerZone.removing" = "Удаление…";
+
+/* Alert title for remove non-favorite confirmation */
+"dangerZone.alert.removeUnfavorited.title" = "Удалить неизбранные узлы";
+
+/* Button to confirm removal */
+"dangerZone.alert.removeUnfavorited.confirm" = "Удалить узлы";
+
+/* Alert message for remove unfavorited (%d = count) */
+"dangerZone.alert.removeUnfavorited.message" = "Это безвозвратно удалит %d узлов, не отмеченных как избранные, с устройства и из приложения, а также их сообщения.";
+
+/* Partial success message (%d = removed, %d = total) */
+"dangerZone.alert.removeUnfavorited.partial" = "Удалено %d из %d узлов. Соединение было прервано — оставшиеся узлы будут удалены при следующей попытке.";
+
+/* Message when no non-favorite nodes to remove */
+"dangerZone.alert.removeUnfavorited.noneFound" = "Нет неизбранных узлов для удаления.";
+
 
 // MARK: - Diagnostics Section
 
