@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import PocketMeshServices
 
 /// Layout constants for message bubbles
@@ -77,6 +78,14 @@ struct UnifiedMessageBubble: View {
     let previewState: PreviewLoadState
     let loadedPreview: LinkPreviewDataDTO?
 
+    // Inline image state
+    let isImageURL: Bool
+    let decodedImage: UIImage?
+    let isGIF: Bool
+    let showInlineImages: Bool
+    let autoPlayGIFs: Bool
+    let onImageTap: (() -> Void)?
+
     // Callbacks for preview lifecycle
     let onRequestPreviewFetch: (() -> Void)?
     let onManualPreviewFetch: (() -> Void)?
@@ -102,9 +111,15 @@ struct UnifiedMessageBubble: View {
         showNewMessagesDivider: Bool = false,
         previewState: PreviewLoadState = .idle,
         loadedPreview: LinkPreviewDataDTO? = nil,
+        isImageURL: Bool = false,
+        decodedImage: UIImage? = nil,
+        isGIF: Bool = false,
+        showInlineImages: Bool = false,
+        autoPlayGIFs: Bool = true,
         onRetry: (() -> Void)? = nil,
         onReaction: ((String) -> Void)? = nil,
         onLongPress: (() -> Void)? = nil,
+        onImageTap: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -119,9 +134,15 @@ struct UnifiedMessageBubble: View {
         self.showNewMessagesDivider = showNewMessagesDivider
         self.previewState = previewState
         self.loadedPreview = loadedPreview
+        self.isImageURL = isImageURL
+        self.decodedImage = decodedImage
+        self.isGIF = isGIF
+        self.showInlineImages = showInlineImages
+        self.autoPlayGIFs = autoPlayGIFs
         self.onRetry = onRetry
         self.onReaction = onReaction
         self.onLongPress = onLongPress
+        self.onImageTap = onImageTap
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -176,8 +197,13 @@ struct UnifiedMessageBubble: View {
                         .padding(.bottom, -6)
                     }
 
-                    // Link preview (if applicable)
-                    if previewsEnabled {
+                    // Inline image (if applicable, separate from link previews)
+                    if isImageURL && showInlineImages {
+                        inlineImageContent
+                    }
+
+                    // Link preview (if applicable, skip for image URLs handled above)
+                    if previewsEnabled && !(isImageURL && showInlineImages) {
                         linkPreviewContent
                     }
 
@@ -198,7 +224,7 @@ struct UnifiedMessageBubble: View {
         .padding(.top, showDirectionGap ? 12 : (showSenderName ? 8 : 2))
         .padding(.bottom, message.isOutgoing ? 4 : 2)
         .onAppear {
-            // Request preview fetch when cell becomes visible
+            // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
             if previewState == .idle && detectedURL != nil && message.linkPreviewURL == nil {
                 onRequestPreviewFetch?()
@@ -206,6 +232,32 @@ struct UnifiedMessageBubble: View {
         }
         .sheet(isPresented: $showingReactionDetails) {
             ReactionDetailsSheet(messageID: message.id)
+        }
+    }
+
+    // MARK: - Inline Image Content
+
+    @ViewBuilder
+    private var inlineImageContent: some View {
+        switch previewState {
+        case .loaded:
+            if let image = decodedImage {
+                InlineImageView(
+                    image: image,
+                    isGIF: isGIF,
+                    autoPlayGIFs: autoPlayGIFs,
+                    onTap: { onImageTap?() }
+                )
+            }
+
+        case .loading, .idle:
+            if let url = detectedURL {
+                LinkPreviewLoadingCard(url: url)
+                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            }
+
+        case .noPreview, .disabled:
+            EmptyView()
         }
     }
 

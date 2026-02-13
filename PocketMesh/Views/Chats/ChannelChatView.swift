@@ -42,7 +42,11 @@ struct ChannelChatView: View {
 
     @State private var selectedMessageForActions: MessageDTO?
     @State private var recentEmojisStore = RecentEmojisStore()
+    @State private var imageViewerData: ImageViewerData?
     @FocusState private var isInputFocused: Bool
+
+    @AppStorage("showInlineImages") private var showInlineImages = true
+    @AppStorage("autoPlayGIFs") private var autoPlayGIFs = true
 
     init(channel: ChannelDTO, parentViewModel: ChatViewModel? = nil) {
         self.channel = channel
@@ -103,6 +107,9 @@ struct ChannelChatView: View {
                     handleMessageAction(action, for: message)
                 }
             )
+        }
+        .fullScreenCover(item: $imageViewerData) { data in
+            FullScreenImageViewer(data: data)
         }
         .task(id: appState.servicesVersion) {
             // Capture pending scroll target before loading
@@ -335,14 +342,31 @@ struct ChannelChatView: View {
                 showNewMessagesDivider: item.showNewMessagesDivider,
                 previewState: item.previewState,
                 loadedPreview: item.loadedPreview,
+                isImageURL: item.isImageURL,
+                decodedImage: viewModel.decodedImage(for: message.id),
+                isGIF: viewModel.isGIFImage(for: message.id),
+                showInlineImages: showInlineImages,
+                autoPlayGIFs: autoPlayGIFs,
                 onRetry: { retryMessage(message) },
                 onReaction: { emoji in
                     recentEmojisStore.recordUsage(emoji)
                     Task { await viewModel.sendReaction(emoji: emoji, to: message) }
                 },
                 onLongPress: { selectedMessageForActions = message },
+                onImageTap: {
+                    if let data = viewModel.imageData(for: message.id) {
+                        imageViewerData = ImageViewerData(
+                            imageData: data,
+                            isGIF: false
+                        )
+                    }
+                },
                 onRequestPreviewFetch: {
-                    viewModel.requestPreviewFetch(for: message.id)
+                    if item.isImageURL && showInlineImages {
+                        viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)
+                    } else {
+                        viewModel.requestPreviewFetch(for: message.id)
+                    }
                 },
                 onManualPreviewFetch: {
                     Task {

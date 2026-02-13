@@ -294,6 +294,20 @@ public enum L10n {
         /// Location: ChatsView.swift - Filter option for unread conversations
         public static let unread = L10n.tr("Chats", "chats.filter.unread", fallback: "Unread")
       }
+      public enum ImageViewer {
+        /// Location: FullScreenImageViewer.swift - Close button label
+        public static let close = L10n.tr("Chats", "chats.imageViewer.close", fallback: "Close")
+        /// Location: FullScreenImageViewer.swift - Share button label
+        public static let share = L10n.tr("Chats", "chats.imageViewer.share", fallback: "Image")
+      }
+      public enum InlineImage {
+        /// Location: InlineImageView.swift - Accessibility label for animated image
+        public static let animatedAccessibility = L10n.tr("Chats", "chats.inlineImage.animatedAccessibility", fallback: "Animated image")
+        /// Location: InlineImageView.swift - Accessibility label for static image
+        public static let imageAccessibility = L10n.tr("Chats", "chats.inlineImage.imageAccessibility", fallback: "Image")
+        /// Location: InlineImageView.swift - Accessibility hint for tap to view full screen
+        public static let tapHint = L10n.tr("Chats", "chats.inlineImage.tapHint", fallback: "Double tap to view full screen")
+      }
       public enum Input {
         /// Location: ChatInputBar.swift - Accessibility hint for text input
         public static let accessibilityHint = L10n.tr("Chats", "chats.input.accessibilityHint", fallback: "Type your message here")
@@ -3026,6 +3040,14 @@ public enum L10n {
         /// Error when export fails
         public static let exportFailed = L10n.tr("Settings", "diagnostics.error.exportFailed", fallback: "Failed to create export file")
       }
+    }
+    public enum InlineImages {
+      /// Toggle label for auto-play GIFs
+      public static let autoPlayGifs = L10n.tr("Settings", "inlineImages.autoPlayGifs", fallback: "Auto-play GIFs")
+      /// Footer explaining inline image privacy implications
+      public static let footer = L10n.tr("Settings", "inlineImages.footer", fallback: "Fetching images from URLs may reveal your IP address to the server hosting the image.")
+      /// Toggle label for inline images
+      public static let toggle = L10n.tr("Settings", "inlineImages.toggle", fallback: "Inline Images")
     }
     public enum LinkPreviews {
       /// Footer explaining link preview privacy implications

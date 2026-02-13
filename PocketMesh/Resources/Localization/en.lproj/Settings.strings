@@ -547,6 +547,18 @@
 "linkPreviews.footer" = "Link previews fetch data from the web, which may reveal your IP address to the server hosting the link.";
 
 
+// MARK: - Inline Image Settings Section
+
+/* Toggle label for inline images */
+"inlineImages.toggle" = "Inline Images";
+
+/* Toggle label for auto-play GIFs */
+"inlineImages.autoPlayGifs" = "Auto-play GIFs";
+
+/* Footer explaining inline image privacy implications */
+"inlineImages.footer" = "Fetching images from URLs may reveal your IP address to the server hosting the image.";
+
+
 // MARK: - Node Settings Section
 
 /* Section header for node settings */

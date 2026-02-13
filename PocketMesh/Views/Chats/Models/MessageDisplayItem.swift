@@ -19,6 +19,7 @@ struct MessageDisplayItem: Identifiable, Hashable, Sendable {
     let showSenderName: Bool  // false for continuation messages in a group
     let showNewMessagesDivider: Bool
     let detectedURL: URL?
+    let isImageURL: Bool
 
     // Forwarded properties from message (lightweight copies)
     let isOutgoing: Bool

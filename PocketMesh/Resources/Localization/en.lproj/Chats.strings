@@ -856,6 +856,25 @@
 /* Location: TapToLoadPreview.swift - Idle accessibility hint */
 "chats.preview.tapHint" = "Fetches title and image from the website";
 
+// MARK: - Inline Image
+
+/* Location: InlineImageView.swift - Accessibility label for static image */
+"chats.inlineImage.imageAccessibility" = "Image";
+
+/* Location: InlineImageView.swift - Accessibility label for animated image */
+"chats.inlineImage.animatedAccessibility" = "Animated image";
+
+/* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
+"chats.inlineImage.tapHint" = "Double tap to view full screen";
+
+// MARK: - Image Viewer
+
+/* Location: FullScreenImageViewer.swift - Close button label */
+"chats.imageViewer.close" = "Close";
+
+/* Location: FullScreenImageViewer.swift - Share button label */
+"chats.imageViewer.share" = "Image";
+
 // MARK: - Common Buttons (using Localizable.strings common keys where possible)
 
 /* Location: Various - OK button (use L10n.Localizable.Common.ok) */
