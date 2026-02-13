@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Settings.stringsdict
+  PocketMesh
+
+  French pluralization rules for danger zone removal strings.
+  French uses: one (0-1), other (2+).
+  AI-translated - please verify with native speakers.
+-->
+<plist version="1.0">
+<dict>
+    <key>dangerZone.alert.removeUnfavorited.message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@nodeCount@</string>
+        <key>nodeCount</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Cela supprimera définitivement %d nœud non marqué comme favori de l'appareil et de l'app, ainsi que ses messages.</string>
+            <key>other</key>
+            <string>Cela supprimera définitivement %d nœuds non marqués comme favoris de l'appareil et de l'app, ainsi que leurs messages.</string>
+        </dict>
+    </dict>
+    <key>dangerZone.alert.removeUnfavorited.partial</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%2$#@totalNodes@</string>
+        <key>totalNodes</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%1$d nœud sur %2$d supprimé. La connexion a été interrompue — appuyez à nouveau sur le bouton pour réessayer.</string>
+            <key>other</key>
+            <string>%1$d nœuds sur %2$d supprimés. La connexion a été interrompue — appuyez à nouveau sur le bouton pour réessayer la suppression des nœuds restants.</string>
+        </dict>
+    </dict>
+</dict>
+</plist>
