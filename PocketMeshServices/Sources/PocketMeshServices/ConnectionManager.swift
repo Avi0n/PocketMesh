@@ -1862,23 +1862,14 @@ public final class ConnectionManager {
                 )
                 removedCount += 1
             } catch ContactServiceError.contactNotFound {
-                // Contact exists locally but not on device — clean up local data
+                // Contact exists locally but not on device — run full local cleanup
                 do {
-                    try await dataStore.deleteMessagesForContact(contactID: contact.id)
-                    try await dataStore.deleteContact(id: contact.id)
+                    try await services.contactService.removeLocalContact(
+                        contactID: contact.id,
+                        publicKey: contact.publicKey
+                    )
                     removedCount += 1
                     logger.info("Contact not found on device, cleaned up locally: \(contact.name)")
-
-                    // Clean up associated RemoteNodeSession (not handled by cleanupHandler
-                    // since removeContact was not called successfully)
-                    if contact.type == .repeater || contact.type == .room {
-                        if let session = try await dataStore.fetchRemoteNodeSession(publicKey: contact.publicKey) {
-                            try await services.remoteNodeService.removeSession(
-                                id: session.id,
-                                publicKey: session.publicKey
-                            )
-                        }
-                    }
                 } catch {
                     logger.warning("Failed to clean up local data for \(contact.name): \(error.localizedDescription)")
                 }

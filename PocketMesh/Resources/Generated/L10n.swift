@@ -2860,6 +2860,8 @@ public enum L10n {
       public static let forgetDevice = L10n.tr("Settings", "dangerZone.forgetDevice", fallback: "Forget Device")
       /// Section header for danger zone
       public static let header = L10n.tr("Settings", "dangerZone.header", fallback: "Danger Zone")
+      /// Label shown after successful removal
+      public static let removed = L10n.tr("Settings", "dangerZone.removed", fallback: "Nodes Removed")
       /// Button to remove non-favorite nodes
       public static let removeUnfavorited = L10n.tr("Settings", "dangerZone.removeUnfavorited", fallback: "Remove Non-Favorite Nodes")
       /// Text shown while removing unfavorited nodes
@@ -2886,8 +2888,10 @@ public enum L10n {
           public static let noneFound = L10n.tr("Settings", "dangerZone.alert.removeUnfavorited.noneFound", fallback: "No non-favorite nodes to remove.")
           /// Partial success message (%d = removed, %d = total)
           public static func partial(_ p1: Int, _ p2: Int) -> String {
-            return L10n.tr("Settings", "dangerZone.alert.removeUnfavorited.partial", p1, p2, fallback: "Removed %d of %d nodes. The connection was interrupted — the remaining nodes will be removed on the next attempt.")
+            return L10n.tr("Settings", "dangerZone.alert.removeUnfavorited.partial", p1, p2, fallback: "Removed %d of %d nodes. The connection was interrupted — tap the button again to retry removing the remaining nodes.")
           }
+          /// Alert title for removal result
+          public static let resultTitle = L10n.tr("Settings", "dangerZone.alert.removeUnfavorited.resultTitle", fallback: "Removal Result")
           /// Alert title for remove non-favorite confirmation
           public static let title = L10n.tr("Settings", "dangerZone.alert.removeUnfavorited.title", fallback: "Remove Non-Favorite Nodes")
         }

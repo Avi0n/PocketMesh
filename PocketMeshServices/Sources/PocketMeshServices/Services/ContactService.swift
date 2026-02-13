@@ -232,6 +232,16 @@ public actor ContactService {
         }
     }
 
+    /// Remove a contact's local data and run the full cleanup chain without contacting the device.
+    /// Use when the device reports the contact doesn't exist but local data remains.
+    public func removeLocalContact(contactID: UUID, publicKey: Data) async throws {
+        try await dataStore.deleteMessagesForContact(contactID: contactID)
+        try await dataStore.deleteContact(id: contactID)
+        await cleanupHandler?(contactID, .deleted, publicKey)
+        await nodeDeletedHandler?()
+        await syncCoordinator?.notifyContactsChanged()
+    }
+
     // MARK: - Reset Path
 
     /// Reset the path for a contact (force rediscovery)

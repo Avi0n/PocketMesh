@@ -15,6 +15,7 @@ struct DangerZoneSection: View {
     @State private var unfavoritedCount = 0
     @State private var showRemoveResult = false
     @State private var removeResult: String?
+    @State private var removeTask: Task<Void, Never>?
 
     var body: some View {
         Section {
@@ -27,7 +28,7 @@ struct DangerZoneSection: View {
                         Text(L10n.Settings.DangerZone.removing)
                     }
                 } else if showRemoveSuccess {
-                    Image(systemName: "checkmark.circle.fill")
+                    Label(L10n.Settings.DangerZone.removed, systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                 } else {
                     Label(L10n.Settings.DangerZone.removeUnfavorited, systemImage: "person.2.slash")
@@ -83,11 +84,12 @@ struct DangerZoneSection: View {
         } message: {
             Text(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.message(unfavoritedCount))
         }
-        .alert(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.title, isPresented: $showRemoveResult) {
+        .alert(L10n.Settings.DangerZone.Alert.RemoveUnfavorited.resultTitle, isPresented: $showRemoveResult) {
             Button(L10n.Localizable.Common.ok) { }
         } message: {
             Text(removeResult ?? "")
         }
+        .onDisappear { removeTask?.cancel() }
         .errorAlert($showError)
     }
 
@@ -150,24 +152,25 @@ struct DangerZoneSection: View {
 
     private func removeUnfavoritedNodes() {
         isRemovingUnfavorited = true
-        Task {
+        removeTask = Task {
+            defer { isRemovingUnfavorited = false }
             do {
                 let result = try await appState.connectionManager.removeUnfavoritedNodes()
                 isRemovingUnfavorited = false
                 if result.removed == result.total {
                     withAnimation { showRemoveSuccess = true }
-                    try? await Task.sleep(for: .seconds(1.5))
+                    try await Task.sleep(for: .seconds(1.5))
                     withAnimation { showRemoveSuccess = false }
                 } else {
                     removeResult = L10n.Settings.DangerZone.Alert.RemoveUnfavorited
                         .partial(result.removed, result.total)
                     showRemoveResult = true
                 }
-                return
             } catch {
-                showError = error.localizedDescription
+                if !(error is CancellationError) {
+                    showError = error.localizedDescription
+                }
             }
-            isRemovingUnfavorited = false
         }
     }
 }

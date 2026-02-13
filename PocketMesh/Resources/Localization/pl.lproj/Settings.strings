@@ -507,17 +507,23 @@
 /* Text shown while removing unfavorited nodes */
 "dangerZone.removing" = "Usuwanie…";
 
+/* Label shown after successful removal */
+"dangerZone.removed" = "Węzły usunięte";
+
 /* Alert title for remove non-favorite confirmation */
 "dangerZone.alert.removeUnfavorited.title" = "Usuń niefaworyzowane węzły";
 
 /* Button to confirm removal */
 "dangerZone.alert.removeUnfavorited.confirm" = "Usuń węzły";
 
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Wynik usuwania";
+
 /* Alert message for remove unfavorited (%d = count) */
 "dangerZone.alert.removeUnfavorited.message" = "Spowoduje to trwałe usunięcie %d węzłów nieoznaczonych jako ulubione z urządzenia i aplikacji, wraz z ich wiadomościami.";
 
 /* Partial success message (%d = removed, %d = total) */
-"dangerZone.alert.removeUnfavorited.partial" = "Usunięto %d z %d węzłów. Połączenie zostało przerwane — pozostałe węzły zostaną usunięte przy następnej próbie.";
+"dangerZone.alert.removeUnfavorited.partial" = "Usunięto %d z %d węzłów. Połączenie zostało przerwane — naciśnij przycisk ponownie, aby usunąć pozostałe węzły.";
 
 /* Message when no non-favorite nodes to remove */
 "dangerZone.alert.removeUnfavorited.noneFound" = "Brak niefaworyzowanych węzłów do usunięcia.";

@@ -507,17 +507,23 @@
 /* Text shown while removing unfavorited nodes */
 "dangerZone.removing" = "Удаление…";
 
+/* Label shown after successful removal */
+"dangerZone.removed" = "Узлы удалены";
+
 /* Alert title for remove non-favorite confirmation */
 "dangerZone.alert.removeUnfavorited.title" = "Удалить неизбранные узлы";
 
 /* Button to confirm removal */
 "dangerZone.alert.removeUnfavorited.confirm" = "Удалить узлы";
 
+/* Alert title for removal result */
+"dangerZone.alert.removeUnfavorited.resultTitle" = "Результат удаления";
+
 /* Alert message for remove unfavorited (%d = count) */
 "dangerZone.alert.removeUnfavorited.message" = "Это безвозвратно удалит %d узлов, не отмеченных как избранные, с устройства и из приложения, а также их сообщения.";
 
 /* Partial success message (%d = removed, %d = total) */
-"dangerZone.alert.removeUnfavorited.partial" = "Удалено %d из %d узлов. Соединение было прервано — оставшиеся узлы будут удалены при следующей попытке.";
+"dangerZone.alert.removeUnfavorited.partial" = "Удалено %d из %d узлов. Соединение было прервано — нажмите кнопку ещё раз, чтобы удалить оставшиеся узлы.";
 
 /* Message when no non-favorite nodes to remove */
 "dangerZone.alert.removeUnfavorited.noneFound" = "Нет неизбранных узлов для удаления.";
