@@ -379,6 +379,77 @@
 /* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
 "remoteNodes.status.channel" = "通道 %d";
 
+// MARK: - History
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
+"remoteNodes.history.vsMinutesAgo" = "自上次访问（%d分钟前）";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago) */
+"remoteNodes.history.vsHoursAgo" = "自上次访问（%d小时前）";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (date) */
+"remoteNodes.history.vsDate" = "自 %@";
+
+/* Location: NodeStatusHistoryView.swift - History navigation title */
+"remoteNodes.history.title" = "历史";
+
+/* Location: NeighborRow - New neighbor badge */
+"remoteNodes.history.new" = "新";
+
+/* Location: NeighborRow - Not seen status */
+"remoteNodes.history.notSeen" = "未发现";
+
+/* Location: NodeStatusHistoryView.swift - Empty state message */
+"remoteNodes.history.checkBack" = "下次访问后再来查看趋势";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.week" = "1周";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.month" = "1月";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.threeMonths" = "3月";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.all" = "全部";
+
+/* Location: NodeStatusHistoryView.swift - Battery chart title */
+"remoteNodes.history.battery" = "电池";
+
+/* Location: NodeStatusHistoryView.swift - SNR chart title */
+"remoteNodes.history.snr" = "信噪比";
+
+/* Location: NodeStatusHistoryView.swift - RSSI chart title */
+"remoteNodes.history.rssi" = "RSSI";
+
+/* Location: NodeStatusHistoryView.swift - Noise floor chart title */
+"remoteNodes.history.noiseFloor" = "无线电底噪";
+
+/* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
+"remoteNodes.history.neighborCount" = "邻居数量";
+
+/* Location: NeighborHistoryView.swift - Active status */
+"remoteNodes.history.active" = "活跃";
+
+/* Location: NeighborHistoryView.swift - Last seen status */
+"remoteNodes.history.lastSeen" = "最后出现 %@";
+
+/* Location: NeighborHistoryView.swift - Neighbors section title */
+"remoteNodes.history.neighbors" = "邻居";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric increased */
+"remoteNodes.history.a11y.increased" = "增加";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric decreased */
+"remoteNodes.history.a11y.decreased" = "减少";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric improved */
+"remoteNodes.history.a11y.improved" = "改善";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric degraded */
+"remoteNodes.history.a11y.degraded" = "恶化";
+
 // MARK: - Room Conversation
 
 /* Location: RoomConversationView.swift - Disconnected status */

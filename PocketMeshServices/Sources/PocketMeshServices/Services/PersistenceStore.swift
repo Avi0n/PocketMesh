@@ -38,7 +38,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         RxLogEntry.self,
         DebugLogEntry.self,
         LinkPreviewData.self,
-        DiscoveredNode.self
+        DiscoveredNode.self,
+        NodeStatusSnapshot.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -2575,6 +2576,89 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         try modelContext.delete(model: Reaction.self, where: #Predicate {
             $0.messageID == targetMessageID
         })
+        try modelContext.save()
+    }
+
+    // MARK: - Node Status Snapshots
+
+    public func saveNodeStatusSnapshot(
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) throws -> UUID {
+        let snapshot = NodeStatusSnapshot(
+            nodePublicKey: nodePublicKey,
+            batteryMillivolts: batteryMillivolts,
+            lastSNR: lastSNR,
+            lastRSSI: lastRSSI,
+            noiseFloor: noiseFloor,
+            uptimeSeconds: uptimeSeconds,
+            rxAirtimeSeconds: rxAirtimeSeconds,
+            packetsSent: packetsSent,
+            packetsReceived: packetsReceived
+        )
+        modelContext.insert(snapshot)
+        try modelContext.save()
+        return snapshot.id
+    }
+
+    public func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) throws -> NodeStatusSnapshotDTO? {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.nodePublicKey == nodePublicKey },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) throws -> [NodeStatusSnapshotDTO] {
+        let descriptor: FetchDescriptor<NodeStatusSnapshot>
+        if let since {
+            descriptor = FetchDescriptor<NodeStatusSnapshot>(
+                predicate: #Predicate { $0.nodePublicKey == nodePublicKey && $0.timestamp >= since },
+                sortBy: [SortDescriptor(\.timestamp)]
+            )
+        } else {
+            descriptor = FetchDescriptor<NodeStatusSnapshot>(
+                predicate: #Predicate { $0.nodePublicKey == nodePublicKey },
+                sortBy: [SortDescriptor(\.timestamp)]
+            )
+        }
+        return try modelContext.fetch(descriptor).map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func fetchPreviousNodeStatusSnapshot(nodePublicKey: Data, before: Date) throws -> NodeStatusSnapshotDTO? {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.nodePublicKey == nodePublicKey && $0.timestamp < before },
+            sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map(NodeStatusSnapshotDTO.init)
+    }
+
+    public func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) throws {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        guard let snapshot = try modelContext.fetch(descriptor).first else { return }
+        snapshot.neighborSnapshots = neighbors
+        try modelContext.save()
+    }
+
+    public func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) throws {
+        var descriptor = FetchDescriptor<NodeStatusSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+        descriptor.fetchLimit = 1
+        guard let snapshot = try modelContext.fetch(descriptor).first else { return }
+        snapshot.telemetryEntries = telemetry
         try modelContext.save()
     }
 }

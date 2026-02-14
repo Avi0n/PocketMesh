@@ -359,6 +359,36 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Delete all reactions for a message
     func deleteReactionsForMessage(messageID: UUID) async throws
+
+    // MARK: - Node Status Snapshots
+
+    /// Save a node status snapshot from primitive parameters. Returns the snapshot ID.
+    func saveNodeStatusSnapshot(
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) async throws -> UUID
+
+    /// Fetch the most recent snapshot for a node
+    func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) async throws -> NodeStatusSnapshotDTO?
+
+    /// Fetch snapshots for a node within a date range, sorted by timestamp ascending
+    func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) async throws -> [NodeStatusSnapshotDTO]
+
+    /// Fetch the most recent snapshot before the given date for a node
+    func fetchPreviousNodeStatusSnapshot(nodePublicKey: Data, before: Date) async throws -> NodeStatusSnapshotDTO?
+
+    /// Update neighbor data on an existing snapshot
+    func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) async throws
+
+    /// Update telemetry data on an existing snapshot
+    func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) async throws
 }
 
 // MARK: - Default Parameter Values

@@ -62,15 +62,18 @@ final class RepeaterStatusViewModel {
     /// Contact ID for saving OCV settings
     private var contactID: UUID?
 
-    /// Current OCV array for telemetry percentage calculation
-    var currentOCVArray: [Int] {
-        ocvValues
-    }
-
     // MARK: - Dependencies
 
     private var repeaterAdminService: RepeaterAdminService?
     private var contactService: ContactService?
+    private var nodeSnapshotService: NodeSnapshotService?
+
+    /// ID of the current session's snapshot (for enrichment).
+    /// Set synchronously before enrichment handlers can fire.
+    private var currentSnapshotID: UUID?
+
+    /// Previous snapshot for delta display
+    private(set) var previousSnapshot: NodeStatusSnapshotDTO?
 
     // MARK: - Initialization
 
@@ -80,6 +83,7 @@ final class RepeaterStatusViewModel {
     func configure(appState: AppState) {
         self.repeaterAdminService = appState.services?.repeaterAdminService
         self.contactService = appState.services?.contactService
+        self.nodeSnapshotService = appState.services?.nodeSnapshotService
         // Handler registration moved to registerHandlers() called from view's .task modifier
     }
 
@@ -93,9 +97,7 @@ final class RepeaterStatusViewModel {
         await repeaterAdminService.clearHandlers()
 
         await repeaterAdminService.setStatusHandler { [weak self] status in
-            await MainActor.run {
-                self?.handleStatusResponse(status)
-            }
+            await self?.handleStatusResponse(status)
         }
 
         await repeaterAdminService.setNeighboursHandler { [weak self] response in
@@ -169,7 +171,6 @@ final class RepeaterStatusViewModel {
         isLoadingStatus = true
         errorMessage = nil
 
-
         // Start timeout
         statusTimeoutTask?.cancel()
         statusTimeoutTask = Task { [weak self] in
@@ -185,7 +186,7 @@ final class RepeaterStatusViewModel {
 
         do {
             let response = try await requestStatusWithRetries(sessionID: session.id)
-            handleStatusResponse(response)
+            await handleStatusResponse(response)
         } catch {
             errorMessage = error.localizedDescription
             isLoadingStatus = false
@@ -227,7 +228,7 @@ final class RepeaterStatusViewModel {
 
     /// Handle status response from push notification
     /// Validates response matches current session before updating
-    func handleStatusResponse(_ response: RemoteNodeStatus) {
+    func handleStatusResponse(_ response: RemoteNodeStatus) async {
         // Session validation: only accept responses for our session
         guard let expectedPrefix = session?.publicKeyPrefix,
               response.publicKeyPrefix == expectedPrefix else {
@@ -236,6 +237,29 @@ final class RepeaterStatusViewModel {
         statusTimeoutTask?.cancel()  // Cancel timeout on success
         self.status = response
         self.isLoadingStatus = false
+
+        // Capture snapshot for history
+        guard let nodeSnapshotService, let session else { return }
+
+        // Fetch previous snapshot BEFORE saving so we compare against the last visit
+        let prev = await nodeSnapshotService.previousSnapshot(
+            for: session.publicKey,
+            before: .now
+        )
+        self.previousSnapshot = prev
+
+        let snapshotID = await nodeSnapshotService.saveStatusSnapshot(
+            nodePublicKey: session.publicKey,
+            batteryMillivolts: response.batteryMillivolts,
+            lastSNR: response.lastSNR,
+            lastRSSI: Int16(clamping: response.lastRSSI),
+            noiseFloor: Int16(clamping: response.noiseFloor),
+            uptimeSeconds: response.uptimeSeconds,
+            rxAirtimeSeconds: response.repeaterRxAirtimeSeconds,
+            packetsSent: response.packetsSent,
+            packetsReceived: response.packetsReceived
+        )
+        self.currentSnapshotID = snapshotID
     }
 
     /// Handle neighbours response from push notification
@@ -245,6 +269,16 @@ final class RepeaterStatusViewModel {
         self.neighbors = response.neighbours
         self.isLoadingNeighbors = false
         self.neighborsLoaded = true
+
+        // Enrich current snapshot with neighbor data
+        if let snapshotID = currentSnapshotID {
+            let entries = response.neighbours.map {
+                NeighborSnapshotEntry(publicKeyPrefix: $0.publicKeyPrefix, snr: $0.snr, secondsAgo: $0.secondsAgo)
+            }
+            Task {
+                await nodeSnapshotService?.enrichWithNeighbors(entries, snapshotID: snapshotID)
+            }
+        }
     }
 
     // MARK: - Telemetry
@@ -302,8 +336,29 @@ final class RepeaterStatusViewModel {
         self.cachedDataPoints = response.dataPoints
         self.isLoadingTelemetry = false
         self.telemetryLoaded = true
-    }
 
+        // Enrich current snapshot with telemetry data
+        if let snapshotID = currentSnapshotID {
+            let entries: [TelemetrySnapshotEntry] = cachedDataPoints.compactMap { dp in
+                let numericValue: Double?
+                switch dp.value {
+                case .float(let value):
+                    numericValue = value
+                case .integer(let value):
+                    numericValue = Double(value)
+                default:
+                    numericValue = nil
+                }
+                guard let value = numericValue else { return nil }
+                return TelemetrySnapshotEntry(channel: Int(dp.channel), type: dp.typeName, value: value)
+            }
+            if !entries.isEmpty {
+                Task {
+                    await nodeSnapshotService?.enrichWithTelemetry(entries, snapshotID: snapshotID)
+                }
+            }
+        }
+    }
 
     // MARK: - Telemetry Grouping
 
@@ -348,7 +403,7 @@ final class RepeaterStatusViewModel {
         guard let mv = status?.batteryMillivolts else { return Self.emDash }
         let volts = Double(mv) / 1000.0
         let battery = BatteryInfo(level: Int(mv))
-        let percent = battery.percentage(using: currentOCVArray)
+        let percent = battery.percentage(using: ocvValues)
         return "\(volts.formatted(.number.precision(.fractionLength(2))))V (\(percent)%)"
     }
 
@@ -377,6 +432,54 @@ final class RepeaterStatusViewModel {
         return count.formatted()
     }
 
+    // MARK: - Delta Display
+
+    /// Format a delta timestamp relative to now.
+    var previousSnapshotTimestamp: String? {
+        guard let prev = previousSnapshot else { return nil }
+        let interval = prev.timestamp.distance(to: .now)
+        if interval < 3600 {
+            return L10n.RemoteNodes.RemoteNodes.History.vsMinutesAgo(Int(interval / 60))
+        } else if interval < 86400 {
+            return L10n.RemoteNodes.RemoteNodes.History.vsHoursAgo(Int(interval / 3600))
+        } else {
+            return L10n.RemoteNodes.RemoteNodes.History.vsDate(prev.timestamp.formatted(.dateTime.month().day()))
+        }
+    }
+
+    /// Battery delta from previous snapshot (in millivolts, positive = increase)
+    var batteryDeltaMV: Int? {
+        guard let current = status?.batteryMillivolts,
+              let previous = previousSnapshot?.batteryMillivolts else { return nil }
+        return Int(current) - Int(previous)
+    }
+
+    /// SNR delta from previous snapshot
+    var snrDelta: Double? {
+        guard let current = status?.lastSNR,
+              let previous = previousSnapshot?.lastSNR else { return nil }
+        return current - previous
+    }
+
+    /// RSSI delta from previous snapshot
+    var rssiDelta: Int? {
+        guard let current = status?.lastRSSI,
+              let previous = previousSnapshot?.lastRSSI else { return nil }
+        return Int(current) - Int(previous)
+    }
+
+    /// Noise floor delta from previous snapshot
+    var noiseFloorDelta: Int? {
+        guard let current = status?.noiseFloor,
+              let previous = previousSnapshot?.noiseFloor else { return nil }
+        return Int(current) - Int(previous)
+    }
+
+    /// Fetch all snapshots for the current node
+    func fetchHistory() async -> [NodeStatusSnapshotDTO] {
+        guard let nodeSnapshotService, let session else { return [] }
+        return await nodeSnapshotService.fetchSnapshots(for: session.publicKey)
+    }
 
     // MARK: - OCV Settings
 

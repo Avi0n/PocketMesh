@@ -1328,6 +1328,98 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         reactions.removeValue(forKey: messageID)
     }
 
+    // MARK: - Node Status Snapshots
+
+    public var nodeStatusSnapshots: [NodeStatusSnapshotDTO] = []
+
+    public func saveNodeStatusSnapshot(
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) async throws -> UUID {
+        let dto = NodeStatusSnapshotDTO(
+            nodePublicKey: nodePublicKey,
+            batteryMillivolts: batteryMillivolts,
+            lastSNR: lastSNR,
+            lastRSSI: lastRSSI,
+            noiseFloor: noiseFloor,
+            uptimeSeconds: uptimeSeconds,
+            rxAirtimeSeconds: rxAirtimeSeconds,
+            packetsSent: packetsSent,
+            packetsReceived: packetsReceived
+        )
+        nodeStatusSnapshots.append(dto)
+        return dto.id
+    }
+
+    public func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) async throws -> NodeStatusSnapshotDTO? {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey }
+            .sorted { $0.timestamp > $1.timestamp }
+            .first
+    }
+
+    public func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) async throws -> [NodeStatusSnapshotDTO] {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey && (since == nil || $0.timestamp >= since!) }
+            .sorted { $0.timestamp < $1.timestamp }
+    }
+
+    public func fetchPreviousNodeStatusSnapshot(nodePublicKey: Data, before: Date) async throws -> NodeStatusSnapshotDTO? {
+        nodeStatusSnapshots
+            .filter { $0.nodePublicKey == nodePublicKey && $0.timestamp < before }
+            .sorted { $0.timestamp > $1.timestamp }
+            .first
+    }
+
+    public func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) async throws {
+        if let index = nodeStatusSnapshots.firstIndex(where: { $0.id == id }) {
+            let existing = nodeStatusSnapshots[index]
+            nodeStatusSnapshots[index] = NodeStatusSnapshotDTO(
+                id: existing.id,
+                timestamp: existing.timestamp,
+                nodePublicKey: existing.nodePublicKey,
+                batteryMillivolts: existing.batteryMillivolts,
+                lastSNR: existing.lastSNR,
+                lastRSSI: existing.lastRSSI,
+                noiseFloor: existing.noiseFloor,
+                uptimeSeconds: existing.uptimeSeconds,
+                rxAirtimeSeconds: existing.rxAirtimeSeconds,
+                packetsSent: existing.packetsSent,
+                packetsReceived: existing.packetsReceived,
+                neighborSnapshots: neighbors,
+                telemetryEntries: existing.telemetryEntries
+            )
+        }
+    }
+
+    public func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) async throws {
+        if let index = nodeStatusSnapshots.firstIndex(where: { $0.id == id }) {
+            let existing = nodeStatusSnapshots[index]
+            nodeStatusSnapshots[index] = NodeStatusSnapshotDTO(
+                id: existing.id,
+                timestamp: existing.timestamp,
+                nodePublicKey: existing.nodePublicKey,
+                batteryMillivolts: existing.batteryMillivolts,
+                lastSNR: existing.lastSNR,
+                lastRSSI: existing.lastRSSI,
+                noiseFloor: existing.noiseFloor,
+                uptimeSeconds: existing.uptimeSeconds,
+                rxAirtimeSeconds: existing.rxAirtimeSeconds,
+                packetsSent: existing.packetsSent,
+                packetsReceived: existing.packetsReceived,
+                neighborSnapshots: existing.neighborSnapshots,
+                telemetryEntries: telemetry
+            )
+        }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations
@@ -1341,6 +1433,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         roomMessages = [:]
         discoveredNodes = [:]
         reactions = [:]
+        nodeStatusSnapshots = []
         savedMessages = []
         savedContacts = []
         savedChannels = []
