@@ -197,12 +197,7 @@ struct UnifiedMessageBubble: View {
                         .padding(.bottom, -6)
                     }
 
-                    // Inline image (if applicable, separate from link previews)
-                    if isImageURL && showInlineImages {
-                        inlineImageContent
-                    }
-
-                    // Link preview (if applicable, skip for image URLs handled above)
+                    // Link preview (if applicable, skip for image URLs shown in bubble)
                     if previewsEnabled && !(isImageURL && showInlineImages) {
                         linkPreviewContent
                     }
@@ -235,10 +230,10 @@ struct UnifiedMessageBubble: View {
         }
     }
 
-    // MARK: - Inline Image Content
+    // MARK: - Embedded Image Content
 
     @ViewBuilder
-    private var inlineImageContent: some View {
+    private var embeddedImageContent: some View {
         switch previewState {
         case .loaded:
             if let image = decodedImage {
@@ -246,14 +241,24 @@ struct UnifiedMessageBubble: View {
                     image: image,
                     isGIF: isGIF,
                     autoPlayGIFs: autoPlayGIFs,
+                    isEmbedded: true,
                     onTap: { onImageTap?() }
                 )
+                .frame(maxWidth: .infinity)
             }
 
         case .loading, .idle:
-            if let url = detectedURL {
-                LinkPreviewLoadingCard(url: url)
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
+            if detectedURL != nil {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(message.isOutgoing ? .white.opacity(0.7) : nil)
+                    Text(L10n.Chats.Chats.Preview.loading)
+                        .font(.subheadline)
+                        .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
 
         case .noPreview, .disabled:
@@ -323,22 +328,28 @@ struct UnifiedMessageBubble: View {
     // MARK: - Message Bubble Content
 
     private var messageBubbleContent: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
 
-            if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
-                HStack(spacing: 4) {
-                    if showIncomingHopCount && !isDirect {
-                        hopCountFooter
-                    }
-                    if showIncomingPath {
-                        pathFooter
+                if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
+                    HStack(spacing: 4) {
+                        if showIncomingHopCount && !isDirect {
+                            hopCountFooter
+                        }
+                        if showIncomingPath {
+                            pathFooter
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            if isImageURL && showInlineImages {
+                embeddedImageContent
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
         .background(bubbleColor)
         .clipShape(.rect(cornerRadius: 16))
         .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)

@@ -6,6 +6,7 @@ struct InlineImageView: View {
     let image: UIImage
     let isGIF: Bool
     let autoPlayGIFs: Bool
+    let isEmbedded: Bool
     let onTap: () -> Void
 
     private static let maxWidth: CGFloat = 280
@@ -32,11 +33,13 @@ struct InlineImageView: View {
             GIFContentView(
                 image: image,
                 autoPlayGIFs: autoPlayGIFs,
+                isEmbedded: isEmbedded,
                 displaySize: displaySize
             )
         } else {
             StaticImageContentView(
                 image: image,
+                isEmbedded: isEmbedded,
                 displaySize: displaySize,
                 onTap: onTap
             )
@@ -49,6 +52,7 @@ struct InlineImageView: View {
 private struct GIFContentView: View {
     let image: UIImage
     let autoPlayGIFs: Bool
+    let isEmbedded: Bool
     let displaySize: CGSize
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -80,8 +84,12 @@ private struct GIFContentView: View {
                 }
             }
         }
-        .background(.regularMaterial)
-        .clipShape(.rect(cornerRadius: 12))
+        .background {
+            if !isEmbedded {
+                Color.clear.background(.regularMaterial)
+            }
+        }
+        .clipShape(.rect(cornerRadius: isEmbedded ? 0 : 12))
         .onTapGesture {
             isPlaying.toggle()
         }
@@ -103,6 +111,7 @@ private struct GIFContentView: View {
 
 private struct StaticImageContentView: View {
     let image: UIImage
+    let isEmbedded: Bool
     let displaySize: CGSize
     let onTap: () -> Void
 
@@ -112,8 +121,12 @@ private struct StaticImageContentView: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: displaySize.width, height: displaySize.height)
-                .background(.regularMaterial)
-                .clipShape(.rect(cornerRadius: 12))
+                .background {
+                    if !isEmbedded {
+                        Color.clear.background(.regularMaterial)
+                    }
+                }
+                .clipShape(.rect(cornerRadius: isEmbedded ? 0 : 12))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(L10n.Chats.Chats.InlineImage.imageAccessibility)
