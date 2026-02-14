@@ -376,6 +376,77 @@
 /* Location: RepeaterStatusView.swift - Channel header for grouped telemetry */
 "remoteNodes.status.channel" = "Канал %d";
 
+// MARK: - History
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
+"remoteNodes.history.vsMinutesAgo" = "З останнього візиту (%d хв тому)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago) */
+"remoteNodes.history.vsHoursAgo" = "З останнього візиту (%d год тому)";
+
+/* Location: RepeaterStatusViewModel.swift - Delta timestamp (date) */
+"remoteNodes.history.vsDate" = "З %@";
+
+/* Location: NodeStatusHistoryView.swift - History navigation title */
+"remoteNodes.history.title" = "Історія";
+
+/* Location: NeighborRow - New neighbor badge */
+"remoteNodes.history.new" = "Новий";
+
+/* Location: NeighborRow - Not seen status */
+"remoteNodes.history.notSeen" = "Не бачено";
+
+/* Location: NodeStatusHistoryView.swift - Empty state message */
+"remoteNodes.history.checkBack" = "Поверніться після наступного візиту, щоб побачити тенденції";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.week" = "1Т";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.month" = "1М";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.threeMonths" = "3М";
+
+/* Location: NodeStatusHistoryView.swift - Time range picker */
+"remoteNodes.history.all" = "Усі";
+
+/* Location: NodeStatusHistoryView.swift - Battery chart title */
+"remoteNodes.history.battery" = "Батарея";
+
+/* Location: NodeStatusHistoryView.swift - SNR chart title */
+"remoteNodes.history.snr" = "SNR";
+
+/* Location: NodeStatusHistoryView.swift - RSSI chart title */
+"remoteNodes.history.rssi" = "RSSI";
+
+/* Location: NodeStatusHistoryView.swift - Noise floor chart title */
+"remoteNodes.history.noiseFloor" = "Рівень шуму";
+
+/* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
+"remoteNodes.history.neighborCount" = "Кількість сусідів";
+
+/* Location: NeighborHistoryView.swift - Active status */
+"remoteNodes.history.active" = "Активний";
+
+/* Location: NeighborHistoryView.swift - Last seen status */
+"remoteNodes.history.lastSeen" = "Востаннє бачено %@";
+
+/* Location: NeighborHistoryView.swift - Neighbors section title */
+"remoteNodes.history.neighbors" = "Сусіди";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric increased */
+"remoteNodes.history.a11y.increased" = "збільшилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric decreased */
+"remoteNodes.history.a11y.decreased" = "зменшилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric improved */
+"remoteNodes.history.a11y.improved" = "покращилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: metric degraded */
+"remoteNodes.history.a11y.degraded" = "погіршилось";
+
 // MARK: - Room Conversation
 
 /* Location: RoomConversationView.swift - Disconnected status */
