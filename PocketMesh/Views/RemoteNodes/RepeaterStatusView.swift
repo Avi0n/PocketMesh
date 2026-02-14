@@ -115,21 +115,54 @@ struct RepeaterStatusView: View {
                     .foregroundStyle(.red)
             } else {
                 statusRows
+
+                if let timestamp = viewModel.previousSnapshotTimestamp {
+                    Text(timestamp)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                NavigationLink {
+                    NodeStatusHistoryView(fetchSnapshots: viewModel.fetchHistory)
+                } label: {
+                    Text(L10n.RemoteNodes.RemoteNodes.History.title)
+                }
             }
         }
     }
 
     @ViewBuilder
     private var statusRows: some View {
-        // Power
-        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.battery, value: viewModel.batteryDisplay)
-        // Health
+        MetricRow(
+            label: L10n.RemoteNodes.RemoteNodes.Status.battery,
+            value: viewModel.batteryDisplay,
+            delta: viewModel.batteryDeltaMV.map { Double($0) / 1000.0 },
+            higherIsBetter: true, unit: "V", fractionDigits: 2
+        )
+
         LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.uptime, value: viewModel.uptimeDisplay)
-        // Radio
-        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.lastRssi, value: viewModel.lastRSSIDisplay)
-        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.lastSnr, value: viewModel.lastSNRDisplay)
-        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.noiseFloor, value: viewModel.noiseFloorDisplay)
-        // Activity
+
+        MetricRow(
+            label: L10n.RemoteNodes.RemoteNodes.Status.lastRssi,
+            value: viewModel.lastRSSIDisplay,
+            delta: viewModel.rssiDelta.map(Double.init),
+            higherIsBetter: true, unit: " dBm", fractionDigits: 0
+        )
+
+        MetricRow(
+            label: L10n.RemoteNodes.RemoteNodes.Status.lastSnr,
+            value: viewModel.lastSNRDisplay,
+            delta: viewModel.snrDelta,
+            higherIsBetter: true, unit: " dB", fractionDigits: 1
+        )
+
+        MetricRow(
+            label: L10n.RemoteNodes.RemoteNodes.Status.noiseFloor,
+            value: viewModel.noiseFloorDisplay,
+            delta: viewModel.noiseFloorDelta.map(Double.init),
+            higherIsBetter: false, unit: " dBm", fractionDigits: 0
+        )
+
         LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.packetsSent, value: viewModel.packetsSentDisplay)
         LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.packetsReceived, value: viewModel.packetsReceivedDisplay)
     }
@@ -150,10 +183,34 @@ struct RepeaterStatusView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
-                        NeighborRow(
-                            neighbor: neighbor,
-                            contact: contacts.first { $0.publicKeyPrefix.starts(with: neighbor.publicKeyPrefix) }
-                        )
+                        let contact = contacts.first { $0.publicKeyPrefix.starts(with: neighbor.publicKeyPrefix) }
+                        NavigationLink {
+                            NeighborSNRChartView(
+                                name: contact?.displayName ?? L10n.RemoteNodes.RemoteNodes.Status.unknown,
+                                neighborPrefix: neighbor.publicKeyPrefix,
+                                fetchSnapshots: viewModel.fetchHistory
+                            )
+                        } label: {
+                            NeighborRow(
+                                neighbor: neighbor,
+                                contact: contact,
+                                previousNeighbor: viewModel.previousSnapshot?.neighborSnapshots?.first {
+                                    $0.publicKeyPrefix == neighbor.publicKeyPrefix
+                                },
+                                hasPreviousSnapshot: viewModel.previousSnapshot?.neighborSnapshots != nil
+                            )
+                        }
+                    }
+
+                    if let previousNeighbors = viewModel.previousSnapshot?.neighborSnapshots {
+                        let currentPrefixes = Set(viewModel.neighbors.map(\.publicKeyPrefix))
+                        let disappeared = previousNeighbors.filter { !currentPrefixes.contains($0.publicKeyPrefix) }
+                        ForEach(disappeared, id: \.publicKeyPrefix) { old in
+                            DisappearedNeighborRow(
+                                neighbor: old,
+                                contact: contacts.first { $0.publicKeyPrefix.starts(with: old.publicKeyPrefix) }
+                            )
+                        }
                     }
                 }
             } label: {
@@ -229,7 +286,7 @@ struct RepeaterStatusView: View {
                         ForEach(viewModel.groupedDataPoints, id: \.channel) { group in
                             Section {
                                 ForEach(group.dataPoints, id: \.self) { dataPoint in
-                                    TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)
+                                    TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.ocvValues)
                                 }
                             } header: {
                                 Text(L10n.RemoteNodes.RemoteNodes.Status.channel(Int(group.channel)))
@@ -238,8 +295,14 @@ struct RepeaterStatusView: View {
                         }
                     } else {
                         ForEach(viewModel.cachedDataPoints, id: \.self) { dataPoint in
-                            TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.currentOCVArray)
+                            TelemetryRow(dataPoint: dataPoint, ocvArray: viewModel.ocvValues)
                         }
+                    }
+
+                    NavigationLink {
+                        TelemetryHistoryView(fetchSnapshots: viewModel.fetchHistory)
+                    } label: {
+                        Text(L10n.RemoteNodes.RemoteNodes.History.title)
                     }
                 } else {
                     Text(L10n.RemoteNodes.RemoteNodes.Status.noTelemetryData)
@@ -275,16 +338,105 @@ struct RepeaterStatusView: View {
     }
 }
 
+// MARK: - Metric Row
+
+private struct MetricRow: View {
+    let label: String
+    let value: String
+    let delta: Double?
+    let higherIsBetter: Bool
+    let unit: String
+    let fractionDigits: Int
+
+    var body: some View {
+        LabeledContent {
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(value)
+                if let delta {
+                    StatusDeltaView(delta: delta, higherIsBetter: higherIsBetter, unit: unit, fractionDigits: fractionDigits)
+                }
+            }
+        } label: {
+            Text(label)
+        }
+    }
+}
+
+// MARK: - Neighbor SNR Chart
+
+private struct NeighborSNRChartView: View {
+    let name: String
+    let neighborPrefix: Data
+    let fetchSnapshots: @Sendable () async -> [NodeStatusSnapshotDTO]
+
+    @State private var allDataPoints: [MetricChartView.DataPoint] = []
+    @State private var timeRange: HistoryTimeRange = .all
+
+    private var filteredDataPoints: [MetricChartView.DataPoint] {
+        guard let start = timeRange.startDate else { return allDataPoints }
+        return allDataPoints.filter { $0.date >= start }
+    }
+
+    var body: some View {
+        List {
+            HistoryTimeRangePicker(selection: $timeRange)
+
+            Section {
+                MetricChartView(
+                    title: name,
+                    unit: "dB",
+                    dataPoints: filteredDataPoints,
+                    accentColor: .blue
+                )
+            }
+        }
+        .navigationTitle(name)
+        .liquidGlassToolbarBackground()
+        .task {
+            let snapshots = await fetchSnapshots()
+            allDataPoints = snapshots.compactMap { snapshot in
+                guard let neighbors = snapshot.neighborSnapshots,
+                      let match = neighbors.first(where: { $0.publicKeyPrefix == neighborPrefix })
+                else { return nil }
+                return MetricChartView.DataPoint(id: snapshot.id, date: snapshot.timestamp, value: match.snr)
+            }
+        }
+    }
+}
+
 // MARK: - Neighbor Row
 
 private struct NeighborRow: View {
     let neighbor: NeighbourInfo
     let contact: ContactDTO?
+    let previousNeighbor: NeighborSnapshotEntry?
+    let hasPreviousSnapshot: Bool
+
+    init(
+        neighbor: NeighbourInfo,
+        contact: ContactDTO?,
+        previousNeighbor: NeighborSnapshotEntry? = nil,
+        hasPreviousSnapshot: Bool = false
+    ) {
+        self.neighbor = neighbor
+        self.contact = contact
+        self.previousNeighbor = previousNeighbor
+        self.hasPreviousSnapshot = hasPreviousSnapshot
+    }
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(displayName)
+                HStack(spacing: 4) {
+                    Text(displayName)
+
+                    if hasPreviousSnapshot && previousNeighbor == nil {
+                        Text(L10n.RemoteNodes.RemoteNodes.History.new)
+                            .font(.caption2)
+                            .bold()
+                            .foregroundStyle(.green)
+                    }
+                }
 
                 HStack(spacing: 4) {
                     Text(firstKeyByte)
@@ -305,6 +457,13 @@ private struct NeighborRow: View {
                 Text("SNR \(neighbor.snr.formatted(.number.precision(.fractionLength(1))))dB")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if let previous = previousNeighbor {
+                    let snrDelta = neighbor.snr - previous.snr
+                    if abs(snrDelta) >= 0.1 {
+                        StatusDeltaView(delta: snrDelta, higherIsBetter: true, unit: " dB", fractionDigits: 1)
+                    }
+                }
             }
         }
     }
@@ -346,6 +505,32 @@ private struct NeighborRow: View {
         } else {
             return .red
         }
+    }
+}
+
+// MARK: - Disappeared Neighbor Row
+
+private struct DisappearedNeighborRow: View {
+    let neighbor: NeighborSnapshotEntry
+    let contact: ContactDTO?
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(displayName)
+                Text(L10n.RemoteNodes.RemoteNodes.History.notSeen)
+                    .font(.caption2)
+            }
+            Spacer()
+            Text("SNR \(neighbor.snr.formatted(.number.precision(.fractionLength(1))))dB")
+                .font(.caption)
+        }
+        .foregroundStyle(.tertiary)
+    }
+
+    private var displayName: String {
+        contact?.displayName
+            ?? neighbor.publicKeyPrefix.prefix(4).map { String(format: "%02X", $0) }.joined()
     }
 }
 

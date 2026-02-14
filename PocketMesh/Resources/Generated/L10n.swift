@@ -2212,6 +2212,64 @@ public enum L10n {
         /// Location: NodeAuthenticationSheet.swift - Room type value
         public static let typeRoom = L10n.tr("RemoteNodes", "remoteNodes.auth.typeRoom", fallback: "Room")
       }
+      public enum History {
+        /// Location: NeighborHistoryView.swift - Active status
+        public static let active = L10n.tr("RemoteNodes", "remoteNodes.history.active", fallback: "Active")
+        /// Location: NodeStatusHistoryView.swift - Time range picker
+        public static let all = L10n.tr("RemoteNodes", "remoteNodes.history.all", fallback: "All")
+        /// Location: NodeStatusHistoryView.swift - Battery chart title
+        public static let battery = L10n.tr("RemoteNodes", "remoteNodes.history.battery", fallback: "Battery")
+        /// Location: NodeStatusHistoryView.swift - Empty state message
+        public static let checkBack = L10n.tr("RemoteNodes", "remoteNodes.history.checkBack", fallback: "Check back after your next visit to see trends")
+        /// Location: NeighborHistoryView.swift - Last seen status
+        public static func lastSeen(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.history.lastSeen", String(describing: p1), fallback: "Last seen %@")
+        }
+        /// Location: NodeStatusHistoryView.swift - Time range picker
+        public static let month = L10n.tr("RemoteNodes", "remoteNodes.history.month", fallback: "1M")
+        /// Location: NodeStatusHistoryView.swift - Neighbor count chart title
+        public static let neighborCount = L10n.tr("RemoteNodes", "remoteNodes.history.neighborCount", fallback: "Neighbor Count")
+        /// Location: NeighborHistoryView.swift - Neighbors section title
+        public static let neighbors = L10n.tr("RemoteNodes", "remoteNodes.history.neighbors", fallback: "Neighbors")
+        /// Location: NeighborRow - New neighbor badge
+        public static let new = L10n.tr("RemoteNodes", "remoteNodes.history.new", fallback: "New")
+        /// Location: NodeStatusHistoryView.swift - Noise floor chart title
+        public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.history.noiseFloor", fallback: "Noise Floor")
+        /// Location: NeighborRow - Not seen status
+        public static let notSeen = L10n.tr("RemoteNodes", "remoteNodes.history.notSeen", fallback: "Not seen")
+        /// Location: NodeStatusHistoryView.swift - RSSI chart title
+        public static let rssi = L10n.tr("RemoteNodes", "remoteNodes.history.rssi", fallback: "RSSI")
+        /// Location: NodeStatusHistoryView.swift - SNR chart title
+        public static let snr = L10n.tr("RemoteNodes", "remoteNodes.history.snr", fallback: "SNR")
+        /// Location: NodeStatusHistoryView.swift - Time range picker
+        public static let threeMonths = L10n.tr("RemoteNodes", "remoteNodes.history.threeMonths", fallback: "3M")
+        /// Location: NodeStatusHistoryView.swift - History navigation title
+        public static let title = L10n.tr("RemoteNodes", "remoteNodes.history.title", fallback: "History")
+        /// Location: RepeaterStatusViewModel.swift - Delta timestamp (date)
+        public static func vsDate(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.history.vsDate", String(describing: p1), fallback: "Since %@")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Delta timestamp (hours ago)
+        public static func vsHoursAgo(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.history.vsHoursAgo", p1, fallback: "Since last visit (%dh ago)")
+        }
+        /// Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago)
+        public static func vsMinutesAgo(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.history.vsMinutesAgo", p1, fallback: "Since last visit (%dm ago)")
+        }
+        /// Location: NodeStatusHistoryView.swift - Time range picker
+        public static let week = L10n.tr("RemoteNodes", "remoteNodes.history.week", fallback: "1W")
+        public enum A11y {
+          /// Location: StatusDeltaView.swift - Accessibility: metric decreased
+          public static let decreased = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.decreased", fallback: "decreased")
+          /// Location: StatusDeltaView.swift - Accessibility: metric degraded
+          public static let degraded = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.degraded", fallback: "degraded")
+          /// Location: StatusDeltaView.swift - Accessibility: metric improved
+          public static let improved = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.improved", fallback: "improved")
+          /// Location: StatusDeltaView.swift - Accessibility: metric increased
+          public static let increased = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.increased", fallback: "increased")
+        }
+      }
       public enum Room {
         /// Location: RoomConversationView.swift - Activity section header
         public static let activity = L10n.tr("RemoteNodes", "remoteNodes.room.activity", fallback: "Activity")
