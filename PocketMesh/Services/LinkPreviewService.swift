@@ -22,11 +22,27 @@ final class LinkPreviewService: Sendable {
         try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
     }()
 
+    /// Extracts a Giphy GIF URL from meshcore-open `g:{id}` message format.
+    /// - Parameter text: Message text to check
+    /// - Returns: Giphy direct GIF URL if text matches `g:{id}` format, nil otherwise
+    static func extractGiphyGIFURL(from text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let match = trimmed.wholeMatch(of: /g:([A-Za-z0-9_-]+)/) else { return nil }
+        return URL(string: "https://media.giphy.com/media/\(match.1)/giphy.gif")
+    }
+
     /// Extracts the first HTTP/HTTPS URL from text, excluding URLs within mentions.
     /// - Parameter text: Message text to scan
     /// - Returns: First HTTP(S) URL found outside mentions, or nil
     static func extractFirstURL(from text: String) -> URL? {
-        guard !text.isEmpty, let detector = urlDetector else { return nil }
+        guard !text.isEmpty else { return nil }
+
+        // Check for meshcore-open g:{giphy_id} format first
+        if let gifURL = extractGiphyGIFURL(from: text) {
+            return gifURL
+        }
+
+        guard let detector = urlDetector else { return nil }
 
         // Find mention ranges to exclude (format: @[name])
         let mentionRanges = extractMentionRanges(from: text)

@@ -112,4 +112,59 @@ struct LinkPreviewServiceTests {
         let url = LinkPreviewService.extractFirstURL(from: text)
         #expect(url == nil, "IP address in mention should not be extracted")
     }
+
+    // MARK: - Meshcore-open GIF Format Tests
+
+    @Test("Extracts Giphy URL from g: prefix message")
+    func extractsGiphyFromGPrefix() {
+        let text = "g:JgWZYoIgjzsIQO8joZ"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url?.absoluteString == "https://media.giphy.com/media/JgWZYoIgjzsIQO8joZ/giphy.gif")
+    }
+
+    @Test("Extracts Giphy URL from g: with whitespace")
+    func extractsGiphyWithWhitespace() {
+        let text = "  g:ABC123xyz  "
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url?.absoluteString == "https://media.giphy.com/media/ABC123xyz/giphy.gif")
+    }
+
+    @Test("Handles g: with hyphens and underscores in ID")
+    func extractsGiphyWithHyphensUnderscores() {
+        let text = "g:my-gif_ID-123"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url?.absoluteString == "https://media.giphy.com/media/my-gif_ID-123/giphy.gif")
+    }
+
+    @Test("Returns nil for g: with no ID")
+    func returnsNilForEmptyGPrefix() {
+        let text = "g:"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url == nil)
+    }
+
+    @Test("Does not match g: embedded in longer text")
+    func doesNotMatchEmbeddedGPrefix() {
+        let text = "Check out g:ABC123 please"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        // Should not match because wholeMatch requires entire string
+        #expect(url == nil)
+    }
+
+    @Test("Does not match g: with invalid characters in ID")
+    func doesNotMatchInvalidGPrefixChars() {
+        let text = "g:ABC 123"
+        let url = LinkPreviewService.extractFirstURL(from: text)
+        #expect(url == nil)
+    }
+
+    @Test("extractGiphyGIFURL returns nil for plain text")
+    func giphyExtractReturnsNilForPlainText() {
+        #expect(LinkPreviewService.extractGiphyGIFURL(from: "hello world") == nil)
+    }
+
+    @Test("extractGiphyGIFURL returns nil for regular URL")
+    func giphyExtractReturnsNilForRegularURL() {
+        #expect(LinkPreviewService.extractGiphyGIFURL(from: "https://example.com") == nil)
+    }
 }
