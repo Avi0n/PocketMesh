@@ -614,6 +614,9 @@
 /* Location: UnifiedMessageBubble.swift - Context menu action to delete */
 "chats.message.action.delete" = "Verwijderen";
 
+/* Location: MessageActionsSheet.swift - Purpose: Block sender action */
+"chats.message.action.blockSender" = "Afzender blokkeren";
+
 /* Location: UnifiedMessageBubble.swift - Status row retry button */
 "chats.message.status.retry" = "Opnieuw";
 
@@ -896,3 +899,23 @@
 
 /* Location: FullScreenImageViewer.swift - Share button label */
 "chats.imageViewer.share" = "Afbeelding";
+
+// MARK: - Block Sender Sheet
+
+/* Location: BlockSenderSheet.swift - Purpose: Sheet title with sender name */
+"chats.blockSender.title" = "\"%@\" blokkeren in kanalen?";
+
+/* Location: BlockSenderSheet.swift - Purpose: Explanation of name-based blocking limitation */
+"chats.blockSender.limitation" = "Kanaalberichten bevatten geen afzenderidentiteit. Deze blokkering komt alleen overeen op naam — de afzender kan van naam veranderen om het te omzeilen.";
+
+/* Location: BlockSenderSheet.swift - Purpose: Section header when matching contacts found */
+"chats.blockSender.matchingContacts" = "De volgende contacten delen deze naam. Selecteer degenen die je ook wilt blokkeren:";
+
+/* Location: BlockSenderSheet.swift - Purpose: Cancel button */
+"chats.blockSender.cancel" = "Annuleren";
+
+/* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
+"chats.blockSender.blockAnyway" = "Blokkeren";
+
+/* Location: BlockSenderSheet.swift - Purpose: Public key label */
+"chats.blockSender.key" = "Sleutel: %@";

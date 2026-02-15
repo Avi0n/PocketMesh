@@ -944,3 +944,26 @@
 
 /* Footer explaining inline image privacy implications */
 "inlineImages.footer" = "从 URL 获取图片可能会将您的 IP 地址暴露给托管图片的服务器。";
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "屏蔽";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "频道发送者";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "联系人";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "已屏蔽的频道发送者";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "没有已屏蔽的用户";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "您屏蔽的频道发送者名称将显示在此处。";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "取消屏蔽";
