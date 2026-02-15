@@ -286,7 +286,7 @@ public actor SettingsService {
     }
 
     /// Set transmit power
-    public func setTxPower(_ power: UInt8) async throws {
+    public func setTxPower(_ power: Int8) async throws {
         do {
             try await session.setTxPower(Int(power))
         } catch let error as MeshCoreError {
@@ -505,7 +505,7 @@ public actor SettingsService {
     }
 
     /// Set TX power with verification
-    public func setTxPowerVerified(_ power: UInt8) async throws -> MeshCore.SelfInfo {
+    public func setTxPowerVerified(_ power: Int8) async throws -> MeshCore.SelfInfo {
         logger.info("[Radio] Sending TX power: \(power)dBm")
 
         try await setTxPower(power)

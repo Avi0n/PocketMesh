@@ -181,8 +181,8 @@ public enum Parsers {
 
             var offset = 0
             let advType = data[offset]; offset += 1
-            let txPower = data[offset]; offset += 1
-            let maxTxPower = data[offset]; offset += 1
+            let txPower = Int8(bitPattern: data[offset]); offset += 1
+            let maxTxPower = Int8(bitPattern: data[offset]); offset += 1
             let publicKey = Data(data[offset..<offset+32]); offset += 32
             let lat = Double(data.readInt32LE(at: offset)) / 1_000_000; offset += 4
             let lon = Double(data.readInt32LE(at: offset)) / 1_000_000; offset += 4

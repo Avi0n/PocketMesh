@@ -6,10 +6,10 @@ import Foundation
 public struct SelfInfo: Sendable, Equatable {
     /// The type of advertisement used by the device.
     public let advertisementType: UInt8
-    /// The current transmit power level.
-    public let txPower: UInt8
-    /// The maximum supported transmit power level.
-    public let maxTxPower: UInt8
+    /// The current transmit power level in dBm (may be negative).
+    public let txPower: Int8
+    /// The maximum supported transmit power level in dBm.
+    public let maxTxPower: Int8
     /// The node's 32-byte public key.
     public let publicKey: Data
     /// The current latitude coordinate.
@@ -42,8 +42,8 @@ public struct SelfInfo: Sendable, Equatable {
     /// Initializes a new self-info structure with the specified device parameters.
     public init(
         advertisementType: UInt8,
-        txPower: UInt8,
-        maxTxPower: UInt8,
+        txPower: Int8,
+        maxTxPower: Int8,
         publicKey: Data,
         latitude: Double,
         longitude: Double,

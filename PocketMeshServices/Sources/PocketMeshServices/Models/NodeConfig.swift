@@ -53,15 +53,15 @@ extension MeshCoreNodeConfig {
         public var bandwidth: UInt32
         public var spreadingFactor: UInt8
         public var codingRate: UInt8
-        /// Transmit power in dBm
-        public var txPower: UInt8
+        /// Transmit power in dBm (may be negative)
+        public var txPower: Int8
 
         public init(
             frequency: UInt32,
             bandwidth: UInt32,
             spreadingFactor: UInt8,
             codingRate: UInt8,
-            txPower: UInt8
+            txPower: Int8
         ) {
             self.frequency = frequency
             self.bandwidth = bandwidth

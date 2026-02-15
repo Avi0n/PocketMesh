@@ -45,11 +45,11 @@ public final class Device {
     /// LoRa coding rate (5-8)
     public var codingRate: UInt8
 
-    /// Transmit power in dBm
-    public var txPower: UInt8
+    /// Transmit power in dBm (may be negative)
+    public var txPower: Int8
 
     /// Maximum transmit power in dBm
-    public var maxTxPower: UInt8
+    public var maxTxPower: Int8
 
     /// Node latitude (scaled by 1e6)
     public var latitude: Double
@@ -168,8 +168,8 @@ public final class Device {
         bandwidth: UInt32 = 250_000,
         spreadingFactor: UInt8 = 10,
         codingRate: UInt8 = 5,
-        txPower: UInt8 = 20,
-        maxTxPower: UInt8 = 20,
+        txPower: Int8 = 20,
+        maxTxPower: Int8 = 20,
         latitude: Double = 0,
         longitude: Double = 0,
         blePin: UInt32 = 0,
@@ -238,8 +238,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let bandwidth: UInt32
     public let spreadingFactor: UInt8
     public let codingRate: UInt8
-    public let txPower: UInt8
-    public let maxTxPower: UInt8
+    public let txPower: Int8
+    public let maxTxPower: Int8
     public let latitude: Double
     public let longitude: Double
     public let blePin: UInt32
@@ -302,8 +302,8 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         bandwidth: UInt32,
         spreadingFactor: UInt8,
         codingRate: UInt8,
-        txPower: UInt8,
-        maxTxPower: UInt8,
+        txPower: Int8,
+        maxTxPower: Int8,
         latitude: Double,
         longitude: Double,
         blePin: UInt32,

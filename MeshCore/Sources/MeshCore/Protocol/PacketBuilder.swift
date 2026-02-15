@@ -144,15 +144,15 @@ public enum PacketBuilder: Sendable {
 
     /// Builds a setTxPower command to set the radio transmission power.
     ///
-    /// - Parameter power: Transmission power in dBm.
+    /// - Parameter power: Transmission power in dBm (range: -9 to 30).
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
     /// - Offset 0 (1 byte): Command code `0x08` (setTxPower)
-    /// - Offset 1 (4 bytes): Power value, Little-endian UInt32
+    /// - Offset 1 (4 bytes): Power value, Little-endian Int32
     public static func setTxPower(_ power: Int) -> Data {
         var data = Data([CommandCode.setTxPower.rawValue])
-        let powerValue = UInt32(power)
+        let powerValue = Int32(power)
         data.append(contentsOf: withUnsafeBytes(of: powerValue.littleEndian) { Array($0) })
         return data
     }

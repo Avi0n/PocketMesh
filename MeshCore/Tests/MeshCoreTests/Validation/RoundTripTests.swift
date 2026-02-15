@@ -61,8 +61,8 @@ final class RoundTripTests: XCTestCase {
     func test_selfInfo_roundTrip() {
         var data = Data()
         let advType: UInt8 = 1
-        let txPower: UInt8 = 20
-        let maxTxPower: UInt8 = 30
+        let txPower: Int8 = 20
+        let maxTxPower: Int8 = 30
         let publicKey = Data(repeating: 0xBB, count: 32)
         let lat: Int32 = 37_774_900
         let lon: Int32 = -122_419_400
@@ -78,8 +78,8 @@ final class RoundTripTests: XCTestCase {
         let name = "MyNode"
 
         data.append(advType)
-        data.append(txPower)
-        data.append(maxTxPower)
+        data.append(UInt8(bitPattern: txPower))
+        data.append(UInt8(bitPattern: maxTxPower))
         data.append(publicKey)
         data.append(contentsOf: withUnsafeBytes(of: lat.littleEndian) { Data($0) })
         data.append(contentsOf: withUnsafeBytes(of: lon.littleEndian) { Data($0) })
@@ -117,6 +117,52 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(info.radioSpreadingFactor, radioSF)
         XCTAssertEqual(info.radioCodingRate, radioCR)
         XCTAssertEqual(info.name, "MyNode")
+    }
+
+    func test_selfInfo_negativeTxPower_roundTrip() {
+        var data = Data()
+        let advType: UInt8 = 1
+        let txPower: Int8 = -5
+        let maxTxPower: Int8 = 30
+        let publicKey = Data(repeating: 0xCC, count: 32)
+        let lat: Int32 = 0
+        let lon: Int32 = 0
+        let multiAcks: UInt8 = 0
+        let advLocPolicy: UInt8 = 0
+        let telemetryMode: UInt8 = 0
+        let manualAdd: UInt8 = 0
+        let radioFreq: UInt32 = 915_000
+        let radioBW: UInt32 = 250_000
+        let radioSF: UInt8 = 10
+        let radioCR: UInt8 = 5
+        let name = "NegPwr"
+
+        data.append(advType)
+        data.append(UInt8(bitPattern: txPower))
+        data.append(UInt8(bitPattern: maxTxPower))
+        data.append(publicKey)
+        data.append(contentsOf: withUnsafeBytes(of: lat.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: lon.littleEndian) { Data($0) })
+        data.append(multiAcks)
+        data.append(advLocPolicy)
+        data.append(telemetryMode)
+        data.append(manualAdd)
+        data.append(contentsOf: withUnsafeBytes(of: radioFreq.littleEndian) { Data($0) })
+        data.append(contentsOf: withUnsafeBytes(of: radioBW.littleEndian) { Data($0) })
+        data.append(radioSF)
+        data.append(radioCR)
+        data.append(name.data(using: .utf8)!)
+
+        let event = Parsers.SelfInfo.parse(data)
+
+        guard case .selfInfo(let info) = event else {
+            XCTFail("Expected .selfInfo event, got \(event)")
+            return
+        }
+
+        XCTAssertEqual(info.txPower, -5, "Negative TX power should be preserved")
+        XCTAssertEqual(info.maxTxPower, 30)
+        XCTAssertEqual(info.name, "NegPwr")
     }
 
     // MARK: - Message Round-Trip

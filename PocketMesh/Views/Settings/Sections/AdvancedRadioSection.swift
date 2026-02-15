@@ -103,7 +103,7 @@ struct AdvancedRadioSection: View {
                 Text(L10n.Settings.AdvancedRadio.txPower)
                 Spacer()
                 TextField(L10n.Settings.AdvancedRadio.txPowerPlaceholder, value: $txPower, format: .number)
-                    .keyboardType(.numberPad)
+                    .keyboardType(.numbersAndPunctuation)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 60)
                     .focused($focusedField, equals: .txPower)
@@ -185,7 +185,7 @@ struct AdvancedRadioSection: View {
                 )
 
                 // Then set TX power
-                _ = try await settingsService.setTxPowerVerified(UInt8(power))
+                _ = try await settingsService.setTxPowerVerified(Int8(power))
 
                 focusedField = nil  // Dismiss keyboard on success
                 retryAlert.reset()
