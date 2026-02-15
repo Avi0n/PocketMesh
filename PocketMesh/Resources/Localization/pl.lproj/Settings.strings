@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Nieprawidłowe wartości wejściowe lub urządzenie niepołączone";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Tryb Repeatera";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Tryb Repeatera zamienia Twoje urządzenie w przenośny repeater na dedykowanej częstotliwości. Przydatny podczas biwakowania lub wędrówek poza zasięgiem infrastruktury repeaterów. Gdy jest aktywny, możesz komunikować się tylko z innymi na tej samej częstotliwości Trybu Repeatera — sieć główna nie będzie dostępna. Prawidłowe częstotliwości dla Trybu Repeatera to: 433 MHz, 869 MHz, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Wybierz preset odpowiadający Twojemu regionowi. Urządzenia MeshCore muszą używać tych samych ustawień radia, aby się komunikować.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Tryb Repeatera";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Tryb Repeatera zamienia Twoje urządzenie w przenośny repeater na dedykowanej częstotliwości. Przydatny podczas biwakowania lub wędrówek poza zasięgiem infrastruktury repeaterów. Gdy jest aktywny, możesz komunikować się tylko z innymi na tej samej częstotliwości Trybu Repeatera — sieć główna nie będzie dostępna.";
 
 
 // MARK: - Telemetry Settings Section

@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Ungültige Eingabewerte oder Gerät nicht verbunden";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Repeater-Modus";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Der Repeater-Modus macht Ihr Gerät zu einem tragbaren Repeater auf einer eigenen Frequenz. Nützlich beim Camping oder Wandern außerhalb der Reichweite von Repeater-Infrastruktur. Im aktiven Zustand können Sie nur mit anderen Geräten auf derselben Repeater-Modus-Frequenz kommunizieren — das Hauptnetzwerk ist nicht erreichbar. Gültige Frequenzen für den Repeater-Modus sind: 433 MHz, 869 MHz, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Wähle eine Voreinstellung passend zu deiner Region. MeshCore-Geräte müssen dieselben Funkeinstellungen verwenden, um kommunizieren zu können.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Repeater-Modus";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Der Repeater-Modus macht Ihr Gerät zu einem tragbaren Repeater auf einer eigenen Frequenz. Nützlich beim Camping oder Wandern außerhalb der Reichweite von Repeater-Infrastruktur. Im aktiven Zustand können Sie nur mit anderen Geräten auf derselben Repeater-Modus-Frequenz kommunizieren — das Hauptnetzwerk ist nicht erreichbar.";
 
 
 // MARK: - Telemetry Settings Section

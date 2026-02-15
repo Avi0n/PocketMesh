@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Неверные значения или устройство не подключено";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Режим ретранслятора";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Режим ретранслятора превращает ваше устройство в портативный ретранслятор на выделенной частоте. Полезен при кемпинге или пеших прогулках вне зоны действия инфраструктуры ретрансляторов. В активном состоянии вы можете общаться только с другими устройствами на той же частоте режима ретранслятора — основная сеть будет недоступна. Допустимые частоты для режима ретранслятора: 433 МГц, 869 МГц, 918 МГц.";
+
 
 /* Accessibility label for voltage text field - %d is the percentage level */
 "batteryCurve.accessibility.voltageLabel" = "Напряжение при %d процентах";
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Выберите пресет, соответствующий вашему региону. Устройства MeshCore должны использовать одинаковые настройки радио для связи.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Режим ретранслятора";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Режим ретранслятора превращает ваше устройство в портативный ретранслятор на выделенной частоте. Полезен при кемпинге или пеших прогулках вне зоны действия инфраструктуры ретрансляторов. В активном состоянии вы можете общаться только с другими устройствами на той же частоте режима ретранслятора — основная сеть будет недоступна.";
 
 
 // MARK: - Telemetry Settings Section

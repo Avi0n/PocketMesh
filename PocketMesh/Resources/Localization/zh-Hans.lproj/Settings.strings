@@ -300,6 +300,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "输入值无效或未连接到设备";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "中继模式";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "中继模式会将您的设备变为专用频率上的便携中继器。适用于露营或徒步旅行等超出中继基础设施范围的场景。启用后，您只能与使用相同中继模式频率的其他设备通信——无法连接到主网络。中继模式的有效频率为：433 MHz、869 MHz、918 MHz。";
+
 // MARK: - Battery Curve Section
 
 /* Accessibility label for voltage text field - %d is percentage level */
@@ -654,6 +660,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "选择与您的地区匹配的预设。MeshCore 设备必须使用相同的无线电设置才能通信。";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "中继模式";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "中继模式会将您的设备变为专用频率上的便携中继器。适用于露营或徒步旅行等超出中继基础设施范围的场景。启用后，您只能与使用相同中继模式频率的其他设备通信——无法连接到主网络。";
 
 // MARK: - Telemetry Settings Section
 

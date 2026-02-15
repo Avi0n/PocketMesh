@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Ongeldige invoerwaarden of apparaat niet verbonden";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Repeatermodus";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "De Repeatermodus maakt van uw apparaat een draagbare repeater op een eigen frequentie. Handig bij kamperen of wandelen buiten het bereik van repeater-infrastructuur. Wanneer actief kunt u alleen communiceren met anderen op dezelfde Repeatermodus-frequentie — het hoofdnetwerk is niet bereikbaar. Geldige frequenties voor de Repeatermodus zijn: 433 MHz, 869 MHz, 918 MHz.";
+
 
 /* Accessibility label for voltage text field at specific battery percent - %d is percent */
 "batteryCurve.accessibility.voltageLabel" = "Spanning bij %d procent";
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Kies een voorinstelling die overeenkomt met je regio. MeshCore-apparaten moeten dezelfde radio-instellingen gebruiken om te kunnen communiceren.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Repeatermodus";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "De Repeatermodus maakt van uw apparaat een draagbare repeater op een eigen frequentie. Handig bij kamperen of wandelen buiten het bereik van repeater-infrastructuur. Wanneer actief kunt u alleen communiceren met anderen op dezelfde Repeatermodus-frequentie — het hoofdnetwerk is niet bereikbaar.";
 
 
 // MARK: - Telemetry Settings Section

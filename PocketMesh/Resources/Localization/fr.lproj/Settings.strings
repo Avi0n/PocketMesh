@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Valeurs d'entrée invalides ou appareil non connecté";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Mode Répéteur";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Le Mode Répéteur transforme votre appareil en répéteur portable sur une fréquence dédiée. Utile pour le camping ou la randonnée hors de portée de l'infrastructure de répéteurs. Lorsqu'il est actif, vous ne pouvez communiquer qu'avec d'autres appareils sur la même fréquence du Mode Répéteur — le réseau principal ne sera pas accessible. Les fréquences valides pour le Mode Répéteur sont : 433 MHz, 869 MHz, 918 MHz.";
+
 
 /* Accessibility label for voltage text field - %d is the percentage level */
 "batteryCurve.accessibility.voltageLabel" = "Tension à %d pour cent";
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Choisissez un préréglage correspondant à votre région. Les appareils MeshCore doivent utiliser les mêmes réglages radio pour communiquer.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Mode Répéteur";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Le Mode Répéteur transforme votre appareil en répéteur portable sur une fréquence dédiée. Utile pour le camping ou la randonnée hors de portée de l'infrastructure de répéteurs. Lorsqu'il est actif, vous ne pouvez communiquer qu'avec d'autres appareils sur la même fréquence du Mode Répéteur — le réseau principal ne sera pas accessible.";
 
 
 // MARK: - Telemetry Settings Section

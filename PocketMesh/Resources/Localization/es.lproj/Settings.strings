@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Valores de entrada inválidos o dispositivo no conectado";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Modo Repetidor";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "El Modo Repetidor convierte tu dispositivo en un repetidor portátil en una frecuencia dedicada. Útil para acampar o hacer senderismo fuera del alcance de la infraestructura de repetidores. Mientras esté activo, solo puedes comunicarte con otros en la misma frecuencia del Modo Repetidor — no podrás acceder a la red principal. Las frecuencias válidas para el Modo Repetidor son: 433 MHz, 869 MHz, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -650,6 +656,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Elige un preset que coincida con tu región. Los dispositivos MeshCore deben usar los mismos ajustes de radio para comunicarse.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Modo Repetidor";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "El Modo Repetidor convierte tu dispositivo en un repetidor portátil en una frecuencia dedicada. Útil para acampar o hacer senderismo fuera del alcance de la infraestructura de repetidores. Mientras esté activo, solo puedes comunicarte con otros en la misma frecuencia del Modo Repetidor — no podrás acceder a la red principal.";
 
 
 // MARK: - Telemetry Settings Section
