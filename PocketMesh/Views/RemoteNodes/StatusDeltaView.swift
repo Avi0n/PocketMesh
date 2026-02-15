@@ -38,6 +38,6 @@ struct StatusDeltaView: View {
             ? L10n.RemoteNodes.RemoteNodes.History.A11y.improved
             : L10n.RemoteNodes.RemoteNodes.History.A11y.degraded
         let formatted = abs(delta).formatted(.number.precision(.fractionLength(fractionDigits)))
-        return "\(quality), \(direction) by \(formatted)\(unit)"
+        return L10n.RemoteNodes.RemoteNodes.History.A11y.deltaDescription(quality, direction, formatted, unit)
     }
 }

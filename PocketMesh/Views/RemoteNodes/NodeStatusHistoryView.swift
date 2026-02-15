@@ -45,6 +45,11 @@ struct NodeStatusHistoryView: View {
                     s.noiseFloor.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
+
+            Section {
+            } footer: {
+                Text(L10n.RemoteNodes.RemoteNodes.History.retentionNotice)
+            }
         }
         .navigationTitle(L10n.RemoteNodes.RemoteNodes.History.title)
         .liquidGlassToolbarBackground()

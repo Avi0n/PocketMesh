@@ -2220,7 +2220,7 @@ public enum L10n {
         /// Location: NodeStatusHistoryView.swift - Battery chart title
         public static let battery = L10n.tr("RemoteNodes", "remoteNodes.history.battery", fallback: "Battery")
         /// Location: NodeStatusHistoryView.swift - Empty state message
-        public static let checkBack = L10n.tr("RemoteNodes", "remoteNodes.history.checkBack", fallback: "Check back after your next visit to see trends")
+        public static let checkBack = L10n.tr("RemoteNodes", "remoteNodes.history.checkBack", fallback: "A snapshot is recorded at most every 15 minutes. Check back after your next visit to see trends.")
         /// Location: NeighborHistoryView.swift - Last seen status
         public static func lastSeen(_ p1: Any) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.history.lastSeen", String(describing: p1), fallback: "Last seen %@")
@@ -2237,12 +2237,16 @@ public enum L10n {
         public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.history.noiseFloor", fallback: "Noise Floor")
         /// Location: NeighborRow - Not seen status
         public static let notSeen = L10n.tr("RemoteNodes", "remoteNodes.history.notSeen", fallback: "Not seen")
+        /// Location: NodeStatusHistoryView.swift - Footer about data retention
+        public static let retentionNotice = L10n.tr("RemoteNodes", "remoteNodes.history.retentionNotice", fallback: "History data older than one year is automatically removed.")
         /// Location: NodeStatusHistoryView.swift - RSSI chart title
         public static let rssi = L10n.tr("RemoteNodes", "remoteNodes.history.rssi", fallback: "RSSI")
         /// Location: NodeStatusHistoryView.swift - SNR chart title
         public static let snr = L10n.tr("RemoteNodes", "remoteNodes.history.snr", fallback: "SNR")
         /// Location: NodeStatusHistoryView.swift - Time range picker
         public static let threeMonths = L10n.tr("RemoteNodes", "remoteNodes.history.threeMonths", fallback: "3M")
+        /// Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker
+        public static let timeRange = L10n.tr("RemoteNodes", "remoteNodes.history.timeRange", fallback: "Time Range")
         /// Location: NodeStatusHistoryView.swift - History navigation title
         public static let title = L10n.tr("RemoteNodes", "remoteNodes.history.title", fallback: "History")
         /// Location: RepeaterStatusViewModel.swift - Delta timestamp (date)
@@ -2264,6 +2268,10 @@ public enum L10n {
           public static let decreased = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.decreased", fallback: "decreased")
           /// Location: StatusDeltaView.swift - Accessibility: metric degraded
           public static let degraded = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.degraded", fallback: "degraded")
+          /// Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit)
+          public static func deltaDescription(_ p1: Any, _ p2: Any, _ p3: Any, _ p4: Any) -> String {
+            return L10n.tr("RemoteNodes", "remoteNodes.history.a11y.deltaDescription", String(describing: p1), String(describing: p2), String(describing: p3), String(describing: p4), fallback: "%1$@, %2$@ by %3$@%4$@")
+          }
           /// Location: StatusDeltaView.swift - Accessibility: metric improved
           public static let improved = L10n.tr("RemoteNodes", "remoteNodes.history.a11y.improved", fallback: "improved")
           /// Location: StatusDeltaView.swift - Accessibility: metric increased

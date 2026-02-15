@@ -400,7 +400,7 @@
 "remoteNodes.history.notSeen" = "Nicht gesehen";
 
 /* Location: NodeStatusHistoryView.swift - Empty state message */
-"remoteNodes.history.checkBack" = "Schau nach deinem nächsten Besuch vorbei, um Trends zu sehen";
+"remoteNodes.history.checkBack" = "Ein Snapshot wird höchstens alle 15 Minuten aufgezeichnet. Schau nach deinem nächsten Besuch vorbei, um Trends zu sehen.";
 
 /* Location: NodeStatusHistoryView.swift - Time range picker */
 "remoteNodes.history.week" = "1W";
@@ -449,6 +449,15 @@
 
 /* Location: StatusDeltaView.swift - Accessibility: metric degraded */
 "remoteNodes.history.a11y.degraded" = "verschlechtert";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ um %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Zeitraum";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Verlaufsdaten, die älter als ein Jahr sind, werden automatisch entfernt.";
 
 // MARK: - Room Conversation
 

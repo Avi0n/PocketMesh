@@ -397,7 +397,7 @@
 "remoteNodes.history.notSeen" = "Не бачено";
 
 /* Location: NodeStatusHistoryView.swift - Empty state message */
-"remoteNodes.history.checkBack" = "Поверніться після наступного візиту, щоб побачити тенденції";
+"remoteNodes.history.checkBack" = "Знімок записується не частіше ніж раз на 15 хвилин. Поверніться після наступного візиту, щоб побачити тенденції.";
 
 /* Location: NodeStatusHistoryView.swift - Time range picker */
 "remoteNodes.history.week" = "1Т";
@@ -446,6 +446,15 @@
 
 /* Location: StatusDeltaView.swift - Accessibility: metric degraded */
 "remoteNodes.history.a11y.degraded" = "погіршилось";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ на %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Період";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Дані історії старіші за один рік автоматично видаляються.";
 
 // MARK: - Room Conversation
 

@@ -397,7 +397,7 @@
 "remoteNodes.history.notSeen" = "Nie widziany";
 
 /* Location: NodeStatusHistoryView.swift - Empty state message */
-"remoteNodes.history.checkBack" = "Sprawdź ponownie po następnej wizycie, aby zobaczyć trendy";
+"remoteNodes.history.checkBack" = "Migawka jest zapisywana co najwyżej co 15 minut. Sprawdź ponownie po następnej wizycie, aby zobaczyć trendy.";
 
 /* Location: NodeStatusHistoryView.swift - Time range picker */
 "remoteNodes.history.week" = "1T";
@@ -446,6 +446,15 @@
 
 /* Location: StatusDeltaView.swift - Accessibility: metric degraded */
 "remoteNodes.history.a11y.degraded" = "pogorszyło się";
+
+/* Location: StatusDeltaView.swift - Accessibility: delta description format (quality, direction, value, unit) */
+"remoteNodes.history.a11y.deltaDescription" = "%1$@, %2$@ o %3$@%4$@";
+
+/* Location: HistoryTimeRangePicker.swift - Accessibility label for time range picker */
+"remoteNodes.history.timeRange" = "Okres";
+
+/* Location: NodeStatusHistoryView.swift - Footer about data retention */
+"remoteNodes.history.retentionNotice" = "Dane historyczne starsze niż rok są automatycznie usuwane.";
 
 // MARK: - Room Conversation
 

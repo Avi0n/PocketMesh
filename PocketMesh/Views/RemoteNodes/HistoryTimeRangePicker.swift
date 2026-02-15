@@ -29,12 +29,10 @@ struct HistoryTimeRangePicker: View {
 
     var body: some View {
         Section {
-            Picker(selection: $selection) {
+            Picker(L10n.RemoteNodes.RemoteNodes.History.timeRange, selection: $selection) {
                 ForEach(HistoryTimeRange.allCases, id: \.self) { range in
                     Text(range.label).tag(range)
                 }
-            } label: {
-                EmptyView()
             }
             .pickerStyle(.segmented)
             .listRowBackground(Color.clear)
