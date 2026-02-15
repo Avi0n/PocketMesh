@@ -54,6 +54,8 @@ struct SettingsView: View {
 
                 LinkPreviewSettingsSection()
 
+                BlockingSection()
+
                 Section {
                     if shouldUseSplitView {
                         NavigationLink {

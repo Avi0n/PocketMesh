@@ -625,6 +625,9 @@
 /* Location: UnifiedMessageBubble.swift - Context menu action to delete */
 "chats.message.action.delete" = "Delete";
 
+/* Location: MessageActionsSheet.swift - Purpose: Block sender action */
+"chats.message.action.blockSender" = "Block Sender";
+
 /* Location: UnifiedMessageBubble.swift - Status row retry button */
 "chats.message.status.retry" = "Retry";
 
@@ -950,3 +953,23 @@
 
 /* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
 "chats.tip.floodAdvert.message" = "Tap here and send a Flood Advert to let nearby devices know you've joined.";
+
+// MARK: - Block Sender Sheet
+
+/* Location: BlockSenderSheet.swift - Purpose: Sheet title with sender name */
+"chats.blockSender.title" = "Block \"%@\" from Channels?";
+
+/* Location: BlockSenderSheet.swift - Purpose: Explanation of name-based blocking limitation */
+"chats.blockSender.limitation" = "Channel messages don't include sender identity. This block matches by name only — the sender could change their name to bypass it.";
+
+/* Location: BlockSenderSheet.swift - Purpose: Section header when matching contacts found */
+"chats.blockSender.matchingContacts" = "The following contacts share this name. Select any you also want to block:";
+
+/* Location: BlockSenderSheet.swift - Purpose: Cancel button */
+"chats.blockSender.cancel" = "Cancel";
+
+/* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
+"chats.blockSender.blockAnyway" = "Block";
+
+/* Location: BlockSenderSheet.swift - Purpose: Public key label */
+"chats.blockSender.key" = "Key: %@";

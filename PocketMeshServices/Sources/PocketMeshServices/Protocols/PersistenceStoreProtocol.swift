@@ -160,6 +160,17 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Fetch blocked contacts for a device
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO]
 
+    // MARK: - Blocked Channel Senders
+
+    /// Save a blocked channel sender name (upserts to prevent duplicates)
+    func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws
+
+    /// Delete a blocked channel sender by device and name
+    func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws
+
+    /// Fetch all blocked channel senders for a device
+    func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO]
+
     // MARK: - Channel Operations
 
     /// Fetch all channels for a device

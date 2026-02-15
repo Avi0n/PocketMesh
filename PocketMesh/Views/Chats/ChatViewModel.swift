@@ -888,13 +888,15 @@ final class ChatViewModel {
             totalFetchedCount = unfilteredCount
             logger.info("loadChannelMessages: fetched \(unfilteredCount) messages")
 
-            // Filter out messages from blocked contacts (defensive: if fetch fails, show all)
+            // Filter out messages from blocked senders (contacts + channel sender names)
             let blockedNames: Set<String>
             do {
                 let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: channel.deviceID)
-                blockedNames = Set(blockedContacts.map(\.name))
+                let blockedSenders = try await dataStore.fetchBlockedChannelSenders(deviceID: channel.deviceID)
+                blockedNames = Set(blockedContacts.map { $0.name.lowercased() })
+                    .union(Set(blockedSenders.map { $0.name.lowercased() }))
             } catch {
-                logger.error("Failed to fetch blocked contacts for filtering: \(error)")
+                logger.error("Failed to fetch blocked names for filtering: \(error)")
                 blockedNames = []
             }
 
@@ -904,7 +906,7 @@ final class ChatViewModel {
             if !blockedNames.isEmpty {
                 fetchedMessages = fetchedMessages.filter { message in
                     guard let senderName = message.senderNodeName else { return true }
-                    return !blockedNames.contains(senderName)
+                    return !blockedNames.contains(senderName.lowercased())
                 }
             }
 
@@ -1036,7 +1038,7 @@ final class ChatViewModel {
             if currentChannel != nil && !cachedBlockedNames.isEmpty {
                 olderMessages = olderMessages.filter { message in
                     guard let senderName = message.senderNodeName else { return true }
-                    return !cachedBlockedNames.contains(senderName)
+                    return !cachedBlockedNames.contains(senderName.lowercased())
                 }
             }
 
@@ -1495,11 +1497,13 @@ final class ChatViewModel {
         // Group channels by deviceID to minimize blocked contacts fetches
         let channelsByDevice = Dictionary(grouping: channels, by: \.deviceID)
         for (deviceID, deviceChannels) in channelsByDevice {
-            // Fetch blocked contacts once per device
+            // Fetch blocked names once per device (contacts + channel senders)
             let blockedNames: Set<String>
             do {
                 let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
-                blockedNames = Set(blockedContacts.map(\.name))
+                let blockedSenders = try await dataStore.fetchBlockedChannelSenders(deviceID: deviceID)
+                blockedNames = Set(blockedContacts.map { $0.name.lowercased() })
+                    .union(Set(blockedSenders.map { $0.name.lowercased() }))
             } catch {
                 blockedNames = []
             }
@@ -1514,7 +1518,7 @@ final class ChatViewModel {
                         // Skip blocked senders
                         if !blockedNames.isEmpty,
                            let senderName = message.senderNodeName,
-                           blockedNames.contains(senderName) {
+                           blockedNames.contains(senderName.lowercased()) {
                             return false
                         }
                         // Skip outgoing reactions (unless failed)

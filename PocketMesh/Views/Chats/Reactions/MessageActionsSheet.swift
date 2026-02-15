@@ -9,6 +9,7 @@ enum MessageAction: Equatable {
     case reply
     case copy
     case sendAgain
+    case blockSender
     case delete
 }
 
@@ -55,6 +56,7 @@ struct MessageActionsSheet: View {
                         }
                         actionsSection
                         detailsSection
+                        blockSection
                         deleteSection
                     }
                 }
@@ -170,6 +172,20 @@ struct MessageActionsSheet: View {
                 L10n.Chats.Chats.Message.Action.sendAgain,
                 icon: "arrow.uturn.forward",
                 action: .sendAgain
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var blockSection: some View {
+        if availability.canBlockSender {
+            Divider()
+                .padding(.vertical, 8)
+            actionButton(
+                L10n.Chats.Chats.Message.Action.blockSender,
+                icon: "hand.raised",
+                action: .blockSender,
+                isDestructive: true
             )
         }
     }

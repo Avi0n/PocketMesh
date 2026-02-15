@@ -39,7 +39,8 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         DebugLogEntry.self,
         LinkPreviewData.self,
         DiscoveredNode.self,
-        NodeStatusSnapshot.self
+        NodeStatusSnapshot.self,
+        BlockedChannelSender.self
     ])
 
     /// Creates a ModelContainer for the app
@@ -446,6 +447,57 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         )
         let contacts = try modelContext.fetch(descriptor)
         return contacts.map { ContactDTO(from: $0) }
+    }
+
+    // MARK: - Blocked Channel Senders
+
+    public func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) throws {
+        let targetDeviceID = dto.deviceID
+        let targetName = dto.name
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID && entry.name == targetName
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            existing.dateBlocked = dto.dateBlocked
+        } else {
+            let entry = BlockedChannelSender(
+                id: dto.id,
+                name: dto.name,
+                deviceID: dto.deviceID,
+                dateBlocked: dto.dateBlocked
+            )
+            modelContext.insert(entry)
+        }
+
+        try modelContext.save()
+    }
+
+    public func deleteBlockedChannelSender(deviceID: UUID, name: String) throws {
+        let targetDeviceID = deviceID
+        let targetName = name
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID && entry.name == targetName
+        }
+        if let entry = try modelContext.fetch(FetchDescriptor(predicate: predicate)).first {
+            modelContext.delete(entry)
+            try modelContext.save()
+        }
+    }
+
+    public func fetchBlockedChannelSenders(deviceID: UUID) throws -> [BlockedChannelSenderDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<BlockedChannelSender> { entry in
+            entry.deviceID == targetDeviceID
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.dateBlocked, order: .reverse)]
+        )
+        let entries = try modelContext.fetch(descriptor)
+        return entries.map { BlockedChannelSenderDTO(from: $0) }
     }
 
     /// Update contact's last message info (nil clears the date, removing from conversations list)

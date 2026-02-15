@@ -5,6 +5,11 @@ import OSLog
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelChatView")
 
+private struct BlockSenderContext: Identifiable {
+    let id = UUID()
+    let senderName: String
+}
+
 /// Channel conversation view with broadcast messaging
 struct ChannelChatView: View {
     @Environment(\.appState) private var appState
@@ -41,6 +46,7 @@ struct ChannelChatView: View {
     }
 
     @State private var selectedMessageForActions: MessageDTO?
+    @State private var blockSenderContext: BlockSenderContext?
     @State private var recentEmojisStore = RecentEmojisStore()
     @State private var imageViewerData: ImageViewerData?
     @FocusState private var isInputFocused: Bool
@@ -107,6 +113,16 @@ struct ChannelChatView: View {
                     handleMessageAction(action, for: message)
                 }
             )
+        }
+        .sheet(item: $blockSenderContext) { context in
+            BlockSenderSheet(
+                senderName: context.senderName,
+                deviceID: channel.deviceID
+            ) { blockedContactIDs in
+                Task {
+                    await performBlock(senderName: context.senderName, contactIDs: blockedContactIDs)
+                }
+            }
         }
         .fullScreenCover(item: $imageViewerData) { data in
             FullScreenImageViewer(data: data)
@@ -431,6 +447,50 @@ struct ChannelChatView: View {
         }
     }
 
+    // MARK: - Blocking
+
+    private func performBlock(senderName: String, contactIDs: Set<UUID>) async {
+        guard let services = appState.services else { return }
+
+        // Save the blocked channel sender name
+        let dto = BlockedChannelSenderDTO(name: senderName, deviceID: channel.deviceID)
+        do {
+            try await services.dataStore.saveBlockedChannelSender(dto)
+        } catch {
+            logger.error("Failed to save blocked channel sender: \(error)")
+            return
+        }
+
+        // Block selected contacts
+        for contactID in contactIDs {
+            do {
+                try await services.contactService.updateContactPreferences(
+                    contactID: contactID,
+                    isBlocked: true
+                )
+            } catch {
+                logger.error("Failed to block contact \(contactID): \(error)")
+            }
+        }
+
+        // Refresh cache so SyncCoordinator has updated blocked names for real-time filtering
+        await services.syncCoordinator.refreshBlockedContactsCache(
+            deviceID: channel.deviceID,
+            dataStore: services.dataStore
+        )
+
+        // Refresh contacts if any were blocked
+        if !contactIDs.isEmpty {
+            await services.syncCoordinator.notifyContactsChanged()
+        }
+
+        // Reload messages to apply filter
+        await viewModel.loadChannelMessages(for: channel)
+
+        // Refresh chat list previews
+        await services.syncCoordinator.notifyConversationsChanged()
+    }
+
     // MARK: - Message Actions
 
     private func handleMessageAction(_ action: MessageAction, for message: MessageDTO) {
@@ -445,6 +505,13 @@ struct ChannelChatView: View {
             UIPasteboard.general.string = message.text
         case .sendAgain:
             sendAgain(message)
+        case .blockSender:
+            guard let name = message.senderNodeName else { return }
+            // Delay to let the message actions sheet dismiss before presenting the block sheet
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                blockSenderContext = BlockSenderContext(senderName: name)
+            }
         case .delete:
             deleteMessage(message)
         }

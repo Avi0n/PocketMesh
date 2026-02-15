@@ -741,6 +741,26 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         return Array(contacts.values.filter { $0.deviceID == deviceID && $0.isBlocked })
     }
 
+    // MARK: - Blocked Channel Senders
+
+    public var blockedChannelSenders: [String: BlockedChannelSenderDTO] = [:]
+    public private(set) var savedBlockedChannelSenders: [BlockedChannelSenderDTO] = []
+    public private(set) var deletedBlockedChannelSenderNames: [(deviceID: UUID, name: String)] = []
+
+    public func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {
+        savedBlockedChannelSenders.append(dto)
+        blockedChannelSenders["\(dto.deviceID)-\(dto.name)"] = dto
+    }
+
+    public func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {
+        deletedBlockedChannelSenderNames.append((deviceID: deviceID, name: name))
+        blockedChannelSenders.removeValue(forKey: "\(deviceID)-\(name)")
+    }
+
+    public func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] {
+        Array(blockedChannelSenders.values.filter { $0.deviceID == deviceID })
+    }
+
     // MARK: - Channel Operations
 
     public func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {

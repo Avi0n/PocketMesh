@@ -429,6 +429,8 @@ struct ChatView: View {
             UIPasteboard.general.string = message.text
         case .sendAgain:
             sendAgain(message)
+        case .blockSender:
+            break  // DMs don't support blocking
         case .delete:
             deleteMessage(message)
         }

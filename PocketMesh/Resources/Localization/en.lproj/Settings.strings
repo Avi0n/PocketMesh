@@ -976,3 +976,27 @@
 
 /* Contact count (param: integer) */
 "configImport.contactCount" = "Will add/update %d contacts on device";
+
+
+// MARK: - Blocking Section
+
+/* Location: BlockingSection.swift - Purpose: Section header */
+"blocking.header" = "Blocking";
+
+/* Location: BlockingSection.swift - Purpose: Channel senders row */
+"blocking.channelSenders" = "Channel Senders";
+
+/* Location: BlockingSection.swift - Purpose: Contacts row */
+"blocking.contacts" = "Contacts";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
+"blocking.channelSenders.title" = "Blocked Channel Senders";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
+"blocking.channelSenders.empty.title" = "No Blocked Users";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
+"blocking.channelSenders.empty.description" = "Channel sender names you block will appear here.";
+
+/* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
+"blocking.channelSenders.unblock" = "Unblock";

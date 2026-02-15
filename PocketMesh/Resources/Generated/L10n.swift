@@ -40,6 +40,24 @@ public enum L10n {
           public static let title = L10n.tr("Chats", "chats.alert.unableToSend.title", fallback: "Unable to Send")
         }
       }
+      public enum BlockSender {
+        /// Location: BlockSenderSheet.swift - Purpose: Destructive block button
+        public static let blockAnyway = L10n.tr("Chats", "chats.blockSender.blockAnyway", fallback: "Block")
+        /// Location: BlockSenderSheet.swift - Purpose: Cancel button
+        public static let cancel = L10n.tr("Chats", "chats.blockSender.cancel", fallback: "Cancel")
+        /// Location: BlockSenderSheet.swift - Purpose: Public key label
+        public static func key(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.blockSender.key", String(describing: p1), fallback: "Key: %@")
+        }
+        /// Location: BlockSenderSheet.swift - Purpose: Explanation of name-based blocking limitation
+        public static let limitation = L10n.tr("Chats", "chats.blockSender.limitation", fallback: "Channel messages don't include sender identity. This block matches by name only — the sender could change their name to bypass it.")
+        /// Location: BlockSenderSheet.swift - Purpose: Section header when matching contacts found
+        public static let matchingContacts = L10n.tr("Chats", "chats.blockSender.matchingContacts", fallback: "The following contacts share this name. Select any you also want to block:")
+        /// Location: BlockSenderSheet.swift - Purpose: Sheet title with sender name
+        public static func title(_ p1: Any) -> String {
+          return L10n.tr("Chats", "chats.blockSender.title", String(describing: p1), fallback: "Block \"%@\" from Channels?")
+        }
+      }
       public enum Channel {
         /// Location: ChannelChatView.swift - Fallback channel name format - %d is channel index
         public static func defaultName(_ p1: Int) -> String {
@@ -460,6 +478,8 @@ public enum L10n {
         /// Location: ChatView.swift - Accessibility label for unavailable message
         public static let unavailableAccessibility = L10n.tr("Chats", "chats.message.unavailableAccessibility", fallback: "Message could not be loaded")
         public enum Action {
+          /// Location: MessageActionsSheet.swift - Purpose: Block sender action
+          public static let blockSender = L10n.tr("Chats", "chats.message.action.blockSender", fallback: "Block Sender")
           /// Location: UnifiedMessageBubble.swift - Context menu action to copy
           public static let copy = L10n.tr("Chats", "chats.message.action.copy", fallback: "Copy")
           /// Location: UnifiedMessageBubble.swift - Context menu action to delete
@@ -2749,6 +2769,26 @@ public enum L10n {
         public static let disconnected = L10n.tr("Settings", "bleStatus.status.disconnected", fallback: "Disconnected")
         /// Status shown when device is ready
         public static let ready = L10n.tr("Settings", "bleStatus.status.ready", fallback: "Ready")
+      }
+    }
+    public enum Blocking {
+      /// Location: BlockingSection.swift - Purpose: Channel senders row
+      public static let channelSenders = L10n.tr("Settings", "blocking.channelSenders", fallback: "Channel Senders")
+      /// Location: BlockingSection.swift - Purpose: Contacts row
+      public static let contacts = L10n.tr("Settings", "blocking.contacts", fallback: "Contacts")
+      /// Location: BlockingSection.swift - Purpose: Section header
+      public static let header = L10n.tr("Settings", "blocking.header", fallback: "Blocking")
+      public enum ChannelSenders {
+        /// Location: BlockedChannelSendersView.swift - Purpose: Navigation title
+        public static let title = L10n.tr("Settings", "blocking.channelSenders.title", fallback: "Blocked Channel Senders")
+        /// Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock
+        public static let unblock = L10n.tr("Settings", "blocking.channelSenders.unblock", fallback: "Unblock")
+        public enum Empty {
+          /// Location: BlockedChannelSendersView.swift - Purpose: Empty state description
+          public static let description = L10n.tr("Settings", "blocking.channelSenders.empty.description", fallback: "Channel sender names you block will appear here.")
+          /// Location: BlockedChannelSendersView.swift - Purpose: Empty state title
+          public static let title = L10n.tr("Settings", "blocking.channelSenders.empty.title", fallback: "No Blocked Users")
+        }
       }
     }
     public enum Bluetooth {
