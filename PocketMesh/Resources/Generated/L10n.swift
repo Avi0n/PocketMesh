@@ -305,8 +305,12 @@ public enum L10n {
         public static let animatedAccessibility = L10n.tr("Chats", "chats.inlineImage.animatedAccessibility", fallback: "Animated image")
         /// Location: InlineImageView.swift - Accessibility label for static image
         public static let imageAccessibility = L10n.tr("Chats", "chats.inlineImage.imageAccessibility", fallback: "Image")
+        /// Location: UnifiedMessageBubble.swift - Accessibility hint for retry button
+        public static let retryHint = L10n.tr("Chats", "chats.inlineImage.retryHint", fallback: "Double tap to retry loading image")
         /// Location: InlineImageView.swift - Accessibility hint for tap to view full screen
         public static let tapHint = L10n.tr("Chats", "chats.inlineImage.tapHint", fallback: "Double tap to view full screen")
+        /// Location: UnifiedMessageBubble.swift - Tap to retry loading failed image
+        public static let tapToRetry = L10n.tr("Chats", "chats.inlineImage.tapToRetry", fallback: "Tap to retry")
       }
       public enum Input {
         /// Location: ChatInputBar.swift - Accessibility hint for text input

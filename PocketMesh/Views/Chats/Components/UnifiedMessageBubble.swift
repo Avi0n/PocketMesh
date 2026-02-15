@@ -85,6 +85,7 @@ struct UnifiedMessageBubble: View {
     let showInlineImages: Bool
     let autoPlayGIFs: Bool
     let onImageTap: (() -> Void)?
+    let onRetryImageFetch: (() -> Void)?
 
     // Callbacks for preview lifecycle
     let onRequestPreviewFetch: (() -> Void)?
@@ -120,6 +121,7 @@ struct UnifiedMessageBubble: View {
         onReaction: ((String) -> Void)? = nil,
         onLongPress: (() -> Void)? = nil,
         onImageTap: (() -> Void)? = nil,
+        onRetryImageFetch: (() -> Void)? = nil,
         onRequestPreviewFetch: (() -> Void)? = nil,
         onManualPreviewFetch: (() -> Void)? = nil
     ) {
@@ -143,6 +145,7 @@ struct UnifiedMessageBubble: View {
         self.onReaction = onReaction
         self.onLongPress = onLongPress
         self.onImageTap = onImageTap
+        self.onRetryImageFetch = onRetryImageFetch
         self.onRequestPreviewFetch = onRequestPreviewFetch
         self.onManualPreviewFetch = onManualPreviewFetch
     }
@@ -262,7 +265,21 @@ struct UnifiedMessageBubble: View {
             }
 
         case .noPreview, .disabled:
-            EmptyView()
+            if isImageURL && showInlineImages && previewState == .noPreview {
+                Button(action: { onRetryImageFetch?() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                        Text(L10n.Chats.Chats.InlineImage.tapToRetry)
+                            .font(.subheadline)
+                            .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(L10n.Chats.Chats.InlineImage.retryHint)
+            }
         }
     }
 

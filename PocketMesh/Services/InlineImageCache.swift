@@ -67,6 +67,11 @@ actor InlineImageCache {
         return result
     }
 
+    /// Removes a URL from the negative cache, allowing it to be retried.
+    func clearFailure(for url: URL) {
+        failedURLs.remove(url.absoluteString)
+    }
+
     /// Performs the HTTP fetch, validates the response, and caches the result.
     private func performFetch(for url: URL, key: String) async -> InlineImageResult {
         do {

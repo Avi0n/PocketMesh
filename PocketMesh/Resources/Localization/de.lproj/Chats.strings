@@ -885,6 +885,12 @@
 /* Location: InlineImageView.swift - Accessibility hint for tap to view full screen */
 "chats.inlineImage.tapHint" = "Doppeltippen für Vollbildansicht";
 
+/* Location: UnifiedMessageBubble.swift - Tap to retry loading failed image */
+"chats.inlineImage.tapToRetry" = "Tap to retry";
+
+/* Location: UnifiedMessageBubble.swift - Accessibility hint for retry button */
+"chats.inlineImage.retryHint" = "Double tap to retry loading image";
+
 /* Location: FullScreenImageViewer.swift - Close button label */
 "chats.imageViewer.close" = "Schließen";
 

@@ -345,6 +345,9 @@ struct ChatView: View {
                         )
                     }
                 },
+                onRetryImageFetch: {
+                    Task { await viewModel.retryImageFetch(for: message.id) }
+                },
                 onRequestPreviewFetch: {
                     if item.isImageURL && showInlineImages {
                         viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)

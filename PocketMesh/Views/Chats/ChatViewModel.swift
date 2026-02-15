@@ -2076,6 +2076,19 @@ final class ChatViewModel {
         loadedImageData[messageID]
     }
 
+    /// Clears the negative cache entry for a failed image and re-triggers the fetch.
+    func retryImageFetch(for messageID: UUID) async {
+        guard let displayItem = displayItems.first(where: { $0.messageID == messageID }),
+              let url = displayItem.detectedURL else { return }
+
+        let directURL = ImageURLDetector.directImageURL(for: url)
+        await InlineImageCache.shared.clearFailure(for: directURL)
+
+        previewStates[messageID] = .idle
+        rebuildDisplayItem(for: messageID)
+        requestImageFetch(for: messageID, showInlineImages: true)
+    }
+
     /// Request inline image fetch for a message (called when cell becomes visible)
     func requestImageFetch(for messageID: UUID, showInlineImages: Bool) {
         guard showInlineImages else { return }
