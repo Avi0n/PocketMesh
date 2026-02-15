@@ -60,6 +60,16 @@ public final class Device {
     /// BLE PIN (0 = disabled, 100000-999999 = enabled)
     public var blePin: UInt32
 
+    /// Whether client repeat mode is enabled (v9+ firmware)
+    public var clientRepeat: Bool = false
+
+    /// Cached radio settings from before repeat mode was enabled, for restoration on disable.
+    /// All 4 fields are set together when enabling repeat mode, and cleared together when disabling.
+    public var preRepeatFrequency: UInt32?
+    public var preRepeatBandwidth: UInt32?
+    public var preRepeatSpreadingFactor: UInt8?
+    public var preRepeatCodingRate: UInt8?
+
     /// Manual add contacts mode
     public var manualAddContacts: Bool
 
@@ -173,6 +183,11 @@ public final class Device {
         latitude: Double = 0,
         longitude: Double = 0,
         blePin: UInt32 = 0,
+        clientRepeat: Bool = false,
+        preRepeatFrequency: UInt32? = nil,
+        preRepeatBandwidth: UInt32? = nil,
+        preRepeatSpreadingFactor: UInt8? = nil,
+        preRepeatCodingRate: UInt8? = nil,
         manualAddContacts: Bool = false,
         autoAddConfig: UInt8 = 0,
         multiAcks: UInt8 = 2,
@@ -205,6 +220,11 @@ public final class Device {
         self.latitude = latitude
         self.longitude = longitude
         self.blePin = blePin
+        self.clientRepeat = clientRepeat
+        self.preRepeatFrequency = preRepeatFrequency
+        self.preRepeatBandwidth = preRepeatBandwidth
+        self.preRepeatSpreadingFactor = preRepeatSpreadingFactor
+        self.preRepeatCodingRate = preRepeatCodingRate
         self.manualAddContacts = manualAddContacts
         self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
@@ -243,6 +263,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     public let latitude: Double
     public let longitude: Double
     public let blePin: UInt32
+    public let clientRepeat: Bool
+    public let preRepeatFrequency: UInt32?
+    public let preRepeatBandwidth: UInt32?
+    public let preRepeatSpreadingFactor: UInt8?
+    public let preRepeatCodingRate: UInt8?
     public let manualAddContacts: Bool
     public let autoAddConfig: UInt8
     public let multiAcks: UInt8
@@ -288,6 +313,15 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         firmwareVersionString.isAtLeast(major: 1, minor: 12)
     }
 
+    /// Whether this device supports client repeat mode (firmware v9+)
+    public var supportsClientRepeat: Bool { firmwareVersion >= 9 }
+
+    /// Whether pre-repeat radio settings are saved for restoration.
+    public var hasPreRepeatSettings: Bool {
+        preRepeatFrequency != nil && preRepeatBandwidth != nil &&
+        preRepeatSpreadingFactor != nil && preRepeatCodingRate != nil
+    }
+
     public init(
         id: UUID,
         publicKey: Data,
@@ -307,6 +341,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         latitude: Double,
         longitude: Double,
         blePin: UInt32,
+        clientRepeat: Bool = false,
+        preRepeatFrequency: UInt32? = nil,
+        preRepeatBandwidth: UInt32? = nil,
+        preRepeatSpreadingFactor: UInt8? = nil,
+        preRepeatCodingRate: UInt8? = nil,
         manualAddContacts: Bool,
         autoAddConfig: UInt8 = 0,
         multiAcks: UInt8,
@@ -339,6 +378,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.latitude = latitude
         self.longitude = longitude
         self.blePin = blePin
+        self.clientRepeat = clientRepeat
+        self.preRepeatFrequency = preRepeatFrequency
+        self.preRepeatBandwidth = preRepeatBandwidth
+        self.preRepeatSpreadingFactor = preRepeatSpreadingFactor
+        self.preRepeatCodingRate = preRepeatCodingRate
         self.manualAddContacts = manualAddContacts
         self.autoAddConfig = autoAddConfig
         self.multiAcks = multiAcks
@@ -373,6 +417,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         self.latitude = device.latitude
         self.longitude = device.longitude
         self.blePin = device.blePin
+        self.clientRepeat = device.clientRepeat
+        self.preRepeatFrequency = device.preRepeatFrequency
+        self.preRepeatBandwidth = device.preRepeatBandwidth
+        self.preRepeatSpreadingFactor = device.preRepeatSpreadingFactor
+        self.preRepeatCodingRate = device.preRepeatCodingRate
         self.manualAddContacts = device.manualAddContacts
         self.autoAddConfig = device.autoAddConfig
         self.multiAcks = device.multiAcks
@@ -435,6 +484,11 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             latitude: selfInfo.latitude,
             longitude: selfInfo.longitude,
             blePin: blePin,
+            clientRepeat: clientRepeat,
+            preRepeatFrequency: preRepeatFrequency,
+            preRepeatBandwidth: preRepeatBandwidth,
+            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
+            preRepeatCodingRate: preRepeatCodingRate,
             manualAddContacts: selfInfo.manualAddContacts,
             autoAddConfig: autoAddConfig,
             multiAcks: selfInfo.multiAcks,
@@ -473,8 +527,139 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
             latitude: latitude,
             longitude: longitude,
             blePin: blePin,
+            clientRepeat: clientRepeat,
+            preRepeatFrequency: preRepeatFrequency,
+            preRepeatBandwidth: preRepeatBandwidth,
+            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
+            preRepeatCodingRate: preRepeatCodingRate,
             manualAddContacts: manualAddContacts,
             autoAddConfig: config,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
+        )
+    }
+
+    /// Returns a new DeviceDTO with updated client repeat mode.
+    public func withClientRepeat(_ enabled: Bool) -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: nodeName,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: frequency,
+            bandwidth: bandwidth,
+            spreadingFactor: spreadingFactor,
+            codingRate: codingRate,
+            txPower: txPower,
+            maxTxPower: maxTxPower,
+            latitude: latitude,
+            longitude: longitude,
+            blePin: blePin,
+            clientRepeat: enabled,
+            preRepeatFrequency: preRepeatFrequency,
+            preRepeatBandwidth: preRepeatBandwidth,
+            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
+            preRepeatCodingRate: preRepeatCodingRate,
+            manualAddContacts: manualAddContacts,
+            autoAddConfig: autoAddConfig,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
+        )
+    }
+
+    /// Returns a new DeviceDTO with current radio settings saved as pre-repeat settings.
+    public func savingPreRepeatSettings() -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: nodeName,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: frequency,
+            bandwidth: bandwidth,
+            spreadingFactor: spreadingFactor,
+            codingRate: codingRate,
+            txPower: txPower,
+            maxTxPower: maxTxPower,
+            latitude: latitude,
+            longitude: longitude,
+            blePin: blePin,
+            clientRepeat: clientRepeat,
+            preRepeatFrequency: frequency,
+            preRepeatBandwidth: bandwidth,
+            preRepeatSpreadingFactor: spreadingFactor,
+            preRepeatCodingRate: codingRate,
+            manualAddContacts: manualAddContacts,
+            autoAddConfig: autoAddConfig,
+            multiAcks: multiAcks,
+            telemetryModeBase: telemetryModeBase,
+            telemetryModeLoc: telemetryModeLoc,
+            telemetryModeEnv: telemetryModeEnv,
+            advertLocationPolicy: advertLocationPolicy,
+            lastConnected: lastConnected,
+            lastContactSync: lastContactSync,
+            isActive: isActive,
+            ocvPreset: ocvPreset,
+            customOCVArrayString: customOCVArrayString,
+            connectionMethods: connectionMethods
+        )
+    }
+
+    /// Returns a new DeviceDTO with pre-repeat settings cleared.
+    public func clearingPreRepeatSettings() -> DeviceDTO {
+        DeviceDTO(
+            id: id,
+            publicKey: publicKey,
+            nodeName: nodeName,
+            firmwareVersion: firmwareVersion,
+            firmwareVersionString: firmwareVersionString,
+            manufacturerName: manufacturerName,
+            buildDate: buildDate,
+            maxContacts: maxContacts,
+            maxChannels: maxChannels,
+            frequency: frequency,
+            bandwidth: bandwidth,
+            spreadingFactor: spreadingFactor,
+            codingRate: codingRate,
+            txPower: txPower,
+            maxTxPower: maxTxPower,
+            latitude: latitude,
+            longitude: longitude,
+            blePin: blePin,
+            clientRepeat: clientRepeat,
+            preRepeatFrequency: nil,
+            preRepeatBandwidth: nil,
+            preRepeatSpreadingFactor: nil,
+            preRepeatCodingRate: nil,
+            manualAddContacts: manualAddContacts,
+            autoAddConfig: autoAddConfig,
             multiAcks: multiAcks,
             telemetryModeBase: telemetryModeBase,
             telemetryModeLoc: telemetryModeLoc,
@@ -502,7 +687,11 @@ public extension Device {
         self.maxContacts = UInt16(info.maxContacts)
         self.maxChannels = UInt8(min(info.maxChannels, 255))
         self.blePin = info.blePin
+        self.clientRepeat = info.clientRepeat
     }
+
+    /// Whether this device supports client repeat mode (firmware v9+)
+    var supportsClientRepeat: Bool { firmwareVersion >= 9 }
 
     /// Updates device from MeshCore.SelfInfo response
     func update(from info: MeshCore.SelfInfo) {

@@ -2630,6 +2630,8 @@ public enum L10n {
       public static let header = L10n.tr("Settings", "advancedRadio.header", fallback: "Radio Configuration")
       /// Error message for invalid input
       public static let invalidInput = L10n.tr("Settings", "advancedRadio.invalidInput", fallback: "Invalid input values or device not connected")
+      /// Toggle label for repeat mode in advanced radio
+      public static let repeatMode = L10n.tr("Settings", "advancedRadio.repeatMode", fallback: "Repeat Mode")
       /// Label for spreading factor picker
       public static let spreadingFactor = L10n.tr("Settings", "advancedRadio.spreadingFactor", fallback: "Spreading Factor")
       /// Label for TX power input
@@ -2655,6 +2657,10 @@ public enum L10n {
         public static func spreadingFactorLabel(_ p1: Int) -> String {
           return L10n.tr("Settings", "advancedRadio.accessibility.spreadingFactorLabel", p1, fallback: "Spreading factor %d")
         }
+      }
+      public enum RepeatMode {
+        /// Footer explaining repeat mode in advanced radio
+        public static let footer = L10n.tr("Settings", "advancedRadio.repeatMode.footer", fallback: "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network. Valid frequencies for Repeat Mode are: 433 MHz, 869 MHz, 918 MHz.")
       }
     }
     public enum AdvancedSettings {
@@ -3304,6 +3310,12 @@ public enum L10n {
       public static let header = L10n.tr("Settings", "radio.header", fallback: "Radio")
       /// Label for radio preset picker
       public static let preset = L10n.tr("Settings", "radio.preset", fallback: "Radio Preset")
+      /// Toggle label for repeat mode
+      public static let repeatMode = L10n.tr("Settings", "radio.repeatMode", fallback: "Repeat Mode")
+      public enum RepeatMode {
+        /// Footer explaining repeat mode
+        public static let footer = L10n.tr("Settings", "radio.repeatMode.footer", fallback: "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network.")
+      }
     }
     public enum Telemetry {
       /// Toggle label for allowing telemetry requests

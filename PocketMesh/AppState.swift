@@ -489,6 +489,13 @@ public final class AppState {
             }
         }
 
+        // Wire client repeat callback
+        await services.settingsService.setClientRepeatCallback { [weak self] enabled in
+            await MainActor.run {
+                self?.connectionManager.updateClientRepeat(enabled)
+            }
+        }
+
         // Wire node storage full callback
         // Updates isNodeStorageFull when 0x90 (contactsFull) or 0x8F (contactDeleted) push received
         await services.advertisementService.setNodeStorageFullChangedHandler { [weak self] isFull in

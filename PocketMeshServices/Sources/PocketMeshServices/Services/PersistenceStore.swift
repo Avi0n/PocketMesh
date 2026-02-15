@@ -117,6 +117,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             existing.latitude = dto.latitude
             existing.longitude = dto.longitude
             existing.blePin = dto.blePin
+            existing.clientRepeat = dto.clientRepeat
+            existing.preRepeatFrequency = dto.preRepeatFrequency
+            existing.preRepeatBandwidth = dto.preRepeatBandwidth
+            existing.preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
+            existing.preRepeatCodingRate = dto.preRepeatCodingRate
             existing.manualAddContacts = dto.manualAddContacts
             existing.autoAddConfig = dto.autoAddConfig
             existing.multiAcks = dto.multiAcks
@@ -151,6 +156,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
                 latitude: dto.latitude,
                 longitude: dto.longitude,
                 blePin: dto.blePin,
+                clientRepeat: dto.clientRepeat,
+                preRepeatFrequency: dto.preRepeatFrequency,
+                preRepeatBandwidth: dto.preRepeatBandwidth,
+                preRepeatSpreadingFactor: dto.preRepeatSpreadingFactor,
+                preRepeatCodingRate: dto.preRepeatCodingRate,
                 manualAddContacts: dto.manualAddContacts,
                 autoAddConfig: dto.autoAddConfig,
                 multiAcks: dto.multiAcks,

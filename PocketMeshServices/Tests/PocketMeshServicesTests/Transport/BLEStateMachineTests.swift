@@ -75,7 +75,7 @@ struct BLEStateMachineTests {
     func setAutoReconnectingHandlerCanBeRegistered() async {
         let sm = BLEStateMachine()
 
-        await sm.setAutoReconnectingHandler { _ in }
+        await sm.setAutoReconnectingHandler { _, _ in }
 
         #expect(await sm.currentPhase.name == "idle")
     }

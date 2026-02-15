@@ -2041,6 +2041,41 @@ public final class ConnectionManager {
         connectedDevice = device
     }
 
+    /// Updates the connected device's client repeat state.
+    /// Called by SettingsService after client repeat is successfully changed.
+    public func updateClientRepeat(_ enabled: Bool) {
+        guard let device = connectedDevice else { return }
+        let updated = device.withClientRepeat(enabled)
+        connectedDevice = updated
+
+        Task {
+            try? await services?.dataStore.saveDevice(updated)
+        }
+    }
+
+    /// Saves the connected device's current radio settings as pre-repeat settings.
+    /// Called before enabling repeat mode so settings can be restored later.
+    public func savePreRepeatSettings() {
+        guard let device = connectedDevice else { return }
+        let updated = device.savingPreRepeatSettings()
+        connectedDevice = updated
+
+        Task {
+            try? await services?.dataStore.saveDevice(updated)
+        }
+    }
+
+    /// Clears the connected device's pre-repeat settings after restoration.
+    public func clearPreRepeatSettings() {
+        guard let device = connectedDevice else { return }
+        let updated = device.clearingPreRepeatSettings()
+        connectedDevice = updated
+
+        Task {
+            try? await services?.dataStore.saveDevice(updated)
+        }
+    }
+
     /// Checks if an accessory is registered with AccessorySetupKit.
     /// - Parameter deviceID: The Bluetooth UUID of the device
     /// - Returns: `true` if the accessory is available for connection
@@ -2367,7 +2402,7 @@ public final class ConnectionManager {
             mergedMethods.append(method)
         }
 
-        return Device(
+        let device = Device(
             id: deviceID,
             publicKey: selfInfo.publicKey,
             nodeName: selfInfo.name,
@@ -2386,6 +2421,11 @@ public final class ConnectionManager {
             latitude: selfInfo.latitude,
             longitude: selfInfo.longitude,
             blePin: capabilities.blePin,
+            clientRepeat: capabilities.clientRepeat,
+            preRepeatFrequency: existingDevice?.preRepeatFrequency,
+            preRepeatBandwidth: existingDevice?.preRepeatBandwidth,
+            preRepeatSpreadingFactor: existingDevice?.preRepeatSpreadingFactor,
+            preRepeatCodingRate: existingDevice?.preRepeatCodingRate,
             manualAddContacts: selfInfo.manualAddContacts,
             autoAddConfig: autoAddConfig,
             multiAcks: selfInfo.multiAcks,
@@ -2401,6 +2441,16 @@ public final class ConnectionManager {
             customOCVArrayString: existingDevice?.customOCVArrayString,
             connectionMethods: mergedMethods
         )
+
+        // If repeat mode was disabled externally, clear orphaned pre-repeat settings
+        if !capabilities.clientRepeat && existingDevice?.preRepeatFrequency != nil {
+            device.preRepeatFrequency = nil
+            device.preRepeatBandwidth = nil
+            device.preRepeatSpreadingFactor = nil
+            device.preRepeatCodingRate = nil
+        }
+
+        return device
     }
 
     /// Configures BLE write pacing based on detected device platform.

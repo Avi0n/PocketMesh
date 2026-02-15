@@ -309,6 +309,12 @@
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "Invalid input values or device not connected";
 
+/* Toggle label for repeat mode in advanced radio */
+"advancedRadio.repeatMode" = "Repeat Mode";
+
+/* Footer explaining repeat mode in advanced radio */
+"advancedRadio.repeatMode.footer" = "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network. Valid frequencies for Repeat Mode are: 433 MHz, 869 MHz, 918 MHz.";
+
 
 // MARK: - Battery Curve Section
 
@@ -687,6 +693,12 @@
 
 /* Footer explaining radio presets */
 "radio.footer" = "Choose a preset matching your region. MeshCore devices must use the same radio settings in order to communicate.";
+
+/* Toggle label for repeat mode */
+"radio.repeatMode" = "Repeat Mode";
+
+/* Footer explaining repeat mode */
+"radio.repeatMode.footer" = "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network.";
 
 
 // MARK: - Telemetry Settings Section

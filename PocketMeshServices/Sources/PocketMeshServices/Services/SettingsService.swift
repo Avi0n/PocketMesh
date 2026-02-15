@@ -86,6 +86,9 @@ public struct RadioPreset: Identifiable, Sendable, Equatable {
     public let spreadingFactor: UInt8
     public let codingRate: UInt8
 
+    /// Section header for repeat mode presets (e.g., "EU/Asia", "US/AU/NZ")
+    public let repeatSectionHeader: String?
+
     /// Frequency in kHz for protocol encoding
     public var frequencyKHz: UInt32 {
         UInt32(frequencyMHz * 1000)
@@ -103,7 +106,8 @@ public struct RadioPreset: Identifiable, Sendable, Equatable {
         frequencyMHz: Double,
         bandwidthKHz: Double,
         spreadingFactor: UInt8,
-        codingRate: UInt8
+        codingRate: UInt8,
+        repeatSectionHeader: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -112,6 +116,7 @@ public struct RadioPreset: Identifiable, Sendable, Equatable {
         self.bandwidthKHz = bandwidthKHz
         self.spreadingFactor = spreadingFactor
         self.codingRate = codingRate
+        self.repeatSectionHeader = repeatSectionHeader
     }
 }
 
@@ -159,6 +164,21 @@ public enum RadioPresets {
         // Asia
         RadioPreset(id: "vn", name: "Vietnam", region: .asia,
                     frequencyMHz: 920.250, bandwidthKHz: 250, spreadingFactor: 11, codingRate: 5),
+    ]
+
+    /// Repeat mode frequency presets with regional grouping.
+    /// BW 62.5 kHz + CR 8 maximize range for portable repeaters.
+    /// SF varies by band: higher for lower-power EU bands, lower for US.
+    public static let repeatPresets: [RadioPreset] = [
+        RadioPreset(id: "repeat-433", name: "433 MHz", region: .europe,
+                    frequencyMHz: 433.000, bandwidthKHz: 62.5, spreadingFactor: 9, codingRate: 8,
+                    repeatSectionHeader: "EU/Asia"),
+        RadioPreset(id: "repeat-869", name: "869 MHz", region: .europe,
+                    frequencyMHz: 869.000, bandwidthKHz: 62.5, spreadingFactor: 8, codingRate: 8,
+                    repeatSectionHeader: "EU"),
+        RadioPreset(id: "repeat-918", name: "918 MHz", region: .northAmerica,
+                    frequencyMHz: 918.000, bandwidthKHz: 62.5, spreadingFactor: 7, codingRate: 8,
+                    repeatSectionHeader: "US/AU/NZ"),
     ]
 
     /// Get presets filtered and sorted by user's locale
@@ -236,6 +256,10 @@ public actor SettingsService {
     /// Used to update ConnectionManager.connectedDevice.autoAddConfig for UI refresh.
     private var onAutoAddConfigUpdated: (@Sendable (UInt8) async -> Void)?
 
+    /// Callback invoked when client repeat mode is successfully changed.
+    /// Used to update ConnectionManager.connectedDevice.clientRepeat for UI refresh.
+    private var onClientRepeatUpdated: (@Sendable (Bool) async -> Void)?
+
     public init(session: MeshCoreSession) {
         self.session = session
     }
@@ -252,6 +276,13 @@ public actor SettingsService {
         _ callback: @escaping @Sendable (UInt8) async -> Void
     ) {
         onAutoAddConfigUpdated = callback
+    }
+
+    /// Sets the callback for client repeat mode updates.
+    public func setClientRepeatCallback(
+        _ callback: @escaping @Sendable (Bool) async -> Void
+    ) {
+        onClientRepeatUpdated = callback
     }
 
     // MARK: - Radio Settings
@@ -271,14 +302,16 @@ public actor SettingsService {
         frequencyKHz: UInt32,
         bandwidthKHz: UInt32,
         spreadingFactor: UInt8,
-        codingRate: UInt8
+        codingRate: UInt8,
+        clientRepeat: Bool? = nil
     ) async throws {
         do {
             try await session.setRadio(
                 frequency: Double(frequencyKHz) / 1000.0,
                 bandwidth: Double(bandwidthKHz) / 1000.0,
                 spreadingFactor: spreadingFactor,
-                codingRate: codingRate
+                codingRate: codingRate,
+                clientRepeat: clientRepeat
             )
         } catch let error as MeshCoreError {
             throw SettingsServiceError.sessionError(error)
@@ -461,15 +494,17 @@ public actor SettingsService {
         frequencyKHz: UInt32,
         bandwidthKHz: UInt32,
         spreadingFactor: UInt8,
-        codingRate: UInt8
+        codingRate: UInt8,
+        clientRepeat: Bool? = nil
     ) async throws -> MeshCore.SelfInfo {
-        logger.info("[Radio] Sending params: freq=\(frequencyKHz)kHz, bw=\(bandwidthKHz)Hz, sf=\(spreadingFactor), cr=\(codingRate)")
+        logger.info("[Radio] Sending params: freq=\(frequencyKHz)kHz, bw=\(bandwidthKHz)Hz, sf=\(spreadingFactor), cr=\(codingRate), repeat=\(String(describing: clientRepeat))")
 
         try await setRadioParams(
             frequencyKHz: frequencyKHz,
             bandwidthKHz: bandwidthKHz,
             spreadingFactor: spreadingFactor,
-            codingRate: codingRate
+            codingRate: codingRate,
+            clientRepeat: clientRepeat
         )
 
         let selfInfo = try await getSelfInfo()
@@ -486,6 +521,20 @@ public actor SettingsService {
                 expected: "freq=\(frequencyKHz), bw=\(bandwidthKHz), sf=\(spreadingFactor), cr=\(codingRate)",
                 actual: "freq=\(selfInfo.radioFrequency), bw=\(selfInfo.radioBandwidth), sf=\(selfInfo.radioSpreadingFactor), cr=\(selfInfo.radioCodingRate)"
             )
+        }
+
+        // Verify clientRepeat via queryDevice if it was explicitly set
+        if let expectedRepeat = clientRepeat {
+            let capabilities = try await queryDevice()
+            guard capabilities.clientRepeat == expectedRepeat else {
+                logger.warning("[Radio] Client repeat verification failed - expected: \(expectedRepeat), device reports: \(capabilities.clientRepeat)")
+                throw SettingsServiceError.verificationFailed(
+                    expected: "clientRepeat=\(expectedRepeat)",
+                    actual: "clientRepeat=\(capabilities.clientRepeat)"
+                )
+            }
+            logger.info("[Radio] Client repeat verified: \(expectedRepeat)")
+            await onClientRepeatUpdated?(expectedRepeat)
         }
 
         logger.info("[Radio] Params verified successfully")
