@@ -1,5 +1,8 @@
+import OSLog
 import PocketMeshServices
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "RepeaterStatusVM")
 
 /// ViewModel for repeater status display
 @Observable
@@ -66,11 +69,18 @@ final class RepeaterStatusViewModel {
 
     private var repeaterAdminService: RepeaterAdminService?
     private var contactService: ContactService?
-    private var nodeSnapshotService: NodeSnapshotService?
+    var nodeSnapshotService: NodeSnapshotService?
 
     /// ID of the current session's snapshot (for enrichment).
-    /// Set synchronously before enrichment handlers can fire.
+    /// Because `handleStatusResponse` suspends while saving the snapshot,
+    /// neighbor/telemetry handlers may fire before this is set.
+    /// In that case, enrichment data is buffered in `pendingNeighborEntries`
+    /// / `pendingTelemetryEntries` and flushed once the ID is available.
     private var currentSnapshotID: UUID?
+
+    /// Buffered enrichment data received before `currentSnapshotID` was set.
+    private var pendingNeighborEntries: [NeighborSnapshotEntry]?
+    private var pendingTelemetryEntries: [TelemetrySnapshotEntry]?
 
     /// Previous snapshot for delta display
     private(set) var previousSnapshot: NodeStatusSnapshotDTO?
@@ -259,7 +269,24 @@ final class RepeaterStatusViewModel {
             packetsSent: response.packetsSent,
             packetsReceived: response.packetsReceived
         )
-        self.currentSnapshotID = snapshotID
+        if let snapshotID {
+            self.currentSnapshotID = snapshotID
+        } else if let prevID = prev?.id {
+            // Snapshot throttled — enrich the most recent existing snapshot instead
+            self.currentSnapshotID = prevID
+        }
+
+        // Flush any enrichment data that arrived during the await
+        if let enrichmentTarget = self.currentSnapshotID {
+            if let pending = pendingNeighborEntries {
+                pendingNeighborEntries = nil
+                Task { await nodeSnapshotService.enrichWithNeighbors(pending, snapshotID: enrichmentTarget) }
+            }
+            if let pending = pendingTelemetryEntries {
+                pendingTelemetryEntries = nil
+                Task { await nodeSnapshotService.enrichWithTelemetry(pending, snapshotID: enrichmentTarget) }
+            }
+        }
     }
 
     /// Handle neighbours response from push notification
@@ -271,13 +298,13 @@ final class RepeaterStatusViewModel {
         self.neighborsLoaded = true
 
         // Enrich current snapshot with neighbor data
+        let entries = response.neighbours.map {
+            NeighborSnapshotEntry(publicKeyPrefix: $0.publicKeyPrefix, snr: $0.snr, secondsAgo: $0.secondsAgo)
+        }
         if let snapshotID = currentSnapshotID {
-            let entries = response.neighbours.map {
-                NeighborSnapshotEntry(publicKeyPrefix: $0.publicKeyPrefix, snr: $0.snr, secondsAgo: $0.secondsAgo)
-            }
-            Task {
-                await nodeSnapshotService?.enrichWithNeighbors(entries, snapshotID: snapshotID)
-            }
+            Task { await nodeSnapshotService?.enrichWithNeighbors(entries, snapshotID: snapshotID) }
+        } else {
+            pendingNeighborEntries = entries
         }
     }
 
@@ -338,24 +365,24 @@ final class RepeaterStatusViewModel {
         self.telemetryLoaded = true
 
         // Enrich current snapshot with telemetry data
-        if let snapshotID = currentSnapshotID {
-            let entries: [TelemetrySnapshotEntry] = cachedDataPoints.compactMap { dp in
-                let numericValue: Double?
-                switch dp.value {
-                case .float(let value):
-                    numericValue = value
-                case .integer(let value):
-                    numericValue = Double(value)
-                default:
-                    numericValue = nil
-                }
-                guard let value = numericValue else { return nil }
-                return TelemetrySnapshotEntry(channel: Int(dp.channel), type: dp.typeName, value: value)
+        let entries: [TelemetrySnapshotEntry] = cachedDataPoints.compactMap { dp in
+            let numericValue: Double?
+            switch dp.value {
+            case .float(let value):
+                numericValue = value
+            case .integer(let value):
+                numericValue = Double(value)
+            default:
+                numericValue = nil
             }
-            if !entries.isEmpty {
-                Task {
-                    await nodeSnapshotService?.enrichWithTelemetry(entries, snapshotID: snapshotID)
-                }
+            guard let value = numericValue else { return nil }
+            return TelemetrySnapshotEntry(channel: Int(dp.channel), type: dp.typeName, value: value)
+        }
+        if !entries.isEmpty {
+            if let snapshotID = currentSnapshotID {
+                Task { await nodeSnapshotService?.enrichWithTelemetry(entries, snapshotID: snapshotID) }
+            } else {
+                pendingTelemetryEntries = entries
             }
         }
     }
@@ -477,7 +504,10 @@ final class RepeaterStatusViewModel {
 
     /// Fetch all snapshots for the current node
     func fetchHistory() async -> [NodeStatusSnapshotDTO] {
-        guard let nodeSnapshotService, let session else { return [] }
+        guard let nodeSnapshotService, let session else {
+            logger.warning("fetchHistory: nodeSnapshotService or session is nil")
+            return []
+        }
         return await nodeSnapshotService.fetchSnapshots(for: session.publicKey)
     }
 

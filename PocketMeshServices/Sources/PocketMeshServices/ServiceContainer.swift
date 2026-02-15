@@ -304,6 +304,12 @@ public final class ServiceContainer {
             try? await dataStore.pruneDebugLogEntries(keepCount: 1000)
         }
 
+        // Prune node status snapshots older than 1 year
+        Task {
+            let oneYearAgo = Calendar.current.date(byAdding: .year, value: -1, to: .now)!
+            await nodeSnapshotService.pruneOldSnapshots(olderThan: oneYearAgo)
+        }
+
         isMonitoringEvents = true
     }
 

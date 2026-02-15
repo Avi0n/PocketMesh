@@ -3,13 +3,13 @@ import OSLog
 
 /// Service for managing node status snapshots with throttled capture.
 public actor NodeSnapshotService {
-    private let dataStore: PersistenceStore
+    private let dataStore: any PersistenceStoreProtocol
     private let logger = Logger(subsystem: "com.pocketmesh.services", category: "NodeSnapshotService")
 
     /// Minimum interval between snapshots for the same node (15 minutes)
     private static let minimumInterval: TimeInterval = 15 * 60
 
-    public init(dataStore: PersistenceStore) {
+    public init(dataStore: any PersistenceStoreProtocol) {
         self.dataStore = dataStore
     }
 
@@ -87,6 +87,16 @@ public actor NodeSnapshotService {
         } catch {
             logger.error("Failed to fetch snapshots: \(error)")
             return []
+        }
+    }
+
+    /// Delete snapshots older than the given date.
+    public func pruneOldSnapshots(olderThan date: Date) async {
+        do {
+            try await dataStore.deleteOldNodeStatusSnapshots(olderThan: date)
+            logger.info("Pruned snapshots older than \(date)")
+        } catch {
+            logger.error("Failed to prune old snapshots: \(error)")
         }
     }
 }

@@ -1420,6 +1420,10 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         }
     }
 
+    public func deleteOldNodeStatusSnapshots(olderThan date: Date) async throws {
+        nodeStatusSnapshots.removeAll { $0.timestamp < date }
+    }
+
     // MARK: - Test Helpers
 
     /// Resets all storage and recorded invocations

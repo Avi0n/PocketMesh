@@ -137,7 +137,7 @@ struct RepeaterStatusView: View {
             label: L10n.RemoteNodes.RemoteNodes.Status.battery,
             value: viewModel.batteryDisplay,
             delta: viewModel.batteryDeltaMV.map { Double($0) / 1000.0 },
-            higherIsBetter: true, unit: "V", fractionDigits: 2
+            higherIsBetter: true, unit: " V", fractionDigits: 2
         )
 
         LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.uptime, value: viewModel.uptimeDisplay)
@@ -474,7 +474,7 @@ private struct NeighborRow: View {
 
     private var firstKeyByte: String {
         guard let firstByte = neighbor.publicKeyPrefix.first else { return "" }
-        return String(format: "%02X", firstByte)
+        return Data([firstByte]).hexString()
     }
 
     private var lastSeenText: String {
@@ -530,7 +530,7 @@ private struct DisappearedNeighborRow: View {
 
     private var displayName: String {
         contact?.displayName
-            ?? neighbor.publicKeyPrefix.prefix(4).map { String(format: "%02X", $0) }.joined()
+            ?? Data(neighbor.publicKeyPrefix.prefix(4)).hexString()
     }
 }
 

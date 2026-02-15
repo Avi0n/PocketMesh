@@ -389,6 +389,9 @@ public protocol PersistenceStoreProtocol: Actor {
 
     /// Update telemetry data on an existing snapshot
     func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) async throws
+
+    /// Delete snapshots older than the given date
+    func deleteOldNodeStatusSnapshots(olderThan date: Date) async throws
 }
 
 // MARK: - Default Parameter Values

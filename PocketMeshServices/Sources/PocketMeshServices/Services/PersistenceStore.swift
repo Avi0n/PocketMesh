@@ -2661,4 +2661,12 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         snapshot.telemetryEntries = telemetry
         try modelContext.save()
     }
+
+    public func deleteOldNodeStatusSnapshots(olderThan date: Date) throws {
+        try modelContext.delete(
+            model: NodeStatusSnapshot.self,
+            where: #Predicate { $0.timestamp < date }
+        )
+        try modelContext.save()
+    }
 }
