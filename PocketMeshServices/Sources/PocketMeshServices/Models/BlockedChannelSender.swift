@@ -10,7 +10,7 @@ public final class BlockedChannelSender {
     @Attribute(.unique)
     public var id: UUID
 
-    /// The sender name to block (stored as-is, matched case-insensitively)
+    /// The sender name to block (matched exactly as stored)
     public var name: String
 
     /// Which device this block applies to

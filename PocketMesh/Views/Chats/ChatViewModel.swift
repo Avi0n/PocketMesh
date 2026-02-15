@@ -183,9 +183,6 @@ final class ChatViewModel {
     /// Number of messages to fetch per page
     private let pageSize = 50
 
-    /// Cached blocked contact names for channel filtering (set during initial load)
-    private var cachedBlockedNames: Set<String> = []
-
     /// Total messages fetched from database (unfiltered, for accurate offset calculation)
     private var totalFetchedCount = 0
 
@@ -643,7 +640,6 @@ final class ChatViewModel {
         // Reset pagination state for new conversation
         hasMoreMessages = true
         isLoadingOlder = false
-        cachedBlockedNames = []
         totalFetchedCount = 0
 
         do {
@@ -879,7 +875,6 @@ final class ChatViewModel {
         // Reset pagination state for new conversation
         hasMoreMessages = true
         isLoadingOlder = false
-        cachedBlockedNames = []
         totalFetchedCount = 0
 
         do {
@@ -888,25 +883,14 @@ final class ChatViewModel {
             totalFetchedCount = unfilteredCount
             logger.info("loadChannelMessages: fetched \(unfilteredCount) messages")
 
-            // Filter out messages from blocked senders (contacts + channel sender names)
-            let blockedNames: Set<String>
-            do {
-                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: channel.deviceID)
-                let blockedSenders = try await dataStore.fetchBlockedChannelSenders(deviceID: channel.deviceID)
-                blockedNames = Set(blockedContacts.map { $0.name.lowercased() })
-                    .union(Set(blockedSenders.map { $0.name.lowercased() }))
-            } catch {
-                logger.error("Failed to fetch blocked names for filtering: \(error)")
-                blockedNames = []
-            }
-
-            // Cache for pagination
-            cachedBlockedNames = blockedNames
-
-            if !blockedNames.isEmpty {
-                fetchedMessages = fetchedMessages.filter { message in
-                    guard let senderName = message.senderNodeName else { return true }
-                    return !blockedNames.contains(senderName.lowercased())
+            // Filter out messages from blocked senders using SyncCoordinator's cache
+            if let syncCoordinator {
+                let blockedNames = await syncCoordinator.blockedSenderNames()
+                if !blockedNames.isEmpty {
+                    fetchedMessages = fetchedMessages.filter { message in
+                        guard let senderName = message.senderNodeName else { return true }
+                        return !blockedNames.contains(senderName)
+                    }
                 }
             }
 
@@ -1034,11 +1018,14 @@ final class ChatViewModel {
                 hasMoreMessages = false
             }
 
-            // Filter blocked senders for channel messages (use cached names from initial load)
-            if currentChannel != nil && !cachedBlockedNames.isEmpty {
-                olderMessages = olderMessages.filter { message in
-                    guard let senderName = message.senderNodeName else { return true }
-                    return !cachedBlockedNames.contains(senderName.lowercased())
+            // Filter blocked senders for channel messages
+            if currentChannel != nil, let syncCoordinator {
+                let blockedNames = await syncCoordinator.blockedSenderNames()
+                if !blockedNames.isEmpty {
+                    olderMessages = olderMessages.filter { message in
+                        guard let senderName = message.senderNodeName else { return true }
+                        return !blockedNames.contains(senderName)
+                    }
                 }
             }
 
@@ -1494,50 +1481,35 @@ final class ChatViewModel {
         }
 
         // Load channel message previews (filter out blocked senders)
-        // Group channels by deviceID to minimize blocked contacts fetches
-        let channelsByDevice = Dictionary(grouping: channels, by: \.deviceID)
-        for (deviceID, deviceChannels) in channelsByDevice {
-            // Fetch blocked names once per device (contacts + channel senders)
-            let blockedNames: Set<String>
+        let blockedNames = await syncCoordinator?.blockedSenderNames() ?? []
+        for channel in channels {
             do {
-                let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
-                let blockedSenders = try await dataStore.fetchBlockedChannelSenders(deviceID: deviceID)
-                blockedNames = Set(blockedContacts.map { $0.name.lowercased() })
-                    .union(Set(blockedSenders.map { $0.name.lowercased() }))
-            } catch {
-                blockedNames = []
-            }
+                // Fetch extra messages in case recent ones are from blocked senders
+                let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
 
-            for channel in deviceChannels {
-                do {
-                    // Fetch extra messages in case recent ones are from blocked senders
-                    let messages = try await dataStore.fetchMessages(deviceID: channel.deviceID, channelIndex: channel.index, limit: 20)
-
-                    // Filter out messages from blocked senders and outgoing reactions
-                    let lastMessage = messages.last { message in
-                        // Skip blocked senders
-                        if !blockedNames.isEmpty,
-                           let senderName = message.senderNodeName,
-                           blockedNames.contains(senderName.lowercased()) {
-                            return false
-                        }
-                        // Skip outgoing reactions (unless failed)
-                        if message.direction == .outgoing,
-                           ReactionParser.parse(message.text) != nil,
-                           message.status != .failed {
-                            return false
-                        }
-                        return true
+                // Filter out messages from blocked senders and outgoing reactions
+                let lastMessage = messages.last { message in
+                    // Skip blocked senders
+                    if let senderName = message.senderNodeName,
+                       blockedNames.contains(senderName) {
+                        return false
                     }
-
-                    if let lastMessage {
-                        lastMessageCache[channel.id] = lastMessage
-                    } else {
-                        lastMessageCache.removeValue(forKey: channel.id)
+                    // Skip outgoing reactions (unless failed)
+                    if message.direction == .outgoing,
+                       ReactionParser.parse(message.text) != nil,
+                       message.status != .failed {
+                        return false
                     }
-                } catch {
-                    // Silently ignore errors for preview loading
+                    return true
                 }
+
+                if let lastMessage {
+                    lastMessageCache[channel.id] = lastMessage
+                } else {
+                    lastMessageCache.removeValue(forKey: channel.id)
+                }
+            } catch {
+                // Silently ignore errors for preview loading
             }
         }
     }

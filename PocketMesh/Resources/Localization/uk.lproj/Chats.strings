@@ -908,5 +908,11 @@
 /* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
 "chats.blockSender.blockAnyway" = "Заблокувати";
 
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is selected */
+"chats.blockSender.accessibility.selected" = "Вибрано";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is not selected */
+"chats.blockSender.accessibility.notSelected" = "Не вибрано";
+
 /* Location: BlockSenderSheet.swift - Purpose: Public key label */
 "chats.blockSender.key" = "Ключ: %@";

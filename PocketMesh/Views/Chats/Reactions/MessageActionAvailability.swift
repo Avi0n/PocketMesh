@@ -15,7 +15,7 @@ struct MessageActionAvailability {
         canReply = !message.isOutgoing
         canCopy = true
         canSendAgain = message.isOutgoing
-        canBlockSender = message.isChannelMessage && !message.isOutgoing
+        canBlockSender = message.isChannelMessage && !message.isOutgoing && message.senderNodeName != nil
         canShowRepeatDetails = message.isOutgoing && message.heardRepeats > 0
         canViewPath = !message.isOutgoing
             && message.pathNodes != nil

@@ -57,6 +57,12 @@ public enum L10n {
         public static func title(_ p1: Any) -> String {
           return L10n.tr("Chats", "chats.blockSender.title", String(describing: p1), fallback: "Block \"%@\" from Channels?")
         }
+        public enum Accessibility {
+          /// Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is not selected
+          public static let notSelected = L10n.tr("Chats", "chats.blockSender.accessibility.notSelected", fallback: "Not selected")
+          /// Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is selected
+          public static let selected = L10n.tr("Chats", "chats.blockSender.accessibility.selected", fallback: "Selected")
+        }
       }
       public enum Channel {
         /// Location: ChannelChatView.swift - Fallback channel name format - %d is channel index

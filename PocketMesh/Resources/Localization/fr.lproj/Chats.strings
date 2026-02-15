@@ -917,5 +917,11 @@
 /* Location: BlockSenderSheet.swift - Purpose: Destructive block button */
 "chats.blockSender.blockAnyway" = "Bloquer";
 
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is selected */
+"chats.blockSender.accessibility.selected" = "Sélectionné";
+
+/* Location: BlockSenderSheet.swift - Purpose: Accessibility value when contact is not selected */
+"chats.blockSender.accessibility.notSelected" = "Non sélectionné";
+
 /* Location: BlockSenderSheet.swift - Purpose: Public key label */
 "chats.blockSender.key" = "Clé : %@";

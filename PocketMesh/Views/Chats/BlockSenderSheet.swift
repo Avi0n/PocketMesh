@@ -44,13 +44,11 @@ struct BlockSenderSheet: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .destructiveAction) {
                     Button(L10n.Chats.Chats.BlockSender.blockAnyway, role: .destructive) {
                         onBlock(selectedContactIDs)
                         dismiss()
                     }
-                    .foregroundStyle(.red)
-                    .bold()
                 }
             }
             .task {
@@ -165,6 +163,12 @@ private struct ContactMatchRow: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(contact.displayName)
+        .accessibilityValue(isSelected
+            ? L10n.Chats.Chats.BlockSender.Accessibility.selected
+            : L10n.Chats.Chats.BlockSender.Accessibility.notSelected)
+        .accessibilityAddTraits(.isToggle)
     }
 
     private var contactTypeLabel: String {

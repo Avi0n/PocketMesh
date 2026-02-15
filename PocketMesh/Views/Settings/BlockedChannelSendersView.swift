@@ -1,5 +1,8 @@
+import OSLog
 import PocketMeshServices
 import SwiftUI
+
+private let logger = Logger(subsystem: "com.pocketmesh", category: "BlockedChannelSendersView")
 
 /// Settings screen listing blocked channel sender names with swipe-to-unblock.
 struct BlockedChannelSendersView: View {
@@ -34,6 +37,11 @@ struct BlockedChannelSendersView: View {
             }
         }
         .navigationTitle(L10n.Settings.Blocking.ChannelSenders.title)
+        .toolbar {
+            if !blockedSenders.isEmpty {
+                EditButton()
+            }
+        }
         .task {
             await loadBlockedSenders()
         }
@@ -50,6 +58,7 @@ struct BlockedChannelSendersView: View {
                 deviceID: deviceID
             )
         } catch {
+            logger.error("Failed to load blocked channel senders: \(error)")
             blockedSenders = []
         }
     }
@@ -63,10 +72,14 @@ struct BlockedChannelSendersView: View {
                   let deviceID = appState.connectedDevice?.id else { return }
 
             for sender in sendersToUnblock {
-                try? await services.dataStore.deleteBlockedChannelSender(
-                    deviceID: deviceID,
-                    name: sender.name
-                )
+                do {
+                    try await services.dataStore.deleteBlockedChannelSender(
+                        deviceID: deviceID,
+                        name: sender.name
+                    )
+                } catch {
+                    logger.error("Failed to delete blocked sender '\(sender.name)': \(error)")
+                }
             }
 
             await services.syncCoordinator.refreshBlockedContactsCache(

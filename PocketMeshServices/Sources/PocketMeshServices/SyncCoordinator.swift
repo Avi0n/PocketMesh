@@ -249,8 +249,8 @@ public actor SyncCoordinator {
         do {
             let blockedContacts = try await dataStore.fetchBlockedContacts(deviceID: deviceID)
             let blockedSenders = try await dataStore.fetchBlockedChannelSenders(deviceID: deviceID)
-            blockedNames = Set(blockedContacts.map { $0.name.lowercased() })
-                .union(Set(blockedSenders.map { $0.name.lowercased() }))
+            blockedNames = Set(blockedContacts.map(\.name))
+                .union(Set(blockedSenders.map(\.name)))
             logger.debug("Refreshed blocked names cache: \(self.blockedNames.count) entries")
         } catch {
             logger.error("Failed to refresh blocked names cache: \(error)")
@@ -267,12 +267,11 @@ public actor SyncCoordinator {
     /// Check if a sender name is blocked (O(1) lookup)
     public func isBlockedSender(_ name: String?) -> Bool {
         guard let name else { return false }
-        return blockedNames.contains(name.lowercased())
+        return blockedNames.contains(name)
     }
 
-    /// Returns the current set of blocked names for bulk filtering.
-    /// Callers should use this to filter arrays locally rather than calling isBlockedSender per item.
-    public func blockedNamesSet() -> Set<String> {
+    /// Returns a snapshot of blocked sender names for synchronous filtering
+    public func blockedSenderNames() -> Set<String> {
         blockedNames
     }
 

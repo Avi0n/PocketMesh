@@ -465,7 +465,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         } else {
             let entry = BlockedChannelSender(
                 id: dto.id,
-                name: dto.name,
+                name: targetName,
                 deviceID: dto.deviceID,
                 dateBlocked: dto.dateBlocked
             )
