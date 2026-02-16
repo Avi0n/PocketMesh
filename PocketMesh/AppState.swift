@@ -7,16 +7,6 @@ import OSLog
 import TipKit
 import UIKit
 
-/// Represents the current state of the status pill UI component
-enum StatusPillState: Hashable {
-    case hidden
-    case connecting
-    case syncing
-    case ready
-    case disconnected
-    case failed(message: String)
-}
-
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
 /// Handles only UI state, navigation, and notification wiring.
@@ -43,12 +33,6 @@ public final class AppState {
     public var connectionState: PocketMeshServices.ConnectionState { connectionManager.connectionState }
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
-    public var currentTransportType: TransportType? { connectionManager.currentTransportType }
-
-    /// Creates a standalone persistence store for operations that don't require active services
-    public func createStandalonePersistenceStore() -> PersistenceStore {
-        connectionManager.createStandalonePersistenceStore()
-    }
 
     /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?
@@ -78,7 +62,7 @@ public final class AppState {
             return nil
         }
         if cachedOfflineStore == nil {
-            cachedOfflineStore = createStandalonePersistenceStore()
+            cachedOfflineStore = connectionManager.createStandalonePersistenceStore()
         }
         return cachedOfflineStore
     }
@@ -187,9 +171,6 @@ public final class AppState {
         connectionManager.onConnectionLost = { [weak self] in
             await self?.wireServicesIfConnected()
         }
-
-        // Set up notification handlers
-        setupNotificationHandlers()
     }
 
     // MARK: - Lifecycle
@@ -212,7 +193,7 @@ public final class AppState {
         guard let services else {
             // Announce disconnection for VoiceOver users
             if UIAccessibility.isVoiceOverRunning {
-                announceConnectionState("Device connection lost")
+                connectionUI.announceConnectionState("Device connection lost")
             }
             // Clear syncCoordinator when services are nil
             syncCoordinator = nil
@@ -250,7 +231,7 @@ public final class AppState {
 
         // Announce reconnection for VoiceOver users
         if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Device reconnected")
+            connectionUI.announceConnectionState("Device reconnected")
         }
 
         // Store syncCoordinator reference
@@ -650,7 +631,7 @@ public final class AppState {
         // (started on view appear, stopped on disappear, restarted via scenePhase)
 
         // Check for missed battery thresholds and restart polling if connected
-        if services != nil {
+        if let services {
             await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
             batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
         }
@@ -666,12 +647,6 @@ public final class AppState {
 
         // Trigger resync if sync failed while connected
         await connectionManager.checkSyncHealth()
-    }
-
-    // MARK: - Accessibility
-
-    private func announceConnectionState(_ message: String) {
-        connectionUI.announceConnectionState(message)
     }
 
     // MARK: - Onboarding
@@ -712,11 +687,6 @@ public final class AppState {
 #endif
 
     // MARK: - Notification Handlers
-
-    private func setupNotificationHandlers() {
-        // Handlers will be set up when services become available after connection
-        // This is called during init before connection, so we defer actual setup
-    }
 
     /// Configure notification handlers once services are available
     func configureNotificationHandlers() {

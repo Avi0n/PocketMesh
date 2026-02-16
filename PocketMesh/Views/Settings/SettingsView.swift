@@ -44,7 +44,7 @@ struct SettingsView: View {
 
                 LocationSettingsSection(showingLocationPicker: $showingLocationPicker)
 
-                if appState.currentTransportType == .wifi {
+                if appState.connectionManager.currentTransportType == .wifi {
                     WiFiSection(showingEditSheet: $showingWiFiEditSheet)
                 } else {
                     BluetoothSection()

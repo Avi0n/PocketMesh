@@ -46,7 +46,7 @@ struct DiagnosticsSection: View {
     }
 
     private func exportLogs() {
-        let dataStore = appState.services?.dataStore ?? appState.createStandalonePersistenceStore()
+        let dataStore = appState.services?.dataStore ?? appState.connectionManager.createStandalonePersistenceStore()
         isExporting = true
 
         Task {
@@ -94,7 +94,7 @@ struct DiagnosticsSection: View {
     }
 
     private func clearDebugLogs() {
-        let dataStore = appState.services?.dataStore ?? appState.createStandalonePersistenceStore()
+        let dataStore = appState.services?.dataStore ?? appState.connectionManager.createStandalonePersistenceStore()
 
         Task {
             do {

@@ -57,7 +57,7 @@ public final class BatteryMonitor {
             }
 
             await self.initializeBatteryThresholds(device: device, services: capturedServices)
-            self.startBatteryRefreshLoop(services: capturedServices, device: device)
+            self.startRefreshLoop(services: capturedServices, device: device)
         }
     }
 
@@ -105,14 +105,7 @@ public final class BatteryMonitor {
     }
 
     /// Restart the battery refresh loop (e.g., returning to foreground)
-    func startRefreshLoop(services: ServiceContainer?, device: DeviceDTO?) {
-        guard services != nil else { return }
-        startBatteryRefreshLoop(services: services, device: device)
-    }
-
-    // MARK: - Private
-
-    private func startBatteryRefreshLoop(services: ServiceContainer?, device: DeviceDTO?) {
+    func startRefreshLoop(services: ServiceContainer, device: DeviceDTO?) {
         batteryRefreshTask?.cancel()
         batteryRefreshTask = Task { [weak self] in
             while true {
