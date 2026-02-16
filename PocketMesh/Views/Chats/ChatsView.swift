@@ -60,139 +60,68 @@ struct ChatsView: View {
         }
     }
 
-    @ViewBuilder
-    private func conversationListState<Content: View>(
-        @ViewBuilder listContent: () -> Content
-    ) -> some View {
-        if !viewModel.hasLoadedOnce {
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if filteredConversations.isEmpty {
-            ContentUnavailableView {
-                Label(emptyStateMessage.title, systemImage: emptyStateMessage.systemImage)
-            } description: {
-                Text(emptyStateMessage.description)
-            } actions: {
-                if selectedFilter != nil {
-                    Button(L10n.Chats.Chats.Filter.clear) {
-                        selectedFilter = nil
-                    }
-                }
-            }
-        } else {
-            listContent()
-        }
-    }
-
-    private func applyChatsListModifiers<Content: View>(
-        to content: Content,
-        onTaskStart: @escaping () async -> Void
-    ) -> some View {
-        content
-            .navigationTitle(L10n.Chats.Chats.title)
-            .searchable(text: $searchText, prompt: L10n.Chats.Chats.Search.placeholder)
-            .searchScopes($selectedFilter, activation: .onSearchPresentation) {
-                Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
-                ForEach(ChatFilter.allCases) { filter in
-                    Text(filter.localizedName).tag(filter as ChatFilter?)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    BLEStatusIndicatorView()
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    filterMenu
-                }
-                ToolbarItem(placement: .automatic) {
-                    Menu {
-                        Button {
-                            showingNewChat = true
-                        } label: {
-                            Label(L10n.Chats.Chats.Compose.newChat, systemImage: "person")
-                        }
-
-                        Button {
-                            showingChannelOptions = true
-                        } label: {
-                            Label(L10n.Chats.Chats.Compose.newChannel, systemImage: "number")
-                        }
-                    } label: {
-                        Label(L10n.Chats.Chats.Compose.newMessage, systemImage: "square.and.pencil")
-                    }
-                }
-            }
-            .refreshable {
-                if appState.connectionState != .ready {
-                    showOfflineRefreshAlert = true
-                } else {
-                    await refreshConversations()
-                }
-            }
-            .alert(L10n.Chats.Chats.Alert.CannotRefresh.title, isPresented: $showOfflineRefreshAlert) {
-                Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
-            } message: {
-                Text(L10n.Chats.Chats.Alert.CannotRefresh.message)
-            }
-            .task {
-                await onTaskStart()
-            }
-            .onChange(of: appState.pendingChatContact) { _, _ in
-                handlePendingNavigation()
-            }
-            .onChange(of: appState.pendingChannel) { _, _ in
-                handlePendingChannelNavigation()
-            }
-            .onChange(of: appState.pendingRoomSession) { _, _ in
-                handlePendingRoomNavigation()
-            }
-            .onChange(of: appState.servicesVersion) { _, _ in
-                Task {
-                    await loadConversations()
-                }
-            }
-            .onChange(of: appState.conversationsVersion) { _, _ in
-                Task {
-                    await loadConversations()
-                }
-            }
-    }
-
-    @ViewBuilder
-    private var filterMenu: some View {
-        let filterIcon = selectedFilter == nil
-            ? "line.3.horizontal.decrease.circle"
-            : "line.3.horizontal.decrease.circle.fill"
-        let accessibilityLabel = selectedFilter.map { L10n.Chats.Chats.Filter.accessibilityLabelActive($0.localizedName) }
-            ?? L10n.Chats.Chats.Filter.accessibilityLabel
-
-        Menu {
-            Picker(L10n.Chats.Chats.Filter.title, selection: $selectedFilter) {
-                Text(L10n.Chats.Chats.Filter.all).tag(nil as ChatFilter?)
-                ForEach(ChatFilter.allCases) { filter in
-                    Label(filter.localizedName, systemImage: filter.systemImage)
-                        .tag(filter as ChatFilter?)
-                }
-            }
-            .pickerStyle(.inline)
-        } label: {
-            if selectedFilter == nil {
-                Label(L10n.Chats.Chats.Filter.title, systemImage: filterIcon)
-                    .accessibilityLabel(accessibilityLabel)
-            } else {
-                Label(L10n.Chats.Chats.Filter.title, systemImage: filterIcon)
-                    .foregroundStyle(.tint)
-                    .accessibilityLabel(accessibilityLabel)
-            }
-        }
-    }
-
     var body: some View {
         Group {
             if shouldUseSplitView {
-                splitLayout
+                ChatsSplitLayout(sidebarListID: sidebarListID) {
+                    ChatsSplitSidebarContent(
+                        viewModel: viewModel,
+                        filteredFavorites: filteredFavorites,
+                        filteredOthers: filteredOthers,
+                        filteredConversations: filteredConversations,
+                        emptyStateMessage: emptyStateMessage,
+                        hasLoadedOnce: viewModel.hasLoadedOnce,
+                        selectedRoute: $selectedRoute,
+                        selectedFilter: $selectedFilter,
+                        searchText: $searchText,
+                        showingNewChat: $showingNewChat,
+                        showingChannelOptions: $showingChannelOptions,
+                        showOfflineRefreshAlert: $showOfflineRefreshAlert,
+                        roomToAuthenticate: $roomToAuthenticate,
+                        lastSelectedRoomIsConnected: $lastSelectedRoomIsConnected,
+                        routeBeingDeleted: $routeBeingDeleted,
+                        onDeleteConversation: handleDeleteConversation,
+                        onRefreshConversations: refreshConversations,
+                        onLoadConversations: loadConversations,
+                        onHandlePendingNavigation: handlePendingNavigation,
+                        onHandlePendingChannelNavigation: handlePendingChannelNavigation,
+                        onHandlePendingRoomNavigation: handlePendingRoomNavigation,
+                        onAnnounceOfflineStateIfNeeded: announceOfflineStateIfNeeded
+                    )
+                } detail: {
+                    ChatsSplitDetailContent(viewModel: viewModel)
+                }
             } else {
-                stackLayout
+                ChatsStackLayout(
+                    viewModel: viewModel,
+                    navigationPath: $navigationPath,
+                    activeRoute: $activeRoute,
+                    onLoadConversations: loadConversations
+                ) {
+                    ChatsStackRootContent(
+                        viewModel: viewModel,
+                        filteredFavorites: filteredFavorites,
+                        filteredOthers: filteredOthers,
+                        filteredConversations: filteredConversations,
+                        emptyStateMessage: emptyStateMessage,
+                        hasLoadedOnce: viewModel.hasLoadedOnce,
+                        selectedFilter: $selectedFilter,
+                        searchText: $searchText,
+                        showingNewChat: $showingNewChat,
+                        showingChannelOptions: $showingChannelOptions,
+                        showOfflineRefreshAlert: $showOfflineRefreshAlert,
+                        roomToAuthenticate: $roomToAuthenticate,
+                        navigationPath: $navigationPath,
+                        onNavigate: { navigate(to: $0) },
+                        onDeleteConversation: handleDeleteConversation,
+                        onRefreshConversations: refreshConversations,
+                        onLoadConversations: loadConversations,
+                        onHandlePendingNavigation: handlePendingNavigation,
+                        onHandlePendingChannelNavigation: handlePendingChannelNavigation,
+                        onHandlePendingRoomNavigation: handlePendingRoomNavigation,
+                        onAnnounceOfflineStateIfNeeded: announceOfflineStateIfNeeded
+                    )
+                }
             }
         }
         .environment(\.openURL, OpenURLAction { url in
@@ -264,161 +193,6 @@ struct ChatsView: View {
         } message: {
             Text(L10n.Chats.Chats.Alert.LeaveRoom.message)
         }
-    }
-
-    private var splitLayout: some View {
-        NavigationSplitView {
-            NavigationStack {
-                splitSidebarContent
-            }
-        } detail: {
-            NavigationStack {
-                splitDetailContent
-            }
-        }
-        .id(sidebarListID)
-    }
-
-    private var splitSidebarContent: some View {
-        applyChatsListModifiers(
-            to: conversationListState {
-                ConversationListContent(
-                    viewModel: viewModel,
-                    favoriteConversations: filteredFavorites,
-                    otherConversations: filteredOthers,
-                    selection: $selectedRoute,
-                    onDeleteConversation: handleDeleteConversation
-                )
-            },
-            onTaskStart: {
-                chatsViewLogger.debug("ChatsView: task started, services=\(appState.services != nil)")
-                viewModel.configure(appState: appState)
-                await loadConversations()
-                chatsViewLogger.debug("ChatsView: loaded, conversations=\(viewModel.conversations.count), channels=\(viewModel.channels.count), rooms=\(viewModel.roomSessions.count)")
-                announceOfflineStateIfNeeded()
-                handlePendingNavigation()
-                handlePendingChannelNavigation()
-                handlePendingRoomNavigation()
-            }
-        )
-        .onChange(of: selectedRoute) { oldValue, newValue in
-            // Reload conversations when navigating away (but not when clearing for deletion)
-            if oldValue != nil {
-                let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
-                if !didClearSelectionForDeletion {
-                    Task {
-                        await loadConversations()
-                    }
-                }
-            }
-
-            if case .room(let session) = newValue, !session.isConnected {
-                roomToAuthenticate = session
-                selectedRoute = nil
-                appState.chatsSelectedRoute = nil
-                lastSelectedRoomIsConnected = nil
-                routeBeingDeleted = nil
-                return
-            }
-
-            lastSelectedRoomIsConnected = {
-                guard case .room(let session) = newValue else { return nil }
-                return session.isConnected
-            }()
-
-            // Sync sidebar selection to AppState for detail pane (non-nil only;
-            // nil cases are handled explicitly by deletion methods and disconnected room path)
-            if let newValue {
-                appState.chatsSelectedRoute = newValue
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var splitDetailContent: some View {
-        switch appState.chatsSelectedRoute {
-        case .direct(let contact):
-            ChatView(contact: contact, parentViewModel: viewModel)
-                .id(contact.id)
-        case .channel(let channel):
-            ChannelChatView(channel: channel, parentViewModel: viewModel)
-                .id(channel.id)
-        case .room(let session):
-            RoomConversationView(session: session)
-                .id(session.id)
-        case .none:
-            ContentUnavailableView(L10n.Chats.Chats.EmptyState.selectConversation, systemImage: "message")
-        }
-    }
-
-    private var stackLayout: some View {
-        NavigationStack(path: $navigationPath) {
-            stackRootContent
-                .navigationDestination(for: ChatRoute.self) { route in
-                    switch route {
-                    case .direct(let contact):
-                        ChatView(contact: contact, parentViewModel: viewModel)
-                            .id(contact.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.tabBarVisibility = .hidden
-                            }
-
-                    case .channel(let channel):
-                        ChannelChatView(channel: channel, parentViewModel: viewModel)
-                            .id(channel.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.tabBarVisibility = .hidden
-                            }
-
-                    case .room(let session):
-                        RoomConversationView(session: session)
-                            .id(session.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.tabBarVisibility = .hidden
-                            }
-                    }
-                }
-                .onChange(of: navigationPath) { _, newPath in
-                    if newPath.isEmpty {
-                        activeRoute = nil
-                        appState.tabBarVisibility = .visible
-                        Task {
-                            await loadConversations()
-                        }
-                    }
-                }
-                .toolbarVisibility(appState.tabBarVisibility, for: .tabBar)
-        }
-    }
-
-    private var stackRootContent: some View {
-        applyChatsListModifiers(
-            to: conversationListState {
-                ConversationListContent(
-                    viewModel: viewModel,
-                    favoriteConversations: filteredFavorites,
-                    otherConversations: filteredOthers,
-                    onNavigate: { route in
-                        navigationPath.append(route)
-                    },
-                    onRequestRoomAuth: { session in
-                        roomToAuthenticate = session
-                    },
-                    onDeleteConversation: handleDeleteConversation
-                )
-            },
-            onTaskStart: {
-                viewModel.configure(appState: appState)
-                await loadConversations()
-                announceOfflineStateIfNeeded()
-                handlePendingNavigation()
-                handlePendingChannelNavigation()
-                handlePendingRoomNavigation()
-            }
-        )
     }
 
     private func loadConversations() async {
