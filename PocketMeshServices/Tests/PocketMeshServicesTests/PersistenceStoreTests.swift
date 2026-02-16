@@ -15,35 +15,17 @@ struct PersistenceStoreTests {
     }
 
     private func createTestDevice(id: UUID = UUID()) -> DeviceDTO {
-        DeviceDTO(from: Device(
+        DeviceDTO.testDevice(
             id: id,
             publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
-            nodeName: "TestDevice",
             firmwareVersion: 8,
             firmwareVersionString: "v1.11.0",
-            manufacturerName: "TestMfg",
-            buildDate: "06 Dec 2025",
-            maxContacts: 100,
-            maxChannels: 8,
-            frequency: 915_000,
-            bandwidth: 250_000,
-            spreadingFactor: 10,
-            codingRate: 5,
-            txPower: 20,
-            maxTxPower: 20,
-            latitude: 37.7749,
-            longitude: -122.4194,
-            blePin: 0,
-            manualAddContacts: false,
             multiAcks: 0,
-            telemetryModeBase: 2,
-            telemetryModeLoc: 0,
-            telemetryModeEnv: 0,
-            advertLocationPolicy: 0,
-            lastConnected: Date(),
-            lastContactSync: 0,
             isActive: false
-        ))
+        ).copy {
+            $0.latitude = 37.7749
+            $0.longitude = -122.4194
+        }
     }
 
     private func createTestContactFrame(name: String = "TestContact") -> ContactFrame {

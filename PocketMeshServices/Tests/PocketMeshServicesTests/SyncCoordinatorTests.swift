@@ -15,35 +15,14 @@ struct SyncCoordinatorTests {
     ) async throws -> PersistenceStore {
         let container = try PersistenceStore.createContainer(inMemory: true)
         let store = PersistenceStore(modelContainer: container)
-        let device = DeviceDTO(from: Device(
+        let device = DeviceDTO.testDevice(
             id: deviceID,
-            publicKey: Data(repeating: 0x01, count: 32),
-            nodeName: "TestDevice",
             firmwareVersion: 8,
             firmwareVersionString: "v1.0.0",
-            manufacturerName: "TestMfg",
-            buildDate: "01 Jan 2025",
-            maxContacts: 100,
             maxChannels: maxChannels,
-            frequency: 915_000,
-            bandwidth: 250_000,
-            spreadingFactor: 10,
-            codingRate: 5,
-            txPower: 20,
-            maxTxPower: 20,
-            latitude: 0,
-            longitude: 0,
-            blePin: 0,
-            manualAddContacts: false,
             multiAcks: 0,
-            telemetryModeBase: 0,
-            telemetryModeLoc: 0,
-            telemetryModeEnv: 0,
-            advertLocationPolicy: 0,
-            lastConnected: Date(),
-            lastContactSync: lastContactSync,
-            isActive: true
-        ))
+            lastContactSync: lastContactSync
+        )
         try await store.saveDevice(device)
         return store
     }

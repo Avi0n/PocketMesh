@@ -40,39 +40,19 @@ struct DeviceDTOClientRepeatTests {
         preRepeatSpreadingFactor: UInt8? = nil,
         preRepeatCodingRate: UInt8? = nil
     ) -> DeviceDTO {
-        DeviceDTO(from: Device(
-            publicKey: Data(repeating: 0x01, count: 32),
-            nodeName: "TestDevice",
+        DeviceDTO.testDevice(
             firmwareVersion: firmwareVersion,
-            firmwareVersionString: "v1.13.0",
-            manufacturerName: "TestMfg",
-            buildDate: "01 Jan 2025",
-            maxContacts: 100,
-            maxChannels: 8,
             frequency: frequency,
             bandwidth: bandwidth,
             spreadingFactor: spreadingFactor,
-            codingRate: codingRate,
-            txPower: 20,
-            maxTxPower: 20,
-            latitude: 0,
-            longitude: 0,
-            blePin: 0,
-            clientRepeat: clientRepeat,
-            preRepeatFrequency: preRepeatFrequency,
-            preRepeatBandwidth: preRepeatBandwidth,
-            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
-            preRepeatCodingRate: preRepeatCodingRate,
-            manualAddContacts: false,
-            multiAcks: 2,
-            telemetryModeBase: 2,
-            telemetryModeLoc: 0,
-            telemetryModeEnv: 0,
-            advertLocationPolicy: 0,
-            lastConnected: Date(),
-            lastContactSync: 0,
-            isActive: true
-        ))
+            codingRate: codingRate
+        ).copy {
+            $0.clientRepeat = clientRepeat
+            $0.preRepeatFrequency = preRepeatFrequency
+            $0.preRepeatBandwidth = preRepeatBandwidth
+            $0.preRepeatSpreadingFactor = preRepeatSpreadingFactor
+            $0.preRepeatCodingRate = preRepeatCodingRate
+        }
     }
 
     // MARK: - supportsClientRepeat
@@ -95,12 +75,12 @@ struct DeviceDTOClientRepeatTests {
         #expect(device.supportsClientRepeat == true)
     }
 
-    // MARK: - withClientRepeat
+    // MARK: - copy
 
-    @Test("withClientRepeat updates value from false to true")
-    func withClientRepeat_updatesValue() {
+    @Test("copy mutates only specified fields")
+    func copy_mutatesOnlySpecifiedFields() {
         let device = makeDevice(clientRepeat: false, preRepeatFrequency: 906_875)
-        let updated = device.withClientRepeat(true)
+        let updated = device.copy { $0.clientRepeat = true }
 
         #expect(updated.clientRepeat == true)
         // Other fields unchanged
@@ -109,12 +89,25 @@ struct DeviceDTOClientRepeatTests {
         #expect(updated.preRepeatFrequency == 906_875)
     }
 
-    @Test("withClientRepeat updates value from true to false")
-    func withClientRepeat_disables() {
-        let device = makeDevice(clientRepeat: true)
-        let updated = device.withClientRepeat(false)
+    @Test("copy can set optional fields to nil")
+    func copy_canSetOptionalToNil() {
+        let device = makeDevice(preRepeatFrequency: 915_000)
+        let updated = device.copy { $0.preRepeatFrequency = nil }
 
-        #expect(updated.clientRepeat == false)
+        #expect(updated.preRepeatFrequency == nil)
+    }
+
+    @Test("copy can update multiple fields at once")
+    func copy_updatesMultipleFields() {
+        let device = makeDevice(clientRepeat: false)
+        let updated = device.copy {
+            $0.clientRepeat = true
+            $0.autoAddConfig = 0x0F
+        }
+
+        #expect(updated.clientRepeat == true)
+        #expect(updated.autoAddConfig == 0x0F)
+        #expect(updated.nodeName == device.nodeName)
     }
 
     // MARK: - savingPreRepeatSettings

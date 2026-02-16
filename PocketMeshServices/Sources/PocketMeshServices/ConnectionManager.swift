@@ -2036,16 +2036,15 @@ public final class ConnectionManager {
     /// Updates the connected device's auto-add config.
     /// Called by SettingsService after auto-add config is successfully changed.
     public func updateAutoAddConfig(_ config: UInt8) {
-        guard var device = connectedDevice else { return }
-        device = device.withAutoAddConfig(config)
-        connectedDevice = device
+        guard let device = connectedDevice else { return }
+        connectedDevice = device.copy { $0.autoAddConfig = config }
     }
 
     /// Updates the connected device's client repeat state.
     /// Called by SettingsService after client repeat is successfully changed.
     public func updateClientRepeat(_ enabled: Bool) {
         guard let device = connectedDevice else { return }
-        let updated = device.withClientRepeat(enabled)
+        let updated = device.copy { $0.clientRepeat = enabled }
         connectedDevice = updated
 
         Task {

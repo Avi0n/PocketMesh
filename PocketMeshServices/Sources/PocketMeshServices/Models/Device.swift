@@ -76,61 +76,6 @@ public final class Device {
     /// Auto-add configuration bitmask from device
     public var autoAddConfig: UInt8 = 0
 
-    /// Computed auto-add mode based on manualAddContacts and autoAddConfig
-    public var autoAddMode: AutoAddMode {
-        AutoAddMode.mode(manualAddContacts: manualAddContacts, autoAddConfig: autoAddConfig)
-    }
-
-    /// Whether to auto-add Contact type nodes (bit 0x02)
-    public var autoAddContacts: Bool {
-        get { autoAddConfig & 0x02 != 0 }
-        set {
-            if newValue {
-                autoAddConfig |= 0x02
-            } else {
-                autoAddConfig &= ~0x02
-            }
-        }
-    }
-
-    /// Whether to auto-add Repeater type nodes (bit 0x04)
-    public var autoAddRepeaters: Bool {
-        get { autoAddConfig & 0x04 != 0 }
-        set {
-            if newValue {
-                autoAddConfig |= 0x04
-            } else {
-                autoAddConfig &= ~0x04
-            }
-        }
-    }
-
-    /// Whether to auto-add Room Server type nodes (bit 0x08)
-    public var autoAddRoomServers: Bool {
-        get { autoAddConfig & 0x08 != 0 }
-        set {
-            if newValue {
-                autoAddConfig |= 0x08
-            } else {
-                autoAddConfig &= ~0x08
-            }
-        }
-    }
-
-    // Note: Sensor auto-add (0x10) not supported in this version - deferred per design doc
-
-    /// Whether to overwrite oldest non-favorite when storage is full (bit 0x01)
-    public var overwriteOldest: Bool {
-        get { autoAddConfig & 0x01 != 0 }
-        set {
-            if newValue {
-                autoAddConfig |= 0x01
-            } else {
-                autoAddConfig &= ~0x01
-            }
-        }
-    }
-
     /// Number of acknowledgments to send for direct messages (0=disabled, 1-2 typical)
     public var multiAcks: UInt8
 
@@ -245,42 +190,42 @@ public final class Device {
 
 /// A sendable snapshot of Device for cross-actor transfers
 public struct DeviceDTO: Sendable, Equatable, Identifiable {
-    public let id: UUID
-    public let publicKey: Data
-    public let nodeName: String
-    public let firmwareVersion: UInt8
-    public let firmwareVersionString: String
-    public let manufacturerName: String
-    public let buildDate: String
-    public let maxContacts: UInt16
-    public let maxChannels: UInt8
-    public let frequency: UInt32
-    public let bandwidth: UInt32
-    public let spreadingFactor: UInt8
-    public let codingRate: UInt8
-    public let txPower: Int8
-    public let maxTxPower: Int8
-    public let latitude: Double
-    public let longitude: Double
-    public let blePin: UInt32
-    public let clientRepeat: Bool
-    public let preRepeatFrequency: UInt32?
-    public let preRepeatBandwidth: UInt32?
-    public let preRepeatSpreadingFactor: UInt8?
-    public let preRepeatCodingRate: UInt8?
-    public let manualAddContacts: Bool
-    public let autoAddConfig: UInt8
-    public let multiAcks: UInt8
-    public let telemetryModeBase: UInt8
-    public let telemetryModeLoc: UInt8
-    public let telemetryModeEnv: UInt8
-    public let advertLocationPolicy: UInt8
-    public let lastConnected: Date
-    public let lastContactSync: UInt32
-    public let isActive: Bool
-    public let ocvPreset: String?
-    public let customOCVArrayString: String?
-    public let connectionMethods: [ConnectionMethod]
+    public var id: UUID
+    public var publicKey: Data
+    public var nodeName: String
+    public var firmwareVersion: UInt8
+    public var firmwareVersionString: String
+    public var manufacturerName: String
+    public var buildDate: String
+    public var maxContacts: UInt16
+    public var maxChannels: UInt8
+    public var frequency: UInt32
+    public var bandwidth: UInt32
+    public var spreadingFactor: UInt8
+    public var codingRate: UInt8
+    public var txPower: Int8
+    public var maxTxPower: Int8
+    public var latitude: Double
+    public var longitude: Double
+    public var blePin: UInt32
+    public var clientRepeat: Bool
+    public var preRepeatFrequency: UInt32?
+    public var preRepeatBandwidth: UInt32?
+    public var preRepeatSpreadingFactor: UInt8?
+    public var preRepeatCodingRate: UInt8?
+    public var manualAddContacts: Bool
+    public var autoAddConfig: UInt8
+    public var multiAcks: UInt8
+    public var telemetryModeBase: UInt8
+    public var telemetryModeLoc: UInt8
+    public var telemetryModeEnv: UInt8
+    public var advertLocationPolicy: UInt8
+    public var lastConnected: Date
+    public var lastContactSync: UInt32
+    public var isActive: Bool
+    public var ocvPreset: String?
+    public var customOCVArrayString: String?
+    public var connectionMethods: [ConnectionMethod]
 
     /// Computed auto-add mode based on manualAddContacts and autoAddConfig
     public var autoAddMode: AutoAddMode {
@@ -442,6 +387,13 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
         publicKey.prefix(6)
     }
 
+    /// Returns a new DeviceDTO with the given mutations applied.
+    public func copy(_ mutations: (inout DeviceDTO) -> Void) -> DeviceDTO {
+        var copy = self
+        mutations(&copy)
+        return copy
+    }
+
     /// The active OCV array for this device (preset or custom)
     public var activeOCVArray: [Int] {
         // If custom preset with valid custom string, parse it
@@ -465,257 +417,42 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// Returns a new DeviceDTO with settings updated from SelfInfo.
     /// Used after device settings are changed via SettingsService.
     public func updating(from selfInfo: MeshCore.SelfInfo) -> DeviceDTO {
-        DeviceDTO(
-            id: id,
-            publicKey: publicKey,
-            nodeName: selfInfo.name,
-            firmwareVersion: firmwareVersion,
-            firmwareVersionString: firmwareVersionString,
-            manufacturerName: manufacturerName,
-            buildDate: buildDate,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            frequency: UInt32(selfInfo.radioFrequency * 1000),
-            bandwidth: UInt32(selfInfo.radioBandwidth * 1000),
-            spreadingFactor: selfInfo.radioSpreadingFactor,
-            codingRate: selfInfo.radioCodingRate,
-            txPower: selfInfo.txPower,
-            maxTxPower: maxTxPower,
-            latitude: selfInfo.latitude,
-            longitude: selfInfo.longitude,
-            blePin: blePin,
-            clientRepeat: clientRepeat,
-            preRepeatFrequency: preRepeatFrequency,
-            preRepeatBandwidth: preRepeatBandwidth,
-            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
-            preRepeatCodingRate: preRepeatCodingRate,
-            manualAddContacts: selfInfo.manualAddContacts,
-            autoAddConfig: autoAddConfig,
-            multiAcks: selfInfo.multiAcks,
-            telemetryModeBase: selfInfo.telemetryModeBase,
-            telemetryModeLoc: selfInfo.telemetryModeLocation,
-            telemetryModeEnv: selfInfo.telemetryModeEnvironment,
-            advertLocationPolicy: selfInfo.advertisementLocationPolicy,
-            lastConnected: lastConnected,
-            lastContactSync: lastContactSync,
-            isActive: isActive,
-            ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString,
-            connectionMethods: connectionMethods
-        )
-    }
-
-    /// Returns a new DeviceDTO with updated auto-add config.
-    /// Used after auto-add settings are changed via SettingsService.
-    public func withAutoAddConfig(_ config: UInt8) -> DeviceDTO {
-        DeviceDTO(
-            id: id,
-            publicKey: publicKey,
-            nodeName: nodeName,
-            firmwareVersion: firmwareVersion,
-            firmwareVersionString: firmwareVersionString,
-            manufacturerName: manufacturerName,
-            buildDate: buildDate,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            frequency: frequency,
-            bandwidth: bandwidth,
-            spreadingFactor: spreadingFactor,
-            codingRate: codingRate,
-            txPower: txPower,
-            maxTxPower: maxTxPower,
-            latitude: latitude,
-            longitude: longitude,
-            blePin: blePin,
-            clientRepeat: clientRepeat,
-            preRepeatFrequency: preRepeatFrequency,
-            preRepeatBandwidth: preRepeatBandwidth,
-            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
-            preRepeatCodingRate: preRepeatCodingRate,
-            manualAddContacts: manualAddContacts,
-            autoAddConfig: config,
-            multiAcks: multiAcks,
-            telemetryModeBase: telemetryModeBase,
-            telemetryModeLoc: telemetryModeLoc,
-            telemetryModeEnv: telemetryModeEnv,
-            advertLocationPolicy: advertLocationPolicy,
-            lastConnected: lastConnected,
-            lastContactSync: lastContactSync,
-            isActive: isActive,
-            ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString,
-            connectionMethods: connectionMethods
-        )
-    }
-
-    /// Returns a new DeviceDTO with updated client repeat mode.
-    public func withClientRepeat(_ enabled: Bool) -> DeviceDTO {
-        DeviceDTO(
-            id: id,
-            publicKey: publicKey,
-            nodeName: nodeName,
-            firmwareVersion: firmwareVersion,
-            firmwareVersionString: firmwareVersionString,
-            manufacturerName: manufacturerName,
-            buildDate: buildDate,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            frequency: frequency,
-            bandwidth: bandwidth,
-            spreadingFactor: spreadingFactor,
-            codingRate: codingRate,
-            txPower: txPower,
-            maxTxPower: maxTxPower,
-            latitude: latitude,
-            longitude: longitude,
-            blePin: blePin,
-            clientRepeat: enabled,
-            preRepeatFrequency: preRepeatFrequency,
-            preRepeatBandwidth: preRepeatBandwidth,
-            preRepeatSpreadingFactor: preRepeatSpreadingFactor,
-            preRepeatCodingRate: preRepeatCodingRate,
-            manualAddContacts: manualAddContacts,
-            autoAddConfig: autoAddConfig,
-            multiAcks: multiAcks,
-            telemetryModeBase: telemetryModeBase,
-            telemetryModeLoc: telemetryModeLoc,
-            telemetryModeEnv: telemetryModeEnv,
-            advertLocationPolicy: advertLocationPolicy,
-            lastConnected: lastConnected,
-            lastContactSync: lastContactSync,
-            isActive: isActive,
-            ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString,
-            connectionMethods: connectionMethods
-        )
+        copy {
+            $0.nodeName = selfInfo.name
+            $0.frequency = UInt32(selfInfo.radioFrequency * 1000)
+            $0.bandwidth = UInt32(selfInfo.radioBandwidth * 1000)
+            $0.spreadingFactor = selfInfo.radioSpreadingFactor
+            $0.codingRate = selfInfo.radioCodingRate
+            $0.txPower = selfInfo.txPower
+            $0.latitude = selfInfo.latitude
+            $0.longitude = selfInfo.longitude
+            $0.manualAddContacts = selfInfo.manualAddContacts
+            $0.multiAcks = selfInfo.multiAcks
+            $0.telemetryModeBase = selfInfo.telemetryModeBase
+            $0.telemetryModeLoc = selfInfo.telemetryModeLocation
+            $0.telemetryModeEnv = selfInfo.telemetryModeEnvironment
+            $0.advertLocationPolicy = selfInfo.advertisementLocationPolicy
+        }
     }
 
     /// Returns a new DeviceDTO with current radio settings saved as pre-repeat settings.
     public func savingPreRepeatSettings() -> DeviceDTO {
-        DeviceDTO(
-            id: id,
-            publicKey: publicKey,
-            nodeName: nodeName,
-            firmwareVersion: firmwareVersion,
-            firmwareVersionString: firmwareVersionString,
-            manufacturerName: manufacturerName,
-            buildDate: buildDate,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            frequency: frequency,
-            bandwidth: bandwidth,
-            spreadingFactor: spreadingFactor,
-            codingRate: codingRate,
-            txPower: txPower,
-            maxTxPower: maxTxPower,
-            latitude: latitude,
-            longitude: longitude,
-            blePin: blePin,
-            clientRepeat: clientRepeat,
-            preRepeatFrequency: frequency,
-            preRepeatBandwidth: bandwidth,
-            preRepeatSpreadingFactor: spreadingFactor,
-            preRepeatCodingRate: codingRate,
-            manualAddContacts: manualAddContacts,
-            autoAddConfig: autoAddConfig,
-            multiAcks: multiAcks,
-            telemetryModeBase: telemetryModeBase,
-            telemetryModeLoc: telemetryModeLoc,
-            telemetryModeEnv: telemetryModeEnv,
-            advertLocationPolicy: advertLocationPolicy,
-            lastConnected: lastConnected,
-            lastContactSync: lastContactSync,
-            isActive: isActive,
-            ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString,
-            connectionMethods: connectionMethods
-        )
+        copy {
+            $0.preRepeatFrequency = frequency
+            $0.preRepeatBandwidth = bandwidth
+            $0.preRepeatSpreadingFactor = spreadingFactor
+            $0.preRepeatCodingRate = codingRate
+        }
     }
 
     /// Returns a new DeviceDTO with pre-repeat settings cleared.
     public func clearingPreRepeatSettings() -> DeviceDTO {
-        DeviceDTO(
-            id: id,
-            publicKey: publicKey,
-            nodeName: nodeName,
-            firmwareVersion: firmwareVersion,
-            firmwareVersionString: firmwareVersionString,
-            manufacturerName: manufacturerName,
-            buildDate: buildDate,
-            maxContacts: maxContacts,
-            maxChannels: maxChannels,
-            frequency: frequency,
-            bandwidth: bandwidth,
-            spreadingFactor: spreadingFactor,
-            codingRate: codingRate,
-            txPower: txPower,
-            maxTxPower: maxTxPower,
-            latitude: latitude,
-            longitude: longitude,
-            blePin: blePin,
-            clientRepeat: clientRepeat,
-            preRepeatFrequency: nil,
-            preRepeatBandwidth: nil,
-            preRepeatSpreadingFactor: nil,
-            preRepeatCodingRate: nil,
-            manualAddContacts: manualAddContacts,
-            autoAddConfig: autoAddConfig,
-            multiAcks: multiAcks,
-            telemetryModeBase: telemetryModeBase,
-            telemetryModeLoc: telemetryModeLoc,
-            telemetryModeEnv: telemetryModeEnv,
-            advertLocationPolicy: advertLocationPolicy,
-            lastConnected: lastConnected,
-            lastContactSync: lastContactSync,
-            isActive: isActive,
-            ocvPreset: ocvPreset,
-            customOCVArrayString: customOCVArrayString,
-            connectionMethods: connectionMethods
-        )
-    }
-}
-
-// MARK: - Extensions
-
-public extension Device {
-    /// Updates device from MeshCore.DeviceCapabilities response
-    func update(from info: MeshCore.DeviceCapabilities) {
-        self.firmwareVersion = info.firmwareVersion
-        self.firmwareVersionString = info.version
-        self.manufacturerName = info.model
-        self.buildDate = info.firmwareBuild
-        self.maxContacts = UInt16(info.maxContacts)
-        self.maxChannels = UInt8(min(info.maxChannels, 255))
-        self.blePin = info.blePin
-        self.clientRepeat = info.clientRepeat
-    }
-
-    /// Whether this device supports client repeat mode (firmware v9+)
-    var supportsClientRepeat: Bool { firmwareVersion >= 9 }
-
-    /// Updates device from MeshCore.SelfInfo response
-    func update(from info: MeshCore.SelfInfo) {
-        self.publicKey = info.publicKey
-        self.nodeName = info.name
-        self.txPower = info.txPower
-        self.maxTxPower = info.maxTxPower
-        self.latitude = info.latitude
-        self.longitude = info.longitude
-        self.frequency = UInt32(info.radioFrequency * 1000)  // Convert MHz to kHz
-        self.bandwidth = UInt32(info.radioBandwidth * 1000)  // Convert MHz to kHz
-        self.spreadingFactor = info.radioSpreadingFactor
-        self.codingRate = info.radioCodingRate
-        self.multiAcks = info.multiAcks
-        self.advertLocationPolicy = info.advertisementLocationPolicy
-        self.manualAddContacts = info.manualAddContacts
-        self.telemetryModeBase = info.telemetryModeBase
-        self.telemetryModeLoc = info.telemetryModeLocation
-        self.telemetryModeEnv = info.telemetryModeEnvironment
-    }
-
-    /// The 6-byte public key prefix used for identifying messages
-    var publicKeyPrefix: Data {
-        publicKey.prefix(6)
+        copy {
+            $0.preRepeatFrequency = nil
+            $0.preRepeatBandwidth = nil
+            $0.preRepeatSpreadingFactor = nil
+            $0.preRepeatCodingRate = nil
+        }
     }
 }
 
