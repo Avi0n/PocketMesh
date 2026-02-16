@@ -98,61 +98,61 @@ struct OnboardingStateTests {
         #expect(appState.onboarding.onboardingPath == [.welcome, .permissions])
     }
 
-    // MARK: - donateFloodAdvertTipIfOnValidTab
+    // MARK: - donateDeviceMenuTipIfOnValidTab
 
-    @Test("donateFloodAdvertTipIfOnValidTab on Chats tab clears pending")
+    @Test("donateDeviceMenuTipIfOnValidTab on Chats tab clears pending")
     func donateOnChatsTab() async {
         let appState = AppState()
         appState.navigation.selectedTab = 0
-        appState.navigation.pendingFloodAdvertTipDonation = true
+        appState.navigation.pendingDeviceMenuTipDonation = true
 
-        await appState.donateFloodAdvertTipIfOnValidTab()
+        await appState.donateDeviceMenuTipIfOnValidTab()
 
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == false)
     }
 
-    @Test("donateFloodAdvertTipIfOnValidTab on Contacts tab clears pending")
+    @Test("donateDeviceMenuTipIfOnValidTab on Contacts tab clears pending")
     func donateOnContactsTab() async {
         let appState = AppState()
         appState.navigation.selectedTab = 1
-        appState.navigation.pendingFloodAdvertTipDonation = true
+        appState.navigation.pendingDeviceMenuTipDonation = true
 
-        await appState.donateFloodAdvertTipIfOnValidTab()
+        await appState.donateDeviceMenuTipIfOnValidTab()
 
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == false)
     }
 
-    @Test("donateFloodAdvertTipIfOnValidTab on Map tab clears pending")
+    @Test("donateDeviceMenuTipIfOnValidTab on Map tab clears pending")
     func donateOnMapTab() async {
         let appState = AppState()
         appState.navigation.selectedTab = 2
-        appState.navigation.pendingFloodAdvertTipDonation = true
+        appState.navigation.pendingDeviceMenuTipDonation = true
 
-        await appState.donateFloodAdvertTipIfOnValidTab()
+        await appState.donateDeviceMenuTipIfOnValidTab()
 
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == false)
     }
 
-    @Test("donateFloodAdvertTipIfOnValidTab on Settings tab sets pending")
+    @Test("donateDeviceMenuTipIfOnValidTab on Settings tab sets pending")
     func donateOnSettingsTab() async {
         let appState = AppState()
         appState.navigation.selectedTab = 3
-        appState.navigation.pendingFloodAdvertTipDonation = false
+        appState.navigation.pendingDeviceMenuTipDonation = false
 
-        await appState.donateFloodAdvertTipIfOnValidTab()
+        await appState.donateDeviceMenuTipIfOnValidTab()
 
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == true)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == true)
     }
 
-    @Test("donateFloodAdvertTipIfOnValidTab on Tools tab sets pending")
+    @Test("donateDeviceMenuTipIfOnValidTab on Tools tab sets pending")
     func donateOnToolsTab() async {
         let appState = AppState()
         appState.navigation.selectedTab = 4
-        appState.navigation.pendingFloodAdvertTipDonation = false
+        appState.navigation.pendingDeviceMenuTipDonation = false
 
-        await appState.donateFloodAdvertTipIfOnValidTab()
+        await appState.donateDeviceMenuTipIfOnValidTab()
 
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == true)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == true)
     }
 
     // MARK: - hasCompletedOnboarding didSet

@@ -324,9 +324,9 @@ struct NavigationStateTests {
         #expect(appState.navigation.chatsSelectedRoute == .direct(contact2))
     }
 
-    @Test("Flood advert tip donation is pending by default when false")
-    func floodAdvertTipDonationDefault() {
+    @Test("Device menu tip donation is pending by default when false")
+    func deviceMenuTipDonationDefault() {
         let appState = AppState()
-        #expect(appState.navigation.pendingFloodAdvertTipDonation == false)
+        #expect(appState.navigation.pendingDeviceMenuTipDonation == false)
     }
 }

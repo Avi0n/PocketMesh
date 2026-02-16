@@ -865,11 +865,11 @@
 
 // MARK: - Tips
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
-"chats.tip.floodAdvert.title" = "Zasygnalizuj swoją obecność w sieci";
+/* Location: DeviceMenuTip.swift - Purpose: Tip title introducing device menu */
+"chats.tip.deviceMenu.title" = "Your Device Menu";
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
-"chats.tip.floodAdvert.message" = "Dotknij tutaj i wyślij ogłoszenie rozgłoszeniowe, aby pobliskie urządzenia dowiedziały się o Twoim dołączeniu.";
+/* Location: DeviceMenuTip.swift - Purpose: Tip message explaining device menu features */
+"chats.tip.deviceMenu.message" = "Manage your connection, send advertisements, and check battery. Bluetooth devices stay connected even if the app is closed — tap Disconnect when you're ready to turn off the link.";
 
 /* Location: InlineImageView.swift - Accessibility label for static image */
 "chats.inlineImage.imageAccessibility" = "Obraz";

@@ -655,23 +655,23 @@ public final class AppState {
         onboarding.completeOnboarding()
         Task {
             try? await Task.sleep(for: .seconds(1.5))
-            await donateFloodAdvertTipIfOnValidTab()
+            await donateDeviceMenuTipIfOnValidTab()
         }
     }
 
     /// Tabs where BLEStatusIndicatorView exists and tip can anchor (Chats, Contacts, Map)
-    private var isOnValidTabForFloodAdvertTip: Bool {
+    private var isOnValidTabForDeviceMenuTip: Bool {
         navigation.selectedTab == 0 || navigation.selectedTab == 1 || navigation.selectedTab == 2
     }
 
     /// Donates the tip if on a valid tab, otherwise marks it pending.
     /// Thin coordinator that reads from both navigation and onboarding concerns.
-    func donateFloodAdvertTipIfOnValidTab() async {
-        if isOnValidTabForFloodAdvertTip {
-            navigation.pendingFloodAdvertTipDonation = false
-            await SendFloodAdvertTip.hasCompletedOnboarding.donate()
+    func donateDeviceMenuTipIfOnValidTab() async {
+        if isOnValidTabForDeviceMenuTip {
+            navigation.pendingDeviceMenuTipDonation = false
+            await DeviceMenuTip.hasCompletedOnboarding.donate()
         } else {
-            navigation.pendingFloodAdvertTipDonation = true
+            navigation.pendingDeviceMenuTipDonation = true
         }
     }
 

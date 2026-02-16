@@ -923,11 +923,11 @@
 
 // MARK: - Tips
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
-"chats.tip.floodAdvert.title" = "向Mesh网络广播您的存在";
+/* Location: DeviceMenuTip.swift - Purpose: Tip title introducing device menu */
+"chats.tip.deviceMenu.title" = "Your Device Menu";
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
-"chats.tip.floodAdvert.message" = "点击此处发送泛洪广播，让附近的设备知道您已加入。";
+/* Location: DeviceMenuTip.swift - Purpose: Tip message explaining device menu features */
+"chats.tip.deviceMenu.message" = "Manage your connection, send advertisements, and check battery. Bluetooth devices stay connected even if the app is closed — tap Disconnect when you're ready to turn off the link.";
 
 /* Location: InlineImageView.swift - Accessibility label for static image */
 "chats.inlineImage.imageAccessibility" = "图片";

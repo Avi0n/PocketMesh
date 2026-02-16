@@ -162,10 +162,10 @@ struct MainTabView: View {
             }
         }
         .onChange(of: appState.navigation.selectedTab) { _, newTab in
-            // Donate pending flood advert tip when returning to a valid tab
-            if appState.navigation.pendingFloodAdvertTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
+            // Donate pending device menu tip when returning to a valid tab
+            if appState.navigation.pendingDeviceMenuTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
                 Task {
-                    await appState.donateFloodAdvertTipIfOnValidTab()
+                    await appState.donateDeviceMenuTipIfOnValidTab()
                 }
             }
         }

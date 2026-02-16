@@ -14,7 +14,7 @@ struct BLEStatusIndicatorView: View {
     @State private var successFeedbackTrigger = false
     @State private var errorFeedbackTrigger = false
 
-    private let floodAdvertTip = SendFloodAdvertTip()
+    private let deviceMenuTip = DeviceMenuTip()
     private let devicePreferenceStore = DevicePreferenceStore()
 
     var body: some View {
@@ -116,7 +116,8 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
-        .popoverTip(floodAdvertTip, arrowEdge: .top)
+        .popoverTip(deviceMenuTip, arrowEdge: .top)
+        .tipViewStyle(NoCloseButtonTipStyle())
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
@@ -178,7 +179,6 @@ struct BLEStatusIndicatorView: View {
     }
 
     private func sendAdvert(flood: Bool) {
-        floodAdvertTip.invalidate(reason: .actionPerformed)
         guard !isSendingAdvert else { return }
         isSendingAdvert = true
 

@@ -813,11 +813,11 @@ public enum L10n {
         public static let yesterday = L10n.tr("Chats", "chats.timestamp.yesterday", fallback: "Yesterday")
       }
       public enum Tip {
-        public enum FloodAdvert {
-          /// Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action
-          public static let message = L10n.tr("Chats", "chats.tip.floodAdvert.message", fallback: "Tap here and send a Flood Advert to let nearby devices know you've joined.")
-          /// Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement
-          public static let title = L10n.tr("Chats", "chats.tip.floodAdvert.title", fallback: "Announce yourself to the mesh")
+        public enum DeviceMenu {
+          /// Location: DeviceMenuTip.swift - Purpose: Tip message explaining device menu features
+          public static let message = L10n.tr("Chats", "chats.tip.deviceMenu.message", fallback: "Manage your connection, send advertisements, and check battery. Bluetooth devices stay connected even if the app is closed — tap Disconnect when you're ready to turn off the link.")
+          /// Location: DeviceMenuTip.swift - Purpose: Tip title introducing device menu
+          public static let title = L10n.tr("Chats", "chats.tip.deviceMenu.title", fallback: "Your Device Menu")
         }
       }
     }
