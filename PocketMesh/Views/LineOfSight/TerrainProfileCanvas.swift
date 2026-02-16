@@ -343,7 +343,7 @@ extension TerrainProfileCanvas {
             let labelText = isLast ? "\(Int(y)) m" : "\(Int(y))"
             let label = Text(labelText)
                 .font(.system(size: 9))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             context.draw(label, at: CGPoint(x: labelPoint.x - 8, y: labelPoint.y), anchor: .trailing)
         }
 
@@ -359,13 +359,13 @@ extension TerrainProfileCanvas {
                 labelText = isLast ? "\(Int(kmValue)) km" : "\(Int(kmValue))"
             } else {
                 labelText = isLast
-                    ? String(format: "%.1f km", kmValue)
-                    : String(format: "%.1f", kmValue)
+                    ? "\(kmValue.formatted(.number.precision(.fractionLength(1)))) km"
+                    : kmValue.formatted(.number.precision(.fractionLength(1)))
             }
 
             let label = Text(labelText)
                 .font(.system(size: 9))
-                .foregroundColor(.secondary)
+                .foregroundStyle(.secondary)
             context.draw(label, at: CGPoint(x: labelPoint.x, y: labelPoint.y + 10), anchor: .top)
         }
     }
