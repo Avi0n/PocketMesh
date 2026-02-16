@@ -3,8 +3,6 @@ import PocketMeshServices
 import UIKit
 
 /// Manages connection-related UI state: status pills, sync activity, alerts, and pairing state.
-/// Merges R2 (Status Pill UI), R14 (Connection UI Alerts), R7 (Activity Tracking), and R15 (Accessibility).
-/// Extracted from AppState to reduce its responsibility surface.
 @Observable
 @MainActor
 public final class ConnectionUIState {

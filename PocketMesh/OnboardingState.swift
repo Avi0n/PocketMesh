@@ -8,7 +8,6 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
 }
 
 /// Manages onboarding completion flag and navigation path.
-/// Extracted from AppState to reduce its responsibility surface.
 @Observable
 @MainActor
 public final class OnboardingState {

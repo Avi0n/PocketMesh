@@ -2,7 +2,6 @@ import SwiftUI
 import PocketMeshServices
 
 /// Manages tab selection, pending navigation targets, and cross-tab navigation coordination.
-/// Extracted from AppState to reduce its responsibility surface.
 @Observable
 @MainActor
 public final class NavigationCoordinator {
@@ -33,8 +32,8 @@ public final class NavigationCoordinator {
     /// Message to scroll to after navigation (for reaction notifications)
     var pendingScrollToMessageID: UUID?
 
-    /// Whether flood advert tip donation is pending (waiting for valid tab)
-    var pendingFloodAdvertTipDonation = false
+    /// Whether device menu tip donation is pending (waiting for valid tab)
+    var pendingDeviceMenuTipDonation = false
 
     // MARK: - Navigation
 

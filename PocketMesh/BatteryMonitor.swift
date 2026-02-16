@@ -4,7 +4,6 @@ import MeshCore
 import OSLog
 
 /// Manages device battery polling, threshold checks, and low-battery notifications.
-/// Extracted from AppState to reduce its responsibility surface.
 @Observable
 @MainActor
 public final class BatteryMonitor {
