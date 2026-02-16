@@ -2178,8 +2178,9 @@ public final class ConnectionManager {
                 let blePhase = await stateMachine.currentPhaseName
                 let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
                 let backoffDelay = attempt < maxAttempts ? 0.3 * pow(2.0, Double(attempt - 1)) : 0.0
+                let backoffStr = backoffDelay.formatted(.number.precision(.fractionLength(2)))
                 logger.warning(
-                    "[BLE] Reconnection attempt \(attempt)/\(maxAttempts) failed - error: \(error.localizedDescription), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState), nextBackoff: \(String(format: "%.2f", backoffDelay))s"
+                    "[BLE] Reconnection attempt \(attempt)/\(maxAttempts) failed - error: \(error.localizedDescription), blePhase: \(blePhase), blePeripheralState: \(blePeripheralState), nextBackoff: \(backoffStr)s"
                 )
 
                 // Clean up resources but keep state as .connecting

@@ -411,12 +411,21 @@ struct TraceResultHopRow: View {
                 // SNR display - batch mode shows avg with range, single shows plain SNR
                 if !hop.isStartNode {
                     if let stats = batchStats {
-                        Text(L10n.Contacts.Contacts.Results.Hop.avgSNR(String(format: "%.1f", stats.avg), String(format: "%.1f", stats.min), String(format: "%.1f", stats.max)))
+                        let snrFormat = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(1))
+                        Text(L10n.Contacts.Contacts.Results.Hop.avgSNR(
+                            stats.avg.formatted(snrFormat),
+                            stats.min.formatted(snrFormat),
+                            stats.max.formatted(snrFormat)
+                        ))
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .accessibilityLabel(L10n.Contacts.Contacts.Results.Hop.avgSNRLabel(String(format: "%.1f", stats.avg), String(format: "%.1f", stats.min), String(format: "%.1f", stats.max)))
+                            .accessibilityLabel(L10n.Contacts.Contacts.Results.Hop.avgSNRLabel(
+                                stats.avg.formatted(snrFormat),
+                                stats.min.formatted(snrFormat),
+                                stats.max.formatted(snrFormat)
+                            ))
                     } else {
-                        Text(L10n.Contacts.Contacts.Results.Hop.snr(String(format: "%.2f", hop.snr)))
+                        Text(L10n.Contacts.Contacts.Results.Hop.snr(hop.snr.formatted(.number.precision(.fractionLength(2)))))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

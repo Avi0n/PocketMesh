@@ -126,7 +126,7 @@ enum LogExportService {
             Firmware: \(device.firmwareVersionString) (v\(device.firmwareVersion))
             Manufacturer: \(device.manufacturerName)
             Build Date: \(device.buildDate)
-            Radio: \(String(format: "%.3f", frequencyMHz)) MHz, BW \(bandwidthKHz) kHz, SF\(device.spreadingFactor), CR\(device.codingRate)
+            Radio: \(frequencyMHz.formatted(.number.precision(.fractionLength(3)))) MHz, BW \(bandwidthKHz) kHz, SF\(device.spreadingFactor), CR\(device.codingRate)
             TX Power: \(device.txPower) dBm (max \(device.maxTxPower))
             Max Nodes: \(device.maxContacts)
             Max Channels: \(device.maxChannels)
@@ -139,7 +139,7 @@ enum LogExportService {
         return """
             === Battery ===
             Level: \(battery.percentage)%
-            Voltage: \(String(format: "%.2f", battery.voltage)) V
+            Voltage: \(battery.voltage.formatted(.number.precision(.fractionLength(2)))) V
             Raw: \(battery.level) mV
             """
     }
