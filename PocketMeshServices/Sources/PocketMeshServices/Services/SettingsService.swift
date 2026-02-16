@@ -240,6 +240,15 @@ public struct TelemetryModes: Sendable, Equatable {
     }
 }
 
+// MARK: - Settings Events
+
+/// Events emitted by SettingsService when device settings change.
+public enum SettingsEvent: Sendable {
+    case deviceUpdated(MeshCore.SelfInfo)
+    case autoAddConfigUpdated(UInt8)
+    case clientRepeatUpdated(Bool)
+}
+
 // MARK: - Settings Service
 
 /// Service for managing device settings via MeshCore session.
@@ -248,41 +257,33 @@ public actor SettingsService {
     private let session: MeshCoreSession
     private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "SettingsService")
 
-    /// Callback invoked when device settings are successfully changed.
-    /// Used to update ConnectionManager.connectedDevice for UI refresh.
-    private var onDeviceUpdated: (@Sendable (MeshCore.SelfInfo) async -> Void)?
-
-    /// Callback invoked when auto-add config is successfully changed.
-    /// Used to update ConnectionManager.connectedDevice.autoAddConfig for UI refresh.
-    private var onAutoAddConfigUpdated: (@Sendable (UInt8) async -> Void)?
-
-    /// Callback invoked when client repeat mode is successfully changed.
-    /// Used to update ConnectionManager.connectedDevice.clientRepeat for UI refresh.
-    private var onClientRepeatUpdated: (@Sendable (Bool) async -> Void)?
+    private var eventContinuation: AsyncStream<SettingsEvent>.Continuation?
 
     public init(session: MeshCoreSession) {
         self.session = session
     }
 
-    /// Sets the callback for device updates after settings changes.
-    public func setDeviceUpdateCallback(
-        _ callback: @escaping @Sendable (MeshCore.SelfInfo) async -> Void
-    ) {
-        onDeviceUpdated = callback
+    /// Stream of settings change events.
+    /// Only one active subscriber is supported. Subsequent calls replace the previous subscriber.
+    public func events() -> AsyncStream<SettingsEvent> {
+        AsyncStream { continuation in
+            Task { await self.setContinuation(continuation) }
+            continuation.onTermination = { @Sendable _ in
+                Task { await self.clearContinuation() }
+            }
+        }
     }
 
-    /// Sets the callback for auto-add config updates.
-    public func setAutoAddConfigCallback(
-        _ callback: @escaping @Sendable (UInt8) async -> Void
-    ) {
-        onAutoAddConfigUpdated = callback
+    private func setContinuation(_ continuation: AsyncStream<SettingsEvent>.Continuation) {
+        if eventContinuation != nil {
+            logger.warning("Replacing existing SettingsService event stream subscriber")
+        }
+        eventContinuation?.finish()
+        self.eventContinuation = continuation
     }
 
-    /// Sets the callback for client repeat mode updates.
-    public func setClientRepeatCallback(
-        _ callback: @escaping @Sendable (Bool) async -> Void
-    ) {
-        onClientRepeatUpdated = callback
+    private func clearContinuation() {
+        eventContinuation = nil
     }
 
     // MARK: - Radio Settings
@@ -451,7 +452,7 @@ public actor SettingsService {
             )
         }
 
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
         return selfInfo
     }
 
@@ -485,7 +486,7 @@ public actor SettingsService {
             )
         }
 
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
         return selfInfo
     }
 
@@ -534,11 +535,11 @@ public actor SettingsService {
                 )
             }
             logger.info("[Radio] Client repeat verified: \(expectedRepeat)")
-            await onClientRepeatUpdated?(expectedRepeat)
+            eventContinuation?.yield(.clientRepeatUpdated(expectedRepeat))
         }
 
         logger.info("[Radio] Params verified successfully")
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
         return selfInfo
     }
 
@@ -570,7 +571,7 @@ public actor SettingsService {
         }
 
         logger.info("[Radio] TX power verified: \(power)dBm")
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
         return selfInfo
     }
 
@@ -598,7 +599,7 @@ public actor SettingsService {
             )
         }
 
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
         return selfInfo
     }
 
@@ -617,14 +618,14 @@ public actor SettingsService {
     /// Fetches current value and triggers callback to update connected device
     public func refreshAutoAddConfig() async throws {
         let config = try await getAutoAddConfig()
-        await onAutoAddConfigUpdated?(config)
+        eventContinuation?.yield(.autoAddConfigUpdated(config))
     }
 
     /// Refresh device info from the device and notify observers.
     /// Use this instead of `setLocationVerified` when the device already has correct coordinates (e.g. from its own GPS).
     public func refreshDeviceInfo() async throws {
         let selfInfo = try await getSelfInfo()
-        await onDeviceUpdated?(selfInfo)
+        eventContinuation?.yield(.deviceUpdated(selfInfo))
     }
 
     /// Set auto-add configuration on device
@@ -649,7 +650,7 @@ public actor SettingsService {
             )
         }
 
-        await onAutoAddConfigUpdated?(actualConfig)
+        eventContinuation?.yield(.autoAddConfigUpdated(actualConfig))
         return actualConfig
     }
 

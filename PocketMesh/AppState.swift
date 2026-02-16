@@ -461,11 +461,29 @@ public final class AppState {
             self?.showSyncFailedPill()
         }
 
-        // Wire device update callback for settings changes
-        // Updates connectedDevice when radio/node settings are changed via SettingsService
-        await services.settingsService.setDeviceUpdateCallback { [weak self] selfInfo in
-            await MainActor.run {
-                self?.connectionManager.updateDevice(from: selfInfo)
+        // Consume settings service event stream
+        // Updates connectedDevice when settings are changed via SettingsService
+        Task { [weak self] in
+            guard let self else { return }
+            for await event in await services.settingsService.events() {
+                switch event {
+                case .deviceUpdated(let selfInfo):
+                    await MainActor.run {
+                        self.connectionManager.updateDevice(from: selfInfo)
+                    }
+                case .autoAddConfigUpdated(let config):
+                    await MainActor.run {
+                        self.connectionManager.updateAutoAddConfig(config)
+                        // Clear storage full flag when overwrite oldest is enabled (bit 0x01)
+                        if config & 0x01 != 0 {
+                            self.isNodeStorageFull = false
+                        }
+                    }
+                case .clientRepeatUpdated(let enabled):
+                    await MainActor.run {
+                        self.connectionManager.updateClientRepeat(enabled)
+                    }
+                }
             }
         }
 
@@ -474,25 +492,6 @@ public final class AppState {
         await services.deviceService.setDeviceUpdateCallback { [weak self] deviceDTO in
             await MainActor.run {
                 self?.connectionManager.updateDevice(with: deviceDTO)
-            }
-        }
-
-        // Wire auto-add config callback
-        // Updates connectedDevice.autoAddConfig when changed via SettingsService
-        await services.settingsService.setAutoAddConfigCallback { [weak self] config in
-            await MainActor.run {
-                self?.connectionManager.updateAutoAddConfig(config)
-                // Clear storage full flag when overwrite oldest is enabled (bit 0x01)
-                if config & 0x01 != 0 {
-                    self?.isNodeStorageFull = false
-                }
-            }
-        }
-
-        // Wire client repeat callback
-        await services.settingsService.setClientRepeatCallback { [weak self] enabled in
-            await MainActor.run {
-                self?.connectionManager.updateClientRepeat(enabled)
             }
         }
 
