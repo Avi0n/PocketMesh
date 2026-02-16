@@ -724,6 +724,7 @@ public actor SyncCoordinator {
 
     // MARK: - Message Handler Wiring
 
+    // swiftlint:disable:next function_body_length cyclomatic_complexity
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
         logger.info("Wiring message handlers for device \(deviceID)")
 

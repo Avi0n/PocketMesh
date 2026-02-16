@@ -243,8 +243,8 @@ public actor RxLogService {
 
         // Decrypt direct messages to extract senderTimestamp
         // Try all contacts with matching prefix byte (1-byte hash has collision risk)
-        if (parsed.payloadType == .textMessage || parsed.payloadType == .response),
-           (parsed.routeType == .direct || parsed.routeType == .tcDirect),
+        if parsed.payloadType == .textMessage || parsed.payloadType == .response,
+           parsed.routeType == .direct || parsed.routeType == .tcDirect,
            let senderPrefix = parsed.senderPubkeyPrefix?.first,
            let candidateKeys = contactPublicKeysByPrefix[senderPrefix],
            let myPrivateKey = self.myPrivateKey {

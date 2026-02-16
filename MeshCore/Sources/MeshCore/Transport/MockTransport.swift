@@ -34,7 +34,7 @@ public actor MockTransport: MeshTransport {
 
     /// An asynchronous stream of raw data injected via simulation.
     public var receivedData: AsyncStream<Data> { dataStream }
-    
+
     /// Indicates whether the mock transport is currently "connected".
     public private(set) var isConnected = false
 

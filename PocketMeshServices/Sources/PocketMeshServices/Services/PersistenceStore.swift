@@ -758,6 +758,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         limit: Int
     ) throws -> MessageDTO? {
         let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        // swiftlint:disable:next line_length
         logger.debug("[REACTION-MATCH] Looking for message: targetSender=\(parsedReaction.targetSender), hash=\(parsedReaction.messageHash), localNodeName=\(localNodeName ?? "nil"), window=\(timestampWindow.lowerBound)...\(timestampWindow.upperBound)")
 
         let targetDeviceID = deviceID

@@ -849,8 +849,8 @@ final class LineOfSightViewModel {
     func analyze() {
         guard let pointA = pointA,
               let pointB = pointB,
-              let _ = pointA.groundElevation,
-              let _ = pointB.groundElevation else {
+              pointA.groundElevation != nil,
+              pointB.groundElevation != nil else {
             logger.warning("Cannot analyze: missing point elevations")
             return
         }

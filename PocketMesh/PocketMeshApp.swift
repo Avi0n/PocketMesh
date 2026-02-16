@@ -16,6 +16,7 @@ struct PocketMeshApp: App {
     #endif
 
     init() {
+        // swiftlint:disable:next force_try
         let container = try! PersistenceStore.createContainer()
         _appState = State(initialValue: AppState(modelContainer: container))
     }

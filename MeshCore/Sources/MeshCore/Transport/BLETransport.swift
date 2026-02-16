@@ -58,7 +58,7 @@ public actor BLETransport: MeshTransport {
 
     /// The current connection state of the transport.
     public private(set) var isConnected = false
-    
+
     /// The detailed connection state, including failure reasons.
     public private(set) var connectionState: ConnectionState = .disconnected
 
@@ -202,11 +202,11 @@ private final class BLEDelegate: NSObject, CBCentralManagerDelegate, CBPeriphera
 
     init(dataContinuation: AsyncStream<Data>.Continuation) {
         self.dataContinuation = dataContinuation
-        
+
         let (disconnectStream, disconnectContinuation) = AsyncStream.makeStream(of: Void.self)
         self.disconnectionEvents = disconnectStream
         self.disconnectionContinuation = disconnectContinuation
-        
+
         self.centralManager = CBCentralManager(delegate: nil, queue: bleQueue)
         super.init()
         centralManager.delegate = self

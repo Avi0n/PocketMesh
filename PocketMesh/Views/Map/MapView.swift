@@ -3,8 +3,6 @@ import SwiftUI
 import MapKit
 import PocketMeshServices
 
-// swiftlint:disable nesting
-
 private let logger = Logger(subsystem: "com.pocketmesh", category: "MapView")
 
 /// Map view displaying contacts with their locations

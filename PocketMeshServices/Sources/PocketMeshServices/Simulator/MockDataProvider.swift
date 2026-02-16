@@ -248,6 +248,7 @@ public enum MockDataProvider {
 
     // MARK: - Mock Messages
 
+    // swiftlint:disable function_body_length
     /// Generate mock messages for a specific contact
     public static func messages(for contactID: UUID) -> [MessageDTO] {
         let now = Date()
@@ -646,4 +647,5 @@ public enum MockDataProvider {
             return []
         }
     }
+    // swiftlint:enable function_body_length
 }

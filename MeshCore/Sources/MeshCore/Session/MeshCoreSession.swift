@@ -335,7 +335,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     public func startAutoMessageFetching() async {
         guard !isAutoFetchingMessages else { return }
         isAutoFetchingMessages = true
-        
+
         autoMessageFetchTask = Task { [weak self] in
             guard let self else { return }
             await self.autoMessageFetchLoop()

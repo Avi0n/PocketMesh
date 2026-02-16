@@ -7,16 +7,16 @@ import Foundation
 public struct RequestContext: Sendable {
     /// The data representing the expected acknowledgment or tag for this request.
     public let expectedAck: Data
-    
+
     /// The type of binary request being tracked, if applicable.
     public let requestType: BinaryRequestType?
-    
+
     /// The public key prefix of the target node, if applicable.
     public let publicKeyPrefix: Data?
-    
+
     /// The date and time when this request expires.
     public let expiresAt: Date
-    
+
     /// Additional context parameters for specialized request types.
     public let context: [String: Int]
 
@@ -47,7 +47,7 @@ public struct RequestContext: Sendable {
 private struct BinaryRequestKey: Hashable {
     /// The public key prefix of the node.
     let publicKeyPrefix: Data
-    
+
     /// The type of request.
     let requestType: BinaryRequestType
 }
@@ -59,7 +59,7 @@ private struct BinaryRequestKey: Hashable {
 public actor PendingRequests {
     /// Mapping of tags to their respective continuations.
     private var requests: [Data: CheckedContinuation<MeshEvent?, Never>] = [:]
-    
+
     /// Mapping of tags to their request contexts.
     private var metadata: [Data: RequestContext] = [:]
 

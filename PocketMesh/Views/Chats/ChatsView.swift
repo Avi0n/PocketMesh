@@ -10,7 +10,7 @@ struct ChatsView: View {
 
     @State private var viewModel = ChatViewModel()
     @State private var searchText = ""
-    @State private var selectedFilter: ChatFilter? = nil
+    @State private var selectedFilter: ChatFilter?
     @State private var showingNewChat = false
     @State private var showingChannelOptions = false
 

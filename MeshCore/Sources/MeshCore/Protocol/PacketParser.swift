@@ -103,8 +103,8 @@ extension PacketParser {
                 )
             }
             let level = Int(payload.readUInt16LE(at: 0))
-            var usedKB: Int? = nil
-            var totalKB: Int? = nil
+            var usedKB: Int?
+            var totalKB: Int?
             if payload.count >= PacketSize.batteryExtended {
                 usedKB = Int(payload.readUInt32LE(at: 2))
                 totalKB = Int(payload.readUInt32LE(at: 6))

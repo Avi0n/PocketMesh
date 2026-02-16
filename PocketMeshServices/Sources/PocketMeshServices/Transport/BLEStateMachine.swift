@@ -812,7 +812,7 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
-                         advertisementData: [String: Any], rssi RSSI: NSNumber) {
+                        advertisementData: [String: Any], rssi RSSI: NSNumber) {
         guard let sm = stateMachine else { return }
         let peripheralID = peripheral.identifier
         let rssiValue = RSSI.intValue
@@ -1355,6 +1355,7 @@ extension BLEStateMachine {
     }
 
     func handleDidUpdateNotificationState(_ peripheral: CBPeripheral, characteristic: CBCharacteristic, error: Error?) {
+        // swiftlint:disable:next line_length
         logger.info("[BLE] Did update notification state: \(peripheral.identifier.uuidString.prefix(8)), isNotifying: \(characteristic.isNotifying), charUUID: \(characteristic.uuid.uuidString.prefix(8)), error: \(error?.localizedDescription ?? "none")")
 
         guard case .subscribingToNotifications(let expected, let tx, let rx, let continuation) = phase,

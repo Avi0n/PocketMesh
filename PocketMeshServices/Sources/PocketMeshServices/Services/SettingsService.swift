@@ -416,7 +416,6 @@ public actor SettingsService {
         }
     }
 
-
     /// Query device capabilities
     public func queryDevice() async throws -> DeviceCapabilities {
         do {
@@ -517,6 +516,7 @@ public actor SettingsService {
               abs(selfInfo.radioBandwidth - expectedBwMHz) < 0.001 &&
               selfInfo.radioSpreadingFactor == spreadingFactor &&
               selfInfo.radioCodingRate == codingRate else {
+            // swiftlint:disable:next line_length
             logger.warning("[Radio] Verification failed - expected: freq=\(expectedFreqMHz)MHz, bw=\(expectedBwMHz)kHz, sf=\(spreadingFactor), cr=\(codingRate); device reports: freq=\(selfInfo.radioFrequency)MHz, bw=\(selfInfo.radioBandwidth)kHz, sf=\(selfInfo.radioSpreadingFactor), cr=\(selfInfo.radioCodingRate)")
             throw SettingsServiceError.verificationFailed(
                 expected: "freq=\(frequencyKHz), bw=\(bandwidthKHz), sf=\(spreadingFactor), cr=\(codingRate)",

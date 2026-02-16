@@ -168,7 +168,6 @@ private struct PresetDetailsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
                     .font(.caption.monospacedDigit()) +
-                // swiftlint:disable:next line_length
                 Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
                     .font(.caption)
             }
@@ -179,7 +178,6 @@ private struct PresetDetailsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(freqMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
                     .font(.caption.monospacedDigit()) +
-                // swiftlint:disable:next line_length
                 Text(" MHz \u{2022} BW\(bwKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
                     .font(.caption)
             }

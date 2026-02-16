@@ -472,7 +472,6 @@ public final class ConnectionManager {
         return await stateMachine.isDeviceConnectedToSystem(deviceID)
     }
 
-
     // MARK: - BLE Scanning
 
     /// Starts scanning for nearby BLE devices and returns an AsyncStream of (deviceID, rssi) discoveries.
@@ -2048,8 +2047,7 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            do { try await services?.dataStore.saveDevice(updated) }
-            catch { logger.error("Failed to persist client repeat state: \(error)") }
+            do { try await services?.dataStore.saveDevice(updated) } catch { logger.error("Failed to persist client repeat state: \(error)") }
         }
     }
 
@@ -2061,8 +2059,7 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            do { try await services?.dataStore.saveDevice(updated) }
-            catch { logger.error("Failed to persist pre-repeat settings: \(error)") }
+            do { try await services?.dataStore.saveDevice(updated) } catch { logger.error("Failed to persist pre-repeat settings: \(error)") }
         }
     }
 
@@ -2073,8 +2070,7 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            do { try await services?.dataStore.saveDevice(updated) }
-            catch { logger.error("Failed to persist cleared pre-repeat settings: \(error)") }
+            do { try await services?.dataStore.saveDevice(updated) } catch { logger.error("Failed to persist cleared pre-repeat settings: \(error)") }
         }
     }
 
@@ -2379,6 +2375,7 @@ public final class ConnectionManager {
         let pairedSummaryText = pairedSummary.isEmpty ? "none" : pairedSummary.joined(separator: ", ")
 
         logger.warning(
+            // swiftlint:disable:next line_length
             "[BLE] Device not found diagnostics (\(context)) - device: \(deviceID.uuidString.prefix(8)), lastDevice: \(lastDeviceShort), connectionIntent: \(connectionIntent), bleState: \(bleState), blePhase: \(blePhase), askActive: \(accessorySetupKit.isSessionActive), pairedCount: \(pairedAccessories.count), paired: \(pairedSummaryText)"
         )
     }

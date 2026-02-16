@@ -181,27 +181,30 @@ struct MessageServiceTests {
 
 ## Linting and Formatting
 
-### Optional Tools
+### SwiftLint
 
-The project does not currently have SwiftLint or SwiftFormat configured. If you wish to use these tools:
+The project uses [SwiftLint](https://github.com/realm/SwiftLint) for style enforcement, configured via `.swiftlint.yml` at the repo root.
 
-**SwiftLint** (optional):
 ```bash
-brew install swiftlint
+# Check for violations
 swiftlint lint
+
+# Auto-fix trivial violations (trailing whitespace, etc.)
+swiftlint --fix
 ```
 
-**SwiftFormat** (optional):
-```bash
-brew install swiftformat
-swiftformat .
-```
+The configuration sets thresholds slightly above current codebase maximums. These will be tightened incrementally. Rules that overlap with planned refactoring work (e.g., `file_length`, `type_body_length`) are disabled until that work lands.
+
+If SwiftLint is not installed: `brew install swiftlint`
 
 ### Pre-Commit Workflow
 
 Before committing:
 
 ```bash
+# Lint
+swiftlint lint
+
 # Build and test
 xcodebuild test 2>&1 | xcsift --Werror
 ```

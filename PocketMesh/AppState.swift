@@ -1327,6 +1327,7 @@ extension AppState {
             RoomMessage.self
         ])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        // swiftlint:disable:next force_try
         let container = try! ModelContainer(for: schema, configurations: [config])
         self.init(modelContainer: container)
     }

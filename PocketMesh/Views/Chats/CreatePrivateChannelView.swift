@@ -229,7 +229,6 @@ struct CreatePrivateChannelView: View {
     }
 }
 
-
 #Preview {
     NavigationStack {
         CreatePrivateChannelView(availableSlots: [1, 2, 3], onComplete: { _ in })

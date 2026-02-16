@@ -434,7 +434,6 @@ struct UnifiedMessageBubble: View {
                 .foregroundStyle(.blue)
             }
 
-
             // Only show icon for failed status
             if message.status == .failed {
                 Image(systemName: "exclamationmark.circle")

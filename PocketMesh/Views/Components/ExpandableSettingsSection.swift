@@ -75,8 +75,8 @@ struct ExpandableSettingsSection<Content: View>: View {
 #Preview {
     @Previewable @State var isExpanded = false
     @Previewable @State var isLoading = false
-    @Previewable @State var error: String? = nil
-    @Previewable @State var data: String? = nil
+    @Previewable @State var error: String?
+    @Previewable @State var data: String?
 
     Form {
         ExpandableSettingsSection(

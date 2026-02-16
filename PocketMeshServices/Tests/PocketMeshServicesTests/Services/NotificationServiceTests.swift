@@ -105,7 +105,7 @@ struct NotificationServiceTests {
         let service = NotificationService()
         var callbackInvoked = false
 
-        service.onReactionNotificationTapped = { contactID, channelIndex, deviceID, messageID in
+        service.onReactionNotificationTapped = { _, _, _, _ in
             callbackInvoked = true
         }
 

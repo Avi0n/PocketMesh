@@ -40,6 +40,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         // Provide closure to get snapshot params directly from MKMapView (bypasses async binding lag)
         onSnapshotParamsGetter? { [weak mapView] in
             guard let mapView else { return nil }
+            // swiftlint:disable:next force_cast
             return (camera: mapView.camera.copy() as! MKMapCamera, size: mapView.bounds.size)
         }
 

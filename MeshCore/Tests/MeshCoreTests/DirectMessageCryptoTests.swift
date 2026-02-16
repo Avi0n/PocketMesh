@@ -28,6 +28,7 @@ final class DirectMessageCryptoTests: XCTestCase {
         myPrivateKey: Curve25519.KeyAgreement.PrivateKey,
         theirPublicKey: Curve25519.KeyAgreement.PublicKey
     ) -> Data {
+        // swiftlint:disable:next force_try
         let sharedSecret = try! myPrivateKey.sharedSecretFromKeyAgreement(with: theirPublicKey)
         return sharedSecret.withUnsafeBytes { Data($0) }
     }
