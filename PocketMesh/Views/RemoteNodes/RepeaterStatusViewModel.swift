@@ -403,22 +403,6 @@ final class RepeaterStatusViewModel {
             .map { (channel: $0.key, dataPoints: $0.value) }
     }
 
-    // MARK: - Telemetry Grouping
-
-    /// Whether cached data points span multiple channels.
-    var hasMultipleChannels: Bool {
-        let channels = Set(cachedDataPoints.map(\.channel))
-        return channels.count > 1
-    }
-
-    /// Data points grouped by channel, sorted by channel number.
-    /// Only useful when `hasMultipleChannels` is true.
-    var groupedDataPoints: [(channel: UInt8, dataPoints: [LPPDataPoint])] {
-        Dictionary(grouping: cachedDataPoints, by: \.channel)
-            .sorted { $0.key < $1.key }
-            .map { (channel: $0.key, dataPoints: $0.value) }
-    }
-
     // MARK: - Computed Properties
 
     /// Em-dash for missing data (cleaner than "Unavailable")
