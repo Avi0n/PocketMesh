@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Tryb Repeatera";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "Tryb Repeatera zamienia Twoje urządzenie w przenośny repeater na dedykowanej częstotliwości. Przydatny podczas biwakowania lub wędrówek poza zasięgiem infrastruktury repeaterów. Gdy jest aktywny, możesz komunikować się tylko z innymi na tej samej częstotliwości Trybu Repeatera — sieć główna nie będzie dostępna. Prawidłowe częstotliwości dla Trybu Repeatera to: 433 MHz, 869 MHz, 918 MHz.";
+"advancedRadio.repeatMode.footer" = "Tworzy lokalny repeater na wydzielonej częstotliwości. Przydatny podczas pieszych wędrówek i w odległych obszarach. Prawidłowe częstotliwości: 433, 869, 918 MHz.";
 
 
 // MARK: - Battery Curve Section
@@ -661,7 +661,19 @@
 "radio.repeatMode" = "Tryb Repeatera";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "Tryb Repeatera zamienia Twoje urządzenie w przenośny repeater na dedykowanej częstotliwości. Przydatny podczas biwakowania lub wędrówek poza zasięgiem infrastruktury repeaterów. Gdy jest aktywny, możesz komunikować się tylko z innymi na tej samej częstotliwości Trybu Repeatera — sieć główna nie będzie dostępna.";
+"radio.repeatMode.footer" = "Tworzy lokalny repeater na wydzielonej częstotliwości. Przydatny podczas pieszych wędrówek i w odległych obszarach.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Włączenie odłączy Cię od głównej sieci mesh";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Włączyć tryb repeatera?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Zostaniesz odłączony od głównej sieci mesh. Dostępne będą tylko urządzenia na tej samej częstotliwości trybu repeatera.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Włącz";
 
 
 // MARK: - Telemetry Settings Section
@@ -842,6 +854,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Rozprzestrzenia ogłoszenie po całej sieci mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Tryb repeatera aktywny";
 
 
 // MARK: - Location Settings Section

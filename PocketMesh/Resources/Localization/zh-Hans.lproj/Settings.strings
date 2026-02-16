@@ -304,7 +304,7 @@
 "advancedRadio.repeatMode" = "中继模式";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "中继模式会将您的设备变为专用频率上的便携中继器。适用于露营或徒步旅行等超出中继基础设施范围的场景。启用后，您只能与使用相同中继模式频率的其他设备通信——无法连接到主网络。中继模式的有效频率为：433 MHz、869 MHz、918 MHz。";
+"advancedRadio.repeatMode.footer" = "在专用频率上创建本地中继器。适用于徒步旅行和偏远地区。有效频率：433、869、918 MHz。";
 
 // MARK: - Battery Curve Section
 
@@ -665,7 +665,19 @@
 "radio.repeatMode" = "中继模式";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "中继模式会将您的设备变为专用频率上的便携中继器。适用于露营或徒步旅行等超出中继基础设施范围的场景。启用后，您只能与使用相同中继模式频率的其他设备通信——无法连接到主网络。";
+"radio.repeatMode.footer" = "在专用频率上创建本地中继器。适用于徒步旅行和偏远地区。";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "启用此功能将断开与主网状网络的连接";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "启用中继模式？";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "您将断开与主网状网络的连接。只有使用相同中继模式频率的设备才能通信。";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "启用";
 
 // MARK: - Telemetry Settings Section
 
@@ -838,6 +850,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "在整个网络上泛洪广播";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "中继模式已启用";
 
 // MARK: - Config Export/Import
 

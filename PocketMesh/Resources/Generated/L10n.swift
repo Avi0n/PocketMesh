@@ -2660,7 +2660,7 @@ public enum L10n {
       }
       public enum RepeatMode {
         /// Footer explaining repeat mode in advanced radio
-        public static let footer = L10n.tr("Settings", "advancedRadio.repeatMode.footer", fallback: "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network. Valid frequencies for Repeat Mode are: 433 MHz, 869 MHz, 918 MHz.")
+        public static let footer = L10n.tr("Settings", "advancedRadio.repeatMode.footer", fallback: "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas. Valid frequencies: 433, 869, 918 MHz.")
       }
     }
     public enum AdvancedSettings {
@@ -2728,6 +2728,8 @@ public enum L10n {
       public static let changeDevice = L10n.tr("Settings", "bleStatus.changeDevice", fallback: "Change Device")
       /// Menu item to disconnect from the current device
       public static let disconnect = L10n.tr("Settings", "bleStatus.disconnect", fallback: "Disconnect")
+      /// Label shown in BLE status menu when repeat mode is active
+      public static let repeatModeActive = L10n.tr("Settings", "bleStatus.repeatModeActive", fallback: "Repeat Mode Active")
       /// Menu item to send a flood advertisement
       public static let sendFloodAdvert = L10n.tr("Settings", "bleStatus.sendFloodAdvert", fallback: "Send Flood Advert")
       /// Menu item to send a zero-hop advertisement
@@ -3313,8 +3315,18 @@ public enum L10n {
       /// Toggle label for repeat mode
       public static let repeatMode = L10n.tr("Settings", "radio.repeatMode", fallback: "Repeat Mode")
       public enum RepeatMode {
+        /// Accessibility hint for repeat mode toggle
+        public static let accessibilityHint = L10n.tr("Settings", "radio.repeatMode.accessibilityHint", fallback: "Enabling this will disconnect you from the main mesh network")
         /// Footer explaining repeat mode
-        public static let footer = L10n.tr("Settings", "radio.repeatMode.footer", fallback: "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network.")
+        public static let footer = L10n.tr("Settings", "radio.repeatMode.footer", fallback: "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas.")
+        public enum Confirm {
+          /// Confirmation dialog enable button
+          public static let enable = L10n.tr("Settings", "radio.repeatMode.confirm.enable", fallback: "Enable")
+          /// Confirmation dialog message for enabling repeat mode
+          public static let message = L10n.tr("Settings", "radio.repeatMode.confirm.message", fallback: "You will be disconnected from the main mesh network. Only devices on the same Repeat Mode frequency will be reachable.")
+          /// Confirmation dialog title for enabling repeat mode
+          public static let title = L10n.tr("Settings", "radio.repeatMode.confirm.title", fallback: "Enable Repeat Mode?")
+        }
       }
     }
     public enum Telemetry {

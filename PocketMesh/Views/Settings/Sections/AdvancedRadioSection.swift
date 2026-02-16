@@ -117,13 +117,10 @@ struct AdvancedRadioSection: View {
                     get: { clientRepeat ?? false },
                     set: { clientRepeat = $0 }
                 )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.Settings.AdvancedRadio.repeatMode)
-                        Text(L10n.Settings.AdvancedRadio.RepeatMode.footer)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(L10n.Settings.AdvancedRadio.repeatMode)
+                    Text(L10n.Settings.AdvancedRadio.RepeatMode.footer)
                 }
+                .accessibilityHint(L10n.Settings.Radio.RepeatMode.accessibilityHint)
                 .disabled(!hasLoaded)
             }
 

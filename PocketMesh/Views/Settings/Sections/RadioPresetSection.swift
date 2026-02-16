@@ -12,6 +12,7 @@ struct RadioPresetSection: View {
     @State private var retryAlert = RetryAlertState()
     @State private var isRepeatEnabled: Bool = false
     @State private var isApplyingRepeat = false
+    @State private var showRepeatConfirmation = false
 
     private var presets: [RadioPreset] {
         RadioPresets.presetsForLocale()
@@ -43,13 +44,19 @@ struct RadioPresetSection: View {
     /// Matches the device's current radio params against repeat presets.
     private var currentRepeatPreset: RadioPreset? {
         guard let device = appState.connectedDevice else { return nil }
-        return repeatPresets.first(where: { $0.frequencyKHz == device.frequency })
+        return repeatPresets.first(where: {
+            $0.frequencyKHz == device.frequency &&
+            $0.bandwidthHz == device.bandwidth &&
+            $0.spreadingFactor == device.spreadingFactor &&
+            $0.codingRate == device.codingRate
+        })
     }
 
     var body: some View {
         Section {
             Picker(L10n.Settings.Radio.preset, selection: $selectedPresetID) {
                 if isRepeatEnabled {
+                    Text(L10n.Settings.BatteryCurve.custom).tag(nil as String?)
                     ForEach(repeatPresets) { preset in
                         Section(preset.repeatSectionHeader ?? "") {
                             Text(preset.name).tag(preset.id as String?)
@@ -82,7 +89,8 @@ struct RadioPresetSection: View {
             }
             .radioDisabled(for: appState.connectionState, or: isApplying || isApplyingRepeat)
 
-            if let preset = presets.first(where: { $0.id == selectedPresetID }) {
+            let detailPresets = isRepeatEnabled ? repeatPresets : presets
+            if let preset = detailPresets.first(where: { $0.id == selectedPresetID }) {
                 // Display preset settings
                 VStack(alignment: .leading, spacing: 4) {
                     Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)))
@@ -108,17 +116,19 @@ struct RadioPresetSection: View {
 
             if appState.connectedDevice?.supportsClientRepeat == true {
                 Toggle(isOn: $isRepeatEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.Settings.Radio.repeatMode)
-                        Text(L10n.Settings.Radio.RepeatMode.footer)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(L10n.Settings.Radio.repeatMode)
+                    Text(L10n.Settings.Radio.RepeatMode.footer)
                 }
+                .accessibilityHint(L10n.Settings.Radio.RepeatMode.accessibilityHint)
                 .onChange(of: isRepeatEnabled) { _, newValue in
                     guard hasInitialized else { return }
                     if newValue {
-                        enableRepeatMode()
+                        hasInitialized = false
+                        isRepeatEnabled = false
+                        Task { @MainActor in
+                            hasInitialized = true
+                        }
+                        showRepeatConfirmation = true
                     } else {
                         disableRepeatMode()
                     }
@@ -169,6 +179,14 @@ struct RadioPresetSection: View {
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
+        .alert(L10n.Settings.Radio.RepeatMode.Confirm.title, isPresented: $showRepeatConfirmation) {
+            Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+            Button(L10n.Settings.Radio.RepeatMode.Confirm.enable) {
+                enableRepeatMode()
+            }
+        } message: {
+            Text(L10n.Settings.Radio.RepeatMode.Confirm.message)
+        }
     }
 
     private func applyPreset(id: String) {
@@ -194,7 +212,7 @@ struct RadioPresetSection: View {
                 }
                 retryAlert.reset()
             } catch let error as SettingsServiceError where error.isRetryable {
-                selectedPresetID = currentPreset?.id // Revert
+                selectedPresetID = isRepeatEnabled ? (currentRepeatPreset?.id ?? closestRepeatPreset?.id) : currentPreset?.id
                 retryAlert.show(
                     message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
                     onRetry: { applyPreset(id: id) },
@@ -202,7 +220,7 @@ struct RadioPresetSection: View {
                 )
             } catch {
                 showError = error.localizedDescription
-                selectedPresetID = currentPreset?.id // Revert
+                selectedPresetID = isRepeatEnabled ? (currentRepeatPreset?.id ?? closestRepeatPreset?.id) : currentPreset?.id
             }
             isApplying = false
         }
@@ -216,6 +234,7 @@ struct RadioPresetSection: View {
 
         // Swap picker to repeat presets and select closest frequency
         hasInitialized = false
+        isRepeatEnabled = true
         selectedPresetID = preset.id
         Task { @MainActor in
             hasInitialized = true

@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Режим ретранслятора";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "Режим ретранслятора превращает ваше устройство в портативный ретранслятор на выделенной частоте. Полезен при кемпинге или пеших прогулках вне зоны действия инфраструктуры ретрансляторов. В активном состоянии вы можете общаться только с другими устройствами на той же частоте режима ретранслятора — основная сеть будет недоступна. Допустимые частоты для режима ретранслятора: 433 МГц, 869 МГц, 918 МГц.";
+"advancedRadio.repeatMode.footer" = "Создаёт локальный ретранслятор на выделенной частоте. Полезно для походов и удалённых районов. Допустимые частоты: 433, 869, 918 МГц.";
 
 
 /* Accessibility label for voltage text field - %d is the percentage level */
@@ -661,7 +661,19 @@
 "radio.repeatMode" = "Режим ретранслятора";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "Режим ретранслятора превращает ваше устройство в портативный ретранслятор на выделенной частоте. Полезен при кемпинге или пеших прогулках вне зоны действия инфраструктуры ретрансляторов. В активном состоянии вы можете общаться только с другими устройствами на той же частоте режима ретранслятора — основная сеть будет недоступна.";
+"radio.repeatMode.footer" = "Создаёт локальный ретранслятор на выделенной частоте. Полезно для походов и удалённых районов.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Включение отключит вас от основной mesh-сети";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Включить режим ретранслятора?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Вы будете отключены от основной mesh-сети. Доступны будут только устройства на той же частоте режима ретранслятора.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Включить";
 
 
 // MARK: - Telemetry Settings Section
@@ -842,6 +854,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Распространяет объявление по всей сети mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Режим ретранслятора активен";
 
 
 // MARK: - Location Settings Section

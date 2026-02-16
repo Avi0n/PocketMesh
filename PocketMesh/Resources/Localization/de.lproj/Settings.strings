@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Repeater-Modus";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "Der Repeater-Modus macht Ihr Gerät zu einem tragbaren Repeater auf einer eigenen Frequenz. Nützlich beim Camping oder Wandern außerhalb der Reichweite von Repeater-Infrastruktur. Im aktiven Zustand können Sie nur mit anderen Geräten auf derselben Repeater-Modus-Frequenz kommunizieren — das Hauptnetzwerk ist nicht erreichbar. Gültige Frequenzen für den Repeater-Modus sind: 433 MHz, 869 MHz, 918 MHz.";
+"advancedRadio.repeatMode.footer" = "Erstellt einen lokalen Repeater auf einer eigenen Frequenz. Nützlich beim Wandern und in abgelegenen Gebieten. Gültige Frequenzen: 433, 869, 918 MHz.";
 
 
 // MARK: - Battery Curve Section
@@ -661,7 +661,19 @@
 "radio.repeatMode" = "Repeater-Modus";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "Der Repeater-Modus macht Ihr Gerät zu einem tragbaren Repeater auf einer eigenen Frequenz. Nützlich beim Camping oder Wandern außerhalb der Reichweite von Repeater-Infrastruktur. Im aktiven Zustand können Sie nur mit anderen Geräten auf derselben Repeater-Modus-Frequenz kommunizieren — das Hauptnetzwerk ist nicht erreichbar.";
+"radio.repeatMode.footer" = "Erstellt einen lokalen Repeater auf einer eigenen Frequenz. Nützlich beim Wandern und in abgelegenen Gebieten.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Die Aktivierung trennt Sie vom Hauptnetzwerk";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Repeater-Modus aktivieren?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Sie werden vom Hauptnetzwerk getrennt. Nur Geräte auf derselben Repeater-Modus-Frequenz sind erreichbar.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Aktivieren";
 
 
 // MARK: - Telemetry Settings Section
@@ -842,6 +854,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Flutet Ankündigung über das gesamte Mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Repeater-Modus aktiv";
 
 
 // MARK: - Location Settings Section

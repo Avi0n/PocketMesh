@@ -56,6 +56,10 @@ struct BLEStatusIndicatorView: View {
             // Device info section
             if let device = appState.connectedDevice {
                 Section {
+                    if device.clientRepeat {
+                        Label(L10n.Settings.BleStatus.repeatModeActive, systemImage: "repeat")
+                            .foregroundStyle(.orange)
+                    }
                     VStack(alignment: .leading) {
                         Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
                         if let battery = appState.deviceBattery {
@@ -131,13 +135,16 @@ struct BLEStatusIndicatorView: View {
     }
 
     private var iconColor: Color {
+        if appState.connectedDevice?.clientRepeat == true {
+            return .orange
+        }
         switch appState.connectionState {
         case .disconnected:
-            .secondary
+            return .secondary
         case .connecting, .connected:
-            .blue
+            return .blue
         case .ready:
-            .green
+            return .green
         }
     }
 

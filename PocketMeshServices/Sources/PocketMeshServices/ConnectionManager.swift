@@ -2049,7 +2049,8 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            try? await services?.dataStore.saveDevice(updated)
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist client repeat state: \(error)") }
         }
     }
 
@@ -2061,7 +2062,8 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            try? await services?.dataStore.saveDevice(updated)
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist pre-repeat settings: \(error)") }
         }
     }
 
@@ -2072,7 +2074,8 @@ public final class ConnectionManager {
         connectedDevice = updated
 
         Task {
-            try? await services?.dataStore.saveDevice(updated)
+            do { try await services?.dataStore.saveDevice(updated) }
+            catch { logger.error("Failed to persist cleared pre-repeat settings: \(error)") }
         }
     }
 

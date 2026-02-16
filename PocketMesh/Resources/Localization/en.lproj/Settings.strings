@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Repeat Mode";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network. Valid frequencies for Repeat Mode are: 433 MHz, 869 MHz, 918 MHz.";
+"advancedRadio.repeatMode.footer" = "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas. Valid frequencies: 433, 869, 918 MHz.";
 
 
 // MARK: - Battery Curve Section
@@ -698,7 +698,19 @@
 "radio.repeatMode" = "Repeat Mode";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "Repeat Mode turns your device into a portable repeater on a dedicated frequency. Useful when camping or hiking outside the range of repeater infrastructure. While active, you can only communicate with others on the same Repeat Mode frequency — you will not be able to reach the main mesh network.";
+"radio.repeatMode.footer" = "Creates a local repeater on a dedicated frequency. Useful for hiking and remote areas.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Enabling this will disconnect you from the main mesh network";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Enable Repeat Mode?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "You will be disconnected from the main mesh network. Only devices on the same Repeat Mode frequency will be reachable.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Enable";
 
 
 // MARK: - Telemetry Settings Section
@@ -879,6 +891,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Floods advertisement across entire mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Repeat Mode Active";
 
 // MARK: - Config Export/Import
 

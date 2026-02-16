@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Mode Répéteur";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "Le Mode Répéteur transforme votre appareil en répéteur portable sur une fréquence dédiée. Utile pour le camping ou la randonnée hors de portée de l'infrastructure de répéteurs. Lorsqu'il est actif, vous ne pouvez communiquer qu'avec d'autres appareils sur la même fréquence du Mode Répéteur — le réseau principal ne sera pas accessible. Les fréquences valides pour le Mode Répéteur sont : 433 MHz, 869 MHz, 918 MHz.";
+"advancedRadio.repeatMode.footer" = "Crée un répéteur local sur une fréquence dédiée. Utile pour la randonnée et les zones isolées. Fréquences valides : 433, 869, 918 MHz.";
 
 
 /* Accessibility label for voltage text field - %d is the percentage level */
@@ -661,7 +661,19 @@
 "radio.repeatMode" = "Mode Répéteur";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "Le Mode Répéteur transforme votre appareil en répéteur portable sur une fréquence dédiée. Utile pour le camping ou la randonnée hors de portée de l'infrastructure de répéteurs. Lorsqu'il est actif, vous ne pouvez communiquer qu'avec d'autres appareils sur la même fréquence du Mode Répéteur — le réseau principal ne sera pas accessible.";
+"radio.repeatMode.footer" = "Crée un répéteur local sur une fréquence dédiée. Utile pour la randonnée et les zones isolées.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "L'activation vous déconnectera du réseau mesh principal";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "Activer le Mode Répéteur ?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Vous serez déconnecté du réseau mesh principal. Seuls les appareils sur la même fréquence du Mode Répéteur seront joignables.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Activer";
 
 
 // MARK: - Telemetry Settings Section
@@ -842,6 +854,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Propage l'annonce sur tout le réseau mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Mode Répéteur actif";
 
 
 // MARK: - Location Settings Section

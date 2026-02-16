@@ -313,7 +313,7 @@
 "advancedRadio.repeatMode" = "Modo Repetidor";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "El Modo Repetidor convierte tu dispositivo en un repetidor portátil en una frecuencia dedicada. Útil para acampar o hacer senderismo fuera del alcance de la infraestructura de repetidores. Mientras esté activo, solo puedes comunicarte con otros en la misma frecuencia del Modo Repetidor — no podrás acceder a la red principal. Las frecuencias válidas para el Modo Repetidor son: 433 MHz, 869 MHz, 918 MHz.";
+"advancedRadio.repeatMode.footer" = "Crea un repetidor local en una frecuencia dedicada. Útil para senderismo y áreas remotas. Frecuencias válidas: 433, 869, 918 MHz.";
 
 
 // MARK: - Battery Curve Section
@@ -661,7 +661,19 @@
 "radio.repeatMode" = "Modo Repetidor";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "El Modo Repetidor convierte tu dispositivo en un repetidor portátil en una frecuencia dedicada. Útil para acampar o hacer senderismo fuera del alcance de la infraestructura de repetidores. Mientras esté activo, solo puedes comunicarte con otros en la misma frecuencia del Modo Repetidor — no podrás acceder a la red principal.";
+"radio.repeatMode.footer" = "Crea un repetidor local en una frecuencia dedicada. Útil para senderismo y áreas remotas.";
+
+/* Accessibility hint for repeat mode toggle */
+"radio.repeatMode.accessibilityHint" = "Activar esto te desconectará de la red mesh principal";
+
+/* Confirmation dialog title for enabling repeat mode */
+"radio.repeatMode.confirm.title" = "¿Activar Modo Repetidor?";
+
+/* Confirmation dialog message for enabling repeat mode */
+"radio.repeatMode.confirm.message" = "Te desconectarás de la red mesh principal. Solo los dispositivos en la misma frecuencia del Modo Repetidor serán accesibles.";
+
+/* Confirmation dialog enable button */
+"radio.repeatMode.confirm.enable" = "Activar";
 
 
 // MARK: - Telemetry Settings Section
@@ -842,6 +854,9 @@
 
 /* Accessibility hint for flood advert button */
 "bleStatus.sendFloodAdvert.hint" = "Propaga anuncio por toda la red mesh";
+
+/* Label shown in BLE status menu when repeat mode is active */
+"bleStatus.repeatModeActive" = "Modo Repetidor activo";
 
 
 // MARK: - Location Settings Section
