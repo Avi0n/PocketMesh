@@ -11,7 +11,7 @@ enum ChatScrollToMentionPolicy {
 /// UIKit table view controller with flipped orientation for chat-style scrolling
 /// Newest messages appear at visual bottom, keyboard handling via native UIKit
 @MainActor
-final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: UITableViewController where Item.ID: Sendable {
+final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, CellContent: View>: UITableViewController where Item.ID: Sendable {
 
     // MARK: - Types
 
@@ -26,7 +26,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
     private var itemsByID: [Item.ID: Item] = [:]
     /// O(1) index lookup for scroll-to-item (replaces O(n) firstIndex(where:))
     private var itemIndexByID: [Item.ID: Int] = [:]
-    private var cellContentProvider: ((Item) -> AnyView)?
+    private var cellContentProvider: ((Item) -> CellContent)?
     private var dataSource: UITableViewDiffableDataSource<Section, Item.ID>?
 
     /// Tracks scroll position relative to bottom
@@ -165,7 +165,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable>: U
 
     // MARK: - Configuration
 
-    func configure(cellContent: @escaping (Item) -> AnyView) {
+    func configure(cellContent: @escaping (Item) -> CellContent) {
         self.cellContentProvider = cellContent
     }
 
@@ -555,10 +555,10 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     var onNearTop: (() -> Void)?
     var isLoadingOlderMessages: Bool = false
 
-    func makeUIViewController(context: Context) -> ChatTableViewController<Item> {
-        let controller = ChatTableViewController<Item>()
+    func makeUIViewController(context: Context) -> ChatTableViewController<Item, Content> {
+        let controller = ChatTableViewController<Item, Content>()
         controller.configure { item in
-            AnyView(cellContent(item))
+            cellContent(item)
         }
         // Callback set up in updateUIViewController
         context.coordinator.lastScrollRequest = scrollToBottomRequest
@@ -568,11 +568,11 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         return controller
     }
 
-    func updateUIViewController(_ controller: ChatTableViewController<Item>, context: Context) {
+    func updateUIViewController(_ controller: ChatTableViewController<Item, Content>, context: Context) {
         // Update cell content provider each render cycle so reconfigured cells
         // get fresh closures (e.g., onRetry callback when message status changes)
         controller.configure { item in
-            AnyView(cellContent(item))
+            cellContent(item)
         }
 
         // Store current binding setters in coordinator (updated each render cycle)
@@ -580,11 +580,11 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         context.coordinator.setIsAtBottom = { [self] in isAtBottom = $0 }
         context.coordinator.setUnreadCount = { [self] in unreadCount = $0 }
 
-        // Controller callback defers to next run loop via coordinator.
+        // Controller callback defers to next MainActor yield via coordinator.
         // SwiftUI blocks binding updates during updateUIViewController, so we must
         // defer the update to after the current update cycle completes.
         controller.onScrollStateChanged = { [weak coordinator = context.coordinator] atBottom, unread in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 coordinator?.setIsAtBottom?(atBottom)
                 coordinator?.setUnreadCount?(unread)
             }

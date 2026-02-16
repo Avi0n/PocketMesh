@@ -253,7 +253,7 @@ final class TracePathViewModel {
     /// Start listening for trace responses
     func startListening() {
         NotificationCenter.default.publisher(for: .traceDataReceived)
-            .receive(on: DispatchQueue.main)
+            .receive(on: RunLoop.main)
             .sink { [weak self] notification in
                 guard let traceInfo = notification.userInfo?["traceInfo"] as? TraceInfo else { return }
                 let deviceID = notification.userInfo?["deviceID"] as? UUID
