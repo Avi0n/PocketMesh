@@ -63,7 +63,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x02` (deviceQuery)
+    /// - Offset 0 (1 byte): Command code `0x16` (deviceQuery)
     /// - Offset 1 (1 byte): Constant `0x03`
     public static func deviceQuery() -> Data {
         Data([CommandCode.deviceQuery.rawValue, 0x03])
@@ -74,7 +74,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x03` (getBattery)
+    /// - Offset 0 (1 byte): Command code `0x14` (getBattery)
     public static func getBattery() -> Data {
         Data([CommandCode.getBattery.rawValue])
     }
@@ -84,7 +84,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x04` (getTime)
+    /// - Offset 0 (1 byte): Command code `0x05` (getTime)
     public static func getTime() -> Data {
         Data([CommandCode.getTime.rawValue])
     }
@@ -95,7 +95,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x05` (setTime)
+    /// - Offset 0 (1 byte): Command code `0x06` (setTime)
     /// - Offset 1 (4 bytes): Unix timestamp (seconds), Little-endian UInt32
     public static func setTime(_ date: Date) -> Data {
         var data = Data([CommandCode.setTime.rawValue])
@@ -110,7 +110,7 @@ public enum PacketBuilder: Sendable {
     /// - Returns: The command packet data.
     ///
     /// ### Binary Format
-    /// - Offset 0 (1 byte): Command code `0x06` (setName)
+    /// - Offset 0 (1 byte): Command code `0x08` (setName)
     /// - Offset 1 (N bytes): Name string (UTF-8 encoded)
     public static func setName(_ name: String) -> Data {
         var data = Data([CommandCode.setName.rawValue])
