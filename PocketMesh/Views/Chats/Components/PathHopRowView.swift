@@ -39,8 +39,8 @@ struct PathHopRowView: View {
             // Show signal info only on receiver (where we have SNR)
             if case .receiver = hopType, let snr {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Image(systemName: "cellularbars", variableValue: snrLevel(snr))
-                        .foregroundStyle(signalColor(snr))
+                    Image(systemName: "cellularbars", variableValue: snrQuality.barLevel)
+                        .foregroundStyle(snrQuality.color)
 
                     Text("SNR \(snr, format: .number.precision(.fractionLength(1))) dB")
                         .font(.caption)
@@ -76,27 +76,17 @@ struct PathHopRowView: View {
         return ""
     }
 
+    private var snrQuality: SNRQuality { SNRQuality(snr: snr) }
+
     private var signalQualityText: String {
-        guard let snr else { return L10n.Chats.Chats.Path.Hop.signalUnknown }
-        if snr > 10 { return L10n.Chats.Chats.Signal.excellent }
-        if snr > 5 { return L10n.Chats.Chats.Signal.good }
-        if snr > 0 { return L10n.Chats.Chats.Signal.fair }
-        if snr > -10 { return L10n.Chats.Chats.Signal.poor }
-        return L10n.Chats.Chats.Signal.veryPoor
-    }
-
-    private func snrLevel(_ snr: Double) -> Double {
-        if snr > 10 { return 1.0 }
-        if snr > 5 { return 0.75 }
-        if snr > 0 { return 0.5 }
-        if snr > -10 { return 0.25 }
-        return 0
-    }
-
-    private func signalColor(_ snr: Double) -> Color {
-        if snr > 10 { return .green }
-        if snr > 5 { return .yellow }
-        return .red
+        switch snrQuality {
+        case .excellent: L10n.Chats.Chats.Signal.excellent
+        case .good: L10n.Chats.Chats.Signal.good
+        case .fair: L10n.Chats.Chats.Signal.fair
+        case .poor: L10n.Chats.Chats.Signal.poor
+        case .veryPoor: L10n.Chats.Chats.Signal.veryPoor
+        case .unknown: L10n.Chats.Chats.Path.Hop.signalUnknown
+        }
     }
 }
 

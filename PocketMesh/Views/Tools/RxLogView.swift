@@ -264,7 +264,7 @@ struct RxLogRowView: View {
 
                 if entry.snr != nil {
                     Image(systemName: "cellularbars", variableValue: entry.snrLevel)
-                        .foregroundStyle(signalColor)
+                        .foregroundStyle(entry.snrQuality.color)
                         .accessibilityLabel(L10n.Tools.Tools.RxLog.signalStrength(entry.snrQualityLabel))
                 }
             }
@@ -359,13 +359,6 @@ struct RxLogRowView: View {
 
     private var isDirectTextMessage: Bool {
         (entry.routeType == .direct || entry.routeType == .tcDirect) && entry.payloadType == .textMessage
-    }
-
-    private var signalColor: Color {
-        guard let snr = entry.snr else { return .secondary }
-        if snr > 5 { return .green }
-        if snr > 0 { return .yellow }
-        return .red
     }
 
     // MARK: - Expanded Content

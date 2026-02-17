@@ -204,26 +204,14 @@ public struct RxLogEntryDTO: Sendable, Identifiable, Equatable, Hashable {
 
     // MARK: - Signal Quality
 
+    /// Classified signal quality based on SNR thresholds.
+    public var snrQuality: SNRQuality { SNRQuality(snr: snr) }
+
     /// SNR mapped to 0-1 for SF Symbol cellularbars variableValue.
-    /// Based on LoRa SNR ranges: excellent > 10, good > 5, fair > 0, weak > -10.
-    public var snrLevel: Double {
-        guard let snr else { return 0 }
-        if snr > 10 { return 1.0 }
-        if snr > 5 { return 0.75 }
-        if snr > 0 { return 0.5 }
-        if snr > -10 { return 0.25 }
-        return 0.1
-    }
+    public var snrLevel: Double { snrQuality.barLevel }
 
     /// Human-readable SNR quality label for accessibility.
-    public var snrQualityLabel: String {
-        guard let snr else { return "Unknown" }
-        if snr > 10 { return "Excellent" }
-        if snr > 5 { return "Good" }
-        if snr > 0 { return "Fair" }
-        if snr > -10 { return "Weak" }
-        return "Marginal"
-    }
+    public var snrQualityLabel: String { snrQuality.qualityLabel }
 
     /// Formatted SNR string (no label, includes sign for negative).
     public var snrDisplayString: String? {
