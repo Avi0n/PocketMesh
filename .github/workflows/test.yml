@@ -38,9 +38,7 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: |
-          brew tap FelixHerrmann/tap
-          brew install xcodegen swiftgen
+        run: brew install xcodegen swiftgen
 
       - name: Generate Xcode project
         run: xcodegen generate
