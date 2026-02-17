@@ -724,6 +724,35 @@ public actor SyncCoordinator {
 
     // MARK: - Message Handler Wiring
 
+    /// Persists a reaction if it doesn't already exist, notifying the UI on success.
+    ///
+    /// Deduplicates the check-exists → create → persist → notify pattern used across
+    /// DM and channel reaction handlers.
+    ///
+    /// - Returns: `true` if the reaction was new and saved
+    @discardableResult
+    private func persistReactionIfNew(
+        _ reactionDTO: ReactionDTO,
+        services: ServiceContainer
+    ) async -> Bool {
+        let exists = try? await services.dataStore.reactionExists(
+            messageID: reactionDTO.messageID,
+            senderName: reactionDTO.senderName,
+            emoji: reactionDTO.emoji
+        )
+
+        guard exists != true else { return false }
+
+        if let result = await services.reactionService.persistReactionAndUpdateSummary(
+            reactionDTO,
+            using: services.dataStore
+        ) {
+            await onReactionReceived?(result.messageID, result.summary)
+        }
+
+        return true
+    }
+
     // swiftlint:disable:next function_body_length cyclomatic_complexity
     private func wireMessageHandlers(services: ServiceContainer, deviceID: UUID) async {
         logger.info("Wiring message handlers for device \(deviceID)")
@@ -819,30 +848,16 @@ public actor SyncCoordinator {
                     messageHash: parsed.messageHash,
                     contactID: contact.id
                 ) {
-                    let senderName = contact.displayName
-                    let exists = try? await services.dataStore.reactionExists(
+                    let reactionDTO = ReactionDTO(
                         messageID: targetMessageID,
-                        senderName: senderName,
-                        emoji: parsed.emoji
+                        emoji: parsed.emoji,
+                        senderName: contact.displayName,
+                        messageHash: parsed.messageHash,
+                        rawText: message.text,
+                        contactID: contact.id,
+                        deviceID: deviceID
                     )
-
-                    if exists != true {
-                        let reactionDTO = ReactionDTO(
-                            messageID: targetMessageID,
-                            emoji: parsed.emoji,
-                            senderName: senderName,
-                            messageHash: parsed.messageHash,
-                            rawText: message.text,
-                            contactID: contact.id,
-                            deviceID: deviceID
-                        )
-                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                            reactionDTO,
-                            using: services.dataStore
-                        ) {
-                            await self.onReactionReceived?(result.messageID, result.summary)
-                        }
-
+                    if await self.persistReactionIfNew(reactionDTO, services: services) {
                         self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessageID)")
                     }
 
@@ -861,30 +876,16 @@ public actor SyncCoordinator {
                     timestampWindow: windowStart...windowEnd,
                     limit: 200
                 ) {
-                    let senderName = contact.displayName
-                    let exists = try? await services.dataStore.reactionExists(
+                    let reactionDTO = ReactionDTO(
                         messageID: targetMessage.id,
-                        senderName: senderName,
-                        emoji: parsed.emoji
+                        emoji: parsed.emoji,
+                        senderName: contact.displayName,
+                        messageHash: parsed.messageHash,
+                        rawText: message.text,
+                        contactID: contact.id,
+                        deviceID: deviceID
                     )
-
-                    if exists != true {
-                        let reactionDTO = ReactionDTO(
-                            messageID: targetMessage.id,
-                            emoji: parsed.emoji,
-                            senderName: senderName,
-                            messageHash: parsed.messageHash,
-                            rawText: message.text,
-                            contactID: contact.id,
-                            deviceID: deviceID
-                        )
-                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                            reactionDTO,
-                            using: services.dataStore
-                        ) {
-                            await self.onReactionReceived?(result.messageID, result.summary)
-                        }
-
+                    if await self.persistReactionIfNew(reactionDTO, services: services) {
                         self.logger.debug("Saved DM reaction \(parsed.emoji) to message \(targetMessage.id) (from DB)")
                     }
 
@@ -918,29 +919,16 @@ public actor SyncCoordinator {
 
                     // Process pending reactions that now have their target
                     for pending in pendingMatches {
-                        let exists = try? await services.dataStore.reactionExists(
+                        let reactionDTO = ReactionDTO(
                             messageID: messageDTO.id,
+                            emoji: pending.parsed.emoji,
                             senderName: pending.senderName,
-                            emoji: pending.parsed.emoji
+                            messageHash: pending.parsed.messageHash,
+                            rawText: pending.rawText,
+                            contactID: contact.id,
+                            deviceID: deviceID
                         )
-
-                        if exists != true {
-                            let reactionDTO = ReactionDTO(
-                                messageID: messageDTO.id,
-                                emoji: pending.parsed.emoji,
-                                senderName: pending.senderName,
-                                messageHash: pending.parsed.messageHash,
-                                rawText: pending.rawText,
-                                contactID: contact.id,
-                                deviceID: deviceID
-                            )
-                            if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                                reactionDTO,
-                                using: services.dataStore
-                            ) {
-                                await self.onReactionReceived?(result.messageID, result.summary)
-                            }
-
+                        if await self.persistReactionIfNew(reactionDTO, services: services) {
                             self.logger.debug("Processed pending DM reaction \(pending.parsed.emoji)")
                         }
                     }
@@ -1074,32 +1062,16 @@ public actor SyncCoordinator {
                     parsed: parsed,
                     channelIndex: message.channelIndex
                 ) {
-                    // Check for duplicate
-                    let senderName = senderNodeName ?? "Unknown"
-                    let exists = try? await services.dataStore.reactionExists(
+                    let reactionDTO = ReactionDTO(
                         messageID: targetMessageID,
-                        senderName: senderName,
-                        emoji: parsed.emoji
+                        emoji: parsed.emoji,
+                        senderName: senderNodeName ?? "Unknown",
+                        messageHash: parsed.messageHash,
+                        rawText: messageText,
+                        channelIndex: message.channelIndex,
+                        deviceID: deviceID
                     )
-
-                    if exists != true {
-                        // Save reaction
-                        let reactionDTO = ReactionDTO(
-                            messageID: targetMessageID,
-                            emoji: parsed.emoji,
-                            senderName: senderName,
-                            messageHash: parsed.messageHash,
-                            rawText: messageText,
-                            channelIndex: message.channelIndex,
-                            deviceID: deviceID
-                        )
-                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                            reactionDTO,
-                            using: services.dataStore
-                        ) {
-                            await self.onReactionReceived?(result.messageID, result.summary)
-                        }
-
+                    if await self.persistReactionIfNew(reactionDTO, services: services) {
                         self.logger.debug("Saved reaction \(parsed.emoji) to message \(targetMessageID)")
                     }
 
@@ -1120,30 +1092,16 @@ public actor SyncCoordinator {
                     limit: 200
                 ) {
                     let targetMessageID = targetMessage.id
-                    let senderName = senderNodeName ?? "Unknown"
-                    let exists = try? await services.dataStore.reactionExists(
+                    let reactionDTO = ReactionDTO(
                         messageID: targetMessageID,
-                        senderName: senderName,
-                        emoji: parsed.emoji
+                        emoji: parsed.emoji,
+                        senderName: senderNodeName ?? "Unknown",
+                        messageHash: parsed.messageHash,
+                        rawText: messageText,
+                        channelIndex: message.channelIndex,
+                        deviceID: deviceID
                     )
-
-                    if exists != true {
-                        let reactionDTO = ReactionDTO(
-                            messageID: targetMessageID,
-                            emoji: parsed.emoji,
-                            senderName: senderName,
-                            messageHash: parsed.messageHash,
-                            rawText: messageText,
-                            channelIndex: message.channelIndex,
-                            deviceID: deviceID
-                        )
-                        if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                            reactionDTO,
-                            using: services.dataStore
-                        ) {
-                            await self.onReactionReceived?(result.messageID, result.summary)
-                        }
-
+                    if await self.persistReactionIfNew(reactionDTO, services: services) {
                         let targetSenderName: String?
                         if targetMessage.direction == .outgoing {
                             targetSenderName = selfNodeName.isEmpty ? nil : selfNodeName
@@ -1196,29 +1154,16 @@ public actor SyncCoordinator {
 
                     // Process any pending reactions that now have their target
                     for pending in pendingMatches {
-                        let exists = try? await services.dataStore.reactionExists(
+                        let reactionDTO = ReactionDTO(
                             messageID: messageDTO.id,
+                            emoji: pending.parsed.emoji,
                             senderName: pending.senderNodeName,
-                            emoji: pending.parsed.emoji
+                            messageHash: pending.parsed.messageHash,
+                            rawText: pending.rawText,
+                            channelIndex: pending.channelIndex,
+                            deviceID: pending.deviceID
                         )
-
-                        if exists != true {
-                            let reactionDTO = ReactionDTO(
-                                messageID: messageDTO.id,
-                                emoji: pending.parsed.emoji,
-                                senderName: pending.senderNodeName,
-                                messageHash: pending.parsed.messageHash,
-                                rawText: pending.rawText,
-                                channelIndex: pending.channelIndex,
-                                deviceID: pending.deviceID
-                            )
-                            if let result = await services.reactionService.persistReactionAndUpdateSummary(
-                                reactionDTO,
-                                using: services.dataStore
-                            ) {
-                                await self.onReactionReceived?(result.messageID, result.summary)
-                            }
-                        }
+                        await self.persistReactionIfNew(reactionDTO, services: services)
                     }
                 }
 
