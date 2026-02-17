@@ -668,7 +668,7 @@ final class LineOfSightViewModel {
             startHeightMeters: pointAHeight,
             endHeightMeters: repeaterHeight,
             frequencyMHz: freq,
-            kFactor: k
+            refractionK: k
         )
 
         let rbResult = RFCalculator.analyzePathSegment(
@@ -676,7 +676,7 @@ final class LineOfSightViewModel {
             startHeightMeters: repeaterHeight,
             endHeightMeters: pointBHeight,
             frequencyMHz: freq,
-            kFactor: k
+            refractionK: k
         )
 
         // Create segment results
@@ -764,7 +764,7 @@ final class LineOfSightViewModel {
                 startHeightMeters: pointAHeight,
                 endHeightMeters: repeaterHeight,
                 frequencyMHz: freq,
-                kFactor: k
+                refractionK: k
             )
 
             let rbResult = RFCalculator.analyzePathSegment(
@@ -772,7 +772,7 @@ final class LineOfSightViewModel {
                 startHeightMeters: repeaterHeight,
                 endHeightMeters: pointBHeight,
                 frequencyMHz: freq,
-                kFactor: k
+                refractionK: k
             )
 
             // Create segment results
@@ -894,7 +894,7 @@ final class LineOfSightViewModel {
                         pointAHeightMeters: pointAHeight,
                         pointBHeightMeters: pointBHeight,
                         frequencyMHz: freq,
-                        kFactor: k
+                        refractionK: k
                     )
                 }.value
 
@@ -983,7 +983,7 @@ final class LineOfSightViewModel {
                     pointAHeightMeters: pointAHeight,
                     pointBHeightMeters: pointBHeight,
                     frequencyMHz: freq,
-                    kFactor: k
+                    refractionK: k
                 )
             }.value
 
