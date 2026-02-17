@@ -274,7 +274,9 @@ struct SyncCoordinatorTests {
         }
 
         // Wait for sync to start (activity started callback)
-        try await Task.sleep(for: .milliseconds(50))
+        try await waitUntil("Sync activity should have started") {
+            await tracker.started
+        }
         let started = await tracker.started
         #expect(started, "Sync activity should have started")
 
@@ -406,7 +408,9 @@ struct SyncCoordinatorTests {
         }
 
         // Wait for first sync to start
-        try await Task.sleep(for: .milliseconds(50))
+        try await waitUntil("First sync should have started") {
+            await tracker.endedCount >= 1
+        }
 
         // Try to start a second sync while first is still running
         try await coordinator.performFullSync(

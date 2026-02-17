@@ -31,13 +31,17 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
             connectionIntent: .wantsConnection()
         )
 
-        // Allow handler wiring task from ConnectionManager init to complete.
-        try? await Task.sleep(for: .milliseconds(50))
+        // Yield to let handler wiring task from ConnectionManager init complete
+        await Task.yield()
         await mock.simulateAutoReconnecting(
             deviceID: deviceID,
             errorInfo: "domain=CBErrorDomain, code=15, desc=Failed to encrypt"
         )
-        try? await Task.sleep(for: .milliseconds(50))
+
+        // Wait for auto-reconnect handler to propagate state
+        try await waitUntil("connectionState should transition to .connecting") {
+            manager.connectionState == .connecting
+        }
 
         let diagnostic = manager.lastDisconnectDiagnostic ?? ""
         #expect(
