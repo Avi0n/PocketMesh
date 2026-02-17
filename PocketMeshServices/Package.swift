@@ -17,7 +17,10 @@ let package = Package(
         ),
         .testTarget(
             name: "PocketMeshServicesTests",
-            dependencies: ["PocketMeshServices"]
+            dependencies: [
+                "PocketMeshServices",
+                .product(name: "MeshCoreTestSupport", package: "MeshCore")
+            ]
         )
     ]
 )
