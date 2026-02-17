@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  spm-tests:
+    name: SPM Package Tests
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Test MeshCore
+        run: swift test --package-path MeshCore
+
+      - name: Test PocketMeshServices
+        run: swift test --package-path PocketMeshServices
+
+  xcode-tests:
+    name: Xcode Tests
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          brew tap FelixHerrmann/tap
+          brew install xcodegen swiftgen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Run tests
+        run: |
+          xcodebuild test \
+            -scheme PocketMesh \
+            -destination "platform=iOS Simulator,name=iPhone 16e" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
