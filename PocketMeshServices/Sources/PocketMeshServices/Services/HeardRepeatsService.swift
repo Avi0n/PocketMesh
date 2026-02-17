@@ -9,7 +9,7 @@ public typealias HeardRepeatHandler = @Sendable (UUID, Int) async -> Void
 /// Service for correlating RX log entries to sent channel messages
 /// and tracking "heard repeats" - evidence of message propagation through the mesh.
 public actor HeardRepeatsService {
-    private let persistenceStore: PersistenceStore
+    private let dataStore: PersistenceStore
     private let logger = PersistentLogger(subsystem: "PocketMesh", category: "HeardRepeatsService")
 
     /// Device ID for the current session
@@ -21,8 +21,8 @@ public actor HeardRepeatsService {
     /// Handler called when a repeat is recorded (messageID, newCount)
     private var onRepeatRecorded: HeardRepeatHandler?
 
-    public init(persistenceStore: PersistenceStore) {
-        self.persistenceStore = persistenceStore
+    public init(dataStore: PersistenceStore) {
+        self.dataStore = dataStore
     }
 
     /// Sets the handler called when a repeat is recorded.
@@ -42,7 +42,7 @@ public actor HeardRepeatsService {
     /// Checks if a repeat has already been recorded for this RX log entry.
     private func isDuplicateRepeat(_ entryID: UUID) async -> Bool {
         do {
-            return try await persistenceStore.messageRepeatExists(rxLogEntryID: entryID)
+            return try await dataStore.messageRepeatExists(rxLogEntryID: entryID)
         } catch {
             logger.error("Failed to check for existing repeat: \(error.localizedDescription)")
             return true // Assume duplicate on error to prevent potential duplicates
@@ -84,7 +84,7 @@ public actor HeardRepeatsService {
 
         // Find matching sent message
         do {
-            guard let message = try await persistenceStore.findSentChannelMessage(
+            guard let message = try await dataStore.findSentChannelMessage(
                 deviceID: deviceID,
                 channelIndex: channelIndex,
                 timestamp: senderTimestamp,
@@ -104,10 +104,10 @@ public actor HeardRepeatsService {
                 rxLogEntryID: entry.id
             )
 
-            try await persistenceStore.saveMessageRepeat(repeatDTO)
+            try await dataStore.saveMessageRepeat(repeatDTO)
 
             // Increment and return new count
-            let newCount = try await persistenceStore.incrementMessageHeardRepeats(id: message.id)
+            let newCount = try await dataStore.incrementMessageHeardRepeats(id: message.id)
 
             logger.info("Recorded repeat #\(newCount) for message \(message.id)")
 
@@ -133,7 +133,7 @@ public actor HeardRepeatsService {
         // Return existing repeats from database
         logger.info("refreshRepeats called for messageID: \(messageID)")
         do {
-            let results = try await persistenceStore.fetchMessageRepeats(messageID: messageID)
+            let results = try await dataStore.fetchMessageRepeats(messageID: messageID)
             logger.info("refreshRepeats returning \(results.count) repeats")
             return results
         } catch {

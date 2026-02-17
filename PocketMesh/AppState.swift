@@ -153,7 +153,7 @@ public final class AppState {
 
     init(modelContainer: ModelContainer) {
         let bootstrapStore = PersistenceStore(modelContainer: modelContainer)
-        let bootstrapBuffer = DebugLogBuffer(persistenceStore: bootstrapStore)
+        let bootstrapBuffer = DebugLogBuffer(dataStore: bootstrapStore)
         self.bootstrapDebugLogBuffer = bootstrapBuffer
         DebugLogBuffer.shared = bootstrapBuffer
 

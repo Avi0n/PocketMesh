@@ -8,7 +8,7 @@ private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", cate
 /// Actor that processes RX log events, decodes channel messages, and persists to database.
 public actor RxLogService {
     private let session: MeshCoreSession
-    private let persistenceStore: PersistenceStore
+    private let dataStore: PersistenceStore
     private var deviceID: UUID?
 
     // Caches for fast lookup
@@ -32,9 +32,9 @@ public actor RxLogService {
     // Reentrancy guard for reprocessing
     private var isReprocessing = false
 
-    public init(session: MeshCoreSession, persistenceStore: PersistenceStore) {
+    public init(session: MeshCoreSession, dataStore: PersistenceStore) {
         self.session = session
-        self.persistenceStore = persistenceStore
+        self.dataStore = dataStore
     }
 
     /// Sets the HeardRepeatsService for processing channel message repeats.
@@ -77,7 +77,7 @@ public actor RxLogService {
     /// Load channel secrets from database to enable decryption before sync completes.
     private func loadSecretsFromDatabase(deviceID: UUID) async {
         do {
-            let channels = try await persistenceStore.fetchChannels(deviceID: deviceID)
+            let channels = try await dataStore.fetchChannels(deviceID: deviceID)
             channelSecrets = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.secret) })
             channelNames = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.name) })
             if !channels.isEmpty {
@@ -140,7 +140,7 @@ public actor RxLogService {
         let cutoff = Date().addingTimeInterval(-60)
 
         do {
-            let entries = try await persistenceStore.fetchRecentNoMatchingKeyEntries(
+            let entries = try await dataStore.fetchRecentNoMatchingKeyEntries(
                 deviceID: deviceID,
                 since: cutoff
             )
@@ -169,7 +169,7 @@ public actor RxLogService {
 
             // Batch update database (decodedText is @Transient, not persisted)
             if !updates.isEmpty {
-                try await persistenceStore.batchUpdateRxLogDecryption(updates)
+                try await dataStore.batchUpdateRxLogDecryption(updates)
 
                 // Process for heard repeats after DB update
                 if let heardRepeatsService {
@@ -290,8 +290,8 @@ public actor RxLogService {
 
         // Persist
         do {
-            try await persistenceStore.saveRxLogEntry(dto)
-            try await persistenceStore.pruneRxLogEntries(deviceID: deviceID)
+            try await dataStore.saveRxLogEntry(dto)
+            try await dataStore.pruneRxLogEntries(deviceID: deviceID)
         } catch {
             logger.error("Failed to save RX log entry: \(error.localizedDescription)")
         }
@@ -311,7 +311,7 @@ public actor RxLogService {
     public func loadExistingEntries() async -> [RxLogEntryDTO] {
         guard let deviceID else { return [] }
         do {
-            let entries = try await persistenceStore.fetchRxLogEntries(deviceID: deviceID)
+            let entries = try await dataStore.fetchRxLogEntries(deviceID: deviceID)
             return entries.map { decryptEntry($0) }
         } catch {
             logger.error("Failed to load RX log entries: \(error.localizedDescription)")
@@ -431,7 +431,7 @@ public actor RxLogService {
     public func clearEntries() async {
         guard let deviceID else { return }
         do {
-            try await persistenceStore.clearRxLogEntries(deviceID: deviceID)
+            try await dataStore.clearRxLogEntries(deviceID: deviceID)
         } catch {
             logger.error("Failed to clear RX log entries: \(error.localizedDescription)")
         }

@@ -8,7 +8,7 @@ public actor DebugLogBuffer {
     /// Set by ServiceContainer on initialization.
     public nonisolated(unsafe) static var shared: DebugLogBuffer?
 
-    private let persistenceStore: any PersistenceStoreProtocol
+    private let dataStore: any PersistenceStoreProtocol
     private var buffer: [DebugLogEntryDTO] = []
     private var flushTask: Task<Void, Never>?
     private var isFlushScheduled = false
@@ -17,8 +17,8 @@ public actor DebugLogBuffer {
 
     private static let logger = Logger(subsystem: "com.pocketmesh", category: "DebugLogBuffer")
 
-    public init(persistenceStore: any PersistenceStoreProtocol) {
-        self.persistenceStore = persistenceStore
+    public init(dataStore: any PersistenceStoreProtocol) {
+        self.dataStore = dataStore
     }
 
     public func append(_ entry: DebugLogEntryDTO) {
@@ -70,7 +70,7 @@ public actor DebugLogBuffer {
         buffer = []
 
         do {
-            try await persistenceStore.saveDebugLogEntries(entries)
+            try await dataStore.saveDebugLogEntries(entries)
         } catch {
             Self.logger.error("Failed to save debug logs: \(error.localizedDescription)")
 

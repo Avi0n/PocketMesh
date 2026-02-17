@@ -155,9 +155,9 @@ public final class ServiceContainer {
         self.advertisementService = AdvertisementService(session: session, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(session: session, dataStore: dataStore)
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
-        self.rxLogService = RxLogService(session: session, persistenceStore: dataStore)
-        self.heardRepeatsService = HeardRepeatsService(persistenceStore: dataStore)
-        self.debugLogBuffer = DebugLogBuffer(persistenceStore: dataStore)
+        self.rxLogService = RxLogService(session: session, dataStore: dataStore)
+        self.heardRepeatsService = HeardRepeatsService(dataStore: dataStore)
+        self.debugLogBuffer = DebugLogBuffer(dataStore: dataStore)
         DebugLogBuffer.shared = debugLogBuffer
         self.reactionService = ReactionService()
         self.nodeConfigService = NodeConfigService(
