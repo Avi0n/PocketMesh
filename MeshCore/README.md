@@ -265,26 +265,39 @@ The library includes comprehensive unit tests for:
 ```
 MeshCore/
 ├── Events/
-│   ├── EventDispatcher.swift    # Async event broadcasting
-│   └── MeshEvent.swift          # All event types
+│   ├── EventDispatcher.swift        # Async event broadcasting
+│   ├── EventFilter.swift            # Event stream filtering
+│   └── MeshEvent.swift              # All event types
 ├── LPP/
-│   ├── LPPDecoder.swift         # Cayenne LPP parsing
-│   └── LPPDataPoint+Display.swift
+│   ├── LPPDecoder.swift             # Cayenne LPP parsing
+│   └── LPPEncoder.swift             # Cayenne LPP encoding
 ├── Models/
-│   ├── Contact.swift            # MeshContact struct
-│   ├── Destination.swift        # Destination helpers
-│   └── DeviceInfo.swift         # Device info structs
+│   ├── Contact.swift                # MeshContact struct
+│   ├── Destination.swift            # Destination helpers
+│   └── DeviceInfo.swift             # Device info structs
 ├── Protocol/
-│   ├── PacketBuilder.swift      # Command packet construction
-│   ├── PacketParser.swift       # Response packet parsing
-│   └── PacketCodes.swift        # Protocol constants
+│   ├── ChannelCrypto.swift          # Channel message encryption
+│   ├── DataExtensions.swift         # Data/byte helpers
+│   ├── DirectMessageCrypto.swift    # Direct message encryption
+│   ├── PacketBuilder.swift          # Command packet construction
+│   ├── PacketCodes.swift            # Protocol constants
+│   ├── PacketParser.swift           # Response packet parsing
+│   ├── Parsers.swift                # Specialized response parsers
+│   ├── RxLogParser.swift            # RF log packet parsing
+│   └── RxLogTypes.swift             # RF log data types
+├── Protocols/
+│   └── MeshCoreSessionProtocol.swift # Session protocol for mocking
 ├── Session/
-│   ├── MeshCoreSession.swift    # Main session actor
-│   └── SessionConfiguration.swift
+│   ├── ContactManager.swift         # Contact list management
+│   ├── MeshCoreSession.swift        # Main session actor
+│   ├── RequestContext.swift         # Request/response context
+│   └── SessionConfiguration.swift   # Session configuration
 └── Transport/
-    ├── MeshTransport.swift      # Transport protocol
-    ├── BLETransport.swift       # CoreBluetooth implementation
-    └── MockTransport.swift      # Testing mock
+    ├── BLETransport.swift           # CoreBluetooth implementation
+    ├── MeshTransport.swift          # Transport protocol
+    ├── MockTransport.swift          # Testing mock
+    ├── WiFiFrameCodec.swift         # WiFi frame encoding/decoding
+    └── WiFiTransport.swift          # WiFi transport implementation
 ```
 
 ## License
