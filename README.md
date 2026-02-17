@@ -33,35 +33,47 @@ Join the beta on TestFlight or sideload using unsigned IPA files under [Releases
 - Channels (public, private, and hashtag)
 - Room Server connections with guest/participant modes
 - Heard repeats tracking
+- Message reactions (emoji)
+- Quoted replies
+- Link previews and inline images
+- @Mentions
+- Per-conversation notification levels
+- Hashtag channel deep links
+- Blocking (contacts and channel senders)
 
 ### Contacts
 - Auto-discovery on the mesh
-- QR code sharing
+- QR code and advert sharing
 - Favorites
+- Ping repeater (latency and SNR)
 
 ### Map
-- See contact positions
+- Contact positions
+- Map layers (standard, satellite, hybrid)
 
 ### Network Tools
 - **Trace Path** - Route through specific repeaters with option to save paths
 - **Line of Sight** - Terrain analysis with Fresnel zone and RF parameters
 - **RX Log** - Live packet capture
+- **Noise Floor Monitor** - Live dBm chart with signal quality stats
+- **CLI Terminal** - Remote command-line access to repeaters
 
 ### Remote Node Management
 - Repeater status (battery, uptime, neighbors, telemetry)
+- Remote repeater configuration (radio, behavior, identity, reboot)
+- Telemetry history charts
 - Admin authentication
 
 ### Companion Device
-- Bluetooth pairing
+- Bluetooth and WiFi pairing
 - Radio presets and manual tuning (frequency, TX power, spreading factor, bandwidth)
 - Battery monitoring with OCV curves
 
 ### General
 - Offline mesh networking (no internet required)
 - Push notifications with quick reply
-
-### Future Features
-- Import/Export config and/or data
+- Location sharing controls
+- Config import/export
 
 
 ## Requirements
