@@ -13,6 +13,9 @@ public final class BatteryMonitor {
     /// Current device battery info (nil if not fetched or disconnected)
     var deviceBattery: BatteryInfo?
 
+    /// Task for initial battery fetch on connect (cancelled on disconnect)
+    private var bootstrapTask: Task<Void, Never>?
+
     /// Task for periodic battery refresh (cancelled on disconnect/background)
     private var batteryRefreshTask: Task<Void, Never>?
 
@@ -44,24 +47,27 @@ public final class BatteryMonitor {
     /// Start battery monitoring for a newly connected device.
     /// Defers bootstrap so connection setup is not blocked by device request timeouts.
     func start(services: ServiceContainer, device: DeviceDTO?) {
-        let capturedServices = services
-        Task { @MainActor [weak self] in
+        bootstrapTask = Task { @MainActor [weak self] in
             guard let self else { return }
 
             do {
-                self.deviceBattery = try await capturedServices.settingsService.getBattery()
+                self.deviceBattery = try await services.settingsService.getBattery()
             } catch {
                 self.logger.debug("Deferred battery bootstrap failed: \(error.localizedDescription, privacy: .public)")
                 self.deviceBattery = nil
             }
 
-            await self.initializeBatteryThresholds(device: device, services: capturedServices)
-            self.startRefreshLoop(services: capturedServices, device: device)
+            guard !Task.isCancelled else { return }
+
+            await self.initializeBatteryThresholds(device: device, services: services)
+            self.startRefreshLoop(services: services, device: device)
         }
     }
 
     /// Stop battery monitoring (disconnect or background)
     func stop() {
+        bootstrapTask?.cancel()
+        bootstrapTask = nil
         batteryRefreshTask?.cancel()
         batteryRefreshTask = nil
     }
