@@ -200,20 +200,65 @@ Note: `ElevationService`, `LocationService`, `LinkPreviewService`, and `LogExpor
 - `RepeaterAdminService`: Repeater administration and configuration
 - `RoomServerService`: Room server operations and message routing
 
-**Lifecycle Management**:
+**Three-Phase Lifecycle**:
+
+ServiceContainer uses a deliberate three-phase initialization because services have circular runtime dependencies that can't be resolved in a single `init`. Phase 1 creates all services with their constructor dependencies. Phase 2 wires cross-service callbacks that couldn't be passed at init time. Phase 3 activates event listeners once a device is connected.
+
 ```swift
-// Create container
+// Phase 1: Create all services (constructor injection)
 let container = ServiceContainer(session: meshCoreSession, modelContainer: modelContainer)
 
-// Wire inter-service dependencies
+// Phase 2: Wire inter-service dependencies (callback injection)
 await container.wireServices()
 
-// Start event monitoring when device connects
+// Phase 3: Start event monitoring when device connects
 await container.startEventMonitoring(deviceID: deviceUUID)
 
-// Perform initial sync
+// Then perform initial sync
 await container.performInitialSync(deviceID: deviceUUID)
 ```
+
+**Phase 1 — Construction** (`init`):
+
+All services are created with their direct dependencies (session, dataStore, other services). The dependency order is:
+1. `PersistenceStore` (from modelContainer)
+2. Independent services: `KeychainService`, `NotificationService`
+3. Core services: `ContactService`, `MessageService`, `ChannelService`, `SettingsService`, `DeviceService`, `AdvertisementService`, `MessagePollingService`, `BinaryProtocolService`, `RxLogService`, `HeardRepeatsService`, `DebugLogBuffer`, `ReactionService`, `NodeConfigService`, `NodeSnapshotService`
+4. Remote Node services: `RemoteNodeService` (needs keychainService), `RepeaterAdminService` (needs remoteNodeService), `RoomServerService` (needs remoteNodeService)
+5. `SyncCoordinator` (no constructor dependencies)
+
+Also sets `DebugLogBuffer.shared = debugLogBuffer` so `PersistentLogger` can enqueue entries from anywhere.
+
+**Phase 2 — Wiring** (`wireServices()`):
+
+Six cross-service connections that can't be expressed as constructor parameters:
+
+| # | Connection | Purpose |
+|---|-----------|---------|
+| 1 | `messageService.setContactService(contactService)` | Path management during message retry (needs contact's last-known path) |
+| 2 | `contactService.setSyncCoordinator(syncCoordinator)` | UI refresh notifications when contacts change |
+| 3 | `nodeConfigService.setSyncCoordinator(syncCoordinator)` | UI refresh notifications after config import adds contacts |
+| 4 | `contactService.setCleanupHandler { ... }` | On contact block/delete: invalidate blocked-contacts cache, remove notifications, update badge, clean up remote node sessions |
+| 5 | `channelService.setChannelUpdateHandler { ... }` | Push channel secrets to RxLogService for packet decryption |
+| 6 | `rxLogService.setHeardRepeatsService(heardRepeatsService)` | Forward heard-repeat events for channel propagation analysis |
+
+Wiring is idempotent — the `isWired` guard prevents double-wiring.
+
+**Phase 3 — Event Monitoring** (`startEventMonitoring(deviceID:)`):
+
+Activates event listeners on services that process live device events. Only called after a device is connected:
+
+- `HeardRepeatsService.configure(deviceID:localNodeName:)` — needs device info for local node identification
+- `AdvertisementService.startEventMonitoring(deviceID:)` — listens for advertisement/path discovery events
+- `RxLogService.startEventMonitoring(deviceID:)` — captures RF packets for diagnostic viewer
+- `MessageService.startEventListening()` — listens for ACK events during send-with-retry
+- `RemoteNodeService.startEventMonitoring()` — listens for remote node session events
+- `MessagePollingService.startMessageEventMonitoring(deviceID:)` — routes polled messages to handlers
+- `MessagePollingService.startAutoFetch(deviceID:)` — begins periodic message polling
+- Debug log pruning (keeps most recent 1,000 entries)
+- Node snapshot pruning (removes snapshots older than 1 year)
+
+Monitoring is stopped symmetrically by `stopEventMonitoring()` on disconnect, which also flushes the debug log buffer.
 
 ### DTO (Data Transfer Object) Pattern
 
@@ -275,6 +320,25 @@ PocketMesh strictly adheres to the **Swift 6 concurrency model**:
 - **MainActor**: UI updates, `ConnectionManager`, and `MessageEventBroadcaster` are isolated to the main thread.
 - **AsyncStream**: Used for all event-driven communication (BLE data -> Protocol events -> Business events -> UI updates).
 - **Structured Concurrency**: Utilizes `TaskGroups` for complex asynchronous flows like message retries and contact synchronization.
+
+### `nonisolated(unsafe)` Invariants
+
+The codebase has four uses of `nonisolated(unsafe)`. Each bypasses Swift's actor isolation checking for a specific reason, with safety maintained by convention:
+
+**SyncCoordinator** — 3 callback properties (`SyncCoordinator.swift`):
+- `onPhaseChanged`, `onContactsChanged`, `onConversationsChanged`
+- **Pattern**: Set once during Phase 2 wiring (before event monitoring starts), then only called from `@MainActor` methods
+- **Safety**: Write-once semantics with no concurrent reads during the write. After wiring, the closures are effectively immutable
+
+**DebugLogBuffer** — static singleton (`DebugLogBuffer.swift`):
+- `static var shared: DebugLogBuffer?`
+- **Pattern**: Set once by `ServiceContainer.init`, read by `PersistentLogger` from any context
+- **Safety**: Written during app startup before any logging occurs. After assignment, the reference is never changed — only the actor-isolated internals are mutated (which are protected by actor isolation)
+
+**BLEStateMachine** — CBCentralManager (`BLEStateMachine.swift`):
+- `var centralManager: CBCentralManager!`
+- **Pattern**: CBCentralManager is not `Sendable`, but needs nonisolated access for the `bluetoothState` computed property
+- **Safety**: Mutated once during initialization (assigned in init). All subsequent access is either from the actor's isolated context or from the `bluetoothState` property, which reads the atomic `state` property of CBCentralManager. Returns `.unknown` during the brief window before assignment
 
 ### Data Flow (Receiving a Message)
 
