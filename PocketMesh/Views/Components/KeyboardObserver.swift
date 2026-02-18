@@ -10,6 +10,9 @@ final class KeyboardObserver {
     /// Height to add as bottom padding when keyboard is docked (0 when floating/hidden)
     private(set) var keyboardHeight: CGFloat = 0
 
+    // nonisolated(unsafe) is required because NSObjectProtocol is not Sendable
+    // and deinit is nonisolated. Tokens are only set once in setupObservers() on MainActor
+    // and read in deinit (which runs after all references are released).
     nonisolated(unsafe) private var showToken: (any NSObjectProtocol)?
     nonisolated(unsafe) private var hideToken: (any NSObjectProtocol)?
     nonisolated(unsafe) private var changeToken: (any NSObjectProtocol)?

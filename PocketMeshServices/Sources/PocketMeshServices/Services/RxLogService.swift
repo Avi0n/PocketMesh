@@ -299,11 +299,10 @@ public actor RxLogService {
         // Emit to stream
         streamContinuation?.yield(dto)
 
-        // Process for heard repeats (fire and forget - don't block stream)
+        // Process for heard repeats (inline await provides natural backpressure,
+        // preventing unbounded Task accumulation under high RX volume)
         if let heardRepeatsService = self.heardRepeatsService {
-            Task {
-                await heardRepeatsService.processForRepeats(dto)
-            }
+            await heardRepeatsService.processForRepeats(dto)
         }
     }
 

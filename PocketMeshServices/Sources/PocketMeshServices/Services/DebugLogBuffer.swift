@@ -5,7 +5,9 @@ import os
 /// Provides batched saves for performance and backpressure handling.
 public actor DebugLogBuffer {
     /// Shared buffer instance for app-wide logging.
-    /// Set by ServiceContainer on initialization.
+    /// Written only during app bootstrap on @MainActor (AppState.init, then ServiceContainer.init),
+    /// before any PersistentLogger reads can occur. Reads happen from any actor via PersistentLogger.
+    /// nonisolated(unsafe) is required because Swift cannot express "set-once-before-use" statically.
     public nonisolated(unsafe) static var shared: DebugLogBuffer?
 
     private let dataStore: any PersistenceStoreProtocol

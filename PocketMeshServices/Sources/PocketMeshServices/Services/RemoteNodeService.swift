@@ -120,6 +120,10 @@ public actor RemoteNodeService {
     /// Using 6-byte prefix matches MeshCore protocol format for login results.
     private var pendingLogins: [Data: CheckedContinuation<LoginResult, Error>] = [:]
 
+    /// Timeout tasks for pending logins, keyed by 6-byte public key prefix.
+    /// Cancelled when login succeeds/fails before timeout.
+    private var pendingLoginTimeoutTasks: [Data: Task<Void, Never>] = [:]
+
     /// Pending CLI request with command info for content-based response matching
     private struct PendingCLIRequest {
         let command: String
@@ -440,6 +444,7 @@ public actor RemoteNodeService {
         if let existing = pendingLogins.removeValue(forKey: prefix) {
             let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
             logger.warning("Overwriting pending login for prefix \(prefixHex)")
+            pendingLoginTimeoutTasks.removeValue(forKey: prefix)?.cancel()
             existing.resume(throwing: RemoteNodeError.cancelled)
         }
 
@@ -453,13 +458,14 @@ public actor RemoteNodeService {
         return try await withCheckedThrowingContinuation { continuation in
             pendingLogins[prefix] = continuation
 
-            Task { [self] in
+            let timeoutTask = Task { [self] in
                 // Send login via MeshCore session
                 let sentInfo: MessageSentInfo
                 do {
                     sentInfo = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
                 } catch {
                     // Send failed - remove pending and resume with error
+                    pendingLoginTimeoutTasks.removeValue(forKey: prefix)
                     if let pending = pendingLogins.removeValue(forKey: prefix) {
                         let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
                         pending.resume(throwing: RemoteNodeError.sessionError(meshError))
@@ -477,13 +483,16 @@ public actor RemoteNodeService {
                     await onTimeoutKnown(timeoutMs / 1000)
                 }
                 try? await Task.sleep(for: timeout)
+                guard !Task.isCancelled else { return }
                 if let pending = pendingLogins.removeValue(forKey: prefix) {
                     logger.warning("Login timeout after \(timeout) for session \(sessionID), prefix \(prefixHex)")
+                    pendingLoginTimeoutTasks.removeValue(forKey: prefix)
                     pending.resume(throwing: RemoteNodeError.timeout)
                 } else {
                     logger.info("login: timeout elapsed but continuation already consumed for prefix \(prefixHex)")
                 }
             }
+            pendingLoginTimeoutTasks[prefix] = timeoutTask
         }
     }
 
@@ -502,6 +511,7 @@ public actor RemoteNodeService {
             logger.warning("Login result with no pending request. Prefix: \(prefixHex)")
             return
         }
+        pendingLoginTimeoutTasks.removeValue(forKey: prefix)?.cancel()
         logger.info("handleLoginResult: found continuation for prefix \(prefixHex)")
 
         if result.success {
@@ -1066,12 +1076,17 @@ public actor RemoteNodeService {
 
     // MARK: - Cleanup
 
-    /// Stop all keep-alive timers (call on app termination)
+    /// Stop all keep-alive timers and cancel pending login timeouts (call on app termination)
     public func stopAllKeepAlives() {
         for task in keepAliveTasks.values {
             task.cancel()
         }
         keepAliveTasks.removeAll()
+
+        for task in pendingLoginTimeoutTasks.values {
+            task.cancel()
+        }
+        pendingLoginTimeoutTasks.removeAll()
     }
 
 }

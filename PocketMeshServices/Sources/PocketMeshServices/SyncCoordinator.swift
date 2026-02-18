@@ -114,16 +114,18 @@ public actor SyncCoordinator {
     /// Prevents stuck suppression if sync completes abnormally without clearing it.
     private var suppressionWatchdogTask: Task<Void, Never>?
 
-    /// Callback when sync phase changes (for SwiftUI observation)
-    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    /// Callback when sync phase changes (for SwiftUI observation).
+    /// Set once during wiring (actor-isolated), read from @MainActor methods (setState).
+    /// nonisolated(unsafe) bridges this cross-isolation boundary; safe because writes
+    /// complete before any reads begin.
     nonisolated(unsafe) private var onPhaseChanged: (@Sendable @MainActor (_ phase: SyncPhase?) -> Void)?
 
-    /// Callback when contacts data changes (for SwiftUI observation)
-    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    /// Callback when contacts data changes (for SwiftUI observation).
+    /// Same cross-isolation invariant as onPhaseChanged.
     nonisolated(unsafe) private var onContactsChanged: (@Sendable @MainActor () -> Void)?
 
-    /// Callback when conversations data changes (for SwiftUI observation)
-    /// nonisolated(unsafe) because it's set once during wiring and only called from @MainActor methods
+    /// Callback when conversations data changes (for SwiftUI observation).
+    /// Same cross-isolation invariant as onPhaseChanged.
     nonisolated(unsafe) private var onConversationsChanged: (@Sendable @MainActor () -> Void)?
 
     /// Callback when a direct message is received (for MessageEventBroadcaster)
