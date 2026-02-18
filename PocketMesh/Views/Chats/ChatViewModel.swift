@@ -662,7 +662,7 @@ final class ChatViewModel {
                 dividerComputed = true
             }
 
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index loaded messages for reaction matching and process any pending reactions
             if let reactionService = appState?.services?.reactionService {
@@ -911,7 +911,7 @@ final class ChatViewModel {
             }
 
             buildChannelSenders(deviceID: channel.deviceID)
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index loaded messages for reaction matching and process any pending reactions
             if let reactionService = appState?.services?.reactionService {
@@ -1047,7 +1047,7 @@ final class ChatViewModel {
             }
 
             // Rebuild display items with new messages
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index older channel messages for reaction matching and process pending reactions
             if let channel = currentChannel,
@@ -1790,15 +1790,10 @@ final class ChatViewModel {
     // MARK: - Display Items
 
     /// Build display items with pre-computed properties.
-    /// URL detection runs off main thread to avoid blocking.
-    func buildDisplayItems() async {
+    func buildDisplayItems() {
         messagesByID = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
 
-        // Extract texts for URL detection off main thread
-        let texts = messages.map { $0.text }
-        let urls = await Task.detached(priority: .userInitiated) {
-            texts.map { LinkPreviewService.extractFirstURL(from: $0) }
-        }.value
+        let urls = messages.map { LinkPreviewService.extractFirstURL(from: $0.text) }
 
         displayItems = messages.enumerated().map { index, message in
             // Compute all display flags in single pass to avoid redundant array lookups
