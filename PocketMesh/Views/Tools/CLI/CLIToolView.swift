@@ -195,10 +195,14 @@ private struct CLIToolContent: View {
                 }
             }
         }
-        .background(Color(.secondarySystemBackground))
-        .contentShape(.rect)
-        .onTapGesture {
-            isKeyboardFocused = true
+        .background {
+            Button {
+                isKeyboardFocused = true
+            } label: {
+                Color(.secondarySystemBackground)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHidden(true)
         }
         .safeAreaInset(edge: .bottom) {
             if isKeyboardFocused {

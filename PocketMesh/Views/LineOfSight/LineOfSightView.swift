@@ -133,7 +133,17 @@ struct LineOfSightView: View {
 
     @ViewBuilder
     private func mapCanvasWithBehaviors(showSheet: Bool) -> some View {
-        let base = mapCanvas
+        let base = LOSMapCanvasView(
+            viewModel: viewModel,
+            appState: appState,
+            mapStyleSelection: $mapStyleSelection,
+            showingMapStyleMenu: $showingMapStyleMenu,
+            showLabels: $showLabels,
+            isDropPinMode: $isDropPinMode,
+            mapOverlayBottomPadding: mapOverlayBottomPadding,
+            onRepeaterTap: { handleRepeaterTap($0) },
+            onMapTap: { handleMapTap(at: $0) }
+        )
             .onGeometryChange(for: CGFloat.self) { proxy in
                 proxy.size.height
             } action: { height in
@@ -271,148 +281,9 @@ struct LineOfSightView: View {
         }
     }
 
-    private var mapCanvas: some View {
-        ZStack {
-            mapLayer
-                .ignoresSafeArea()
-
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    mapControlsStack
-                }
-            }
-            .padding(.bottom, mapOverlayBottomPadding)
-
-            if showingMapStyleMenu {
-                Button {
-                    withAnimation {
-                        showingMapStyleMenu = false
-                    }
-                } label: {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                }
-                .buttonStyle(.plain)
-
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 0) {
-                            ForEach(LOSMapStyleSelection.allCases, id: \.self) { style in
-                                Button {
-                                    mapStyleSelection = style
-                                    withAnimation {
-                                        showingMapStyleMenu = false
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text(style.label)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        if mapStyleSelection == style {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.blue)
-                                        }
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                }
-
-                                if style != LOSMapStyleSelection.allCases.last {
-                                    Divider()
-                                }
-                            }
-                        }
-                        .frame(width: 140)
-                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
-                        .shadow(radius: 8)
-                        .padding(.trailing)
-                    }
-                }
-                .padding(.bottom, mapOverlayBottomPadding)
-            }
-        }
-    }
-
-    // MARK: - Map Layer
-
     private var collapsedSheetFraction: Double {
         guard showAnalysisSheet else { return 0 }
         return 0.30
-    }
-
-    private var mapLayer: some View {
-        LOSMKMapView(
-            repeaters: viewModel.repeatersWithLocation,
-            pointA: viewModel.pointA,
-            pointB: viewModel.pointB,
-            repeaterTarget: viewModel.repeaterPoint,
-            relocatingPoint: viewModel.relocatingPoint,
-            mapType: mapStyleSelection.mkMapType,
-            showLabels: showLabels,
-            cameraRegion: $viewModel.cameraRegion,
-            cameraRegionVersion: viewModel.cameraRegionVersion,
-            selectionState: { [viewModel] in viewModel.selectionState },
-            onRepeaterTap: { contact in
-                handleRepeaterTap(contact)
-            },
-            onMapTap: { coordinate in
-                handleMapTap(at: coordinate)
-            }
-        )
-    }
-
-    // MARK: - Map Controls Stack
-
-    private var mapControlsStack: some View {
-        MapControlsToolbar(
-            onLocationTap: {
-                Task {
-                    if let location = try? await appState.locationService.requestCurrentLocation() {
-                        viewModel.cameraRegion = MKCoordinateRegion(
-                            center: location.coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                        )
-                        viewModel.cameraRegionVersion += 1
-                    }
-                }
-            },
-            showingLayersMenu: $showingMapStyleMenu
-        ) {
-            labelToggleButton
-            dropPinButton
-        }
-    }
-
-    private var labelToggleButton: some View {
-        Button {
-            showLabels.toggle()
-        } label: {
-            Image(systemName: "character.textbox")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(showLabels ? .blue : .primary)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
-    }
-
-    private var dropPinButton: some View {
-        Button {
-            isDropPinMode.toggle()
-        } label: {
-            Image(systemName: isDropPinMode ? "mappin.slash" : "mappin")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(isDropPinMode ? .blue : .primary)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin)
     }
 
     // MARK: - Analysis Sheet
@@ -1245,6 +1116,136 @@ struct LineOfSightView: View {
 
     private func handleRepeaterTap(_ contact: ContactDTO) {
         viewModel.toggleContact(contact)
+    }
+}
+
+// MARK: - Map Canvas View
+
+private struct LOSMapCanvasView: View {
+    @Bindable var viewModel: LineOfSightViewModel
+    let appState: AppState
+    @Binding var mapStyleSelection: LOSMapStyleSelection
+    @Binding var showingMapStyleMenu: Bool
+    @Binding var showLabels: Bool
+    @Binding var isDropPinMode: Bool
+    let mapOverlayBottomPadding: CGFloat
+    let onRepeaterTap: (ContactDTO) -> Void
+    let onMapTap: (CLLocationCoordinate2D) -> Void
+
+    var body: some View {
+        ZStack {
+            LOSMKMapView(
+                repeaters: viewModel.repeatersWithLocation,
+                pointA: viewModel.pointA,
+                pointB: viewModel.pointB,
+                repeaterTarget: viewModel.repeaterPoint,
+                relocatingPoint: viewModel.relocatingPoint,
+                mapType: mapStyleSelection.mkMapType,
+                showLabels: showLabels,
+                cameraRegion: $viewModel.cameraRegion,
+                cameraRegionVersion: viewModel.cameraRegionVersion,
+                selectionState: { [viewModel] in viewModel.selectionState },
+                onRepeaterTap: onRepeaterTap,
+                onMapTap: onMapTap
+            )
+            .ignoresSafeArea()
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    MapControlsToolbar(
+                        onLocationTap: {
+                            Task {
+                                if let location = try? await appState.locationService.requestCurrentLocation() {
+                                    viewModel.cameraRegion = MKCoordinateRegion(
+                                        center: location.coordinate,
+                                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                    )
+                                    viewModel.cameraRegionVersion += 1
+                                }
+                            }
+                        },
+                        showingLayersMenu: $showingMapStyleMenu
+                    ) {
+                        Button {
+                            showLabels.toggle()
+                        } label: {
+                            Image(systemName: "character.textbox")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(showLabels ? .blue : .primary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
+
+                        Button {
+                            isDropPinMode.toggle()
+                        } label: {
+                            Image(systemName: isDropPinMode ? "mappin.slash" : "mappin")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(isDropPinMode ? .blue : .primary)
+                                .frame(width: 44, height: 44)
+                                .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin)
+                    }
+                }
+            }
+            .padding(.bottom, mapOverlayBottomPadding)
+
+            if showingMapStyleMenu {
+                Button {
+                    withAnimation {
+                        showingMapStyleMenu = false
+                    }
+                } label: {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                }
+                .buttonStyle(.plain)
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 0) {
+                            ForEach(LOSMapStyleSelection.allCases, id: \.self) { style in
+                                Button {
+                                    mapStyleSelection = style
+                                    withAnimation {
+                                        showingMapStyleMenu = false
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(style.label)
+                                            .foregroundStyle(.primary)
+                                        Spacer()
+                                        if mapStyleSelection == style {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.blue)
+                                        }
+                                    }
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                                }
+
+                                if style != LOSMapStyleSelection.allCases.last {
+                                    Divider()
+                                }
+                            }
+                        }
+                        .frame(width: 140)
+                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
+                        .shadow(radius: 8)
+                        .padding(.trailing)
+                    }
+                }
+                .padding(.bottom, mapOverlayBottomPadding)
+            }
+        }
     }
 }
 
