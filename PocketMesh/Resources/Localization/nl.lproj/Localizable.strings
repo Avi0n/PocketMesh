@@ -151,3 +151,36 @@
 
 /* Notification title when a new room is discovered on the mesh network */
 "notifications.discovery.room" = "Nieuwe ruimte ontdekt";
+
+
+// MARK: - Notification Actions
+
+/* Notification action button to reply to a message */
+"notifications.action.reply" = "Antwoorden";
+
+/* Notification action button to send a quick reply */
+"notifications.action.send" = "Verzenden";
+
+/* Notification action placeholder for quick reply text input */
+"notifications.action.messagePlaceholder" = "Bericht...";
+
+/* Notification action button to mark a message as read */
+"notifications.action.markAsRead" = "Markeer als gelezen";
+
+
+// MARK: - Connection VoiceOver Announcements
+
+/* VoiceOver announcement when sync fails and device is disconnecting */
+"accessibility.connection.syncFailedDisconnecting" = "Synchronisatie mislukt. Verbinding wordt verbroken.";
+
+/* VoiceOver announcement when device connection is lost */
+"accessibility.connection.deviceConnectionLost" = "Apparaatverbinding verloren";
+
+/* VoiceOver announcement when device reconnects */
+"accessibility.connection.deviceReconnected" = "Apparaat opnieuw verbonden";
+
+
+// MARK: - Status Pill
+
+/* Status pill message when sync has failed */
+"statusPill.syncFailed" = "Sync mislukt";

@@ -9,4 +9,16 @@ public protocol NotificationStringProvider: Sendable {
     /// - Parameter type: The type of contact discovered
     /// - Returns: Localized notification title (e.g., "New Repeater Discovered")
     func discoveryNotificationTitle(for type: ContactType) -> String
+
+    /// Returns the localized title for the "Reply" notification action.
+    var replyActionTitle: String { get }
+
+    /// Returns the localized title for the "Send" button in notification quick reply.
+    var sendButtonTitle: String { get }
+
+    /// Returns the localized placeholder for the notification quick reply text input.
+    var messagePlaceholder: String { get }
+
+    /// Returns the localized title for the "Mark as Read" notification action.
+    var markAsReadActionTitle: String { get }
 }

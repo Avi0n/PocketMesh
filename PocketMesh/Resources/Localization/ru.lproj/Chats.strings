@@ -124,6 +124,9 @@
 /* Location: ScrollToMentionFAB.swift - Accessibility hint for scroll to mention button */
 "chats.fab.scrollToMention.accessibilityHint" = "Двойное нажатие для перехода к сообщению";
 
+/* Location: ScrollToMentionFAB.swift - Accessibility value for unread mention count - %d is the number of unread mentions */
+"chats.fab.scrollToMention.accessibilityValue" = "%d непрочитанных упоминаний";
+
 /* Location: ScrollToBottomFAB.swift - Accessibility label for scroll to bottom button */
 "chats.fab.scrollToBottom.accessibilityLabel" = "Перейти к последнему сообщению";
 

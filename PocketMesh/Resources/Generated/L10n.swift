@@ -294,6 +294,10 @@ public enum L10n {
           public static let accessibilityHint = L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityHint", fallback: "Double-tap to navigate to the message")
           /// Location: ScrollToMentionFAB.swift - Accessibility label for scroll to mention button
           public static let accessibilityLabel = L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityLabel", fallback: "Scroll to your oldest unread mention")
+          /// Location: ScrollToMentionFAB.swift - Accessibility value for unread mention count - %d is the number of unread mentions
+          public static func accessibilityValue(_ p1: Int) -> String {
+            return L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityValue", p1, fallback: "%d unread mentions")
+          }
         }
       }
       public enum Filter {
@@ -1784,6 +1788,14 @@ public enum L10n {
       public static let on = L10n.tr("Localizable", "accessibility.on", fallback: "On")
       /// VoiceOver announcement when viewing cached data while disconnected from device
       public static let viewingCachedData = L10n.tr("Localizable", "accessibility.viewingCachedData", fallback: "Viewing cached data. Connect to device for updates.")
+      public enum Connection {
+        /// VoiceOver announcement when device connection is lost
+        public static let deviceConnectionLost = L10n.tr("Localizable", "accessibility.connection.deviceConnectionLost", fallback: "Device connection lost")
+        /// VoiceOver announcement when device reconnects
+        public static let deviceReconnected = L10n.tr("Localizable", "accessibility.connection.deviceReconnected", fallback: "Device reconnected")
+        /// VoiceOver announcement when sync fails and device is disconnecting
+        public static let syncFailedDisconnecting = L10n.tr("Localizable", "accessibility.connection.syncFailedDisconnecting", fallback: "Sync failed. Disconnecting.")
+      }
     }
     public enum Alert {
       public enum ConnectionFailed {
@@ -1864,6 +1876,16 @@ public enum L10n {
       public static let room = L10n.tr("Localizable", "nodeType.room", fallback: "Room")
     }
     public enum Notifications {
+      public enum Action {
+        /// Notification action button to mark a message as read
+        public static let markAsRead = L10n.tr("Localizable", "notifications.action.markAsRead", fallback: "Mark as Read")
+        /// Notification action placeholder for quick reply text input
+        public static let messagePlaceholder = L10n.tr("Localizable", "notifications.action.messagePlaceholder", fallback: "Message...")
+        /// Notification action button to reply to a message
+        public static let reply = L10n.tr("Localizable", "notifications.action.reply", fallback: "Reply")
+        /// Notification action button to send a quick reply
+        public static let send = L10n.tr("Localizable", "notifications.action.send", fallback: "Send")
+      }
       public enum Discovery {
         /// Notification title when a new contact is discovered on the mesh network
         public static let contact = L10n.tr("Localizable", "notifications.discovery.contact", fallback: "New Contact Discovered")
@@ -1886,6 +1908,10 @@ public enum L10n {
       public static let guest = L10n.tr("Localizable", "permission.guest", fallback: "Guest")
       /// Permission level with standard access
       public static let member = L10n.tr("Localizable", "permission.member", fallback: "Member")
+    }
+    public enum StatusPill {
+      /// Status pill message when sync has failed
+      public static let syncFailed = L10n.tr("Localizable", "statusPill.syncFailed", fallback: "Sync Failed")
     }
     public enum Tabs {
       /// Tab bar title for the messaging/conversations screen

@@ -92,7 +92,7 @@ public final class ConnectionUIState {
         syncFailedPillVisible = true
 
         if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Sync failed. Disconnecting.")
+            announceConnectionState(L10n.Localizable.Accessibility.Connection.syncFailedDisconnecting)
         }
 
         syncFailedPillTask = Task {
@@ -172,7 +172,7 @@ public final class ConnectionUIState {
         shouldSuppressDisconnectedPill: Bool
     ) {
         if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Device connection lost")
+            announceConnectionState(L10n.Localizable.Accessibility.Connection.deviceConnectionLost)
         }
         syncActivityCount = 0
         currentSyncPhase = nil
@@ -195,7 +195,7 @@ public final class ConnectionUIState {
         hideDisconnectedPill()
 
         if UIAccessibility.isVoiceOverRunning {
-            announceConnectionState("Device reconnected")
+            announceConnectionState(L10n.Localizable.Accessibility.Connection.deviceReconnected)
         }
 
         // Sync activity callbacks for syncing pill display

@@ -149,3 +149,36 @@
 
 /* Notification title when a new room is discovered on the mesh network */
 "notifications.discovery.room" = "Neuer Raum entdeckt";
+
+
+// MARK: - Notification Actions
+
+/* Notification action button to reply to a message */
+"notifications.action.reply" = "Antworten";
+
+/* Notification action button to send a quick reply */
+"notifications.action.send" = "Senden";
+
+/* Notification action placeholder for quick reply text input */
+"notifications.action.messagePlaceholder" = "Nachricht ...";
+
+/* Notification action button to mark a message as read */
+"notifications.action.markAsRead" = "Als gelesen markieren";
+
+
+// MARK: - Connection VoiceOver Announcements
+
+/* VoiceOver announcement when sync fails and device is disconnecting */
+"accessibility.connection.syncFailedDisconnecting" = "Synchronisierung fehlgeschlagen. Verbindung wird getrennt.";
+
+/* VoiceOver announcement when device connection is lost */
+"accessibility.connection.deviceConnectionLost" = "Geräteverbindung verloren";
+
+/* VoiceOver announcement when device reconnects */
+"accessibility.connection.deviceReconnected" = "Gerät wieder verbunden";
+
+
+// MARK: - Status Pill
+
+/* Status pill message when sync has failed */
+"statusPill.syncFailed" = "Sync fehlgeschlagen";

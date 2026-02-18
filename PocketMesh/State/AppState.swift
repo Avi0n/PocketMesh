@@ -128,7 +128,7 @@ public final class AppState {
     /// Priority: failed > syncing > ready > connecting > disconnected > hidden
     var statusPillState: StatusPillState {
         if connectionUI.syncFailedPillVisible {
-            return .failed(message: "Sync Failed")
+            return .failed(message: L10n.Localizable.StatusPill.syncFailed)
         }
         if connectionUI.syncActivityCount > 0 {
             return .syncing
@@ -304,12 +304,10 @@ public final class AppState {
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
 
-        // Set up notification center delegate and check authorization
+        // Set up notification center delegate, wire localized strings, then register categories
         UNUserNotificationCenter.current().delegate = services.notificationService
-        await services.notificationService.setup()
-
-        // Wire notification string provider for localized discovery notifications
         services.notificationService.setStringProvider(NotificationStringProviderImpl())
+        await services.notificationService.setup()
 
         // Configure badge count callback
         services.notificationService.getBadgeCount = { [weak self, dataStore = services.dataStore] in

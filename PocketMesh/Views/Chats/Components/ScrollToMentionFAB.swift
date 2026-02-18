@@ -22,7 +22,7 @@ struct ScrollToMentionFAB: View {
         .scaleEffect(isVisible ? 1 : 0.5)
         .animation(.snappy(duration: 0.2), value: isVisible)
         .accessibilityLabel(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityLabel)
-        .accessibilityValue(String(format: NSLocalizedString("chats.unreadMentions.accessibilityValue", tableName: "Chats", comment: ""), locale: .current, unreadMentionCount))
+        .accessibilityValue(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityValue(unreadMentionCount))
         .accessibilityHint(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityHint)
         .accessibilityHidden(!isVisible)
     }
