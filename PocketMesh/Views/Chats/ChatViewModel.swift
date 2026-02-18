@@ -990,17 +990,22 @@ final class ChatViewModel {
         isLoadingOlder = true
         defer { isLoadingOlder = false }
 
+        // Snapshot conversation context before any await — actor reentrancy
+        // means currentContact/currentChannel can change during suspensions
+        let contact = currentContact
+        let channel = currentChannel
+
         do {
             let currentOffset = totalFetchedCount
             var olderMessages: [MessageDTO]
 
-            if let contact = currentContact {
+            if let contact {
                 olderMessages = try await dataStore.fetchMessages(
                     contactID: contact.id,
                     limit: pageSize,
                     offset: currentOffset
                 )
-            } else if let channel = currentChannel {
+            } else if let channel {
                 olderMessages = try await dataStore.fetchMessages(
                     deviceID: channel.deviceID,
                     channelIndex: channel.index,
@@ -1019,7 +1024,7 @@ final class ChatViewModel {
             }
 
             // Filter blocked senders for channel messages
-            if currentChannel != nil, let syncCoordinator {
+            if channel != nil, let syncCoordinator {
                 let blockedNames = await syncCoordinator.blockedSenderNames()
                 if !blockedNames.isEmpty {
                     olderMessages = olderMessages.filter { message in
@@ -1030,7 +1035,7 @@ final class ChatViewModel {
             }
 
             // Hide sent reaction messages (unless failed)
-            let isDM = currentContact != nil
+            let isDM = contact != nil
             olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
 
             // Filter out messages already in array (race condition: appendMessageIfNew can add
@@ -1050,7 +1055,7 @@ final class ChatViewModel {
             buildDisplayItems()
 
             // Index older channel messages for reaction matching and process pending reactions
-            if let channel = currentChannel,
+            if let channel,
                let reactionService = appState?.services?.reactionService {
                 let localNodeName = appState?.connectedDevice?.nodeName
                 let deviceID = appState?.connectedDevice?.id ?? UUID()
@@ -1101,7 +1106,7 @@ final class ChatViewModel {
             }
 
             // Index older DM messages for reaction matching and process pending reactions
-            if let contact = currentContact,
+            if let contact,
                let reactionService = appState?.services?.reactionService {
                 for message in olderMessages {
                     let pendingMatches = await reactionService.indexDMMessage(
@@ -1695,17 +1700,6 @@ final class ChatViewModel {
         return gap > messageGroupingGapSeconds
     }
 
-    /// Determines if the message direction changed from the previous message.
-    /// Used to add visual separation between incoming and outgoing message groups.
-    static func isDirectionChange(at index: Int, in messages: [MessageDTO]) -> Bool {
-        guard index > 0 else { return false }
-
-        let currentMessage = messages[index]
-        let previousMessage = messages[index - 1]
-
-        return currentMessage.direction != previousMessage.direction
-    }
-
     /// Determines if sender name should be shown for a channel message at the given index.
     /// Returns true for first message or when sender/timing breaks the group.
     ///
@@ -2166,6 +2160,8 @@ final class ChatViewModel {
         isProcessingQueue = true
         defer { isProcessingQueue = false }
 
+        // Snapshot before suspensions — currentContact can change if user switches conversations
+        let contact = currentContact
         var lastDeviceID: UUID?
 
         // Process messages with re-check after reload to catch any that arrived during reload
@@ -2193,7 +2189,7 @@ final class ChatViewModel {
             }
 
             // Reload after queue drains - syncs statuses and conversation list
-            if let contact = currentContact {
+            if let contact {
                 await loadMessages(for: contact)
             }
             if let deviceID = lastDeviceID {
