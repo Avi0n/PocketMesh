@@ -37,9 +37,9 @@ struct MessageTextTests {
         let linkValue = formatted[attrRange].link
         #expect(linkValue == nil, "WCMesh.com should not be parsed as a URL when it's part of a mention")
 
-        // Verify it has mention styling (bold)
-        let intent = formatted[attrRange].inlinePresentationIntent
-        #expect(intent == .stronglyEmphasized, "WCMesh.com should have mention styling (bold)")
+        // Verify it has mention styling (underline)
+        let underline = formatted[attrRange].underlineStyle
+        #expect(underline == .single, "WCMesh.com should have mention styling (underline)")
     }
 
     @Test("URL-like text in mention with IP address should not be parsed as link")

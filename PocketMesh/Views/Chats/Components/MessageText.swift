@@ -69,7 +69,7 @@ struct MessageText: View {
 
             // Replace @[name] with @name, styled appropriately for bubble color
             var replacement = AttributedString("@\(name)")
-            replacement.inlinePresentationIntent = .stronglyEmphasized
+            replacement.underlineStyle = .single
 
             if isOnDarkBubble {
                 // On dark bubbles: use white text, with background only for self-mentions
@@ -102,11 +102,11 @@ struct MessageText: View {
     private func applyURLFormatting(_ attributedString: inout AttributedString) {
         guard let detector = Self.urlDetector else { return }
 
-        // Collect ranges already styled as mentions (have stronglyEmphasized intent)
+        // Collect ranges already styled as mentions (have underline style)
         // URLs within these ranges should not be converted to links
         var mentionRanges: [Range<AttributedString.Index>] = []
         for run in attributedString.runs {
-            if run.inlinePresentationIntent == .stronglyEmphasized {
+            if run.underlineStyle == .single {
                 mentionRanges.append(run.range)
             }
         }
