@@ -346,7 +346,6 @@ struct ChannelChatView: View {
             UnifiedMessageBubble(
                 message: message,
                 contactName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
-                contactNodeName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .channel(
                     isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),

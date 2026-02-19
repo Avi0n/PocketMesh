@@ -462,7 +462,6 @@ private struct ChatMessagesContent: View {
             UnifiedMessageBubble(
                 message: message,
                 contactName: contact.displayName,
-                contactNodeName: contact.name,
                 deviceName: deviceName,
                 configuration: .directMessage,
                 showTimestamp: item.showTimestamp,

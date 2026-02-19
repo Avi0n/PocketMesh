@@ -58,7 +58,6 @@ struct MessageBubbleConfiguration: Sendable {
 struct UnifiedMessageBubble: View {
     let message: MessageDTO
     let contactName: String
-    let contactNodeName: String
     let deviceName: String
     let configuration: MessageBubbleConfiguration
     let showTimestamp: Bool
@@ -98,7 +97,6 @@ struct UnifiedMessageBubble: View {
     init(
         message: MessageDTO,
         contactName: String,
-        contactNodeName: String,
         deviceName: String = "Me",
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
@@ -122,7 +120,6 @@ struct UnifiedMessageBubble: View {
     ) {
         self.message = message
         self.contactName = contactName
-        self.contactNodeName = contactNodeName
         self.deviceName = deviceName
         self.configuration = configuration
         self.showTimestamp = showTimestamp
@@ -364,7 +361,7 @@ struct UnifiedMessageBubble: View {
     // MARK: - Computed Properties
 
     private var senderName: String {
-        configuration.senderNameResolver?(message) ?? "Unknown"
+        configuration.senderNameResolver?(message) ?? L10n.Chats.Chats.Message.Sender.unknown
     }
 
     private var senderColor: Color {
@@ -464,9 +461,7 @@ struct UnifiedMessageBubble: View {
 
     private var statusText: String {
         switch message.status {
-        case .pending:
-            return L10n.Chats.Chats.Message.Status.sending
-        case .sending:
+        case .pending, .sending:
             return L10n.Chats.Chats.Message.Status.sending
         case .sent:
             // Build status parts: repeats, send count, sent
@@ -507,31 +502,6 @@ struct UnifiedMessageBubble: View {
 
     // MARK: - Helpers
 
-    private func snrFormatted(_ snr: Double) -> String {
-        let quality: String
-        switch snr {
-        case 10...:
-            quality = L10n.Chats.Chats.Signal.excellent
-        case 5..<10:
-            quality = L10n.Chats.Chats.Signal.good
-        case 0..<5:
-            quality = L10n.Chats.Chats.Signal.fair
-        case -10..<0:
-            quality = L10n.Chats.Chats.Signal.poor
-        default:
-            quality = L10n.Chats.Chats.Signal.veryPoor
-        }
-        return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB (\(quality))"
-    }
-
-    private func hopCountFormatted(_ pathLength: UInt8) -> String {
-        switch pathLength {
-        case 0, 0xFF:  // 0 = zero hops, 0xFF = direct/unknown (no route tracking)
-            return L10n.Chats.Chats.Message.Hops.direct
-        default:
-            return "\(pathLength)"
-        }
-    }
 }
 
 // MARK: - Previews
@@ -547,7 +517,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Alice",
-        contactNodeName: "Alice",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -566,7 +535,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Bob",
-        contactNodeName: "Bob",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -583,7 +551,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Charlie",
-        contactNodeName: "Charlie",
         deviceName: "My Device",
         configuration: .directMessage,
         onRetry: { }
@@ -602,7 +569,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "General",
-        contactNodeName: "General",
         deviceName: "My Device",
         configuration: .channel(isPublic: true, contacts: [])
     )
@@ -619,7 +585,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Private Group",
-        contactNodeName: "Private Group",
         deviceName: "My Device",
         configuration: .channel(isPublic: false, contacts: [])
     )
@@ -637,7 +602,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Alice",
-        contactNodeName: "Alice",
         configuration: .directMessage
     )
 }
@@ -655,7 +619,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Bob",
-        contactNodeName: "Bob",
         configuration: .directMessage
     )
 }
@@ -673,7 +636,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Charlie",
-        contactNodeName: "Charlie",
         configuration: .directMessage
     )
 }
