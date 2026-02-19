@@ -257,7 +257,7 @@
 "contacts.detail.name" = "名称";
 
 /* Location: ContactDetailView.swift - Purpose: Last advert label */
-"contacts.detail.lastAdvert" = "最后广播";
+"contacts.detail.lastAdvert" = "最近广播";
 
 /* Location: ContactDetailView.swift - Purpose: Unread messages label */
 "contacts.detail.unreadMessages" = "未读消息";
@@ -276,22 +276,22 @@
 // MARK: - Contact Detail Network Path Section
 
 /* Location: ContactDetailView.swift - Purpose: Network path section header */
-"contacts.detail.networkPath" = "网络路径";
+"contacts.detail.networkPath" = "网络配置";
 
 /* Location: ContactDetailView.swift - Purpose: Route label */
-"contacts.detail.route" = "路由";
+"contacts.detail.route" = "路由类型";
 
 /* Location: ContactDetailView.swift - Purpose: Hops away label */
 "contacts.detail.hopsAway" = "距离跳数";
 
 /* Location: ContactDetailView.swift - Purpose: Path discovery in progress */
-"contacts.detail.discoveringPath" = "正在发现路径...";
+"contacts.detail.discoveringPath" = "正在探测...";
 
 /* Location: ContactDetailView.swift - Purpose: Discovery countdown */
-"contacts.detail.secondsRemaining" = "最多 %d 秒剩余";
+"contacts.detail.secondsRemaining" = "时间剩余 %d 秒";
 
 /* Location: ContactDetailView.swift - Purpose: Discover path button */
-"contacts.detail.discoverPath" = "发现路径";
+"contacts.detail.discoverPath" = "路由探测";
 
 /* Location: ContactDetailView.swift - Purpose: Edit path button */
 "contacts.detail.editPath" = "编辑路径";
@@ -300,7 +300,7 @@
 "contacts.detail.resetPath" = "重置路径";
 
 /* Location: ContactDetailView.swift - Purpose: Footer for flood routing */
-"contacts.detail.floodFooter" = "消息广播到所有节点。发现路径以查找最佳路由。";
+"contacts.detail.floodFooter" = "消息广播到所有节点。发现新路径以查找最佳路由。";
 
 /* Location: ContactDetailView.swift - Purpose: Footer for path routing */
 "contacts.detail.pathFooter" = "消息通过显示的路径路由。重置路径以改用泛洪路由。";
@@ -710,7 +710,7 @@
 // MARK: - Trace Path View
 
 /* Location: TracePathView.swift - Purpose: Navigation title */
-"contacts.trace.title" = "路径追踪";
+"contacts.trace.title" = "路由追踪";
 
 /* Location: TracePathView.swift - Purpose: View mode picker label */
 "contacts.trace.viewMode" = "视图模式";

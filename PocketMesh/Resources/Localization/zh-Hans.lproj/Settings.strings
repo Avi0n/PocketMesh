@@ -82,7 +82,7 @@
 "deviceInfo.firmwareVersion" = "固件版本";
 
 /* Label for build date */
-"deviceInfo.buildDate" = "构建日期";
+"deviceInfo.buildDate" = "编译日期";
 
 /* Label for manufacturer */
 "deviceInfo.manufacturer" = "制造商";
@@ -109,10 +109,10 @@
 "deviceInfo.identity.header" = "身份";
 
 /* Label for public key */
-"deviceInfo.publicKey" = "公钥";
+"deviceInfo.publicKey" = "查看公钥";
 
 /* Button to share contact information */
-"deviceInfo.shareContact" = "分享我的联系人";
+"deviceInfo.shareContact" = "我的二维码";
 
 /* Title for ContentUnavailableView when no device is connected */
 "deviceInfo.noDevice.title" = "未连接设备";
@@ -239,10 +239,10 @@
 "about.header" = "关于";
 
 /* Link to MeshCore website */
-"about.website" = "MeshCore 网站";
+"about.website" = "MeshCore 官方网站";
 
 /* Link to MeshCore online map */
-"about.onlineMap" = "MeshCore 在线地图";
+"about.onlineMap" = "MeshCore 节点地图";
 
 /* Link to GitHub repository */
 "about.github" = "GitHub";
@@ -295,16 +295,16 @@
 "advancedRadio.apply" = "应用无线电设置";
 
 /* Footer warning about incorrect radio settings */
-"advancedRadio.footer" = "警告：不正确的设置可能会阻止与Mesh网络设备的通信。";
+"advancedRadio.footer" = "警告：若设置不当，可能会无法与Mesh网络设备进行通信。";
 
 /* Error message for invalid input */
 "advancedRadio.invalidInput" = "输入值无效或未连接到设备";
 
 /* Toggle label for repeat mode in advanced radio */
-"advancedRadio.repeatMode" = "中继模式";
+"advancedRadio.repeatMode" = "转发模式";
 
 /* Footer explaining repeat mode in advanced radio */
-"advancedRadio.repeatMode.footer" = "在专用频率上创建本地中继器。适用于徒步旅行和偏远地区。有效频率：433、869、918 MHz。";
+"advancedRadio.repeatMode.footer" = "在专用频率上打开转发。适用于徒步旅行和偏远地区。有效频率：433、869、918 MHz。";
 
 // MARK: - Battery Curve Section
 
@@ -312,16 +312,16 @@
 "batteryCurve.accessibility.voltageLabel" = "%d%% 时的电压";
 
 /* Accessibility value for voltage text field - %d is millivolt value */
-"batteryCurve.accessibility.voltageValue" = "%d 毫伏";
+"batteryCurve.accessibility.voltageValue" = "%d mV";
 
 /* Accessibility hint for voltage text field */
-"batteryCurve.accessibility.voltageHint" = "输入此电量水平下的预期电压";
+"batteryCurve.accessibility.voltageHint" = "输入此电量水平下的电压";
 
 /* Section header for battery curve */
 "batteryCurve.header" = "电池曲线";
 
 /* Footer explaining battery curve configuration */
-"batteryCurve.footer" = "为您的设备电池配置电压到百分比曲线。";
+"batteryCurve.footer" = "为您的设备电池配置电压百分比曲线，注意百分比仅在APP上面显示。";
 
 /* Label for preset picker */
 "batteryCurve.preset" = "预设";
@@ -330,7 +330,7 @@
 "batteryCurve.custom" = "自定义";
 
 /* Disclosure group label for editing values */
-"batteryCurve.editValues" = "编辑值";
+"batteryCurve.editValues" = "编辑曲线";
 
 /* Validation error for value out of range - %d is percentage level */
 "batteryCurve.validation.outOfRange" = "%d%% 处的值必须在 1000-5000 mV 范围内";
@@ -347,7 +347,7 @@
 "bluetooth.header" = "蓝牙";
 
 /* Label for PIN type picker */
-"bluetooth.pinType" = "PIN 类型";
+"bluetooth.pinType" = "蓝牙 PIN 设置";
 
 /* PIN type option for default PIN */
 "bluetooth.pinType.default" = "默认";
@@ -362,7 +362,7 @@
 "bluetooth.changePin" = "更改 PIN";
 
 /* Button to change device display name */
-"bluetooth.changeDisplayName" = "更改显示名称";
+"bluetooth.changeDisplayName" = "更改蓝牙名称";
 
 /* Footer explaining default PIN */
 "bluetooth.defaultPinFooter" = "默认 PIN 为 123456。带有屏幕的设备显示其自己的 PIN。";
@@ -414,10 +414,10 @@
 "nodes.header" = "节点";
 
 /* Label for auto-add mode picker */
-"nodes.autoAddMode" = "自动添加模式";
+"nodes.autoAddMode" = "节点添加设置";
 
 /* Auto-add mode: manual */
-"nodes.autoAddMode.manual" = "手动";
+"nodes.autoAddMode.manual" = "手动添加";
 
 /* Auto-add mode: manual description */
 "nodes.autoAddMode.manualDescription" = "在添加之前在发现中查看所有节点";
@@ -429,10 +429,10 @@
 "nodes.autoAddMode.selectedTypesDescription" = "仅自动添加以下启用的类型";
 
 /* Auto-add mode: all */
-"nodes.autoAddMode.all" = "全部";
+"nodes.autoAddMode.all" = "自动添加";
 
 /* Auto-add mode: all description */
-"nodes.autoAddMode.allDescription" = "自动添加每个发现的节点";
+"nodes.autoAddMode.allDescription" = "可允许自动添加每个发现的节点";
 
 /* Section header for auto-add types */
 "nodes.autoAddTypes.header" = "自动添加类型";
@@ -458,13 +458,13 @@
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
-"dangerZone.header" = "危险区域";
+"dangerZone.header" = "谨慎设置";
 
 /* Button to forget/unpair device */
 "dangerZone.forgetDevice" = "忘记设备";
 
 /* Button to factory reset device */
-"dangerZone.factoryReset" = "恢复出厂设置设备";
+"dangerZone.factoryReset" = "设备恢复出厂设置";
 
 /* Text shown while resetting */
 "dangerZone.resetting" = "正在重置...";
@@ -587,7 +587,7 @@
 "node.locationNotSet" = "未设置";
 
 /* Toggle label for share location publicly */
-"node.shareLocationPublicly" = "公开分享位置";
+"node.shareLocationPublicly" = "允许公开位置";
 
 /* Footer explaining node visibility */
 "node.footer" = "您的节点名称在共享时对其他Mesh网络用户可见。";
@@ -633,10 +633,10 @@
 "notifications.newContactDiscovered" = "发现新联系人";
 
 /* Toggle label for low battery warnings */
-"notifications.lowBattery" = "低电池警告";
+"notifications.lowBattery" = "低电量警告";
 
 /* Toggle label for reaction notifications */
-"notifications.reactions" = "反应";
+"notifications.reactions" = "表情反应";
 
 /* Button to enable notifications */
 "notifications.enable" = "启用通知";
@@ -662,19 +662,19 @@
 "radio.footer" = "选择与您的地区匹配的预设。MeshCore 设备必须使用相同的无线电设置才能通信。";
 
 /* Toggle label for repeat mode */
-"radio.repeatMode" = "中继模式";
+"radio.repeatMode" = "转发模式";
 
 /* Footer explaining repeat mode */
-"radio.repeatMode.footer" = "在专用频率上创建本地中继器。适用于徒步旅行和偏远地区。";
+"radio.repeatMode.footer" = "在专用频率上创建本地转发器。适用于徒步旅行和偏远地区。";
 
 /* Accessibility hint for repeat mode toggle */
 "radio.repeatMode.accessibilityHint" = "启用此功能将断开与主网状网络的连接";
 
 /* Confirmation dialog title for enabling repeat mode */
-"radio.repeatMode.confirm.title" = "启用中继模式？";
+"radio.repeatMode.confirm.title" = "启用转发？";
 
 /* Confirmation dialog message for enabling repeat mode */
-"radio.repeatMode.confirm.message" = "您将断开与主网状网络的连接。只有使用相同中继模式频率的设备才能通信。";
+"radio.repeatMode.confirm.message" = "您将断开与主网状网络的连接。只有使用相同转发频率的设备才能通信。";
 
 /* Confirmation dialog enable button */
 "radio.repeatMode.confirm.enable" = "启用";
@@ -688,16 +688,16 @@
 "telemetry.allowRequests" = "允许遥测请求";
 
 /* Description for telemetry requests toggle */
-"telemetry.allowRequestsDescription" = "其他用户手动追踪到您所必需。共享电池电量。";
+"telemetry.allowRequestsDescription" = "允许其他用户请求的基础信息。如设备的电池电量。";
 
 /* Toggle label for including location in telemetry */
-"telemetry.includeLocation" = "包含位置";
+"telemetry.includeLocation" = "允许位置请求";
 
 /* Description for include location toggle */
 "telemetry.includeLocationDescription" = "在遥测数据中共享 GPS 坐标";
 
 /* Toggle label for including environment sensors */
-"telemetry.includeEnvironment" = "包含环境传感器";
+"telemetry.includeEnvironment" = "允许传感器数据请求";
 
 /* Description for include environment toggle */
 "telemetry.includeEnvironmentDescription" = "共享温度、湿度等。";
@@ -706,7 +706,7 @@
 "telemetry.trustedOnly" = "仅与信任联系人共享";
 
 /* Description for trusted contacts toggle */
-"telemetry.trustedOnlyDescription" = "将遥测数据限制給选定的联系人";
+"telemetry.trustedOnlyDescription" = "遥测数据将限制给选定的联系人";
 
 /* Link to manage trusted contacts */
 "telemetry.manageTrusted" = "管理信任联系人";
@@ -819,7 +819,7 @@
 "bleStatus.sendFloodAdvert" = "发送泛洪广播";
 
 /* Menu item to change the connected device */
-"bleStatus.changeDevice" = "更改设备";
+"bleStatus.changeDevice" = "切换设备";
 
 /* Menu item to disconnect from the current device */
 "bleStatus.disconnect" = "断开连接";
@@ -852,7 +852,7 @@
 "bleStatus.sendFloodAdvert.hint" = "在整个网络上泛洪广播";
 
 /* Label shown in BLE status menu when repeat mode is active */
-"bleStatus.repeatModeActive" = "中继模式已启用";
+"bleStatus.repeatModeActive" = "转发已启用";
 
 // MARK: - Config Export/Import
 
@@ -964,7 +964,7 @@
 "configImport.contactCount" = "将在设备上添加/更新 %d 个联系人";
 
 /* Toggle label for inline images */
-"inlineImages.toggle" = "内嵌图片";
+"inlineImages.toggle" = "内嵌图片消息";
 
 /* Toggle label for auto-play GIFs */
 "inlineImages.autoPlayGifs" = "自动播放 GIF";
@@ -978,19 +978,19 @@
 "blocking.header" = "屏蔽";
 
 /* Location: BlockingSection.swift - Purpose: Channel senders row */
-"blocking.channelSenders" = "频道发送者";
+"blocking.channelSenders" = "频道成员";
 
 /* Location: BlockingSection.swift - Purpose: Contacts row */
 "blocking.contacts" = "联系人";
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Navigation title */
-"blocking.channelSenders.title" = "已屏蔽的频道发送者";
+"blocking.channelSenders.title" = "已屏蔽的频道成员";
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Empty state title */
 "blocking.channelSenders.empty.title" = "没有已屏蔽的用户";
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Empty state description */
-"blocking.channelSenders.empty.description" = "您屏蔽的频道发送者名称将显示在此处。";
+"blocking.channelSenders.empty.description" = "您屏蔽的频道成员名称将显示在此处。";
 
 /* Location: BlockedChannelSendersView.swift - Purpose: Swipe action to unblock */
 "blocking.channelSenders.unblock" = "取消屏蔽";
