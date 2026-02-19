@@ -181,7 +181,7 @@
 "chats.channel.emptyState.noMessages" = "暂无消息";
 
 /* Location: ChannelChatView.swift - Empty state description for public channel */
-"chats.channel.emptyState.publicDescription" = "这是一个公共广播频道";
+"chats.channel.emptyState.publicDescription" = "这是一个公共频道";
 
 /* Location: ChannelChatView.swift - Empty state description for private channel */
 "chats.channel.emptyState.privateDescription" = "这是一个私人频道";
@@ -213,7 +213,7 @@
 "chats.channelInfo.lastMessage" = "最后消息";
 
 /* Location: ChannelInfoSheet.swift - QR code instruction text */
-"chats.channelInfo.scanToJoin" = "扫描以加入此频道";
+"chats.channelInfo.scanToJoin" = "扫描二维码加入此频道";
 
 /* Location: ChannelInfoSheet.swift - Section header for QR sharing */
 "chats.channelInfo.shareChannel" = "分享频道";
@@ -243,7 +243,7 @@
 "chats.channelInfo.deleteButton" = "删除频道";
 
 /* Location: ChannelInfoSheet.swift - Footer explaining delete action */
-"chats.channelInfo.deleteFooter" = "删除将从您的设备中移除此频道，如果您有密钥，稍后可以重新加入。";
+"chats.channelInfo.deleteFooter" = "删除频道，会将从您的设备中移除此频道，如果您有密钥，稍后也可以重新加入。";
 
 /* Location: ChannelInfoSheet.swift - Error when device not connected */
 "chats.error.noDeviceConnected" = "未连接设备";
@@ -287,10 +287,10 @@
 "chats.channelOptions.joinPublic.title" = "加入公共频道";
 
 /* Location: ChannelOptionsSheet.swift - Join public channel option description */
-"chats.channelOptions.joinPublic.description" = "默认公共频道";
+"chats.channelOptions.joinPublic.description" = "默认Public公共频道";
 
 /* Location: ChannelOptionsSheet.swift - Join hashtag channel option title */
-"chats.channelOptions.joinHashtag.title" = "加入标签频道";
+"chats.channelOptions.joinHashtag.title" = "加入话题频道";
 
 /* Location: ChannelOptionsSheet.swift - Join hashtag channel option description */
 "chats.channelOptions.joinHashtag.description" = "任何人都可以通过名称加入的公共频道";
@@ -302,7 +302,7 @@
 "chats.channelOptions.footer.noSlots" = "所有频道都在使用中，删除现有频道以添加新频道";
 
 /* Location: ChannelOptionsSheet.swift - Footer when public channel already exists */
-"chats.channelOptions.footer.hasPublic" = "公共频道已在频道0上配置";
+"chats.channelOptions.footer.hasPublic" = "默认的公共频道Public已存在";
 
 // MARK: - New Chat View
 
@@ -459,7 +459,7 @@
 "chats.joinPublic.channelName" = "公共频道";
 
 /* Location: JoinPublicChannelView.swift - Description of public channel */
-"chats.joinPublic.description" = "公共频道是频道0上的开放广播频道，Mesh上的所有设备都可以在此频道上发送和接收消息。";
+"chats.joinPublic.description" = "Public频道是默认的公共广播频道，Mesh上的所有设备都可以在此频道上发送和接收消息。";
 
 /* Location: JoinPublicChannelView.swift - Button to add public channel */
 "chats.joinPublic.addButton" = "添加公共频道";
@@ -473,10 +473,10 @@
 "chats.joinHashtag.placeholder" = "channel-name";
 
 /* Location: JoinHashtagChannelView.swift - Section header */
-"chats.joinHashtag.section.header" = "标签频道";
+"chats.joinHashtag.section.header" = "话题频道";
 
 /* Location: JoinHashtagChannelView.swift - Footer explaining hashtag channels */
-"chats.joinHashtag.footer" = "标签频道是公共的，任何人都可以通过输入相同的名称加入，仅允许小写字母、数字和连字符。";
+"chats.joinHashtag.footer" = "话题频道是公共的，任何人都可以通过输入相同的名称加入，仅允许小写字母、数字和连字符。";
 
 /* Location: JoinHashtagChannelView.swift - Description about encryption */
 "chats.joinHashtag.encryptionDescription" = "频道名称用于生成加密密钥，具有相同名称的任何人都可以读取消息。";
@@ -491,7 +491,7 @@
 "chats.joinHashtag.existingHint" = "打开您已加入的频道";
 
 /* Location: JoinHashtagChannelView.swift - Accessibility hint for new channel */
-"chats.joinHashtag.newHint" = "创建并加入此标签频道";
+"chats.joinHashtag.newHint" = "创建并加入此话题频道";
 
 /* Location: JoinHashtagChannelView.swift - Footer label when channel already joined */
 "chats.joinHashtag.alreadyJoined" = "已加入";
@@ -500,7 +500,7 @@
 "chats.joinHashtag.alreadyJoinedAccessibility" = "频道已加入";
 
 /* Location: JoinHashtagChannelView.swift - Navigation title */
-"chats.joinHashtag.title" = "加入标签频道";
+"chats.joinHashtag.title" = "加入话题频道";
 
 // MARK: - Join Hashtag From Message View
 
@@ -523,7 +523,7 @@
 "chats.joinFromMessage.noSlots.description" = "频道数量已达上限，请先退出一个频道，再尝试加入 %@";
 
 /* Location: JoinHashtagFromMessageView.swift - Description of hashtag channels */
-"chats.joinFromMessage.description" = "标签频道是公共的，任何人都可以通过输入相同的名称加入.";
+"chats.joinFromMessage.description" = "话题频道是公共的，任何人都可以通过输入相同的名称加入.";
 
 /* Location: JoinHashtagFromMessageView.swift - Button to join channel - %@ is channel name */
 "chats.joinFromMessage.joinButton" = "加入%@";
@@ -581,7 +581,7 @@
 "chats.message.action.copy" = "复制";
 
 /* Location: UnifiedMessageBubble.swift - Context menu action to view repeat details */
-"chats.message.action.repeatDetails" = "中继详情";
+"chats.message.action.repeatDetails" = "转发详情";
 
 /* Location: UnifiedMessageBubble.swift - Context menu action to send again */
 "chats.message.action.sendAgain" = "再次发送";
@@ -602,7 +602,7 @@
 "chats.message.info.roundTrip" = "往返时间：%d毫秒";
 
 /* Location: UnifiedMessageBubble.swift - Context menu action to view path */
-"chats.message.action.viewPath" = "查看路径";
+"chats.message.action.viewPath" = "查看链路";
 
 /* Location: UnifiedMessageBubble.swift - Context menu text showing hop count - %@ is count or "Direct" */
 "chats.message.info.hops" = "跳数：%@";
