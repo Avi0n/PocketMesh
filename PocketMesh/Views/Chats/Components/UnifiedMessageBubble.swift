@@ -2,11 +2,6 @@ import SwiftUI
 import UIKit
 import PocketMeshServices
 
-/// Layout constants for message bubbles
-private enum MessageLayout {
-    static let maxBubbleWidth: CGFloat = 280
-}
-
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {
     let accentColor: Color
@@ -165,7 +160,7 @@ struct UnifiedMessageBubble: View {
             // Bubble content (aligned based on direction)
             HStack(alignment: .bottom, spacing: 4) {
                 if message.isOutgoing {
-                    Spacer(minLength: 60)
+                    Spacer(minLength: 40)
                 }
 
                 VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
@@ -214,7 +209,7 @@ struct UnifiedMessageBubble: View {
                 .accessibilityLabel(accessibilityMessageLabel)
 
                 if !message.isOutgoing {
-                    Spacer(minLength: 60)
+                    Spacer(minLength: 40)
                 }
             }
         }
@@ -298,13 +293,11 @@ struct UnifiedMessageBubble: View {
                     iconData: preview.iconData,
                     onTap: { openURL(url) }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .loading:
             if let url = detectedURL {
                 LinkPreviewLoadingCard(url: url)
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .noPreview:
@@ -319,7 +312,6 @@ struct UnifiedMessageBubble: View {
                         onManualPreviewFetch?()
                     }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .idle:
@@ -333,11 +325,9 @@ struct UnifiedMessageBubble: View {
                     iconData: message.linkPreviewIconData,
                     onTap: { openURL(url) }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             } else if let url = detectedURL {
                 // URL detected, waiting for fetch - show loading
                 LinkPreviewLoadingCard(url: url)
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
         }
     }
@@ -369,7 +359,6 @@ struct UnifiedMessageBubble: View {
         }
         .background(bubbleColor)
         .clipShape(.rect(cornerRadius: 16))
-        .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
     }
 
     // MARK: - Computed Properties
