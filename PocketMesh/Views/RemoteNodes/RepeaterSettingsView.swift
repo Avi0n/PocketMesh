@@ -279,6 +279,7 @@ struct RepeaterSettingsView: View {
                 }
             }
             .disabled(viewModel.isApplying || !viewModel.radioSettingsModified)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
     }
 

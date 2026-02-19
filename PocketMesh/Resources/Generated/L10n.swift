@@ -2529,8 +2529,6 @@ public enum L10n {
         public static let settingsApplied = L10n.tr("RemoteNodes", "remoteNodes.settings.settingsApplied", fallback: "Settings applied")
         /// Location: RepeaterSettingsViewModel.swift - General apply failure
         public static let someSettingsFailedToApply = L10n.tr("RemoteNodes", "remoteNodes.settings.someSettingsFailedToApply", fallback: "Some settings failed to apply")
-        /// Location: RepeaterSettingsViewModel.swift - Partial load error
-        public static let someSettingsFailedToLoad = L10n.tr("RemoteNodes", "remoteNodes.settings.someSettingsFailedToLoad", fallback: "Some settings failed to load")
         /// Location: RepeaterSettingsView.swift - Spreading factor label
         public static let spreadingFactor = L10n.tr("RemoteNodes", "remoteNodes.settings.spreadingFactor", fallback: "Spreading Factor")
         /// Location: RepeaterSettingsView.swift - Spreading factor accessibility hint

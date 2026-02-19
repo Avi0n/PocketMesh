@@ -337,7 +337,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            deviceInfoError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            deviceInfoError = "error"
         }
 
         isLoadingDeviceInfo = false
@@ -390,7 +390,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            identityError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            identityError = "error"
         }
 
         isLoadingIdentity = false
@@ -431,7 +431,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            radioError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            radioError = "error"
         }
 
         isLoadingRadio = false
@@ -497,7 +497,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            behaviorError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            behaviorError = "error"
         }
 
         isLoadingBehavior = false

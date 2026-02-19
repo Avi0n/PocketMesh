@@ -222,8 +222,6 @@
 
 // MARK: - Repeater Settings ViewModel Messages
 
-/* Location: RepeaterSettingsViewModel.swift - Partial load error */
-"remoteNodes.settings.someSettingsFailedToLoad" = "Деякі налаштування не вдалося завантажити";
 
 /* Location: RepeaterSettingsViewModel.swift - Radio not loaded error */
 "remoteNodes.settings.radioNotLoaded" = "Налаштування радіо не завантажено";
