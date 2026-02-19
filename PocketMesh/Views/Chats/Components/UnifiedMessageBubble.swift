@@ -211,7 +211,7 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, showDirectionGap ? 8 : (showSenderName ? 6 : 2))
+        .padding(.top, showDirectionGap ? 6 : (showSenderName ? 4 : 2))
         .padding(.bottom, 2)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
