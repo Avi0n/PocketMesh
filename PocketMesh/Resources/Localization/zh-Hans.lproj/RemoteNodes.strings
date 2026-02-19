@@ -371,7 +371,7 @@
 "remoteNodes.status.uptimeMinutes" = "%d分钟";
 
 /* Location: RepeaterStatusViewModel.swift - Failed to load OCV settings */
-"remoteNodes.status.ocvLoadFailed" = "加载电池曲线设置失败";
+"remoteNodes.status.ocvLoadFailed" = "电池曲线设置失败";
 
 /* Location: RepeaterStatusViewModel.swift - Cannot save OCV error */
 "remoteNodes.status.ocvSaveNoContact" = "无法保存：未找到联系人";
@@ -386,10 +386,10 @@
 "remoteNodes.status.telemetryFooter" = "传感器读数，如温度、湿度和电压。";
 
 /* Location: RepeaterStatusView.swift - Neighbors section footer */
-"remoteNodes.status.neighborsFooter" = "此中继器发现的其他节点及其信号质量。";
+"remoteNodes.status.neighborsFooter" = "此节点发现的其他节点及其信号质量";
 
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
-"remoteNodes.status.batteryCurveFooter" = "用于估算电池电量的电压百分比映射。";
+"remoteNodes.status.batteryCurveFooter" = "用于估算电池电量的电压百分比";
 
 // MARK: - History
 
