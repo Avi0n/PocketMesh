@@ -48,6 +48,12 @@ enum PathDiscoveryResult: Equatable {
 
 @MainActor @Observable
 final class PathManagementViewModel {
+    private enum DiscoveryTimeout {
+        static let minimumSeconds = 5.0
+        static let maximumSeconds = 60.0
+        static let defaultSeconds = 30.0
+        static let multiplier = 1.2
+    }
 
     // MARK: - State
 
@@ -184,6 +190,15 @@ final class PathManagementViewModel {
 
     // MARK: - Path Operations
 
+    nonisolated static func sanitizedDiscoveryTimeoutSeconds(suggestedTimeoutMs: UInt32) -> Double {
+        let candidateSeconds = (Double(suggestedTimeoutMs) / 1000.0) * DiscoveryTimeout.multiplier
+        guard candidateSeconds >= DiscoveryTimeout.minimumSeconds,
+              candidateSeconds <= DiscoveryTimeout.maximumSeconds else {
+            return DiscoveryTimeout.defaultSeconds
+        }
+        return candidateSeconds
+    }
+
     /// Initiate path discovery for a contact (with cancel support)
     /// Uses two-tier approach:
     /// 1. First perform active discovery to get fresh path (requires remote response)
@@ -207,11 +222,15 @@ final class PathManagementViewModel {
                     publicKey: contact.publicKey
                 )
 
-                // Calculate timeout from firmware's suggested value
-                // MeshCore uses suggested_timeout/600 which gives ~1.67× the raw ms-to-seconds conversion
-                // This accounts for network variability in mesh routing
-                let timeoutSeconds = Double(sentResponse.suggestedTimeoutMs) / 600.0
-                logger.info("Path discovery timeout: \(Int(timeoutSeconds))s (firmware suggested: \(sentResponse.suggestedTimeoutMs)ms)")
+                let candidateSeconds = (Double(sentResponse.suggestedTimeoutMs) / 1000.0) * DiscoveryTimeout.multiplier
+                let timeoutSeconds = Self.sanitizedDiscoveryTimeoutSeconds(suggestedTimeoutMs: sentResponse.suggestedTimeoutMs)
+                if timeoutSeconds == DiscoveryTimeout.defaultSeconds && candidateSeconds != timeoutSeconds {
+                    logger.warning(
+                        "Path discovery timeout fallback applied: raw=\(sentResponse.suggestedTimeoutMs)ms, candidate=\(candidateSeconds)s, fallback=\(timeoutSeconds)s"
+                    )
+                } else {
+                    logger.info("Path discovery timeout: \(timeoutSeconds)s (firmware suggested: \(sentResponse.suggestedTimeoutMs)ms)")
+                }
 
                 // Start countdown timer
                 self.discoveryTimeoutSeconds = timeoutSeconds
