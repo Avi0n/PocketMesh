@@ -28,7 +28,13 @@ struct ChannelChatView: View {
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
     @State private var scrollToTargetID: UUID?
-    @State private var initialScrollRequest = 0
+    @State private var scrollToDividerRequest = 0
+    @State private var isDividerVisible = false
+    @State private var hasDismissedDividerFAB = false
+
+    private var showDividerFAB: Bool {
+        viewModel.newMessagesDividerMessageID != nil && !isDividerVisible && !hasDismissedDividerFAB
+    }
 
     /// Mention IDs that are both unseen AND present in loaded messages
     private var reachableMentionIDs: Set<UUID> {
@@ -141,13 +147,10 @@ struct ChannelChatView: View {
             await viewModel.loadConversations(deviceID: channel.deviceID)
             await loadUnseenMentions()
 
-            // Trigger scroll to target message if pending
+            // Trigger scroll to target message if pending (notification deeplink)
             if let targetID = pendingTarget {
                 scrollToTargetID = targetID
                 scrollToMentionRequest += 1
-            } else if let dividerID = viewModel.newMessagesDividerMessageID {
-                scrollToTargetID = dividerID
-                initialScrollRequest += 1
             }
         }
         .onDisappear {
@@ -310,8 +313,9 @@ struct ChannelChatView: View {
                         }
                     },
                     mentionTargetID: scrollTargetID,
-                    initialScrollTargetID: scrollToTargetID,
-                    initialScrollRequest: $initialScrollRequest,
+                    scrollToDividerRequest: $scrollToDividerRequest,
+                    dividerItemID: viewModel.newMessagesDividerMessageID,
+                    isDividerVisible: $isDividerVisible,
                     onNearTop: {
                         Task {
                             await viewModel.loadOlderMessages()
@@ -321,11 +325,23 @@ struct ChannelChatView: View {
                 )
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 12) {
-                        ScrollToMentionFAB(
-                            isVisible: !reachableMentionIDs.isEmpty,
-                            unreadMentionCount: reachableMentionIDs.count,
-                            onTap: { scrollToMentionRequest += 1 }
-                        )
+                        if showDividerFAB {
+                            ScrollToDividerFAB(
+                                onTap: {
+                                    scrollToDividerRequest += 1
+                                    hasDismissedDividerFAB = true
+                                }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        if !reachableMentionIDs.isEmpty {
+                            ScrollToMentionFAB(
+                                unreadMentionCount: reachableMentionIDs.count,
+                                onTap: { scrollToMentionRequest += 1 }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
 
                         ScrollToBottomFAB(
                             isVisible: !isAtBottom,
@@ -333,8 +349,13 @@ struct ChannelChatView: View {
                             onTap: { scrollToBottomRequest += 1 }
                         )
                     }
+                    .animation(.snappy(duration: 0.2), value: showDividerFAB)
+                    .animation(.snappy(duration: 0.2), value: reachableMentionIDs.isEmpty)
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
+                }
+                .onChange(of: viewModel.newMessagesDividerMessageID) { _, _ in
+                    hasDismissedDividerFAB = false
                 }
             }
         }

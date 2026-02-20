@@ -53,6 +53,15 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
     /// Closure to check if an item contains an unseen self-mention
     var isUnseenMention: ((Item) -> Bool)?
 
+    /// Item ID of the new messages divider (for visibility tracking)
+    var dividerItemID: Item.ID?
+
+    /// Callback when the divider row's visibility changes
+    var onDividerVisibilityChanged: ((Bool) -> Void)?
+
+    /// Last reported divider visibility (change detection to avoid redundant callbacks)
+    private var lastDividerVisible: Bool?
+
     /// Tracks mention IDs that have already been reported as visible (prevents duplicate callbacks)
     private var markedMentionIDs: Set<Item.ID> = []
 
@@ -83,6 +92,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
 
         // Visual setup
         tableView.separatorStyle = .none
+        tableView.estimatedRowHeight = 80
 
         // Flipped table (scaleX: 1, y: -1) inverts top/bottom, so automatic
         // content-inset adjustment applies safe-area padding to the wrong edges.
@@ -418,6 +428,7 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
     override func scrollViewDidScroll(_ scrollView: UIScrollView) {
         updateIsAtBottom()
         checkVisibleMentions()
+        checkDividerVisibility()
         checkNearTop()
     }
 
@@ -443,6 +454,28 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
     /// Resets the debouncing state (call when conversation changes)
     func resetMarkedMentions() {
         markedMentionIDs.removeAll()
+    }
+
+    private func checkDividerVisibility() {
+        guard let dividerItemID,
+              let itemIndex = itemIndexByID[dividerItemID],
+              let onDividerVisibilityChanged else {
+            // No divider configured — report not visible if we previously reported visible
+            if lastDividerVisible == true {
+                lastDividerVisible = false
+                self.onDividerVisibilityChanged?(false)
+            }
+            return
+        }
+
+        let rowIndex = items.count - 1 - itemIndex
+        let indexPath = IndexPath(row: rowIndex, section: 0)
+        let isVisible = tableView.indexPathsForVisibleRows?.contains(indexPath) ?? false
+
+        if isVisible != lastDividerVisible {
+            lastDividerVisible = isVisible
+            onDividerVisibilityChanged(isVisible)
+        }
     }
 
     override func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -550,8 +583,9 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     var isUnseenMention: ((Item) -> Bool)?
     var onMentionBecameVisible: ((Item.ID) -> Void)?
     var mentionTargetID: Item.ID?
-    var initialScrollTargetID: Item.ID?
-    @Binding var initialScrollRequest: Int
+    @Binding var scrollToDividerRequest: Int
+    var dividerItemID: Item.ID?
+    @Binding var isDividerVisible: Bool
     var onNearTop: (() -> Void)?
     var isLoadingOlderMessages: Bool = false
 
@@ -564,7 +598,7 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         context.coordinator.lastScrollRequest = scrollToBottomRequest
         controller.isUnseenMention = isUnseenMention
         context.coordinator.lastMentionRequest = scrollToMentionRequest
-        context.coordinator.lastInitialScrollRequest = initialScrollRequest
+        context.coordinator.lastDividerScrollRequest = scrollToDividerRequest
         return controller
     }
 
@@ -594,6 +628,15 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         controller.isUnseenMention = isUnseenMention
         controller.onMentionBecameVisible = onMentionBecameVisible
 
+        // Update divider visibility tracking
+        controller.dividerItemID = dividerItemID
+        context.coordinator.setIsDividerVisible = { [self] in isDividerVisible = $0 }
+        controller.onDividerVisibilityChanged = { [weak coordinator = context.coordinator] visible in
+            Task { @MainActor in
+                coordinator?.setIsDividerVisible?(visible)
+            }
+        }
+
         // Update pagination state
         controller.onNearTop = onNearTop
         controller.isLoadingOlderMessages = isLoadingOlderMessages
@@ -614,10 +657,10 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
             )
         }
 
-        // Check for initial-scroll request (new messages divider)
-        let shouldInitialScroll = initialScrollRequest != context.coordinator.lastInitialScrollRequest
-        if shouldInitialScroll {
-            context.coordinator.lastInitialScrollRequest = initialScrollRequest
+        // Check for scroll-to-divider request (new messages divider)
+        let shouldScrollToDivider = scrollToDividerRequest != context.coordinator.lastDividerScrollRequest
+        if shouldScrollToDivider {
+            context.coordinator.lastDividerScrollRequest = scrollToDividerRequest
         }
 
         // Check for scroll-to-bottom request BEFORE updating items
@@ -641,8 +684,8 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
             } else if let targetID = mentionScrollTargetID {
                 controller.scrollToItem(id: targetID, animated: true)
             }
-        } else if shouldInitialScroll, let targetID = initialScrollTargetID {
-            controller.scrollToItemIfNotVisible(id: targetID, animated: false)
+        } else if shouldScrollToDivider, let targetID = dividerItemID {
+            controller.scrollToItem(id: targetID, animated: true)
         }
     }
 
@@ -653,8 +696,9 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
     class Coordinator {
         var lastScrollRequest: Int = 0
         var lastMentionRequest: Int = 0
-        var lastInitialScrollRequest: Int = 0
+        var lastDividerScrollRequest: Int = 0
         var setIsAtBottom: ((Bool) -> Void)?
         var setUnreadCount: ((Int) -> Void)?
+        var setIsDividerVisible: ((Bool) -> Void)?
     }
 }

@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Floating action button to scroll to unread mentions
 struct ScrollToMentionFAB: View {
-    let isVisible: Bool
     let unreadMentionCount: Int
     let onTap: () -> Void
 
@@ -18,13 +17,9 @@ struct ScrollToMentionFAB: View {
         .overlay(alignment: .topTrailing) {
             unreadBadge
         }
-        .opacity(isVisible ? 1 : 0)
-        .scaleEffect(isVisible ? 1 : 0.5)
-        .animation(.snappy(duration: 0.2), value: isVisible)
         .accessibilityLabel(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityLabel)
         .accessibilityValue(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityValue(unreadMentionCount))
         .accessibilityHint(L10n.Chats.Chats.Fab.ScrollToMention.accessibilityHint)
-        .accessibilityHidden(!isVisible)
     }
 
     @ViewBuilder
@@ -41,17 +36,12 @@ struct ScrollToMentionFAB: View {
     }
 }
 
-#Preview("Visible with multiple") {
-    ScrollToMentionFAB(isVisible: true, unreadMentionCount: 5, onTap: {})
+#Preview("With multiple") {
+    ScrollToMentionFAB(unreadMentionCount: 5, onTap: {})
         .padding(50)
 }
 
-#Preview("Visible with one") {
-    ScrollToMentionFAB(isVisible: true, unreadMentionCount: 1, onTap: {})
-        .padding(50)
-}
-
-#Preview("Hidden") {
-    ScrollToMentionFAB(isVisible: false, unreadMentionCount: 3, onTap: {})
+#Preview("With one") {
+    ScrollToMentionFAB(unreadMentionCount: 1, onTap: {})
         .padding(50)
 }

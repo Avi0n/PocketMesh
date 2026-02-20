@@ -289,6 +289,12 @@ public enum L10n {
           /// Location: ScrollToBottomFAB.swift - Accessibility label for scroll to bottom button
           public static let accessibilityLabel = L10n.tr("Chats", "chats.fab.scrollToBottom.accessibilityLabel", fallback: "Scroll to latest message")
         }
+        public enum ScrollToDivider {
+          /// Location: ScrollToDividerFAB.swift - Accessibility hint for scroll to divider button
+          public static let accessibilityHint = L10n.tr("Chats", "chats.fab.scrollToDivider.accessibilityHint", fallback: "Double-tap to scroll to the new messages divider")
+          /// Location: ScrollToDividerFAB.swift - Accessibility label for scroll to divider button
+          public static let accessibilityLabel = L10n.tr("Chats", "chats.fab.scrollToDivider.accessibilityLabel", fallback: "Scroll to new messages")
+        }
         public enum ScrollToMention {
           /// Location: ScrollToMentionFAB.swift - Accessibility hint for scroll to mention button
           public static let accessibilityHint = L10n.tr("Chats", "chats.fab.scrollToMention.accessibilityHint", fallback: "Double-tap to navigate to the message")

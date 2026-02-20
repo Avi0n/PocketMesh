@@ -23,7 +23,8 @@ struct ChatView: View {
     @State private var scrollToMentionRequest = 0
     @State private var unseenMentionIDs: Set<UUID> = []
     @State private var scrollToTargetID: UUID?
-    @State private var initialScrollRequest = 0
+    @State private var scrollToDividerRequest = 0
+    @State private var isDividerVisible = false
 
     @State private var selectedMessageForActions: MessageDTO?
     @State private var recentEmojisStore = RecentEmojisStore()
@@ -51,7 +52,9 @@ struct ChatView: View {
             scrollToMentionRequest: $scrollToMentionRequest,
             unseenMentionIDs: unseenMentionIDs,
             scrollToTargetID: scrollToTargetID,
-            initialScrollRequest: $initialScrollRequest,
+            newMessagesDividerMessageID: viewModel.newMessagesDividerMessageID,
+            scrollToDividerRequest: $scrollToDividerRequest,
+            isDividerVisible: $isDividerVisible,
             selectedMessageForActions: $selectedMessageForActions,
             imageViewerData: $imageViewerData,
             onMentionSeen: { await markMentionSeen(messageID: $0) }
@@ -113,13 +116,10 @@ struct ChatView: View {
             viewModel.loadDraftIfExists()
             await loadUnseenMentions()
 
-            // Trigger scroll to target message if pending
+            // Trigger scroll to target message if pending (notification deeplink)
             if let targetID = pendingTarget {
                 scrollToTargetID = targetID
                 scrollToMentionRequest += 1
-            } else if let dividerID = viewModel.newMessagesDividerMessageID {
-                scrollToTargetID = dividerID
-                initialScrollRequest += 1
             }
         }
         .onDisappear {
@@ -382,10 +382,18 @@ private struct ChatMessagesContent: View {
     @Binding var scrollToMentionRequest: Int
     let unseenMentionIDs: Set<UUID>
     let scrollToTargetID: UUID?
-    @Binding var initialScrollRequest: Int
+    let newMessagesDividerMessageID: UUID?
+    @Binding var scrollToDividerRequest: Int
+    @Binding var isDividerVisible: Bool
     @Binding var selectedMessageForActions: MessageDTO?
     @Binding var imageViewerData: ImageViewerData?
     let onMentionSeen: (UUID) async -> Void
+
+    @State private var hasDismissedDividerFAB = false
+
+    private var showDividerFAB: Bool {
+        newMessagesDividerMessageID != nil && !isDividerVisible && !hasDismissedDividerFAB
+    }
 
     private var reachableMentionIDs: Set<UUID> {
         let loadedIDs = Set(viewModel.displayItems.map(\.id))
@@ -426,8 +434,9 @@ private struct ChatMessagesContent: View {
                         }
                     },
                     mentionTargetID: mentionTargetID,
-                    initialScrollTargetID: scrollToTargetID,
-                    initialScrollRequest: $initialScrollRequest,
+                    scrollToDividerRequest: $scrollToDividerRequest,
+                    dividerItemID: newMessagesDividerMessageID,
+                    isDividerVisible: $isDividerVisible,
                     onNearTop: {
                         Task {
                             await viewModel.loadOlderMessages()
@@ -437,11 +446,23 @@ private struct ChatMessagesContent: View {
                 )
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 12) {
-                        ScrollToMentionFAB(
-                            isVisible: !reachableMentionIDs.isEmpty,
-                            unreadMentionCount: reachableMentionIDs.count,
-                            onTap: { scrollToMentionRequest += 1 }
-                        )
+                        if showDividerFAB {
+                            ScrollToDividerFAB(
+                                onTap: {
+                                    scrollToDividerRequest += 1
+                                    hasDismissedDividerFAB = true
+                                }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        if !reachableMentionIDs.isEmpty {
+                            ScrollToMentionFAB(
+                                unreadMentionCount: reachableMentionIDs.count,
+                                onTap: { scrollToMentionRequest += 1 }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
 
                         ScrollToBottomFAB(
                             isVisible: !isAtBottom,
@@ -449,8 +470,13 @@ private struct ChatMessagesContent: View {
                             onTap: { scrollToBottomRequest += 1 }
                         )
                     }
+                    .animation(.snappy(duration: 0.2), value: showDividerFAB)
+                    .animation(.snappy(duration: 0.2), value: reachableMentionIDs.isEmpty)
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
+                }
+                .onChange(of: newMessagesDividerMessageID) { _, _ in
+                    hasDismissedDividerFAB = false
                 }
             }
         }

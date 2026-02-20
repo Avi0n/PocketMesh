@@ -147,7 +147,8 @@ struct RoomConversationView: View {
                     unreadCount: $unreadCount,
                     scrollToBottomRequest: $scrollToBottomRequest,
                     scrollToMentionRequest: .constant(0),
-                    initialScrollRequest: .constant(0)
+                    scrollToDividerRequest: .constant(0),
+                    isDividerVisible: .constant(false)
                 )
                 .overlay(alignment: .bottomTrailing) {
                     ScrollToBottomFAB(
