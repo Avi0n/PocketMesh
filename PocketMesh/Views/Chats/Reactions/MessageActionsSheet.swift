@@ -72,6 +72,7 @@ struct MessageActionsSheet: View {
         .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
         .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
+        .presentationBackground(Color(.systemBackground))
         .onAppear {
             longPressHapticTrigger += 1
         }
@@ -140,7 +141,7 @@ struct MessageActionsSheet: View {
                 showEmojiPicker = true
             }
         )
-        .padding()
+        .padding(.vertical, 4)
         .sheet(isPresented: $showEmojiPicker) {
             EmojiPickerSheet { emoji in
                 onAction(.react(emoji))

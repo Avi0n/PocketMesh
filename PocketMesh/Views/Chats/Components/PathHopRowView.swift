@@ -19,14 +19,16 @@ struct PathHopRowView: View {
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(nodeName)
-                    .font(.body)
+                HStack(spacing: 6) {
+                    if let nodeID {
+                        Text(nodeID)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .monospaced()
+                    }
 
-                if let nodeID {
-                    Text(nodeID)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .monospaced()
+                    Text(nodeName)
+                        .font(.body)
                 }
 
                 Text(hopLabel)
@@ -48,7 +50,7 @@ struct PathHopRowView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(hopLabel): \(nodeName)")
         .accessibilityValue(accessibilityValueText)
