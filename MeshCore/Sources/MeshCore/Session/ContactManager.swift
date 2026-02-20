@@ -187,6 +187,14 @@ struct ContactManager {
             isDirty = true
         case .contactDeleted(let publicKey):
             let contactId = publicKey.hexString
+            let keyPrefix = publicKey.prefix(6).hexString
+            if let cached = contacts[contactId] {
+                logger.info("Overwrite oldest: removing '\(cached.advertisedName, privacy: .public)' (\(keyPrefix, privacy: .public)...) from contacts cache (type=\(cached.type.rawValue), lastAdvert=\(cached.lastAdvertisement.description, privacy: .public), lastModified=\(cached.lastModified.description, privacy: .public))")
+            } else if pendingContacts[contactId] != nil {
+                logger.info("Overwrite oldest: removing \(keyPrefix, privacy: .public)... from pending contacts cache")
+            } else {
+                logger.info("Overwrite oldest: contact \(keyPrefix, privacy: .public)... not found in cache (already removed or never synced)")
+            }
             contacts.removeValue(forKey: contactId)
             pendingContacts.removeValue(forKey: contactId)
             isDirty = true

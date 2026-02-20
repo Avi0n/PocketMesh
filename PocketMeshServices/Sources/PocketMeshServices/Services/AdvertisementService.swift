@@ -32,6 +32,10 @@ public actor AdvertisementService {
     private var isSyncingContacts = false
     private var pendingUnknownContactKeys: Set<Data> = []
 
+    /// Tracks the last overwrite-oldest deletion for correlating with the replacement contact.
+    /// The device sends 0x8F (deleted) then shortly after an advert for the new contact.
+    private var lastOverwriteDeletion: (name: String, pubKeyHex: String, time: Date)?
+
     /// Handler for new advertisement events (for UI updates)
     private var advertHandler: (@Sendable (ContactFrame) -> Void)?
 
@@ -297,6 +301,9 @@ public actor AdvertisementService {
                             let contactName = meshContact.advertisedName.isEmpty ? "Unknown Contact" : meshContact.advertisedName
                             let contactType = meshContact.type
                             await newContactDiscoveredHandler?(contactName, contactID, contactType)
+
+                            // Correlate with recent overwrite-oldest deletion
+                            logOverwriteReplacementIfRecent(newContactName: contactName, newContactType: contactType)
                         }
                     } catch {
                         logger.error("Failed to fetch new contact: \(error.localizedDescription)")
@@ -356,6 +363,9 @@ public actor AdvertisementService {
                 let contactName = node.name
                 let contactType = node.nodeType
                 await newContactDiscoveredHandler?(contactName, node.id, contactType)
+
+                // Correlate with recent overwrite-oldest deletion
+                logOverwriteReplacementIfRecent(newContactName: contactName, newContactType: contactType)
             }
         } catch {
             logger.error("Error handling new advert event: \(error.localizedDescription)")
@@ -450,41 +460,63 @@ public actor AdvertisementService {
 
     /// Handle contact deleted event (0x8F) - device auto-deleted a contact via overwrite oldest
     private func handleContactDeletedEvent(publicKey: Data, deviceID: UUID) async {
-        let pubKeyHex = publicKey.prefix(6).map { String(format: "%02X", $0) }.joined()
-        logger.info("Contact deleted by device: \(pubKeyHex)...")
+        let fullPubKeyHex = publicKey.map { String(format: "%02X", $0) }.joined()
+        let pubKeyPrefix = publicKey.prefix(6).map { String(format: "%02X", $0) }.joined()
+        logger.info("Overwrite oldest: device deleted contact with key \(pubKeyPrefix)...")
 
         do {
-            // Fetch contact by publicKey to get its UUID
+            // Fetch contact by publicKey to get its UUID and details before deleting
             guard let contact = try await dataStore.fetchContact(deviceID: deviceID, publicKey: publicKey) else {
-                logger.warning("Contact not found in local database for deletion: \(pubKeyHex)...")
+                logger.warning("Overwrite oldest: contact not found in local database for key \(pubKeyPrefix)... (may have been deleted already)")
                 return
             }
 
+            let contactName = contact.name.isEmpty ? "(unnamed)" : contact.name
+            let contactTypeDesc = ContactType(rawValue: contact.typeRawValue).map { "\($0)" } ?? "unknown(\(contact.typeRawValue))"
+            let lastModifiedDate = Date(timeIntervalSince1970: TimeInterval(contact.lastModified))
+            let lastAdvertDate = Date(timeIntervalSince1970: TimeInterval(contact.lastAdvertTimestamp))
+
+            logger.notice("Overwrite oldest: deleting contact '\(contactName)' [key=\(fullPubKeyHex), type=\(contactTypeDesc), favorite=\(contact.isFavorite), pathLen=\(contact.outPathLength), lastModified=\(lastModifiedDate), lastAdvert=\(lastAdvertDate)]")
+
+            // Store deletion info for correlation with the replacement contact
+            lastOverwriteDeletion = (name: contactName, pubKeyHex: pubKeyPrefix, time: Date())
+
             let contactID = contact.id
 
-            // Delete associated messages first
+            // Delete associated messages
             try await dataStore.deleteMessagesForContact(contactID: contactID)
+            logger.info("Overwrite oldest: deleted messages for contact '\(contactName)'")
 
             // Delete the contact
             try await dataStore.deleteContact(id: contactID)
-            logger.debug("Deleted contact from local database")
+            logger.info("Overwrite oldest: deleted contact '\(contactName)' from local database")
 
             // Trigger cleanup (notifications, badge, session)
             await contactDeletedCleanupHandler?(contactID, publicKey)
 
             // Storage now has room - clear the full flag
             await nodeStorageFullChangedHandler?(false)
+            logger.info("Overwrite oldest: cleanup complete for '\(contactName)', storage full flag cleared")
 
             // Notify UI to refresh contacts list
             await contactUpdatedHandler?()
         } catch {
-            logger.error("Failed to delete contact: \(error.localizedDescription)")
+            logger.error("Overwrite oldest: failed to delete contact \(pubKeyPrefix)...: \(error.localizedDescription)")
         }
+    }
+
+    /// Log a correlation between an overwrite-oldest deletion and the new contact that replaced it.
+    private func logOverwriteReplacementIfRecent(newContactName: String, newContactType: ContactType) {
+        guard let deletion = lastOverwriteDeletion,
+              Date().timeIntervalSince(deletion.time) < 60 else { return }
+
+        logger.notice("Overwrite oldest: '\(deletion.name)' (\(deletion.pubKeyHex)...) replaced by '\(newContactName)' (type=\(newContactType))")
+        lastOverwriteDeletion = nil
     }
 
     /// Handle contacts full event (0x90) - device storage is full
     private func handleContactsFullEvent() async {
-        logger.warning("Device node storage is full")
+        logger.warning("Device node storage is full - if overwrite oldest is enabled, the next new node will trigger auto-deletion of the oldest non-favorite contact")
         await nodeStorageFullChangedHandler?(true)
     }
 }
