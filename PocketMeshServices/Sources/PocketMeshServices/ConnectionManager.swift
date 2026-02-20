@@ -218,6 +218,10 @@ public final class ConnectionManager {
     /// Use this to update UI state when services become unavailable.
     public var onConnectionLost: (() async -> Void)?
 
+    /// Called after initial sync completes and connectionState becomes `.ready`.
+    /// Use this for work that depends on up-to-date synced data (e.g. stale node cleanup).
+    public var onDeviceSynced: (() async -> Void)?
+
     /// Provider for app foreground/background state detection
     public var appStateProvider: AppStateProvider?
 
@@ -891,6 +895,7 @@ public final class ConnectionManager {
 
         currentTransportType = .wifi
         connectionState = .ready
+        await onDeviceSynced?()
         stopReconnectionWatchdog()
         startWiFiHeartbeat()
     }
@@ -1756,6 +1761,7 @@ public final class ConnectionManager {
             await onConnectionReady?()
 
             connectionState = .ready
+            await onDeviceSynced?()
             logger.info("Simulator connection complete")
         } catch {
             // Cleanup on failure
@@ -1865,6 +1871,7 @@ public final class ConnectionManager {
 
             currentTransportType = .wifi
             connectionState = .ready
+            await onDeviceSynced?()
             stopReconnectionWatchdog()
 
             startWiFiHeartbeat()
@@ -1975,6 +1982,7 @@ public final class ConnectionManager {
 
         currentTransportType = .bluetooth
         connectionState = .ready
+        await onDeviceSynced?()
         stopReconnectionWatchdog()
         logger.info("Device switch complete - device ready")
     }
@@ -2052,10 +2060,34 @@ public final class ConnectionManager {
     }
 
     /// Removes all non-favorite contacts from the device and app, along with their messages.
-    /// For room/repeater contacts, also removes the associated RemoteNodeSession.
     /// - Returns: Count of removed vs total non-favorite contacts
     /// - Throws: `ConnectionError.notConnected` if no device is connected
     public func removeUnfavoritedNodes() async throws -> RemoveUnfavoritedResult {
+        try await removeContacts(matching: { !$0.isFavorite })
+    }
+
+    /// Removes non-favorite contacts whose `lastModified` timestamp is older than the given threshold.
+    /// - Parameter days: Number of days. Contacts not heard from in this many days are removed.
+    /// - Returns: Count of removed vs total stale contacts
+    /// - Throws: `ConnectionError.notConnected` if no device is connected
+    public func removeStaleNodes(olderThanDays days: Int) async throws -> RemoveUnfavoritedResult {
+        let cutoff = UInt32(Date().addingTimeInterval(-Double(days) * 86400).timeIntervalSince1970)
+        return try await removeContacts(matching: { !$0.isFavorite && $0.lastModified < cutoff }) { contact in
+            let ageDays = (Int(Date().timeIntervalSince1970) - Int(contact.lastModified)) / 86400
+            let keyPrefix = contact.publicKeyHex.prefix(8)
+            self.logger.info("Auto-removed stale node '\(contact.name)' [\(keyPrefix)] (last heard \(ageDays)d ago)")
+        }
+    }
+
+    /// Shared implementation for removing contacts matching a predicate.
+    /// - Parameters:
+    ///   - predicate: Filter applied to all contacts to determine which to remove.
+    ///   - onRemove: Optional callback invoked after each successful removal (for per-contact logging).
+    /// - Returns: Count of removed vs total matching contacts
+    private func removeContacts(
+        matching predicate: (ContactDTO) -> Bool,
+        onRemove: ((_ contact: ContactDTO) -> Void)? = nil
+    ) async throws -> RemoveUnfavoritedResult {
         guard let deviceID = connectedDevice?.id else {
             throw ConnectionError.notConnected
         }
@@ -2066,15 +2098,15 @@ public final class ConnectionManager {
 
         let dataStore = PersistenceStore(modelContainer: modelContainer)
         let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
-        let unfavorited = allContacts.filter { !$0.isFavorite }
+        let targets = allContacts.filter(predicate)
 
-        if unfavorited.isEmpty {
+        if targets.isEmpty {
             return RemoveUnfavoritedResult(removed: 0, total: 0)
         }
 
         var removedCount = 0
 
-        for contact in unfavorited {
+        for contact in targets {
             try Task.checkCancellation()
 
             do {
@@ -2083,8 +2115,8 @@ public final class ConnectionManager {
                     publicKey: contact.publicKey
                 )
                 removedCount += 1
+                onRemove?(contact)
             } catch ContactServiceError.contactNotFound {
-                // Contact exists locally but not on device — run full local cleanup
                 do {
                     try await services.contactService.removeLocalContact(
                         contactID: contact.id,
@@ -2100,13 +2132,12 @@ public final class ConnectionManager {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                // Connection error — stop the loop, report partial progress
                 logger.warning("Failed to remove contact \(contact.name): \(error.localizedDescription)")
-                return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
+                return RemoveUnfavoritedResult(removed: removedCount, total: targets.count)
             }
         }
 
-        return RemoveUnfavoritedResult(removed: removedCount, total: unfavorited.count)
+        return RemoveUnfavoritedResult(removed: removedCount, total: targets.count)
     }
 
     /// Clears all stale pairings from AccessorySetupKit.
@@ -2480,6 +2511,7 @@ public final class ConnectionManager {
 
         currentTransportType = .bluetooth
         connectionState = .ready
+        await onDeviceSynced?()
         stopReconnectionWatchdog()
         logger.info("Connection complete - device ready")
     }
@@ -2801,6 +2833,7 @@ public final class ConnectionManager {
 
         currentTransportType = .bluetooth
         connectionState = .ready
+        await onDeviceSynced?()
         recordConnectionSuccess()
         stopReconnectionWatchdog()
         logger.info("[BLE] iOS auto-reconnect: session ready, device: \(deviceID.uuidString.prefix(8))")

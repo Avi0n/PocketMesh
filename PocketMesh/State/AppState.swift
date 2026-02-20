@@ -173,6 +173,11 @@ public final class AppState {
         connectionManager.onConnectionLost = { [weak self] in
             await self?.wireServicesIfConnected()
         }
+
+        // Wire device synced callback - runs after sync completes and state is .ready
+        connectionManager.onDeviceSynced = { [weak self] in
+            self?.performStaleNodeCleanup()
+        }
     }
 
     // MARK: - Lifecycle
@@ -286,6 +291,7 @@ public final class AppState {
         // Removes notifications and updates badge when device auto-deletes a contact via 0x8F
         await services.advertisementService.setContactDeletedCleanupHandler { [weak self] contactID, _ in
             guard let self else { return }
+            self.logger.info("Overwrite oldest: running cleanup for deleted contact \(contactID) - removing notifications and updating badge")
             await self.services?.notificationService.removeDeliveredNotifications(forContactID: contactID)
             await self.services?.notificationService.updateBadgeCount()
         }
@@ -327,6 +333,39 @@ public final class AppState {
 
         // Defer battery bootstrap so connection setup is not blocked by device request timeouts.
         batteryMonitor.start(services: services, device: connectedDevice)
+
+    }
+
+    // MARK: - Stale Node Cleanup
+
+    /// Runs automatic cleanup of stale non-favorite nodes if the threshold is configured.
+    /// - Parameter force: When `true`, skips the 6-hour cooldown (used when the user changes the setting).
+    func performStaleNodeCleanup(force: Bool = false) {
+        let threshold = UserDefaults.standard.integer(forKey: "autoDeleteStaleNodesDays")
+        guard threshold > 0 else { return }
+
+        if !force {
+            let lastRunTimestamp = UserDefaults.standard.double(forKey: "lastStaleCleanupDate")
+            let lastRun = lastRunTimestamp > 0 ? Date(timeIntervalSinceReferenceDate: lastRunTimestamp) : Date.distantPast
+            guard Date().timeIntervalSince(lastRun) >= 3 * 3600 else {
+                logger.debug("Stale node cleanup skipped — cooldown not expired")
+                return
+            }
+        }
+
+        Task {
+            do {
+                let result = try await connectionManager.removeStaleNodes(olderThanDays: threshold)
+                UserDefaults.standard.set(Date().timeIntervalSinceReferenceDate, forKey: "lastStaleCleanupDate")
+                if result.total > 0 {
+                    logger.info("Stale node cleanup: removed \(result.removed) of \(result.total) nodes older than \(threshold) days")
+                } else {
+                    logger.debug("Stale node cleanup: no stale nodes found")
+                }
+            } catch {
+                logger.warning("Stale node cleanup failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Device Actions
