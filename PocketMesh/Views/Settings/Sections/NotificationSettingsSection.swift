@@ -83,8 +83,6 @@ struct NotificationSettingsSection: View {
                 Text(L10n.Settings.Notifications.connectDevice)
                     .foregroundStyle(.secondary)
             }
-        } header: {
-            Text(L10n.Settings.Notifications.header)
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {

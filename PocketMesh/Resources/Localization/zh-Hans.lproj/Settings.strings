@@ -577,10 +577,19 @@
 /* Error when export fails */
 "diagnostics.error.exportFailed" = "创建导出文件失败";
 
+// MARK: - Privacy Settings
+
+/* Navigation title for privacy settings page */
+"privacy.title" = "隐私";
+
+/* Footer for privacy settings navigation row */
+"privacy.footer" = "链接预览、内嵌图片和已屏蔽联系人。";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "隐私";
+/* Section header for link preview settings */
+"linkPreviews.header" = "链接预览";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "链接预览";
@@ -680,6 +689,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "连接设备以配置通知";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "消息提醒、联系人发现和低电量警告。";
 
 // MARK: - Radio Preset Section
 

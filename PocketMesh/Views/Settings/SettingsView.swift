@@ -50,11 +50,25 @@ struct SettingsView: View {
                     BluetoothSection()
                 }
 
-                NotificationSettingsSection()
+                Section {
+                    NavigationLink {
+                        NotificationSettingsView()
+                    } label: {
+                        TintedLabel(L10n.Settings.Notifications.header, systemImage: "bell.badge")
+                    }
+                } footer: {
+                    Text(L10n.Settings.Notifications.footer)
+                }
 
-                LinkPreviewSettingsSection()
-
-                BlockingSection()
+                Section {
+                    NavigationLink {
+                        PrivacySettingsView()
+                    } label: {
+                        TintedLabel(L10n.Settings.Privacy.title, systemImage: "hand.raised")
+                    }
+                } footer: {
+                    Text(L10n.Settings.Privacy.footer)
+                }
 
                 Section {
                     if shouldUseSplitView {

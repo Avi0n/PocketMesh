@@ -592,10 +592,19 @@
 "diagnostics.error.exportFailed" = "Error al crear archivo de exportación";
 
 
+// MARK: - Privacy Settings
+
+/* Navigation title for privacy settings page */
+"privacy.title" = "Privacidad";
+
+/* Footer for privacy settings navigation row */
+"privacy.footer" = "Vista previa de enlaces, imágenes en línea y contactos bloqueados.";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "Privacidad";
+/* Section header for link preview settings */
+"linkPreviews.header" = "Vista previa de enlaces";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "Vista previa de enlaces";
@@ -674,6 +683,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "Conecta un dispositivo para configurar notificaciones";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "Alertas de mensajes, descubrimientos de contactos y avisos de batería baja.";
 
 
 // MARK: - Radio Preset Section

@@ -592,10 +592,19 @@
 "diagnostics.error.exportFailed" = "Не удалось создать файл экспорта";
 
 
+// MARK: - Privacy Settings
+
+/* Navigation title for privacy settings page */
+"privacy.title" = "Конфиденциальность";
+
+/* Footer for privacy settings navigation row */
+"privacy.footer" = "Предпросмотр ссылок, встроенные изображения и заблокированные контакты.";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "Конфиденциальность";
+/* Section header for link preview settings */
+"linkPreviews.header" = "Предпросмотр ссылок";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "Предпросмотр ссылок";
@@ -674,6 +683,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "Подключите устройство для настройки уведомлений";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "Оповещения о сообщениях, обнаружении контактов и низком заряде батареи.";
 
 
 // MARK: - Radio Preset Section

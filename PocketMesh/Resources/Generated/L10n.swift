@@ -3246,8 +3246,8 @@ public enum L10n {
     public enum LinkPreviews {
       /// Footer explaining link preview privacy implications
       public static let footer = L10n.tr("Settings", "linkPreviews.footer", fallback: "Link previews fetch data from the web, which may reveal your IP address to the server hosting the link.")
-      /// Section header for privacy settings
-      public static let header = L10n.tr("Settings", "linkPreviews.header", fallback: "Privacy")
+      /// Section header for link preview settings
+      public static let header = L10n.tr("Settings", "linkPreviews.header", fallback: "Link Previews")
       /// Toggle label for showing previews in channels
       public static let showInChannels = L10n.tr("Settings", "linkPreviews.showInChannels", fallback: "Show in Channels")
       /// Toggle label for showing previews in DMs
@@ -3396,6 +3396,8 @@ public enum L10n {
       public static let disabled = L10n.tr("Settings", "notifications.disabled", fallback: "Notifications Disabled")
       /// Button to enable notifications
       public static let enable = L10n.tr("Settings", "notifications.enable", fallback: "Enable Notifications")
+      /// Footer for notifications navigation row
+      public static let footer = L10n.tr("Settings", "notifications.footer", fallback: "Message alerts, contact discoveries, and low battery warnings.")
       /// Section header for notifications
       public static let header = L10n.tr("Settings", "notifications.header", fallback: "Notifications")
       /// Toggle label for low battery warnings
@@ -3408,6 +3410,12 @@ public enum L10n {
       public static let reactions = L10n.tr("Settings", "notifications.reactions", fallback: "Reactions")
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
+    }
+    public enum Privacy {
+      /// Footer for privacy settings navigation row
+      public static let footer = L10n.tr("Settings", "privacy.footer", fallback: "Link previews, inline images, and blocked contacts.")
+      /// Navigation title for privacy settings page
+      public static let title = L10n.tr("Settings", "privacy.title", fallback: "Privacy")
     }
     public enum PublicKey {
       /// Button to copy key to clipboard

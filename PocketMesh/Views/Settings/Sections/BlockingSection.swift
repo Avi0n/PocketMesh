@@ -14,7 +14,7 @@ struct BlockingSection: View {
             NavigationLink {
                 BlockedContactsView()
             } label: {
-                TintedLabel(L10n.Settings.Blocking.contacts, systemImage: "hand.raised")
+                TintedLabel(L10n.Settings.Blocking.contacts, systemImage: "hand.raised.slash")
             }
         } header: {
             Text(L10n.Settings.Blocking.header)

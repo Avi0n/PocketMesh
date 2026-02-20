@@ -592,10 +592,19 @@
 "diagnostics.error.exportFailed" = "Failed to create export file";
 
 
+// MARK: - Privacy Settings
+
+/* Navigation title for privacy settings page */
+"privacy.title" = "Privacy";
+
+/* Footer for privacy settings navigation row */
+"privacy.footer" = "Link previews, inline images, and blocked contacts.";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "Privacy";
+/* Section header for link preview settings */
+"linkPreviews.header" = "Link Previews";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "Link Previews";
@@ -711,6 +720,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "Connect a device to configure notifications";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "Message alerts, contact discoveries, and low battery warnings.";
 
 
 // MARK: - Radio Preset Section

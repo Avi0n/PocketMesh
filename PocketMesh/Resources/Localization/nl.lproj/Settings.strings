@@ -592,10 +592,19 @@
 "diagnostics.error.exportFailed" = "Kan exportbestand niet maken";
 
 
+// MARK: - Privacy Settings
+
+/* Navigation title for privacy settings page */
+"privacy.title" = "Privacy";
+
+/* Footer for privacy settings navigation row */
+"privacy.footer" = "Linkvoorbeelden, inline afbeeldingen en geblokkeerde contacten.";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "Privacy";
+/* Section header for link preview settings */
+"linkPreviews.header" = "Linkvoorbeelden";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "Linkvoorbeelden";
@@ -674,6 +683,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "Verbind een apparaat om meldingen te configureren";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "Berichtmeldingen, contactontdekkingen en waarschuwingen voor lage batterij.";
 
 
 // MARK: - Radio Preset Section
