@@ -5,6 +5,16 @@ import SwiftUI
 /// Drill-down view showing historical charts for telemetry metrics grouped by channel and type.
 struct TelemetryHistoryView: View {
     let fetchSnapshots: @Sendable () async -> [NodeStatusSnapshotDTO]
+    let ocvArray: [Int]
+
+    private let voltageChartBufferMV = 500
+
+    private var voltageYAxisDomain: ClosedRange<Double>? {
+        guard let min = ocvArray.min(), let max = ocvArray.max() else { return nil }
+        let yMin = Double(min - voltageChartBufferMV) / 1000.0
+        let yMax = Double(max + voltageChartBufferMV) / 1000.0
+        return yMin...yMax
+    }
 
     @State private var snapshots: [NodeStatusSnapshotDTO] = []
     @State private var timeRange: HistoryTimeRange = .all
@@ -23,12 +33,7 @@ struct TelemetryHistoryView: View {
                 ForEach(groups) { channelGroup in
                     Section {
                         ForEach(channelGroup.charts, id: \.key) { chart in
-                            MetricChartView(
-                                title: chart.title,
-                                unit: telemetryUnit(for: chart.typeName),
-                                dataPoints: chart.dataPoints,
-                                accentColor: telemetryColor(for: chart.typeName)
-                            )
+                            chartView(for: chart)
                         }
                     } header: {
                         Text(L10n.RemoteNodes.RemoteNodes.Status.channel(channelGroup.channel))
@@ -37,12 +42,7 @@ struct TelemetryHistoryView: View {
             } else if let singleGroup = groups.first {
                 ForEach(singleGroup.charts, id: \.key) { chart in
                     Section {
-                        MetricChartView(
-                            title: chart.title,
-                            unit: telemetryUnit(for: chart.typeName),
-                            dataPoints: chart.dataPoints,
-                            accentColor: telemetryColor(for: chart.typeName)
-                        )
+                        chartView(for: chart)
                     }
                 }
             }
@@ -52,6 +52,16 @@ struct TelemetryHistoryView: View {
         .task {
             snapshots = await fetchSnapshots()
         }
+    }
+
+    private func chartView(for chart: TelemetryChartGroup) -> MetricChartView {
+        MetricChartView(
+            title: chart.title,
+            unit: telemetryUnit(for: chart.typeName),
+            dataPoints: chart.dataPoints,
+            accentColor: telemetryColor(for: chart.typeName),
+            yAxisDomain: chart.typeName == "Voltage" ? voltageYAxisDomain : nil
+        )
     }
 
     private var channelGroups: [ChannelGroup] {

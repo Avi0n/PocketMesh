@@ -8,6 +8,7 @@ struct MetricChartView: View {
     let unit: String
     let dataPoints: [DataPoint]
     let accentColor: Color
+    var yAxisDomain: ClosedRange<Double>?
 
     @State private var selectedDate: Date?
 
@@ -23,7 +24,7 @@ struct MetricChartView: View {
             if dataPoints.count < 2 {
                 MetricChartEmptyState(value: dataPoints.first?.value, unit: unit)
             } else {
-                MetricChartContent(title: title, dataPoints: dataPoints, accentColor: accentColor, selectedDate: $selectedDate, selectedPoint: selectedPoint)
+                MetricChartContent(title: title, dataPoints: dataPoints, accentColor: accentColor, yAxisDomain: yAxisDomain, selectedDate: $selectedDate, selectedPoint: selectedPoint)
             }
         }
     }
@@ -69,11 +70,35 @@ private struct MetricChartContent: View {
     let title: String
     let dataPoints: [MetricChartView.DataPoint]
     let accentColor: Color
+    let yAxisDomain: ClosedRange<Double>?
     @Binding var selectedDate: Date?
     let selectedPoint: MetricChartView.DataPoint?
 
     var body: some View {
-        Chart {
+        chart
+            .chartXSelection(value: $selectedDate)
+            .chartGesture { proxy in
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        proxy.selectXValue(at: value.location.x)
+                    }
+                    .onEnded { _ in
+                        selectedDate = nil
+                    }
+            }
+            .chartYAxis {
+                AxisMarks(position: .leading)
+            }
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 4))
+            }
+            .accessibilityLabel(title)
+            .frame(height: 180)
+    }
+
+    @ViewBuilder
+    private var chart: some View {
+        let base = Chart {
             ForEach(dataPoints) { point in
                 LineMark(
                     x: .value("Time", point.date),
@@ -97,24 +122,12 @@ private struct MetricChartContent: View {
                     .zIndex(-1)
             }
         }
-        .chartXSelection(value: $selectedDate)
-        .chartGesture { proxy in
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    proxy.selectXValue(at: value.location.x)
-                }
-                .onEnded { _ in
-                    selectedDate = nil
-                }
+
+        if let yAxisDomain {
+            base.chartYScale(domain: yAxisDomain)
+        } else {
+            base
         }
-        .chartYAxis {
-            AxisMarks(position: .leading)
-        }
-        .chartXAxis {
-            AxisMarks(values: .automatic(desiredCount: 4))
-        }
-        .accessibilityLabel(title)
-        .frame(height: 180)
     }
 }
 
