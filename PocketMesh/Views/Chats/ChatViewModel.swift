@@ -178,7 +178,7 @@ final class ChatViewModel {
     private(set) var isLoadingOlder = false
 
     /// Whether more messages exist beyond what's loaded
-    private var hasMoreMessages = true
+    private(set) var hasMoreMessages = true
 
     /// Number of messages to fetch per page
     private let pageSize = 50
@@ -703,8 +703,9 @@ final class ChatViewModel {
                 }
             }
 
-            // Clear unread count and notify UI to refresh chat list
+            // Clear unread count and mention badge, then notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
+            try await dataStore.clearUnreadMentionCount(contactID: contact.id)
             syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
@@ -963,8 +964,9 @@ final class ChatViewModel {
                 }
             }
 
-            // Clear unread count and notify UI to refresh chat list
+            // Clear unread count and mention badge, then notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+            try await dataStore.clearChannelUnreadMentionCount(channelID: channel.id)
             syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
