@@ -3354,6 +3354,32 @@ public enum L10n {
         /// Section header for auto-add types
         public static let header = L10n.tr("Settings", "nodes.autoAddTypes.header", fallback: "Auto-Add Types")
       }
+      public enum StaleCleanup {
+        /// Threshold option: number of days (%d = day count)
+        public static func days(_ p1: Int) -> String {
+          return L10n.tr("Settings", "nodes.staleCleanup.days", p1, fallback: "%d days")
+        }
+        /// Footer describing the auto-remove feature (shown when toggle is off)
+        public static let footerDisabled = L10n.tr("Settings", "nodes.staleCleanup.footerDisabled", fallback: "Automatically removes non-favorite nodes that haven't been heard from after a set period. Favorites are never removed.")
+        /// Footer when enabled but device is disconnected
+        public static let footerDisconnected = L10n.tr("Settings", "nodes.staleCleanup.footerDisconnected", fallback: "Will check for old nodes on next connection. Favorites are never removed.")
+        /// Footer when auto-remove is enabled (%d = day count)
+        public static func footerEnabled(_ p1: Int) -> String {
+          return L10n.tr("Settings", "nodes.staleCleanup.footerEnabled", p1, fallback: "Non-favorite nodes not heard from in %d days are automatically removed on connection.")
+        }
+        /// Footer when toggle is on but no threshold selected yet
+        public static let footerSelect = L10n.tr("Settings", "nodes.staleCleanup.footerSelect", fallback: "Choose how long to keep nodes. Favorites are never removed.")
+        /// Toggle label / section header for stale node cleanup
+        public static let header = L10n.tr("Settings", "nodes.staleCleanup.header", fallback: "Auto-Remove Old Nodes")
+        /// Last cleanup date row (%@ = relative date)
+        public static func lastRun(_ p1: Any) -> String {
+          return L10n.tr("Settings", "nodes.staleCleanup.lastRun", String(describing: p1), fallback: "Last checked %@")
+        }
+        /// Picker placeholder when no threshold is selected
+        public static let select = L10n.tr("Settings", "nodes.staleCleanup.select", fallback: "Select")
+        /// Label for threshold picker
+        public static let threshold = L10n.tr("Settings", "nodes.staleCleanup.threshold", fallback: "Remove nodes older than")
+      }
       public enum Storage {
         /// Section header for storage settings
         public static let header = L10n.tr("Settings", "nodes.storage.header", fallback: "Storage")

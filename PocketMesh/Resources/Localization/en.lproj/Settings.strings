@@ -469,6 +469,36 @@
 "nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
 
 
+// MARK: - Auto-Remove Old Nodes Section
+
+/* Toggle label / section header for stale node cleanup */
+"nodes.staleCleanup.header" = "Auto-Remove Old Nodes";
+
+/* Label for threshold picker */
+"nodes.staleCleanup.threshold" = "Remove nodes older than";
+
+/* Picker placeholder when no threshold is selected */
+"nodes.staleCleanup.select" = "Select";
+
+/* Threshold option: number of days (%d = day count) */
+"nodes.staleCleanup.days" = "%d days";
+
+/* Footer when auto-remove is enabled (%d = day count) */
+"nodes.staleCleanup.footerEnabled" = "Non-favorite nodes not heard from in %d days are automatically removed on connection.";
+
+/* Footer describing the auto-remove feature (shown when toggle is off) */
+"nodes.staleCleanup.footerDisabled" = "Automatically removes non-favorite nodes that haven't been heard from after a set period. Favorites are never removed.";
+
+/* Footer when toggle is on but no threshold selected yet */
+"nodes.staleCleanup.footerSelect" = "Choose how long to keep nodes. Favorites are never removed.";
+
+/* Footer when enabled but device is disconnected */
+"nodes.staleCleanup.footerDisconnected" = "Will check for old nodes on next connection. Favorites are never removed.";
+
+/* Last cleanup date row (%@ = relative date) */
+"nodes.staleCleanup.lastRun" = "Last checked %@";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */

@@ -18,6 +18,9 @@ struct AdvancedSettingsView: View {
                 // Nodes Settings
                 NodesSettingsSection()
 
+                // Auto-Remove Old Nodes
+                StaleNodeCleanupSection()
+
                 // Telemetry Settings
                 TelemetrySettingsSection()
 

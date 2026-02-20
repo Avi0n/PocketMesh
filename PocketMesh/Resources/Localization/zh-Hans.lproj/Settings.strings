@@ -455,6 +455,37 @@
 /* Description for overwrite oldest toggle */
 "nodes.overwriteOldestDescription" = "当存储已满时，替换最旧的非收藏节点";
 
+
+// MARK: - Auto-Remove Old Nodes Section
+
+/* Toggle label / section header for stale node cleanup */
+"nodes.staleCleanup.header" = "自动移除旧节点";
+
+/* Label for threshold picker */
+"nodes.staleCleanup.threshold" = "移除超过此时间的节点";
+
+/* Picker placeholder when no threshold is selected */
+"nodes.staleCleanup.select" = "选择";
+
+/* Threshold option: number of days (%d = day count) */
+"nodes.staleCleanup.days" = "%d 天";
+
+/* Footer when auto-remove is enabled (%d = day count) */
+"nodes.staleCleanup.footerEnabled" = "超过 %d 天未收到消息的非收藏节点将在连接时自动移除。";
+
+/* Footer describing the auto-remove feature (shown when toggle is off) */
+"nodes.staleCleanup.footerDisabled" = "自动移除设定时间内未收到消息的非收藏节点。收藏节点不会被移除。";
+
+/* Footer when toggle is on but no threshold selected yet */
+"nodes.staleCleanup.footerSelect" = "选择保留节点的时间。收藏节点不会被移除。";
+
+/* Footer when enabled but device is disconnected */
+"nodes.staleCleanup.footerDisconnected" = "将在下次连接时检查旧节点。收藏节点不会被移除。";
+
+/* Last cleanup date row (%@ = relative date) */
+"nodes.staleCleanup.lastRun" = "上次检查 %@";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
