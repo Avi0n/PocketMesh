@@ -348,12 +348,7 @@ struct ChatView: View {
     }
 
     private func buildReplyText(for message: MessageDTO) -> String {
-        let mentionName = contact.name
-        let preview = String(message.text.prefix(20))
-        let hasMore = message.text.count > 20
-        let suffix = hasMore ? ".." : ""
-        let mention = MentionUtilities.createMention(for: mentionName)
-        return "\(mention)\"\(preview)\(suffix)\"\n"
+        MentionUtilities.buildReplyText(mentionName: contact.name, messageText: message.text)
     }
 
     // MARK: - Input Bar

@@ -109,4 +109,19 @@ public enum MentionUtilities {
         let mentions = extractMentions(from: text)
         return mentions.contains { $0.caseInsensitiveCompare(selfName) == .orderedSame }
     }
+
+    /// Builds reply text with a mention and quoted preview of the original message.
+    /// Strips any leading mention from the message text before generating the preview.
+    public static func buildReplyText(mentionName: String, messageText: String) -> String {
+        let previewSource: String
+        if let range = messageText.range(of: #"^@\[[^\]]+\]\s*"#, options: .regularExpression) {
+            previewSource = String(messageText[range.upperBound...])
+        } else {
+            previewSource = messageText
+        }
+        let preview = String(previewSource.prefix(10))
+        let suffix = previewSource.count > 10 ? ".." : ""
+        let mention = createMention(for: mentionName)
+        return "\(mention)\n>\(preview)\(suffix)\n"
+    }
 }

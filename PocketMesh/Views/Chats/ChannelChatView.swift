@@ -599,11 +599,7 @@ struct ChannelChatView: View {
 
     private func buildReplyText(for message: MessageDTO) -> String {
         let mentionName = message.senderNodeName ?? L10n.Chats.Chats.Message.Sender.unknown
-        let preview = String(message.text.prefix(20))
-        let hasMore = message.text.count > 20
-        let suffix = hasMore ? ".." : ""
-        let mention = MentionUtilities.createMention(for: mentionName)
-        return "\(mention)\"\(preview)\(suffix)\"\n"
+        return MentionUtilities.buildReplyText(mentionName: mentionName, messageText: message.text)
     }
 
     // MARK: - Input Bar
