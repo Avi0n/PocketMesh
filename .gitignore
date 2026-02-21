@@ -7,9 +7,6 @@
 # MeshCore references
 MeshCore-references/
 
-# XcodeBuildMCP
-.xcodebuildmcp/
-
 # AI
 .claude
 .ignore
@@ -18,6 +15,7 @@ AGENTS.md
 thoughts/
 plans/
 tmp/
+.xcodebuildmcp/
 
 scripts/
 
