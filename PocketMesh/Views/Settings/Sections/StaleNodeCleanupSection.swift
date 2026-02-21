@@ -42,6 +42,7 @@ struct StaleNodeCleanupSection: View {
                 Text(L10n.Settings.Nodes.StaleCleanup.footerDisconnected)
             }
         }
+        .radioDisabled(for: appState.connectionState)
         .onAppear {
             isEnabled = threshold > 0
         }
