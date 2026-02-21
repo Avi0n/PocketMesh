@@ -123,7 +123,7 @@ struct RepeaterStatusView: View {
                 }
 
                 NavigationLink {
-                    NodeStatusHistoryView(fetchSnapshots: viewModel.fetchHistory)
+                    NodeStatusHistoryView(fetchSnapshots: viewModel.fetchHistory, ocvArray: viewModel.ocvValues)
                 } label: {
                     Text(L10n.RemoteNodes.RemoteNodes.History.title)
                 }
