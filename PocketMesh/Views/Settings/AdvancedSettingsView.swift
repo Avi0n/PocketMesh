@@ -10,57 +10,52 @@ struct AdvancedSettingsView: View {
     @State private var ocvValues: [Int] = OCVPreset.liIon.ocvArray
 
     var body: some View {
-        NavigationStack {
-            List {
-                // Manual Radio Configuration
-                AdvancedRadioSection()
+        List {
+            // Manual Radio Configuration
+            AdvancedRadioSection()
 
-                // Nodes Settings
-                NodesSettingsSection()
+            // Nodes Settings
+            NodesSettingsSection()
 
-                // Auto-Remove Old Nodes
-                StaleNodeCleanupSection()
+            // Auto-Remove Old Nodes
+            StaleNodeCleanupSection()
 
-                // Telemetry Settings
-                TelemetrySettingsSection()
+            // Telemetry Settings
+            TelemetrySettingsSection()
 
-                // Messages Settings
-                MessagesSettingsSection()
+            // Messages Settings
+            MessagesSettingsSection()
 
-                // Battery Curve
-                BatteryCurveSection(
-                    availablePresets: OCVPreset.selectablePresets,
-                    headerText: L10n.Settings.BatteryCurve.header,
-                    footerText: L10n.Settings.BatteryCurve.footer,
-                    selectedPreset: $selectedOCVPreset,
-                    voltageValues: $ocvValues,
-                    onSave: saveOCVToDevice,
-                    isDisabled: appState.connectionState != .ready
-                )
+            // Battery Curve
+            BatteryCurveSection(
+                availablePresets: OCVPreset.selectablePresets,
+                headerText: L10n.Settings.BatteryCurve.header,
+                footerText: L10n.Settings.BatteryCurve.footer,
+                selectedPreset: $selectedOCVPreset,
+                voltageValues: $ocvValues,
+                onSave: saveOCVToDevice,
+                isDisabled: appState.connectionState != .ready
+            )
 
-                // Config Export/Import
-                ConfigExportImportSection()
+            // Config Export/Import
+            ConfigExportImportSection()
 
-                // Danger Zone
-                DangerZoneSection()
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.Settings.AdvancedSettings.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.Localizable.Common.done) { dismiss() }
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(L10n.Localizable.Common.done) {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil,
-                            from: nil,
-                            for: nil
-                        )
-                    }
+            // Danger Zone
+            DangerZoneSection()
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle(L10n.Settings.AdvancedSettings.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L10n.Localizable.Common.done) {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
                 }
             }
         }

@@ -2759,6 +2759,10 @@ public enum L10n {
         public static let unableToSave = L10n.tr("Settings", "alert.retry.unableToSave", fallback: "Unable to Save Setting")
       }
     }
+    public enum AppSettings {
+      /// Section header for app-level settings
+      public static let header = L10n.tr("Settings", "appSettings.header", fallback: "App Settings")
+    }
     public enum BatteryCurve {
       /// Option for custom battery curve
       public static let custom = L10n.tr("Settings", "batteryCurve.custom", fallback: "Custom")
@@ -2908,6 +2912,10 @@ public enum L10n {
       public static let percent = L10n.tr("Settings", "chart.percent", fallback: "Percent")
       /// Chart Y axis label
       public static let voltage = L10n.tr("Settings", "chart.voltage", fallback: "Voltage (V)")
+    }
+    public enum ChatSettings {
+      /// Navigation title for chat settings page
+      public static let title = L10n.tr("Settings", "chatSettings.title", fallback: "Chats")
     }
     public enum ConfigExport {
       /// Channels
@@ -3264,6 +3272,10 @@ public enum L10n {
       public static let gpsSource = L10n.tr("Settings", "location.gpsSource", fallback: "GPS Source")
       /// Section header for location settings
       public static let header = L10n.tr("Settings", "location.header", fallback: "Location")
+      /// Detail text when location is not being shared
+      public static let notSharing = L10n.tr("Settings", "location.notSharing", fallback: "Not sharing")
+      /// Detail text when location is being shared publicly
+      public static let sharingPublicly = L10n.tr("Settings", "location.sharingPublicly", fallback: "Sharing publicly")
       public enum GpsSource {
         /// GPS source option: device GPS
         public static let device = L10n.tr("Settings", "location.gpsSource.device", fallback: "Device GPS")
@@ -3294,6 +3306,10 @@ public enum L10n {
       public static let showIncomingHopCount = L10n.tr("Settings", "messages.showIncomingHopCount", fallback: "Show Incoming Hop Count")
       /// Toggle label for showing routing path on incoming messages
       public static let showIncomingPath = L10n.tr("Settings", "messages.showIncomingPath", fallback: "Show Incoming Path")
+    }
+    public enum MyDevice {
+      /// Section header for device-specific settings
+      public static let header = L10n.tr("Settings", "myDevice.header", fallback: "My Device")
     }
     public enum Node {
       /// Button text to copy
@@ -3410,12 +3426,6 @@ public enum L10n {
       public static let reactions = L10n.tr("Settings", "notifications.reactions", fallback: "Reactions")
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
-    }
-    public enum Privacy {
-      /// Footer for privacy settings navigation row
-      public static let footer = L10n.tr("Settings", "privacy.footer", fallback: "Link previews, inline images, and blocked contacts.")
-      /// Navigation title for privacy settings page
-      public static let title = L10n.tr("Settings", "privacy.title", fallback: "Privacy")
     }
     public enum PublicKey {
       /// Button to copy key to clipboard

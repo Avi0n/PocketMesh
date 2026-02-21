@@ -15,6 +15,12 @@
 /* Placeholder shown in split view detail when no setting is selected */
 "selectSetting" = "Выберите настройку";
 
+/* Section header for device-specific settings */
+"myDevice.header" = "Моё устройство";
+
+/* Section header for app-level settings */
+"appSettings.header" = "Настройки приложения";
+
 /* Footer text for the advanced settings row */
 "advancedSettings.footer" = "Настройка радио, телеметрия, настройки контактов и управление устройством";
 
@@ -592,13 +598,10 @@
 "diagnostics.error.exportFailed" = "Не удалось создать файл экспорта";
 
 
-// MARK: - Privacy Settings
+// MARK: - Chat Settings
 
-/* Navigation title for privacy settings page */
-"privacy.title" = "Конфиденциальность";
-
-/* Footer for privacy settings navigation row */
-"privacy.footer" = "Предпросмотр ссылок, встроенные изображения и заблокированные контакты.";
+/* Navigation title for chat settings page */
+"chatSettings.title" = "Чаты";
 
 
 // MARK: - Link Preview Settings Section
@@ -920,6 +923,12 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS устройства";
+
+/* Detail text when location is being shared publicly */
+"location.sharingPublicly" = "Публичный доступ";
+
+/* Detail text when location is not being shared */
+"location.notSharing" = "Не делится";
 
 // MARK: - Config Export/Import
 

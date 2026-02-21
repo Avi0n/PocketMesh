@@ -1,12 +1,12 @@
 import SwiftUI
 
-struct PrivacySettingsView: View {
+struct ChatSettingsView: View {
     var body: some View {
         List {
             LinkPreviewSettingsSection()
             BlockingSection()
         }
-        .navigationTitle(L10n.Settings.Privacy.title)
+        .navigationTitle(L10n.Settings.ChatSettings.title)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

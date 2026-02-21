@@ -15,6 +15,12 @@
 /* Placeholder shown in split view detail when no setting is selected */
 "selectSetting" = "Eine Einstellung auswählen";
 
+/* Section header for device-specific settings */
+"myDevice.header" = "Mein Gerät";
+
+/* Section header for app-level settings */
+"appSettings.header" = "App-Einstellungen";
+
 /* Footer text for the advanced settings row */
 "advancedSettings.footer" = "Funk-Tuning, Telemetrie, Kontakteinstellungen und Geräteverwaltung";
 
@@ -592,13 +598,10 @@
 "diagnostics.error.exportFailed" = "Exportdatei konnte nicht erstellt werden";
 
 
-// MARK: - Privacy Settings
+// MARK: - Chat Settings
 
-/* Navigation title for privacy settings page */
-"privacy.title" = "Datenschutz";
-
-/* Footer for privacy settings navigation row */
-"privacy.footer" = "Linkvorschau, Inline-Bilder und blockierte Kontakte.";
+/* Navigation title for chat settings page */
+"chatSettings.title" = "Chats";
 
 
 // MARK: - Link Preview Settings Section
@@ -920,6 +923,12 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "Geräte-GPS";
+
+/* Detail text when location is being shared publicly */
+"location.sharingPublicly" = "Öffentlich teilen";
+
+/* Detail text when location is not being shared */
+"location.notSharing" = "Nicht teilen";
 
 // MARK: - Config Export/Import
 

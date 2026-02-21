@@ -15,6 +15,12 @@
 /* Placeholder shown in split view detail when no setting is selected */
 "selectSetting" = "选择设置";
 
+/* Section header for device-specific settings */
+"myDevice.header" = "我的设备";
+
+/* Section header for app-level settings */
+"appSettings.header" = "应用设置";
+
 /* Footer text for advanced settings row */
 "advancedSettings.footer" = "无线电、遥测数据、联系人设置和设备管理";
 
@@ -577,13 +583,10 @@
 /* Error when export fails */
 "diagnostics.error.exportFailed" = "创建导出文件失败";
 
-// MARK: - Privacy Settings
+// MARK: - Chat Settings
 
-/* Navigation title for privacy settings page */
-"privacy.title" = "隐私";
-
-/* Footer for privacy settings navigation row */
-"privacy.footer" = "链接预览、内嵌图片和已屏蔽联系人。";
+/* Navigation title for chat settings page */
+"chatSettings.title" = "聊天";
 
 
 // MARK: - Link Preview Settings Section
@@ -654,6 +657,12 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "设备 GPS";
+
+/* Detail text when location is being shared publicly */
+"location.sharingPublicly" = "公开分享";
+
+/* Detail text when location is not being shared */
+"location.notSharing" = "未分享";
 
 // MARK: - Notification Settings Section
 

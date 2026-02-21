@@ -8,7 +8,14 @@ private let deviceInfoLogger = Logger(subsystem: "com.pocketmesh", category: "De
 /// Detailed device information screen
 struct DeviceInfoView: View {
     @Environment(\.appState) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = false
+
+    @State private var nodeName: String = ""
+    @State private var isEditingName = false
+    @State private var showError: String?
+    @State private var retryAlert = RetryAlertState()
+    @State private var isSaving = false
 
     var body: some View {
         List {
@@ -18,6 +25,48 @@ struct DeviceInfoView: View {
                     DeviceIdentityHeader(device: device)
                 } header: {
                     Text(L10n.Settings.Device.header)
+                }
+
+                // Node settings (name, public key, share)
+                Section {
+                    HStack {
+                        TintedLabel(L10n.Settings.Node.name, systemImage: "person.text.rectangle")
+                        Spacer()
+                        Button(device.nodeName) {
+                            nodeName = device.nodeName
+                            isEditingName = true
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .radioDisabled(for: appState.connectionState, or: isSaving)
+
+                    NavigationLink {
+                        PublicKeyView(publicKey: device.publicKey)
+                    } label: {
+                        Label(L10n.Settings.DeviceInfo.publicKey, systemImage: "key")
+                    }
+
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Label(L10n.Settings.DeviceInfo.shareContact, systemImage: "square.and.arrow.up")
+                    }
+                } header: {
+                    Text(L10n.Settings.Node.header)
+                } footer: {
+                    Text(L10n.Settings.Node.footer)
+                }
+                .alert(L10n.Settings.Node.Alert.EditName.title, isPresented: $isEditingName) {
+                    TextField(L10n.Settings.Node.name, text: $nodeName)
+                        .onChange(of: nodeName) { _, newValue in
+                            if newValue.utf8.count > ProtocolLimits.maxUsableNameBytes {
+                                nodeName = newValue.utf8Prefix(maxBytes: ProtocolLimits.maxUsableNameBytes)
+                            }
+                        }
+                    Button(L10n.Localizable.Common.cancel, role: .cancel) { }
+                    Button(L10n.Localizable.Common.save) {
+                        saveNodeName()
+                    }
                 }
 
                 // Connection status
@@ -141,23 +190,6 @@ struct DeviceInfoView: View {
                     Text(L10n.Settings.DeviceInfo.Capabilities.header)
                 }
 
-                // Identity
-                Section {
-                    NavigationLink {
-                        PublicKeyView(publicKey: device.publicKey)
-                    } label: {
-                        Label(L10n.Settings.DeviceInfo.publicKey, systemImage: "key")
-                    }
-
-                    Button {
-                        showShareSheet = true
-                    } label: {
-                        Label(L10n.Settings.DeviceInfo.shareContact, systemImage: "square.and.arrow.up")
-                    }
-                } header: {
-                    Text(L10n.Settings.DeviceInfo.Identity.header)
-                }
-
             } else {
                 ContentUnavailableView(
                     L10n.Settings.DeviceInfo.NoDevice.title,
@@ -167,6 +199,8 @@ struct DeviceInfoView: View {
             }
         }
         .navigationTitle(L10n.Settings.DeviceInfo.title)
+        .errorAlert($showError)
+        .retryAlert(retryAlert)
         .refreshable {
             await appState.batteryMonitor.fetchDeviceBattery(services: appState.services, device: appState.connectedDevice)
         }
@@ -187,6 +221,29 @@ struct DeviceInfoView: View {
 
     private func formatStorage(used: Int, total: Int) -> String {
         "\(used) / \(total) KB"
+    }
+
+    private func saveNodeName() {
+        let name = nodeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty,
+              let settingsService = appState.services?.settingsService else { return }
+
+        isSaving = true
+        Task {
+            do {
+                _ = try await settingsService.setNodeNameVerified(name)
+                retryAlert.reset()
+            } catch let error as SettingsServiceError where error.isRetryable {
+                retryAlert.show(
+                    message: error.errorDescription ?? L10n.Settings.Alert.Retry.fallbackMessage,
+                    onRetry: { saveNodeName() },
+                    onMaxRetriesExceeded: { dismiss() }
+                )
+            } catch {
+                showError = error.localizedDescription
+            }
+            isSaving = false
+        }
     }
 }
 
