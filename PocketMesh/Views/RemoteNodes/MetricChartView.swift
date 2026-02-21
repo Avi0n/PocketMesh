@@ -131,6 +131,16 @@ private struct MetricChartContent: View {
     }
 }
 
+// MARK: - OCV Chart Domain
+
+extension Array where Element == Int {
+    /// Computes a chart Y-axis domain in volts from millivolt OCV values, with a ±buffer.
+    func voltageChartDomain(bufferMV: Int = 500) -> ClosedRange<Double>? {
+        guard let min = self.min(), let max = self.max() else { return nil }
+        return Double(min - bufferMV) / 1000.0 ... Double(max + bufferMV) / 1000.0
+    }
+}
+
 /// Empty state shown when fewer than 2 data points exist.
 private struct MetricChartEmptyState: View {
     let value: Double?

@@ -7,15 +7,6 @@ struct TelemetryHistoryView: View {
     let fetchSnapshots: @Sendable () async -> [NodeStatusSnapshotDTO]
     let ocvArray: [Int]
 
-    private let voltageChartBufferMV = 500
-
-    private var voltageYAxisDomain: ClosedRange<Double>? {
-        guard let min = ocvArray.min(), let max = ocvArray.max() else { return nil }
-        let yMin = Double(min - voltageChartBufferMV) / 1000.0
-        let yMax = Double(max + voltageChartBufferMV) / 1000.0
-        return yMin...yMax
-    }
-
     @State private var snapshots: [NodeStatusSnapshotDTO] = []
     @State private var timeRange: HistoryTimeRange = .all
 
@@ -60,7 +51,7 @@ struct TelemetryHistoryView: View {
             unit: chart.sensorType?.unit ?? "",
             dataPoints: chart.dataPoints,
             accentColor: telemetryColor(for: chart.sensorType),
-            yAxisDomain: chart.sensorType == .voltage ? voltageYAxisDomain : nil
+            yAxisDomain: chart.sensorType == .voltage ? ocvArray.voltageChartDomain() : nil
         )
     }
 
