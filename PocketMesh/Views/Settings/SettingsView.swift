@@ -148,7 +148,6 @@ private struct MyDeviceSection: View {
             } label: {
                 advancedSettingsRowLabel
             }
-            .foregroundStyle(.primary)
         } header: {
             Text(L10n.Settings.MyDevice.header)
         }
@@ -171,13 +170,7 @@ private struct MyDeviceSection: View {
     }
 
     private var advancedSettingsRowLabel: some View {
-        HStack {
-            TintedLabel(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape.2")
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
+        TintedLabel(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape.2")
     }
 }
 
