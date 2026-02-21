@@ -7,6 +7,9 @@
 # MeshCore references
 MeshCore-references/
 
+# XcodeBuildMCP
+.xcodebuildmcp/
+
 # AI
 .claude
 .ignore
