@@ -24,6 +24,7 @@
 	<array>
 		<string>MeshCore-</string>
 		<string>Whisper-</string>
+		<string>WisCore</string>
 	</array>
 	<key>NSAccessorySetupBluetoothServices</key>
 	<array>

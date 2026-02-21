@@ -73,7 +73,7 @@ public final class AccessorySetupKitService {
 
     /// Bluetooth name prefixes for supported MeshCore devices
     /// Each prefix must have a matching entry in NSAccessorySetupBluetoothNames in Info.plist
-    private static let supportedNamePrefixes = ["MeshCore-", "Whisper-"]
+    private static let supportedNamePrefixes = ["MeshCore-", "Whisper-", "WisCore"]
 
     private var discoveryDescriptors: [ASDiscoveryDescriptor] {
         Self.supportedNamePrefixes.map { prefix in
