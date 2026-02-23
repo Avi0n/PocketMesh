@@ -20,7 +20,6 @@ struct ChannelChatView: View {
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
-    @State private var keyboardObserver = KeyboardObserver()
     @State private var showingChannelInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
@@ -55,10 +54,7 @@ struct ChannelChatView: View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
-                    .floatingKeyboardAware()
             }
-            .ignoreKeyboardOnIPad()
-            .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }

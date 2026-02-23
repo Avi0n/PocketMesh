@@ -15,7 +15,6 @@ struct RoomConversationView: View {
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
-    @State private var keyboardObserver = KeyboardObserver()
     @FocusState private var isInputFocused: Bool
 
     init(session: RemoteNodeSessionDTO) {
@@ -29,14 +28,11 @@ struct RoomConversationView: View {
                     disconnectedBanner
                 } else if session.canPost {
                     inputBar
-                        .floatingKeyboardAware()
                 } else {
                     readOnlyBanner
                 }
             }
             .animation(.default, value: session.isConnected)
-            .ignoreKeyboardOnIPad()
-            .environment(keyboardObserver)
             .navigationHeader(title: session.name, subtitle: connectionStatus)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {

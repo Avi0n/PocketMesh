@@ -65,9 +65,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
     /// Tracks mention IDs that have already been reported as visible (prevents duplicate callbacks)
     private var markedMentionIDs: Set<Item.ID> = []
 
-    /// Current keyboard height for inset calculation
-    private var keyboardHeight: CGFloat = 0
-
     /// Flag to prevent scroll delegate from overriding isAtBottom during programmatic scroll
     private(set) var isScrollingToBottom = false
 
@@ -151,7 +148,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
         }
 
         let wasAtBottom = isAtBottom
-        keyboardHeight = keyboardFrame.height
 
         // SwiftUI handles frame changes for keyboard, so we don't add content inset.
         // Just scroll to bottom after layout settles if we were at bottom.
@@ -170,7 +166,6 @@ final class ChatTableViewController<Item: Identifiable & Hashable & Sendable, Ce
     }
 
     @objc private func keyboardWillHide(_ notification: Notification) {
-        keyboardHeight = 0
     }
 
     // MARK: - Configuration
