@@ -195,6 +195,17 @@ final class ChatViewModel {
     /// Minimum unread count before showing the "New Messages" divider
     private let newMessagesDividerMinUnreadCount = 10
 
+    /// Computes the divider message ID from a fetched (unfiltered) message array.
+    /// Must be called before filtering. Sets `dividerComputed = true`.
+    private func computeDividerPosition(from messages: [MessageDTO], unreadCount: Int) {
+        guard !dividerComputed, unreadCount > newMessagesDividerMinUnreadCount else { return }
+        let dividerIndex = max(0, messages.count - unreadCount)
+        if dividerIndex < messages.count {
+            newMessagesDividerMessageID = messages[dividerIndex].id
+        }
+        dividerComputed = true
+    }
+
     // MARK: - Dependencies
 
     private var dataStore: DataStore?
@@ -647,20 +658,14 @@ final class ChatViewModel {
             let unfilteredCount = fetchedMessages.count
             totalFetchedCount = unfilteredCount
 
+            // Compute divider position before filtering, using unfiltered array
+            computeDividerPosition(from: fetchedMessages, unreadCount: contact.unreadCount)
+
             // Hide sent reaction messages (unless failed)
             fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: true)
 
             messages = fetchedMessages
             hasMoreMessages = unfilteredCount == pageSize
-
-            // Compute divider position from unread count before it gets cleared
-            if !dividerComputed && contact.unreadCount > newMessagesDividerMinUnreadCount {
-                let dividerIndex = fetchedMessages.count - contact.unreadCount
-                if dividerIndex > 0 && dividerIndex < fetchedMessages.count {
-                    newMessagesDividerMessageID = fetchedMessages[dividerIndex].id
-                }
-                dividerComputed = true
-            }
 
             buildDisplayItems()
 
@@ -884,6 +889,9 @@ final class ChatViewModel {
             totalFetchedCount = unfilteredCount
             logger.info("loadChannelMessages: fetched \(unfilteredCount) messages")
 
+            // Compute divider position before filtering, using unfiltered array
+            computeDividerPosition(from: fetchedMessages, unreadCount: channel.unreadCount)
+
             // Filter out messages from blocked senders using SyncCoordinator's cache
             if let syncCoordinator {
                 let blockedNames = await syncCoordinator.blockedSenderNames()
@@ -901,15 +909,6 @@ final class ChatViewModel {
             // Use unfiltered count to determine if more messages exist
             hasMoreMessages = unfilteredCount == pageSize
             messages = fetchedMessages
-
-            // Compute divider position from unread count before it gets cleared
-            if !dividerComputed && channel.unreadCount > newMessagesDividerMinUnreadCount {
-                let dividerIndex = fetchedMessages.count - channel.unreadCount
-                if dividerIndex > 0 && dividerIndex < fetchedMessages.count {
-                    newMessagesDividerMessageID = fetchedMessages[dividerIndex].id
-                }
-                dividerComputed = true
-            }
 
             buildChannelSenders(deviceID: channel.deviceID)
             buildDisplayItems()
