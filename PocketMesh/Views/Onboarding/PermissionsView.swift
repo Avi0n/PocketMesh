@@ -135,7 +135,7 @@ struct PermissionsView: View {
             // Navigation buttons
             VStack(spacing: 12) {
                 Button {
-                    appState.onboardingPath.append(.deviceScan)
+                    appState.onboarding.onboardingPath.append(.deviceScan)
                 } label: {
                     Text(allPermissionsGranted ? L10n.Onboarding.Permissions.continue : L10n.Onboarding.Permissions.skipForNow)
                         .font(.headline)
@@ -145,7 +145,7 @@ struct PermissionsView: View {
                 .liquidGlassProminentButtonStyle()
 
                 Button {
-                    appState.onboardingPath.removeLast()
+                    appState.onboarding.onboardingPath.removeLast()
                 } label: {
                     Text(L10n.Onboarding.Permissions.back)
                         .font(.subheadline)

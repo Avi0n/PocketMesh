@@ -6,56 +6,45 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        @Bindable var appState = appState
+        @Bindable var connectionUI = appState.connectionUI
 
         Group {
-            if appState.hasCompletedOnboarding {
+            if appState.onboarding.hasCompletedOnboarding {
                 MainTabView()
             } else {
                 OnboardingView()
             }
         }
-        .animation(.default, value: appState.hasCompletedOnboarding)
+        .animation(.default, value: appState.onboarding.hasCompletedOnboarding)
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 appState.handleBecameActive()
             }
         }
-        .alert(L10n.Localizable.Alert.ConnectionFailed.title, isPresented: $appState.showingConnectionFailedAlert) {
-            if appState.failedPairingDeviceID != nil {
+        .alert(L10n.Localizable.Alert.ConnectionFailed.title, isPresented: $connectionUI.showingConnectionFailedAlert) {
+            if appState.connectionUI.failedPairingDeviceID != nil {
                 // Wrong PIN scenario - offer to remove and retry
                 Button(L10n.Localizable.Alert.ConnectionFailed.removeAndRetry) {
                     appState.removeFailedPairingAndRetry()
                 }
                 Button(L10n.Localizable.Common.cancel, role: .cancel) {
-                    appState.failedPairingDeviceID = nil
-                }
-            } else if appState.pendingReconnectDeviceID != nil {
-                Button(L10n.Localizable.Common.tryAgain) {
-                    Task {
-                        if let deviceID = appState.pendingReconnectDeviceID {
-                            try? await appState.connectionManager.connect(to: deviceID, forceReconnect: true)
-                        }
-                    }
-                }
-                Button(L10n.Localizable.Common.cancel, role: .cancel) {
-                    appState.pendingReconnectDeviceID = nil
+                    appState.connectionUI.failedPairingDeviceID = nil
                 }
             } else {
                 Button(L10n.Localizable.Common.ok, role: .cancel) { }
             }
         } message: {
-            Text(appState.connectionFailedMessage ?? L10n.Localizable.Alert.ConnectionFailed.defaultMessage)
+            Text(appState.connectionUI.connectionFailedMessage ?? L10n.Localizable.Alert.ConnectionFailed.defaultMessage)
         }
         .alert(
             L10n.Localizable.Alert.CouldNotConnect.title,
             isPresented: Binding(
-                get: { appState.otherAppWarningDeviceID != nil },
-                set: { if !$0 { appState.otherAppWarningDeviceID = nil } }
+                get: { appState.connectionUI.otherAppWarningDeviceID != nil },
+                set: { if !$0 { appState.connectionUI.otherAppWarningDeviceID = nil } }
             )
         ) {
             Button(L10n.Localizable.Common.ok) {
-                appState.cancelOtherAppWarning()
+                appState.connectionUI.otherAppWarningDeviceID = nil
             }
         } message: {
             Text(L10n.Localizable.Alert.CouldNotConnect.otherAppMessage)
@@ -69,9 +58,9 @@ struct OnboardingView: View {
     @Environment(\.appState) private var appState
 
     var body: some View {
-        @Bindable var appState = appState
+        @Bindable var onboarding = appState.onboarding
 
-        NavigationStack(path: $appState.onboardingPath) {
+        NavigationStack(path: $onboarding.onboardingPath) {
             WelcomeView()
                 .navigationDestination(for: OnboardingStep.self) { step in
                     switch step {
@@ -116,10 +105,10 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        @Bindable var appState = appState
+        @Bindable var navigation = appState.navigation
 
         ZStack(alignment: .top) {
-            TabView(selection: $appState.selectedTab) {
+            TabView(selection: $navigation.selectedTab) {
             Tab(L10n.Localizable.Tabs.chats, systemImage: "message.fill", value: 0) {
                 ChatsView()
             }
@@ -161,11 +150,11 @@ struct MainTabView: View {
                 }
             }
         }
-        .onChange(of: appState.selectedTab) { _, newTab in
-            // Donate pending flood advert tip when returning to a valid tab
-            if appState.pendingFloodAdvertTipDonation && (newTab == 0 || newTab == 1 || newTab == 2) {
+        .onChange(of: appState.navigation.selectedTab) { _, newTab in
+            // Donate pending device menu tip when returning to a valid tab
+            if appState.navigation.pendingDeviceMenuTipDonation && appState.navigation.isOnValidTabForDeviceMenuTip {
                 Task {
-                    await appState.donateFloodAdvertTipIfOnValidTab()
+                    await appState.donateDeviceMenuTipIfOnValidTab()
                 }
             }
         }
@@ -184,7 +173,7 @@ struct MainTabView: View {
 
 #Preview("Content View - Main App") {
     let appState = AppState()
-    appState.hasCompletedOnboarding = true
+    appState.onboarding.hasCompletedOnboarding = true
     return ContentView()
         .environment(\.appState, appState)
 }

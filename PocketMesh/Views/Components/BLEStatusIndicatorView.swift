@@ -14,7 +14,7 @@ struct BLEStatusIndicatorView: View {
     @State private var successFeedbackTrigger = false
     @State private var errorFeedbackTrigger = false
 
-    private let floodAdvertTip = SendFloodAdvertTip()
+    private let deviceMenuTip = DeviceMenuTip()
     private let devicePreferenceStore = DevicePreferenceStore()
 
     var body: some View {
@@ -62,10 +62,11 @@ struct BLEStatusIndicatorView: View {
                     }
                     VStack(alignment: .leading) {
                         Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
-                        if let battery = appState.deviceBattery {
+                        if let battery = appState.batteryMonitor.deviceBattery {
+                            let ocvArray = appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice)
                             Label(
-                                "\(battery.percentage(using: appState.activeBatteryOCVArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
-                                systemImage: battery.iconName(using: appState.activeBatteryOCVArray)
+                                "\(battery.percentage(using: ocvArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: battery.iconName(using: ocvArray)
                             )
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -115,7 +116,7 @@ struct BLEStatusIndicatorView: View {
                 .foregroundStyle(iconColor)
                 .symbolEffect(.pulse, isActive: isAnimating)
         }
-        .popoverTip(floodAdvertTip, arrowEdge: .top)
+        .popoverTip(deviceMenuTip)
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
@@ -167,24 +168,23 @@ struct BLEStatusIndicatorView: View {
 
     // MARK: - Actions
 
-    private var autoUpdateConfig: (enabled: Bool, source: GPSSource)? {
+    private var autoUpdateGPSSource: GPSSource? {
         guard let device = appState.connectedDevice,
               device.advertLocationPolicy == 1,
               devicePreferenceStore.isAutoUpdateLocationEnabled(deviceID: device.id) else {
             return nil
         }
-        return (true, devicePreferenceStore.gpsSource(deviceID: device.id))
+        return devicePreferenceStore.gpsSource(deviceID: device.id)
     }
 
     private func sendAdvert(flood: Bool) {
-        floodAdvertTip.invalidate(reason: .actionPerformed)
         guard !isSendingAdvert else { return }
         isSendingAdvert = true
 
         Task {
             // Update location from GPS before sending if enabled
-            if let config = autoUpdateConfig {
-                await updateLocationFromGPS(source: config.source)
+            if let source = autoUpdateGPSSource {
+                await updateLocationFromGPS(source: source)
             }
 
             do {

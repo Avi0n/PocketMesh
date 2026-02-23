@@ -37,6 +37,16 @@ public protocol BLEStateMachineProtocol: Actor {
     /// - Returns: `true` if the device is connected to the system
     func isDeviceConnectedToSystem(_ deviceID: UUID) -> Bool
 
+    /// Starts a best-effort adoption of an already system-connected peripheral.
+    ///
+    /// This is used to recover from cases where iOS keeps the BLE link alive across app termination
+    /// (e.g., app update) but state restoration did not run. The adoption uses the same discovery
+    /// chain as state restoration/auto-reconnect.
+    ///
+    /// - Parameter deviceID: The UUID of the device to adopt.
+    /// - Returns: `true` if an adoption attempt was started.
+    func startAdoptingSystemConnectedPeripheral(_ deviceID: UUID) -> Bool
+
     /// Activates the central manager if needed.
     func activate()
 

@@ -63,6 +63,7 @@ struct NodesSettingsSection: View {
                 }
                 Text(L10n.Settings.Nodes.AutoAddMode.all).tag(AutoAddMode.all)
             }
+            .pickerStyle(.menu)
             .onChange(of: autoAddMode) { _, newValue in
                 if newValue == .selectedTypes {
                     UIAccessibility.post(notification: .screenChanged, argument: nil)

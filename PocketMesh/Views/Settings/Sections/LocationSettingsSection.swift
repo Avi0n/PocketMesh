@@ -31,12 +31,7 @@ struct LocationSettingsSection: View {
                 showingLocationPicker = true
             } label: {
                 HStack {
-                    Label {
-                        Text(L10n.Settings.Node.setLocation)
-                    } icon: {
-                        Image(systemName: "mappin.and.ellipse")
-                            .foregroundStyle(.tint)
-                    }
+                    TintedLabel(L10n.Settings.Node.setLocation, systemImage: "mappin.and.ellipse")
                     Spacer()
                     if let device = appState.connectedDevice,
                        device.latitude != 0 || device.longitude != 0 {
@@ -56,7 +51,7 @@ struct LocationSettingsSection: View {
 
             // Share Location Publicly
             Toggle(isOn: $shareLocation) {
-                Label(L10n.Settings.Node.shareLocationPublicly, systemImage: "location")
+                TintedLabel(L10n.Settings.Node.shareLocationPublicly, systemImage: "location")
             }
             .onChange(of: shareLocation) { _, newValue in
                 guard didLoad else { return }
@@ -66,7 +61,7 @@ struct LocationSettingsSection: View {
 
             // Auto-Update Location
             Toggle(isOn: $autoUpdateLocation) {
-                Label(L10n.Settings.Location.autoUpdate, systemImage: "location.circle")
+                TintedLabel(L10n.Settings.Location.autoUpdate, systemImage: "location.circle")
             }
             .onChange(of: autoUpdateLocation) { _, newValue in
                 guard let deviceID = appState.connectedDevice?.id else { return }
@@ -129,7 +124,7 @@ struct LocationSettingsSection: View {
 
     private var startupTaskID: String {
         let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
-        let syncPhase = appState.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        let syncPhase = appState.connectionUI.currentSyncPhase.map { String(describing: $0) } ?? "none"
         return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
     }
 

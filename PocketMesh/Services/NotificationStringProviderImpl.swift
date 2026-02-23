@@ -13,4 +13,15 @@ struct NotificationStringProviderImpl: NotificationStringProvider {
             L10n.Localizable.Notifications.Discovery.room
         }
     }
+
+    var replyActionTitle: String { L10n.Localizable.Notifications.Action.reply }
+    var sendButtonTitle: String { L10n.Localizable.Notifications.Action.send }
+    var messagePlaceholder: String { L10n.Localizable.Notifications.Action.messagePlaceholder }
+    var markAsReadActionTitle: String { L10n.Localizable.Notifications.Action.markAsRead }
+
+    var lowBatteryTitle: String { L10n.Localizable.Notifications.LowBattery.title }
+
+    func lowBatteryBody(deviceName: String, percentage: Int) -> String {
+        L10n.Localizable.Notifications.LowBattery.body(deviceName, percentage)
+    }
 }

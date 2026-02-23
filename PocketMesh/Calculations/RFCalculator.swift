@@ -94,6 +94,12 @@ enum RFCalculator {
     /// Earth's radius in kilometers
     static let earthRadiusKm: Double = 6371
 
+    /// Minimum Fresnel zone clearance percentage for a "clear" path
+    static let clearClearanceThreshold: Double = 80
+
+    /// Minimum Fresnel zone clearance percentage for a "marginal" path
+    static let marginalClearanceThreshold: Double = 60
+
     // MARK: - Wavelength
 
     /// Calculates the wavelength in meters for a given frequency.
@@ -143,18 +149,18 @@ enum RFCalculator {
     /// - Parameters:
     ///   - distanceToAMeters: Distance from point A to the calculation point in meters.
     ///   - distanceToBMeters: Distance from the calculation point to point B in meters.
-    ///   - kFactor: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///   - refractionK: The effective earth radius factor. Use 1.0 for no adjustment,
     ///              1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: The earth bulge in meters.
     static func earthBulge(
         distanceToAMeters: Double,
         distanceToBMeters: Double,
-        kFactor: Double
+        refractionK: Double
     ) -> Double {
-        guard distanceToAMeters > 0, distanceToBMeters > 0, kFactor > 0 else { return 0 }
+        guard distanceToAMeters > 0, distanceToBMeters > 0, refractionK > 0 else { return 0 }
 
         let earthRadiusMeters = earthRadiusKm * 1000
-        let effectiveEarthRadius = kFactor * earthRadiusMeters
+        let effectiveEarthRadius = refractionK * earthRadiusMeters
 
         // Earth bulge: h = (d1 * d2) / (2 * Re_effective)
         return (distanceToAMeters * distanceToBMeters) / (2 * effectiveEarthRadius)
@@ -286,7 +292,7 @@ enum RFCalculator {
     ///   - pointAHeightMeters: Antenna height at point A in meters above ground.
     ///   - pointBHeightMeters: Antenna height at point B in meters above ground.
     ///   - frequencyMHz: The operating frequency in megahertz.
-    ///   - kFactor: The effective earth radius factor. Use 1.0 for no adjustment,
+    ///   - refractionK: The effective earth radius factor. Use 1.0 for no adjustment,
     ///              1.33 (4/3) for standard atmosphere, or 4.0 for ducting conditions.
     /// - Returns: A PathAnalysisResult containing loss calculations and clearance status.
     static func analyzePath(
@@ -294,7 +300,7 @@ enum RFCalculator {
         pointAHeightMeters: Double,
         pointBHeightMeters: Double,
         frequencyMHz: Double,
-        kFactor: Double
+        refractionK: Double
     ) -> PathAnalysisResult {
         guard elevationProfile.count >= 2 else {
             return PathAnalysisResult(
@@ -306,7 +312,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: kFactor
+                refractionK: refractionK
             )
         }
 
@@ -325,7 +331,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: kFactor
+                refractionK: refractionK
             )
         }
 
@@ -356,7 +362,7 @@ enum RFCalculator {
             let bulge = earthBulge(
                 distanceToAMeters: distanceFromA,
                 distanceToBMeters: distanceToB,
-                kFactor: kFactor
+                refractionK: refractionK
             )
             let effectiveTerrainHeight = sample.elevation + bulge
 
@@ -401,8 +407,8 @@ enum RFCalculator {
                 }
             }
 
-            // Record obstruction points where clearance < 60%
-            if clearancePercent < 60 {
+            // Record obstruction points where clearance < marginal threshold
+            if clearancePercent < marginalClearanceThreshold {
                 let obstruction = ObstructionPoint(
                     distanceFromAMeters: distanceFromA,
                     obstructionHeightMeters: obstructionHeight,
@@ -419,9 +425,9 @@ enum RFCalculator {
 
         // Determine clearance status
         let clearanceStatus: ClearanceStatus
-        if worstClearancePercent >= 80 {
+        if worstClearancePercent >= clearClearanceThreshold {
             clearanceStatus = .clear
-        } else if worstClearancePercent >= 60 {
+        } else if worstClearancePercent >= marginalClearanceThreshold {
             clearanceStatus = .marginal
         } else if worstClearancePercent >= 0 {
             clearanceStatus = .partialObstruction
@@ -440,7 +446,7 @@ enum RFCalculator {
             worstClearancePercent: worstClearancePercent,
             obstructionPoints: obstructionPoints,
             frequencyMHz: frequencyMHz,
-            refractionK: kFactor
+            refractionK: refractionK
         )
     }
 
@@ -454,14 +460,14 @@ enum RFCalculator {
     ///   - startHeightMeters: Antenna height at segment start in meters above ground.
     ///   - endHeightMeters: Antenna height at segment end in meters above ground.
     ///   - frequencyMHz: The operating frequency in megahertz.
-    ///   - kFactor: The effective earth radius factor.
+    ///   - refractionK: The effective earth radius factor.
     /// - Returns: A PathAnalysisResult for this segment.
     static func analyzePathSegment(
         elevationProfile: ArraySlice<ElevationSample>,
         startHeightMeters: Double,
         endHeightMeters: Double,
         frequencyMHz: Double,
-        kFactor: Double
+        refractionK: Double
     ) -> PathAnalysisResult {
         guard elevationProfile.count >= 2,
               let firstSample = elevationProfile.first,
@@ -475,7 +481,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: kFactor
+                refractionK: refractionK
             )
         }
 
@@ -494,7 +500,7 @@ enum RFCalculator {
                 worstClearancePercent: 0,
                 obstructionPoints: [],
                 frequencyMHz: frequencyMHz,
-                refractionK: kFactor
+                refractionK: refractionK
             )
         }
 
@@ -525,7 +531,7 @@ enum RFCalculator {
             let bulge = earthBulge(
                 distanceToAMeters: distanceFromSegmentStart,
                 distanceToBMeters: distanceToSegmentEnd,
-                kFactor: kFactor
+                refractionK: refractionK
             )
             let effectiveTerrainHeight = sample.elevation + bulge
 
@@ -564,7 +570,7 @@ enum RFCalculator {
             }
 
             // Record obstruction points
-            if clearancePercent < 60 {
+            if clearancePercent < marginalClearanceThreshold {
                 let obstruction = ObstructionPoint(
                     distanceFromAMeters: sample.distanceFromAMeters, // Keep original distance
                     obstructionHeightMeters: obstructionHeight,
@@ -579,9 +585,9 @@ enum RFCalculator {
         }
 
         let clearanceStatus: ClearanceStatus
-        if worstClearancePercent >= 80 {
+        if worstClearancePercent >= clearClearanceThreshold {
             clearanceStatus = .clear
-        } else if worstClearancePercent >= 60 {
+        } else if worstClearancePercent >= marginalClearanceThreshold {
             clearanceStatus = .marginal
         } else if worstClearancePercent >= 0 {
             clearanceStatus = .partialObstruction
@@ -598,7 +604,7 @@ enum RFCalculator {
             worstClearancePercent: worstClearancePercent,
             obstructionPoints: obstructionPoints,
             frequencyMHz: frequencyMHz,
-            refractionK: kFactor
+            refractionK: refractionK
         )
     }
 }

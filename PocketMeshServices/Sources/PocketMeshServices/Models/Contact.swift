@@ -116,6 +116,28 @@ public final class Contact {
         self.customOCVArrayString = customOCVArrayString
     }
 
+    /// Applies all mutable fields from a DTO to this model instance.
+    func apply(_ dto: ContactDTO) {
+        name = dto.name
+        typeRawValue = dto.typeRawValue
+        flags = dto.flags
+        outPathLength = dto.outPathLength
+        outPath = dto.outPath
+        lastAdvertTimestamp = dto.lastAdvertTimestamp
+        latitude = dto.latitude
+        longitude = dto.longitude
+        lastModified = dto.lastModified
+        nickname = dto.nickname
+        isBlocked = dto.isBlocked
+        isMuted = dto.isMuted
+        isFavorite = dto.isFavorite
+        lastMessageDate = dto.lastMessageDate
+        unreadCount = dto.unreadCount
+        unreadMentionCount = dto.unreadMentionCount
+        ocvPreset = dto.ocvPreset
+        customOCVArrayString = dto.customOCVArrayString
+    }
+
     /// Creates a Contact from a protocol ContactFrame
     public convenience init(deviceID: UUID, from frame: ContactFrame) {
         self.init(

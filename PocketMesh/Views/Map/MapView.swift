@@ -3,8 +3,6 @@ import SwiftUI
 import MapKit
 import PocketMeshServices
 
-// swiftlint:disable nesting
-
 private let logger = Logger(subsystem: "com.pocketmesh", category: "MapView")
 
 /// Map view displaying contacts with their locations
@@ -67,13 +65,15 @@ struct MapView: View {
 
             // Layers menu overlay
             if viewModel.showingLayersMenu {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation {
-                            viewModel.showingLayersMenu = false
-                        }
+                Button {
+                    withAnimation {
+                        viewModel.showingLayersMenu = false
                     }
+                } label: {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                }
+                .buttonStyle(.plain)
 
                 VStack {
                     Spacer()
@@ -106,7 +106,7 @@ struct MapView: View {
                 MKMapViewRepresentable(
                     contacts: viewModel.contactsWithLocation,
                     mapType: viewModel.mapStyleSelection.mkMapType,
-                    showLabels: viewModel.shouldShowLabels,
+                    showLabels: viewModel.showLabels,
                     showsUserLocation: true,
                     selectedContact: $viewModel.selectedContact,
                     cameraRegion: $viewModel.cameraRegion,
@@ -250,7 +250,7 @@ struct MapView: View {
 
     private func navigateToChat(with contact: ContactDTO) {
         clearSelection()
-        appState.navigateToChat(with: contact)
+        appState.navigation.navigateToChat(with: contact)
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
@@ -475,7 +475,7 @@ private struct ContactDetailSheet: View {
                         NodeAuthenticationSheet(contact: contact, role: role) { session in
                             activeSheet = nil
                             dismiss()
-                            appState.navigateToRoom(with: session)
+                            appState.navigation.navigateToRoom(with: session)
                         }
                         .presentationSizing(.page)
                     }

@@ -64,37 +64,10 @@ public actor DeviceService {
         }
 
         // Update OCV fields
-        device = DeviceDTO(
-            id: device.id,
-            publicKey: device.publicKey,
-            nodeName: device.nodeName,
-            firmwareVersion: device.firmwareVersion,
-            firmwareVersionString: device.firmwareVersionString,
-            manufacturerName: device.manufacturerName,
-            buildDate: device.buildDate,
-            maxContacts: device.maxContacts,
-            maxChannels: device.maxChannels,
-            frequency: device.frequency,
-            bandwidth: device.bandwidth,
-            spreadingFactor: device.spreadingFactor,
-            codingRate: device.codingRate,
-            txPower: device.txPower,
-            maxTxPower: device.maxTxPower,
-            latitude: device.latitude,
-            longitude: device.longitude,
-            blePin: device.blePin,
-            manualAddContacts: device.manualAddContacts,
-            multiAcks: device.multiAcks,
-            telemetryModeBase: device.telemetryModeBase,
-            telemetryModeLoc: device.telemetryModeLoc,
-            telemetryModeEnv: device.telemetryModeEnv,
-            advertLocationPolicy: device.advertLocationPolicy,
-            lastConnected: device.lastConnected,
-            lastContactSync: device.lastContactSync,
-            isActive: device.isActive,
-            ocvPreset: preset,
-            customOCVArrayString: customArray
-        )
+        device = device.copy {
+            $0.ocvPreset = preset
+            $0.customOCVArrayString = customArray
+        }
 
         // Save to persistence
         do {

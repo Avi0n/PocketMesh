@@ -155,9 +155,9 @@ public final class ServiceContainer {
         self.advertisementService = AdvertisementService(session: session, dataStore: dataStore)
         self.messagePollingService = MessagePollingService(session: session, dataStore: dataStore)
         self.binaryProtocolService = BinaryProtocolService(session: session, dataStore: dataStore)
-        self.rxLogService = RxLogService(session: session, persistenceStore: dataStore)
-        self.heardRepeatsService = HeardRepeatsService(persistenceStore: dataStore)
-        self.debugLogBuffer = DebugLogBuffer(persistenceStore: dataStore)
+        self.rxLogService = RxLogService(session: session, dataStore: dataStore)
+        self.heardRepeatsService = HeardRepeatsService(dataStore: dataStore)
+        self.debugLogBuffer = DebugLogBuffer(dataStore: dataStore)
         DebugLogBuffer.shared = debugLogBuffer
         self.reactionService = ReactionService()
         self.nodeConfigService = NodeConfigService(
@@ -290,7 +290,7 @@ public final class ServiceContainer {
             await advertisementService.startEventMonitoring(deviceID: deviceID)
         }
         await rxLogService.startEventMonitoring(deviceID: deviceID)
-        await messageService.startEventListening()
+        await messageService.startEventMonitoring()
         await remoteNodeService.startEventMonitoring()
 
         // Always start message event monitoring so handlers are ready for polled messages
@@ -321,7 +321,7 @@ public final class ServiceContainer {
 
         await advertisementService.stopEventMonitoring()
         await rxLogService.stopEventMonitoring()
-        await messageService.stopEventListening()
+        await messageService.stopEventMonitoring()
         await messagePollingService.stopMessageEventMonitoring()
         // RemoteNodeService event monitoring is per-session, handled internally
 
@@ -426,12 +426,19 @@ extension ServiceContainer {
 
     /// Creates a service container with a new in-memory model container.
     ///
-    /// Useful for testing and previews.
+    /// Useful for testing and previews. By default, inter-service dependencies
+    /// are wired via `wireServices()` so the container matches production behavior.
     ///
-    /// - Parameter session: The MeshCoreSession for device communication
+    /// - Parameters:
+    ///   - session: The MeshCoreSession for device communication
+    ///   - wired: Whether to call `wireServices()` after creation (default `true`)
     /// - Returns: A configured ServiceContainer with in-memory storage
-    public static func forTesting(session: MeshCoreSession) throws -> ServiceContainer {
+    public static func forTesting(session: MeshCoreSession, wired: Bool = true) async throws -> ServiceContainer {
         let container = try PersistenceStore.createContainer(inMemory: true)
-        return ServiceContainer(session: session, modelContainer: container)
+        let services = ServiceContainer(session: session, modelContainer: container)
+        if wired {
+            await services.wireServices()
+        }
+        return services
     }
 }

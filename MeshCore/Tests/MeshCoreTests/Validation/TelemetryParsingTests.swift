@@ -1,9 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class TelemetryParsingTests: XCTestCase {
+@Suite("Telemetry Parsing")
+struct TelemetryParsingTests {
 
-    func test_telemetryResponse_skipsReservedByte() {
+    @Test("telemetryResponse skips reserved byte")
+    func telemetryResponseSkipsReservedByte() {
         // Firmware format: [reserved:1][pubkey_prefix:6][lpp_data...]
         var payload = Data()
         payload.append(0x00)  // Reserved byte (should be skipped)
@@ -13,29 +16,31 @@ final class TelemetryParsingTests: XCTestCase {
         let event = Parsers.TelemetryResponse.parse(payload)
 
         guard case .telemetryResponse(let response) = event else {
-            XCTFail("Expected telemetryResponse, got \(event)")
+            Issue.record("Expected telemetryResponse, got \(event)")
             return
         }
 
-        XCTAssertEqual(response.publicKeyPrefix.hexString, "aabbccddeeff",
+        #expect(response.publicKeyPrefix.hexString == "aabbccddeeff",
             "Pubkey should start at byte 1, not byte 0")
-        XCTAssertNil(response.tag, "Push telemetry should have no tag")
-        XCTAssertEqual(response.rawData, Data([0x01, 0x67, 0x00, 0xFA]),
+        #expect(response.tag == nil, "Push telemetry should have no tag")
+        #expect(response.rawData == Data([0x01, 0x67, 0x00, 0xFA]),
             "LPP data should start at byte 7")
     }
 
-    func test_telemetryResponse_rejectsShortPayload() {
+    @Test("telemetryResponse rejects short payload")
+    func telemetryResponseRejectsShortPayload() {
         let shortPayload = Data([0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE])  // Only 6 bytes
 
         let event = Parsers.TelemetryResponse.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }
 
-    func test_telemetryResponse_handlesEmptyLPPData() {
+    @Test("telemetryResponse handles empty LPP data")
+    func telemetryResponseHandlesEmptyLppData() {
         // Minimum valid: reserved + pubkey = 7 bytes, no LPP data
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -44,10 +49,10 @@ final class TelemetryParsingTests: XCTestCase {
         let event = Parsers.TelemetryResponse.parse(payload)
 
         guard case .telemetryResponse(let response) = event else {
-            XCTFail("Expected telemetryResponse")
+            Issue.record("Expected telemetryResponse")
             return
         }
 
-        XCTAssertEqual(response.rawData.count, 0, "Should have empty LPP data")
+        #expect(response.rawData.count == 0, "Should have empty LPP data")
     }
 }

@@ -91,10 +91,10 @@ struct DeviceSelectionSheet: View {
                                     try await appState.connectionManager.connect(to: device.id, forceFullSync: true, forceReconnect: true)
                                 }
                             } catch BLEError.deviceConnectedToOtherApp {
-                                appState.otherAppWarningDeviceID = device.id
+                                appState.connectionUI.otherAppWarningDeviceID = device.id
                             } catch {
-                                appState.connectionFailedMessage = error.localizedDescription
-                                appState.showingConnectionFailedAlert = true
+                                appState.connectionUI.connectionFailedMessage = error.localizedDescription
+                                appState.connectionUI.showingConnectionFailedAlert = true
                             }
                         }
                     }
@@ -118,18 +118,20 @@ struct DeviceSelectionSheet: View {
                 ForEach(devices) { device in
                     let tier = device.isWiFiOnly ? nil : deviceSignalTier[device.id]
                     let isDisabledByBLE = !device.isWiFiOnly && scanSettled && deviceRSSI[device.id] == nil
-                    DeviceRow(
-                        device: device,
-                        isSelected: selectedDevice?.id == device.id,
-                        isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
-                        signalTier: tier,
-                        scanSettled: device.isWiFiOnly ? false : scanSettled
-                    )
+                    Button {
+                        selectedDevice = device
+                    } label: {
+                        DeviceRow(
+                            device: device,
+                            isSelected: selectedDevice?.id == device.id,
+                            isConnectedElsewhere: devicesConnectedElsewhere.contains(device.id),
+                            signalTier: tier,
+                            scanSettled: device.isWiFiOnly ? false : scanSettled
+                        )
                         .contentShape(.rect)
-                        .onTapGesture {
-                            guard !isDisabledByBLE else { return }
-                            selectedDevice = device
-                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabledByBLE)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 deleteDevice(device)

@@ -1,9 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class PathDiscoveryParsingTests: XCTestCase {
+@Suite("PathDiscovery Parsing")
+struct PathDiscoveryParsingTests {
 
-    func test_pathDiscoveryResponse_skipsReservedByte() {
+    @Test("pathDiscoveryResponse skips reserved byte")
+    func pathDiscoveryResponseSkipsReservedByte() {
         // Firmware format: [reserved:1][pubkey:6][out_len:1][out_path...][in_len:1][in_path...]
         var payload = Data()
         payload.append(0x00)  // Reserved byte (should be skipped)
@@ -16,19 +19,20 @@ final class PathDiscoveryParsingTests: XCTestCase {
         let event = Parsers.PathDiscoveryResponse.parse(payload)
 
         guard case .pathResponse(let pathInfo) = event else {
-            XCTFail("Expected pathResponse, got \(event)")
+            Issue.record("Expected pathResponse, got \(event)")
             return
         }
 
-        XCTAssertEqual(pathInfo.publicKeyPrefix.hexString, "aabbccddeeff",
+        #expect(pathInfo.publicKeyPrefix.hexString == "aabbccddeeff",
             "Pubkey should start at byte 1")
-        XCTAssertEqual(pathInfo.outPath, Data([0x11, 0x22]),
+        #expect(pathInfo.outPath == Data([0x11, 0x22]),
             "Out path should be [0x11, 0x22]")
-        XCTAssertEqual(pathInfo.inPath, Data([0x33, 0x44, 0x55]),
+        #expect(pathInfo.inPath == Data([0x33, 0x44, 0x55]),
             "In path should be [0x33, 0x44, 0x55]")
     }
 
-    func test_pathDiscoveryResponse_handlesEmptyPaths() {
+    @Test("pathDiscoveryResponse handles empty paths")
+    func pathDiscoveryResponseHandlesEmptyPaths() {
         var payload = Data()
         payload.append(0x00)  // Reserved
         payload.append(contentsOf: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66])  // Pubkey
@@ -38,21 +42,22 @@ final class PathDiscoveryParsingTests: XCTestCase {
         let event = Parsers.PathDiscoveryResponse.parse(payload)
 
         guard case .pathResponse(let pathInfo) = event else {
-            XCTFail("Expected pathResponse")
+            Issue.record("Expected pathResponse")
             return
         }
 
-        XCTAssertEqual(pathInfo.outPath.count, 0)
-        XCTAssertEqual(pathInfo.inPath.count, 0)
+        #expect(pathInfo.outPath.count == 0)
+        #expect(pathInfo.inPath.count == 0)
     }
 
-    func test_pathDiscoveryResponse_rejectsShortPayload() {
+    @Test("pathDiscoveryResponse rejects short payload")
+    func pathDiscoveryResponseRejectsShortPayload() {
         let shortPayload = Data([0x00, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE])  // Only 6 bytes
 
         let event = Parsers.PathDiscoveryResponse.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }

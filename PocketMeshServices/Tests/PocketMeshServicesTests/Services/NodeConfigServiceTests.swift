@@ -31,8 +31,8 @@ struct NodeConfigServiceTests {
     private static let testContact = MeshContact(
         id: Data(repeating: 0x01, count: 32).hexString().lowercased(),
         publicKey: Data(repeating: 0x01, count: 32),
-        type: 1,
-        flags: 0x02,
+        type: .chat,
+        flags: ContactFlags(rawValue: 0x02),
         outPathLength: 3,
         outPath: Data([0xAA, 0xBB, 0xCC]),
         advertisedName: "RemoteNode",
@@ -45,8 +45,8 @@ struct NodeConfigServiceTests {
     private static let floodContact = MeshContact(
         id: Data(repeating: 0x02, count: 32).hexString().lowercased(),
         publicKey: Data(repeating: 0x02, count: 32),
-        type: 2,
-        flags: 0,
+        type: .repeater,
+        flags: [],
         outPathLength: -1,
         outPath: Data(),
         advertisedName: "FloodNode",
@@ -59,8 +59,8 @@ struct NodeConfigServiceTests {
     private static let zeroPathContact = MeshContact(
         id: Data(repeating: 0x03, count: 32).hexString().lowercased(),
         publicKey: Data(repeating: 0x03, count: 32),
-        type: 1,
-        flags: 0,
+        type: .chat,
+        flags: [],
         outPathLength: 0,
         outPath: Data(),
         advertisedName: "DirectNode",
@@ -175,7 +175,7 @@ struct NodeConfigServiceTests {
         let contact = MeshContact(
             id: "test",
             publicKey: Data(repeating: 0x04, count: 32),
-            type: 1, flags: 0, outPathLength: 2,
+            type: .chat, flags: [], outPathLength: 2,
             outPath: Data([0xAA, 0xBB, 0xCC, 0xDD]),
             advertisedName: "Truncated",
             lastAdvertisement: .now, latitude: 0, longitude: 0,

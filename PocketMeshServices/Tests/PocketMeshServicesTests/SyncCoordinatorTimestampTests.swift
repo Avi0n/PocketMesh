@@ -94,7 +94,9 @@ struct SyncCoordinatorTimestampTests {
 
     @Test("Timestamp exactly 6 months in past is not corrected")
     func exactlySixMonthsAgoNotCorrected() {
-        let now = Date()
+        // Use whole-second receive time so UInt32 truncation doesn't push
+        // the timestamp past the boundary (fractional seconds are lost in UInt32).
+        let now = Date(timeIntervalSince1970: Double(Int(Date().timeIntervalSince1970)))
         let pastDate = now.addingTimeInterval(-sixMonths)
         let timestamp = UInt32(pastDate.timeIntervalSince1970)
 

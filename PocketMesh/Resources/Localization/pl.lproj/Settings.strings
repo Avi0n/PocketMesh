@@ -15,6 +15,12 @@
 /* Placeholder shown in split view detail when no setting is selected */
 "selectSetting" = "Wybierz ustawienie";
 
+/* Section header for device-specific settings */
+"myDevice.header" = "Moje urządzenie";
+
+/* Section header for app-level settings */
+"appSettings.header" = "Ustawienia aplikacji";
+
 /* Footer text for the advanced settings row */
 "advancedSettings.footer" = "Strojenie radia, telemetria, ustawienia kontaktów i zarządzanie urządzeniem";
 
@@ -469,6 +475,57 @@
 "nodes.overwriteOldestDescription" = "When storage is full, replace the oldest non-favorite node";
 
 
+// MARK: - Auto-Remove Old Nodes Section
+
+/* Toggle label / section header for stale node cleanup */
+"nodes.staleCleanup.header" = "Auto-Remove Old Nodes";
+
+/* Label for threshold picker */
+"nodes.staleCleanup.threshold" = "Remove nodes older than";
+
+/* Picker placeholder when no threshold is selected */
+"nodes.staleCleanup.select" = "Select";
+
+/* Threshold option: number of days (%d = day count) */
+"nodes.staleCleanup.days" = "%d days";
+
+/* Footer when auto-remove is enabled (%d = day count) */
+"nodes.staleCleanup.footerEnabled" = "Non-favorite nodes not heard from in %d days are automatically removed on connection.";
+
+/* Footer describing the auto-remove feature (shown when toggle is off) */
+"nodes.staleCleanup.footerDisabled" = "Automatically removes non-favorite nodes that haven't been heard from after a set period. Favorites are never removed.";
+
+/* Footer when toggle is on but no threshold selected yet */
+"nodes.staleCleanup.footerSelect" = "Choose how long to keep nodes. Favorites are never removed.";
+
+/* Footer when enabled but device is disconnected */
+"nodes.staleCleanup.footerDisconnected" = "Will check for old nodes on next connection. Favorites are never removed.";
+
+/* Last cleanup date row (%@ = relative date) */
+"nodes.staleCleanup.lastRun" = "Last checked %@";
+
+
+// MARK: - Device Actions Section
+
+/* Section header for device actions */
+"deviceActions.header" = "Device";
+
+/* Button to reboot the device */
+"deviceActions.rebootDevice" = "Reboot Device";
+
+/* Text shown while rebooting */
+"deviceActions.rebooting" = "Rebooting...";
+
+/* Alert title for reboot confirmation */
+"deviceActions.alert.reboot.title" = "Reboot Device?";
+
+/* Button to confirm reboot */
+"deviceActions.alert.reboot.confirm" = "Reboot";
+
+/* Alert message for reboot confirmation */
+"deviceActions.alert.reboot.message" = "The device will restart and temporarily disconnect.";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
@@ -562,10 +619,16 @@
 "diagnostics.error.exportFailed" = "Nie udało się utworzyć pliku eksportu";
 
 
+// MARK: - Chat Settings
+
+/* Navigation title for chat settings page */
+"chatSettings.title" = "Czaty";
+
+
 // MARK: - Link Preview Settings Section
 
-/* Section header for privacy settings */
-"linkPreviews.header" = "Prywatność";
+/* Section header for link preview settings */
+"linkPreviews.header" = "Podgląd linków";
 
 /* Toggle label for link previews */
 "linkPreviews.toggle" = "Podgląd linków";
@@ -644,6 +707,9 @@
 
 /* Message shown when device not connected */
 "notifications.connectDevice" = "Połącz urządzenie, aby skonfigurować powiadomienia";
+
+/* Footer for notifications navigation row */
+"notifications.footer" = "Powiadomienia o wiadomościach, odkryciach kontaktów i niskim poziomie baterii.";
 
 
 // MARK: - Radio Preset Section
@@ -878,6 +944,12 @@
 
 /* GPS source option: device GPS */
 "location.gpsSource.device" = "GPS urządzenia";
+
+/* Detail text when location is being shared publicly */
+"location.sharingPublicly" = "Udostępnianie publiczne";
+
+/* Detail text when location is not being shared */
+"location.notSharing" = "Nie udostępniam";
 
 // MARK: - Config Export/Import
 

@@ -48,7 +48,6 @@ struct RepeaterSettingsView: View {
         }
         .task {
             await viewModel.configure(appState: appState, session: session)
-            await viewModel.registerHandlers(appState: appState)
             // Device Info auto-loads because isDeviceInfoExpanded = true by default
         }
         .onDisappear {
@@ -279,6 +278,7 @@ struct RepeaterSettingsView: View {
                 }
             }
             .disabled(viewModel.isApplying || !viewModel.radioSettingsModified)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
         }
     }
 

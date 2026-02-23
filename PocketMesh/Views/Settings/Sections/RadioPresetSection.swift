@@ -14,6 +14,12 @@ struct RadioPresetSection: View {
     @State private var isApplyingRepeat = false
     @State private var showRepeatConfirmation = false
 
+    private var startupTaskID: String {
+        let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
+        let syncPhase = appState.connectionUI.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
+    }
+
     private var presets: [RadioPreset] {
         RadioPresets.presetsForLocale()
     }
@@ -91,26 +97,20 @@ struct RadioPresetSection: View {
 
             let detailPresets = isRepeatEnabled ? repeatPresets : presets
             if let preset = detailPresets.first(where: { $0.id == selectedPresetID }) {
-                // Display preset settings
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(preset.frequencyMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
-                        .font(.caption.monospacedDigit()) +
-                    // swiftlint:disable:next line_length
-                    Text(" MHz \u{2022} BW\(preset.bandwidthKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(preset.spreadingFactor) \u{2022} CR\(preset.codingRate)")
-                        .font(.caption)
-                }
+                RadioParameterText(
+                    frequencyMHz: preset.frequencyMHz,
+                    bandwidthKHz: preset.bandwidthKHz,
+                    spreadingFactor: preset.spreadingFactor,
+                    codingRate: preset.codingRate
+                )
                 .foregroundStyle(.secondary)
             } else if let device = appState.connectedDevice {
-                // Display device's current custom settings
-                let freqMHz = Double(device.frequency) / 1000.0
-                let bwKHz = Double(device.bandwidth) / 1000.0
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(freqMHz, format: .number.precision(.fractionLength(3)).locale(.posix))
-                        .font(.caption.monospacedDigit()) +
-                    // swiftlint:disable:next line_length
-                    Text(" MHz \u{2022} BW\(bwKHz, format: .number.locale(.posix)) kHz \u{2022} SF\(device.spreadingFactor) \u{2022} CR\(device.codingRate)")
-                        .font(.caption)
-                }
+                RadioParameterText(
+                    frequencyMHz: Double(device.frequency) / 1000.0,
+                    bandwidthKHz: Double(device.bandwidth) / 1000.0,
+                    spreadingFactor: device.spreadingFactor,
+                    codingRate: device.codingRate
+                )
                 .foregroundStyle(.secondary)
             }
 
@@ -152,6 +152,11 @@ struct RadioPresetSection: View {
             Task { @MainActor in
                 hasInitialized = true
             }
+        }
+        .task(id: startupTaskID) {
+            guard appState.canRunSettingsStartupReads,
+                  let settingsService = appState.services?.settingsService else { return }
+            _ = try? await settingsService.getSelfInfo()
         }
         .onChange(of: currentPreset?.id) { _, newPresetID in
             // Sync picker when device settings change externally (e.g., from Advanced Settings)

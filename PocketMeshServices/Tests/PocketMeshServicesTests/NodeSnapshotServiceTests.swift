@@ -204,8 +204,11 @@ struct NodeSnapshotServiceTests {
             packetsSent: nil, packetsReceived: nil
         )
 
-        // Save a "recent" snapshot
+        // Capture cutoff between saves so it's reliably between their timestamps
+        let cutoff = Date.now
         try await Task.sleep(for: .milliseconds(10))
+
+        // Save a "recent" snapshot
         let recentID = try await store.saveNodeStatusSnapshot(
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800,
@@ -213,9 +216,6 @@ struct NodeSnapshotServiceTests {
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
             packetsSent: nil, packetsReceived: nil
         )
-
-        // Prune with a cutoff between the two snapshots (delete the old one)
-        let cutoff = Date.now.addingTimeInterval(-0.005) // 5ms ago
         await service.pruneOldSnapshots(olderThan: cutoff)
 
         let remaining = await service.fetchSnapshots(for: testPublicKey)

@@ -50,12 +50,6 @@ public actor MessagePollingService {
     /// Used to wait for sync-time handlers to complete before resuming notifications
     private var pendingHandlerCount: Int = 0
 
-    /// Expected number of handlers from the last pollAllMessages() call
-    private var expectedHandlerCount: Int = 0
-
-    /// Number of handlers that have completed since the last pollAllMessages() call
-    private var handlerCompletionCount: Int = 0
-
     /// Whether pollAllMessages() is actively polling and processing messages directly.
     /// When true, the event monitor skips message events to avoid double-processing.
     private var isPolling = false
@@ -187,7 +181,6 @@ public actor MessagePollingService {
     /// Poll all waiting messages from the device.
     /// - Returns: Count of messages retrieved
     public func pollAllMessages() async throws -> Int {
-        handlerCompletionCount = 0
         isPolling = true
         defer { isPolling = false }
         var count = 0
@@ -202,8 +195,6 @@ public actor MessagePollingService {
                 count += 1
                 await handleChannelMessage(msg)
             case .noMoreMessages:
-                expectedHandlerCount = count
-                handlerCompletionCount = count
                 return count
             }
         }
@@ -216,7 +207,7 @@ public actor MessagePollingService {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
 
-        while handlerCompletionCount < expectedHandlerCount {
+        while pendingHandlerCount > 0 {
             if clock.now >= deadline {
                 return false
             }
@@ -255,19 +246,13 @@ public actor MessagePollingService {
         case .contactMessageReceived(let message):
             guard !isPolling else { return }
             pendingHandlerCount += 1
-            defer {
-                pendingHandlerCount -= 1
-                handlerCompletionCount += 1
-            }
+            defer { pendingHandlerCount -= 1 }
             await handleContactMessage(message)
 
         case .channelMessageReceived(let message):
             guard !isPolling else { return }
             pendingHandlerCount += 1
-            defer {
-                pendingHandlerCount -= 1
-                handlerCompletionCount += 1
-            }
+            defer { pendingHandlerCount -= 1 }
             await handleChannelMessage(message)
 
         case .acknowledgement(let code, _):

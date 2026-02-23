@@ -196,7 +196,7 @@ struct ContactDetailView: View {
             if let role = RemoteNodeRole(contactType: currentContact.type) {
                 NodeAuthenticationSheet(contact: currentContact, role: role) { session in
                     // Navigate to Chats tab with the room conversation
-                    appState.navigateToRoom(with: session)
+                    appState.navigation.navigateToRoom(with: session)
                 }
                 .presentationSizing(.page)
             }
@@ -471,7 +471,7 @@ struct ContactDetailView: View {
                 // Send message - only show when NOT from direct chat and NOT blocked
                 if !showFromDirectChat && !currentContact.isBlocked {
                     Button {
-                        appState.navigateToChat(with: currentContact)
+                        appState.navigation.navigateToChat(with: currentContact)
                     } label: {
                         Label(L10n.Contacts.Contacts.Detail.sendMessage, systemImage: "message.fill")
                     }

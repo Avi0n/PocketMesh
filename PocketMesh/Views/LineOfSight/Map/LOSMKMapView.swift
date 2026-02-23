@@ -494,4 +494,3 @@ struct LOSMKMapView: UIViewRepresentable {
         }
     }
 }
-

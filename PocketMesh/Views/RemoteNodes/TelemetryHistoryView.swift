@@ -5,6 +5,7 @@ import SwiftUI
 /// Drill-down view showing historical charts for telemetry metrics grouped by channel and type.
 struct TelemetryHistoryView: View {
     let fetchSnapshots: @Sendable () async -> [NodeStatusSnapshotDTO]
+    let ocvArray: [Int]
 
     @State private var snapshots: [NodeStatusSnapshotDTO] = []
     @State private var timeRange: HistoryTimeRange = .all
@@ -23,12 +24,7 @@ struct TelemetryHistoryView: View {
                 ForEach(groups) { channelGroup in
                     Section {
                         ForEach(channelGroup.charts, id: \.key) { chart in
-                            MetricChartView(
-                                title: chart.title,
-                                unit: telemetryUnit(for: chart.typeName),
-                                dataPoints: chart.dataPoints,
-                                accentColor: telemetryColor(for: chart.typeName)
-                            )
+                            chartView(for: chart)
                         }
                     } header: {
                         Text(L10n.RemoteNodes.RemoteNodes.Status.channel(channelGroup.channel))
@@ -37,12 +33,7 @@ struct TelemetryHistoryView: View {
             } else if let singleGroup = groups.first {
                 ForEach(singleGroup.charts, id: \.key) { chart in
                     Section {
-                        MetricChartView(
-                            title: chart.title,
-                            unit: telemetryUnit(for: chart.typeName),
-                            dataPoints: chart.dataPoints,
-                            accentColor: telemetryColor(for: chart.typeName)
-                        )
+                        chartView(for: chart)
                     }
                 }
             }
@@ -52,6 +43,16 @@ struct TelemetryHistoryView: View {
         .task {
             snapshots = await fetchSnapshots()
         }
+    }
+
+    private func chartView(for chart: TelemetryChartGroup) -> MetricChartView {
+        MetricChartView(
+            title: chart.title,
+            unit: chart.sensorType?.unit ?? "",
+            dataPoints: chart.dataPoints,
+            accentColor: telemetryColor(for: chart.sensorType),
+            yAxisDomain: chart.sensorType == .voltage ? ocvArray.voltageChartDomain() : nil
+        )
     }
 
     private var channelGroups: [ChannelGroup] {
@@ -73,14 +74,14 @@ struct TelemetryHistoryView: View {
             )
 
             channelTypeGroups[channel, default: [:]][type, default: TelemetryChartGroup(
-                key: "\(channel)-\(type)", title: type, typeName: type, dataPoints: []
+                key: "\(channel)-\(type)", title: type, sensorType: LPPSensorType(name: type), dataPoints: []
             )].dataPoints.append(point)
         }
 
         return channelTypeGroups.keys.sorted().map { channel in
             let charts = channelTypeGroups[channel]!.values.sorted { lhs, rhs in
-                let lhsIsVoltage = lhs.typeName == "Voltage"
-                let rhsIsVoltage = rhs.typeName == "Voltage"
+                let lhsIsVoltage = lhs.sensorType == .voltage
+                let rhsIsVoltage = rhs.sensorType == .voltage
                 if lhsIsVoltage != rhsIsVoltage { return lhsIsVoltage }
                 return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
             }
@@ -100,46 +101,26 @@ private struct ChannelGroup: Identifiable {
 private struct TelemetryChartGroup {
     let key: String
     let title: String
-    let typeName: String
+    let sensorType: LPPSensorType?
     var dataPoints: [MetricChartView.DataPoint]
 }
 
 // MARK: - Telemetry Display Helpers
 
-private func telemetryUnit(for type: String) -> String {
-    switch type {
-    case "Voltage": "V"
-    case "Temperature": "\u{00B0}C"
-    case "Humidity": "%"
-    case "Pressure": "hPa"
-    case "Illuminance": "lux"
-    case "Current": "A"
-    case "Power": "W"
-    case "Frequency": "Hz"
-    case "Altitude": "m"
-    case "Distance": "m"
-    case "Energy": "kWh"
-    case "Direction": "\u{00B0}"
-    case "Percentage": "%"
-    default: ""
-    }
-}
-
-private func telemetryColor(for type: String) -> Color {
-    switch type {
-    case "Voltage": .orange
-    case "Temperature": .red
-    case "Humidity": .teal
-    case "Pressure": .purple
-    case "Illuminance": .yellow
-    case "Current": .mint
-    case "Power": .pink
-    case "Frequency": .blue
-    case "Altitude": .green
-    case "Distance": .green
-    case "Energy": .orange
-    case "Direction": .indigo
-    case "Percentage": .cyan
+private func telemetryColor(for sensorType: LPPSensorType?) -> Color {
+    switch sensorType {
+    case .voltage: .orange
+    case .temperature: .red
+    case .humidity: .teal
+    case .barometer: .purple
+    case .illuminance: .yellow
+    case .current: .mint
+    case .power: .pink
+    case .frequency: .blue
+    case .altitude, .distance: .green
+    case .energy: .orange
+    case .direction: .indigo
+    case .percentage: .cyan
     default: .cyan
     }
 }

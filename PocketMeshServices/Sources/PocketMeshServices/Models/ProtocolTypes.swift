@@ -8,18 +8,22 @@
 ///
 /// Types that are direct duplicates of MeshCore types have been removed.
 /// Use MeshCore types directly: SelfInfo, DeviceCapabilities, ChannelInfo,
-/// ContactMessage, ChannelMessage, MessageSentInfo, BatteryInfo.
+/// ContactMessage, ChannelMessage, MessageSentInfo, BatteryInfo,
+/// ContactType, ContactFlags.
 
 import Foundation
+import MeshCore
 
-// MARK: - Contact Types
+// MARK: - Contact Type Re-exports
 
-/// Contact type identifier for mesh network nodes
-public enum ContactType: UInt8, Sendable, Codable {
-    case chat = 0x01
-    case repeater = 0x02
-    case room = 0x03
+/// Re-exported from MeshCore for backward compatibility. MeshContact now uses these
+/// types directly, eliminating the need for rawValue conversions at the boundary.
+public typealias ContactType = MeshCore.ContactType
+public typealias ContactFlags = MeshCore.ContactFlags
 
+// MARK: - Contact Type UI Extensions
+
+extension ContactType {
     /// Human-readable name for display in UI
     public var displayName: String {
         switch self {

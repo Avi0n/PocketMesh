@@ -128,11 +128,6 @@ final class MapViewModel {
     func clearSelection() {
         selectedContact = nil
     }
-
-    /// Labels should show when toggle is on
-    var shouldShowLabels: Bool {
-        showLabels
-    }
 }
 
 // MARK: - ContactDTO Location Extension

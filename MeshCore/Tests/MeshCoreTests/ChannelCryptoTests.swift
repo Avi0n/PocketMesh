@@ -1,12 +1,14 @@
-import XCTest
 import CommonCrypto
 import CryptoKit
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class ChannelCryptoTests: XCTestCase {
+@Suite("ChannelCrypto")
+struct ChannelCryptoTests {
 
     // Test channel secret (16 bytes)
-    let testSecret = Data([
+    private let testSecret = Data([
         0x8b, 0x33, 0x87, 0xe9, 0xc5, 0xcd, 0xea, 0x6a,
         0xc9, 0xe5, 0xed, 0xba, 0xa1, 0x15, 0xcd, 0x72
     ])
@@ -56,11 +58,6 @@ final class ChannelCryptoTests: XCTestCase {
     }
 
     /// Create an encrypted channel payload for testing
-    /// - Parameters:
-    ///   - timestamp: 4-byte sender timestamp
-    ///   - txtType: Message type (0 = normal text, 1 = command, 2 = signed)
-    ///   - message: The message text
-    ///   - secret: 16-byte channel secret
     private func createEncryptedPayload(timestamp: UInt32, txtType: UInt8 = 0, message: String, secret: Data) -> Data? {
         // Build plaintext: [timestamp: 4B] [txt_type: 1B] [message bytes]
         var plaintext = Data()
@@ -83,7 +80,8 @@ final class ChannelCryptoTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testDecryptSuccess() {
+    @Test("Decrypt success")
+    func decryptSuccess() {
         let message = "Alice: Hello mesh!"
         let timestamp: UInt32 = 1703123456
         let txtType: UInt8 = 0  // Normal text
@@ -94,7 +92,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -102,19 +100,20 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let tt, let text):
-            XCTAssertEqual(ts, timestamp)
-            XCTAssertEqual(tt, txtType)
-            XCTAssertEqual(text, message)
+            #expect(ts == timestamp)
+            #expect(tt == txtType)
+            #expect(text == message)
         case .hmacFailed:
-            XCTFail("HMAC verification failed")
+            Issue.record("HMAC verification failed")
         case .decryptFailed:
-            XCTFail("Decryption failed")
+            Issue.record("Decryption failed")
         case .payloadTooShort:
-            XCTFail("Payload too short")
+            Issue.record("Payload too short")
         }
     }
 
-    func testDecryptWrongKey() {
+    @Test("Decrypt wrong key")
+    func decryptWrongKey() {
         let message = "Bob: Secret message"
         let timestamp: UInt32 = 1703123456
 
@@ -123,7 +122,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -137,16 +136,17 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success:
-            XCTFail("Should have failed with wrong key")
+            Issue.record("Should have failed with wrong key")
         case .hmacFailed:
             // Expected - HMAC should fail with wrong key
             break
         case .decryptFailed, .payloadTooShort:
-            XCTFail("Wrong failure type - expected hmacFailed")
+            Issue.record("Wrong failure type - expected hmacFailed")
         }
     }
 
-    func testDecryptCorruptedMAC() {
+    @Test("Decrypt corrupted MAC")
+    func decryptCorruptedMAC() {
         let message = "Test message"
         let timestamp: UInt32 = 1703123456
 
@@ -155,7 +155,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -167,16 +167,17 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success:
-            XCTFail("Should have failed with corrupted MAC")
+            Issue.record("Should have failed with corrupted MAC")
         case .hmacFailed:
             // Expected
             break
         case .decryptFailed, .payloadTooShort:
-            XCTFail("Wrong failure type - expected hmacFailed")
+            Issue.record("Wrong failure type - expected hmacFailed")
         }
     }
 
-    func testDecryptPayloadTooShort() {
+    @Test("Decrypt payload too short")
+    func decryptPayloadTooShort() {
         // Less than minimum: 2 bytes MAC + 16 bytes (1 AES block)
         let shortPayload = Data([0x00, 0x01, 0x02, 0x03])
 
@@ -187,11 +188,12 @@ final class ChannelCryptoTests: XCTestCase {
             // Expected
             break
         default:
-            XCTFail("Expected payloadTooShort")
+            Issue.record("Expected payloadTooShort")
         }
     }
 
-    func testDecryptEmptyMessage() {
+    @Test("Decrypt empty message")
+    func decryptEmptyMessage() {
         let message = ""
         let timestamp: UInt32 = 0
         let txtType: UInt8 = 0
@@ -202,7 +204,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -210,15 +212,16 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let tt, let text):
-            XCTAssertEqual(ts, timestamp)
-            XCTAssertEqual(tt, txtType)
-            XCTAssertEqual(text, message)
+            #expect(ts == timestamp)
+            #expect(tt == txtType)
+            #expect(text == message)
         default:
-            XCTFail("Expected success for empty message")
+            Issue.record("Expected success for empty message")
         }
     }
 
-    func testDecryptLongMessage() {
+    @Test("Decrypt long message")
+    func decryptLongMessage() {
         // Message that spans multiple AES blocks (>11 bytes after header)
         let message = "This is a longer message that will definitely span multiple AES blocks for encryption testing"
         let timestamp: UInt32 = 1703123456
@@ -230,7 +233,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -238,15 +241,16 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let tt, let text):
-            XCTAssertEqual(ts, timestamp)
-            XCTAssertEqual(tt, txtType)
-            XCTAssertEqual(text, message)
+            #expect(ts == timestamp)
+            #expect(tt == txtType)
+            #expect(text == message)
         default:
-            XCTFail("Expected success for long message")
+            Issue.record("Expected success for long message")
         }
     }
 
-    func testDecryptUnicodeMessage() {
+    @Test("Decrypt unicode message")
+    func decryptUnicodeMessage() {
         let message = "Hello! 你好! 🌍"
         let timestamp: UInt32 = 1703123456
         let txtType: UInt8 = 0
@@ -257,7 +261,7 @@ final class ChannelCryptoTests: XCTestCase {
             message: message,
             secret: testSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -265,23 +269,25 @@ final class ChannelCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let tt, let text):
-            XCTAssertEqual(ts, timestamp)
-            XCTAssertEqual(tt, txtType)
-            XCTAssertEqual(text, message)
+            #expect(ts == timestamp)
+            #expect(tt == txtType)
+            #expect(text == message)
         default:
-            XCTFail("Expected success for unicode message")
+            Issue.record("Expected success for unicode message")
         }
     }
 
-    func testConstants() {
-        XCTAssertEqual(ChannelCrypto.macSize, 2)
-        XCTAssertEqual(ChannelCrypto.keySize, 16)
-        XCTAssertEqual(ChannelCrypto.timestampSize, 4)
-        XCTAssertEqual(ChannelCrypto.txtTypeSize, 1)
-        XCTAssertEqual(ChannelCrypto.plaintextHeaderSize, 5)
+    @Test("Constants")
+    func constants() {
+        #expect(ChannelCrypto.macSize == 2)
+        #expect(ChannelCrypto.keySize == 16)
+        #expect(ChannelCrypto.timestampSize == 4)
+        #expect(ChannelCrypto.txtTypeSize == 1)
+        #expect(ChannelCrypto.plaintextHeaderSize == 5)
     }
 
-    func testDecryptWithDifferentTxtTypes() {
+    @Test("Decrypt with different txtTypes")
+    func decryptWithDifferentTxtTypes() {
         let message = "Test message"
         let timestamp: UInt32 = 1703123456
 
@@ -293,7 +299,7 @@ final class ChannelCryptoTests: XCTestCase {
                 message: message,
                 secret: testSecret
             ) else {
-                XCTFail("Failed to create test payload for txtType \(txtType)")
+                Issue.record("Failed to create test payload for txtType \(txtType)")
                 continue
             }
 
@@ -301,11 +307,11 @@ final class ChannelCryptoTests: XCTestCase {
 
             switch result {
             case .success(let ts, let tt, let text):
-                XCTAssertEqual(ts, timestamp)
-                XCTAssertEqual(tt, txtType, "txtType mismatch for value \(txtType)")
-                XCTAssertEqual(text, message)
+                #expect(ts == timestamp)
+                #expect(tt == txtType, "txtType mismatch for value \(txtType)")
+                #expect(text == message)
             default:
-                XCTFail("Expected success for txtType \(txtType)")
+                Issue.record("Expected success for txtType \(txtType)")
             }
         }
     }

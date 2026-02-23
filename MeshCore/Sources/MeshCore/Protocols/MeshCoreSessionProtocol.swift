@@ -125,7 +125,7 @@ public protocol MeshCoreSessionProtocol: Actor {
     ///   - contact: The contact to update.
     ///   - flags: The new flags value.
     /// - Throws: `MeshCoreError` if the update fails.
-    func changeContactFlags(_ contact: MeshContact, flags: UInt8) async throws
+    func changeContactFlags(_ contact: MeshContact, flags: ContactFlags) async throws
 
     // MARK: - Channel Operations (used by ChannelService)
 

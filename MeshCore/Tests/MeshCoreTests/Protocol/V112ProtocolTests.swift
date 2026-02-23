@@ -1,83 +1,94 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class V112ProtocolTests: XCTestCase {
+@Suite("V112 Protocol")
+struct V112ProtocolTests {
 
     // MARK: - ResponseCode Tests
 
-    func test_contactDeleted_responseCode_exists() {
+    @Test("contactDeleted response code exists")
+    func contactDeletedResponseCodeExists() {
         let code = ResponseCode(rawValue: 0x8F)
-        XCTAssertNotNil(code)
-        XCTAssertEqual(code, .contactDeleted)
+        #expect(code != nil)
+        #expect(code == .contactDeleted)
     }
 
-    func test_contactsFull_responseCode_exists() {
+    @Test("contactsFull response code exists")
+    func contactsFullResponseCodeExists() {
         let code = ResponseCode(rawValue: 0x90)
-        XCTAssertNotNil(code)
-        XCTAssertEqual(code, .contactsFull)
+        #expect(code != nil)
+        #expect(code == .contactsFull)
     }
 
-    func test_contactDeleted_category_isPush() {
-        XCTAssertEqual(ResponseCode.contactDeleted.category, .push)
+    @Test("contactDeleted category is push")
+    func contactDeletedCategoryIsPush() {
+        #expect(ResponseCode.contactDeleted.category == .push)
     }
 
-    func test_contactsFull_category_isPush() {
-        XCTAssertEqual(ResponseCode.contactsFull.category, .push)
+    @Test("contactsFull category is push")
+    func contactsFullCategoryIsPush() {
+        #expect(ResponseCode.contactsFull.category == .push)
     }
 
     // MARK: - ContactDeleted Parser Tests
 
-    func test_contactDeleted_parsesValidPayload() {
+    @Test("contactDeleted parses valid payload")
+    func contactDeletedParsesValidPayload() {
         let publicKey = Data(repeating: 0xAB, count: 32)
 
         let event = Parsers.ContactDeleted.parse(publicKey)
 
         if case .contactDeleted(let parsedKey) = event {
-            XCTAssertEqual(parsedKey, publicKey)
+            #expect(parsedKey == publicKey)
         } else {
-            XCTFail("Expected .contactDeleted event, got \(event)")
+            Issue.record("Expected .contactDeleted event, got \(event)")
         }
     }
 
-    func test_contactDeleted_parseFailure_forShortPayload() {
+    @Test("contactDeleted parse failure for short payload")
+    func contactDeletedParseFailureForShortPayload() {
         let shortData = Data(repeating: 0xAB, count: 31)
 
         let event = Parsers.ContactDeleted.parse(shortData)
 
         if case .parseFailure(_, let reason) = event {
-            XCTAssertTrue(reason.contains("ContactDeleted too short"))
+            #expect(reason.contains("ContactDeleted too short"))
         } else {
-            XCTFail("Expected .parseFailure event, got \(event)")
+            Issue.record("Expected .parseFailure event, got \(event)")
         }
     }
 
-    func test_contactDeleted_ignoresExtraBytes() {
+    @Test("contactDeleted ignores extra bytes")
+    func contactDeletedIgnoresExtraBytes() {
         var data = Data(repeating: 0xCD, count: 32)
         data.append(contentsOf: [0xFF, 0xFF, 0xFF])
 
         let event = Parsers.ContactDeleted.parse(data)
 
         if case .contactDeleted(let parsedKey) = event {
-            XCTAssertEqual(parsedKey.count, 32)
-            XCTAssertEqual(parsedKey, Data(repeating: 0xCD, count: 32))
+            #expect(parsedKey.count == 32)
+            #expect(parsedKey == Data(repeating: 0xCD, count: 32))
         } else {
-            XCTFail("Expected .contactDeleted event, got \(event)")
+            Issue.record("Expected .contactDeleted event, got \(event)")
         }
     }
 
     // MARK: - ContactsFull Parser Tests
 
-    func test_contactsFull_parsesEmptyPayload() {
+    @Test("contactsFull parses empty payload")
+    func contactsFullParsesEmptyPayload() {
         let event = Parsers.ContactsFull.parse(Data())
 
         if case .contactsFull = event {
             // Success
         } else {
-            XCTFail("Expected .contactsFull event, got \(event)")
+            Issue.record("Expected .contactsFull event, got \(event)")
         }
     }
 
-    func test_contactsFull_parsesAnyPayload() {
+    @Test("contactsFull parses any payload")
+    func contactsFullParsesAnyPayload() {
         let data = Data([0x01, 0x02, 0x03])
 
         let event = Parsers.ContactsFull.parse(data)
@@ -85,26 +96,28 @@ final class V112ProtocolTests: XCTestCase {
         if case .contactsFull = event {
             // Success - payload is ignored
         } else {
-            XCTFail("Expected .contactsFull event, got \(event)")
+            Issue.record("Expected .contactsFull event, got \(event)")
         }
     }
 
     // MARK: - PacketParser Integration Tests
 
-    func test_packetParser_routesContactDeleted() {
+    @Test("packetParser routes contactDeleted")
+    func packetParserRoutesContactDeleted() {
         var packet = Data([0x8F])
         packet.append(Data(repeating: 0xEF, count: 32))
 
         let event = PacketParser.parse(packet)
 
         if case .contactDeleted(let publicKey) = event {
-            XCTAssertEqual(publicKey, Data(repeating: 0xEF, count: 32))
+            #expect(publicKey == Data(repeating: 0xEF, count: 32))
         } else {
-            XCTFail("Expected .contactDeleted event, got \(event)")
+            Issue.record("Expected .contactDeleted event, got \(event)")
         }
     }
 
-    func test_packetParser_routesContactsFull() {
+    @Test("packetParser routes contactsFull")
+    func packetParserRoutesContactsFull() {
         let packet = Data([0x90])
 
         let event = PacketParser.parse(packet)
@@ -112,26 +125,28 @@ final class V112ProtocolTests: XCTestCase {
         if case .contactsFull = event {
             // Success
         } else {
-            XCTFail("Expected .contactsFull event, got \(event)")
+            Issue.record("Expected .contactsFull event, got \(event)")
         }
     }
 
-    func test_packetParser_contactDeleted_parseFailure_shortPayload() {
+    @Test("packetParser contactDeleted parse failure for short payload")
+    func packetParserContactDeletedParseFailureShortPayload() {
         var packet = Data([0x8F])
         packet.append(Data(repeating: 0xAB, count: 20))
 
         let event = PacketParser.parse(packet)
 
         if case .parseFailure(_, let reason) = event {
-            XCTAssertTrue(reason.contains("ContactDeleted too short"))
+            #expect(reason.contains("ContactDeleted too short"))
         } else {
-            XCTFail("Expected .parseFailure event, got \(event)")
+            Issue.record("Expected .parseFailure event, got \(event)")
         }
     }
 
     // MARK: - ContactManager Tests
 
-    func test_contactManager_tracksContactDeleted() {
+    @Test("contactManager tracks contactDeleted")
+    func contactManagerTracksContactDeleted() {
         var manager = ContactManager()
         let publicKey = Data(repeating: 0x11, count: 32)
         let contactId = publicKey.hexString
@@ -139,8 +154,8 @@ final class V112ProtocolTests: XCTestCase {
         let contact = MeshContact(
             id: contactId,
             publicKey: publicKey,
-            type: 0,
-            flags: 0,
+            type: .chat,
+            flags: [],
             outPathLength: 0,
             outPath: Data(),
             advertisedName: "Test",
@@ -151,93 +166,103 @@ final class V112ProtocolTests: XCTestCase {
         )
         manager.store(contact)
 
-        XCTAssertNotNil(manager.getByPublicKey(publicKey))
+        #expect(manager.getByPublicKey(publicKey) != nil)
 
         manager.trackChanges(from: .contactDeleted(publicKey: publicKey))
 
-        XCTAssertNil(manager.getByPublicKey(publicKey))
-        XCTAssertTrue(manager.needsRefresh)
+        #expect(manager.getByPublicKey(publicKey) == nil)
+        #expect(manager.needsRefresh)
     }
 
-    func test_contactManager_tracksContactsFull() {
+    @Test("contactManager tracks contactsFull")
+    func contactManagerTracksContactsFull() {
         var manager = ContactManager()
 
         manager.trackChanges(from: .contactsFull)
 
-        XCTAssertTrue(manager.needsRefresh)
+        #expect(manager.needsRefresh)
     }
 
     // MARK: - Auto-Add Config PacketBuilder Tests
 
-    func test_getAutoAddConfig_packetBuilder() {
+    @Test("getAutoAddConfig packet builder")
+    func getAutoAddConfigPacketBuilder() {
         let packet = PacketBuilder.getAutoAddConfig()
 
-        XCTAssertEqual(packet, Data([0x3B]))
+        #expect(packet == Data([0x3B]))
     }
 
-    func test_setAutoAddConfig_packetBuilder() {
+    @Test("setAutoAddConfig packet builder")
+    func setAutoAddConfigPacketBuilder() {
         let packet = PacketBuilder.setAutoAddConfig(0x0F)
 
-        XCTAssertEqual(packet, Data([0x3A, 0x0F]))
+        #expect(packet == Data([0x3A, 0x0F]))
     }
 
-    func test_setAutoAddConfig_packetBuilder_allBitsSet() {
+    @Test("setAutoAddConfig all bits set")
+    func setAutoAddConfigAllBitsSet() {
         let packet = PacketBuilder.setAutoAddConfig(0xFF)
 
-        XCTAssertEqual(packet, Data([0x3A, 0xFF]))
+        #expect(packet == Data([0x3A, 0xFF]))
     }
 
-    func test_setAutoAddConfig_packetBuilder_zeroBits() {
+    @Test("setAutoAddConfig zero bits")
+    func setAutoAddConfigZeroBits() {
         let packet = PacketBuilder.setAutoAddConfig(0x00)
 
-        XCTAssertEqual(packet, Data([0x3A, 0x00]))
+        #expect(packet == Data([0x3A, 0x00]))
     }
 
     // MARK: - Auto-Add Config Response Parser Tests
 
-    func test_autoAddConfig_responseCode_exists() {
+    @Test("autoAddConfig response code exists")
+    func autoAddConfigResponseCodeExists() {
         let code = ResponseCode(rawValue: 0x19)
-        XCTAssertNotNil(code)
-        XCTAssertEqual(code, .autoAddConfig)
+        #expect(code != nil)
+        #expect(code == .autoAddConfig)
     }
 
-    func test_autoAddConfig_category_isDevice() {
-        XCTAssertEqual(ResponseCode.autoAddConfig.category, .device)
+    @Test("autoAddConfig category is device")
+    func autoAddConfigCategoryIsDevice() {
+        #expect(ResponseCode.autoAddConfig.category == .device)
     }
 
-    func test_autoAddConfig_parsesValidPayload() {
+    @Test("autoAddConfig parses valid payload")
+    func autoAddConfigParsesValidPayload() {
         let packet = Data([0x19, 0x0F])
 
         let event = PacketParser.parse(packet)
 
         if case .autoAddConfig(let config) = event {
-            XCTAssertEqual(config, 0x0F)
+            #expect(config == 0x0F)
         } else {
-            XCTFail("Expected .autoAddConfig event, got \(event)")
+            Issue.record("Expected .autoAddConfig event, got \(event)")
         }
     }
 
-    func test_autoAddConfig_parseFailure_forEmptyPayload() {
+    @Test("autoAddConfig parse failure for empty payload")
+    func autoAddConfigParseFailureForEmptyPayload() {
         let packet = Data([0x19])
 
         let event = PacketParser.parse(packet)
 
         if case .parseFailure(_, let reason) = event {
-            XCTAssertTrue(reason.contains("AutoAddConfig response too short"))
+            #expect(reason.contains("AutoAddConfig response too short"))
         } else {
-            XCTFail("Expected .parseFailure event, got \(event)")
+            Issue.record("Expected .parseFailure event, got \(event)")
         }
     }
 
-    func test_autoAddConfig_ignoresExtraBytes() {
+    @Test("autoAddConfig ignores extra bytes")
+    func autoAddConfigIgnoresExtraBytes() {
         let packet = Data([0x19, 0x0E, 0xFF, 0xFF])
 
         let event = PacketParser.parse(packet)
 
         if case .autoAddConfig(let config) = event {
-            XCTAssertEqual(config, 0x0E)
+            #expect(config == 0x0E)
         } else {
-            XCTFail("Expected .autoAddConfig event, got \(event)")
+            Issue.record("Expected .autoAddConfig event, got \(event)")
         }
     }
 }

@@ -80,7 +80,7 @@
 "map.detail.longitude" = "经度";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Section header for network path info */
-"map.detail.section.networkPath" = "网络路径";
+"map.detail.section.networkPath" = "网络链路";
 
 /* Location: MapView.swift ContactDetailSheet - Purpose: Label for routing type */
 "map.detail.routing" = "路由";

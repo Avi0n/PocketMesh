@@ -938,16 +938,16 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         contactName: String? = nil
     ) throws -> RxLogEntryDTO? {
         if let channelIndex {
-            // Channel message: match by channelHash and senderTimestamp
+            // Channel message: match by channelIndex and senderTimestamp
             return mockRxLogEntries.first { entry in
-                entry.channelHash == channelIndex &&
+                entry.channelIndex == channelIndex &&
                 entry.senderTimestamp == senderTimestamp
             }
         } else {
             // Direct message: match by senderTimestamp (now stored via decryption)
             return mockRxLogEntries.first { entry in
                 entry.senderTimestamp == senderTimestamp &&
-                entry.channelHash == nil &&
+                entry.channelIndex == nil &&
                 (contactName == nil || entry.fromContactName == contactName)
             }
         }

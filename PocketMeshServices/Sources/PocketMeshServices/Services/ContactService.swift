@@ -103,6 +103,12 @@ public actor ContactService {
         cleanupHandler = handler
     }
 
+    /// Whether a sync coordinator has been wired via `setSyncCoordinator`.
+    var hasSyncCoordinatorWired: Bool { syncCoordinator != nil }
+
+    /// Whether a cleanup handler has been wired via `setCleanupHandler`.
+    var hasCleanupHandlerWired: Bool { cleanupHandler != nil }
+
     /// Set handler for node deletion events (for clearing storage full flag)
     public func setNodeDeletedHandler(_ handler: @escaping @Sendable () async -> Void) {
         nodeDeletedHandler = handler
@@ -509,8 +515,8 @@ public actor ContactService {
         let meshContact = MeshContact(
             id: existing.publicKey.hexString(),
             publicKey: existing.publicKey,
-            type: existing.typeRawValue,
-            flags: existing.flags,
+            type: ContactType(rawValue: existing.typeRawValue) ?? .chat,
+            flags: ContactFlags(rawValue: existing.flags),
             outPathLength: existing.outPathLength,
             outPath: existing.outPath,
             advertisedName: existing.name,
@@ -522,7 +528,7 @@ public actor ContactService {
 
         // Push to device and wait for confirmation
         do {
-            try await session.changeContactFlags(meshContact, flags: newFlags)
+            try await session.changeContactFlags(meshContact, flags: ContactFlags(rawValue: newFlags))
         } catch let error as MeshCoreError {
             throw ContactServiceError.sessionError(error)
         }
@@ -584,8 +590,8 @@ public actor ContactService {
         let meshContact = MeshContact(
             id: existing.publicKey.hexString(),
             publicKey: existing.publicKey,
-            type: existing.typeRawValue,
-            flags: existing.flags,
+            type: ContactType(rawValue: existing.typeRawValue) ?? .chat,
+            flags: ContactFlags(rawValue: existing.flags),
             outPathLength: existing.outPathLength,
             outPath: existing.outPath,
             advertisedName: existing.name,
@@ -597,7 +603,7 @@ public actor ContactService {
 
         // Push to device and wait for confirmation
         do {
-            try await session.changeContactFlags(meshContact, flags: newFlags)
+            try await session.changeContactFlags(meshContact, flags: ContactFlags(rawValue: newFlags))
         } catch let error as MeshCoreError {
             throw ContactServiceError.sessionError(error)
         }
@@ -701,8 +707,8 @@ extension MeshContact {
     func toContactFrame() -> ContactFrame {
         ContactFrame(
             publicKey: publicKey,
-            type: ContactType(rawValue: type) ?? .chat,
-            flags: flags,
+            type: type,
+            flags: flags.rawValue,
             outPathLength: outPathLength,
             outPath: outPath,
             name: advertisedName,
@@ -722,8 +728,8 @@ extension ContactFrame {
         MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: type.rawValue,
-            flags: flags,
+            type: type,
+            flags: ContactFlags(rawValue: flags),
             outPathLength: outPathLength,
             outPath: outPath,
             advertisedName: name,

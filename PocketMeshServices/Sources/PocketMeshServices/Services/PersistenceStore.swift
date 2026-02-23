@@ -100,42 +100,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            // Update existing
-            existing.publicKey = dto.publicKey
-            existing.nodeName = dto.nodeName
-            existing.firmwareVersion = dto.firmwareVersion
-            existing.firmwareVersionString = dto.firmwareVersionString
-            existing.manufacturerName = dto.manufacturerName
-            existing.buildDate = dto.buildDate
-            existing.maxContacts = dto.maxContacts
-            existing.maxChannels = dto.maxChannels
-            existing.frequency = dto.frequency
-            existing.bandwidth = dto.bandwidth
-            existing.spreadingFactor = dto.spreadingFactor
-            existing.codingRate = dto.codingRate
-            existing.txPower = dto.txPower
-            existing.maxTxPower = dto.maxTxPower
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.blePin = dto.blePin
-            existing.clientRepeat = dto.clientRepeat
-            existing.preRepeatFrequency = dto.preRepeatFrequency
-            existing.preRepeatBandwidth = dto.preRepeatBandwidth
-            existing.preRepeatSpreadingFactor = dto.preRepeatSpreadingFactor
-            existing.preRepeatCodingRate = dto.preRepeatCodingRate
-            existing.manualAddContacts = dto.manualAddContacts
-            existing.autoAddConfig = dto.autoAddConfig
-            existing.multiAcks = dto.multiAcks
-            existing.telemetryModeBase = dto.telemetryModeBase
-            existing.telemetryModeLoc = dto.telemetryModeLoc
-            existing.telemetryModeEnv = dto.telemetryModeEnv
-            existing.advertLocationPolicy = dto.advertLocationPolicy
-            existing.lastConnected = dto.lastConnected
-            existing.lastContactSync = dto.lastContactSync
-            existing.isActive = dto.isActive
-            existing.ocvPreset = dto.ocvPreset
-            existing.customOCVArrayString = dto.customOCVArrayString
-            existing.connectionMethods = dto.connectionMethods
+            existing.apply(dto)
         } else {
             // Create new
             let device = Device(
@@ -389,22 +354,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            existing.name = dto.name
-            existing.typeRawValue = dto.typeRawValue
-            existing.flags = dto.flags
-            existing.outPathLength = dto.outPathLength
-            existing.outPath = dto.outPath
-            existing.lastAdvertTimestamp = dto.lastAdvertTimestamp
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.lastModified = dto.lastModified
-            existing.nickname = dto.nickname
-            existing.isBlocked = dto.isBlocked
-            existing.isFavorite = dto.isFavorite
-            existing.lastMessageDate = dto.lastMessageDate
-            existing.unreadCount = dto.unreadCount
-            existing.ocvPreset = dto.ocvPreset
-            existing.customOCVArrayString = dto.customOCVArrayString
+            existing.apply(dto)
         } else {
             let contact = Contact(
                 id: dto.id,
@@ -758,6 +708,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         limit: Int
     ) throws -> MessageDTO? {
         let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        // swiftlint:disable:next line_length
         logger.debug("[REACTION-MATCH] Looking for message: targetSender=\(parsedReaction.targetSender), hash=\(parsedReaction.messageHash), localNodeName=\(localNodeName ?? "nil"), window=\(timestampWindow.lowerBound)...\(timestampWindow.upperBound)")
 
         let targetDeviceID = deviceID
@@ -1174,14 +1125,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            existing.name = dto.name
-            existing.secret = dto.secret
-            existing.isEnabled = dto.isEnabled
-            existing.lastMessageDate = dto.lastMessageDate
-            existing.unreadCount = dto.unreadCount
-            existing.unreadMentionCount = dto.unreadMentionCount
-            existing.notificationLevel = dto.notificationLevel
-            existing.isFavorite = dto.isFavorite
+            existing.apply(dto)
         } else {
             let channel = Channel(
                 id: dto.id,
@@ -1480,26 +1424,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         descriptor.fetchLimit = 1
 
         if let existing = try modelContext.fetch(descriptor).first {
-            // Update existing
-            existing.deviceID = dto.deviceID
-            existing.publicKey = dto.publicKey
-            existing.name = dto.name
-            existing.roleRawValue = dto.role.rawValue
-            existing.latitude = dto.latitude
-            existing.longitude = dto.longitude
-            existing.isConnected = dto.isConnected
-            existing.permissionLevelRawValue = dto.permissionLevel.rawValue
-            existing.lastConnectedDate = dto.lastConnectedDate
-            existing.lastBatteryMillivolts = dto.lastBatteryMillivolts
-            existing.lastUptimeSeconds = dto.lastUptimeSeconds
-            existing.lastNoiseFloor = dto.lastNoiseFloor
-            existing.unreadCount = dto.unreadCount
-            existing.notificationLevel = dto.notificationLevel
-            existing.isFavorite = dto.isFavorite
-            existing.lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
-            existing.neighborCount = dto.neighborCount
-            existing.lastSyncTimestamp = dto.lastSyncTimestamp
-            existing.lastMessageDate = dto.lastMessageDate
+            existing.apply(dto)
             try modelContext.save()
             return existing
         } else {
@@ -2026,7 +1951,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             packetPayload: dto.packetPayload,
             rawPayload: dto.rawPayload,
             packetHash: dto.packetHash,
-            channelHash: dto.channelHash.map { Int($0) },
+            channelIndex: dto.channelIndex.map { Int($0) },
             channelName: dto.channelName,
             decryptStatus: dto.decryptStatus.rawValue,
             fromContactName: dto.fromContactName,
@@ -2111,11 +2036,11 @@ public actor PersistenceStore: PersistenceStoreProtocol {
         let targetTimestamp = Int(senderTimestamp)
 
         if let channelIndex {
-            // Channel message: match on channelHash and senderTimestamp
+            // Channel message: match on channelIndex and senderTimestamp
             let channelIndexInt = Int(channelIndex)
 
             let predicate = #Predicate<RxLogEntry> { entry in
-                entry.channelHash == channelIndexInt &&
+                entry.channelIndex == channelIndexInt &&
                 entry.senderTimestamp == targetTimestamp
             }
 
@@ -2133,14 +2058,14 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             if let contactName {
                 predicate = #Predicate<RxLogEntry> { entry in
                     entry.senderTimestamp == targetTimestamp &&
-                    entry.channelHash == nil &&
+                    entry.channelIndex == nil &&
                     entry.payloadType == textMessageType &&
                     entry.fromContactName == contactName
                 }
             } else {
                 predicate = #Predicate<RxLogEntry> { entry in
                     entry.senderTimestamp == targetTimestamp &&
-                    entry.channelHash == nil &&
+                    entry.channelIndex == nil &&
                     entry.payloadType == textMessageType
                 }
             }
@@ -2174,7 +2099,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
     /// Batch update RX log entries after successful decryption.
     /// Note: decodedText is @Transient and not persisted.
     public func batchUpdateRxLogDecryption(
-        _ updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)]
+        _ updates: [(id: UUID, channelIndex: UInt8?, channelName: String?, senderTimestamp: UInt32?)]
     ) throws {
         for update in updates {
             let targetID = update.id
@@ -2183,7 +2108,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             )
             guard let entry = try modelContext.fetch(descriptor).first else { continue }
 
-            entry.channelHash = update.channelHash.map { Int($0) }
+            entry.channelIndex = update.channelIndex.map { Int($0) }
             entry.channelName = update.channelName
             entry.decryptStatus = DecryptStatus.success.rawValue
             entry.senderTimestamp = update.senderTimestamp.map { Int($0) }

@@ -86,6 +86,18 @@ public final class Channel {
         self.isFavorite = isFavorite
     }
 
+    /// Applies all mutable fields from a DTO to this model instance.
+    func apply(_ dto: ChannelDTO) {
+        name = dto.name
+        secret = dto.secret
+        isEnabled = dto.isEnabled
+        lastMessageDate = dto.lastMessageDate
+        unreadCount = dto.unreadCount
+        unreadMentionCount = dto.unreadMentionCount
+        notificationLevel = dto.notificationLevel
+        isFavorite = dto.isFavorite
+    }
+
     /// Creates a Channel from a protocol ChannelInfo
     public convenience init(deviceID: UUID, from info: ChannelInfo) {
         self.init(

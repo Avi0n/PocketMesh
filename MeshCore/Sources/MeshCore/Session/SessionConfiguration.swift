@@ -4,7 +4,7 @@ import Foundation
 public struct SessionConfiguration: Sendable {
     /// The default timeout for device operations in seconds.
     public let defaultTimeout: TimeInterval
-    
+
     /// The client identifier sent to the device during session startup.
     public let clientIdentifier: String
 
@@ -29,49 +29,49 @@ public struct SessionConfiguration: Sendable {
 public enum MeshCoreError: Error, Sendable {
     /// The operation timed out.
     case timeout
-    
+
     /// The device returned an error code.
     case deviceError(code: UInt8)
-    
+
     /// Failed to parse data from the device.
     case parseError(String)
-    
+
     /// The transport is not connected.
     case notConnected
-    
+
     /// A command failed on the device.
     case commandFailed(CommandCode, reason: String)
-    
+
     /// Received an unexpected response from the device.
     case invalidResponse(expected: String, got: String)
-    
+
     /// Could not find the specified contact.
     case contactNotFound(publicKeyPrefix: Data)
-    
+
     /// The data exceeds the device's maximum allowed size.
     case dataTooLarge(maxSize: Int, actualSize: Int)
-    
+
     /// Cryptographic signing failed.
     case signingFailed(reason: String)
-    
+
     /// Provided input is invalid.
     case invalidInput(String)
-    
+
     /// An unknown error occurred.
     case unknown(String)
 
     /// Bluetooth is unavailable on this device.
     case bluetoothUnavailable
-    
+
     /// App is not authorized to use Bluetooth.
     case bluetoothUnauthorized
-    
+
     /// Bluetooth is powered off.
     case bluetoothPoweredOff
-    
+
     /// The connection was lost.
     case connectionLost(underlying: Error?)
-    
+
     /// The session has not been started.
     case sessionNotStarted
 }
@@ -80,10 +80,10 @@ public enum MeshCoreError: Error, Sendable {
 public enum MessageResult: Sendable {
     /// A direct message from a contact.
     case contactMessage(ContactMessage)
-    
+
     /// A message from a channel.
     case channelMessage(ChannelMessage)
-    
+
     /// No more messages are available in the device queue.
     case noMoreMessages
 }

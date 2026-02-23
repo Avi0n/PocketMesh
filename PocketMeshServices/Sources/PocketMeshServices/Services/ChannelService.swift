@@ -521,51 +521,6 @@ public actor ChannelService {
         return channels.filter { $0.lastMessageDate != nil }
     }
 
-    /// Updates a channel's enabled state locally.
-    /// - Parameters:
-    ///   - channelID: The channel UUID
-    ///   - isEnabled: Whether the channel is enabled
-    public func setChannelEnabled(channelID: UUID, isEnabled: Bool) async throws {
-        guard let dto = try await fetchChannelDTO(id: channelID) else {
-            throw ChannelServiceError.channelNotFound
-        }
-
-        // Create updated channel and save
-        let channel = Channel(
-            id: dto.id,
-            deviceID: dto.deviceID,
-            index: dto.index,
-            name: dto.name,
-            secret: dto.secret,
-            isEnabled: isEnabled,
-            lastMessageDate: dto.lastMessageDate,
-            unreadCount: dto.unreadCount
-        )
-        let updatedDTO = ChannelDTO(from: channel)
-        try await dataStore.saveChannel(updatedDTO)
-    }
-
-    /// Clears unread count for a channel.
-    /// - Parameter channelID: The channel UUID
-    public func clearUnreadCount(channelID: UUID) async throws {
-        guard let dto = try await fetchChannelDTO(id: channelID) else {
-            throw ChannelServiceError.channelNotFound
-        }
-
-        let channel = Channel(
-            id: dto.id,
-            deviceID: dto.deviceID,
-            index: dto.index,
-            name: dto.name,
-            secret: dto.secret,
-            isEnabled: dto.isEnabled,
-            lastMessageDate: dto.lastMessageDate,
-            unreadCount: 0
-        )
-        let updatedDTO = ChannelDTO(from: channel)
-        try await dataStore.saveChannel(updatedDTO)
-    }
-
     // MARK: - Public Channel (Slot 0)
 
     private static let publicChannelSecret = Data([
@@ -598,6 +553,9 @@ public actor ChannelService {
     public func setChannelUpdateHandler(_ handler: @escaping @Sendable ([ChannelDTO]) -> Void) {
         channelUpdateHandler = handler
     }
+
+    /// Whether a channel update handler has been wired via `setChannelUpdateHandler`.
+    var hasChannelUpdateHandlerWired: Bool { channelUpdateHandler != nil }
 
     // MARK: - Private Helpers
 
@@ -648,9 +606,6 @@ public actor ChannelService {
         )
     }
 
-    private func fetchChannelDTO(id: UUID) async throws -> ChannelDTO? {
-        try await dataStore.fetchChannel(id: id)
-    }
 }
 
 // MARK: - ChannelServiceProtocol Conformance

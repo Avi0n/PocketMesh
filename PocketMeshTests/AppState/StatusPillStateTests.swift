@@ -9,7 +9,7 @@ struct StatusPillStateTests {
     @MainActor
     func failedTakesPriority() {
         let appState = AppState()
-        appState.showSyncFailedPill()
+        appState.connectionUI.showSyncFailedPill()
         #expect(appState.statusPillState == .failed(message: "Sync Failed"))
     }
 
@@ -18,7 +18,7 @@ struct StatusPillStateTests {
     func syncingOverConnecting() async {
         let appState = AppState()
         // Simulate sync activity
-        await appState.withSyncActivity {
+        await appState.connectionUI.withSyncActivity {
             #expect(appState.statusPillState == .syncing)
         }
     }
@@ -27,7 +27,7 @@ struct StatusPillStateTests {
     @MainActor
     func readyStateShowsWithToast() {
         let appState = AppState()
-        appState.showReadyToastBriefly()
+        appState.connectionUI.showReadyToastBriefly()
         #expect(appState.statusPillState == .ready)
     }
 
@@ -44,7 +44,11 @@ struct StatusPillStateTests {
         let appState = AppState()
         // This test verifies the delay mechanism exists
         // Full integration test would require mocking connectionManager
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
         // Without a paired device, should remain hidden
         #expect(appState.statusPillState == .hidden)
     }
@@ -55,19 +59,19 @@ struct StatusPillStateTests {
         let appState = AppState()
 
         // Simulate sync starting
-        appState.simulateSyncStarted()
+        appState.connectionUI.simulateSyncStarted()
         #expect(appState.statusPillState == .syncing)
 
         // First end call (simulates onDisconnected path)
-        appState.simulateSyncEnded()
+        appState.connectionUI.simulateSyncEnded()
         #expect(appState.statusPillState != .syncing)
 
         // Second end call (simulates error path) - should be no-op due to guard
-        appState.simulateSyncEnded()
+        appState.connectionUI.simulateSyncEnded()
         #expect(appState.statusPillState == .hidden)
 
         // Start new sync - pill should show (proves count didn't go negative)
-        appState.simulateSyncStarted()
+        appState.connectionUI.simulateSyncStarted()
         #expect(appState.statusPillState == .syncing)
     }
 }

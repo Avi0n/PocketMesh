@@ -10,54 +10,55 @@ struct AdvancedSettingsView: View {
     @State private var ocvValues: [Int] = OCVPreset.liIon.ocvArray
 
     var body: some View {
-        NavigationStack {
-            List {
-                // Manual Radio Configuration
-                AdvancedRadioSection()
+        List {
+            // Manual Radio Configuration
+            AdvancedRadioSection()
 
-                // Nodes Settings
-                NodesSettingsSection()
+            // Nodes Settings
+            NodesSettingsSection()
 
-                // Telemetry Settings
-                TelemetrySettingsSection()
+            // Auto-Remove Old Nodes
+            StaleNodeCleanupSection()
 
-                // Messages Settings
-                MessagesSettingsSection()
+            // Telemetry Settings
+            TelemetrySettingsSection()
 
-                // Battery Curve
-                BatteryCurveSection(
-                    availablePresets: OCVPreset.selectablePresets,
-                    headerText: L10n.Settings.BatteryCurve.header,
-                    footerText: L10n.Settings.BatteryCurve.footer,
-                    selectedPreset: $selectedOCVPreset,
-                    voltageValues: $ocvValues,
-                    onSave: saveOCVToDevice,
-                    isDisabled: appState.connectionState != .ready
-                )
+            // Messages Settings
+            MessagesSettingsSection()
 
-                // Config Export/Import
-                ConfigExportImportSection()
+            // Battery Curve
+            BatteryCurveSection(
+                availablePresets: OCVPreset.selectablePresets,
+                headerText: L10n.Settings.BatteryCurve.header,
+                footerText: L10n.Settings.BatteryCurve.footer,
+                selectedPreset: $selectedOCVPreset,
+                voltageValues: $ocvValues,
+                onSave: saveOCVToDevice,
+                isDisabled: appState.connectionState != .ready
+            )
 
-                // Danger Zone
-                DangerZoneSection()
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle(L10n.Settings.AdvancedSettings.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.Localizable.Common.done) { dismiss() }
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(L10n.Localizable.Common.done) {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil,
-                            from: nil,
-                            for: nil
-                        )
-                    }
+            // Config Export/Import
+            ConfigExportImportSection()
+
+            // Device Actions
+            DeviceActionsSection()
+
+            // Danger Zone
+            DangerZoneSection()
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle(L10n.Settings.AdvancedSettings.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L10n.Localizable.Common.done) {
+                    UIApplication.shared.sendAction(
+                        #selector(UIResponder.resignFirstResponder),
+                        to: nil,
+                        from: nil,
+                        for: nil
+                    )
                 }
             }
         }
@@ -67,11 +68,16 @@ struct AdvancedSettingsView: View {
         .task(id: appState.connectedDevice?.id) {
             loadOCVFromDevice()
         }
+        .onChange(of: appState.connectedDevice) { _, newDevice in
+            if newDevice == nil {
+                dismiss()
+            }
+        }
     }
 
     private var refreshTaskID: String {
         let deviceID = appState.connectedDevice?.id.uuidString ?? "none"
-        let syncPhase = appState.currentSyncPhase.map { String(describing: $0) } ?? "none"
+        let syncPhase = appState.connectionUI.currentSyncPhase.map { String(describing: $0) } ?? "none"
         return "\(deviceID)-\(String(describing: appState.connectionState))-\(syncPhase)"
     }
 

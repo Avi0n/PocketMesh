@@ -3,15 +3,17 @@
 To make the contribution process smooth and respectful of everyone's time, please follow these guidelines:
 
 ### Before Starting Work
-- **Discuss your idea first**: Reach out to me on Discord so we can coordinate. This helps avoid duplicate effort, as I might already be working on something similar.
-- Find me in the official MeshCore server, look for the PocketMesh forum post.
+- **Discuss your idea first**: Reach out so we can coordinate. This helps avoid duplicate effort, as I might already be working on something similar.
+- [MeshCore Discord](https://discord.gg/bSuST8xvet) — look for the PocketMesh forum post.
 - Or message me on Matrix at @avion:matrix.org
 
 ### Pull Request Requirements
-When submitting a PR, please include:
-- A clear description of the feature or fix.
-- An overview of the changes made.
-- The testing steps you performed.
+When submitting a PR, please:
+- Include a clear description of the feature or fix.
+- Include an overview of the changes made.
+- Run `swiftlint lint` and fix any warnings or errors.
+- Run the test suite and confirm all tests pass.
+- Describe the testing steps you performed.
 
 ### Important Note for AI-Assisted Contributions
 If you're an experienced software engineer and did not rely heavily on AI for your contribution, skip to Getting Started.
@@ -40,7 +42,7 @@ If you used AI extensively (which is totally fine, I built this entire project w
    Manually verify that everything works as expected. Test edge cases.
 
 8. **Submit the PR**  
-   PR into dev, not main. You can ask the AI to draft the PR description. Feel free to use it directly, but adding a bit of your own voice is always appreciated!
+   You can ask the AI to draft the PR description. Feel free to use it directly, but adding a bit of your own voice is always appreciated!
 
 
 ## Getting Started
@@ -67,6 +69,17 @@ If you used AI extensively (which is totally fine, I built this entire project w
    xcodegen generate
    ```
 3. **Open `PocketMesh.xcodeproj`**.
+
+### Branch Workflow
+
+- All development happens on the `dev` branch. `main` is reserved for releases.
+- Fork the repo and create your branch from `dev`.
+- Use the naming convention `{type}/short-descriptive-name`, where type is one of:
+  - `feature` — new functionality
+  - `fix` — bug fix
+  - `refactor` — code restructuring without behavior change
+  - `chore` — tooling, CI, docs, or other non-code changes
+- Target your PR to `dev`, not `main`.
 
 
 ## Thank You!

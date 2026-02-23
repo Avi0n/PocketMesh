@@ -9,7 +9,7 @@ struct NoDeviceSection: View {
             Button {
                 showingDeviceSelection = true
             } label: {
-                Label(L10n.Settings.Device.connect, systemImage: "antenna.radiowaves.left.and.right")
+                TintedLabel(L10n.Settings.Device.connect, systemImage: "antenna.radiowaves.left.and.right")
             }
         } header: {
             Text(L10n.Settings.Device.header)

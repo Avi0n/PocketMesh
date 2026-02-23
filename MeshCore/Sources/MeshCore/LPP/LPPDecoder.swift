@@ -103,7 +103,7 @@ public enum LPPSensorType: UInt8, Sendable, CaseIterable {
         case .temperature: "Temperature"
         case .humidity: "Humidity"
         case .accelerometer: "Accelerometer"
-        case .barometer: "Barometer"
+        case .barometer: "Pressure"
         case .voltage: "Voltage"
         case .current: "Current"
         case .frequency: "Frequency"
@@ -121,6 +121,32 @@ public enum LPPSensorType: UInt8, Sendable, CaseIterable {
         case .gps: "GPS"
         case .switchValue: "Switch"
         }
+    }
+
+    /// Returns the standard unit symbol for the sensor type.
+    public var unit: String {
+        switch self {
+        case .voltage: "V"
+        case .temperature: "\u{00B0}C"
+        case .humidity, .percentage: "%"
+        case .barometer: "hPa"
+        case .illuminance: "lux"
+        case .current: "A"
+        case .power: "W"
+        case .frequency: "Hz"
+        case .altitude, .distance: "m"
+        case .energy: "kWh"
+        case .direction: "\u{00B0}"
+        case .load: "kg"
+        case .concentration: "ppm"
+        default: ""
+        }
+    }
+
+    /// Looks up a sensor type by its human-readable name.
+    public init?(name: String) {
+        guard let match = Self.allCases.first(where: { $0.name == name }) else { return nil }
+        self = match
     }
 }
 

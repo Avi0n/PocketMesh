@@ -2,6 +2,7 @@
 import Testing
 import Foundation
 import MeshCore
+import MeshCoreTestSupport
 @testable import PocketMeshServices
 
 @Suite("SyncCoordinator Tests")
@@ -15,35 +16,14 @@ struct SyncCoordinatorTests {
     ) async throws -> PersistenceStore {
         let container = try PersistenceStore.createContainer(inMemory: true)
         let store = PersistenceStore(modelContainer: container)
-        let device = DeviceDTO(from: Device(
+        let device = DeviceDTO.testDevice(
             id: deviceID,
-            publicKey: Data(repeating: 0x01, count: 32),
-            nodeName: "TestDevice",
             firmwareVersion: 8,
             firmwareVersionString: "v1.0.0",
-            manufacturerName: "TestMfg",
-            buildDate: "01 Jan 2025",
-            maxContacts: 100,
             maxChannels: maxChannels,
-            frequency: 915_000,
-            bandwidth: 250_000,
-            spreadingFactor: 10,
-            codingRate: 5,
-            txPower: 20,
-            maxTxPower: 20,
-            latitude: 0,
-            longitude: 0,
-            blePin: 0,
-            manualAddContacts: false,
             multiAcks: 0,
-            telemetryModeBase: 0,
-            telemetryModeLoc: 0,
-            telemetryModeEnv: 0,
-            advertLocationPolicy: 0,
-            lastConnected: Date(),
-            lastContactSync: lastContactSync,
-            isActive: true
-        ))
+            lastContactSync: lastContactSync
+        )
         try await store.saveDevice(device)
         return store
     }
@@ -130,11 +110,12 @@ struct SyncCoordinatorTests {
         let testDeviceID = UUID()
         let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
-        let tracker = CallbackTracker()
+        let startedTracker = CallTracker()
+        let endedTracker = CallTracker()
 
         await coordinator.setSyncActivityCallbacks(
-            onStarted: { await tracker.markStarted() },
-            onEnded: { await tracker.markEnded() },
+            onStarted: { startedTracker.markCalled() },
+            onEnded: { endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -146,10 +127,8 @@ struct SyncCoordinatorTests {
             messagePollingService: mockMessagePollingService
         )
 
-        let started = await tracker.started
-        let ended = await tracker.ended
-        #expect(started, "onSyncActivityStarted should have been called")
-        #expect(ended, "onSyncActivityEnded should have been called")
+        #expect(startedTracker.wasCalled, "onSyncActivityStarted should have been called")
+        #expect(endedTracker.wasCalled, "onSyncActivityEnded should have been called")
     }
 
     @Test("Sync activity callbacks not double called on error")
@@ -162,11 +141,11 @@ struct SyncCoordinatorTests {
         let testDeviceID = UUID()
         let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
-        let tracker = CallbackTracker()
+        let endedTracker = CallTracker()
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: { await tracker.incrementEndedCount() },
+            onEnded: { endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -186,8 +165,7 @@ struct SyncCoordinatorTests {
             // Expected
         }
 
-        let endedCount = await tracker.endedCount
-        #expect(endedCount == 1, "onSyncActivityEnded should be called exactly once on error")
+        #expect(endedTracker.callCount == 1, "onSyncActivityEnded should be called exactly once on error")
     }
 
     @Test("Sync activity ends before messages phase")
@@ -230,7 +208,7 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
         // Manually set suppression flag to true (simulating mid-sync state)
         services.notificationService.isSuppressingNotifications = true
@@ -251,7 +229,7 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
         // Call onDisconnected
         await coordinator.onDisconnected(services: services)
@@ -273,13 +251,14 @@ struct SyncCoordinatorTests {
         // Create a test ServiceContainer
         let mockTransport = SimulatorMockTransport()
         let session = MeshCoreSession(transport: mockTransport)
-        let services = try ServiceContainer.forTesting(session: session)
+        let services = try await ServiceContainer.forTesting(session: session)
 
-        let tracker = CallbackTracker()
+        let startedTracker = CallTracker()
+        let endedTracker = CallTracker()
 
         await coordinator.setSyncActivityCallbacks(
-            onStarted: { await tracker.markStarted() },
-            onEnded: { await tracker.markEnded() },
+            onStarted: { startedTracker.markCalled() },
+            onEnded: { endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -295,16 +274,16 @@ struct SyncCoordinatorTests {
         }
 
         // Wait for sync to start (activity started callback)
-        try await Task.sleep(for: .milliseconds(50))
-        let started = await tracker.started
-        #expect(started, "Sync activity should have started")
+        try await waitUntil("Sync activity should have started") {
+            startedTracker.wasCalled
+        }
+        #expect(startedTracker.wasCalled, "Sync activity should have started")
 
         // Call onDisconnected while sync is in contacts phase
         await coordinator.onDisconnected(services: services)
 
         // Verify onSyncActivityEnded was called by onDisconnected
-        let ended = await tracker.ended
-        #expect(ended, "onSyncActivityEnded should be called when disconnecting mid-sync")
+        #expect(endedTracker.wasCalled, "onSyncActivityEnded should be called when disconnecting mid-sync")
 
         // Cleanup: resume the sync so it doesn't hang
         await delayingContactService.completeSync()
@@ -407,10 +386,10 @@ struct SyncCoordinatorTests {
         let testDeviceID = UUID()
         let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
-        let tracker = CallbackTracker()
+        let startedTracker = CallTracker()
 
         await coordinator.setSyncActivityCallbacks(
-            onStarted: { await tracker.incrementEndedCount() }, // Reusing endedCount to track starts
+            onStarted: { startedTracker.markCalled() },
             onEnded: { },
             onPhaseChanged: { _ in }
         )
@@ -427,7 +406,9 @@ struct SyncCoordinatorTests {
         }
 
         // Wait for first sync to start
-        try await Task.sleep(for: .milliseconds(50))
+        try await waitUntil("First sync should have started") {
+            startedTracker.callCount >= 1
+        }
 
         // Try to start a second sync while first is still running
         try await coordinator.performFullSync(
@@ -439,8 +420,7 @@ struct SyncCoordinatorTests {
         )
 
         // Verify onSyncActivityStarted was only called once (not twice)
-        let startCount = await tracker.endedCount
-        #expect(startCount == 1, "onSyncActivityStarted should only be called once even with duplicate performFullSync calls")
+        #expect(startedTracker.callCount == 1, "onSyncActivityStarted should only be called once even with duplicate performFullSync calls")
 
         // Cleanup
         await delayingContactService.completeSync()
@@ -457,11 +437,11 @@ struct SyncCoordinatorTests {
         let testDeviceID = UUID()
         let dataStore = try await createTestDataStore(deviceID: testDeviceID)
 
-        let tracker = CallbackTracker()
+        let endedTracker = CallTracker()
 
         await coordinator.setSyncActivityCallbacks(
-            onStarted: { await tracker.markStarted() },
-            onEnded: { await tracker.incrementEndedCount() },
+            onStarted: { },
+            onEnded: { endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -487,8 +467,7 @@ struct SyncCoordinatorTests {
             Issue.record("Expected CancellationError, got \(error)")
         }
 
-        let endedCount = await tracker.endedCount
-        #expect(endedCount == 1, "onSyncActivityEnded should be called exactly once on cancellation")
+        #expect(endedTracker.callCount == 1, "onSyncActivityEnded should be called exactly once on cancellation")
         #expect(coordinator.state == .idle, "Sync state should reset to idle on cancellation")
     }
 
@@ -533,24 +512,6 @@ struct SyncCoordinatorTests {
 // MARK: - Test Helpers
 
 /// Actor to safely track callback invocations from concurrent closures
-actor CallbackTracker {
-    var started = false
-    var ended = false
-    var endedCount = 0
-
-    func markStarted() {
-        started = true
-    }
-
-    func markEnded() {
-        ended = true
-    }
-
-    func incrementEndedCount() {
-        endedCount += 1
-    }
-}
-
 /// Mock that tracks the order of activity ended callback vs message polling
 actor OrderTrackingMessagePollingService: MessagePollingServiceProtocol {
     private var activityEndedTime: Date?

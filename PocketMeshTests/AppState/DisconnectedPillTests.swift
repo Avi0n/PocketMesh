@@ -67,13 +67,17 @@ struct DisconnectedPillTests {
         let appState = try makeAppState()
 
         // When: update disconnected pill state (simulates app launch check)
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
 
         // Wait for potential delay
         try await Task.sleep(for: .seconds(1.2))
 
         // Then: pill should not be visible
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill shown after unexpected disconnect")
@@ -88,13 +92,17 @@ struct DisconnectedPillTests {
         let appState = try makeAppState()
 
         // When: update disconnected pill state (simulates app launch after termination)
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
 
         // Wait for the 1-second delay plus margin
         try await Task.sleep(for: .seconds(1.2))
 
         // Then: pill should be visible
-        #expect(appState.disconnectedPillVisible == true)
+        #expect(appState.connectionUI.disconnectedPillVisible == true)
     }
 
     @Test("disconnected pill not shown when no last connected device")
@@ -108,13 +116,17 @@ struct DisconnectedPillTests {
         let appState = try makeAppState()
 
         // When: update disconnected pill state
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
 
         // Wait for potential delay
         try await Task.sleep(for: .seconds(1.2))
 
         // Then: pill should not be visible
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill hidden when connection starts")
@@ -128,15 +140,19 @@ struct DisconnectedPillTests {
         let appState = try makeAppState()
 
         // Start showing the pill
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
         try await Task.sleep(for: .seconds(1.2))
-        #expect(appState.disconnectedPillVisible == true)
+        #expect(appState.connectionUI.disconnectedPillVisible == true)
 
         // When: hide the pill (simulates connection starting)
-        appState.hideDisconnectedPill()
+        appState.connectionUI.hideDisconnectedPill()
 
         // Then: pill should be hidden immediately
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill delay prevents flash during brief reconnects")
@@ -150,19 +166,23 @@ struct DisconnectedPillTests {
         let appState = try makeAppState()
 
         // When: update state and immediately hide (simulates quick reconnect)
-        appState.updateDisconnectedPillState()
+        appState.connectionUI.updateDisconnectedPillState(
+            connectionState: appState.connectionState,
+            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
+            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+        )
 
         // Pill should NOT be visible immediately (1s delay)
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
 
         // Hide before delay completes (simulates connection established)
         try await Task.sleep(for: .seconds(0.5))
-        appState.hideDisconnectedPill()
+        appState.connectionUI.hideDisconnectedPill()
 
         // Wait past the original delay
         try await Task.sleep(for: .seconds(1.0))
 
         // Then: pill should still be hidden (was cancelled)
-        #expect(appState.disconnectedPillVisible == false)
+        #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 }

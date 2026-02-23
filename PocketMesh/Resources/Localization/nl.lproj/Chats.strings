@@ -125,11 +125,20 @@
 /* Location: ScrollToMentionFAB.swift - Accessibility hint for scroll to mention button */
 "chats.fab.scrollToMention.accessibilityHint" = "Dubbeltik om naar het bericht te navigeren";
 
+/* Location: ScrollToMentionFAB.swift - Accessibility value for unread mention count - %d is the number of unread mentions */
+"chats.fab.scrollToMention.accessibilityValue" = "%d ongelezen vermeldingen";
+
 /* Location: ScrollToBottomFAB.swift - Accessibility label for scroll to bottom button */
 "chats.fab.scrollToBottom.accessibilityLabel" = "Scroll naar nieuwste bericht";
 
 /* Location: ScrollToMentionFAB.swift, ScrollToBottomFAB.swift - Badge text for 99+ unread */
 "chats.fab.badge.overflow" = "99+";
+
+/* Location: ScrollToDividerFAB.swift - Accessibility label for scroll to divider button */
+"chats.fab.scrollToDivider.accessibilityLabel" = "Scroll to new messages";
+
+/* Location: ScrollToDividerFAB.swift - Accessibility hint for scroll to divider button */
+"chats.fab.scrollToDivider.accessibilityHint" = "Double-tap to scroll to the new messages divider";
 
 // MARK: - Chat View (Direct Messages)
 
@@ -873,11 +882,11 @@
 
 // MARK: - Tips
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip title encouraging mesh announcement */
-"chats.tip.floodAdvert.title" = "Maak jezelf bekend op het mesh-netwerk";
+/* Location: DeviceMenuTip.swift - Purpose: Tip title introducing device menu */
+"chats.tip.deviceMenu.title" = "Your Device Menu";
 
-/* Location: SendFloodAdvertTip.swift - Purpose: Tip message explaining flood advert action */
-"chats.tip.floodAdvert.message" = "Tik hier en verstuur een Flood Advert om apparaten in de buurt te laten weten dat je bent toegetreden.";
+/* Location: DeviceMenuTip.swift - Purpose: Tip message explaining device menu features */
+"chats.tip.deviceMenu.message" = "Manage your connection, send advertisements, and check battery. Bluetooth devices stay connected even if the app is closed — tap Disconnect when you're ready to turn off the link.";
 
 /* Location: InlineImageView.swift - Accessibility label for static image */
 "chats.inlineImage.imageAccessibility" = "Afbeelding";

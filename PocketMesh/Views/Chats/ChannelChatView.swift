@@ -20,29 +20,20 @@ struct ChannelChatView: View {
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
-    @State private var keyboardObserver = KeyboardObserver()
     @State private var showingChannelInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
     @State private var scrollToMentionRequest = 0
-    @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var unseenMentionIDs: [UUID] = []
     @State private var scrollToTargetID: UUID?
-    @State private var initialScrollRequest = 0
+    @State private var mentionScrollTask: Task<Void, Never>?
+    @State private var scrollToDividerRequest = 0
+    @State private var isDividerVisible = false
+    @State private var hasDismissedDividerFAB = false
 
-    /// Mention IDs that are both unseen AND present in loaded messages
-    private var reachableMentionIDs: Set<UUID> {
-        let loadedIDs = Set(viewModel.displayItems.map(\.id))
-        return unseenMentionIDs.intersection(loadedIDs)
-    }
-
-    /// Target message ID for scrolling (notification target takes priority over mentions)
-    private var scrollTargetID: UUID? {
-        if let targetID = scrollToTargetID,
-           viewModel.displayItems.contains(where: { $0.id == targetID }) {
-            return targetID
-        }
-        return reachableMentionIDs.first
+    private var showDividerFAB: Bool {
+        viewModel.newMessagesDividerMessageID != nil && !isDividerVisible && !hasDismissedDividerFAB
     }
 
     @State private var selectedMessageForActions: MessageDTO?
@@ -63,10 +54,7 @@ struct ChannelChatView: View {
         messagesView
             .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
-                    .floatingKeyboardAware()
             }
-            .ignoreKeyboardOnIPad()
-            .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
@@ -129,9 +117,9 @@ struct ChannelChatView: View {
         }
         .task(id: appState.servicesVersion) {
             // Capture pending scroll target before loading
-            let pendingTarget = appState.pendingScrollToMessageID
+            let pendingTarget = appState.navigation.pendingScrollToMessageID
             if pendingTarget != nil {
-                appState.clearPendingScrollToMessage()
+                appState.navigation.clearPendingScrollToMessage()
             }
 
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
@@ -141,16 +129,16 @@ struct ChannelChatView: View {
             await viewModel.loadConversations(deviceID: channel.deviceID)
             await loadUnseenMentions()
 
-            // Trigger scroll to target message if pending
+            // Trigger scroll to target message if pending (notification deeplink)
             if let targetID = pendingTarget {
                 scrollToTargetID = targetID
                 scrollToMentionRequest += 1
-            } else if let dividerID = viewModel.newMessagesDividerMessageID {
-                scrollToTargetID = dividerID
-                initialScrollRequest += 1
             }
         }
         .onDisappear {
+            mentionScrollTask?.cancel()
+            mentionScrollTask = nil
+
             // Clear active channel for notification suppression
             appState.services?.notificationService.activeChannelIndex = nil
             appState.services?.notificationService.activeChannelDeviceID = nil
@@ -235,12 +223,34 @@ struct ChannelChatView: View {
     // MARK: - Mention Tracking
 
     private func loadUnseenMentions() async {
-        guard let dataStore = appState.services?.dataStore else { return }
+        guard let services = appState.services else { return }
         do {
-            unseenMentionIDs = Set(try await dataStore.fetchUnseenChannelMentionIDs(
+            let allIDs = try await services.dataStore.fetchUnseenChannelMentionIDs(
                 deviceID: channel.deviceID,
                 channelIndex: channel.index
-            ))
+            )
+
+            let blockedNames = await services.syncCoordinator.blockedSenderNames()
+            if blockedNames.isEmpty {
+                unseenMentionIDs = allIDs
+                return
+            }
+
+            var filteredIDs: [UUID] = []
+            for id in allIDs {
+                do {
+                    if let message = try await services.dataStore.fetchMessage(id: id),
+                       let senderName = message.senderNodeName,
+                       blockedNames.contains(senderName) {
+                        try await services.dataStore.markMentionSeen(messageID: id)
+                        continue
+                    }
+                } catch {
+                    logger.error("Failed to check/filter mention \(id): \(error)")
+                }
+                filteredIDs.append(id)
+            }
+            unseenMentionIDs = filteredIDs
         } catch {
             logger.error("Failed to load unseen channel mentions: \(error)")
         }
@@ -254,7 +264,7 @@ struct ChannelChatView: View {
             try await dataStore.markMentionSeen(messageID: messageID)
             try await dataStore.decrementChannelUnreadMentionCount(channelID: channel.id)
 
-            unseenMentionIDs.remove(messageID)
+            unseenMentionIDs.removeAll { $0 == messageID }
 
             // Refresh parent's channel list to update badge in sidebar (important for iPad split view)
             if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
@@ -282,6 +292,54 @@ struct ChannelChatView: View {
         }
     }
 
+    // MARK: - Mention Navigation
+
+    private func scrollToNextMention() {
+        guard let targetID = unseenMentionIDs.first else { return }
+
+        if viewModel.displayItems.contains(where: { $0.id == targetID }) {
+            scrollToTargetID = targetID
+            scrollToMentionRequest += 1
+            return
+        }
+
+        mentionScrollTask?.cancel()
+        mentionScrollTask = Task {
+            do {
+                let deadline = ContinuousClock.now + .seconds(10)
+                while !viewModel.displayItems.contains(where: { $0.id == targetID }) {
+                    guard viewModel.hasMoreMessages else {
+                        logger.warning("Mention \(targetID) not found after exhausting history, removing")
+                        if let dataStore = appState.services?.dataStore {
+                            try? await dataStore.markMentionSeen(messageID: targetID)
+                        }
+                        unseenMentionIDs.removeAll { $0 == targetID }
+                        break
+                    }
+                    guard unseenMentionIDs.contains(targetID) else { break }
+                    guard ContinuousClock.now < deadline else {
+                        logger.warning("Mention \(targetID) paging timed out")
+                        break
+                    }
+                    if viewModel.isLoadingOlder {
+                        try await Task.sleep(for: .milliseconds(50))
+                        continue
+                    }
+                    await viewModel.loadOlderMessages()
+                    try Task.checkCancellation()
+                }
+                if viewModel.displayItems.contains(where: { $0.id == targetID }) {
+                    scrollToTargetID = targetID
+                    scrollToMentionRequest += 1
+                }
+            } catch is CancellationError {
+                // Expected when view disappears during paging
+            } catch {
+                logger.error("Failed to scroll to mention: \(error)")
+            }
+        }
+    }
+
     // MARK: - Messages View
 
     private var messagesView: some View {
@@ -292,6 +350,7 @@ struct ChannelChatView: View {
             } else if viewModel.messages.isEmpty {
                 emptyMessagesView
             } else {
+                let mentionIDSet = Set(unseenMentionIDs)
                 ChatTableView(
                     items: viewModel.displayItems,
                     cellContent: { displayItem in
@@ -302,16 +361,17 @@ struct ChannelChatView: View {
                     scrollToBottomRequest: $scrollToBottomRequest,
                     scrollToMentionRequest: $scrollToMentionRequest,
                     isUnseenMention: { displayItem in
-                        displayItem.containsSelfMention && !displayItem.mentionSeen && unseenMentionIDs.contains(displayItem.id)
+                        displayItem.containsSelfMention && !displayItem.mentionSeen && mentionIDSet.contains(displayItem.id)
                     },
                     onMentionBecameVisible: { messageID in
                         Task {
                             await markMentionSeen(messageID: messageID)
                         }
                     },
-                    mentionTargetID: scrollTargetID,
-                    initialScrollTargetID: scrollToTargetID,
-                    initialScrollRequest: $initialScrollRequest,
+                    mentionTargetID: scrollToTargetID,
+                    scrollToDividerRequest: $scrollToDividerRequest,
+                    dividerItemID: viewModel.newMessagesDividerMessageID,
+                    isDividerVisible: $isDividerVisible,
                     onNearTop: {
                         Task {
                             await viewModel.loadOlderMessages()
@@ -321,11 +381,23 @@ struct ChannelChatView: View {
                 )
                 .overlay(alignment: .bottomTrailing) {
                     VStack(spacing: 12) {
-                        ScrollToMentionFAB(
-                            isVisible: !reachableMentionIDs.isEmpty,
-                            unreadMentionCount: reachableMentionIDs.count,
-                            onTap: { scrollToMentionRequest += 1 }
-                        )
+                        if showDividerFAB {
+                            ScrollToDividerFAB(
+                                onTap: {
+                                    scrollToDividerRequest += 1
+                                    hasDismissedDividerFAB = true
+                                }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        if !unseenMentionIDs.isEmpty {
+                            ScrollToMentionFAB(
+                                unreadMentionCount: unseenMentionIDs.count,
+                                onTap: { scrollToNextMention() }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
 
                         ScrollToBottomFAB(
                             isVisible: !isAtBottom,
@@ -333,8 +405,13 @@ struct ChannelChatView: View {
                             onTap: { scrollToBottomRequest += 1 }
                         )
                     }
+                    .animation(.snappy(duration: 0.2), value: showDividerFAB)
+                    .animation(.snappy(duration: 0.2), value: unseenMentionIDs.isEmpty)
                     .padding(.trailing, 16)
                     .padding(.bottom, 8)
+                }
+                .onChange(of: viewModel.newMessagesDividerMessageID) { _, _ in
+                    hasDismissedDividerFAB = false
                 }
             }
         }
@@ -346,7 +423,6 @@ struct ChannelChatView: View {
             UnifiedMessageBubble(
                 message: message,
                 contactName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
-                contactNodeName: channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name,
                 deviceName: appState.connectedDevice?.nodeName ?? "Me",
                 configuration: .channel(
                     isPublic: channel.isPublicChannel || channel.name.hasPrefix("#"),
@@ -519,11 +595,7 @@ struct ChannelChatView: View {
 
     private func buildReplyText(for message: MessageDTO) -> String {
         let mentionName = message.senderNodeName ?? L10n.Chats.Chats.Message.Sender.unknown
-        let preview = String(message.text.prefix(20))
-        let hasMore = message.text.count > 20
-        let suffix = hasMore ? ".." : ""
-        let mention = MentionUtilities.createMention(for: mentionName)
-        return "\(mention)\"\(preview)\(suffix)\"\n"
+        return MentionUtilities.buildReplyText(mentionName: mentionName, messageText: message.text)
     }
 
     // MARK: - Input Bar

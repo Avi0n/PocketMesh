@@ -202,7 +202,7 @@ public actor MockMeshCoreSession: MeshCoreSessionProtocol {
         // Stub - not used in current tests
     }
 
-    public func changeContactFlags(_ contact: MeshContact, flags: UInt8) async throws {
+    public func changeContactFlags(_ contact: MeshContact, flags: ContactFlags) async throws {
         // Stub - not used in current tests
     }
 

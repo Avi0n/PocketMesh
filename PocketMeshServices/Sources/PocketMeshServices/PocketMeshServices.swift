@@ -262,36 +262,7 @@ public enum CLIResponse: Sendable, Equatable {
 extension LPPDataPoint {
     /// Human-readable type name for the sensor channel
     public var typeName: String {
-        switch type {
-        case .digitalInput: return "Digital Input"
-        case .digitalOutput: return "Digital Output"
-        case .analogInput: return "Analog Input"
-        case .analogOutput: return "Analog Output"
-        case .illuminance: return "Illuminance"
-        case .presence: return "Presence"
-        case .temperature: return "Temperature"
-        case .humidity: return "Humidity"
-        case .accelerometer: return "Accelerometer"
-        case .barometer: return "Pressure"
-        case .gyrometer: return "Gyrometer"
-        case .gps: return "GPS"
-        case .voltage: return "Voltage"
-        case .current: return "Current"
-        case .frequency: return "Frequency"
-        case .percentage: return "Percentage"
-        case .altitude: return "Altitude"
-        case .concentration: return "Concentration"
-        case .power: return "Power"
-        case .distance: return "Distance"
-        case .energy: return "Energy"
-        case .direction: return "Direction"
-        case .genericSensor: return "Sensor"
-        case .colour: return "Colour"
-        case .switchValue: return "Switch"
-        case .load: return "Load"
-        case .unixTime: return "Time"
-        @unknown default: return "Unknown"
-        }
+        type.name
     }
 
     /// Formatted value with appropriate unit suffix

@@ -128,7 +128,7 @@ public struct PendingAck: Sendable {
 /// - Marks messages as failed when timeout expires
 /// - Tracks repeat acknowledgements for network analysis
 ///
-/// Call `startEventListening()` to begin processing ACKs from the session.
+/// Call `startEventMonitoring()` to begin processing ACKs from the session.
 public actor MessageService {
 
     // MARK: - Properties
@@ -199,6 +199,9 @@ public actor MessageService {
         self.contactService = service
     }
 
+    /// Whether a contact service has been wired via `setContactService`.
+    var hasContactServiceWired: Bool { contactService != nil }
+
     // MARK: - Event Listening
 
     /// Starts listening for session events to process message acknowledgements.
@@ -207,9 +210,9 @@ public actor MessageService {
     /// The service will automatically update message delivery status when ACKs are received.
     ///
     /// # Important
-    /// This must be called for ACK tracking to work. Without event listening,
+    /// This must be called for ACK tracking to work. Without event monitoring,
     /// messages will remain in "sent" status even if ACKs are received.
-    public func startEventListening() {
+    public func startEventMonitoring() {
         eventListenerTask?.cancel()
 
         eventListenerTask = Task { [weak self] in
@@ -228,10 +231,10 @@ public actor MessageService {
         }
     }
 
-    /// Stops listening for session events.
+    /// Stops monitoring session events.
     ///
     /// Call this when disconnecting from the device.
-    public func stopEventListening() {
+    public func stopEventMonitoring() {
         eventListenerTask?.cancel()
         eventListenerTask = nil
     }

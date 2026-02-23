@@ -21,15 +21,14 @@ This guide provides information for developers who want to contribute to the Poc
   brew install xcsift
   ```
 
-Note: SwiftLint and SwiftFormat are not currently configured for this project but may be added optionally. See the "Linting and Formatting" section below.
-
 ### Project Setup
 
 1. **Clone the repository**.
-2. **Generate the Xcode project**:
+2. **Generate the Xcode project** from `project.yml`:
    ```bash
    xcodegen generate
    ```
+   > **Note:** Do not edit `PocketMesh.xcodeproj` directly — it is generated from `project.yml` and will be overwritten. Make project configuration changes in `project.yml` and regenerate.
 3. **Open `PocketMesh.xcodeproj`**.
 
 ## Building the Project
@@ -181,27 +180,30 @@ struct MessageServiceTests {
 
 ## Linting and Formatting
 
-### Optional Tools
+### SwiftLint
 
-The project does not currently have SwiftLint or SwiftFormat configured. If you wish to use these tools:
+The project uses [SwiftLint](https://github.com/realm/SwiftLint) for style enforcement, configured via `.swiftlint.yml` at the repo root.
 
-**SwiftLint** (optional):
 ```bash
-brew install swiftlint
+# Check for violations
 swiftlint lint
+
+# Auto-fix trivial violations (trailing whitespace, etc.)
+swiftlint --fix
 ```
 
-**SwiftFormat** (optional):
-```bash
-brew install swiftformat
-swiftformat .
-```
+The configuration sets thresholds slightly above current codebase maximums. These will be tightened incrementally. Rules that overlap with planned refactoring work (e.g., `file_length`, `type_body_length`) are disabled until that work lands.
+
+If SwiftLint is not installed: `brew install swiftlint`
 
 ### Pre-Commit Workflow
 
 Before committing:
 
 ```bash
+# Lint
+swiftlint lint
+
 # Build and test
 xcodebuild test 2>&1 | xcsift --Werror
 ```
@@ -367,30 +369,20 @@ xcodebuild test \
 ### Responsive Design Testing
 
 ```swift
-// Test different size classes in SwiftUI preview
-struct MyView_Previews: PreviewProvider {
-    static var previews: some View {
-        // Compact (iPhone)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.portrait)
-        }
-        .previewLayout(.sizeThatFits)
+// Test different size classes with the #Preview macro
+#Preview("iPhone Portrait") {
+    MyView()
+        .previewInterfaceOrientation(.portrait)
+}
 
-        // Regular (iPad portrait)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.portrait)
-        }
-        .previewLayout(.device(IPadPro12_9))
+#Preview("iPad Portrait", traits: .fixedLayout(width: 1024, height: 1366)) {
+    MyView()
+        .previewInterfaceOrientation(.portrait)
+}
 
-        // Regular (iPad landscape)
-        Group {
-            MyView()
-                .previewInterfaceOrientation(.landscapeLeft)
-        }
-        .previewLayout(.device(IPadPro12_9))
-    }
+#Preview("iPad Landscape", traits: .fixedLayout(width: 1366, height: 1024)) {
+    MyView()
+        .previewInterfaceOrientation(.landscapeLeft)
 }
 ```
 

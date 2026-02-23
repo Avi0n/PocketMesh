@@ -13,14 +13,14 @@ struct ConfigExportImportSection: View {
             NavigationLink {
                 NodeConfigExportView()
             } label: {
-                Label(L10n.Settings.ConfigExport.export, systemImage: "square.and.arrow.up")
+                TintedLabel(L10n.Settings.ConfigExport.export, systemImage: "square.and.arrow.up")
             }
             .disabled(isDisabled)
 
             NavigationLink {
                 NodeConfigImportView()
             } label: {
-                Label(L10n.Settings.ConfigImport.importConfig, systemImage: "square.and.arrow.down")
+                TintedLabel(L10n.Settings.ConfigImport.importConfig, systemImage: "square.and.arrow.down")
             }
             .disabled(isDisabled)
         } header: {

@@ -13,6 +13,16 @@ struct NotificationStringProviderTests {
             case .room: "Mock Room Title"
             }
         }
+
+        var replyActionTitle: String { "Mock Reply" }
+        var sendButtonTitle: String { "Mock Send" }
+        var messagePlaceholder: String { "Mock Placeholder" }
+        var markAsReadActionTitle: String { "Mock Mark as Read" }
+        var lowBatteryTitle: String { "Mock Low Battery" }
+
+        func lowBatteryBody(deviceName: String, percentage: Int) -> String {
+            "Mock \(deviceName) at \(percentage)%"
+        }
     }
 
     @Test("Provider returns correct title for chat type")
@@ -36,18 +46,25 @@ struct NotificationStringProviderTests {
         #expect(title == "Mock Room Title")
     }
 
+    @Test("Provider returns correct low battery title")
+    func providerReturnsLowBatteryTitle() {
+        let provider = MockStringProvider()
+        #expect(provider.lowBatteryTitle == "Mock Low Battery")
+    }
+
+    @Test("Provider returns correct low battery body with device name and percentage")
+    func providerReturnsLowBatteryBody() {
+        let provider = MockStringProvider()
+        let body = provider.lowBatteryBody(deviceName: "Node-7", percentage: 15)
+        #expect(body == "Mock Node-7 at 15%")
+    }
+
     @Test("Default fallback titles are English")
     @MainActor
-    func defaultFallbackTitlesAreEnglish() async {
+    func defaultFallbackTitlesAreEnglish() {
         let service = NotificationService()
-        // Without a provider set, should use defaults
-        // We can't easily test the internal default method, but we verify
-        // the service can be used without a provider (no crash)
-        await service.postNewContactNotification(
-            contactName: "Test",
-            contactID: UUID(),
-            contactType: ContactType.repeater
-        )
-        #expect(true) // If we got here, no crash occurred
+        #expect(service.defaultDiscoveryTitle(for: .chat) == "New Contact Discovered")
+        #expect(service.defaultDiscoveryTitle(for: .repeater) == "New Repeater Discovered")
+        #expect(service.defaultDiscoveryTitle(for: .room) == "New Room Discovered")
     }
 }

@@ -29,12 +29,16 @@ struct RxLogTypesTests {
         #expect(PayloadType.unknown.rawValue == 255)
     }
 
-    @Test("PayloadType values 12-15 map to unknown via fromBits")
+    @Test("Reserved PayloadType values 12-14 map to unknown via fromBits")
     func payloadTypeFromBitsUnknown() {
         #expect(PayloadType(fromBits: 12) == .unknown)
         #expect(PayloadType(fromBits: 13) == .unknown)
         #expect(PayloadType(fromBits: 14) == .unknown)
-        #expect(PayloadType(fromBits: 15) == .unknown)
+    }
+
+    @Test("PayloadType value 15 maps to rawCustom via fromBits")
+    func payloadTypeFromBitsRawCustom() {
+        #expect(PayloadType(fromBits: 15) == .rawCustom)
     }
 
     @Test("PayloadType rawValue initializer returns nil for undefined values")

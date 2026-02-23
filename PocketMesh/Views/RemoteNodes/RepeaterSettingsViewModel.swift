@@ -227,17 +227,9 @@ final class RepeaterSettingsViewModel {
         }
 
         // Identity settings - only process if finished loading with error
+        // Check lat/lon before name: lat/lon require valid Double parsing,
+        // while name accepts any string and would incorrectly capture numeric values.
         if !isLoadingIdentity && identityError != nil {
-            if originalName == nil {
-                if case .name(let n) = CLIResponse.parse(response, forQuery: "get name") {
-                    self.name = n
-                    self.originalName = n
-                    self.identityError = nil
-                    logger.info("Late response: received name")
-                    return
-                }
-            }
-
             if originalLatitude == nil {
                 if case .latitude(let lat) = CLIResponse.parse(response, forQuery: "get lat") {
                     self.latitude = lat
@@ -254,6 +246,16 @@ final class RepeaterSettingsViewModel {
                     self.originalLongitude = lon
                     self.identityError = nil
                     logger.info("Late response: received longitude")
+                    return
+                }
+            }
+
+            if originalName == nil {
+                if case .name(let n) = CLIResponse.parse(response, forQuery: "get name") {
+                    self.name = n
+                    self.originalName = n
+                    self.identityError = nil
+                    logger.info("Late response: received name")
                     return
                 }
             }
@@ -337,7 +339,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            deviceInfoError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            deviceInfoError = "error"
         }
 
         isLoadingDeviceInfo = false
@@ -390,7 +392,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            identityError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            identityError = "error"
         }
 
         isLoadingIdentity = false
@@ -431,7 +433,7 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            radioError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            radioError = "error"
         }
 
         isLoadingRadio = false
@@ -497,18 +499,10 @@ final class RepeaterSettingsViewModel {
 
         // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
-            behaviorError = L10n.RemoteNodes.RemoteNodes.Settings.someSettingsFailedToLoad
+            behaviorError = "error"
         }
 
         isLoadingBehavior = false
-    }
-
-    // MARK: - Handler Registration
-
-    /// Register for CLI responses (called from view's .task modifier)
-    /// No longer needed - service handles response collection
-    func registerHandlers(appState: AppState) async {
-        // Response collection now handled by RemoteNodeService
     }
 
     // MARK: - Settings Actions

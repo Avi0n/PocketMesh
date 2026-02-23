@@ -388,4 +388,8 @@ extension MockBLEStateMachine {
     func setStubbedIsBluetoothPoweredOff(_ value: Bool) {
         stubbedIsBluetoothPoweredOff = value
     }
+
+    func setStubbedDidStartAdoptingSystemConnectedPeripheral(_ value: Bool) {
+        stubbedDidStartAdoptingSystemConnectedPeripheral = value
+    }
 }

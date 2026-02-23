@@ -134,6 +134,29 @@ public final class RemoteNodeSession {
         self.lastSyncTimestamp = lastSyncTimestamp
         self.lastMessageDate = lastMessageDate
     }
+
+    /// Applies all mutable fields from a DTO to this model instance.
+    func apply(_ dto: RemoteNodeSessionDTO) {
+        deviceID = dto.deviceID
+        publicKey = dto.publicKey
+        name = dto.name
+        roleRawValue = dto.role.rawValue
+        latitude = dto.latitude
+        longitude = dto.longitude
+        isConnected = dto.isConnected
+        permissionLevelRawValue = dto.permissionLevel.rawValue
+        lastConnectedDate = dto.lastConnectedDate
+        lastBatteryMillivolts = dto.lastBatteryMillivolts
+        lastUptimeSeconds = dto.lastUptimeSeconds
+        lastNoiseFloor = dto.lastNoiseFloor
+        unreadCount = dto.unreadCount
+        notificationLevel = dto.notificationLevel
+        isFavorite = dto.isFavorite
+        lastRxAirtimeSeconds = dto.lastRxAirtimeSeconds
+        neighborCount = dto.neighborCount
+        lastSyncTimestamp = dto.lastSyncTimestamp
+        lastMessageDate = dto.lastMessageDate
+    }
 }
 
 // MARK: - Computed Properties

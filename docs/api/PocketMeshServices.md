@@ -123,12 +123,12 @@ public struct MessageServiceConfig: Sendable {
 | `sendChannelMessage(text:channelIndex:...) async throws -> UUID` | Broadcasts to channel |
 | `retryDirectMessage(messageID:to:) async throws -> MessageDTO` | Manual retry of failed message |
 
-### Event Listening
+### Event Monitoring
 
 | Method | Description |
 |--------|-------------|
-| `startEventListening()` | Starts listening for session events to process message acknowledgements |
-| `stopEventListening()` | Stops listening for session events |
+| `startEventMonitoring()` | Starts monitoring session events to process message acknowledgements |
+| `stopEventMonitoring()` | Stops monitoring session events |
 
 ### ACK Tracking
 

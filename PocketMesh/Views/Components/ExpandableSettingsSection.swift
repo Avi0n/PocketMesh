@@ -25,15 +25,13 @@ struct ExpandableSettingsSection<Content: View>: View {
                 if let error, !isLoaded() {
                     VStack(spacing: 12) {
                         Label(L10n.Localizable.Common.Error.failedToLoad, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.orange)
                         Button(L10n.Localizable.Common.tryAgain) {
                             Task { await onLoad() }
                         }
                         .buttonStyle(.bordered)
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                 }
             } label: {
@@ -75,8 +73,8 @@ struct ExpandableSettingsSection<Content: View>: View {
 #Preview {
     @Previewable @State var isExpanded = false
     @Previewable @State var isLoading = false
-    @Previewable @State var error: String? = nil
-    @Previewable @State var data: String? = nil
+    @Previewable @State var error: String?
+    @Previewable @State var data: String?
 
     Form {
         ExpandableSettingsSection(

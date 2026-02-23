@@ -63,36 +63,38 @@ private struct GIFContentView: View {
     }
 
     var body: some View {
-        Group {
-            if isPlaying {
-                AnimatedGIFView(image: image)
-            } else {
-                Image(uiImage: staticFrame)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            }
-        }
-        .frame(width: displaySize.width, height: displaySize.height)
-        .overlay {
-            if !isPlaying {
-                ZStack {
-                    Color.black.opacity(0.3)
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(.white)
-                        .shadow(radius: 2)
+        Button {
+            isPlaying.toggle()
+        } label: {
+            Group {
+                if isPlaying {
+                    AnimatedGIFView(image: image)
+                } else {
+                    Image(uiImage: staticFrame)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
                 }
             }
-        }
-        .background {
-            if !isEmbedded {
-                Color.clear.background(.regularMaterial)
+            .frame(width: displaySize.width, height: displaySize.height)
+            .overlay {
+                if !isPlaying {
+                    ZStack {
+                        Color.black.opacity(0.3)
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(.white)
+                            .shadow(radius: 2)
+                    }
+                }
             }
+            .background {
+                if !isEmbedded {
+                    Color.clear.background(.regularMaterial)
+                }
+            }
+            .clipShape(.rect(cornerRadius: isEmbedded ? 0 : 12))
         }
-        .clipShape(.rect(cornerRadius: isEmbedded ? 0 : 12))
-        .onTapGesture {
-            isPlaying.toggle()
-        }
+        .buttonStyle(.plain)
         .onAppear {
             isPlaying = autoPlayGIFs && !reduceMotion
         }

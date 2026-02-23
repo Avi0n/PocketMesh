@@ -160,6 +160,9 @@ final class RoomConversationViewModel {
 
     // MARK: - Timestamp Helpers
 
+    /// Time gap (in seconds) that breaks message grouping for timestamps.
+    static let messageGroupingGapSeconds = 300
+
     /// Determines if a timestamp should be shown for a message at the given index.
     /// Shows timestamp for first message or when there's a gap > 5 minutes.
     static func shouldShowTimestamp(at index: Int, in messages: [RoomMessageDTO]) -> Bool {
@@ -169,6 +172,6 @@ final class RoomConversationViewModel {
         let previousMessage = messages[index - 1]
 
         let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > 300
+        return gap > messageGroupingGapSeconds
     }
 }

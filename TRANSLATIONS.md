@@ -76,7 +76,7 @@ If you see English text while using PocketMesh in another language, a translatio
 
 ## How to Request a New Language
 
-Open an [issue](https://github.com/nicklama/PocketMesh/issues) and include:
+Open an [issue](https://github.com/Avi0n/PocketMesh/issues) and include:
 
 - The language name and code (e.g., "Japanese — ja")
 - Whether you'd be willing to help review translations

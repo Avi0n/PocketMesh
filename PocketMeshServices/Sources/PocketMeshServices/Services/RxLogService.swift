@@ -8,7 +8,7 @@ private let logger = PersistentLogger(subsystem: "com.pocketmesh.services", cate
 /// Actor that processes RX log events, decodes channel messages, and persists to database.
 public actor RxLogService {
     private let session: MeshCoreSession
-    private let persistenceStore: PersistenceStore
+    private let dataStore: PersistenceStore
     private var deviceID: UUID?
 
     // Caches for fast lookup
@@ -32,15 +32,18 @@ public actor RxLogService {
     // Reentrancy guard for reprocessing
     private var isReprocessing = false
 
-    public init(session: MeshCoreSession, persistenceStore: PersistenceStore) {
+    public init(session: MeshCoreSession, dataStore: PersistenceStore) {
         self.session = session
-        self.persistenceStore = persistenceStore
+        self.dataStore = dataStore
     }
 
     /// Sets the HeardRepeatsService for processing channel message repeats.
     public func setHeardRepeatsService(_ service: HeardRepeatsService) {
         self.heardRepeatsService = service
     }
+
+    /// Whether a heard repeats service has been wired via `setHeardRepeatsService`.
+    var hasHeardRepeatsServiceWired: Bool { heardRepeatsService != nil }
 
     deinit {
         eventMonitorTask?.cancel()
@@ -74,7 +77,7 @@ public actor RxLogService {
     /// Load channel secrets from database to enable decryption before sync completes.
     private func loadSecretsFromDatabase(deviceID: UUID) async {
         do {
-            let channels = try await persistenceStore.fetchChannels(deviceID: deviceID)
+            let channels = try await dataStore.fetchChannels(deviceID: deviceID)
             channelSecrets = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.secret) })
             channelNames = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.name) })
             if !channels.isEmpty {
@@ -137,7 +140,7 @@ public actor RxLogService {
         let cutoff = Date().addingTimeInterval(-60)
 
         do {
-            let entries = try await persistenceStore.fetchRecentNoMatchingKeyEntries(
+            let entries = try await dataStore.fetchRecentNoMatchingKeyEntries(
                 deviceID: deviceID,
                 since: cutoff
             )
@@ -146,7 +149,7 @@ public actor RxLogService {
             logger.info("Re-processing \(entries.count) noMatchingKey entries")
 
             // Collect successful decryptions for batch update
-            var updates: [(id: UUID, channelHash: UInt8?, channelName: String?, senderTimestamp: UInt32?)] = []
+            var updates: [(id: UUID, channelIndex: UInt8?, channelName: String?, senderTimestamp: UInt32?)] = []
             var decryptedEntries: [RxLogEntryDTO] = []
 
             for entry in entries {
@@ -157,8 +160,8 @@ public actor RxLogService {
 
                 updates.append((
                     id: entry.id,
-                    channelHash: decrypted.channelHash,
-                    channelName: channelNames[decrypted.channelHash ?? 0],
+                    channelIndex: decrypted.channelIndex,
+                    channelName: channelNames[decrypted.channelIndex ?? 0],
                     senderTimestamp: decrypted.senderTimestamp
                 ))
                 decryptedEntries.append(decrypted)
@@ -166,7 +169,7 @@ public actor RxLogService {
 
             // Batch update database (decodedText is @Transient, not persisted)
             if !updates.isEmpty {
-                try await persistenceStore.batchUpdateRxLogDecryption(updates)
+                try await dataStore.batchUpdateRxLogDecryption(updates)
 
                 // Process for heard repeats after DB update
                 if let heardRepeatsService {
@@ -243,8 +246,8 @@ public actor RxLogService {
 
         // Decrypt direct messages to extract senderTimestamp
         // Try all contacts with matching prefix byte (1-byte hash has collision risk)
-        if (parsed.payloadType == .textMessage || parsed.payloadType == .response),
-           (parsed.routeType == .direct || parsed.routeType == .tcDirect),
+        if parsed.payloadType == .textMessage || parsed.payloadType == .response,
+           parsed.routeType == .direct || parsed.routeType == .tcDirect,
            let senderPrefix = parsed.senderPubkeyPrefix?.first,
            let candidateKeys = contactPublicKeysByPrefix[senderPrefix],
            let myPrivateKey = self.myPrivateKey {
@@ -277,7 +280,7 @@ public actor RxLogService {
         let dto = RxLogEntryDTO(
             deviceID: deviceID,
             from: parsed,
-            channelHash: channelIndex,
+            channelIndex: channelIndex,
             channelName: channelName,
             decryptStatus: decryptStatus,
             fromContactName: fromContactName,
@@ -287,8 +290,8 @@ public actor RxLogService {
 
         // Persist
         do {
-            try await persistenceStore.saveRxLogEntry(dto)
-            try await persistenceStore.pruneRxLogEntries(deviceID: deviceID)
+            try await dataStore.saveRxLogEntry(dto)
+            try await dataStore.pruneRxLogEntries(deviceID: deviceID)
         } catch {
             logger.error("Failed to save RX log entry: \(error.localizedDescription)")
         }
@@ -296,11 +299,10 @@ public actor RxLogService {
         // Emit to stream
         streamContinuation?.yield(dto)
 
-        // Process for heard repeats (fire and forget - don't block stream)
+        // Process for heard repeats (inline await provides natural backpressure,
+        // preventing unbounded Task accumulation under high RX volume)
         if let heardRepeatsService = self.heardRepeatsService {
-            Task {
-                await heardRepeatsService.processForRepeats(dto)
-            }
+            await heardRepeatsService.processForRepeats(dto)
         }
     }
 
@@ -308,7 +310,7 @@ public actor RxLogService {
     public func loadExistingEntries() async -> [RxLogEntryDTO] {
         guard let deviceID else { return [] }
         do {
-            let entries = try await persistenceStore.fetchRxLogEntries(deviceID: deviceID)
+            let entries = try await dataStore.fetchRxLogEntries(deviceID: deviceID)
             return entries.map { decryptEntry($0) }
         } catch {
             logger.error("Failed to load RX log entries: \(error.localizedDescription)")
@@ -341,7 +343,7 @@ public actor RxLogService {
         let encryptedPayload = Data(entry.packetPayload.dropFirst(1))
 
         // Fast path: use stored channel index if previously decrypted successfully
-        if entry.decryptStatus == .success, let channelIndex = entry.channelHash,
+        if entry.decryptStatus == .success, let channelIndex = entry.channelIndex,
            let secret = channelSecrets[channelIndex] {
             let decryptResult = ChannelCrypto.decrypt(payload: encryptedPayload, secret: secret)
             if case .success(let timestamp, _, let text) = decryptResult {
@@ -401,7 +403,7 @@ public actor RxLogService {
         let encryptedPayload = Data(entry.packetPayload.dropFirst(1))
 
         // Fast path: use stored channel index
-        if entry.decryptStatus == .success, let channelIndex = entry.channelHash,
+        if entry.decryptStatus == .success, let channelIndex = entry.channelIndex,
            let secret = secrets[channelIndex] {
             let decryptResult = ChannelCrypto.decrypt(payload: encryptedPayload, secret: secret)
             if case .success(let timestamp, _, let text) = decryptResult {
@@ -428,7 +430,7 @@ public actor RxLogService {
     public func clearEntries() async {
         guard let deviceID else { return }
         do {
-            try await persistenceStore.clearRxLogEntries(deviceID: deviceID)
+            try await dataStore.clearRxLogEntries(deviceID: deviceID)
         } catch {
             logger.error("Failed to clear RX log entries: \(error.localizedDescription)")
         }

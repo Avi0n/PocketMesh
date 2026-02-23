@@ -10,6 +10,7 @@ struct HashtagUtilitiesTests {
     @Test("hashtag pattern matches valid hashtags")
     func testPatternMatchesValid() {
         let pattern = HashtagUtilities.hashtagPattern
+        // swiftlint:disable:next force_try
         let regex = try! NSRegularExpression(pattern: pattern)
 
         let validCases = ["#general", "#General", "#test-channel", "#abc123", "#a"]
@@ -24,6 +25,7 @@ struct HashtagUtilitiesTests {
     func testPatternRejectsInvalid() {
         // Use anchored pattern for full-string validation (extraction pattern finds partial matches)
         let anchoredPattern = "^" + HashtagUtilities.hashtagPattern + "$"
+        // swiftlint:disable:next force_try
         let regex = try! NSRegularExpression(pattern: anchoredPattern)
 
         let invalidCases = ["#test_underscore", "#test.dot", "#", "#-bad", "#bad!", "#white space"]

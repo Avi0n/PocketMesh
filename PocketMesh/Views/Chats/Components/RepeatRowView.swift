@@ -50,20 +50,20 @@ struct RepeatRowView: View {
 
     // MARK: - Helpers
 
-    /// Signal color based on SNR quality thresholds
-    private var signalColor: Color {
-        guard let snr = repeatEntry.snr else { return .secondary }
-        if snr > 10 { return .green }
-        if snr > 5 { return .yellow }
-        return .red
-    }
+    private var snrQuality: SNRQuality { repeatEntry.snrQuality }
+
+    private var signalColor: Color { snrQuality.color }
 
     /// Signal quality description for accessibility
     private var signalQuality: String {
-        guard let snr = repeatEntry.snr else { return L10n.Chats.Chats.Path.Hop.signalUnknown }
-        if snr > 10 { return L10n.Chats.Chats.Signal.excellent }
-        if snr > 5 { return L10n.Chats.Chats.Signal.good }
-        return L10n.Chats.Chats.Signal.poor
+        switch snrQuality {
+        case .excellent: L10n.Chats.Chats.Signal.excellent
+        case .good: L10n.Chats.Chats.Signal.good
+        case .fair: L10n.Chats.Chats.Signal.fair
+        case .poor: L10n.Chats.Chats.Signal.poor
+        case .veryPoor: L10n.Chats.Chats.Signal.veryPoor
+        case .unknown: L10n.Chats.Chats.Path.Hop.signalUnknown
+        }
     }
 
     /// Hop count text with proper pluralization

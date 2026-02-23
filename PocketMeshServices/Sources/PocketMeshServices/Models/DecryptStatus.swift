@@ -4,7 +4,7 @@ import Foundation
 /// Decryption outcome for channel messages.
 public enum DecryptStatus: Int, Codable, Sendable, CaseIterable {
     case notApplicable = 0   // Not a channel message (e.g., direct, advert)
-    case noMatchingKey = 1   // No stored channel matches channelHash
+    case noMatchingKey = 1   // No stored channel matches channelIndex
     case hmacFailed = 2      // Key found but HMAC validation failed
     case decryptFailed = 3   // HMAC passed but AES decrypt failed
     case success = 4         // Decrypted successfully

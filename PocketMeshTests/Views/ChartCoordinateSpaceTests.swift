@@ -82,8 +82,8 @@ struct ChartCoordinateSpaceTests {
             yRange: 0...500
         )
 
-        #expect(space.xLabel(0) == "0.0")
-        #expect(space.xLabel(5000) == "5.0")
-        #expect(space.xLabel(10000) == "10.0")
+        #expect(space.xLabel(0) == (0.0).formatted(.number.precision(.fractionLength(1))))
+        #expect(space.xLabel(5000) == (5.0).formatted(.number.precision(.fractionLength(1))))
+        #expect(space.xLabel(10000) == (10.0).formatted(.number.precision(.fractionLength(1))))
     }
 }

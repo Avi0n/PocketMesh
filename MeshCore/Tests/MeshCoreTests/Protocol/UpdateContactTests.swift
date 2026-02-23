@@ -1,14 +1,17 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class UpdateContactTests: XCTestCase {
+@Suite("UpdateContact")
+struct UpdateContactTests {
 
-    func test_updateContact_produces147Bytes() {
+    @Test("updateContact produces 147 bytes")
+    func updateContactProduces147Bytes() {
         let contact = MeshContact(
             id: "test",
             publicKey: Data(repeating: 0xAA, count: 32),
-            type: 0x01,
-            flags: 0x02,
+            type: .chat,
+            flags: ContactFlags(rawValue: 0x02),
             outPathLength: 3,
             outPath: Data([0x11, 0x22, 0x33]),
             advertisedName: "TestNode",
@@ -20,17 +23,18 @@ final class UpdateContactTests: XCTestCase {
 
         let packet = PacketBuilder.updateContact(contact)
 
-        XCTAssertEqual(packet.count, 147, "Full contact update should be 147 bytes")
+        #expect(packet.count == 147, "Full contact update should be 147 bytes")
     }
 
-    func test_updateContact_correctLayout() {
+    @Test("updateContact correct layout")
+    func updateContactCorrectLayout() {
         let pubkey = Data(repeating: 0xAA, count: 32)
         let outPath = Data([0x11, 0x22, 0x33])
         let contact = MeshContact(
             id: "test",
             publicKey: pubkey,
-            type: 0x05,
-            flags: 0x03,
+            type: .room,
+            flags: ContactFlags(rawValue: 0x03),
             outPathLength: 3,
             outPath: outPath,
             advertisedName: "Node",
@@ -43,41 +47,42 @@ final class UpdateContactTests: XCTestCase {
         let packet = PacketBuilder.updateContact(contact)
 
         // Verify layout
-        XCTAssertEqual(packet[0], 0x09, "Byte 0: command code")
-        XCTAssertEqual(Data(packet[1..<33]), pubkey, "Bytes 1-32: public key")
-        XCTAssertEqual(packet[33], 0x05, "Byte 33: type")
-        XCTAssertEqual(packet[34], 0x03, "Byte 34: flags")
-        XCTAssertEqual(packet[35], 0x03, "Byte 35: outPathLength")
+        #expect(packet[0] == 0x09, "Byte 0: command code")
+        #expect(Data(packet[1..<33]) == pubkey, "Bytes 1-32: public key")
+        #expect(packet[33] == ContactType.room.rawValue, "Byte 33: type")
+        #expect(packet[34] == 0x03, "Byte 34: flags")
+        #expect(packet[35] == 0x03, "Byte 35: outPathLength")
 
         // Bytes 36-99: outPath (64 bytes, padded)
-        XCTAssertEqual(Data(packet[36..<39]), outPath, "Bytes 36-38: outPath data")
-        XCTAssertEqual(packet[39], 0x00, "Byte 39: padding")
+        #expect(Data(packet[36..<39]) == outPath, "Bytes 36-38: outPath data")
+        #expect(packet[39] == 0x00, "Byte 39: padding")
 
         // Bytes 100-131: name (32 bytes, padded)
         let nameBytes = Data(packet[100..<132])
         let name = String(data: nameBytes.prefix(4), encoding: .utf8)
-        XCTAssertEqual(name, "Node", "Bytes 100-103: name")
-        XCTAssertEqual(packet[104], 0x00, "Byte 104: name padding")
+        #expect(name == "Node", "Bytes 100-103: name")
+        #expect(packet[104] == 0x00, "Byte 104: name padding")
 
         // Bytes 132-135: lastAdvertTimestamp (UInt32 LE)
         let timestamp = packet.readUInt32LE(at: 132)
-        XCTAssertEqual(timestamp, 1000, "Bytes 132-135: timestamp")
+        #expect(timestamp == 1000, "Bytes 132-135: timestamp")
 
         // Bytes 136-139: latitude (Int32 LE, scaled by 1M)
         let lat = packet.readInt32LE(at: 136)
-        XCTAssertEqual(lat, 10_000_000, "Bytes 136-139: latitude")
+        #expect(lat == 10_000_000, "Bytes 136-139: latitude")
 
         // Bytes 140-143: longitude (Int32 LE, scaled by 1M)
         let lon = packet.readInt32LE(at: 140)
-        XCTAssertEqual(lon, -20_000_000, "Bytes 140-143: longitude")
+        #expect(lon == -20_000_000, "Bytes 140-143: longitude")
     }
 
-    func test_updateContact_signedPathLength() {
+    @Test("updateContact signed path length")
+    func updateContactSignedPathLength() {
         let contact = MeshContact(
             id: "test",
             publicKey: Data(repeating: 0x00, count: 32),
-            type: 0x00,
-            flags: 0x00,
+            type: .chat,
+            flags: [],
             outPathLength: -1,  // Flood path
             outPath: Data(),
             advertisedName: "",
@@ -90,6 +95,6 @@ final class UpdateContactTests: XCTestCase {
         let packet = PacketBuilder.updateContact(contact)
 
         // -1 as UInt8 bit pattern = 0xFF
-        XCTAssertEqual(packet[35], 0xFF, "outPathLength -1 should be 0xFF")
+        #expect(packet[35] == 0xFF, "outPathLength -1 should be 0xFF")
     }
 }

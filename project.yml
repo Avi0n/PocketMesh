@@ -60,7 +60,7 @@ targets:
       base:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 0.8.0
+        MARKETING_VERSION: 0.9.0
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -75,6 +75,19 @@ targets:
           - "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
         NSAccessorySetupBluetoothNames:
           - "MeshCore-"
+          - "Whisper-"
+          - "WisCore"
+          - "XIAO"
+          - "elecrow"
+          - "HT-n5262"
+          - "Seeed"
+          - "BQ"
+          - "ProMicro"
+          - "Keepteen"
+          - "Meshtiny"
+          - "T1000-E-BOOT"
+          - "me25ls01-BOOT"
+          - "NRF52 DK"
       configs:
         Debug:
           INFOPLIST_FILE: PocketMesh/Info-Debug.plist
@@ -93,7 +106,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: PocketMeshTests/Info.plist
-        MARKETING_VERSION: 0.8.0
+        MARKETING_VERSION: 0.9.0
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"

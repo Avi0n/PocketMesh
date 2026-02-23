@@ -93,8 +93,19 @@ public actor EventDispatcher {
         }
     }
 
+    /// Finishes all active subscriptions, causing their async streams to terminate.
+    ///
+    /// Call this during session teardown so that any `for await` loops consuming
+    /// event streams exit promptly instead of hanging until deallocation.
+    public func finishAllSubscriptions() {
+        for (_, subscription) in subscriptions {
+            subscription.continuation.finish()
+        }
+        subscriptions.removeAll()
+    }
+
     /// Removes a subscription from the dispatcher.
-    /// 
+    ///
     /// - Parameter id: The unique identifier of the subscription to remove.
     private func removeSubscription(id: UUID) {
         subscriptions.removeValue(forKey: id)

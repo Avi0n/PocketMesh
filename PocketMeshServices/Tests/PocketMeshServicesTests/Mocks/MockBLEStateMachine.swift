@@ -16,6 +16,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     public var stubbedCentralManagerStateName: String = "poweredOn"
     public var stubbedIsBluetoothPoweredOff: Bool = false
     public var stubbedIsDeviceConnectedToSystem: Bool = false
+    public var stubbedDidStartAdoptingSystemConnectedPeripheral: Bool = false
 
     // MARK: - Protocol Properties
 
@@ -31,6 +32,7 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
 
     public private(set) var activateCallCount = 0
     public private(set) var isDeviceConnectedToSystemCalls: [UUID] = []
+    public private(set) var startAdoptingSystemConnectedPeripheralCalls: [UUID] = []
     public private(set) var startScanningCallCount = 0
     public private(set) var stopScanningCallCount = 0
     public private(set) var isScanning = false
@@ -51,6 +53,11 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
     public func isDeviceConnectedToSystem(_ deviceID: UUID) -> Bool {
         isDeviceConnectedToSystemCalls.append(deviceID)
         return stubbedIsDeviceConnectedToSystem
+    }
+
+    public func startAdoptingSystemConnectedPeripheral(_ deviceID: UUID) -> Bool {
+        startAdoptingSystemConnectedPeripheralCalls.append(deviceID)
+        return stubbedDidStartAdoptingSystemConnectedPeripheral
     }
 
     public func activate() {
@@ -115,8 +122,10 @@ public actor MockBLEStateMachine: BLEStateMachineProtocol {
         stubbedCentralManagerStateName = "poweredOn"
         stubbedIsBluetoothPoweredOff = false
         stubbedIsDeviceConnectedToSystem = false
+        stubbedDidStartAdoptingSystemConnectedPeripheral = false
         activateCallCount = 0
         isDeviceConnectedToSystemCalls = []
+        startAdoptingSystemConnectedPeripheralCalls = []
         startScanningCallCount = 0
         stopScanningCallCount = 0
         isScanning = false

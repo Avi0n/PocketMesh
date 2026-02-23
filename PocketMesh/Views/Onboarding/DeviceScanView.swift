@@ -27,12 +27,14 @@ struct DeviceScanView: View {
                     .foregroundStyle(.tint)
                     .frame(height: 120)
 
-                Text(L10n.Onboarding.DeviceScan.title)
-                    .font(.largeTitle)
-                    .bold()
-                    .onTapGesture {
-                        handleTitleTap()
-                    }
+                Button {
+                    handleTitleTap()
+                } label: {
+                    Text(L10n.Onboarding.DeviceScan.title)
+                        .font(.largeTitle)
+                        .bold()
+                }
+                .buttonStyle(.plain)
 
                 if !hasConnectedDevice {
                     Text(L10n.Onboarding.DeviceScan.subtitle)
@@ -71,7 +73,7 @@ struct DeviceScanView: View {
             VStack(spacing: 12) {
                 if hasConnectedDevice {
                     Button {
-                        appState.onboardingPath.append(.radioPreset)
+                        appState.onboarding.onboardingPath.append(.radioPreset)
                     } label: {
                         Text(L10n.Onboarding.DeviceScan.continue)
                             .font(.headline)
@@ -86,7 +88,7 @@ struct DeviceScanView: View {
                         connectSimulator()
                     } label: {
                         HStack(spacing: 8) {
-                            if appState.isPairing {
+                            if appState.connectionUI.isPairing {
                                 ProgressView()
                                     .controlSize(.small)
                                 Text(L10n.Onboarding.DeviceScan.connecting)
@@ -100,7 +102,7 @@ struct DeviceScanView: View {
                         .padding()
                     }
                     .liquidGlassProminentButtonStyle()
-                    .disabled(appState.isPairing)
+                    .disabled(appState.connectionUI.isPairing)
                     #else
                     // Device build - show demo mode button if enabled, otherwise Add Device
                     if demoModeManager.isEnabled {
@@ -108,7 +110,7 @@ struct DeviceScanView: View {
                             connectSimulator()
                         } label: {
                             HStack(spacing: 8) {
-                                if appState.isPairing {
+                                if appState.connectionUI.isPairing {
                                     ProgressView()
                                         .controlSize(.small)
                                     Text(L10n.Onboarding.DeviceScan.connecting)
@@ -122,13 +124,13 @@ struct DeviceScanView: View {
                             .padding()
                         }
                         .liquidGlassProminentButtonStyle()
-                        .disabled(appState.isPairing)
+                        .disabled(appState.connectionUI.isPairing)
                     } else {
                         Button {
                             startPairing()
                         } label: {
                             HStack(spacing: 8) {
-                                if appState.isPairing {
+                                if appState.connectionUI.isPairing {
                                     ProgressView()
                                         .controlSize(.small)
                                     Text(L10n.Onboarding.DeviceScan.connecting)
@@ -142,7 +144,7 @@ struct DeviceScanView: View {
                             .padding()
                         }
                         .liquidGlassProminentButtonStyle()
-                        .disabled(appState.isPairing)
+                        .disabled(appState.connectionUI.isPairing)
                     }
                     #endif
 
@@ -191,19 +193,19 @@ struct DeviceScanView: View {
     }
 
     private func startPairing() {
-        appState.isPairing = true
+        appState.connectionUI.isPairing = true
         didInitiatePairing = true
         // Clear any previous pairing failure state
-        appState.failedPairingDeviceID = nil
+        appState.connectionUI.failedPairingDeviceID = nil
 
         Task { @MainActor in
-            defer { appState.isPairing = false }
+            defer { appState.connectionUI.isPairing = false }
 
             do {
                 try await appState.connectionManager.pairNewDevice()
                 await appState.wireServicesIfConnected()
                 pairingSuccessTrigger.toggle()
-                appState.onboardingPath.append(.radioPreset)
+                appState.onboarding.onboardingPath.append(.radioPreset)
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show
             } catch AccessorySetupKitError.pickerAlreadyActive {
@@ -211,32 +213,32 @@ struct DeviceScanView: View {
             } catch let pairingError as PairingError {
                 // ASK pairing succeeded but BLE connection failed (e.g., wrong PIN)
                 // Use AppState's alert mechanism for consistent UX
-                appState.failedPairingDeviceID = pairingError.deviceID
-                appState.connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
-                appState.showingConnectionFailedAlert = true
+                appState.connectionUI.failedPairingDeviceID = pairingError.deviceID
+                appState.connectionUI.connectionFailedMessage = "Authentication failed. The device was added but couldn't connect — this usually means the wrong PIN was entered."
+                appState.connectionUI.showingConnectionFailedAlert = true
             } catch {
                 // Other errors - show via AppState's alert
-                appState.connectionFailedMessage = error.localizedDescription
-                appState.showingConnectionFailedAlert = true
+                appState.connectionUI.connectionFailedMessage = error.localizedDescription
+                appState.connectionUI.showingConnectionFailedAlert = true
             }
         }
     }
 
     private func connectSimulator() {
-        appState.isPairing = true
+        appState.connectionUI.isPairing = true
         didInitiatePairing = true
 
         Task {
-            defer { appState.isPairing = false }
+            defer { appState.connectionUI.isPairing = false }
 
             do {
                 try await appState.connectionManager.simulatorConnect()
                 await appState.wireServicesIfConnected()
                 pairingSuccessTrigger.toggle()
-                appState.onboardingPath.append(.radioPreset)
+                appState.onboarding.onboardingPath.append(.radioPreset)
             } catch {
-                appState.connectionFailedMessage = "Simulator connection failed: \(error.localizedDescription)"
-                appState.showingConnectionFailedAlert = true
+                appState.connectionUI.connectionFailedMessage = "Simulator connection failed: \(error.localizedDescription)"
+                appState.connectionUI.showingConnectionFailedAlert = true
             }
         }
     }

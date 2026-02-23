@@ -1,25 +1,18 @@
-import XCTest
 import CommonCrypto
 import CryptoKit
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class DirectMessageCryptoTests: XCTestCase {
+@Suite("DirectMessageCrypto")
+struct DirectMessageCryptoTests {
 
     // Test key pair (generated for testing)
     // In real use, keys come from device and contacts
-    private var senderPrivateKey: Curve25519.KeyAgreement.PrivateKey!
-    private var senderPublicKey: Curve25519.KeyAgreement.PublicKey!
-    private var recipientPrivateKey: Curve25519.KeyAgreement.PrivateKey!
-    private var recipientPublicKey: Curve25519.KeyAgreement.PublicKey!
-
-    override func setUp() {
-        super.setUp()
-        // Generate test key pairs
-        senderPrivateKey = Curve25519.KeyAgreement.PrivateKey()
-        senderPublicKey = senderPrivateKey.publicKey
-        recipientPrivateKey = Curve25519.KeyAgreement.PrivateKey()
-        recipientPublicKey = recipientPrivateKey.publicKey
-    }
+    private let senderPrivateKey = Curve25519.KeyAgreement.PrivateKey()
+    private var senderPublicKey: Curve25519.KeyAgreement.PublicKey { senderPrivateKey.publicKey }
+    private let recipientPrivateKey = Curve25519.KeyAgreement.PrivateKey()
+    private var recipientPublicKey: Curve25519.KeyAgreement.PublicKey { recipientPrivateKey.publicKey }
 
     // MARK: - Helpers
 
@@ -28,6 +21,7 @@ final class DirectMessageCryptoTests: XCTestCase {
         myPrivateKey: Curve25519.KeyAgreement.PrivateKey,
         theirPublicKey: Curve25519.KeyAgreement.PublicKey
     ) -> Data {
+        // swiftlint:disable:next force_try
         let sharedSecret = try! myPrivateKey.sharedSecretFromKeyAgreement(with: theirPublicKey)
         return sharedSecret.withUnsafeBytes { Data($0) }
     }
@@ -112,7 +106,8 @@ final class DirectMessageCryptoTests: XCTestCase {
 
     // MARK: - Tests
 
-    func testDecryptSuccess() {
+    @Test("Decrypt success")
+    func decryptSuccess() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -132,7 +127,7 @@ final class DirectMessageCryptoTests: XCTestCase {
             message: message,
             sharedSecret: sharedSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -144,21 +139,22 @@ final class DirectMessageCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let ta, let text):
-            XCTAssertEqual(ts, timestamp)
-            XCTAssertEqual(ta, typeAttempt)
-            XCTAssertEqual(text, message)
+            #expect(ts == timestamp)
+            #expect(ta == typeAttempt)
+            #expect(text == message)
         case .macMismatch:
-            XCTFail("MAC verification failed")
+            Issue.record("MAC verification failed")
         case .decryptionFailed:
-            XCTFail("Decryption failed")
+            Issue.record("Decryption failed")
         case .invalidPayload:
-            XCTFail("Invalid payload")
+            Issue.record("Invalid payload")
         case .keyError:
-            XCTFail("Key error")
+            Issue.record("Key error")
         }
     }
 
-    func testDecryptWrongKey() {
+    @Test("Decrypt wrong key")
+    func decryptWrongKey() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -184,16 +180,17 @@ final class DirectMessageCryptoTests: XCTestCase {
 
         switch result {
         case .success:
-            XCTFail("Should have failed with wrong key")
+            Issue.record("Should have failed with wrong key")
         case .macMismatch:
             // Expected
             break
         default:
-            XCTFail("Expected macMismatch")
+            Issue.record("Expected macMismatch")
         }
     }
 
-    func testDecryptCorruptedMAC() {
+    @Test("Decrypt corrupted MAC")
+    func decryptCorruptedMAC() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -223,11 +220,12 @@ final class DirectMessageCryptoTests: XCTestCase {
             // Expected
             break
         default:
-            XCTFail("Expected macMismatch")
+            Issue.record("Expected macMismatch")
         }
     }
 
-    func testDecryptPayloadTooShort() {
+    @Test("Decrypt payload too short")
+    func decryptPayloadTooShort() {
         // Less than minimum: 1 + 1 + 2 + 16 = 20 bytes
         let shortPayload = Data([0x00, 0x01, 0x02, 0x03])
 
@@ -242,11 +240,12 @@ final class DirectMessageCryptoTests: XCTestCase {
             // Expected
             break
         default:
-            XCTFail("Expected invalidPayload")
+            Issue.record("Expected invalidPayload")
         }
     }
 
-    func testDecryptEmptyMessage() {
+    @Test("Decrypt empty message")
+    func decryptEmptyMessage() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -260,7 +259,7 @@ final class DirectMessageCryptoTests: XCTestCase {
             message: "",
             sharedSecret: sharedSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -272,15 +271,16 @@ final class DirectMessageCryptoTests: XCTestCase {
 
         switch result {
         case .success(let ts, let ta, let text):
-            XCTAssertEqual(ts, 0)
-            XCTAssertEqual(ta, 0)
-            XCTAssertEqual(text, "")
+            #expect(ts == 0)
+            #expect(ta == 0)
+            #expect(text == "")
         default:
-            XCTFail("Expected success")
+            Issue.record("Expected success")
         }
     }
 
-    func testDecryptUnicodeMessage() {
+    @Test("Decrypt unicode message")
+    func decryptUnicodeMessage() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -296,7 +296,7 @@ final class DirectMessageCryptoTests: XCTestCase {
             message: message,
             sharedSecret: sharedSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -308,13 +308,14 @@ final class DirectMessageCryptoTests: XCTestCase {
 
         switch result {
         case .success(_, _, let text):
-            XCTAssertEqual(text, message)
+            #expect(text == message)
         default:
-            XCTFail("Expected success")
+            Issue.record("Expected success")
         }
     }
 
-    func testExtractTimestamp() {
+    @Test("Extract timestamp")
+    func extractTimestamp() {
         let sharedSecret = computeSharedSecret(
             myPrivateKey: recipientPrivateKey,
             theirPublicKey: senderPublicKey
@@ -330,7 +331,7 @@ final class DirectMessageCryptoTests: XCTestCase {
             message: "Test",
             sharedSecret: sharedSecret
         ) else {
-            XCTFail("Failed to create test payload")
+            Issue.record("Failed to create test payload")
             return
         }
 
@@ -340,19 +341,21 @@ final class DirectMessageCryptoTests: XCTestCase {
             senderPublicKey: Data(senderPublicKey.rawRepresentation)
         )
 
-        XCTAssertEqual(timestamp, expectedTimestamp)
+        #expect(timestamp == expectedTimestamp)
     }
 
-    func testConstants() {
-        XCTAssertEqual(DirectMessageCrypto.macSize, 2)
-        XCTAssertEqual(DirectMessageCrypto.headerSize, 2)
-        XCTAssertEqual(DirectMessageCrypto.timestampSize, 4)
-        XCTAssertEqual(DirectMessageCrypto.typeAttemptSize, 1)
-        XCTAssertEqual(DirectMessageCrypto.minCiphertextSize, 16)
-        XCTAssertEqual(DirectMessageCrypto.minPacketSize, 20)
+    @Test("Constants")
+    func constants() {
+        #expect(DirectMessageCrypto.macSize == 2)
+        #expect(DirectMessageCrypto.headerSize == 2)
+        #expect(DirectMessageCrypto.timestampSize == 4)
+        #expect(DirectMessageCrypto.typeAttemptSize == 1)
+        #expect(DirectMessageCrypto.minCiphertextSize == 16)
+        #expect(DirectMessageCrypto.minPacketSize == 20)
     }
 
-    func testInvalidKeyLength() {
+    @Test("Invalid key length")
+    func invalidKeyLength() {
         let payload = Data(repeating: 0, count: 24)
 
         let result = DirectMessageCrypto.decrypt(
@@ -366,7 +369,7 @@ final class DirectMessageCryptoTests: XCTestCase {
             // Expected
             break
         default:
-            XCTFail("Expected keyError")
+            Issue.record("Expected keyError")
         }
     }
 }

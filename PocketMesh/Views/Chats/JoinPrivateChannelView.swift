@@ -22,7 +22,7 @@ struct JoinPrivateChannelView: View {
 
     private var isValidSecret: Bool {
         let cleaned = secretKeyHex.replacing(" ", with: "").uppercased()
-        return cleaned.count == 32 && cleaned.allSatisfy { $0.isHexDigit }
+        return cleaned.count == ProtocolLimits.channelSecretSize * 2 && cleaned.allSatisfy { $0.isHexDigit }
     }
 
     var body: some View {

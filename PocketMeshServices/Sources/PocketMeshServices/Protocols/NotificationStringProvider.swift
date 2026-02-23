@@ -9,4 +9,26 @@ public protocol NotificationStringProvider: Sendable {
     /// - Parameter type: The type of contact discovered
     /// - Returns: Localized notification title (e.g., "New Repeater Discovered")
     func discoveryNotificationTitle(for type: ContactType) -> String
+
+    /// Returns the localized title for the "Reply" notification action.
+    var replyActionTitle: String { get }
+
+    /// Returns the localized title for the "Send" button in notification quick reply.
+    var sendButtonTitle: String { get }
+
+    /// Returns the localized placeholder for the notification quick reply text input.
+    var messagePlaceholder: String { get }
+
+    /// Returns the localized title for the "Mark as Read" notification action.
+    var markAsReadActionTitle: String { get }
+
+    /// Returns the localized title for a low battery warning notification.
+    var lowBatteryTitle: String { get }
+
+    /// Returns the localized body for a low battery warning notification.
+    /// - Parameters:
+    ///   - deviceName: The name of the device with low battery
+    ///   - percentage: The current battery percentage
+    /// - Returns: Localized notification body
+    func lowBatteryBody(deviceName: String, percentage: Int) -> String
 }

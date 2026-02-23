@@ -284,6 +284,11 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func deleteMessagesForContact(contactID: UUID) async throws {}
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO] { [] }
 
+    // Blocked Channel Senders
+    func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {}
+    func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {}
+    func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] { [] }
+
     // Channel Operations
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] { [] }
     func fetchChannel(deviceID: UUID, index: UInt8) async throws -> ChannelDTO? { nil }
@@ -365,6 +370,7 @@ private actor MockPreviewDataStore: PersistenceStoreProtocol {
     func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {}
 
     // Node Status Snapshots
+    // swiftlint:disable:next line_length
     func saveNodeStatusSnapshot(nodePublicKey: Data, batteryMillivolts: UInt16?, lastSNR: Double?, lastRSSI: Int16?, noiseFloor: Int16?, uptimeSeconds: UInt32?, rxAirtimeSeconds: UInt32?, packetsSent: UInt32?, packetsReceived: UInt32?) async throws -> UUID { UUID() }
     func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) async throws -> NodeStatusSnapshotDTO? { nil }
     func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) async throws -> [NodeStatusSnapshotDTO] { [] }

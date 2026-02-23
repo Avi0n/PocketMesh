@@ -138,7 +138,7 @@ public enum DirectMessageCrypto {
         myPrivateKey: Data,
         theirPublicKey: Data
     ) -> Data? {
-        guard myPrivateKey.count == 32, theirPublicKey.count == 32 else {
+        guard myPrivateKey.count == PacketBuilder.publicKeySize, theirPublicKey.count == PacketBuilder.publicKeySize else {
             return nil
         }
 

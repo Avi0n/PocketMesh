@@ -158,7 +158,9 @@ struct BLEReconnectionCoordinatorTests {
         await coordinator.handleReconnectionComplete(deviceID: staleDevice)
 
         // Timeout should still fire because it was not canceled
-        try await Task.sleep(for: .milliseconds(250))
+        try await waitUntil("Timeout should still fire after stale completion") {
+            delegate.connectionState == .disconnected
+        }
 
         #expect(delegate.connectionState == .disconnected, "Timeout should still fire after stale completion")
         #expect(delegate.rebuildSessionCalls.isEmpty, "Should not rebuild for stale device")
@@ -175,8 +177,10 @@ struct BLEReconnectionCoordinatorTests {
         await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
         #expect(delegate.connectionState == .connecting)
 
-        // Wait for timeout
-        try await Task.sleep(for: .milliseconds(250))
+        // Wait for timeout to fire and transition state
+        try await waitUntil("Timeout should transition to disconnected") {
+            delegate.connectionState == .disconnected
+        }
 
         #expect(delegate.connectionState == .disconnected)
         #expect(delegate.connectedDeviceWasCleared == true)
@@ -196,7 +200,7 @@ struct BLEReconnectionCoordinatorTests {
         // Complete reconnection before timeout (same device)
         await coordinator.handleReconnectionComplete(deviceID: deviceID)
 
-        // Wait past timeout duration
+        // Fixed sleep: negative assertion — confirm timeout did NOT fire
         try await Task.sleep(for: .milliseconds(250))
 
         // Should be .connecting from reconnection complete, not .disconnected from timeout
@@ -219,8 +223,10 @@ struct BLEReconnectionCoordinatorTests {
             await coordinator.handleReconnectionComplete(deviceID: deviceID)
         }
 
-        // Wait for first rebuild to fail and enter the 2s sleep
-        try await Task.sleep(for: .milliseconds(100))
+        // Wait for first rebuild to fail and enter the 2s retry delay
+        try await waitUntil("First rebuild should have been attempted") {
+            delegate.rebuildSessionCalls.count == 1
+        }
         #expect(delegate.rebuildSessionCalls.count == 1, "First rebuild should have been attempted")
 
         // Start a new reconnect cycle during the delay — this bumps the generation counter
@@ -250,8 +256,10 @@ struct BLEReconnectionCoordinatorTests {
 
         await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
 
-        // Wait for max window to expire (0.15s + margin)
-        try await Task.sleep(for: .milliseconds(350))
+        // Wait for max connecting window to expire and disconnect
+        try await waitUntil("Max connecting window should trigger disconnect") {
+            delegate.connectionState == .disconnected
+        }
 
         #expect(delegate.connectionState == .disconnected)
         #expect(delegate.notifyConnectionLostCallCount == 1)
@@ -269,7 +277,7 @@ struct BLEReconnectionCoordinatorTests {
         let deviceID = UUID()
         await coordinator.handleEnteringAutoReconnect(deviceID: deviceID)
 
-        // Wait for first timeout to fire and re-arm
+        // Fixed sleep: negative assertion — confirm re-arm keeps state as .connecting
         try await Task.sleep(for: .milliseconds(200))
 
         // Should still be .connecting because BLE is auto-reconnecting
@@ -287,9 +295,9 @@ struct BLEReconnectionCoordinatorTests {
 
         await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
 
-        // Wait long enough for multiple re-arms plus the 60s max window check.
-        // Since the max window is 60s but our test can't wait that long,
-        // verify the re-arm mechanism works within the window.
+        // Fixed sleep: negative assertion — within the 60s max window, re-arm
+        // should keep the state as .connecting. We can't wait 60s in a test, so
+        // verify the re-arm mechanism works within a short window.
         try await Task.sleep(for: .milliseconds(200))
 
         // Within the 60s window, should still be .connecting
@@ -305,7 +313,9 @@ struct BLEReconnectionCoordinatorTests {
 
         await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
 
-        try await Task.sleep(for: .milliseconds(250))
+        try await waitUntil("Timeout should fire when BLE is not auto-reconnecting") {
+            delegate.connectionState == .disconnected
+        }
 
         #expect(delegate.connectionState == .disconnected)
         #expect(delegate.notifyConnectionLostCallCount == 1)
@@ -320,6 +330,7 @@ struct BLEReconnectionCoordinatorTests {
         await coordinator.handleEnteringAutoReconnect(deviceID: UUID())
         coordinator.cancelTimeout()
 
+        // Fixed sleep: negative assertion — confirm timeout was cancelled
         try await Task.sleep(for: .milliseconds(250))
 
         // State should remain .connecting (timeout was cancelled)

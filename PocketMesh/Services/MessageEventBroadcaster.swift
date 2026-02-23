@@ -163,6 +163,110 @@ public final class MessageEventBroadcaster {
         self.sessionStateChanged += 1
     }
 
+    // MARK: - Service Wiring
+
+    /// Wire all service callbacks for message event handling.
+    /// Call this once when services become available after connection.
+    func wireServices(
+        _ services: ServiceContainer,
+        onConversationsChanged: @escaping @MainActor () -> Void,
+        onReactionReceived: @escaping @Sendable (UUID) async -> Void
+    ) async {
+        // Assign service references
+        messageService = services.messageService
+        remoteNodeService = services.remoteNodeService
+        dataStore = services.dataStore
+        roomServerService = services.roomServerService
+        binaryProtocolService = services.binaryProtocolService
+        repeaterAdminService = services.repeaterAdminService
+
+        // Wire message event callbacks for real-time chat updates
+        await services.syncCoordinator.setMessageEventCallbacks(
+            onDirectMessageReceived: { [weak self] message, contact in
+                await self?.handleDirectMessage(message, from: contact)
+            },
+            onChannelMessageReceived: { [weak self] message, channelIndex in
+                await self?.handleChannelMessage(message, channelIndex: channelIndex)
+            },
+            onRoomMessageReceived: { [weak self] message in
+                await self?.handleRoomMessage(message)
+            },
+            onReactionReceived: { [weak self] messageID, summary in
+                await self?.handleReactionReceived(messageID: messageID, summary: summary)
+                await onReactionReceived(messageID)
+            }
+        )
+
+        // Wire heard repeat callback for UI updates when repeats are recorded
+        await services.heardRepeatsService.setRepeatRecordedHandler { [weak self] messageID, count in
+            await MainActor.run {
+                self?.handleHeardRepeatRecorded(messageID: messageID, count: count)
+            }
+        }
+
+        // Wire session state change handler for room connection status UI updates
+        await services.remoteNodeService.setSessionStateChangedHandler { [weak self] sessionID, isConnected in
+            await MainActor.run {
+                onConversationsChanged()
+                self?.handleSessionStateChanged(sessionID: sessionID, isConnected: isConnected)
+            }
+        }
+
+        // Wire room connection recovery handler
+        await services.roomServerService.setConnectionRecoveryHandler { [weak self] sessionID in
+            await MainActor.run {
+                onConversationsChanged()
+                self?.handleSessionStateChanged(sessionID: sessionID, isConnected: true)
+            }
+        }
+
+        // Wire room message status handler for delivery confirmation UI updates
+        await services.roomServerService.setStatusUpdateHandler { [weak self] messageID, status in
+            await MainActor.run {
+                if status == .failed {
+                    self?.handleRoomMessageFailed(messageID: messageID)
+                } else {
+                    self?.handleRoomMessageStatusUpdated(messageID: messageID)
+                }
+            }
+        }
+
+        // Wire ACK confirmation handler to trigger UI refresh on delivery
+        await services.messageService.setAckConfirmationHandler { [weak self] ackCode, _ in
+            Task { @MainActor in
+                self?.handleAcknowledgement(ackCode: ackCode)
+            }
+        }
+
+        // Wire retry status events from MessageService
+        await services.messageService.setRetryStatusHandler { [weak self] messageID, attempt, maxAttempts in
+            await MainActor.run {
+                self?.handleMessageRetrying(
+                    messageID: messageID,
+                    attempt: attempt,
+                    maxAttempts: maxAttempts
+                )
+            }
+        }
+
+        // Wire routing change events from MessageService
+        await services.messageService.setRoutingChangedHandler { [weak self] contactID, isFlood in
+            await MainActor.run {
+                self?.handleRoutingChanged(
+                    contactID: contactID,
+                    isFlood: isFlood
+                )
+            }
+        }
+
+        // Wire message failure handler
+        await services.messageService.setMessageFailedHandler { [weak self] messageID in
+            await MainActor.run {
+                self?.handleMessageFailed(messageID: messageID)
+            }
+        }
+    }
+
     // MARK: - Status Response Handling
 
     /// Handle status response from remote node

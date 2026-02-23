@@ -118,8 +118,8 @@ struct ContactServiceTests {
         let meshContact = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.chat.rawValue,
-            flags: testFlags,
+            type: .chat,
+            flags: ContactFlags(rawValue: testFlags),
             outPathLength: 2,
             outPath: outPath,
             advertisedName: advertisedName,
@@ -153,8 +153,8 @@ struct ContactServiceTests {
         let chatContact = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.chat.rawValue,
-            flags: 0,
+            type: .chat,
+            flags: ContactFlags(rawValue: 0),
             outPathLength: 0,
             outPath: Data(),
             advertisedName: "Chat",
@@ -169,8 +169,8 @@ struct ContactServiceTests {
         let repeaterContact = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.repeater.rawValue,
-            flags: 0,
+            type: .repeater,
+            flags: ContactFlags(rawValue: 0),
             outPathLength: 0,
             outPath: Data(),
             advertisedName: "Repeater",
@@ -185,8 +185,8 @@ struct ContactServiceTests {
         let roomContact = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.room.rawValue,
-            flags: 0,
+            type: .room,
+            flags: ContactFlags(rawValue: 0),
             outPathLength: 0,
             outPath: Data(),
             advertisedName: "Room",
@@ -198,27 +198,15 @@ struct ContactServiceTests {
         #expect(roomContact.toContactFrame().type == .room)
     }
 
-    @Test("MeshContact handles invalid ContactType gracefully")
-    func meshContactInvalidContactType() {
-        let publicKey = Data(repeating: 0x00, count: ProtocolLimits.publicKeySize)
+    @Test("Parser handles invalid ContactType by defaulting to .chat")
+    func parserInvalidContactType() {
+        // Build 147-byte contact data with invalid type byte at offset 32
+        var data = Data(repeating: 0x00, count: 147)
+        data[32] = invalidContactType  // type byte
 
-        // Create MeshContact with invalid type
-        let invalidContact = MeshContact(
-            id: publicKey.hexString(),
-            publicKey: publicKey,
-            type: invalidContactType,
-            flags: 0,
-            outPathLength: 0,
-            outPath: Data(),
-            advertisedName: "Invalid",
-            lastAdvertisement: Date(),
-            latitude: 0,
-            longitude: 0,
-            lastModified: Date()
-        )
-
-        // Should default to .chat per ContactService implementation
-        #expect(invalidContact.toContactFrame().type == .chat)
+        // Parser should default unknown types to .chat
+        let contact = Parsers.parseContactData(data)
+        #expect(contact?.type == .chat)
     }
 
     @Test("MeshContact handles flood routing path")
@@ -228,8 +216,8 @@ struct ContactServiceTests {
         let floodContact = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.chat.rawValue,
-            flags: 0,
+            type: .chat,
+            flags: ContactFlags(rawValue: 0),
             outPathLength: -1,  // Flood routing
             outPath: Data(),
             advertisedName: "Flood",
@@ -276,8 +264,8 @@ struct ContactServiceTests {
         // Verify all fields are correctly mapped
         #expect(meshContact.id == publicKey.hexString())
         #expect(meshContact.publicKey == publicKey)
-        #expect(meshContact.type == ContactType.chat.rawValue)
-        #expect(meshContact.flags == testFlags)
+        #expect(meshContact.type == .chat)
+        #expect(meshContact.flags == ContactFlags(rawValue: testFlags))
         #expect(meshContact.outPathLength == 2)
         #expect(meshContact.outPath == outPath)
         #expect(meshContact.advertisedName == name)
@@ -331,7 +319,7 @@ struct ContactServiceTests {
             longitude: 0,
             lastModified: 0
         )
-        #expect(chatFrame.toMeshContact().type == ContactType.chat.rawValue)
+        #expect(chatFrame.toMeshContact().type == .chat)
 
         // Test repeater type
         let repeaterFrame = ContactFrame(
@@ -346,7 +334,7 @@ struct ContactServiceTests {
             longitude: 0,
             lastModified: 0
         )
-        #expect(repeaterFrame.toMeshContact().type == ContactType.repeater.rawValue)
+        #expect(repeaterFrame.toMeshContact().type == .repeater)
 
         // Test room type
         let roomFrame = ContactFrame(
@@ -361,7 +349,7 @@ struct ContactServiceTests {
             longitude: 0,
             lastModified: 0
         )
-        #expect(roomFrame.toMeshContact().type == ContactType.room.rawValue)
+        #expect(roomFrame.toMeshContact().type == .room)
     }
 
     // MARK: - Round-Trip Conversion Tests
@@ -373,8 +361,8 @@ struct ContactServiceTests {
         let original = MeshContact(
             id: publicKey.hexString(),
             publicKey: publicKey,
-            type: ContactType.repeater.rawValue,
-            flags: 0x05,
+            type: .repeater,
+            flags: ContactFlags(rawValue: 0x05),
             outPathLength: 3,
             outPath: Data([0xAA, 0xBB, 0xCC]),
             advertisedName: "OriginalNode",

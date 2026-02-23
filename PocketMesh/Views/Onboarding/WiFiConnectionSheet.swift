@@ -206,7 +206,7 @@ struct WiFiConnectionSheet: View {
                 await appState.wireServicesIfConnected()
                 dismiss()
                 // Navigate directly to radio settings
-                appState.onboardingPath.append(.radioPreset)
+                appState.onboarding.onboardingPath.append(.radioPreset)
             } catch {
                 errorMessage = error.localizedDescription
                 isConnecting = false

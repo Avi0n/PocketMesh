@@ -1,9 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class RawDataParsingTests: XCTestCase {
+@Suite("RawData Parsing")
+struct RawDataParsingTests {
 
-    func test_rawData_skipsReservedByte() {
+    @Test("rawData skips reserved byte")
+    func rawDataSkipsReservedByte() {
         // Firmware format: [snr:1][rssi:1][reserved:1][payload...]
         var payload = Data()
         payload.append(0x28)  // SNR: 40/4 = 10.0
@@ -14,38 +17,40 @@ final class RawDataParsingTests: XCTestCase {
         let event = Parsers.RawData.parse(payload)
 
         guard case .rawData(let info) = event else {
-            XCTFail("Expected rawData, got \(event)")
+            Issue.record("Expected rawData, got \(event)")
             return
         }
 
-        XCTAssertEqual(info.snr, 10.0, accuracy: 0.001)
-        XCTAssertEqual(info.rssi, -85)
-        XCTAssertEqual(info.payload, Data([0x01, 0x02, 0x03, 0x04]),
+        #expect(abs(info.snr - 10.0) <= 0.001)
+        #expect(info.rssi == -85)
+        #expect(info.payload == Data([0x01, 0x02, 0x03, 0x04]),
             "Payload should not include reserved byte 0xFF")
     }
 
-    func test_rawData_rejectsShortPayload() {
+    @Test("rawData rejects short payload")
+    func rawDataRejectsShortPayload() {
         let shortPayload = Data([0x28, 0xAB])  // Only 2 bytes, need 3
 
         let event = Parsers.RawData.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }
 
-    func test_rawData_handlesEmptyPayload() {
+    @Test("rawData handles empty payload")
+    func rawDataHandlesEmptyPayload() {
         // Minimum valid: snr + rssi + reserved = 3 bytes, no actual payload
         let payload = Data([0x28, 0xAB, 0xFF])
 
         let event = Parsers.RawData.parse(payload)
 
         guard case .rawData(let info) = event else {
-            XCTFail("Expected rawData")
+            Issue.record("Expected rawData")
             return
         }
 
-        XCTAssertEqual(info.payload.count, 0, "Should have empty payload")
+        #expect(info.payload.count == 0, "Should have empty payload")
     }
 }

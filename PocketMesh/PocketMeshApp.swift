@@ -16,6 +16,7 @@ struct PocketMeshApp: App {
     #endif
 
     init() {
+        // swiftlint:disable:next force_try
         let container = try! PersistenceStore.createContainer()
         _appState = State(initialValue: AppState(modelContainer: container))
     }
@@ -53,7 +54,7 @@ struct PocketMeshApp: App {
     @MainActor
     private func setupScreenshotMode() async {
         // Bypass onboarding
-        appState.hasCompletedOnboarding = true
+        appState.onboarding.hasCompletedOnboarding = true
 
         // Persist simulator device ID for auto-reconnect
         UserDefaults.standard.set(

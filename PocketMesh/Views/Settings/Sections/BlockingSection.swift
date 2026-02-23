@@ -8,13 +8,13 @@ struct BlockingSection: View {
             NavigationLink {
                 BlockedChannelSendersView()
             } label: {
-                Label(L10n.Settings.Blocking.channelSenders, systemImage: "person.crop.circle.badge.xmark")
+                TintedLabel(L10n.Settings.Blocking.channelSenders, systemImage: "person.crop.circle.badge.xmark")
             }
 
             NavigationLink {
                 BlockedContactsView()
             } label: {
-                Label(L10n.Settings.Blocking.contacts, systemImage: "hand.raised")
+                TintedLabel(L10n.Settings.Blocking.contacts, systemImage: "hand.raised.slash")
             }
         } header: {
             Text(L10n.Settings.Blocking.header)

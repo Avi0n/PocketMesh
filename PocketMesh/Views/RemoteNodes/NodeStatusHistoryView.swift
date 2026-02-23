@@ -5,6 +5,7 @@ import SwiftUI
 /// Drill-down view showing historical charts for status metrics (battery, SNR, RSSI, noise floor).
 struct NodeStatusHistoryView: View {
     let fetchSnapshots: @Sendable () async -> [NodeStatusSnapshotDTO]
+    let ocvArray: [Int]
 
     @State private var snapshots: [NodeStatusSnapshotDTO] = []
     @State private var timeRange: HistoryTimeRange = .all
@@ -19,10 +20,11 @@ struct NodeStatusHistoryView: View {
             HistoryTimeRangePicker(selection: $timeRange)
 
             metricSection(
-                title: L10n.RemoteNodes.RemoteNodes.History.battery, unit: "mV", color: .mint,
+                title: L10n.RemoteNodes.RemoteNodes.History.battery, unit: "V", color: .mint,
                 dataPoints: filteredSnapshots.compactMap { s in
-                    s.batteryMillivolts.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
-                }
+                    s.batteryMillivolts.map { .init(id: s.id, date: s.timestamp, value: Double($0) / 1000.0) }
+                },
+                yAxisDomain: ocvArray.voltageChartDomain()
             )
 
             metricSection(
@@ -61,11 +63,12 @@ struct NodeStatusHistoryView: View {
     @ViewBuilder
     private func metricSection(
         title: String, unit: String, color: Color,
-        dataPoints: [MetricChartView.DataPoint]
+        dataPoints: [MetricChartView.DataPoint],
+        yAxisDomain: ClosedRange<Double>? = nil
     ) -> some View {
         if !dataPoints.isEmpty {
             Section {
-                MetricChartView(title: title, unit: unit, dataPoints: dataPoints, accentColor: color)
+                MetricChartView(title: title, unit: unit, dataPoints: dataPoints, accentColor: color, yAxisDomain: yAxisDomain)
             }
         }
     }

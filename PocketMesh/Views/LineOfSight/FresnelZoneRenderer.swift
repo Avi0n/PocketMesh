@@ -71,7 +71,7 @@ enum FresnelZoneRenderer {
             let earthBulge = RFCalculator.earthBulge(
                 distanceToAMeters: distanceFromSegmentStart,
                 distanceToBMeters: distanceToSegmentEnd,
-                kFactor: refractionK
+                refractionK: refractionK
             )
 
             // Preserve original x-coordinate for correct rendering position

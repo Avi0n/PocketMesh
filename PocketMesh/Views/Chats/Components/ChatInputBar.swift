@@ -77,9 +77,10 @@ struct ChatInputBar: View {
         } else {
             Button(action: onSend) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
+                    .font(.title)
                     .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
             }
+            .padding(.vertical, 4)
             .disabled(!canSend)
             .accessibilityLabel(sendAccessibilityLabel)
             .accessibilityHint(sendAccessibilityHint)

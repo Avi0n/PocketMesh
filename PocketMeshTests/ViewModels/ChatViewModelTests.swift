@@ -14,7 +14,7 @@ private func createTestContact(
     let contact = Contact(
         id: UUID(),
         deviceID: deviceID,
-        publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+        publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
         name: name,
         typeRawValue: type.rawValue,
         flags: 0,
@@ -90,8 +90,8 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: 1000)
         ]
 
-        let shouldShow = ChatViewModel.shouldShowTimestamp(at: 0, in: messages)
-        #expect(shouldShow == true)
+        let flags = ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil)
+        #expect(flags.showTimestamp == true)
     }
 
     @Test("Consecutive messages within 5 minutes don't show timestamp")
@@ -106,13 +106,13 @@ struct ChatViewModelTests {
         ]
 
         // First message always shows timestamp
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
 
         // Messages 1-4 shouldn't show timestamp (within 5 min of previous)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == false)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 2, in: messages) == false)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 3, in: messages) == false)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 4, in: messages) == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showTimestamp == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1]).showTimestamp == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[3], previous: messages[2]).showTimestamp == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[4], previous: messages[3]).showTimestamp == false)
     }
 
     @Test("Message after 5+ minute gap shows timestamp")
@@ -123,8 +123,8 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: baseTime + 301)  // 5 min 1 sec later
         ]
 
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showTimestamp == true)
     }
 
     @Test("Exactly 5 minute gap does not show timestamp")
@@ -135,8 +135,8 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: baseTime + 300)  // Exactly 5 minutes
         ]
 
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == false)  // 300 is not > 300
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showTimestamp == false)  // 300 is not > 300
     }
 
     @Test("Mixed gaps show correct timestamps")
@@ -151,12 +151,12 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: baseTime + 920)      // 5: 20 sec - no show
         ]
 
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == false)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 2, in: messages) == true)   // 360s gap
-        #expect(ChatViewModel.shouldShowTimestamp(at: 3, in: messages) == false)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 4, in: messages) == true)   // 420s gap
-        #expect(ChatViewModel.shouldShowTimestamp(at: 5, in: messages) == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showTimestamp == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1]).showTimestamp == true)   // 360s gap
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[3], previous: messages[2]).showTimestamp == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[4], previous: messages[3]).showTimestamp == true)   // 420s gap
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[5], previous: messages[4]).showTimestamp == false)
     }
 
     @Test("Empty messages array handled gracefully")
@@ -176,7 +176,7 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: 1000)
         ]
 
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
     }
 
     @Test("Large time gaps show timestamp")
@@ -187,8 +187,8 @@ struct ChatViewModelTests {
             createTestMessage(timestamp: baseTime + 86400)  // 24 hours later
         ]
 
-        #expect(ChatViewModel.shouldShowTimestamp(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowTimestamp(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showTimestamp == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showTimestamp == true)
     }
 
     // MARK: - Conversation Filtering Tests
@@ -414,11 +414,11 @@ struct BlockedContactFilteringTests {
     }
 }
 
-// MARK: - Message Grouping Tests
+// MARK: - Display Flags Tests
 
-@Suite("Message Grouping")
+@Suite("Display Flags")
 @MainActor
-struct MessageGroupingTests {
+struct DisplayFlagsTests {
 
     @Test("First message always shows sender name")
     func firstMessageAlwaysShowsSenderName() {
@@ -426,7 +426,7 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1000, senderName: "Alice")
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
     }
 
     @Test("Consecutive messages from same sender within 5 min hide sender name")
@@ -437,9 +437,9 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1120, senderName: "Alice")   // 2 min later
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == false)
-        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1]).showSenderName == false)
     }
 
     @Test("Different sender shows sender name")
@@ -449,8 +449,8 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1060, senderName: "Bob")
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)
     }
 
     @Test("Gap over 5 minutes shows sender name")
@@ -460,8 +460,8 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1301, senderName: "Alice")  // 5 min 1 sec later
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)
     }
 
     @Test("Exactly 5 minute gap still groups")
@@ -471,8 +471,8 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1300, senderName: "Alice")  // Exactly 5 min
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == false)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == false)
     }
 
     @Test("Outgoing message between incoming breaks group")
@@ -483,9 +483,9 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1120, senderName: "Alice")
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)  // outgoing
-        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == true)  // after outgoing
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)  // outgoing
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1]).showSenderName == true)  // after outgoing
     }
 
     @Test("Interleaved senders all show names")
@@ -496,9 +496,9 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1120, senderName: "Alice")
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 2, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1]).showSenderName == true)
     }
 
     @Test("Nil sender name shows name to be safe")
@@ -508,8 +508,8 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1060, senderName: nil)  // malformed message
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)
     }
 
     @Test("Empty string sender name treated as different sender")
@@ -519,8 +519,8 @@ struct MessageGroupingTests {
             createChannelMessage(timestamp: 1060, senderName: "")
         ]
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
-        #expect(ChatViewModel.shouldShowSenderName(at: 1, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil).showSenderName == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0]).showSenderName == true)
     }
 
     @Test("Direct messages always return true")
@@ -535,8 +535,23 @@ struct MessageGroupingTests {
             directionRawValue: MessageDirection.incoming.rawValue,
             statusRawValue: MessageStatus.delivered.rawValue
         )
-        let messages = [MessageDTO(from: message)]
+        let dto = MessageDTO(from: message)
 
-        #expect(ChatViewModel.shouldShowSenderName(at: 0, in: messages) == true)
+        #expect(ChatViewModel.computeDisplayFlags(for: dto, previous: nil).showSenderName == true)
+    }
+
+    @Test("Direction change shows direction gap")
+    func directionChangeShowsDirectionGap() {
+        let messages = [
+            createChannelMessage(timestamp: 1000, senderName: "Alice"),
+            createChannelMessage(timestamp: 1060, senderName: "Alice", isOutgoing: true),
+            createChannelMessage(timestamp: 1120, senderName: "Alice")
+        ]
+        let flags0 = ChatViewModel.computeDisplayFlags(for: messages[0], previous: nil)
+        let flags1 = ChatViewModel.computeDisplayFlags(for: messages[1], previous: messages[0])
+        let flags2 = ChatViewModel.computeDisplayFlags(for: messages[2], previous: messages[1])
+        #expect(flags0.showDirectionGap == false)
+        #expect(flags1.showDirectionGap == true)
+        #expect(flags2.showDirectionGap == true)
     }
 }

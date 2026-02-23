@@ -1,9 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class NewResponseParsingTests: XCTestCase {
+@Suite("NewResponse Parsing")
+struct NewResponseParsingTests {
 
-    func test_advertPathResponse_parse() {
+    @Test("advertPathResponse parse")
+    func advertPathResponseParse() {
         var payload = Data()
         payload.appendLittleEndian(UInt32(1704067200))  // timestamp
         payload.append(0x03)  // path length
@@ -12,16 +15,17 @@ final class NewResponseParsingTests: XCTestCase {
         let event = Parsers.AdvertPathResponse.parse(payload)
 
         guard case .advertPathResponse(let response) = event else {
-            XCTFail("Expected advertPathResponse, got \(event)")
+            Issue.record("Expected advertPathResponse, got \(event)")
             return
         }
 
-        XCTAssertEqual(response.recvTimestamp, 1704067200)
-        XCTAssertEqual(response.pathLength, 3)
-        XCTAssertEqual(response.path, Data([0x11, 0x22, 0x33]))
+        #expect(response.recvTimestamp == 1704067200)
+        #expect(response.pathLength == 3)
+        #expect(response.path == Data([0x11, 0x22, 0x33]))
     }
 
-    func test_advertPathResponse_emptyPath() {
+    @Test("advertPathResponse empty path")
+    func advertPathResponseEmptyPath() {
         var payload = Data()
         payload.appendLittleEndian(UInt32(1000))
         payload.append(0x00)  // path length = 0
@@ -29,27 +33,29 @@ final class NewResponseParsingTests: XCTestCase {
         let event = Parsers.AdvertPathResponse.parse(payload)
 
         guard case .advertPathResponse(let response) = event else {
-            XCTFail("Expected advertPathResponse")
+            Issue.record("Expected advertPathResponse")
             return
         }
 
-        XCTAssertEqual(response.pathLength, 0)
-        XCTAssertEqual(response.path.count, 0)
+        #expect(response.pathLength == 0)
+        #expect(response.path.count == 0)
     }
 
-    func test_advertPathResponse_tooShort() {
+    @Test("advertPathResponse too short")
+    func advertPathResponseTooShort() {
         // Less than 5 bytes should fail
         let shortPayload = Data([0x01, 0x02, 0x03, 0x04])
 
         let event = Parsers.AdvertPathResponse.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }
 
-    func test_tuningParamsResponse_parse() {
+    @Test("tuningParamsResponse parse")
+    func tuningParamsResponseParse() {
         var payload = Data()
         // rx_delay_base * 1000 = 1500 (1.5ms)
         payload.appendLittleEndian(UInt32(1500))
@@ -59,27 +65,29 @@ final class NewResponseParsingTests: XCTestCase {
         let event = Parsers.TuningParamsResponse.parse(payload)
 
         guard case .tuningParamsResponse(let response) = event else {
-            XCTFail("Expected tuningParamsResponse, got \(event)")
+            Issue.record("Expected tuningParamsResponse, got \(event)")
             return
         }
 
-        XCTAssertEqual(response.rxDelayBase, 1.5, accuracy: 0.001)
-        XCTAssertEqual(response.airtimeFactor, 2.5, accuracy: 0.001)
+        #expect(abs(response.rxDelayBase - 1.5) <= 0.001)
+        #expect(abs(response.airtimeFactor - 2.5) <= 0.001)
     }
 
-    func test_tuningParamsResponse_tooShort() {
+    @Test("tuningParamsResponse too short")
+    func tuningParamsResponseTooShort() {
         // Less than 8 bytes should fail
         let shortPayload = Data([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
 
         let event = Parsers.TuningParamsResponse.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }
 
-    func test_tuningParamsResponse_zeroValues() {
+    @Test("tuningParamsResponse zero values")
+    func tuningParamsResponseZeroValues() {
         var payload = Data()
         payload.appendLittleEndian(UInt32(0))
         payload.appendLittleEndian(UInt32(0))
@@ -87,11 +95,11 @@ final class NewResponseParsingTests: XCTestCase {
         let event = Parsers.TuningParamsResponse.parse(payload)
 
         guard case .tuningParamsResponse(let response) = event else {
-            XCTFail("Expected tuningParamsResponse")
+            Issue.record("Expected tuningParamsResponse")
             return
         }
 
-        XCTAssertEqual(response.rxDelayBase, 0.0, accuracy: 0.001)
-        XCTAssertEqual(response.airtimeFactor, 0.0, accuracy: 0.001)
+        #expect(abs(response.rxDelayBase - 0.0) <= 0.001)
+        #expect(abs(response.airtimeFactor - 0.0) <= 0.001)
     }
 }

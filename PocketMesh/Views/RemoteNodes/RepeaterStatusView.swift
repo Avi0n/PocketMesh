@@ -123,7 +123,7 @@ struct RepeaterStatusView: View {
                 }
 
                 NavigationLink {
-                    NodeStatusHistoryView(fetchSnapshots: viewModel.fetchHistory)
+                    NodeStatusHistoryView(fetchSnapshots: viewModel.fetchHistory, ocvArray: viewModel.ocvValues)
                 } label: {
                     Text(L10n.RemoteNodes.RemoteNodes.History.title)
                 }
@@ -308,7 +308,7 @@ struct RepeaterStatusView: View {
                     }
 
                     NavigationLink {
-                        TelemetryHistoryView(fetchSnapshots: viewModel.fetchHistory)
+                        TelemetryHistoryView(fetchSnapshots: viewModel.fetchHistory, ocvArray: viewModel.ocvValues)
                     } label: {
                         Text(L10n.RemoteNodes.RemoteNodes.History.title)
                     }
@@ -498,24 +498,9 @@ private struct NeighborRow: View {
         }
     }
 
-    private var snrLevel: Double {
-        let snr = neighbor.snr
-        if snr > 10 { return 1.0 }
-        if snr > 5 { return 0.75 }
-        if snr > 0 { return 0.5 }
-        if snr > -10 { return 0.25 }
-        return 0.1
-    }
-
-    private var snrColor: Color {
-        if neighbor.snr >= 5 {
-            return .green
-        } else if neighbor.snr >= 0 {
-            return .yellow
-        } else {
-            return .red
-        }
-    }
+    private var snrQuality: SNRQuality { SNRQuality(snr: neighbor.snr) }
+    private var snrLevel: Double { snrQuality.barLevel }
+    private var snrColor: Color { snrQuality.color }
 }
 
 // MARK: - Disappeared Neighbor Row

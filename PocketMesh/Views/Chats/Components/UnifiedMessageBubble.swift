@@ -2,11 +2,6 @@ import SwiftUI
 import UIKit
 import PocketMeshServices
 
-/// Layout constants for message bubbles
-private enum MessageLayout {
-    static let maxBubbleWidth: CGFloat = 280
-}
-
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {
     let accentColor: Color
@@ -63,7 +58,6 @@ struct MessageBubbleConfiguration: Sendable {
 struct UnifiedMessageBubble: View {
     let message: MessageDTO
     let contactName: String
-    let contactNodeName: String
     let deviceName: String
     let configuration: MessageBubbleConfiguration
     let showTimestamp: Bool
@@ -103,7 +97,6 @@ struct UnifiedMessageBubble: View {
     init(
         message: MessageDTO,
         contactName: String,
-        contactNodeName: String,
         deviceName: String = "Me",
         configuration: MessageBubbleConfiguration,
         showTimestamp: Bool = false,
@@ -127,7 +120,6 @@ struct UnifiedMessageBubble: View {
     ) {
         self.message = message
         self.contactName = contactName
-        self.contactNodeName = contactNodeName
         self.deviceName = deviceName
         self.configuration = configuration
         self.showTimestamp = showTimestamp
@@ -165,7 +157,7 @@ struct UnifiedMessageBubble: View {
             // Bubble content (aligned based on direction)
             HStack(alignment: .bottom, spacing: 4) {
                 if message.isOutgoing {
-                    Spacer(minLength: 60)
+                    Spacer(minLength: 40)
                 }
 
                 VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
@@ -214,13 +206,13 @@ struct UnifiedMessageBubble: View {
                 .accessibilityLabel(accessibilityMessageLabel)
 
                 if !message.isOutgoing {
-                    Spacer(minLength: 60)
+                    Spacer(minLength: 40)
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.top, showDirectionGap ? 12 : (showSenderName ? 8 : 2))
-        .padding(.bottom, message.isOutgoing ? 4 : 2)
+        .padding(.horizontal, 12)
+        .padding(.top, showDirectionGap ? 6 : (showSenderName ? 4 : 2))
+        .padding(.bottom, 2)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
@@ -261,7 +253,7 @@ struct UnifiedMessageBubble: View {
                         .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.vertical, 6)
             }
 
         case .noPreview, .disabled:
@@ -275,7 +267,7 @@ struct UnifiedMessageBubble: View {
                             .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(L10n.Chats.Chats.InlineImage.retryHint)
@@ -298,13 +290,11 @@ struct UnifiedMessageBubble: View {
                     iconData: preview.iconData,
                     onTap: { openURL(url) }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .loading:
             if let url = detectedURL {
                 LinkPreviewLoadingCard(url: url)
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .noPreview:
@@ -319,7 +309,6 @@ struct UnifiedMessageBubble: View {
                         onManualPreviewFetch?()
                     }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
 
         case .idle:
@@ -333,11 +322,9 @@ struct UnifiedMessageBubble: View {
                     iconData: message.linkPreviewIconData,
                     onTap: { openURL(url) }
                 )
-                .frame(maxWidth: MessageLayout.maxBubbleWidth)
             } else if let url = detectedURL {
                 // URL detected, waiting for fetch - show loading
                 LinkPreviewLoadingCard(url: url)
-                    .frame(maxWidth: MessageLayout.maxBubbleWidth)
             }
         }
     }
@@ -361,7 +348,7 @@ struct UnifiedMessageBubble: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
 
             if isImageURL && showInlineImages {
                 embeddedImageContent
@@ -369,13 +356,12 @@ struct UnifiedMessageBubble: View {
         }
         .background(bubbleColor)
         .clipShape(.rect(cornerRadius: 16))
-        .frame(maxWidth: MessageLayout.maxBubbleWidth, alignment: message.isOutgoing ? .trailing : .leading)
     }
 
     // MARK: - Computed Properties
 
     private var senderName: String {
-        configuration.senderNameResolver?(message) ?? "Unknown"
+        configuration.senderNameResolver?(message) ?? L10n.Chats.Chats.Message.Sender.unknown
     }
 
     private var senderColor: Color {
@@ -434,7 +420,6 @@ struct UnifiedMessageBubble: View {
                 .foregroundStyle(.blue)
             }
 
-
             // Only show icon for failed status
             if message.status == .failed {
                 Image(systemName: "exclamationmark.circle")
@@ -476,9 +461,7 @@ struct UnifiedMessageBubble: View {
 
     private var statusText: String {
         switch message.status {
-        case .pending:
-            return L10n.Chats.Chats.Message.Status.sending
-        case .sending:
+        case .pending, .sending:
             return L10n.Chats.Chats.Message.Status.sending
         case .sent:
             // Build status parts: repeats, send count, sent
@@ -519,31 +502,6 @@ struct UnifiedMessageBubble: View {
 
     // MARK: - Helpers
 
-    private func snrFormatted(_ snr: Double) -> String {
-        let quality: String
-        switch snr {
-        case 10...:
-            quality = L10n.Chats.Chats.Signal.excellent
-        case 5..<10:
-            quality = L10n.Chats.Chats.Signal.good
-        case 0..<5:
-            quality = L10n.Chats.Chats.Signal.fair
-        case -10..<0:
-            quality = L10n.Chats.Chats.Signal.poor
-        default:
-            quality = L10n.Chats.Chats.Signal.veryPoor
-        }
-        return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB (\(quality))"
-    }
-
-    private func hopCountFormatted(_ pathLength: UInt8) -> String {
-        switch pathLength {
-        case 0, 0xFF:  // 0 = zero hops, 0xFF = direct/unknown (no route tracking)
-            return L10n.Chats.Chats.Message.Hops.direct
-        default:
-            return "\(pathLength)"
-        }
-    }
 }
 
 // MARK: - Previews
@@ -559,7 +517,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Alice",
-        contactNodeName: "Alice",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -578,7 +535,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Bob",
-        contactNodeName: "Bob",
         deviceName: "My Device",
         configuration: .directMessage
     )
@@ -595,7 +551,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Charlie",
-        contactNodeName: "Charlie",
         deviceName: "My Device",
         configuration: .directMessage,
         onRetry: { }
@@ -614,7 +569,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "General",
-        contactNodeName: "General",
         deviceName: "My Device",
         configuration: .channel(isPublic: true, contacts: [])
     )
@@ -631,7 +585,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Private Group",
-        contactNodeName: "Private Group",
         deviceName: "My Device",
         configuration: .channel(isPublic: false, contacts: [])
     )
@@ -649,7 +602,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Alice",
-        contactNodeName: "Alice",
         configuration: .directMessage
     )
 }
@@ -667,7 +619,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Bob",
-        contactNodeName: "Bob",
         configuration: .directMessage
     )
 }
@@ -685,7 +636,6 @@ struct UnifiedMessageBubble: View {
     return UnifiedMessageBubble(
         message: MessageDTO(from: message),
         contactName: "Charlie",
-        contactNodeName: "Charlie",
         configuration: .directMessage
     )
 }

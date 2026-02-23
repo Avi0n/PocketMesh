@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MeshCoreTestSupport
 @testable import MeshCore
 
 @Suite("WiFiTransport Tests")
@@ -130,23 +131,5 @@ struct WiFiTransportTests {
         try? await Task.sleep(for: .milliseconds(100))
 
         #expect(!callTracker.wasCalled, "Handler should not be called on initial connect failure")
-    }
-}
-
-// Thread-safe call tracker for testing async callbacks
-private final class CallTracker: @unchecked Sendable {
-    private var _wasCalled = false
-    private let lock = NSLock()
-
-    var wasCalled: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return _wasCalled
-    }
-
-    func markCalled() {
-        lock.lock()
-        defer { lock.unlock() }
-        _wasCalled = true
     }
 }

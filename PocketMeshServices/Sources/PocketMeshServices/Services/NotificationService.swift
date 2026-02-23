@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import os
 
 // MARK: - Notification Categories
 
@@ -28,6 +29,8 @@ public enum NotificationAction: String, Sendable {
 public final class NotificationService: NSObject {
 
     // MARK: - Properties
+
+    private let logger = Logger(subsystem: "com.pocketmesh", category: "Notifications")
 
     /// Whether notification permissions are authorized
     public private(set) var isAuthorized: Bool = false
@@ -185,16 +188,16 @@ public final class NotificationService: NSObject {
         // Reply action with text input
         let replyAction = UNTextInputNotificationAction(
             identifier: NotificationAction.reply.rawValue,
-            title: "Reply",
+            title: stringProvider?.replyActionTitle ?? "Reply",
             options: [],
-            textInputButtonTitle: "Send",
-            textInputPlaceholder: "Message..."
+            textInputButtonTitle: stringProvider?.sendButtonTitle ?? "Send",
+            textInputPlaceholder: stringProvider?.messagePlaceholder ?? "Message..."
         )
 
         // Mark as read action
         let markReadAction = UNNotificationAction(
             identifier: NotificationAction.markRead.rawValue,
-            title: "Mark as Read",
+            title: stringProvider?.markAsReadActionTitle ?? "Mark as Read",
             options: []
         )
 
@@ -296,7 +299,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post - log but don't throw
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
 
         // Update badge from database AFTER posting (non-blocking for notification display)
@@ -358,7 +361,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
 
         // Update badge from database AFTER posting
@@ -401,8 +404,9 @@ public final class NotificationService: NSObject {
         ]
         content.threadIdentifier = "room-\(roomName)"
 
-        badgeCount += 1
-        content.badge = NSNumber(value: badgeCount)
+        if preferences.badgeEnabled {
+            content.badge = NSNumber(value: badgeCount + 1)
+        }
 
         let request = UNNotificationRequest(
             identifier: messageID.uuidString,
@@ -413,7 +417,11 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
+        }
+
+        if preferences.badgeEnabled {
+            await updateBadgeCount()
         }
     }
 
@@ -456,12 +464,12 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
     }
 
     /// Default English titles when no string provider is set.
-    private func defaultDiscoveryTitle(for type: ContactType) -> String {
+    func defaultDiscoveryTitle(for type: ContactType) -> String {
         switch type {
         case .chat: "New Contact Discovered"
         case .repeater: "New Repeater Discovered"
@@ -526,7 +534,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
     }
 
@@ -541,8 +549,9 @@ public final class NotificationService: NSObject {
         guard preferences.lowBatteryEnabled else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Low Battery"
-        content.body = "\(deviceName) battery is at \(batteryPercentage)%"
+        content.title = stringProvider?.lowBatteryTitle ?? "Low Battery"
+        content.body = stringProvider?.lowBatteryBody(deviceName: deviceName, percentage: batteryPercentage)
+            ?? "\(deviceName) battery is at \(batteryPercentage)%"
         content.sound = preferences.soundEnabled ? .default : nil
         content.categoryIdentifier = NotificationCategory.lowBattery.rawValue
         content.userInfo = [
@@ -560,7 +569,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
     }
 
@@ -590,7 +599,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
     }
 
@@ -621,7 +630,7 @@ public final class NotificationService: NSObject {
         do {
             try await UNUserNotificationCenter.current().add(request)
         } catch {
-            // Notification failed to post
+            logger.warning("Failed to post notification: \(error.localizedDescription)")
         }
     }
 

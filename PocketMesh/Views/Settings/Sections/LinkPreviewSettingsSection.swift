@@ -11,7 +11,7 @@ struct LinkPreviewSettingsSection: View {
     var body: some View {
         Section {
             Toggle(isOn: $previewsEnabled) {
-                Label(L10n.Settings.LinkPreviews.toggle, systemImage: "link")
+                TintedLabel(L10n.Settings.LinkPreviews.toggle, systemImage: "link")
             }
 
             if previewsEnabled {
@@ -26,12 +26,12 @@ struct LinkPreviewSettingsSection: View {
 
         Section {
             Toggle(isOn: $showInlineImages) {
-                Label(L10n.Settings.InlineImages.toggle, systemImage: "photo")
+                TintedLabel(L10n.Settings.InlineImages.toggle, systemImage: "photo")
             }
 
             if showInlineImages {
                 Toggle(isOn: $autoPlayGIFs) {
-                    Label(L10n.Settings.InlineImages.autoPlayGifs, systemImage: "play.square")
+                    TintedLabel(L10n.Settings.InlineImages.autoPlayGifs, systemImage: "play.square")
                 }
             }
         } footer: {

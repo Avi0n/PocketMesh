@@ -192,15 +192,18 @@ private struct ChartSection: View {
         return L10n.Tools.Tools.NoiseFloor.chartAccessibility(count, Int(stats.min), Int(stats.max), Int(stats.average), trendDescription)
     }
 
+    /// Visible chart window duration in seconds.
+    private let chartWindowSeconds: Double = 300
+
     private var chartDomain: ClosedRange<Double> {
         guard let lastReading = viewModel.readings.last else {
-            return 0...300
+            return 0...chartWindowSeconds
         }
         let latestElapsed = lastReading.timestamp.timeIntervalSince(startTime)
-        if latestElapsed <= 300 {
-            return 0...300
+        if latestElapsed <= chartWindowSeconds {
+            return 0...chartWindowSeconds
         }
-        return (latestElapsed - 300)...latestElapsed
+        return (latestElapsed - chartWindowSeconds)...latestElapsed
     }
 
     var body: some View {

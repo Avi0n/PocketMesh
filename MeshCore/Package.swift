@@ -11,6 +11,10 @@ let package = Package(
         .library(
             name: "MeshCore",
             targets: ["MeshCore"]
+        ),
+        .library(
+            name: "MeshCoreTestSupport",
+            targets: ["MeshCoreTestSupport"]
         )
     ],
     dependencies: [
@@ -20,9 +24,13 @@ let package = Package(
         .target(
             name: "MeshCore"
         ),
+        .target(
+            name: "MeshCoreTestSupport",
+            path: "Tests/MeshCoreTestSupport"
+        ),
         .testTarget(
             name: "MeshCoreTests",
-            dependencies: ["MeshCore"]
+            dependencies: ["MeshCore", "MeshCoreTestSupport"]
         )
     ]
 )

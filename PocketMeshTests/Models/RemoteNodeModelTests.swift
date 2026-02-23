@@ -13,7 +13,7 @@ struct RemoteNodeModelTests {
         let dataStore = DataStore(modelContainer: container)
 
         let deviceID = UUID()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
 
         // Create room session
         let roomSession = RemoteNodeSessionDTO(
@@ -37,7 +37,7 @@ struct RemoteNodeModelTests {
         let dataStore = DataStore(modelContainer: container)
 
         let deviceID = UUID()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
 
         let repeaterSession = RemoteNodeSessionDTO(
             deviceID: deviceID,
@@ -244,7 +244,7 @@ struct RemoteNodeModelTests {
     @Test("KeychainService store/retrieve/delete cycle")
     func keychainServiceStoreRetrieveDeleteCycle() async throws {
         let keychain = MockKeychainService()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
         let password = "testpassword123"
 
         // Store
@@ -272,7 +272,7 @@ struct RemoteNodeModelTests {
     @Test("KeychainService handles non-existent keys")
     func keychainServiceHandlesNonExistentKeys() async throws {
         let keychain = MockKeychainService()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
 
         let retrieved = try await keychain.retrievePassword(forNodeKey: publicKey)
         #expect(retrieved == nil)
@@ -284,7 +284,7 @@ struct RemoteNodeModelTests {
     @Test("KeychainService replaces existing password")
     func keychainServiceReplacesExistingPassword() async throws {
         let keychain = MockKeychainService()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
 
         // Store first password
         try await keychain.storePassword("first", forNodeKey: publicKey)
@@ -300,7 +300,7 @@ struct RemoteNodeModelTests {
     @Test("KeychainService delete non-existent key does not throw")
     func keychainServiceDeleteNonExistentKeyNoThrow() async throws {
         let keychain = MockKeychainService()
-        let publicKey = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let publicKey = Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) })
 
         // Should not throw
         try await keychain.deletePassword(forNodeKey: publicKey)

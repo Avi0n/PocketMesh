@@ -13,7 +13,7 @@ private func createTestContact(
     ContactDTO(
         id: id,
         deviceID: deviceID,
-        publicKey: Data((0..<32).map { _ in UInt8.random(in: 0...255) }),
+        publicKey: Data((0..<ProtocolLimits.publicKeySize).map { _ in UInt8.random(in: 0...255) }),
         name: name,
         typeRawValue: ContactType.chat.rawValue,
         flags: 0,
@@ -230,6 +230,12 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
         blockedContacts.filter { $0.deviceID == deviceID }
     }
 
+    // MARK: - Blocked Channel Senders
+
+    func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {}
+    func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {}
+    func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] { [] }
+
     // MARK: - Channel Operations
 
     func fetchChannels(deviceID: UUID) async throws -> [ChannelDTO] {
@@ -352,6 +358,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
 
     // MARK: - Node Status Snapshots
 
+    // swiftlint:disable:next line_length
     func saveNodeStatusSnapshot(nodePublicKey: Data, batteryMillivolts: UInt16?, lastSNR: Double?, lastRSSI: Int16?, noiseFloor: Int16?, uptimeSeconds: UInt32?, rxAirtimeSeconds: UInt32?, packetsSent: UInt32?, packetsReceived: UInt32?) async throws -> UUID { UUID() }
     func fetchLatestNodeStatusSnapshot(nodePublicKey: Data) async throws -> NodeStatusSnapshotDTO? { nil }
     func fetchNodeStatusSnapshots(nodePublicKey: Data, since: Date?) async throws -> [NodeStatusSnapshotDTO] { [] }

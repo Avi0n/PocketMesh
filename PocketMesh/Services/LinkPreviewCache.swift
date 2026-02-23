@@ -181,4 +181,3 @@ private final class CachedPreview: @unchecked Sendable {
     let dto: LinkPreviewDataDTO
     init(_ dto: LinkPreviewDataDTO) { self.dto = dto }
 }
-

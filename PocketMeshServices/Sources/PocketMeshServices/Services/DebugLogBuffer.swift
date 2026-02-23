@@ -5,10 +5,12 @@ import os
 /// Provides batched saves for performance and backpressure handling.
 public actor DebugLogBuffer {
     /// Shared buffer instance for app-wide logging.
-    /// Set by ServiceContainer on initialization.
+    /// Written only during app bootstrap on @MainActor (AppState.init, then ServiceContainer.init),
+    /// before any PersistentLogger reads can occur. Reads happen from any actor via PersistentLogger.
+    /// nonisolated(unsafe) is required because Swift cannot express "set-once-before-use" statically.
     public nonisolated(unsafe) static var shared: DebugLogBuffer?
 
-    private let persistenceStore: any PersistenceStoreProtocol
+    private let dataStore: any PersistenceStoreProtocol
     private var buffer: [DebugLogEntryDTO] = []
     private var flushTask: Task<Void, Never>?
     private var isFlushScheduled = false
@@ -17,8 +19,8 @@ public actor DebugLogBuffer {
 
     private static let logger = Logger(subsystem: "com.pocketmesh", category: "DebugLogBuffer")
 
-    public init(persistenceStore: any PersistenceStoreProtocol) {
-        self.persistenceStore = persistenceStore
+    public init(dataStore: any PersistenceStoreProtocol) {
+        self.dataStore = dataStore
     }
 
     public func append(_ entry: DebugLogEntryDTO) {
@@ -70,7 +72,7 @@ public actor DebugLogBuffer {
         buffer = []
 
         do {
-            try await persistenceStore.saveDebugLogEntries(entries)
+            try await dataStore.saveDebugLogEntries(entries)
         } catch {
             Self.logger.error("Failed to save debug logs: \(error.localizedDescription)")
 

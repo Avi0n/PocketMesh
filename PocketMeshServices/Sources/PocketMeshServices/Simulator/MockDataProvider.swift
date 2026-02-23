@@ -21,7 +21,7 @@ public enum MockDataProvider {
 
     /// Generate a deterministic 32-byte public key from a seed
     private static func mockPublicKey(seed: UInt8) -> Data {
-        Data((0..<32).map { UInt8($0) &+ seed })
+        Data((0..<ProtocolLimits.publicKeySize).map { UInt8($0) &+ seed })
     }
 
     // MARK: - Simulator Device
@@ -248,6 +248,7 @@ public enum MockDataProvider {
 
     // MARK: - Mock Messages
 
+    // swiftlint:disable function_body_length
     /// Generate mock messages for a specific contact
     public static func messages(for contactID: UUID) -> [MessageDTO] {
         let now = Date()
@@ -646,4 +647,5 @@ public enum MockDataProvider {
             return []
         }
     }
+    // swiftlint:enable function_body_length
 }

@@ -197,6 +197,9 @@ private struct CLIToolContent: View {
         }
         .background(Color(.secondarySystemBackground))
         .contentShape(.rect)
+        // onTapGesture is intentional: a Button in .background can't receive
+        // taps through the ScrollView, and this is a non-semantic "tap anywhere
+        // to focus keyboard" gesture, not a discrete button action.
         .onTapGesture {
             isKeyboardFocused = true
         }

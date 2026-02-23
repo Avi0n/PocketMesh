@@ -408,11 +408,15 @@ final class RepeaterStatusViewModel {
     /// Em-dash for missing data (cleaner than "Unavailable")
     private static let emDash = "—"
 
+    private static let secondsPerMinute: UInt32 = 60
+    private static let secondsPerHour: UInt32 = 3_600
+    private static let secondsPerDay: UInt32 = 86_400
+
     var uptimeDisplay: String {
         guard let uptime = status?.uptimeSeconds else { return Self.emDash }
-        let days = Int(uptime / 86400)
-        let hours = Int((uptime % 86400) / 3600)
-        let minutes = Int((uptime % 3600) / 60)
+        let days = Int(uptime / Self.secondsPerDay)
+        let hours = Int((uptime % Self.secondsPerDay) / Self.secondsPerHour)
+        let minutes = Int((uptime % Self.secondsPerHour) / Self.secondsPerMinute)
 
         if days > 0 {
             if days == 1 {
@@ -470,10 +474,12 @@ final class RepeaterStatusViewModel {
     var previousSnapshotTimestamp: String? {
         guard let prev = previousSnapshot else { return nil }
         let interval = prev.timestamp.distance(to: .now)
-        if interval < 3600 {
+        let secondsPerHour: TimeInterval = 3_600
+        let secondsPerDay: TimeInterval = 86_400
+        if interval < secondsPerHour {
             return L10n.RemoteNodes.RemoteNodes.History.vsMinutesAgo(Int(interval / 60))
-        } else if interval < 86400 {
-            return L10n.RemoteNodes.RemoteNodes.History.vsHoursAgo(Int(interval / 3600))
+        } else if interval < secondsPerDay {
+            return L10n.RemoteNodes.RemoteNodes.History.vsHoursAgo(Int(interval / secondsPerHour))
         } else {
             return L10n.RemoteNodes.RemoteNodes.History.vsDate(prev.timestamp.formatted(.dateTime.month().day()))
         }

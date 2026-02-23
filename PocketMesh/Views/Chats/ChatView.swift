@@ -15,30 +15,16 @@ struct ChatView: View {
     let parentViewModel: ChatViewModel?
 
     @State private var viewModel = ChatViewModel()
-    @State private var keyboardObserver = KeyboardObserver()
     @State private var showingContactInfo = false
     @State private var isAtBottom = true
     @State private var unreadCount = 0
     @State private var scrollToBottomRequest = 0
     @State private var scrollToMentionRequest = 0
-    @State private var unseenMentionIDs: Set<UUID> = []
+    @State private var unseenMentionIDs: [UUID] = []
     @State private var scrollToTargetID: UUID?
-    @State private var initialScrollRequest = 0
-
-    /// Mention IDs that are both unseen AND present in loaded messages
-    private var reachableMentionIDs: Set<UUID> {
-        let loadedIDs = Set(viewModel.displayItems.map(\.id))
-        return unseenMentionIDs.intersection(loadedIDs)
-    }
-
-    /// Target message ID for scrolling (notification target takes priority over mentions)
-    private var scrollTargetID: UUID? {
-        if let targetID = scrollToTargetID,
-           viewModel.displayItems.contains(where: { $0.id == targetID }) {
-            return targetID
-        }
-        return reachableMentionIDs.first
-    }
+    @State private var mentionScrollTask: Task<Void, Never>?
+    @State private var scrollToDividerRequest = 0
+    @State private var isDividerVisible = false
 
     @State private var selectedMessageForActions: MessageDTO?
     @State private var recentEmojisStore = RecentEmojisStore()
@@ -54,13 +40,29 @@ struct ChatView: View {
     }
 
     var body: some View {
-        messagesView
+        ChatMessagesContent(
+            viewModel: viewModel,
+            contact: contact,
+            deviceName: appState.connectedDevice?.nodeName ?? "Me",
+            showInlineImages: showInlineImages,
+            autoPlayGIFs: autoPlayGIFs,
+            isAtBottom: $isAtBottom,
+            unreadCount: $unreadCount,
+            scrollToBottomRequest: $scrollToBottomRequest,
+            scrollToMentionRequest: $scrollToMentionRequest,
+            unseenMentionIDs: unseenMentionIDs,
+            scrollToTargetID: scrollToTargetID,
+            newMessagesDividerMessageID: viewModel.newMessagesDividerMessageID,
+            scrollToDividerRequest: $scrollToDividerRequest,
+            isDividerVisible: $isDividerVisible,
+            selectedMessageForActions: $selectedMessageForActions,
+            imageViewerData: $imageViewerData,
+            onMentionSeen: { await markMentionSeen(messageID: $0) },
+            onScrollToMention: { scrollToNextMention() }
+        )
             .safeAreaInset(edge: .bottom, spacing: 8) {
                 inputBar
-                    .floatingKeyboardAware()
             }
-            .ignoreKeyboardOnIPad()
-            .environment(keyboardObserver)
             .overlay(alignment: .bottom) {
                 mentionSuggestionsOverlay
             }
@@ -100,9 +102,9 @@ struct ChatView: View {
         }
         .task(id: appState.servicesVersion) {
             // Capture pending scroll target before loading
-            let pendingTarget = appState.pendingScrollToMessageID
+            let pendingTarget = appState.navigation.pendingScrollToMessageID
             if pendingTarget != nil {
-                appState.clearPendingScrollToMessage()
+                appState.navigation.clearPendingScrollToMessage()
             }
 
             viewModel.configure(appState: appState, linkPreviewCache: linkPreviewCache)
@@ -112,16 +114,16 @@ struct ChatView: View {
             viewModel.loadDraftIfExists()
             await loadUnseenMentions()
 
-            // Trigger scroll to target message if pending
+            // Trigger scroll to target message if pending (notification deeplink)
             if let targetID = pendingTarget {
                 scrollToTargetID = targetID
                 scrollToMentionRequest += 1
-            } else if let dividerID = viewModel.newMessagesDividerMessageID {
-                scrollToTargetID = dividerID
-                initialScrollRequest += 1
             }
         }
         .onDisappear {
+            mentionScrollTask?.cancel()
+            mentionScrollTask = nil
+
             // Clear active conversation for notification suppression
             appState.services?.notificationService.activeContactID = nil
 
@@ -206,7 +208,7 @@ struct ChatView: View {
     private func loadUnseenMentions() async {
         guard let dataStore = appState.services?.dataStore else { return }
         do {
-            unseenMentionIDs = Set(try await dataStore.fetchUnseenMentionIDs(contactID: contact.id))
+            unseenMentionIDs = try await dataStore.fetchUnseenMentionIDs(contactID: contact.id)
         } catch {
             logger.error("Failed to load unseen mentions: \(error)")
         }
@@ -220,7 +222,7 @@ struct ChatView: View {
             try await dataStore.markMentionSeen(messageID: messageID)
             try await dataStore.decrementUnreadMentionCount(contactID: contact.id)
 
-            unseenMentionIDs.remove(messageID)
+            unseenMentionIDs.removeAll { $0 == messageID }
 
             // Refresh parent's conversation list to update badge in sidebar (important for iPad split view)
             if let parent = parentViewModel, let deviceID = appState.connectedDevice?.id {
@@ -248,6 +250,52 @@ struct ChatView: View {
         }
     }
 
+    private func scrollToNextMention() {
+        guard let targetID = unseenMentionIDs.first else { return }
+
+        if viewModel.displayItems.contains(where: { $0.id == targetID }) {
+            scrollToTargetID = targetID
+            scrollToMentionRequest += 1
+            return
+        }
+
+        mentionScrollTask?.cancel()
+        mentionScrollTask = Task {
+            do {
+                let deadline = ContinuousClock.now + .seconds(10)
+                while !viewModel.displayItems.contains(where: { $0.id == targetID }) {
+                    guard viewModel.hasMoreMessages else {
+                        logger.warning("Mention \(targetID) not found after exhausting history, removing")
+                        if let dataStore = appState.services?.dataStore {
+                            try? await dataStore.markMentionSeen(messageID: targetID)
+                        }
+                        unseenMentionIDs.removeAll { $0 == targetID }
+                        break
+                    }
+                    guard unseenMentionIDs.contains(targetID) else { break }
+                    guard ContinuousClock.now < deadline else {
+                        logger.warning("Mention \(targetID) paging timed out")
+                        break
+                    }
+                    if viewModel.isLoadingOlder {
+                        try await Task.sleep(for: .milliseconds(50))
+                        continue
+                    }
+                    await viewModel.loadOlderMessages()
+                    try Task.checkCancellation()
+                }
+                if viewModel.displayItems.contains(where: { $0.id == targetID }) {
+                    scrollToTargetID = targetID
+                    scrollToMentionRequest += 1
+                }
+            } catch is CancellationError {
+                // Expected when view disappears during paging
+            } catch {
+                logger.error("Failed to scroll to mention: \(error)")
+            }
+        }
+    }
+
     private var connectionStatus: String {
         if contact.isFloodRouted {
             return L10n.Chats.Chats.ConnectionStatus.floodRouting
@@ -255,140 +303,6 @@ struct ChatView: View {
             return L10n.Chats.Chats.ConnectionStatus.direct(Int(contact.outPathLength))
         }
         return L10n.Chats.Chats.ConnectionStatus.unknown
-    }
-
-    // MARK: - Messages View
-
-    private var messagesView: some View {
-        Group {
-            if !viewModel.hasLoadedOnce {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.messages.isEmpty {
-                emptyMessagesView
-            } else {
-                ChatTableView(
-                    items: viewModel.displayItems,
-                    cellContent: { displayItem in
-                        messageBubble(for: displayItem)
-                    },
-                    isAtBottom: $isAtBottom,
-                    unreadCount: $unreadCount,
-                    scrollToBottomRequest: $scrollToBottomRequest,
-                    scrollToMentionRequest: $scrollToMentionRequest,
-                    isUnseenMention: { displayItem in
-                        displayItem.containsSelfMention && !displayItem.mentionSeen && unseenMentionIDs.contains(displayItem.id)
-                    },
-                    onMentionBecameVisible: { messageID in
-                        Task {
-                            await markMentionSeen(messageID: messageID)
-                        }
-                    },
-                    mentionTargetID: scrollTargetID,
-                    initialScrollTargetID: scrollToTargetID,
-                    initialScrollRequest: $initialScrollRequest,
-                    onNearTop: {
-                        Task {
-                            await viewModel.loadOlderMessages()
-                        }
-                    },
-                    isLoadingOlderMessages: viewModel.isLoadingOlder
-                )
-                .overlay(alignment: .bottomTrailing) {
-                    VStack(spacing: 12) {
-                        ScrollToMentionFAB(
-                            isVisible: !reachableMentionIDs.isEmpty,
-                            unreadMentionCount: reachableMentionIDs.count,
-                            onTap: { scrollToMentionRequest += 1 }
-                        )
-
-                        ScrollToBottomFAB(
-                            isVisible: !isAtBottom,
-                            unreadCount: unreadCount,
-                            onTap: { scrollToBottomRequest += 1 }
-                        )
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 8)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func messageBubble(for item: MessageDisplayItem) -> some View {
-        if let message = viewModel.message(for: item) {
-            UnifiedMessageBubble(
-                message: message,
-                contactName: contact.displayName,
-                contactNodeName: contact.name,
-                deviceName: appState.connectedDevice?.nodeName ?? "Me",
-                configuration: .directMessage,
-                showTimestamp: item.showTimestamp,
-                showDirectionGap: item.showDirectionGap,
-                showSenderName: item.showSenderName,
-                showNewMessagesDivider: item.showNewMessagesDivider,
-                previewState: item.previewState,
-                loadedPreview: item.loadedPreview,
-                isImageURL: item.isImageURL,
-                decodedImage: viewModel.decodedImage(for: message.id),
-                isGIF: viewModel.isGIFImage(for: message.id),
-                showInlineImages: showInlineImages,
-                autoPlayGIFs: autoPlayGIFs,
-                onRetry: { retryMessage(message) },
-                onLongPress: { selectedMessageForActions = message },
-                onImageTap: {
-                    if let data = viewModel.imageData(for: message.id) {
-                        imageViewerData = ImageViewerData(
-                            imageData: data,
-                            isGIF: false
-                        )
-                    }
-                },
-                onRetryImageFetch: {
-                    Task { await viewModel.retryImageFetch(for: message.id) }
-                },
-                onRequestPreviewFetch: {
-                    if item.isImageURL && showInlineImages {
-                        viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)
-                    } else {
-                        viewModel.requestPreviewFetch(for: message.id)
-                    }
-                },
-                onManualPreviewFetch: {
-                    Task {
-                        await viewModel.manualFetchPreview(for: message.id)
-                    }
-                }
-            )
-        } else {
-            // ViewModel logs the warning for data inconsistency
-            Text(L10n.Chats.Chats.Message.unavailable)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
-        }
-    }
-
-    private var emptyMessagesView: some View {
-        VStack(spacing: 16) {
-            ContactAvatar(contact: contact, size: 80)
-
-            Text(contact.displayName)
-                .font(.title2)
-                .bold()
-
-            Text(L10n.Chats.Chats.EmptyState.startConversation)
-                .foregroundStyle(.secondary)
-
-            if contact.hasLocation {
-                Label(L10n.Chats.Chats.ContactInfo.hasLocation, systemImage: "location.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
 
     private func setReplyText(_ text: String) {
@@ -399,13 +313,6 @@ struct ChatView: View {
     private func deleteMessage(_ message: MessageDTO) {
         Task {
             await viewModel.deleteMessage(message)
-        }
-    }
-
-    private func retryMessage(_ message: MessageDTO) {
-        logger.info("retryMessage called for message: \(message.id)")
-        Task {
-            await viewModel.retryMessage(message)
         }
     }
 
@@ -437,12 +344,7 @@ struct ChatView: View {
     }
 
     private func buildReplyText(for message: MessageDTO) -> String {
-        let mentionName = contact.name
-        let preview = String(message.text.prefix(20))
-        let hasMore = message.text.count > 20
-        let suffix = hasMore ? ".." : ""
-        let mention = MentionUtilities.createMention(for: mentionName)
-        return "\(mention)\"\(preview)\(suffix)\"\n"
+        MentionUtilities.buildReplyText(mentionName: contact.name, messageText: message.text)
     }
 
     // MARK: - Input Bar
@@ -505,6 +407,193 @@ struct ChatView: View {
             let mention = MentionUtilities.createMention(for: contact.name)
             viewModel.composingText.replaceSubrange(range, with: mention + " ")
         }
+    }
+}
+
+// MARK: - Chat Messages Content
+
+private struct ChatMessagesContent: View {
+    @Bindable var viewModel: ChatViewModel
+    let contact: ContactDTO
+    let deviceName: String
+    let showInlineImages: Bool
+    let autoPlayGIFs: Bool
+    @Binding var isAtBottom: Bool
+    @Binding var unreadCount: Int
+    @Binding var scrollToBottomRequest: Int
+    @Binding var scrollToMentionRequest: Int
+    let unseenMentionIDs: [UUID]
+    let scrollToTargetID: UUID?
+    let newMessagesDividerMessageID: UUID?
+    @Binding var scrollToDividerRequest: Int
+    @Binding var isDividerVisible: Bool
+    @Binding var selectedMessageForActions: MessageDTO?
+    @Binding var imageViewerData: ImageViewerData?
+    let onMentionSeen: (UUID) async -> Void
+    let onScrollToMention: () -> Void
+
+    @State private var hasDismissedDividerFAB = false
+
+    private var showDividerFAB: Bool {
+        newMessagesDividerMessageID != nil && !isDividerVisible && !hasDismissedDividerFAB
+    }
+
+    var body: some View {
+        Group {
+            if !viewModel.hasLoadedOnce {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if viewModel.messages.isEmpty {
+                ChatEmptyMessagesView(contact: contact)
+            } else {
+                let mentionIDSet = Set(unseenMentionIDs)
+                ChatTableView(
+                    items: viewModel.displayItems,
+                    cellContent: { displayItem in
+                        messageBubble(for: displayItem)
+                    },
+                    isAtBottom: $isAtBottom,
+                    unreadCount: $unreadCount,
+                    scrollToBottomRequest: $scrollToBottomRequest,
+                    scrollToMentionRequest: $scrollToMentionRequest,
+                    isUnseenMention: { displayItem in
+                        displayItem.containsSelfMention && !displayItem.mentionSeen && mentionIDSet.contains(displayItem.id)
+                    },
+                    onMentionBecameVisible: { messageID in
+                        Task {
+                            await onMentionSeen(messageID)
+                        }
+                    },
+                    mentionTargetID: scrollToTargetID,
+                    scrollToDividerRequest: $scrollToDividerRequest,
+                    dividerItemID: newMessagesDividerMessageID,
+                    isDividerVisible: $isDividerVisible,
+                    onNearTop: {
+                        Task {
+                            await viewModel.loadOlderMessages()
+                        }
+                    },
+                    isLoadingOlderMessages: viewModel.isLoadingOlder
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    VStack(spacing: 12) {
+                        if showDividerFAB {
+                            ScrollToDividerFAB(
+                                onTap: {
+                                    scrollToDividerRequest += 1
+                                    hasDismissedDividerFAB = true
+                                }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        if !unseenMentionIDs.isEmpty {
+                            ScrollToMentionFAB(
+                                unreadMentionCount: unseenMentionIDs.count,
+                                onTap: { onScrollToMention() }
+                            )
+                            .transition(.scale.combined(with: .opacity))
+                        }
+
+                        ScrollToBottomFAB(
+                            isVisible: !isAtBottom,
+                            unreadCount: unreadCount,
+                            onTap: { scrollToBottomRequest += 1 }
+                        )
+                    }
+                    .animation(.snappy(duration: 0.2), value: showDividerFAB)
+                    .animation(.snappy(duration: 0.2), value: unseenMentionIDs.isEmpty)
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
+                }
+                .onChange(of: newMessagesDividerMessageID) { _, _ in
+                    hasDismissedDividerFAB = false
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func messageBubble(for item: MessageDisplayItem) -> some View {
+        if let message = viewModel.message(for: item) {
+            UnifiedMessageBubble(
+                message: message,
+                contactName: contact.displayName,
+                deviceName: deviceName,
+                configuration: .directMessage,
+                showTimestamp: item.showTimestamp,
+                showDirectionGap: item.showDirectionGap,
+                showSenderName: item.showSenderName,
+                showNewMessagesDivider: item.showNewMessagesDivider,
+                previewState: item.previewState,
+                loadedPreview: item.loadedPreview,
+                isImageURL: item.isImageURL,
+                decodedImage: viewModel.decodedImage(for: message.id),
+                isGIF: viewModel.isGIFImage(for: message.id),
+                showInlineImages: showInlineImages,
+                autoPlayGIFs: autoPlayGIFs,
+                onRetry: {
+                    logger.info("retryMessage called for message: \(message.id)")
+                    Task { await viewModel.retryMessage(message) }
+                },
+                onLongPress: { selectedMessageForActions = message },
+                onImageTap: {
+                    if let data = viewModel.imageData(for: message.id) {
+                        imageViewerData = ImageViewerData(
+                            imageData: data,
+                            isGIF: false
+                        )
+                    }
+                },
+                onRetryImageFetch: {
+                    Task { await viewModel.retryImageFetch(for: message.id) }
+                },
+                onRequestPreviewFetch: {
+                    if item.isImageURL && showInlineImages {
+                        viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)
+                    } else {
+                        viewModel.requestPreviewFetch(for: message.id)
+                    }
+                },
+                onManualPreviewFetch: {
+                    Task {
+                        await viewModel.manualFetchPreview(for: message.id)
+                    }
+                }
+            )
+        } else {
+            Text(L10n.Chats.Chats.Message.unavailable)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel(L10n.Chats.Chats.Message.unavailableAccessibility)
+        }
+    }
+}
+
+// MARK: - Chat Empty Messages View
+
+private struct ChatEmptyMessagesView: View {
+    let contact: ContactDTO
+
+    var body: some View {
+        VStack(spacing: 16) {
+            ContactAvatar(contact: contact, size: 80)
+
+            Text(contact.displayName)
+                .font(.title2)
+                .bold()
+
+            Text(L10n.Chats.Chats.EmptyState.startConversation)
+                .foregroundStyle(.secondary)
+
+            if contact.hasLocation {
+                Label(L10n.Chats.Chats.ContactInfo.hasLocation, systemImage: "location.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 }
 

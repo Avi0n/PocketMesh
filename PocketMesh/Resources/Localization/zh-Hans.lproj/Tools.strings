@@ -12,7 +12,7 @@
 "tools.title" = "工具";
 
 /* Location: ToolsView.swift - Tool selection label */
-"tools.tracePath" = "路径追踪";
+"tools.tracePath" = "路由追踪";
 
 /* Location: ToolsView.swift - Tool selection label */
 "tools.lineOfSight" = "视距分析";
@@ -23,13 +23,16 @@
 /* Location: ToolsView.swift - Tool selection label */
 "tools.noiseFloor" = "底噪测量";
 
+/* Location: ToolsView.swift - Tool selection label */
+"tools.nodeDiscovery" = "节点发现";
+
 /* Location: ToolsView.swift - Empty state when no tool selected */
 "tools.selectTool" = "选择工具";
 
 // MARK: - RX Log View
 
 /* Location: RxLogView.swift - Empty state title when listening */
-"tools.rxLog.listening" = "正在测量...";
+"tools.rxLog.listening" = "正在监听...";
 
 /* Location: RxLogView.swift - Empty state description */
 "tools.rxLog.listeningDescription" = "RF 数据包将在到达时显示在此处";
@@ -98,7 +101,7 @@
 "tools.rxLog.rssiLabel" = "RSSI：";
 
 /* Location: RxLogView.swift - SNR label */
-"tools.rxLog.snrLabel" = "信噪比：";
+"tools.rxLog.snrLabel"  = "信噪比：";
 
 /* Location: RxLogView.swift - Type label */
 "tools.rxLog.typeLabel" = "类型：";
@@ -186,10 +189,10 @@
 "tools.noiseFloor.maximum" = "最大值";
 
 /* Location: NoiseFloorView.swift - Last RSSI label */
-"tools.noiseFloor.lastRssi" = "最后 RSSI";
+"tools.noiseFloor.lastRssi" = "最近RSSI";
 
 /* Location: NoiseFloorView.swift - Last SNR label */
-"tools.noiseFloor.lastSnr" = "最后信噪比";
+"tools.noiseFloor.lastSnr" = "最近信噪比";
 
 /* Location: NoiseFloorView.swift - Trend: stable */
 "tools.noiseFloor.trendStable" = "稳定";
@@ -222,6 +225,68 @@
 
 /* Location: NoiseFloorViewModel.swift - Error: unable to read stats */
 "tools.noiseFloor.error.unableToRead" = "无法读取无线电统计";
+
+// MARK: - Node Discovery View
+
+/* Location: NodeDiscoveryView.swift - Disconnected state description */
+"tools.nodeDiscovery.notConnectedDescription" = "连接到无线电以发现%@";
+
+/* Location: NodeDiscoveryView.swift - Initial empty state title */
+"tools.nodeDiscovery.scanPrompt" = "扫描%@";
+
+/* Location: NodeDiscoveryView.swift - Initial empty state description */
+"tools.nodeDiscovery.scanPromptDescription" = "点击下面的按钮以发现附近的%@。";
+
+/* Location: NodeDiscoveryView.swift - No results empty state title */
+"tools.nodeDiscovery.noResults" = "未发现%@";
+
+/* Location: NodeDiscoveryView.swift - No results empty state description */
+"tools.nodeDiscovery.noResultsDescription" = "没有%@响应发现探测。请重试或靠近网格节点。";
+
+/* Location: NodeDiscoveryView.swift - Scan button label (idle) */
+"tools.nodeDiscovery.scanButton" = "扫描%@";
+
+/* Location: NodeDiscoveryView.swift - Scan button label (scanning) */
+"tools.nodeDiscovery.stopButton" = "停止扫描";
+
+/* Location: NodeDiscoveryView.swift - Segment label */
+"tools.nodeDiscovery.repeaters" = "转发节点";
+
+/* Location: NodeDiscoveryView.swift - Segment label */
+"tools.nodeDiscovery.sensors" = "传感器";
+
+/* Location: NodeDiscoveryView.swift - Sort option */
+"tools.nodeDiscovery.sortSignal" = "信号强度";
+
+/* Location: NodeDiscoveryView.swift - Sort option */
+"tools.nodeDiscovery.sortName" = "名称";
+
+/* Location: NodeDiscoveryView.swift - Sort menu accessibility label */
+"tools.nodeDiscovery.sortMenu" = "排序";
+
+/* Location: NodeDiscoveryView.swift - Sort menu accessibility hint */
+"tools.nodeDiscovery.sortMenuHint" = "更改发现节点的排序方式";
+
+/* Location: NodeDiscoveryRowView.swift - Unknown node name fallback */
+"tools.nodeDiscovery.unknownNode" = "未知";
+
+/* Location: NodeDiscoveryRowView.swift - Node type: repeater */
+"tools.nodeDiscovery.typeRepeater" = "转发节点";
+
+/* Location: NodeDiscoveryRowView.swift - Node type: sensor */
+"tools.nodeDiscovery.typeSensor" = "传感器";
+
+/* Location: NodeDiscoveryRowView.swift - SNR label (local receive) */
+"tools.nodeDiscovery.snrDown" = "↓ %@ dB";
+
+/* Location: NodeDiscoveryRowView.swift - SNR label (remote receive) */
+"tools.nodeDiscovery.snrUp" = "↑ %@ dB";
+
+/* Location: NodeDiscoveryRowView.swift - RSSI label */
+"tools.nodeDiscovery.rssi" = "RSSI %@ dBm";
+
+/* Location: NodeDiscoveryView.swift - Error alert title */
+"tools.nodeDiscovery.errorTitle" = "扫描失败";
 
 // MARK: - Line of Sight View
 

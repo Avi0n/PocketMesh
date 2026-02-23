@@ -45,7 +45,9 @@ struct ConnectionManagerBLEScanningTests {
         consumeTask.cancel()
         _ = await consumeTask.result
 
-        try? await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("Stream cleanup should stop scanning") {
+            await mock.isScanning == false
+        }
 
         #expect(await mock.isScanning == false)
         #expect(await mock.stopScanningCallCount >= 1)
@@ -69,6 +71,9 @@ struct ConnectionManagerBLEScanningTests {
 
         consumeTask1.cancel()
         _ = await consumeTask1.result
+
+        // Fixed sleep: negative assertion — older stream cleanup must not stop the newer scan.
+        // We wait briefly to confirm no erroneous stopScanning call fires.
         try? await Task.sleep(for: .milliseconds(100))
 
         #expect(await mock.isScanning, "Newer scan should remain active")

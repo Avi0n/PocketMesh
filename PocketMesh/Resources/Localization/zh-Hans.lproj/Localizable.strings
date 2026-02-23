@@ -152,7 +152,7 @@
 // MARK: - Reaction Notifications
 
 /* Notification body when someone reacts to your message - %1$@ is the emoji, %2$@ is the message preview */
-"notifications.reaction.body" = "对您的消息 reacted %1$@：\"%2$@\"";
+"notifications.reaction.body" = "%1$@ 回应了您的消息：\"%2$@\"";
 
 
 // MARK: - Discovery Notifications
@@ -165,3 +165,45 @@
 
 /* Notification title when a new room is discovered on the mesh network */
 "notifications.discovery.room" = "发现新房间";
+
+
+// MARK: - Notification Actions
+
+/* Notification action button to reply to a message */
+"notifications.action.reply" = "回复";
+
+/* Notification action button to send a quick reply */
+"notifications.action.send" = "发送";
+
+/* Notification action placeholder for quick reply text input */
+"notifications.action.messagePlaceholder" = "消息...";
+
+/* Notification action button to mark a message as read */
+"notifications.action.markAsRead" = "标为已读";
+
+
+// MARK: - Low Battery Notifications
+
+/* Notification title for low battery warning */
+"notifications.lowBattery.title" = "设备电量低";
+
+/* Notification body for low battery warning - %1$@ is device name, %2$d is battery percentage */
+"notifications.lowBattery.body" = "%1$@ 电量为 %2$d%%";
+
+
+// MARK: - Connection VoiceOver Announcements
+
+/* VoiceOver announcement when sync fails and device is disconnecting */
+"accessibility.connection.syncFailedDisconnecting" = "同步失败。正在断开连接。";
+
+/* VoiceOver announcement when device connection is lost */
+"accessibility.connection.deviceConnectionLost" = "设备连接已断开";
+
+/* VoiceOver announcement when device reconnects */
+"accessibility.connection.deviceReconnected" = "设备已重新连接";
+
+
+// MARK: - Status Pill
+
+/* Status pill message when sync has failed */
+"statusPill.syncFailed" = "同步失败";

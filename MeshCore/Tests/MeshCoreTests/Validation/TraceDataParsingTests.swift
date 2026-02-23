@@ -1,9 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class TraceDataParsingTests: XCTestCase {
+@Suite("TraceData Parsing")
+struct TraceDataParsingTests {
 
-    func test_traceData_pathSz0_singleByteHashes() {
+    @Test("traceData pathSz=0 single byte hashes")
+    func traceDataPathSz0SingleByteHashes() {
         // path_sz=0: 1-byte hashes, pathLength = hop count
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -18,26 +21,27 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData, got \(event)")
+            Issue.record("Expected traceData, got \(event)")
             return
         }
 
-        XCTAssertEqual(trace.tag, 12345)
-        XCTAssertEqual(trace.authCode, 67890)
-        XCTAssertEqual(trace.path.count, 3, "Should have 2 hops + 1 destination")
+        #expect(trace.tag == 12345)
+        #expect(trace.authCode == 67890)
+        #expect(trace.path.count == 3, "Should have 2 hops + 1 destination")
 
         // Check hash bytes
-        XCTAssertEqual(trace.path[0].hashBytes, Data([0xAA]))
-        XCTAssertEqual(trace.path[1].hashBytes, Data([0xBB]))
-        XCTAssertNil(trace.path[2].hashBytes, "Destination has no hash")
+        #expect(trace.path[0].hashBytes == Data([0xAA]))
+        #expect(trace.path[1].hashBytes == Data([0xBB]))
+        #expect(trace.path[2].hashBytes == nil, "Destination has no hash")
 
         // Check SNRs
-        XCTAssertEqual(trace.path[0].snr, 10.0, accuracy: 0.001)
-        XCTAssertEqual(trace.path[1].snr, 5.0, accuracy: 0.001)
-        XCTAssertEqual(trace.path[2].snr, 3.0, accuracy: 0.001)
+        #expect(abs(trace.path[0].snr - 10.0) <= 0.001)
+        #expect(abs(trace.path[1].snr - 5.0) <= 0.001)
+        #expect(abs(trace.path[2].snr - 3.0) <= 0.001)
     }
 
-    func test_traceData_pathSz2_fourByteHashes() {
+    @Test("traceData pathSz=2 four byte hashes")
+    func traceDataPathSz2FourByteHashes() {
         // path_sz=2: 4-byte hashes, hopCount = pathLength / 4
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -55,22 +59,23 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData, got \(event)")
+            Issue.record("Expected traceData, got \(event)")
             return
         }
 
-        XCTAssertEqual(trace.path.count, 3, "Should have 2 hops + 1 destination")
+        #expect(trace.path.count == 3, "Should have 2 hops + 1 destination")
 
         // Check 4-byte hashes
-        XCTAssertEqual(trace.path[0].hashBytes, Data([0x11, 0x22, 0x33, 0x44]))
-        XCTAssertEqual(trace.path[1].hashBytes, Data([0x55, 0x66, 0x77, 0x88]))
-        XCTAssertNil(trace.path[2].hashBytes)
+        #expect(trace.path[0].hashBytes == Data([0x11, 0x22, 0x33, 0x44]))
+        #expect(trace.path[1].hashBytes == Data([0x55, 0x66, 0x77, 0x88]))
+        #expect(trace.path[2].hashBytes == nil)
 
         // Legacy hash accessor (first byte only)
-        XCTAssertEqual(trace.path[0].hash, 0x11)
+        #expect(trace.path[0].hash == 0x11)
     }
 
-    func test_traceData_pathSz1_twoByteHashes() {
+    @Test("traceData pathSz=1 two byte hashes")
+    func traceDataPathSz1TwoByteHashes() {
         // path_sz=1: 2-byte hashes, hopCount = pathLength / 2
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -88,19 +93,20 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData, got \(event)")
+            Issue.record("Expected traceData, got \(event)")
             return
         }
 
-        XCTAssertEqual(trace.path.count, 3, "Should have 2 hops + 1 destination")
+        #expect(trace.path.count == 3, "Should have 2 hops + 1 destination")
 
         // Check 2-byte hashes
-        XCTAssertEqual(trace.path[0].hashBytes, Data([0xAA, 0xBB]))
-        XCTAssertEqual(trace.path[1].hashBytes, Data([0xCC, 0xDD]))
-        XCTAssertNil(trace.path[2].hashBytes)
+        #expect(trace.path[0].hashBytes == Data([0xAA, 0xBB]))
+        #expect(trace.path[1].hashBytes == Data([0xCC, 0xDD]))
+        #expect(trace.path[2].hashBytes == nil)
     }
 
-    func test_traceData_destinationMarker() {
+    @Test("traceData destination marker")
+    func traceDataDestinationMarker() {
         // 0xFF hash means destination (no hash)
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -115,15 +121,16 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData")
+            Issue.record("Expected traceData")
             return
         }
 
         // 0xFF hash should be interpreted as destination (nil)
-        XCTAssertNil(trace.path[0].hashBytes)
+        #expect(trace.path[0].hashBytes == nil)
     }
 
-    func test_traceData_emptyPath() {
+    @Test("traceData empty path")
+    func traceDataEmptyPath() {
         // pathLength = 0 means direct connection (no intermediate hops)
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -136,16 +143,17 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData, got \(event)")
+            Issue.record("Expected traceData, got \(event)")
             return
         }
 
-        XCTAssertEqual(trace.path.count, 1, "Should have destination only")
-        XCTAssertNil(trace.path[0].hashBytes, "Destination has no hash")
-        XCTAssertEqual(trace.path[0].snr, 10.0, accuracy: 0.001)
+        #expect(trace.path.count == 1, "Should have destination only")
+        #expect(trace.path[0].hashBytes == nil, "Destination has no hash")
+        #expect(abs(trace.path[0].snr - 10.0) <= 0.001)
     }
 
-    func test_traceData_legacyHashAccessor() {
+    @Test("traceData legacy hash accessor")
+    func traceDataLegacyHashAccessor() {
         // Verify legacy hash property works correctly
         var payload = Data()
         payload.append(0x00)  // Reserved
@@ -160,53 +168,57 @@ final class TraceDataParsingTests: XCTestCase {
         let event = Parsers.TraceData.parse(payload)
 
         guard case .traceData(let trace) = event else {
-            XCTFail("Expected traceData")
+            Issue.record("Expected traceData")
             return
         }
 
         // Legacy accessor should return first byte
-        XCTAssertEqual(trace.path[0].hash, 0x42)
-        XCTAssertNil(trace.path[1].hash, "Destination has no hash")
+        #expect(trace.path[0].hash == 0x42)
+        #expect(trace.path[1].hash == nil, "Destination has no hash")
     }
 
-    func test_traceData_tooShortPayload() {
+    @Test("traceData too short payload")
+    func traceDataTooShortPayload() {
         // Less than 11 bytes should fail
         let shortPayload = Data([0x00, 0x01, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
 
         let event = Parsers.TraceData.parse(shortPayload)
 
         guard case .parseFailure = event else {
-            XCTFail("Expected parseFailure for short payload")
+            Issue.record("Expected parseFailure for short payload")
             return
         }
     }
 
-    func test_traceNode_initWithHashBytes() {
+    @Test("TraceNode init with hashBytes")
+    func traceNodeInitWithHashBytes() {
         let node = TraceNode(hashBytes: Data([0x11, 0x22, 0x33]), snr: 5.5)
-        XCTAssertEqual(node.hashBytes, Data([0x11, 0x22, 0x33]))
-        XCTAssertEqual(node.snr, 5.5)
-        XCTAssertEqual(node.hash, 0x11, "Legacy accessor returns first byte")
+        #expect(node.hashBytes == Data([0x11, 0x22, 0x33]))
+        #expect(node.snr == 5.5)
+        #expect(node.hash == 0x11, "Legacy accessor returns first byte")
     }
 
-    func test_traceNode_initWithNilHashBytes() {
+    @Test("TraceNode init with nil hashBytes")
+    func traceNodeInitWithNilHashBytes() {
         let node = TraceNode(hashBytes: nil, snr: 3.0)
-        XCTAssertNil(node.hashBytes)
-        XCTAssertNil(node.hash)
-        XCTAssertEqual(node.snr, 3.0)
+        #expect(node.hashBytes == nil)
+        #expect(node.hash == nil)
+        #expect(node.snr == 3.0)
     }
 
-    func test_traceNode_legacyInitWithHash() {
+    @Test("TraceNode legacy init with hash")
+    func traceNodeLegacyInitWithHash() {
         let node = TraceNode(hash: 0xAB, snr: 7.5)
-        XCTAssertEqual(node.hashBytes, Data([0xAB]))
-        XCTAssertEqual(node.hash, 0xAB)
-        XCTAssertEqual(node.snr, 7.5)
+        #expect(node.hashBytes == Data([0xAB]))
+        #expect(node.hash == 0xAB)
+        #expect(node.snr == 7.5)
     }
 
-    func test_traceNode_legacyInitWithNilHash() {
+    @Test("TraceNode legacy init with nil hash")
+    func traceNodeLegacyInitWithNilHash() {
         let node = TraceNode(hash: nil, snr: 2.0)
-        XCTAssertNil(node.hashBytes)
-        XCTAssertNil(node.hash)
-        XCTAssertEqual(node.snr, 2.0)
+        #expect(node.hashBytes == nil)
+        #expect(node.hash == nil)
+        #expect(node.snr == 2.0)
     }
-
 }

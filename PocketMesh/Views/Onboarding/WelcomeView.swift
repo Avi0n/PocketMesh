@@ -45,7 +45,7 @@ struct WelcomeView: View {
 
             // Continue button
             Button {
-                appState.onboardingPath.append(.permissions)
+                appState.onboarding.onboardingPath.append(.permissions)
             } label: {
                 Text(L10n.Onboarding.Welcome.getStarted)
                     .font(.headline)

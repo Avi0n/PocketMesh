@@ -5,18 +5,46 @@ struct ToolsView: View {
     private static let lineOfSightSidebarWidthIdeal: CGFloat = 440
     private static let lineOfSightSidebarWidthMax: CGFloat = 560
 
-    private enum ToolSelection: Hashable {
+    private enum ToolSelection: Hashable, CaseIterable {
         case tracePath
         case lineOfSight
         case rxLog
         case noiseFloor
+        case nodeDiscovery
         case cli
+
+        var title: String {
+            switch self {
+            case .tracePath: L10n.Tools.Tools.tracePath
+            case .lineOfSight: L10n.Tools.Tools.lineOfSight
+            case .rxLog: L10n.Tools.Tools.rxLog
+            case .noiseFloor: L10n.Tools.Tools.noiseFloor
+            case .nodeDiscovery: L10n.Tools.Tools.nodeDiscovery
+            case .cli: L10n.Tools.Tools.cli
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .tracePath: "point.3.connected.trianglepath.dotted"
+            case .lineOfSight: "eye"
+            case .rxLog: "waveform.badge.magnifyingglass"
+            case .noiseFloor: "waveform"
+            case .nodeDiscovery: "dot.radiowaves.left.and.right"
+            case .cli: "terminal"
+            }
+        }
+
+        var requiresRadio: Bool {
+            self != .lineOfSight
+        }
     }
 
     private enum SidebarDestination: Hashable {
         case lineOfSightPoints
     }
 
+    @Environment(\.appState) private var appState
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedTool: ToolSelection?
@@ -28,21 +56,6 @@ struct ToolsView: View {
 
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
-    }
-
-    private var detailTitle: String {
-        switch selectedTool {
-        case .tracePath:
-            L10n.Tools.Tools.tracePath
-        case .rxLog:
-            L10n.Tools.Tools.rxLog
-        case .noiseFloor:
-            L10n.Tools.Tools.noiseFloor
-        case .cli:
-            L10n.Tools.Tools.cli
-        case .lineOfSight, .none:
-            L10n.Tools.Tools.title
-        }
     }
 
     var body: some View {
@@ -65,7 +78,7 @@ struct ToolsView: View {
                             .navigationBarTitleDisplayMode(.inline)
                     } else {
                         toolDetailView
-                            .navigationTitle(detailTitle)
+                            .navigationTitle(selectedTool?.title ?? L10n.Tools.Tools.title)
                             .navigationBarTitleDisplayMode(.inline)
                     }
                 }
@@ -78,37 +91,22 @@ struct ToolsView: View {
                     selectedTool = nil
                 }
             }
+            .onChange(of: appState.connectedDevice) { _, newDevice in
+                if newDevice == nil, selectedTool?.requiresRadio == true {
+                    selectedTool = nil
+                    isShowingLineOfSightPoints = false
+                    sidebarPath = NavigationPath()
+                }
+            }
         } else {
             NavigationStack {
                 List {
-                    NavigationLink {
-                        TracePathView()
-                    } label: {
-                        Label(L10n.Tools.Tools.tracePath, systemImage: "point.3.connected.trianglepath.dotted")
-                    }
-
-                    NavigationLink {
-                        LineOfSightView()
-                    } label: {
-                        Label(L10n.Tools.Tools.lineOfSight, systemImage: "eye")
-                    }
-
-                    NavigationLink {
-                        RxLogView()
-                    } label: {
-                        Label(L10n.Tools.Tools.rxLog, systemImage: "waveform.badge.magnifyingglass")
-                    }
-
-                    NavigationLink {
-                        NoiseFloorView()
-                    } label: {
-                        Label(L10n.Tools.Tools.noiseFloor, systemImage: "waveform")
-                    }
-
-                    NavigationLink {
-                        CLIToolView()
-                    } label: {
-                        Label(L10n.Tools.Tools.cli, systemImage: "terminal")
+                    ForEach(ToolSelection.allCases, id: \.self) { tool in
+                        NavigationLink {
+                            toolDestination(for: tool)
+                        } label: {
+                            Label(tool.title, systemImage: tool.systemImage)
+                        }
                     }
                 }
                 .navigationTitle(L10n.Tools.Tools.title)
@@ -124,45 +122,12 @@ struct ToolsView: View {
     private var sidebarStack: some View {
         NavigationStack(path: $sidebarPath) {
             List {
-                Button {
-                    selectedTool = .tracePath
-                    isShowingLineOfSightPoints = false
-                    sidebarPath = NavigationPath()
-                } label: {
-                    Label(L10n.Tools.Tools.tracePath, systemImage: "point.3.connected.trianglepath.dotted")
-                }
-
-                Button {
-                    selectedTool = .lineOfSight
-                    isShowingLineOfSightPoints = true
-                    sidebarPath = NavigationPath()
-                    sidebarPath.append(SidebarDestination.lineOfSightPoints)
-                } label: {
-                    Label(L10n.Tools.Tools.lineOfSight, systemImage: "eye")
-                }
-
-                Button {
-                    selectedTool = .rxLog
-                    isShowingLineOfSightPoints = false
-                    sidebarPath = NavigationPath()
-                } label: {
-                    Label(L10n.Tools.Tools.rxLog, systemImage: "waveform.badge.magnifyingglass")
-                }
-
-                Button {
-                    selectedTool = .noiseFloor
-                    isShowingLineOfSightPoints = false
-                    sidebarPath = NavigationPath()
-                } label: {
-                    Label(L10n.Tools.Tools.noiseFloor, systemImage: "waveform")
-                }
-
-                Button {
-                    selectedTool = .cli
-                    isShowingLineOfSightPoints = false
-                    sidebarPath = NavigationPath()
-                } label: {
-                    Label(L10n.Tools.Tools.cli, systemImage: "terminal")
+                ForEach(ToolSelection.allCases, id: \.self) { tool in
+                    Button {
+                        selectTool(tool)
+                    } label: {
+                        Label(tool.title, systemImage: tool.systemImage)
+                    }
                 }
             }
             .listStyle(.sidebar)
@@ -183,21 +148,40 @@ struct ToolsView: View {
         }
     }
 
+    private func selectTool(_ tool: ToolSelection) {
+        selectedTool = tool
+        sidebarPath = NavigationPath()
+
+        if tool == .lineOfSight {
+            isShowingLineOfSightPoints = true
+            sidebarPath.append(SidebarDestination.lineOfSightPoints)
+        } else {
+            isShowingLineOfSightPoints = false
+        }
+    }
+
+    @ViewBuilder
+    private func toolDestination(for tool: ToolSelection) -> some View {
+        switch tool {
+        case .tracePath: TracePathView()
+        case .lineOfSight: LineOfSightView()
+        case .rxLog: RxLogView()
+        case .noiseFloor: NoiseFloorView()
+        case .nodeDiscovery: NodeDiscoveryView()
+        case .cli: CLIToolView()
+        }
+    }
+
     @ViewBuilder
     private var toolDetailView: some View {
         switch selectedTool {
-        case .tracePath:
-            TracePathView()
-        case .lineOfSight:
-            LineOfSightView(viewModel: lineOfSightViewModel, layoutMode: .map)
-        case .rxLog:
-            RxLogView()
-        case .noiseFloor:
-            NoiseFloorView()
-        case .cli:
-            CLIToolView()
-        case .none:
-            ContentUnavailableView(L10n.Tools.Tools.selectTool, systemImage: "wrench.and.screwdriver")
+        case .tracePath: TracePathView()
+        case .lineOfSight: LineOfSightView(viewModel: lineOfSightViewModel, layoutMode: .map)
+        case .rxLog: RxLogView()
+        case .noiseFloor: NoiseFloorView()
+        case .nodeDiscovery: NodeDiscoveryView()
+        case .cli: CLIToolView()
+        case .none: ContentUnavailableView(L10n.Tools.Tools.selectTool, systemImage: "wrench.and.screwdriver")
         }
     }
 }

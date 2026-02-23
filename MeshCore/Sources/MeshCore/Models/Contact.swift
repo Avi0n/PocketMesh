@@ -37,10 +37,10 @@ public struct MeshContact: Sendable, Identifiable, Equatable {
     public let publicKey: Data
 
     /// The type identifier for the contact.
-    public let type: UInt8
+    public let type: ContactType
 
     /// The operational flags for the contact.
-    public let flags: UInt8
+    public let flags: ContactFlags
 
     /// The length of the outbound routing path, where -1 indicates flood routing.
     public let outPathLength: Int8
@@ -83,8 +83,8 @@ public struct MeshContact: Sendable, Identifiable, Equatable {
     /// - Parameters:
     ///   - id: Unique hex string identifier.
     ///   - publicKey: The 32-byte public key data.
-    ///   - type: Contact type identifier.
-    ///   - flags: Operational flags.
+    ///   - type: Contact type identifier (chat, repeater, room).
+    ///   - flags: Operational flags (favorite, telemetry permissions).
     ///   - outPathLength: Length of the outbound path.
     ///   - outPath: Outbound path data.
     ///   - advertisedName: Name advertised by the node.
@@ -95,8 +95,8 @@ public struct MeshContact: Sendable, Identifiable, Equatable {
     public init(
         id: String,
         publicKey: Data,
-        type: UInt8,
-        flags: UInt8,
+        type: ContactType,
+        flags: ContactFlags,
         outPathLength: Int8,
         outPath: Data,
         advertisedName: String,

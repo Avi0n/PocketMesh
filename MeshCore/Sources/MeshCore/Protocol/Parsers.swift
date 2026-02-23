@@ -102,8 +102,8 @@ public enum Parsers {
 
         var offset = 0
         let publicKey = Data(data[offset..<offset+32]); offset += 32
-        let type = data[offset]; offset += 1
-        let flags = data[offset]; offset += 1
+        let type = ContactType(rawValue: data[offset]) ?? .chat; offset += 1
+        let flags = ContactFlags(rawValue: data[offset]); offset += 1
         let pathLen = Int8(bitPattern: data[offset]); offset += 1
         let actualPathLen = pathLen == -1 ? 0 : Int(pathLen)
         // Read full 64-byte path field, but only use first actualPathLen bytes
@@ -244,12 +244,12 @@ public enum Parsers {
 
             let fwVer = data[0]
             var offset = 1
-            var maxContacts: Int? = nil
-            var maxChannels: Int? = nil
-            var blePin: UInt32? = nil
-            var fwBuild: String? = nil
-            var model: String? = nil
-            var version: String? = nil
+            var maxContacts: Int?
+            var maxChannels: Int?
+            var blePin: UInt32?
+            var fwBuild: String?
+            var model: String?
+            var version: String?
 
             // v3+ format: fwBuild=12, model=40, version=20 bytes
             if fwVer >= 3 && data.count >= PacketSize.deviceInfoV3Full {
@@ -316,7 +316,7 @@ public enum Parsers {
         /// - Offset 15+ (N bytes): Message payload (UTF-8)
         static func parse(_ data: Data, version: Version) -> MeshEvent {
             var offset = 0
-            var snr: Double? = nil
+            var snr: Double?
 
             let minSize = version == .v3 ? PacketSize.contactMessageV3Minimum : PacketSize.contactMessageV1Minimum
             guard data.count >= minSize else {
@@ -337,7 +337,7 @@ public enum Parsers {
             let txtType = data[offset]; offset += 1
             let timestamp = Date(timeIntervalSince1970: TimeInterval(data.readUInt32LE(at: offset))); offset += 4
 
-            var signature: Data? = nil
+            var signature: Data?
             if txtType == 2 && data.count >= offset + 4 {
                 signature = Data(data[offset..<offset+4]); offset += 4
             }
@@ -388,7 +388,7 @@ public enum Parsers {
         /// - Offset 10+ (N bytes): Message payload (UTF-8)
         static func parse(_ data: Data, version: Version) -> MeshEvent {
             var offset = 0
-            var snr: Double? = nil
+            var snr: Double?
 
             let minSize = version == .v3 ? PacketSize.channelMessageV3Minimum : PacketSize.channelMessageV1Minimum
             guard data.count >= minSize else {
@@ -452,10 +452,10 @@ public enum Parsers {
     enum Advertisement {
         /// Parses a 32-byte public key advertisement.
         static func parse(_ data: Data) -> MeshEvent {
-            guard data.count >= 32 else {
-                return .parseFailure(data: data, reason: "Advertisement too short: \(data.count) < 32")
+            guard data.count >= PacketBuilder.publicKeySize else {
+                return .parseFailure(data: data, reason: "Advertisement too short: \(data.count) < \(PacketBuilder.publicKeySize)")
             }
-            let publicKey = Data(data.prefix(32))
+            let publicKey = Data(data.prefix(PacketBuilder.publicKeySize))
             return .advertisement(publicKey: publicKey)
         }
     }
@@ -472,7 +472,7 @@ public enum Parsers {
         static func parse(_ data: Data) -> MeshEvent {
             if let contact = parseContactData(data) {
                 return .newContact(contact)
-            } else if data.count >= 32 {
+            } else if data.count >= PacketBuilder.publicKeySize {
                 // Fallback: insufficient data for full contact, but we have public key
                 return .parseFailure(
                     data: data,
@@ -489,10 +489,10 @@ public enum Parsers {
     enum PathUpdate {
         /// Parses a 32-byte public key path update.
         static func parse(_ data: Data) -> MeshEvent {
-            guard data.count >= 32 else {
-                return .parseFailure(data: data, reason: "PathUpdate too short: \(data.count) < 32")
+            guard data.count >= PacketBuilder.publicKeySize else {
+                return .parseFailure(data: data, reason: "PathUpdate too short: \(data.count) < \(PacketBuilder.publicKeySize)")
             }
-            let publicKey = Data(data.prefix(32))
+            let publicKey = Data(data.prefix(PacketBuilder.publicKeySize))
             return .pathUpdate(publicKey: publicKey)
         }
     }

@@ -144,3 +144,45 @@
 
 /* Notification title when a new room is discovered on the mesh network */
 "notifications.discovery.room" = "Виявлено нову кімнату";
+
+
+// MARK: - Notification Actions
+
+/* Notification action button to reply to a message */
+"notifications.action.reply" = "Відповісти";
+
+/* Notification action button to send a quick reply */
+"notifications.action.send" = "Надіслати";
+
+/* Notification action placeholder for quick reply text input */
+"notifications.action.messagePlaceholder" = "Повідомлення...";
+
+/* Notification action button to mark a message as read */
+"notifications.action.markAsRead" = "Позначити як прочитане";
+
+
+// MARK: - Low Battery Notifications
+
+/* Notification title for low battery warning */
+"notifications.lowBattery.title" = "Низький заряд батареї";
+
+/* Notification body for low battery warning - %1$@ is device name, %2$d is battery percentage */
+"notifications.lowBattery.body" = "Заряд батареї %1$@ становить %2$d%%";
+
+
+// MARK: - Connection VoiceOver Announcements
+
+/* VoiceOver announcement when sync fails and device is disconnecting */
+"accessibility.connection.syncFailedDisconnecting" = "Синхронізація не вдалася. Від'єднання.";
+
+/* VoiceOver announcement when device connection is lost */
+"accessibility.connection.deviceConnectionLost" = "З'єднання з пристроєм втрачено";
+
+/* VoiceOver announcement when device reconnects */
+"accessibility.connection.deviceReconnected" = "Пристрій перепідключено";
+
+
+// MARK: - Status Pill
+
+/* Status pill message when sync has failed */
+"statusPill.syncFailed" = "Помилка синхронізації";

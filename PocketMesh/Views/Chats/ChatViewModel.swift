@@ -178,7 +178,7 @@ final class ChatViewModel {
     private(set) var isLoadingOlder = false
 
     /// Whether more messages exist beyond what's loaded
-    private var hasMoreMessages = true
+    private(set) var hasMoreMessages = true
 
     /// Number of messages to fetch per page
     private let pageSize = 50
@@ -662,7 +662,7 @@ final class ChatViewModel {
                 dividerComputed = true
             }
 
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index loaded messages for reaction matching and process any pending reactions
             if let reactionService = appState?.services?.reactionService {
@@ -703,8 +703,9 @@ final class ChatViewModel {
                 }
             }
 
-            // Clear unread count and notify UI to refresh chat list
+            // Clear unread count and mention badge, then notify UI to refresh chat list
             try await dataStore.clearUnreadCount(contactID: contact.id)
+            try await dataStore.clearUnreadMentionCount(contactID: contact.id)
             syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
@@ -911,7 +912,7 @@ final class ChatViewModel {
             }
 
             buildChannelSenders(deviceID: channel.deviceID)
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index loaded messages for reaction matching and process any pending reactions
             if let reactionService = appState?.services?.reactionService {
@@ -963,8 +964,9 @@ final class ChatViewModel {
                 }
             }
 
-            // Clear unread count and notify UI to refresh chat list
+            // Clear unread count and mention badge, then notify UI to refresh chat list
             try await dataStore.clearChannelUnreadCount(channelID: channel.id)
+            try await dataStore.clearChannelUnreadMentionCount(channelID: channel.id)
             syncCoordinator?.notifyConversationsChanged()
 
             // Update app badge
@@ -990,17 +992,22 @@ final class ChatViewModel {
         isLoadingOlder = true
         defer { isLoadingOlder = false }
 
+        // Snapshot conversation context before any await — actor reentrancy
+        // means currentContact/currentChannel can change during suspensions
+        let contact = currentContact
+        let channel = currentChannel
+
         do {
             let currentOffset = totalFetchedCount
             var olderMessages: [MessageDTO]
 
-            if let contact = currentContact {
+            if let contact {
                 olderMessages = try await dataStore.fetchMessages(
                     contactID: contact.id,
                     limit: pageSize,
                     offset: currentOffset
                 )
-            } else if let channel = currentChannel {
+            } else if let channel {
                 olderMessages = try await dataStore.fetchMessages(
                     deviceID: channel.deviceID,
                     channelIndex: channel.index,
@@ -1019,7 +1026,7 @@ final class ChatViewModel {
             }
 
             // Filter blocked senders for channel messages
-            if currentChannel != nil, let syncCoordinator {
+            if channel != nil, let syncCoordinator {
                 let blockedNames = await syncCoordinator.blockedSenderNames()
                 if !blockedNames.isEmpty {
                     olderMessages = olderMessages.filter { message in
@@ -1030,7 +1037,7 @@ final class ChatViewModel {
             }
 
             // Hide sent reaction messages (unless failed)
-            let isDM = currentContact != nil
+            let isDM = contact != nil
             olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
 
             // Filter out messages already in array (race condition: appendMessageIfNew can add
@@ -1047,10 +1054,10 @@ final class ChatViewModel {
             }
 
             // Rebuild display items with new messages
-            await buildDisplayItems()
+            buildDisplayItems()
 
             // Index older channel messages for reaction matching and process pending reactions
-            if let channel = currentChannel,
+            if let channel,
                let reactionService = appState?.services?.reactionService {
                 let localNodeName = appState?.connectedDevice?.nodeName
                 let deviceID = appState?.connectedDevice?.id ?? UUID()
@@ -1101,7 +1108,7 @@ final class ChatViewModel {
             }
 
             // Index older DM messages for reaction matching and process pending reactions
-            if let contact = currentContact,
+            if let contact,
                let reactionService = appState?.services?.reactionService {
                 for message in olderMessages {
                     let pendingMatches = await reactionService.indexDMMessage(
@@ -1680,66 +1687,8 @@ final class ChatViewModel {
 
     // MARK: - Timestamp Helpers
 
-    /// Determines if a timestamp should be shown for a message at the given index.
-    /// Shows timestamp for first message or when there's a gap > 5 minutes.
-    static func shouldShowTimestamp(at index: Int, in messages: [MessageDTO]) -> Bool {
-        guard index > 0 else { return true }
-
-        let currentMessage = messages[index]
-        let previousMessage = messages[index - 1]
-
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        return gap > 300
-    }
-
-    /// Determines if the message direction changed from the previous message.
-    /// Used to add visual separation between incoming and outgoing message groups.
-    static func isDirectionChange(at index: Int, in messages: [MessageDTO]) -> Bool {
-        guard index > 0 else { return false }
-
-        let currentMessage = messages[index]
-        let previousMessage = messages[index - 1]
-
-        return currentMessage.direction != previousMessage.direction
-    }
-
-    /// Determines if sender name should be shown for a channel message at the given index.
-    /// Returns true for first message or when sender/timing breaks the group.
-    ///
-    /// **Note:** Channel messages identify senders solely by parsing "NodeName: text" from
-    /// the message content (per MeshCore protocol). There is no cryptographic sender
-    /// verification. `senderKeyPrefix` is always nil for channel messages.
-    static func shouldShowSenderName(at index: Int, in messages: [MessageDTO]) -> Bool {
-        let currentMessage = messages[index]
-
-        // Direct messages use configuration.showSenderName=false to hide names,
-        // so this value is ignored. Return true (no grouping) for simplicity.
-        guard currentMessage.contactID == nil else { return true }
-
-        // Outgoing messages don't show sender name
-        guard !currentMessage.isOutgoing else { return true }
-
-        // First message always shows sender name
-        guard index > 0 else { return true }
-
-        let previousMessage = messages[index - 1]
-
-        // Direction change breaks group
-        guard !previousMessage.isOutgoing else { return true }
-
-        // Time gap > 5 minutes breaks group
-        let gap = abs(Int(currentMessage.timestamp) - Int(previousMessage.timestamp))
-        guard gap <= 300 else { return true }
-
-        // Different sender breaks group (channel messages only use senderNodeName)
-        if let currentName = currentMessage.senderNodeName,
-           let previousName = previousMessage.senderNodeName {
-            return currentName != previousName
-        }
-
-        // No sender name available (malformed message), show name to be safe
-        return true
-    }
+    /// Time gap (in seconds) that breaks message grouping for timestamps and sender names.
+    static let messageGroupingGapSeconds = 300
 
     /// Pre-computed display flags for a single message
     struct DisplayFlags {
@@ -1760,7 +1709,7 @@ final class ChatViewModel {
         let timeGap = abs(Int(message.timestamp) - Int(previous.timestamp))
 
         // Timestamp: gap > 5 minutes
-        let showTimestamp = timeGap > 300
+        let showTimestamp = timeGap > messageGroupingGapSeconds
 
         // Direction gap: direction changed from previous
         let showDirectionGap = message.direction != previous.direction
@@ -1770,7 +1719,7 @@ final class ChatViewModel {
         if message.contactID != nil || message.isOutgoing {
             // Direct messages or outgoing: always true (UI ignores for direct messages anyway)
             showSenderName = true
-        } else if previous.isOutgoing || timeGap > 300 {
+        } else if previous.isOutgoing || timeGap > messageGroupingGapSeconds {
             // Direction change or time gap breaks group
             showSenderName = true
         } else if let currentName = message.senderNodeName, let previousName = previous.senderNodeName {
@@ -1787,15 +1736,10 @@ final class ChatViewModel {
     // MARK: - Display Items
 
     /// Build display items with pre-computed properties.
-    /// URL detection runs off main thread to avoid blocking.
-    func buildDisplayItems() async {
+    func buildDisplayItems() {
         messagesByID = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
 
-        // Extract texts for URL detection off main thread
-        let texts = messages.map { $0.text }
-        let urls = await Task.detached(priority: .userInitiated) {
-            texts.map { LinkPreviewService.extractFirstURL(from: $0) }
-        }.value
+        let urls = messages.map { LinkPreviewService.extractFirstURL(from: $0.text) }
 
         displayItems = messages.enumerated().map { index, message in
             // Compute all display flags in single pass to avoid redundant array lookups
@@ -2091,6 +2035,10 @@ final class ChatViewModel {
             imageFetchTasks.removeValue(forKey: messageID)
             return
         }
+        guard displayItemIndexByID[messageID] != nil else {
+            imageFetchTasks.removeValue(forKey: messageID)
+            return
+        }
 
         switch result {
         case .loaded(let data):
@@ -2107,6 +2055,10 @@ final class ChatViewModel {
                 }
             }.value
             guard !Task.isCancelled, let decoded else {
+                imageFetchTasks.removeValue(forKey: messageID)
+                return
+            }
+            guard displayItemIndexByID[messageID] != nil else {
                 imageFetchTasks.removeValue(forKey: messageID)
                 return
             }
@@ -2168,6 +2120,8 @@ final class ChatViewModel {
         isProcessingQueue = true
         defer { isProcessingQueue = false }
 
+        // Snapshot before suspensions — currentContact can change if user switches conversations
+        let contact = currentContact
         var lastDeviceID: UUID?
 
         // Process messages with re-check after reload to catch any that arrived during reload
@@ -2195,7 +2149,7 @@ final class ChatViewModel {
             }
 
             // Reload after queue drains - syncs statuses and conversation list
-            if let contact = currentContact {
+            if let contact {
                 await loadMessages(for: contact)
             }
             if let deviceID = lastDeviceID {

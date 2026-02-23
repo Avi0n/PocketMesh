@@ -1,23 +1,27 @@
-import XCTest
+import Foundation
+import Testing
 @testable import MeshCore
 
-final class FactoryResetTests: XCTestCase {
+@Suite("FactoryReset")
+struct FactoryResetTests {
 
-    func test_factoryReset_includesGuardString() {
+    @Test("factoryReset includes guard string")
+    func factoryResetIncludesGuardString() {
         let packet = PacketBuilder.factoryReset()
 
         // Firmware requires: [0x33]['r']['e']['s']['e']['t']
-        XCTAssertEqual(packet.count, 6, "Should be 6 bytes: command + 'reset'")
-        XCTAssertEqual(packet[0], 0x33, "Byte 0 should be command code 0x33")
+        #expect(packet.count == 6, "Should be 6 bytes: command + 'reset'")
+        #expect(packet[0] == 0x33, "Byte 0 should be command code 0x33")
 
         let guardString = String(data: Data(packet[1...]), encoding: .utf8)
-        XCTAssertEqual(guardString, "reset", "Bytes 1-5 should be 'reset'")
+        #expect(guardString == "reset", "Bytes 1-5 should be 'reset'")
     }
 
-    func test_factoryReset_exactBytes() {
+    @Test("factoryReset exact bytes")
+    func factoryResetExactBytes() {
         let packet = PacketBuilder.factoryReset()
 
         let expected = Data([0x33, 0x72, 0x65, 0x73, 0x65, 0x74])  // 0x33 + "reset"
-        XCTAssertEqual(packet, expected)
+        #expect(packet == expected)
     }
 }
