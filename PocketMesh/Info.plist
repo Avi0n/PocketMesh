@@ -25,6 +25,17 @@
 		<string>MeshCore-</string>
 		<string>Whisper-</string>
 		<string>WisCore</string>
+		<string>XIAO</string>
+		<string>elecrow</string>
+		<string>HT-n5262</string>
+		<string>Seeed</string>
+		<string>BQ</string>
+		<string>ProMicro</string>
+		<string>Keepteen</string>
+		<string>Meshtiny</string>
+		<string>T1000-E-BOOT</string>
+		<string>me25ls01-BOOT</string>
+		<string>NRF52 DK</string>
 	</array>
 	<key>NSAccessorySetupBluetoothServices</key>
 	<array>

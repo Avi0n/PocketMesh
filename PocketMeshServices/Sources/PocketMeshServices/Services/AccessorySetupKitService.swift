@@ -73,7 +73,16 @@ public final class AccessorySetupKitService {
 
     /// Bluetooth name prefixes for supported MeshCore devices
     /// Each prefix must have a matching entry in NSAccessorySetupBluetoothNames in Info.plist
-    private static let supportedNamePrefixes = ["MeshCore-", "Whisper-", "WisCore"]
+    private static let supportedNamePrefixes = [
+        // Primary MeshCore firmware prefix
+        "MeshCore-",
+        // Third-party/legacy firmware prefixes
+        "Whisper-", "WisCore",
+        // nRF52 board BSP defaults (devices may advertise these when firmware name isn't set)
+        "XIAO", "elecrow", "HT-n5262", "Seeed", "BQ",
+        "ProMicro", "Keepteen", "Meshtiny", "T1000-E-BOOT",
+        "me25ls01-BOOT", "NRF52 DK",
+    ]
 
     private var discoveryDescriptors: [ASDiscoveryDescriptor] {
         Self.supportedNamePrefixes.map { prefix in
