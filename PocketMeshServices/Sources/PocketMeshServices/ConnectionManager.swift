@@ -206,7 +206,7 @@ public final class ConnectionManager {
     public private(set) var currentTransportType: TransportType?
 
     /// The user's connection intent. Replaces shouldBeConnected, userExplicitlyDisconnected, and pendingForceFullSync.
-    private(set) var connectionIntent: ConnectionIntent = .restored()
+    private(set) var connectionIntent: ConnectionIntent = .none
 
     // MARK: - Callbacks
 
@@ -238,6 +238,7 @@ public final class ConnectionManager {
     // MARK: - Internal Components
 
     private let modelContainer: ModelContainer
+    private let defaults: UserDefaults
     private let transport: iOSBLETransport
     private var wifiTransport: WiFiTransport?
     private var session: MeshCoreSession?
@@ -402,7 +403,7 @@ public final class ConnectionManager {
             return testID
         }
         #endif
-        guard let uuidString = UserDefaults.standard.string(forKey: lastDeviceIDKey) else {
+        guard let uuidString = defaults.string(forKey: lastDeviceIDKey) else {
             return nil
         }
         return UUID(uuidString: uuidString)
@@ -410,14 +411,14 @@ public final class ConnectionManager {
 
     /// Records a successful connection for future restoration
     private func persistConnection(deviceID: UUID, deviceName: String) {
-        UserDefaults.standard.set(deviceID.uuidString, forKey: lastDeviceIDKey)
-        UserDefaults.standard.set(deviceName, forKey: lastDeviceNameKey)
+        defaults.set(deviceID.uuidString, forKey: lastDeviceIDKey)
+        defaults.set(deviceName, forKey: lastDeviceNameKey)
     }
 
     /// Clears the persisted connection
     private func clearPersistedConnection() {
-        UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
-        UserDefaults.standard.removeObject(forKey: lastDeviceNameKey)
+        defaults.removeObject(forKey: lastDeviceIDKey)
+        defaults.removeObject(forKey: lastDeviceNameKey)
     }
 
     /// Whether the disconnected pill should be suppressed (user explicitly disconnected)
@@ -427,7 +428,7 @@ public final class ConnectionManager {
 
     /// Most recent disconnect diagnostic summary persisted across app launches.
     public var lastDisconnectDiagnostic: String? {
-        UserDefaults.standard.string(forKey: lastDisconnectDiagnosticKey)
+        defaults.string(forKey: lastDisconnectDiagnosticKey)
     }
 
     /// Current high-level connection intent, exported for diagnostics.
@@ -1197,8 +1198,10 @@ public final class ConnectionManager {
     /// - Parameters:
     ///   - modelContainer: The SwiftData model container for persistence
     ///   - stateMachine: Optional BLE state machine for testing. If nil, creates a real BLEStateMachine.
-    public init(modelContainer: ModelContainer, stateMachine: (any BLEStateMachineProtocol)? = nil) {
+    public init(modelContainer: ModelContainer, defaults: UserDefaults = .standard, stateMachine: (any BLEStateMachineProtocol)? = nil) {
         self.modelContainer = modelContainer
+        self.defaults = defaults
+        self.connectionIntent = .restored(from: defaults)
 
         // Use provided state machine or create default
         let bleStateMachine = stateMachine ?? BLEStateMachine()
@@ -1445,7 +1448,7 @@ public final class ConnectionManager {
 
         // Clear intentional disconnect flag - user is explicitly pairing
         connectionIntent = .wantsConnection()
-        connectionIntent.persist()
+        persistIntent()
 
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
@@ -1542,7 +1545,7 @@ public final class ConnectionManager {
                 // The reconnection handler will create the session when auto-reconnect succeeds.
                 // Preserve user intent so the watchdog can retry if auto-reconnect fails.
                 connectionIntent = .wantsConnection(forceFullSync: forceFullSync)
-                connectionIntent.persist()
+                persistIntent()
                 // Show connecting UI so the user sees their tap did something
                 if connectionState != .connecting {
                     connectionState = .connecting
@@ -1560,7 +1563,7 @@ public final class ConnectionManager {
         // (common after app updates), adopt the existing link rather than blocking as "connected elsewhere".
         if deviceID == lastConnectedDeviceID {
             connectionIntent = .wantsConnection(forceFullSync: forceFullSync)
-            connectionIntent.persist()
+            persistIntent()
 
             if await startAdoptingLastSystemConnectedPeripheralIfAvailable(
                 deviceID: deviceID,
@@ -1578,7 +1581,7 @@ public final class ConnectionManager {
         // Clear intentional disconnect flag before changing state,
         // so the didSet invariant check sees consistent state
         connectionIntent = .wantsConnection(forceFullSync: forceFullSync)
-        connectionIntent.persist()
+        persistIntent()
 
         // Set connecting state for immediate UI feedback
         connectionState = .connecting
@@ -1656,7 +1659,7 @@ public final class ConnectionManager {
         switch reason {
         case .userInitiated, .statusMenuDisconnectTap, .forgetDevice, .deviceRemovedFromSettings, .factoryReset, .switchingDevice:
             connectionIntent = .userDisconnected
-            connectionIntent.persist()
+            persistIntent()
         case .resyncFailed, .wifiAddressChange, .wifiReconnectPrep, .pairingFailed:
             // Preserve .wantsConnection so health check can retry
             break
@@ -1722,7 +1725,7 @@ public final class ConnectionManager {
         logger.info("Starting simulator connection")
 
         connectionIntent = .wantsConnection()
-        connectionIntent.persist()
+        persistIntent()
         connectionState = .connecting
 
         do {
@@ -1791,7 +1794,7 @@ public final class ConnectionManager {
         }
 
         connectionIntent = .wantsConnection()
-        connectionIntent.persist()
+        persistIntent()
         connectionState = .connecting
 
         do {
@@ -1897,7 +1900,7 @@ public final class ConnectionManager {
 
         // Update intent
         connectionIntent = .wantsConnection()
-        connectionIntent.persist()
+        persistIntent()
 
         // Validate device is registered with ASK
         if accessorySetupKit.isSessionActive {
@@ -2885,7 +2888,11 @@ public final class ConnectionManager {
 
     private func persistDisconnectDiagnostic(_ summary: String) {
         let timestamp = Date().ISO8601Format()
-        UserDefaults.standard.set("\(timestamp) \(summary)", forKey: lastDisconnectDiagnosticKey)
+        defaults.set("\(timestamp) \(summary)", forKey: lastDisconnectDiagnosticKey)
+    }
+
+    private func persistIntent() {
+        connectionIntent.persist(to: defaults)
     }
 
     // MARK: - State Invariants

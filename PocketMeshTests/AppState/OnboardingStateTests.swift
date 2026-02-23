@@ -6,78 +6,63 @@ import Foundation
 @MainActor
 struct OnboardingStateTests {
 
-    private let onboardingKey = "hasCompletedOnboarding"
+    private let defaults: UserDefaults
 
-    private func cleanupUserDefaults() {
-        UserDefaults.standard.removeObject(forKey: onboardingKey)
+    init() {
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
     }
 
     // MARK: - completeOnboarding
 
     @Test("completeOnboarding sets flag to true")
     func completeOnboardingSetsFlag() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
+        onboarding.hasCompletedOnboarding = false
 
-        let appState = AppState()
-        appState.onboarding.hasCompletedOnboarding = false
+        onboarding.completeOnboarding()
 
-        appState.completeOnboarding()
-
-        #expect(appState.onboarding.hasCompletedOnboarding == true)
+        #expect(onboarding.hasCompletedOnboarding == true)
     }
 
     @Test("completeOnboarding persists to UserDefaults")
     func completeOnboardingPersists() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
+        onboarding.hasCompletedOnboarding = false
 
-        let appState = AppState()
-        appState.onboarding.hasCompletedOnboarding = false
+        onboarding.completeOnboarding()
 
-        appState.completeOnboarding()
-
-        #expect(UserDefaults.standard.bool(forKey: onboardingKey) == true)
+        #expect(defaults.bool(forKey: "hasCompletedOnboarding") == true)
     }
 
     // MARK: - resetOnboarding
 
     @Test("resetOnboarding clears flag")
     func resetOnboardingClearsFlag() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
+        onboarding.hasCompletedOnboarding = true
 
-        let appState = AppState()
-        appState.onboarding.hasCompletedOnboarding = true
+        onboarding.resetOnboarding()
 
-        appState.onboarding.resetOnboarding()
-
-        #expect(appState.onboarding.hasCompletedOnboarding == false)
+        #expect(onboarding.hasCompletedOnboarding == false)
     }
 
     @Test("resetOnboarding clears onboarding path")
     func resetOnboardingClearsPath() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
+        onboarding.onboardingPath = [.welcome, .permissions]
 
-        let appState = AppState()
-        appState.onboarding.onboardingPath = [.welcome, .permissions]
+        onboarding.resetOnboarding()
 
-        appState.onboarding.resetOnboarding()
-
-        #expect(appState.onboarding.onboardingPath.isEmpty)
+        #expect(onboarding.onboardingPath.isEmpty)
     }
 
     @Test("resetOnboarding persists false to UserDefaults")
     func resetOnboardingPersists() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
+        onboarding.hasCompletedOnboarding = true
+        onboarding.resetOnboarding()
 
-        let appState = AppState()
-        appState.onboarding.hasCompletedOnboarding = true
-        appState.onboarding.resetOnboarding()
-
-        #expect(UserDefaults.standard.bool(forKey: onboardingKey) == false)
+        #expect(defaults.bool(forKey: "hasCompletedOnboarding") == false)
     }
 
     // MARK: - onboardingPath
@@ -159,15 +144,12 @@ struct OnboardingStateTests {
 
     @Test("hasCompletedOnboarding syncs to UserDefaults on set")
     func hasCompletedOnboardingDidSet() {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let onboarding = OnboardingState(defaults: defaults)
 
-        let appState = AppState()
+        onboarding.hasCompletedOnboarding = true
+        #expect(defaults.bool(forKey: "hasCompletedOnboarding") == true)
 
-        appState.onboarding.hasCompletedOnboarding = true
-        #expect(UserDefaults.standard.bool(forKey: onboardingKey) == true)
-
-        appState.onboarding.hasCompletedOnboarding = false
-        #expect(UserDefaults.standard.bool(forKey: onboardingKey) == false)
+        onboarding.hasCompletedOnboarding = false
+        #expect(defaults.bool(forKey: "hasCompletedOnboarding") == false)
     }
 }

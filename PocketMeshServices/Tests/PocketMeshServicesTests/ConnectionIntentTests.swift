@@ -91,53 +91,44 @@ struct ConnectionIntentTests {
     }
 }
 
-// MARK: - Persistence Tests (serialized to avoid UserDefaults race conditions)
+// MARK: - Persistence Tests
 
-@Suite("ConnectionIntent Persistence Tests", .serialized)
+@Suite("ConnectionIntent Persistence Tests")
 struct ConnectionIntentPersistenceTests {
 
-    private static let key = "com.pocketmesh.userExplicitlyDisconnected"
+    private let defaults: UserDefaults
+
+    init() {
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+    }
 
     @Test("userDisconnected persists and restores")
     func userDisconnectedPersistsAndRestores() {
-        UserDefaults.standard.removeObject(forKey: Self.key)
-
-        ConnectionIntent.userDisconnected.persist()
-        let restored = ConnectionIntent.restored()
+        ConnectionIntent.userDisconnected.persist(to: defaults)
+        let restored = ConnectionIntent.restored(from: defaults)
         #expect(restored == .userDisconnected)
-
-        UserDefaults.standard.removeObject(forKey: Self.key)
     }
 
     @Test("none clears persisted userDisconnected")
     func noneClearsPersistence() {
-        UserDefaults.standard.removeObject(forKey: Self.key)
+        ConnectionIntent.userDisconnected.persist(to: defaults)
+        #expect(ConnectionIntent.restored(from: defaults) == .userDisconnected)
 
-        ConnectionIntent.userDisconnected.persist()
-        #expect(ConnectionIntent.restored() == .userDisconnected)
-
-        ConnectionIntent.none.persist()
-        #expect(ConnectionIntent.restored() == .none)
-
-        UserDefaults.standard.removeObject(forKey: Self.key)
+        ConnectionIntent.none.persist(to: defaults)
+        #expect(ConnectionIntent.restored(from: defaults) == .none)
     }
 
     @Test("wantsConnection clears persisted userDisconnected")
     func wantsConnectionClearsPersistence() {
-        UserDefaults.standard.removeObject(forKey: Self.key)
+        ConnectionIntent.userDisconnected.persist(to: defaults)
+        #expect(ConnectionIntent.restored(from: defaults) == .userDisconnected)
 
-        ConnectionIntent.userDisconnected.persist()
-        #expect(ConnectionIntent.restored() == .userDisconnected)
-
-        ConnectionIntent.wantsConnection().persist()
-        #expect(ConnectionIntent.restored() == .none)
-
-        UserDefaults.standard.removeObject(forKey: Self.key)
+        ConnectionIntent.wantsConnection().persist(to: defaults)
+        #expect(ConnectionIntent.restored(from: defaults) == .none)
     }
 
     @Test("restored returns .none when nothing persisted")
     func restoredReturnsNoneByDefault() {
-        UserDefaults.standard.removeObject(forKey: Self.key)
-        #expect(ConnectionIntent.restored() == .none)
+        #expect(ConnectionIntent.restored(from: defaults) == .none)
     }
 }

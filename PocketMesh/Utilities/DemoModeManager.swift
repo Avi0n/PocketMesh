@@ -8,13 +8,21 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "DemoMode")
 final class DemoModeManager {
     static let shared = DemoModeManager()
 
-    @ObservationIgnored
-    @AppStorage("isDemoModeUnlocked") var isUnlocked: Bool = false
+    private let defaults: UserDefaults
 
-    @ObservationIgnored
-    @AppStorage("isDemoModeEnabled") var isEnabled: Bool = false
+    var isUnlocked: Bool {
+        didSet { defaults.set(isUnlocked, forKey: "isDemoModeUnlocked") }
+    }
 
-    private init() {}
+    var isEnabled: Bool {
+        didSet { defaults.set(isEnabled, forKey: "isDemoModeEnabled") }
+    }
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.isUnlocked = defaults.bool(forKey: "isDemoModeUnlocked")
+        self.isEnabled = defaults.bool(forKey: "isDemoModeEnabled")
+    }
 
     func unlock() {
         logger.info("Demo mode unlocked and enabled")

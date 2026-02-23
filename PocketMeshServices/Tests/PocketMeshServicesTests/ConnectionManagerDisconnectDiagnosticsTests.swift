@@ -2,26 +2,25 @@ import Foundation
 import Testing
 @testable import PocketMeshServices
 
-@Suite("ConnectionManager Disconnect Diagnostics Tests", .serialized)
+@Suite("ConnectionManager Disconnect Diagnostics Tests")
 @MainActor
 struct ConnectionManagerDisconnectDiagnosticsTests {
-    private static let lastDisconnectDiagnosticKey = "com.pocketmesh.lastDisconnectDiagnostic"
+
+    private let defaults: UserDefaults
+
+    init() {
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+    }
 
     private func createTestManager() throws -> (ConnectionManager, MockBLEStateMachine) {
         let container = try PersistenceStore.createContainer(inMemory: true)
         let mock = MockBLEStateMachine()
-        let manager = ConnectionManager(modelContainer: container, stateMachine: mock)
+        let manager = ConnectionManager(modelContainer: container, defaults: defaults, stateMachine: mock)
         return (manager, mock)
-    }
-
-    private func clearLastDisconnectDiagnostic() {
-        UserDefaults.standard.removeObject(forKey: Self.lastDisconnectDiagnosticKey)
     }
 
     @Test("auto-reconnect entry persists disconnect diagnostic with error info")
     func autoReconnectEntryPersistsDisconnectDiagnostic() async throws {
-        clearLastDisconnectDiagnostic()
-        defer { clearLastDisconnectDiagnostic() }
 
         let (manager, mock) = try createTestManager()
         let deviceID = UUID()
@@ -53,9 +52,6 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("health check preserves intent and persists diagnostic when other app is connected")
     func healthCheckPersistsDiagnosticWhenOtherAppConnected() async throws {
-        clearLastDisconnectDiagnostic()
-        defer { clearLastDisconnectDiagnostic() }
-
         let (manager, mock) = try createTestManager()
         let deviceID = UUID()
 
@@ -84,9 +80,6 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("health check adopts system-connected last device when adoption can start")
     func healthCheckAdoptsSystemConnectedPeripheral() async throws {
-        clearLastDisconnectDiagnostic()
-        defer { clearLastDisconnectDiagnostic() }
-
         let (manager, mock) = try createTestManager()
         let deviceID = UUID()
 
@@ -118,9 +111,6 @@ struct ConnectionManagerDisconnectDiagnosticsTests {
 
     @Test("manual connect adopts system-connected last device instead of throwing deviceConnectedToOtherApp")
     func manualConnectAdoptsSystemConnectedPeripheral() async throws {
-        clearLastDisconnectDiagnostic()
-        defer { clearLastDisconnectDiagnostic() }
-
         let (manager, mock) = try createTestManager()
         let deviceID = UUID()
 

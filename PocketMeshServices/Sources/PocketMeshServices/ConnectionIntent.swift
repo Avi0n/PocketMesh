@@ -21,22 +21,19 @@ public enum ConnectionIntent: Sendable, Equatable {
 
     /// Persists the `userDisconnected` state to UserDefaults.
     /// Only `.userDisconnected` is persisted; other states are transient.
-    func persist() {
+    func persist(to defaults: UserDefaults = .standard) {
         switch self {
         case .userDisconnected:
-            UserDefaults.standard.set(true, forKey: Self.persistenceKey)
+            defaults.set(true, forKey: Self.persistenceKey)
         case .none, .wantsConnection:
-            UserDefaults.standard.removeObject(forKey: Self.persistenceKey)
+            defaults.removeObject(forKey: Self.persistenceKey)
         }
     }
 
     /// Restores intent from UserDefaults on launch.
     /// Returns `.userDisconnected` if persisted, otherwise `.none`.
-    static func restored() -> ConnectionIntent {
-        if UserDefaults.standard.bool(forKey: persistenceKey) {
-            return .userDisconnected
-        }
-        return .none
+    static func restored(from defaults: UserDefaults = .standard) -> ConnectionIntent {
+        defaults.bool(forKey: persistenceKey) ? .userDisconnected : .none
     }
 
     // MARK: - Convenience

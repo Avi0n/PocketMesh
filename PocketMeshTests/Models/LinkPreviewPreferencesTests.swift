@@ -5,16 +5,15 @@ import Foundation
 @Suite("LinkPreviewPreferences Tests")
 struct LinkPreviewPreferencesTests {
 
-    // Clean up UserDefaults before tests
+    private let defaults: UserDefaults
+
     init() {
-        UserDefaults.standard.removeObject(forKey: "linkPreviewsEnabled")
-        UserDefaults.standard.removeObject(forKey: "linkPreviewsAutoResolveDM")
-        UserDefaults.standard.removeObject(forKey: "linkPreviewsAutoResolveChannels")
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
     }
 
     @Test("Has expected defaults: previews off, auto-resolve on")
     func defaultsToEnabled() {
-        let prefs = LinkPreviewPreferences()
+        let prefs = LinkPreviewPreferences(defaults: defaults)
         #expect(prefs.previewsEnabled == false)
         #expect(prefs.autoResolveDM == true)
         #expect(prefs.autoResolveChannels == true)
@@ -22,7 +21,7 @@ struct LinkPreviewPreferencesTests {
 
     @Test("shouldAutoResolve for DM respects settings")
     func shouldAutoResolveForDM() {
-        var prefs = LinkPreviewPreferences()
+        var prefs = LinkPreviewPreferences(defaults: defaults)
 
         // Master on, auto on -> true
         prefs.previewsEnabled = true
@@ -41,7 +40,7 @@ struct LinkPreviewPreferencesTests {
 
     @Test("shouldAutoResolve for channel respects settings")
     func shouldAutoResolveForChannel() {
-        var prefs = LinkPreviewPreferences()
+        var prefs = LinkPreviewPreferences(defaults: defaults)
 
         prefs.previewsEnabled = true
         prefs.autoResolveChannels = true
@@ -53,7 +52,7 @@ struct LinkPreviewPreferencesTests {
 
     @Test("shouldShowPreview reflects master toggle")
     func shouldShowPreview() {
-        var prefs = LinkPreviewPreferences()
+        var prefs = LinkPreviewPreferences(defaults: defaults)
 
         prefs.previewsEnabled = true
         #expect(prefs.shouldShowPreview == true)

@@ -165,22 +165,12 @@ struct ConnectionUIStateTests {
 
     @Test("updateDisconnectedPillState without paired device stays hidden")
     func disconnectedPillNoPairedDevice() async throws {
-        // Clean up any leftover device ID from other tests
-        let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
-        let savedValue = UserDefaults.standard.string(forKey: lastDeviceIDKey)
-        UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
-        defer {
-            if let savedValue {
-                UserDefaults.standard.set(savedValue, forKey: lastDeviceIDKey)
-            }
-        }
-
         let appState = AppState()
 
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
         )
 
         try await Task.sleep(for: .seconds(1.3))

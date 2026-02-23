@@ -8,16 +8,15 @@ import SwiftData
 @MainActor
 struct DisconnectedPillTests {
 
-    private let userDisconnectedKey = "com.pocketmesh.userExplicitlyDisconnected"
-    private let lastDeviceIDKey = "com.pocketmesh.lastConnectedDeviceID"
+    // MARK: - shouldSuppressDisconnectedPill Integration Tests
 
-    // Clean up UserDefaults after each test
-    private func cleanupUserDefaults() {
-        UserDefaults.standard.removeObject(forKey: userDisconnectedKey)
-        UserDefaults.standard.removeObject(forKey: lastDeviceIDKey)
+    private let defaults: UserDefaults
+
+    init() {
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
     }
 
-    private func makeAppState() throws -> AppState {
+    private func makeTestManager() throws -> ConnectionManager {
         let schema = Schema([
             Device.self,
             Contact.self,
@@ -28,161 +27,99 @@ struct DisconnectedPillTests {
         ])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: [config])
-        return AppState(modelContainer: container)
+        return ConnectionManager(modelContainer: container, defaults: defaults)
     }
-
-    // MARK: - shouldSuppressDisconnectedPill Tests
 
     @Test("shouldSuppressDisconnectedPill returns true when user explicitly disconnected")
     func testShouldSuppressWhenUserDisconnected() throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        ConnectionIntent.userDisconnected.persist(to: defaults)
 
-        UserDefaults.standard.set(true, forKey: userDisconnectedKey)
-
-        let appState = try makeAppState()
-        #expect(appState.connectionManager.shouldSuppressDisconnectedPill == true)
+        let manager = try makeTestManager()
+        #expect(manager.shouldSuppressDisconnectedPill == true)
     }
 
     @Test("shouldSuppressDisconnectedPill returns false when user did not explicitly disconnect")
     func testShouldNotSuppressWhenNoExplicitDisconnect() throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
-
-        let appState = try makeAppState()
-        #expect(appState.connectionManager.shouldSuppressDisconnectedPill == false)
+        let manager = try makeTestManager()
+        #expect(manager.shouldSuppressDisconnectedPill == false)
     }
 
-    // MARK: - updateDisconnectedPillState Tests
+    // MARK: - updateDisconnectedPillState Tests (pass values directly)
 
     @Test("disconnected pill not shown when user explicitly disconnected")
     func testPillNotShownAfterExplicitDisconnect() async throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let appState = AppState()
 
-        // Given: last device exists + user explicitly disconnected
-        UserDefaults.standard.set(UUID().uuidString, forKey: lastDeviceIDKey)
-        UserDefaults.standard.set(true, forKey: userDisconnectedKey)
-
-        let appState = try makeAppState()
-
-        // When: update disconnected pill state (simulates app launch check)
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: true
         )
 
-        // Wait for potential delay
         try await Task.sleep(for: .seconds(1.2))
-
-        // Then: pill should not be visible
         #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill shown after unexpected disconnect")
     func testPillShownAfterUnexpectedDisconnect() async throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let appState = AppState()
 
-        // Given: last device exists + NOT explicitly disconnected
-        UserDefaults.standard.set(UUID().uuidString, forKey: lastDeviceIDKey)
-        // userDisconnectedKey is not set (defaults to false)
-
-        let appState = try makeAppState()
-
-        // When: update disconnected pill state (simulates app launch after termination)
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: false
         )
 
-        // Wait for the 1-second delay plus margin
         try await Task.sleep(for: .seconds(1.2))
-
-        // Then: pill should be visible
         #expect(appState.connectionUI.disconnectedPillVisible == true)
     }
 
     @Test("disconnected pill not shown when no last connected device")
     func testPillNotShownWhenNoLastDevice() async throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let appState = AppState()
 
-        // Given: no last device ID exists
-        // lastDeviceIDKey is not set
-
-        let appState = try makeAppState()
-
-        // When: update disconnected pill state
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: nil,
+            shouldSuppressDisconnectedPill: false
         )
 
-        // Wait for potential delay
         try await Task.sleep(for: .seconds(1.2))
-
-        // Then: pill should not be visible
         #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill hidden when connection starts")
     func testPillHiddenWhenConnecting() async throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let appState = AppState()
 
-        // Given: last device exists + NOT explicitly disconnected
-        UserDefaults.standard.set(UUID().uuidString, forKey: lastDeviceIDKey)
-
-        let appState = try makeAppState()
-
-        // Start showing the pill
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: false
         )
         try await Task.sleep(for: .seconds(1.2))
         #expect(appState.connectionUI.disconnectedPillVisible == true)
 
-        // When: hide the pill (simulates connection starting)
         appState.connectionUI.hideDisconnectedPill()
-
-        // Then: pill should be hidden immediately
         #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 
     @Test("disconnected pill delay prevents flash during brief reconnects")
     func testPillDelayPreventsFlash() async throws {
-        cleanupUserDefaults()
-        defer { cleanupUserDefaults() }
+        let appState = AppState()
 
-        // Given: conditions that would show the pill
-        UserDefaults.standard.set(UUID().uuidString, forKey: lastDeviceIDKey)
-
-        let appState = try makeAppState()
-
-        // When: update state and immediately hide (simulates quick reconnect)
         appState.connectionUI.updateDisconnectedPillState(
-            connectionState: appState.connectionState,
-            lastConnectedDeviceID: appState.connectionManager.lastConnectedDeviceID,
-            shouldSuppressDisconnectedPill: appState.connectionManager.shouldSuppressDisconnectedPill
+            connectionState: .disconnected,
+            lastConnectedDeviceID: UUID(),
+            shouldSuppressDisconnectedPill: false
         )
 
-        // Pill should NOT be visible immediately (1s delay)
         #expect(appState.connectionUI.disconnectedPillVisible == false)
 
-        // Hide before delay completes (simulates connection established)
         try await Task.sleep(for: .seconds(0.5))
         appState.connectionUI.hideDisconnectedPill()
 
-        // Wait past the original delay
         try await Task.sleep(for: .seconds(1.0))
-
-        // Then: pill should still be hidden (was cancelled)
         #expect(appState.connectionUI.disconnectedPillVisible == false)
     }
 }

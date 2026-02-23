@@ -12,15 +12,22 @@ enum OnboardingStep: Int, CaseIterable, Hashable {
 @MainActor
 public final class OnboardingState {
 
+    private let defaults: UserDefaults
+
     /// Whether onboarding is complete (persisted to UserDefaults)
-    var hasCompletedOnboarding: Bool = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") {
+    var hasCompletedOnboarding: Bool {
         didSet {
-            UserDefaults.standard.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
+            defaults.set(hasCompletedOnboarding, forKey: "hasCompletedOnboarding")
         }
     }
 
     /// Navigation path for onboarding flow
     var onboardingPath: [OnboardingStep] = []
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.hasCompletedOnboarding = defaults.bool(forKey: "hasCompletedOnboarding")
+    }
 
     /// Mark onboarding as complete
     func completeOnboarding() {

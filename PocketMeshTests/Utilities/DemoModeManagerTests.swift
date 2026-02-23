@@ -6,10 +6,10 @@ import Foundation
 @MainActor
 struct DemoModeManagerTests {
 
-    // Clean up UserDefaults before tests
+    private let defaults: UserDefaults
+
     init() {
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
     }
 
     // MARK: - Singleton Pattern Tests
@@ -25,11 +25,7 @@ struct DemoModeManagerTests {
 
     @Test("properties default to false for new instances")
     func testDefaultValues() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
-
-        let manager = DemoModeManager.shared
+        let manager = DemoModeManager(defaults: defaults)
         #expect(manager.isUnlocked == false)
         #expect(manager.isEnabled == false)
     }
@@ -38,20 +34,13 @@ struct DemoModeManagerTests {
 
     @Test("unlock sets both isUnlocked and isEnabled to true")
     func testUnlockSetsBothFlags() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+        let manager = DemoModeManager(defaults: defaults)
 
-        let manager = DemoModeManager.shared
-
-        // Verify initial state
         #expect(manager.isUnlocked == false)
         #expect(manager.isEnabled == false)
 
-        // Call unlock
         manager.unlock()
 
-        // Verify both flags are set to true
         #expect(manager.isUnlocked == true)
         #expect(manager.isEnabled == true)
     }
@@ -60,82 +49,44 @@ struct DemoModeManagerTests {
 
     @Test("UserDefaults persistence works for isUnlocked")
     func testUserDefaultsPersistenceForIsUnlocked() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+        let manager = DemoModeManager(defaults: defaults)
 
-        let manager = DemoModeManager.shared
-
-        // Set isUnlocked to true
         manager.isUnlocked = true
 
-        // Verify it's persisted in UserDefaults
-        let persistedValue = UserDefaults.standard.bool(forKey: "isDemoModeUnlocked")
+        let persistedValue = defaults.bool(forKey: "isDemoModeUnlocked")
         #expect(persistedValue == true)
-
-        // Clean up
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
     }
 
     @Test("UserDefaults persistence works for isEnabled")
     func testUserDefaultsPersistenceForIsEnabled() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+        let manager = DemoModeManager(defaults: defaults)
 
-        let manager = DemoModeManager.shared
-
-        // Set isEnabled to true
         manager.isEnabled = true
 
-        // Verify it's persisted in UserDefaults
-        let persistedValue = UserDefaults.standard.bool(forKey: "isDemoModeEnabled")
+        let persistedValue = defaults.bool(forKey: "isDemoModeEnabled")
         #expect(persistedValue == true)
-
-        // Clean up
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
     }
 
     @Test("unlock persists both values to UserDefaults")
     func testUnlockPersistsToUserDefaults() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+        let manager = DemoModeManager(defaults: defaults)
 
-        let manager = DemoModeManager.shared
-
-        // Call unlock
         manager.unlock()
 
-        // Verify both values are persisted in UserDefaults
-        let unlockedValue = UserDefaults.standard.bool(forKey: "isDemoModeUnlocked")
-        let enabledValue = UserDefaults.standard.bool(forKey: "isDemoModeEnabled")
+        let unlockedValue = defaults.bool(forKey: "isDemoModeUnlocked")
+        let enabledValue = defaults.bool(forKey: "isDemoModeEnabled")
 
         #expect(unlockedValue == true)
         #expect(enabledValue == true)
-
-        // Clean up
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
     }
 
-    @Test("values persist across singleton access")
-    func testPersistenceAcrossSingletonAccess() {
-        // Clean UserDefaults to ensure fresh state
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
+    @Test("values persist and can be read back")
+    func testPersistenceReadBack() {
+        defaults.set(true, forKey: "isDemoModeUnlocked")
+        defaults.set(true, forKey: "isDemoModeEnabled")
 
-        // Set values via UserDefaults directly
-        UserDefaults.standard.set(true, forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.set(true, forKey: "isDemoModeEnabled")
-
-        // Access singleton and verify it reads from UserDefaults
-        let manager = DemoModeManager.shared
+        let manager = DemoModeManager(defaults: defaults)
         #expect(manager.isUnlocked == true)
         #expect(manager.isEnabled == true)
-
-        // Clean up
-        UserDefaults.standard.removeObject(forKey: "isDemoModeUnlocked")
-        UserDefaults.standard.removeObject(forKey: "isDemoModeEnabled")
     }
 }
