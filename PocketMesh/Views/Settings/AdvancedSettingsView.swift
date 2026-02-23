@@ -40,6 +40,9 @@ struct AdvancedSettingsView: View {
             // Config Export/Import
             ConfigExportImportSection()
 
+            // Device Actions
+            DeviceActionsSection()
+
             // Danger Zone
             DangerZoneSection()
         }

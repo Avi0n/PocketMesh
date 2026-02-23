@@ -3119,6 +3119,24 @@ public enum L10n {
       /// Footer shown when no device is connected
       public static let noDeviceConnected = L10n.tr("Settings", "device.noDeviceConnected", fallback: "No MeshCore device connected")
     }
+    public enum DeviceActions {
+      /// Section header for device actions
+      public static let header = L10n.tr("Settings", "deviceActions.header", fallback: "Device")
+      /// Button to reboot the device
+      public static let rebootDevice = L10n.tr("Settings", "deviceActions.rebootDevice", fallback: "Reboot Device")
+      /// Text shown while rebooting
+      public static let rebooting = L10n.tr("Settings", "deviceActions.rebooting", fallback: "Rebooting...")
+      public enum Alert {
+        public enum Reboot {
+          /// Button to confirm reboot
+          public static let confirm = L10n.tr("Settings", "deviceActions.alert.reboot.confirm", fallback: "Reboot")
+          /// Alert message for reboot confirmation
+          public static let message = L10n.tr("Settings", "deviceActions.alert.reboot.message", fallback: "The device will restart and temporarily disconnect.")
+          /// Alert title for reboot confirmation
+          public static let title = L10n.tr("Settings", "deviceActions.alert.reboot.title", fallback: "Reboot Device?")
+        }
+      }
+    }
     public enum DeviceInfo {
       /// Label for battery level
       public static let battery = L10n.tr("Settings", "deviceInfo.battery", fallback: "Battery")

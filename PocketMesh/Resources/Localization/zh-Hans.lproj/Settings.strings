@@ -492,6 +492,27 @@
 "nodes.staleCleanup.lastRun" = "上次检查 %@";
 
 
+// MARK: - Device Actions Section
+
+/* Section header for device actions */
+"deviceActions.header" = "Device";
+
+/* Button to reboot the device */
+"deviceActions.rebootDevice" = "Reboot Device";
+
+/* Text shown while rebooting */
+"deviceActions.rebooting" = "Rebooting...";
+
+/* Alert title for reboot confirmation */
+"deviceActions.alert.reboot.title" = "Reboot Device?";
+
+/* Button to confirm reboot */
+"deviceActions.alert.reboot.confirm" = "Reboot";
+
+/* Alert message for reboot confirmation */
+"deviceActions.alert.reboot.message" = "The device will restart and temporarily disconnect.";
+
+
 // MARK: - Danger Zone Section
 
 /* Section header for danger zone */
