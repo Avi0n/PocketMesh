@@ -1,0 +1,275 @@
+import SwiftUI
+import UIKit
+import PocketMeshServices
+
+extension ChatViewModel {
+
+    // MARK: - Preview State Management
+
+    /// Request preview fetch for a message (called when cell becomes visible)
+    func requestPreviewFetch(for messageID: UUID) {
+        // Ignore if already fetched or in progress
+        guard previewStates[messageID] == nil || previewStates[messageID] == .idle else { return }
+
+        // Get the display item to check for detected URL
+        guard let displayItem = displayItems.first(where: { $0.messageID == messageID }),
+              let url = displayItem.detectedURL else { return }
+
+        // Check if channel message
+        let isChannel = currentChannel != nil
+
+        // Start fetch task
+        previewFetchTasks[messageID] = Task {
+            await fetchPreview(for: messageID, url: url, isChannelMessage: isChannel)
+        }
+    }
+
+    /// Fetch preview for a message and update state
+    private func fetchPreview(for messageID: UUID, url: URL, isChannelMessage: Bool) async {
+        guard let dataStore, let linkPreviewCache else { return }
+
+        // Update to loading state
+        previewStates[messageID] = .loading
+        rebuildDisplayItem(for: messageID)
+
+        // Get preview from cache (handles all tiers: memory, database, network)
+        let result = await linkPreviewCache.preview(
+            for: url,
+            using: dataStore,
+            isChannelMessage: isChannelMessage
+        )
+
+        // Check if task was cancelled (message scrolled away or conversation changed)
+        guard !Task.isCancelled else {
+            previewFetchTasks.removeValue(forKey: messageID)
+            return
+        }
+
+        // Update state based on result
+        switch result {
+        case .loaded(let dto):
+            previewStates[messageID] = .loaded
+            loadedPreviews[messageID] = dto
+            // VoiceOver announcement for dynamic content
+            if let title = dto.title {
+                AccessibilityNotification.Announcement("Preview loaded: \(title)")
+                    .post()
+            }
+
+        case .loading:
+            // Still loading (duplicate request), keep current state
+            break
+
+        case .noPreviewAvailable, .failed:
+            previewStates[messageID] = .noPreview
+
+        case .disabled:
+            previewStates[messageID] = .disabled
+        }
+
+        previewFetchTasks.removeValue(forKey: messageID)
+        rebuildDisplayItem(for: messageID)
+    }
+
+    /// Manually fetch preview (for tap-to-load when previews disabled)
+    func manualFetchPreview(for messageID: UUID) async {
+        guard let displayItem = displayItems.first(where: { $0.messageID == messageID }),
+              let url = displayItem.detectedURL,
+              let dataStore,
+              let linkPreviewCache else { return }
+
+        previewStates[messageID] = .loading
+        rebuildDisplayItem(for: messageID)
+
+        let result = await linkPreviewCache.manualFetch(for: url, using: dataStore)
+
+        switch result {
+        case .loaded(let dto):
+            previewStates[messageID] = .loaded
+            loadedPreviews[messageID] = dto
+            // VoiceOver announcement for dynamic content
+            if let title = dto.title {
+                AccessibilityNotification.Announcement("Preview loaded: \(title)")
+                    .post()
+            }
+        case .loading:
+            break
+        case .noPreviewAvailable, .failed, .disabled:
+            previewStates[messageID] = .noPreview
+        }
+
+        rebuildDisplayItem(for: messageID)
+    }
+
+    /// Rebuild a single display item with current preview state (O(1) lookup)
+    func rebuildDisplayItem(for messageID: UUID) {
+        guard let index = displayItemIndexByID[messageID] else { return }
+        let item = displayItems[index]
+        let message = messagesByID[messageID]
+
+        displayItems[index] = MessageDisplayItem(
+            messageID: item.messageID,
+            showTimestamp: item.showTimestamp,
+            showDirectionGap: item.showDirectionGap,
+            showSenderName: item.showSenderName,
+            showNewMessagesDivider: item.showNewMessagesDivider,
+            detectedURL: item.detectedURL,
+            isImageURL: item.isImageURL,
+            isOutgoing: item.isOutgoing,
+            status: item.status,
+            containsSelfMention: item.containsSelfMention,
+            mentionSeen: item.mentionSeen,
+            heardRepeats: item.heardRepeats,
+            retryAttempt: item.retryAttempt,
+            maxRetryAttempts: item.maxRetryAttempts,
+            reactionSummary: message?.reactionSummary,
+            previewState: previewStates[messageID] ?? .idle,
+            loadedPreview: loadedPreviews[messageID]
+        )
+    }
+
+    /// Cancel preview fetch for a message (called when cell scrolls away)
+    func cancelPreviewFetch(for messageID: UUID) {
+        previewFetchTasks[messageID]?.cancel()
+        previewFetchTasks.removeValue(forKey: messageID)
+    }
+
+    /// Clear all preview state (called on conversation switch)
+    func clearPreviewState() {
+        previewFetchTasks.values.forEach { $0.cancel() }
+        previewFetchTasks.removeAll()
+        previewStates.removeAll()
+        loadedPreviews.removeAll()
+        clearImageState()
+    }
+
+    /// Clean up preview state for a specific message (called on message deletion)
+    func cleanupPreviewState(for messageID: UUID) {
+        previewStates.removeValue(forKey: messageID)
+        loadedPreviews.removeValue(forKey: messageID)
+        previewFetchTasks[messageID]?.cancel()
+        previewFetchTasks.removeValue(forKey: messageID)
+        cleanupImageState(for: messageID)
+    }
+
+    // MARK: - Inline Image State Management
+
+    /// Returns the pre-decoded UIImage for a message, if available
+    func decodedImage(for messageID: UUID) -> UIImage? {
+        decodedImages[messageID]
+    }
+
+    /// Returns whether the image for a message is a GIF
+    func isGIFImage(for messageID: UUID) -> Bool {
+        imageIsGIF[messageID] ?? false
+    }
+
+    /// Returns the raw image data for a message, if available
+    func imageData(for messageID: UUID) -> Data? {
+        loadedImageData[messageID]
+    }
+
+    /// Clears the negative cache entry for a failed image and re-triggers the fetch.
+    func retryImageFetch(for messageID: UUID) async {
+        guard let displayItem = displayItems.first(where: { $0.messageID == messageID }),
+              let url = displayItem.detectedURL else { return }
+
+        let directURL = ImageURLDetector.directImageURL(for: url)
+        await InlineImageCache.shared.clearFailure(for: directURL)
+
+        previewStates[messageID] = .idle
+        rebuildDisplayItem(for: messageID)
+        requestImageFetch(for: messageID, showInlineImages: true)
+    }
+
+    /// Request inline image fetch for a message (called when cell becomes visible)
+    func requestImageFetch(for messageID: UUID, showInlineImages: Bool) {
+        guard showInlineImages else { return }
+        guard previewStates[messageID] == nil || previewStates[messageID] == .idle else { return }
+
+        guard let displayItem = displayItems.first(where: { $0.messageID == messageID }),
+              displayItem.isImageURL,
+              let url = displayItem.detectedURL else { return }
+
+        imageFetchTasks[messageID] = Task {
+            await fetchInlineImage(for: messageID, url: url)
+        }
+    }
+
+    /// Fetch inline image data and update state
+    private func fetchInlineImage(for messageID: UUID, url: URL) async {
+        previewStates[messageID] = .loading
+        rebuildDisplayItem(for: messageID)
+
+        let directURL = ImageURLDetector.directImageURL(for: url)
+        let result = await InlineImageCache.shared.fetchImageData(for: directURL)
+
+        guard !Task.isCancelled else {
+            imageFetchTasks.removeValue(forKey: messageID)
+            return
+        }
+        guard displayItemIndexByID[messageID] != nil else {
+            imageFetchTasks.removeValue(forKey: messageID)
+            return
+        }
+
+        switch result {
+        case .loaded(let data):
+            let isGIF = ImageURLDetector.isGIFData(data)
+            imageIsGIF[messageID] = isGIF
+            if !isGIF {
+                loadedImageData[messageID] = data
+            }
+            let decoded: UIImage? = await Task.detached {
+                if isGIF {
+                    return ImageURLDetector.decodeGIFImage(from: data)
+                } else {
+                    return ImageURLDetector.downsampledImage(from: data)
+                }
+            }.value
+            guard !Task.isCancelled, let decoded else {
+                imageFetchTasks.removeValue(forKey: messageID)
+                return
+            }
+            guard displayItemIndexByID[messageID] != nil else {
+                imageFetchTasks.removeValue(forKey: messageID)
+                return
+            }
+            decodedImages[messageID] = decoded
+            previewStates[messageID] = .loaded
+
+        case .loading:
+            break
+
+        case .failed:
+            previewStates[messageID] = .noPreview
+        }
+
+        imageFetchTasks.removeValue(forKey: messageID)
+        rebuildDisplayItem(for: messageID)
+    }
+
+    /// Cancel image fetch for a message
+    func cancelImageFetch(for messageID: UUID) {
+        imageFetchTasks[messageID]?.cancel()
+        imageFetchTasks.removeValue(forKey: messageID)
+    }
+
+    /// Clean up image state for a specific message
+    private func cleanupImageState(for messageID: UUID) {
+        loadedImageData.removeValue(forKey: messageID)
+        decodedImages.removeValue(forKey: messageID)
+        imageIsGIF.removeValue(forKey: messageID)
+        imageFetchTasks[messageID]?.cancel()
+        imageFetchTasks.removeValue(forKey: messageID)
+    }
+
+    /// Clear all image state (called on conversation switch)
+    private func clearImageState() {
+        imageFetchTasks.values.forEach { $0.cancel() }
+        imageFetchTasks.removeAll()
+        loadedImageData.removeAll()
+        decodedImages.removeAll()
+        imageIsGIF.removeAll()
+    }
+}
