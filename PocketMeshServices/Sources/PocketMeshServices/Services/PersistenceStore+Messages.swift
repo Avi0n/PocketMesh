@@ -1,0 +1,641 @@
+import Foundation
+import os
+import SwiftData
+
+extension PersistenceStore {
+
+    // MARK: - Mention Tracking
+
+    public func markMentionSeen(messageID: UUID) throws {
+        let targetID = messageID
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else { return }
+        message.mentionSeen = true
+        try modelContext.save()
+    }
+
+    // MARK: - Message Operations
+
+    /// Fetch messages for a contact
+    public func fetchMessages(contactID: UUID, limit: Int = 50, offset: Int = 0) throws -> [MessageDTO] {
+        let targetContactID: UUID? = contactID
+        let predicate = #Predicate<Message> { message in
+            message.contactID == targetContactID
+        }
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+        descriptor.fetchOffset = offset
+
+        let messages = try modelContext.fetch(descriptor)
+        return messages.reversed().map { MessageDTO(from: $0) }
+    }
+
+    /// Fetch messages for a channel
+    public func fetchMessages(deviceID: UUID, channelIndex: UInt8, limit: Int = 50, offset: Int = 0) throws -> [MessageDTO] {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID && message.channelIndex == targetChannelIndex
+        }
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+        descriptor.fetchOffset = offset
+
+        let messages = try modelContext.fetch(descriptor)
+        return messages.reversed().map { MessageDTO(from: $0) }
+    }
+
+    /// Finds a channel message matching a parsed reaction within a timestamp window.
+    public func findChannelMessageForReaction(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        parsedReaction: ParsedReaction,
+        localNodeName: String?,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) throws -> MessageDTO? {
+        let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        // swiftlint:disable:next line_length
+        logger.debug("[REACTION-MATCH] Looking for message: targetSender=\(parsedReaction.targetSender), hash=\(parsedReaction.messageHash), localNodeName=\(localNodeName ?? "nil"), window=\(timestampWindow.lowerBound)...\(timestampWindow.upperBound)")
+
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        let start = timestampWindow.lowerBound
+        let end = timestampWindow.upperBound
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.channelIndex == targetChannelIndex &&
+            message.timestamp >= start &&
+            message.timestamp <= end
+        }
+
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+
+        let candidates = try modelContext.fetch(descriptor)
+        logger.debug("[REACTION-MATCH] Found \(candidates.count) candidates in window")
+        guard !candidates.isEmpty else { return nil }
+
+        for candidate in candidates {
+            let direction = candidate.direction == .outgoing ? "outgoing" : "incoming"
+            // Use senderTimestamp if available (for incoming messages with corrected timestamps)
+            let reactionTimestamp = candidate.senderTimestamp ?? candidate.timestamp
+            let candidateHash = ReactionParser.generateMessageHash(text: candidate.text, timestamp: reactionTimestamp)
+            logger.debug("[REACTION-MATCH] Candidate: direction=\(direction), senderNodeName=\(candidate.senderNodeName ?? "nil"), hash=\(candidateHash), text=\(candidate.text.prefix(30))")
+
+            if candidate.direction == .outgoing {
+                guard let localNodeName, parsedReaction.targetSender == localNodeName else {
+                    logger.debug("[REACTION-MATCH] Skip outgoing: localNodeName=\(localNodeName ?? "nil"), targetSender=\(parsedReaction.targetSender)")
+                    continue
+                }
+            } else {
+                guard candidate.senderNodeName == parsedReaction.targetSender else {
+                    logger.debug("[REACTION-MATCH] Skip incoming: senderNodeName=\(candidate.senderNodeName ?? "nil") != targetSender=\(parsedReaction.targetSender)")
+                    continue
+                }
+            }
+
+            guard candidateHash == parsedReaction.messageHash else {
+                logger.debug("[REACTION-MATCH] Hash mismatch: \(candidateHash) != \(parsedReaction.messageHash)")
+                continue
+            }
+
+            logger.debug("[REACTION-MATCH] Found match!")
+            return MessageDTO(from: candidate)
+        }
+
+        logger.debug("[REACTION-MATCH] No match found")
+        return nil
+    }
+
+    /// Finds a DM message matching a reaction by hash within a timestamp window.
+    public func findDMMessageForReaction(
+        deviceID: UUID,
+        contactID: UUID,
+        messageHash: String,
+        timestampWindow: ClosedRange<UInt32>,
+        limit: Int
+    ) throws -> MessageDTO? {
+        let logger = Logger(subsystem: "PocketMeshServices", category: "PersistenceStore")
+        logger.debug("[DM-REACTION-MATCH] Looking for DM: hash=\(messageHash), contactID=\(contactID)")
+
+        let targetDeviceID = deviceID
+        let targetContactID: UUID? = contactID
+        let start = timestampWindow.lowerBound
+        let end = timestampWindow.upperBound
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.contactID == targetContactID &&
+            message.timestamp >= start &&
+            message.timestamp <= end
+        }
+
+        var descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [
+                SortDescriptor(\Message.timestamp, order: .reverse),
+                SortDescriptor(\Message.createdAt, order: .reverse)
+            ]
+        )
+        descriptor.fetchLimit = limit
+
+        let candidates = try modelContext.fetch(descriptor)
+        logger.debug("[DM-REACTION-MATCH] Found \(candidates.count) candidates")
+
+        for candidate in candidates {
+            // Skip messages that are themselves reactions
+            if ReactionParser.parseDM(candidate.text) != nil {
+                logger.debug("[DM-REACTION-MATCH] Skipping candidate (is reaction): \(candidate.text.prefix(30))")
+                continue
+            }
+
+            // Use senderTimestamp if available (for incoming messages with corrected timestamps)
+            let reactionTimestamp = candidate.senderTimestamp ?? candidate.timestamp
+            let direction = candidate.direction == .outgoing ? "outgoing" : "incoming"
+            let candidateHash = ReactionParser.generateMessageHash(
+                text: candidate.text,
+                timestamp: reactionTimestamp
+            )
+            logger.debug("[DM-REACTION-MATCH] Candidate: direction=\(direction), timestamp=\(candidate.timestamp), senderTimestamp=\(candidate.senderTimestamp ?? 0), hash=\(candidateHash), text=\(candidate.text.prefix(30))")
+            if candidateHash == messageHash {
+                logger.debug("[DM-REACTION-MATCH] Found match: \(candidate.id)")
+                return MessageDTO(from: candidate)
+            } else {
+                logger.debug("[DM-REACTION-MATCH] Hash mismatch: \(candidateHash) != \(messageHash)")
+            }
+        }
+
+        return nil
+    }
+
+    /// Fetch a message by ID
+    public func fetchMessage(id: UUID) throws -> MessageDTO? {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { MessageDTO(from: $0) }
+    }
+
+    /// Fetch a message by ACK code
+    public func fetchMessage(ackCode: UInt32) throws -> MessageDTO? {
+        let targetAckCode: UInt32? = ackCode
+        let predicate = #Predicate<Message> { message in
+            message.ackCode == targetAckCode
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first.map { MessageDTO(from: $0) }
+    }
+
+    /// Save a new message
+    public func saveMessage(_ dto: MessageDTO) throws {
+        let message = Message(
+            id: dto.id,
+            deviceID: dto.deviceID,
+            contactID: dto.contactID,
+            channelIndex: dto.channelIndex,
+            text: dto.text,
+            timestamp: dto.timestamp,
+            createdAt: dto.createdAt,
+            directionRawValue: dto.direction.rawValue,
+            statusRawValue: dto.status.rawValue,
+            textTypeRawValue: dto.textType.rawValue,
+            ackCode: dto.ackCode,
+            pathLength: dto.pathLength,
+            snr: dto.snr,
+            pathNodes: dto.pathNodes,
+            senderKeyPrefix: dto.senderKeyPrefix,
+            senderNodeName: dto.senderNodeName,
+            isRead: dto.isRead,
+            replyToID: dto.replyToID,
+            roundTripTime: dto.roundTripTime,
+            heardRepeats: dto.heardRepeats,
+            retryAttempt: dto.retryAttempt,
+            maxRetryAttempts: dto.maxRetryAttempts,
+            deduplicationKey: nil,
+            containsSelfMention: dto.containsSelfMention,
+            mentionSeen: dto.mentionSeen,
+            timestampCorrected: dto.timestampCorrected,
+            senderTimestamp: dto.senderTimestamp
+        )
+        modelContext.insert(message)
+        try modelContext.save()
+    }
+
+    /// Update message status
+    public func updateMessageStatus(id: UUID, status: MessageStatus) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.status = status
+            try modelContext.save()
+        }
+    }
+
+    /// Update message status with retry attempt information
+    public func updateMessageRetryStatus(
+        id: UUID,
+        status: MessageStatus,
+        retryAttempt: Int,
+        maxRetryAttempts: Int
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.status = status
+            message.retryAttempt = retryAttempt
+            message.maxRetryAttempts = maxRetryAttempts
+            try modelContext.save()
+        }
+    }
+
+    /// Update message timestamp (for resending)
+    public func updateMessageTimestamp(id: UUID, timestamp: UInt32) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.timestamp = timestamp
+            try modelContext.save()
+        }
+    }
+
+    /// Update message ACK info
+    public func updateMessageAck(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32? = nil) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.ackCode = ackCode
+            message.status = status
+            message.roundTripTime = roundTripTime
+            try modelContext.save()
+        }
+    }
+
+    /// Update message status by ACK code
+    public func updateMessageByAckCode(_ ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32? = nil) throws {
+        let targetAckCode: UInt32? = ackCode
+        let predicate = #Predicate<Message> { message in
+            message.ackCode == targetAckCode
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.status = status
+            message.roundTripTime = roundTripTime
+            try modelContext.save()
+        }
+    }
+
+    /// Mark a message as read
+    public func markMessageAsRead(id: UUID) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.isRead = true
+            try modelContext.save()
+        }
+    }
+
+    /// Updates the heard repeats count for a message
+    public func updateMessageHeardRepeats(id: UUID, heardRepeats: Int) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.heardRepeats = heardRepeats
+            try modelContext.save()
+        }
+    }
+
+    /// Update link preview data for a message
+    public func updateMessageLinkPreview(
+        id: UUID,
+        url: String?,
+        title: String?,
+        imageData: Data?,
+        iconData: Data?,
+        fetched: Bool
+    ) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        if let message = try modelContext.fetch(descriptor).first {
+            message.linkPreviewURL = url
+            message.linkPreviewTitle = title
+            message.linkPreviewImageData = imageData
+            message.linkPreviewIconData = iconData
+            message.linkPreviewFetched = fetched
+            try modelContext.save()
+        }
+    }
+
+    /// Delete a message and its reactions
+    public func deleteMessage(id: UUID) throws {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in
+            message.id == targetID
+        }
+        if let message = try modelContext.fetch(FetchDescriptor(predicate: predicate)).first {
+            try deleteReactionsForMessage(messageID: id)
+            modelContext.delete(message)
+            try modelContext.save()
+        }
+    }
+
+    /// Count pending messages for a device
+    public func countPendingMessages(deviceID: UUID) throws -> Int {
+        let targetDeviceID = deviceID
+        let pendingStatus = MessageStatus.pending.rawValue
+        let sendingStatus = MessageStatus.sending.rawValue
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            (message.statusRawValue == pendingStatus ||
+             message.statusRawValue == sendingStatus)
+        }
+        return try modelContext.fetchCount(FetchDescriptor(predicate: predicate))
+    }
+
+    // MARK: - Heard Repeats
+
+    /// Finds a sent channel message matching the given criteria within a time window.
+    /// Used for correlating RX log entries to sent messages.
+    ///
+    /// - Parameters:
+    ///   - deviceID: The device that sent the message
+    ///   - channelIndex: Channel the message was sent on
+    ///   - timestamp: Sender timestamp from the message
+    ///   - text: Message text to match
+    ///   - withinSeconds: Time window to search (default 10 seconds)
+    /// - Returns: MessageDTO if found, nil otherwise
+    public func findSentChannelMessage(
+        deviceID: UUID,
+        channelIndex: UInt8,
+        timestamp: UInt32,
+        text: String,
+        withinSeconds: Int = 10
+    ) throws -> MessageDTO? {
+        let targetDeviceID = deviceID
+        let targetChannelIndex: UInt8? = channelIndex
+        let targetTimestamp = timestamp
+        let outgoingDirection = MessageDirection.outgoing.rawValue
+
+        // Calculate time window
+        let now = Date()
+        let windowStart = now.addingTimeInterval(-TimeInterval(withinSeconds))
+        let windowStartTimestamp = UInt32(windowStart.timeIntervalSince1970)
+
+        let predicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.channelIndex == targetChannelIndex &&
+            message.timestamp == targetTimestamp &&
+            message.directionRawValue == outgoingDirection &&
+            message.timestamp >= windowStartTimestamp
+        }
+
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return nil
+        }
+
+        // Verify text matches (outgoing channel messages store just the text)
+        guard message.text == text else {
+            return nil
+        }
+
+        return MessageDTO(from: message)
+    }
+
+    /// Saves a new MessageRepeat entry and links it to the parent message.
+    public func saveMessageRepeat(_ dto: MessageRepeatDTO) throws {
+        // Fetch the parent message for relationship
+        let targetMessageID = dto.messageID
+        let messagePredicate = #Predicate<Message> { message in
+            message.id == targetMessageID
+        }
+        var messageDescriptor = FetchDescriptor(predicate: messagePredicate)
+        messageDescriptor.fetchLimit = 1
+
+        guard let parentMessage = try modelContext.fetch(messageDescriptor).first else {
+            throw PersistenceStoreError.messageNotFound
+        }
+
+        let repeat_ = MessageRepeat(
+            id: dto.id,
+            message: parentMessage,
+            messageID: dto.messageID,
+            receivedAt: dto.receivedAt,
+            pathNodes: dto.pathNodes,
+            pathLength: dto.pathLength,
+            snr: dto.snr,
+            rssi: dto.rssi,
+            rxLogEntryID: dto.rxLogEntryID
+        )
+        modelContext.insert(repeat_)
+        try modelContext.save()
+    }
+
+    /// Fetches all repeats for a given message, sorted by receivedAt ascending.
+    public func fetchMessageRepeats(messageID: UUID) throws -> [MessageRepeatDTO] {
+        let targetMessageID = messageID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.messageID == targetMessageID
+        }
+        let descriptor = FetchDescriptor(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\MessageRepeat.receivedAt, order: .forward)]
+        )
+
+        let results = try modelContext.fetch(descriptor)
+        return results.map { MessageRepeatDTO(from: $0) }
+    }
+
+    /// Deletes all repeats for a given message.
+    public func deleteMessageRepeats(messageID: UUID) throws {
+        let targetMessageID = messageID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.messageID == targetMessageID
+        }
+        let descriptor = FetchDescriptor(predicate: predicate)
+
+        let results = try modelContext.fetch(descriptor)
+        for repeat_ in results {
+            modelContext.delete(repeat_)
+        }
+        try modelContext.save()
+    }
+
+    /// Checks if a repeat already exists for the given RX log entry.
+    public func messageRepeatExists(rxLogEntryID: UUID) throws -> Bool {
+        let targetID: UUID? = rxLogEntryID
+        let predicate = #Predicate<MessageRepeat> { repeat_ in
+            repeat_.rxLogEntryID == targetID
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// Increments the heardRepeats count for a message and returns the new count.
+    public func incrementMessageHeardRepeats(id: UUID) throws -> Int {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in message.id == targetID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return 0
+        }
+
+        message.heardRepeats += 1
+        try modelContext.save()
+        return message.heardRepeats
+    }
+
+    /// Increments the sendCount for a message and returns the new count.
+    public func incrementMessageSendCount(id: UUID) throws -> Int {
+        let targetID = id
+        let predicate = #Predicate<Message> { message in message.id == targetID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else {
+            return 0
+        }
+
+        message.sendCount += 1
+        try modelContext.save()
+        return message.sendCount
+    }
+
+    // MARK: - Reactions
+
+    /// Saves a new reaction
+    public func saveReaction(_ dto: ReactionDTO) throws {
+        let reaction = Reaction(
+            id: dto.id,
+            messageID: dto.messageID,
+            emoji: dto.emoji,
+            senderName: dto.senderName,
+            messageHash: dto.messageHash,
+            rawText: dto.rawText,
+            receivedAt: dto.receivedAt,
+            channelIndex: dto.channelIndex,
+            contactID: dto.contactID,
+            deviceID: dto.deviceID
+        )
+        modelContext.insert(reaction)
+        try modelContext.save()
+    }
+
+    /// Fetches reactions for a message
+    public func fetchReactions(for messageID: UUID, limit: Int = 100) throws -> [ReactionDTO] {
+        let targetMessageID = messageID
+        var descriptor = FetchDescriptor<Reaction>(
+            predicate: #Predicate { $0.messageID == targetMessageID },
+            sortBy: [SortDescriptor(\Reaction.receivedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        return try modelContext.fetch(descriptor).map { ReactionDTO(from: $0) }
+    }
+
+    /// Checks if a reaction already exists (deduplication)
+    public func reactionExists(messageID: UUID, senderName: String, emoji: String) throws -> Bool {
+        let targetMessageID = messageID
+        let targetSenderName = senderName
+        let targetEmoji = emoji
+        let predicate = #Predicate<Reaction> {
+            $0.messageID == targetMessageID &&
+            $0.senderName == targetSenderName &&
+            $0.emoji == targetEmoji
+        }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+        return try !modelContext.fetch(descriptor).isEmpty
+    }
+
+    /// Updates a message's reaction summary cache
+    public func updateMessageReactionSummary(messageID: UUID, summary: String?) throws {
+        let targetMessageID = messageID
+        let predicate = #Predicate<Message> { $0.id == targetMessageID }
+        var descriptor = FetchDescriptor(predicate: predicate)
+        descriptor.fetchLimit = 1
+
+        guard let message = try modelContext.fetch(descriptor).first else { return }
+        message.reactionSummary = summary
+        try modelContext.save()
+    }
+
+    /// Deletes all reactions for a message
+    public func deleteReactionsForMessage(messageID: UUID) throws {
+        let targetMessageID = messageID
+        try modelContext.delete(model: Reaction.self, where: #Predicate {
+            $0.messageID == targetMessageID
+        })
+        try modelContext.save()
+    }
+}
