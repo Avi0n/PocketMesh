@@ -67,7 +67,7 @@ extension PersistenceStore {
 
     /// Save or update a remote node session
     @discardableResult
-    public func saveRemoteNodeSession(_ dto: RemoteNodeSessionDTO) throws -> RemoteNodeSession {
+    private func saveRemoteNodeSession(_ dto: RemoteNodeSessionDTO) throws -> RemoteNodeSession {
         let targetID = dto.id
         let predicate = #Predicate<RemoteNodeSession> { session in
             session.id == targetID
