@@ -1,0 +1,428 @@
+// SyncCoordinator+Sync.swift
+import Foundation
+
+// MARK: - Full Sync & Connection Lifecycle
+
+extension SyncCoordinator {
+
+    // MARK: - Full Sync
+
+    /// Performs full sync of contacts, channels, and messages from device.
+    ///
+    /// This is the core sync method that ensures all data is pulled from the device.
+    /// It syncs in order: contacts → channels → messages.
+    ///
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - dataStore: Persistence store for data operations
+    ///   - contactService: Service for contact sync
+    ///   - channelService: Service for channel sync
+    ///   - messagePollingService: Service for message polling
+    ///   - appStateProvider: Optional provider for foreground/background state. When nil,
+    ///     defaults to foreground mode (channels sync). When provided and app is backgrounded,
+    ///     channel sync is skipped to reduce BLE traffic.
+    ///   - rxLogService: Optional service for updating contact public keys after sync.
+    ///   - forceFullSync: When true, ignores lastContactSync watermark and fetches all contacts.
+    public func performFullSync(
+        deviceID: UUID,
+        dataStore: PersistenceStore,
+        contactService: some ContactServiceProtocol,
+        channelService: some ChannelServiceProtocol,
+        messagePollingService: some MessagePollingServiceProtocol,
+        appStateProvider: AppStateProvider? = nil,
+        rxLogService: RxLogService? = nil,
+        forceFullSync: Bool = false
+    ) async throws {
+        // Prevent concurrent syncs - check before logging to avoid noise
+        let currentState = await state
+        if currentState.isSyncing {
+            logger.warning("performFullSync called while already syncing, ignoring duplicate")
+            return
+        }
+
+        logger.info("Starting full sync for device \(deviceID)")
+
+        do {
+            // Set phase before triggering pill visibility
+            logger.info("[Sync] State → .syncing(.contacts)")
+            await setState(.syncing(progress: SyncProgress(phase: .contacts, current: 0, total: 0)))
+            hasEndedSyncActivity = false
+            logger.info("[Sync] Calling onSyncActivityStarted")
+            await onSyncActivityStarted?()
+
+            // Perform contacts and channels sync (activity should show pill)
+            do {
+                // Fetch device once for both contacts (lastContactSync) and channels (maxChannels)
+                let device = try await dataStore.fetchDevice(id: deviceID)
+
+                // Phase 1: Contacts (incremental unless forced full)
+                logger.info("[Sync] Phase start: contacts")
+                let lastContactSync: Date? = forceFullSync ? nil : {
+                    guard let timestamp = device?.lastContactSync, timestamp > 0 else { return nil }
+                    return Date(timeIntervalSince1970: Double(timestamp))
+                }()
+
+                let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
+                let syncType = contactResult.isIncremental ? "incremental" : "full"
+                let forced = forceFullSync ? ", forced" : ""
+                logger.info("[Sync] Phase end: contacts - \(contactResult.contactsReceived) (\(syncType)\(forced))")
+                await notifyContactsChanged()
+
+                // Update lastContactSync watermark for future incremental syncs
+                if contactResult.lastSyncTimestamp > 0 {
+                    try await dataStore.updateDeviceLastContactSync(
+                        deviceID: deviceID,
+                        timestamp: contactResult.lastSyncTimestamp
+                    )
+                }
+
+                // Update RxLogService with contact public keys for direct message decryption
+                if let rxLogService {
+                    do {
+                        let publicKeys = try await dataStore.fetchContactPublicKeysByPrefix(deviceID: deviceID)
+                        await rxLogService.updateContactPublicKeys(publicKeys)
+                        logger.debug("Updated \(publicKeys.count) contact public keys for direct message decryption")
+                    } catch {
+                        logger.error("Failed to fetch contact public keys: \(error)")
+                    }
+                }
+
+                // Phase 2: Channels (foreground only)
+                logger.debug("About to check foreground state, provider exists: \(appStateProvider != nil)")
+                let shouldSyncChannels: Bool
+                if let provider = appStateProvider {
+                    logger.debug("Calling isInForeground...")
+                    shouldSyncChannels = await provider.isInForeground
+                    logger.debug("isInForeground returned: \(shouldSyncChannels)")
+                } else {
+                    logger.debug("No appStateProvider, defaulting to foreground mode")
+                    shouldSyncChannels = true
+                }
+                logger.debug("Proceeding with shouldSyncChannels=\(shouldSyncChannels)")
+                if shouldSyncChannels {
+                    logger.info("[Sync] State → .syncing(.channels)")
+                    await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
+                    let maxChannels = device?.maxChannels ?? 0
+
+                    let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
+                    logger.info("[Sync] Phase end: channels - \(channelResult.channelsSynced) synced (device capacity: \(maxChannels))")
+
+                    // Retry failed channels once if there are retryable errors
+                    if !channelResult.isComplete {
+                        let retryableIndices = channelResult.retryableIndices
+                        if !retryableIndices.isEmpty {
+                            logger.info("Retrying \(retryableIndices.count) failed channels")
+                            let retryResult = try await channelService.retryFailedChannels(
+                                deviceID: deviceID,
+                                indices: retryableIndices
+                            )
+
+                            if retryResult.isComplete {
+                                logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                            } else {
+                                logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                            }
+                        }
+                    }
+
+                    await logPostSyncChannelDiagnostics(deviceID: deviceID, dataStore: dataStore)
+                    if let rxLogService {
+                        await refreshRxLogChannels(deviceID: deviceID, dataStore: dataStore, rxLogService: rxLogService)
+                    }
+                } else {
+                    logger.info("Skipping channel sync (app in background)")
+                }
+            } catch {
+                // End sync activity on error during contacts/channels phase
+                await endSyncActivityOnce()
+                throw error
+            }
+
+            // End sync activity before messages phase (pill should hide)
+            await endSyncActivityOnce()
+
+            // Phase 3: Messages (no pill for this phase)
+            logger.info("[Sync] State → .syncing(.messages)")
+            await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
+            let messageCount = try await messagePollingService.pollAllMessages()
+            logger.info("[Sync] Phase end: messages - \(messageCount) polled")
+            await notifyConversationsChanged()
+
+            // Complete
+            logger.info("[Sync] State → .synced")
+            await setState(.synced)
+            await setLastSyncDate(Date())
+
+            logger.info("Full sync complete")
+        } catch let error as CancellationError {
+            // Defensive: ensure activity count is decremented even if cancellation
+            // occurs outside the contacts/channels error path.
+            await endSyncActivityOnce()
+            await setState(.idle)
+            throw error
+        } catch {
+            // Defensive: ensure activity count is decremented even if an error is
+            // thrown from a path that bypasses the inner contacts/channels catch.
+            await endSyncActivityOnce()
+            logger.warning("[Sync] State → .failed: \(error.localizedDescription)")
+            await setState(.failed(.syncFailed(error.localizedDescription)))
+            throw error
+        }
+    }
+
+    /// Attempts to resync data after a previous sync failure.
+    /// Unlike onConnectionEstablished, does NOT rewire handlers or restart event monitoring.
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - services: The ServiceContainer with all services
+    /// - Returns: `true` if sync succeeded, `false` if it failed
+    public func performResync(
+        deviceID: UUID,
+        services: ServiceContainer,
+        forceFullSync: Bool = false
+    ) async -> Bool {
+        logger.info("Attempting resync for device \(deviceID)")
+
+        await MainActor.run {
+            logger.info("Suppressing message notifications during resync")
+            services.notificationService.isSuppressingNotifications = true
+        }
+        startSuppressionWatchdog(services: services)
+        logger.info("[Sync] Pausing auto-fetch for resync")
+        await services.messagePollingService.pauseAutoFetch()
+
+        do {
+            try await performFullSync(
+                deviceID: deviceID,
+                dataStore: services.dataStore,
+                contactService: services.contactService,
+                channelService: services.channelService,
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider,
+                rxLogService: services.rxLogService,
+                forceFullSync: forceFullSync
+            )
+
+            await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+
+            let pendingHandlerDrainTimeout: Duration = .seconds(30)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Resync: some handlers did not complete in time")
+            }
+
+            cancelSuppressionWatchdog()
+            await MainActor.run {
+                logger.info("Resuming message notifications (resync complete)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+            logger.info("[Sync] Resuming auto-fetch after resync")
+            await services.messagePollingService.resumeAutoFetch()
+
+            logger.info("Resync succeeded")
+            return true
+        } catch {
+            let pendingHandlerDrainTimeout: Duration = .seconds(30)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Resync: some handlers did not complete in time (error path)")
+            }
+
+            cancelSuppressionWatchdog()
+            await MainActor.run {
+                logger.info("Resuming message notifications (resync failed)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+            await services.messagePollingService.resumeAutoFetch()
+
+            logger.warning("Resync failed: \(error.localizedDescription)")
+            await setState(.failed(.syncFailed(error.localizedDescription)))
+            return false
+        }
+    }
+
+    // MARK: - Connection Lifecycle
+
+    /// Called by ConnectionManager when connection is established.
+    /// Wires handlers, starts event monitoring, and performs initial sync.
+    ///
+    /// This is the critical method that fixes the handler wiring gap:
+    /// 1. Wire message handlers FIRST (before events can arrive)
+    /// 2. Start event monitoring (handlers are now ready)
+    /// 3. Perform full sync (contacts, channels, messages)
+    /// 4. Wire discovery handlers (for ongoing contact discovery)
+    ///
+    /// - Parameters:
+    ///   - deviceID: The connected device UUID
+    ///   - services: The ServiceContainer with all services
+    ///   - forceFullSync: When true, forces a full contact sync instead of incremental.
+    public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) async throws {
+        logger.info("Connection established for device \(deviceID)")
+
+        // Prevent duplicate sync if already syncing (race condition during rapid auto-reconnect cycles)
+        let currentState = await state
+        if currentState.isSyncing {
+            logger.warning("onConnectionEstablished called while already syncing, ignoring duplicate")
+            return
+        }
+
+        // Suppress message notifications during sync to avoid flooding user on reconnect
+        // Unread counts and badges still update - only system notifications are suppressed
+        await MainActor.run {
+            logger.info("Suppressing message notifications during sync")
+            services.notificationService.isSuppressingNotifications = true
+        }
+        startSuppressionWatchdog(services: services)
+
+        do {
+            // Defer advert-driven contact fetches during sync to avoid BLE contention
+            await services.advertisementService.setSyncingContacts(true)
+
+            // 1. Wire message handlers FIRST (before events can arrive)
+            await wireMessageHandlers(services: services, deviceID: deviceID)
+
+            // 2. NOW start event monitoring (handlers are ready), but delay auto-fetch and advert monitoring until after sync
+            logger.info("[Sync] Starting event monitoring for device \(deviceID.uuidString.prefix(8))")
+            await services.startEventMonitoring(deviceID: deviceID, enableAutoFetch: false)
+
+            // 3. Export device private key for direct message decryption
+            do {
+                let privateKey = try await services.session.exportPrivateKey()
+                await services.rxLogService.updatePrivateKey(privateKey)
+                logger.debug("Device private key exported for direct message decryption")
+            } catch {
+                logger.warning("Failed to export private key: \(error.localizedDescription)")
+            }
+
+            // 4. Perform full sync
+            try await performFullSync(
+                deviceID: deviceID,
+                dataStore: services.dataStore,
+                contactService: services.contactService,
+                channelService: services.channelService,
+                messagePollingService: services.messagePollingService,
+                appStateProvider: services.appStateProvider,
+                rxLogService: services.rxLogService,
+                forceFullSync: forceFullSync
+            )
+
+            // 5. Wire discovery handlers (for ongoing contact discovery)
+            await wireDiscoveryHandlers(services: services, deviceID: deviceID)
+
+            // 6. Flush deferred advert-driven contact fetches now that handlers are wired
+            await services.advertisementService.setSyncingContacts(false)
+
+            // 7. Wait for any pending message handlers to complete
+            // Message events are processed asynchronously by the event monitor - we need to ensure
+            // all handlers finish before resuming notifications, otherwise sync-time messages
+            // may trigger notifications after suppression is lifted
+            let pendingHandlerDrainTimeout: Duration = .seconds(30)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
+
+            // Resume notifications on success - synchronously before return
+            cancelSuppressionWatchdog()
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync complete)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+
+            // 8. Start auto-fetch after suppression is cleared to avoid notification spam
+            logger.info("[Sync] Starting auto-fetch for device \(deviceID.uuidString.prefix(8))")
+            await services.messagePollingService.startAutoFetch(deviceID: deviceID)
+
+            logger.info("Connection setup complete for device \(deviceID)")
+        } catch {
+            // Wait for any pending handlers even on error
+            let pendingHandlerDrainTimeout: Duration = .seconds(30)
+            let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+            if !didDrainPendingHandlers {
+                logger.warning("Timed out waiting for pending message handlers")
+            }
+
+            // Resume notifications on error - synchronously before throw
+            cancelSuppressionWatchdog()
+            await MainActor.run {
+                logger.info("Resuming message notifications (sync failed)")
+                services.notificationService.isSuppressingNotifications = false
+            }
+            await services.advertisementService.setSyncingContacts(false)
+            throw error
+        }
+    }
+
+    /// Called when disconnecting from device
+    ///
+    /// If disconnect occurs mid-sync (during contacts or channels phase), we must call
+    /// onSyncActivityEnded to decrement the activity count, otherwise the pill stays stuck.
+    public func onDisconnected(services: ServiceContainer) async {
+        let currentState = await state
+        logger.warning(
+            "[Sync] onDisconnected called - syncState: \(String(describing: currentState)), hasEndedSyncActivity: \(hasEndedSyncActivity)"
+        )
+
+        await deduplicationCache.clear()
+        // Note: pending reactions are NOT cleared on disconnect - they persist for the app session
+        // This handles temporary BLE disconnects without losing queued reactions
+        unresolvedChannelIndices.removeAll()
+        lastUnresolvedChannelSummaryAt = nil
+
+        // If we're mid-sync in contacts or channels phase, end the activity to hide the pill
+        if case .syncing(let progress) = currentState,
+           progress.phase == .contacts || progress.phase == .channels {
+            await endSyncActivityOnce()
+        }
+
+        logger.info("[Sync] State → .idle (disconnected)")
+        await setState(.idle)
+
+        // Safety net: ensure suppression is cleared on disconnect
+        // Handles edge cases like connection dropping mid-sync or force-quit
+        cancelSuppressionWatchdog()
+        await MainActor.run {
+            services.notificationService.isSuppressingNotifications = false
+        }
+
+        logger.info("Disconnected, sync state reset to idle")
+    }
+
+    // MARK: - Sync Helpers
+
+    private func logPostSyncChannelDiagnostics(deviceID: UUID, dataStore: PersistenceStore) async {
+        do {
+            let channels = try await dataStore.fetchChannels(deviceID: deviceID)
+            let emptyNameWithSecretIndices = channels
+                .filter { $0.name.isEmpty && $0.hasSecret }
+                .map(\.index)
+                .sorted()
+            logger.info(
+                "Post-sync channel diagnostics: total=\(channels.count), emptyNameWithSecret=\(emptyNameWithSecretIndices.count)"
+            )
+            if !emptyNameWithSecretIndices.isEmpty {
+                logger.warning(
+                    "Post-sync channels with empty names and non-zero secrets: \(emptyNameWithSecretIndices)"
+                )
+            }
+        } catch {
+            logger.error("Failed to compute post-sync channel diagnostics: \(error)")
+        }
+    }
+
+    private func refreshRxLogChannels(
+        deviceID: UUID,
+        dataStore: PersistenceStore,
+        rxLogService: RxLogService
+    ) async {
+        do {
+            let channels = try await dataStore.fetchChannels(deviceID: deviceID)
+            let secrets = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.secret) })
+            let names = Dictionary(uniqueKeysWithValues: channels.map { ($0.index, $0.name) })
+            await rxLogService.updateChannels(secrets: secrets, names: names)
+            logger.debug("Refreshed RxLogService channel cache with \(channels.count) channels")
+        } catch {
+            logger.error("Failed to refresh RxLogService channel cache: \(error)")
+        }
+    }
+}
