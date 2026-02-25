@@ -73,12 +73,10 @@ struct ContactDetailView: View {
     @State private var isEditingNickname = false
     @State private var showingBlockAlert = false
     @State private var showingDeleteAlert = false
-    @State private var showingShareSheet = false
     @State private var isSaving = false
     @State private var isTogglingFavorite = false
     @State private var errorMessage: String?
     @State private var pathViewModel = PathManagementViewModel()
-    @State private var showAdvanced = false
     @State private var showRoomJoinSheet = false
     @State private var activeSheet: ActiveSheet?
     @State private var pendingSheet: ActiveSheet?
@@ -127,6 +125,7 @@ struct ContactDetailView: View {
             // Danger zone
             dangerSection
         }
+        .errorAlert($errorMessage)
         .navigationTitle(contactTypeLabel)
         .navigationBarTitleDisplayMode(.inline)
         .alert(L10n.Contacts.Contacts.Detail.Alert.Block.title, isPresented: $showingBlockAlert) {
@@ -444,12 +443,12 @@ struct ContactDetailView: View {
             // Role-specific actions based on contact type
             switch currentContact.type {
             case .room:
-                // Room server actions
                 Button {
                     showRoomJoinSheet = true
                 } label: {
                     Label(L10n.Contacts.Contacts.Detail.joinRoom, systemImage: "door.left.hand.open")
                 }
+                .radioDisabled(for: appState.connectionState)
 
             case .repeater:
                 // Telemetry button - shows read-only status sheet after auth
@@ -458,6 +457,7 @@ struct ContactDetailView: View {
                 } label: {
                     Label(L10n.Contacts.Contacts.Detail.telemetry, systemImage: "chart.line.uptrend.xyaxis")
                 }
+                .radioDisabled(for: appState.connectionState)
 
                 // Admin Access - navigates to settings view after auth
                 Button {
@@ -465,6 +465,26 @@ struct ContactDetailView: View {
                     showRepeaterAdminAuth = true
                 } label: {
                     Label(L10n.Contacts.Contacts.Detail.adminAccess, systemImage: "gearshape.2")
+                }
+                .radioDisabled(for: appState.connectionState)
+
+                // Ping Repeater
+                Button {
+                    Task { await pingRepeater() }
+                } label: {
+                    HStack {
+                        Label(L10n.Contacts.Contacts.Detail.pingRepeater, systemImage: "wave.3.right")
+                        if isPinging {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isPinging)
+                .radioDisabled(for: appState.connectionState)
+
+                if let result = pingResult {
+                    PingResultRow(result: result)
                 }
 
             case .chat:
@@ -515,28 +535,6 @@ struct ContactDetailView: View {
                 Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
             }
             .radioDisabled(for: appState.connectionState)
-
-            // Ping Repeater (repeater-only)
-            if currentContact.type == .repeater {
-                Button {
-                    Task { await pingRepeater() }
-                } label: {
-                    HStack {
-                        Label(L10n.Contacts.Contacts.Detail.pingRepeater, systemImage: "wave.3.right")
-                        if isPinging {
-                            Spacer()
-                            ProgressView()
-                        }
-                    }
-                }
-                .disabled(isPinging)
-                .radioDisabled(for: appState.connectionState)
-
-                // Ping result row
-                if let result = pingResult {
-                    PingResultRow(result: result)
-                }
-            }
         }
     }
 
