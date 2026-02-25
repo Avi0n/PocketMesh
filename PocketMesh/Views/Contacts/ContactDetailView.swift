@@ -623,6 +623,7 @@ struct ContactDetailView: View {
             .clipShape(.rect(cornerRadius: 12))
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
+            .padding(.bottom, 8)
 
             // Coordinates
             HStack {
