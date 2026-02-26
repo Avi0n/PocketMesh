@@ -84,13 +84,6 @@ struct ContactRowView: View {
                     Text(routeLabel)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    // Distance to contact
-                    if let distance = distanceToContact {
-                        Text(distance)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { dimensions in
@@ -140,20 +133,4 @@ struct ContactRowView: View {
         }
     }
 
-    private var distanceToContact: String? {
-        guard let userLocation, contact.hasLocation else { return nil }
-
-        let contactLocation = CLLocation(
-            latitude: contact.latitude,
-            longitude: contact.longitude
-        )
-        let meters = userLocation.distance(from: contactLocation)
-        let measurement = Measurement(value: meters, unit: UnitLength.meters)
-
-        let formattedDistance = measurement.formatted(.measurement(
-            width: .abbreviated,
-            usage: .road
-        ))
-        return L10n.Contacts.Contacts.Row.away(formattedDistance)
-    }
 }
