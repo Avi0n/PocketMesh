@@ -103,27 +103,70 @@ struct ContactDetailView: View {
     var body: some View {
         List {
             // Profile header
-            profileSection
+            ContactProfileSection(
+                currentContact: currentContact,
+                contactTypeLabel: contactTypeLabel
+            )
 
             // Quick actions
-            actionsSection
+            ContactActionsSection(
+                currentContact: currentContact,
+                showFromDirectChat: showFromDirectChat,
+                isPinging: isPinging,
+                isTogglingFavorite: isTogglingFavorite,
+                pingResult: pingResult,
+                onJoinRoom: { showRoomJoinSheet = true },
+                onShowTelemetry: { activeSheet = .repeaterAuth },
+                onShowAdminAccess: {
+                    adminSession = nil
+                    showRepeaterAdminAuth = true
+                },
+                onPingRepeater: { Task { await pingRepeater() } },
+                onToggleFavorite: { Task { await toggleFavorite() } },
+                onShareQR: { showQRShareSheet = true },
+                onShareViaAdvert: { Task { await shareContact() } }
+            )
 
             // Info section
-            infoSection
+            ContactInfoSection(
+                currentContact: currentContact,
+                nickname: $nickname,
+                isEditingNickname: $isEditingNickname,
+                isSaving: isSaving,
+                onSaveNickname: { Task { await saveNickname() } }
+            )
 
             // Location section (if available)
             if currentContact.hasLocation {
-                locationSection
+                ContactLocationSection(currentContact: currentContact)
             }
 
             // Network path controls
-            networkPathSection
+            ContactNetworkPathSection(
+                currentContact: currentContact,
+                pathViewModel: pathViewModel,
+                onRefreshContact: { Task { await refreshContact() } }
+            )
 
             // Technical details
-            technicalSection
+            ContactTechnicalSection(
+                currentContact: currentContact,
+                contactTypeLabel: contactTypeLabel
+            )
 
             // Danger zone
-            dangerSection
+            ContactDangerSection(
+                currentContact: currentContact,
+                contactTypeLabel: contactTypeLabel,
+                onToggleBlock: {
+                    if currentContact.isBlocked {
+                        Task { await toggleBlocked() }
+                    } else {
+                        showingBlockAlert = true
+                    }
+                },
+                onDelete: { showingDeleteAlert = true }
+            )
         }
         .errorAlert($errorMessage)
         .navigationTitle(contactTypeLabel)
@@ -381,12 +424,57 @@ struct ContactDetailView: View {
         }
     }
 
-    // MARK: - Profile Section
+    // MARK: - Helpers
 
-    private var profileSection: some View {
+    private var contactTypeLabel: String {
+        switch currentContact.type {
+        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
+        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
+        case .room: return L10n.Contacts.Contacts.NodeKind.room
+        }
+    }
+
+    private func saveNickname() async {
+        isSaving = true
+        do {
+            try await appState.services?.contactService.updateContactPreferences(
+                contactID: currentContact.id,
+                nickname: nickname.isEmpty ? nil : nickname
+            )
+            await refreshContact()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isEditingNickname = false
+        isSaving = false
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct ContactDetailAvatarView: View {
+    let contact: ContactDTO
+
+    var body: some View {
+        switch contact.type {
+        case .chat:
+            ContactAvatar(contact: contact, size: 100)
+        case .repeater:
+            NodeAvatar(publicKey: contact.publicKey, role: .repeater, size: 100)
+        case .room:
+            NodeAvatar(publicKey: contact.publicKey, role: .roomServer, size: 100)
+        }
+    }
+}
+
+private struct ContactProfileSection: View {
+    let currentContact: ContactDTO
+    let contactTypeLabel: String
+
+    var body: some View {
         Section {
             VStack(spacing: 16) {
-                avatarView
+                ContactDetailAvatarView(contact: currentContact)
 
                 VStack(spacing: 4) {
                     Text(currentContact.displayName)
@@ -423,55 +511,49 @@ struct ContactDetailView: View {
             .listRowBackground(Color.clear)
         }
     }
+}
 
-    @ViewBuilder
-    private var avatarView: some View {
-        switch currentContact.type {
-        case .chat:
-            ContactAvatar(contact: currentContact, size: 100)
-        case .repeater:
-            NodeAvatar(publicKey: currentContact.publicKey, role: .repeater, size: 100)
-        case .room:
-            NodeAvatar(publicKey: currentContact.publicKey, role: .roomServer, size: 100)
-        }
-    }
+private struct ContactActionsSection: View {
+    @Environment(\.appState) private var appState
 
-    // MARK: - Actions Section
+    let currentContact: ContactDTO
+    let showFromDirectChat: Bool
+    let isPinging: Bool
+    let isTogglingFavorite: Bool
+    let pingResult: PingResult?
+    let onJoinRoom: () -> Void
+    let onShowTelemetry: () -> Void
+    let onShowAdminAccess: () -> Void
+    let onPingRepeater: () -> Void
+    let onToggleFavorite: () -> Void
+    let onShareQR: () -> Void
+    let onShareViaAdvert: () -> Void
 
-    private var actionsSection: some View {
+    var body: some View {
         Section {
             // Role-specific actions based on contact type
             switch currentContact.type {
             case .room:
-                Button {
-                    showRoomJoinSheet = true
-                } label: {
+                Button(action: onJoinRoom) {
                     Label(L10n.Contacts.Contacts.Detail.joinRoom, systemImage: "door.left.hand.open")
                 }
                 .radioDisabled(for: appState.connectionState)
 
             case .repeater:
                 // Telemetry button - shows read-only status sheet after auth
-                Button {
-                    activeSheet = .repeaterAuth
-                } label: {
+                Button(action: onShowTelemetry) {
                     Label(L10n.Contacts.Contacts.Detail.telemetry, systemImage: "chart.line.uptrend.xyaxis")
                 }
                 .radioDisabled(for: appState.connectionState)
 
                 // Admin Access - navigates to settings view after auth
-                Button {
-                    adminSession = nil  // Clear stale session before presenting sheet
-                    showRepeaterAdminAuth = true
-                } label: {
+                Button(action: onShowAdminAccess) {
                     Label(L10n.Contacts.Contacts.Detail.adminAccess, systemImage: "gearshape.2")
                 }
                 .radioDisabled(for: appState.connectionState)
 
                 // Ping Repeater
-                Button {
-                    Task { await pingRepeater() }
-                } label: {
+                Button(action: onPingRepeater) {
                     HStack {
                         Label(L10n.Contacts.Contacts.Detail.pingRepeater, systemImage: "wave.3.right")
                         if isPinging {
@@ -500,11 +582,7 @@ struct ContactDetailView: View {
             }
 
             // Toggle favorite (for all contact types)
-            Button {
-                Task {
-                    await toggleFavorite()
-                }
-            } label: {
+            Button(action: onToggleFavorite) {
                 HStack {
                     Label(
                         currentContact.isFavorite ? L10n.Contacts.Contacts.Detail.removeFromFavorites : L10n.Contacts.Contacts.Detail.addToFavorites,
@@ -520,27 +598,27 @@ struct ContactDetailView: View {
             .radioDisabled(for: appState.connectionState)
 
             // Share Contact via QR
-            Button {
-                showQRShareSheet = true
-            } label: {
+            Button(action: onShareQR) {
                 Label(L10n.Contacts.Contacts.Detail.shareContact, systemImage: "square.and.arrow.up")
             }
 
             // Share Contact via Advert
-            Button {
-                Task {
-                    await shareContact()
-                }
-            } label: {
+            Button(action: onShareViaAdvert) {
                 Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
             }
             .radioDisabled(for: appState.connectionState)
         }
     }
+}
 
-    // MARK: - Info Section
+private struct ContactInfoSection: View {
+    let currentContact: ContactDTO
+    @Binding var nickname: String
+    @Binding var isEditingNickname: Bool
+    let isSaving: Bool
+    let onSaveNickname: () -> Void
 
-    private var infoSection: some View {
+    var body: some View {
         Section {
             // Nickname
             HStack {
@@ -553,15 +631,11 @@ struct ContactDetailView: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 150)
                         .onSubmit {
-                            Task {
-                                await saveNickname()
-                            }
+                            onSaveNickname()
                         }
 
                     Button(L10n.Contacts.Contacts.Common.save) {
-                        Task {
-                            await saveNickname()
-                        }
+                        onSaveNickname()
                     }
                     .disabled(isSaving)
                 } else {
@@ -605,10 +679,19 @@ struct ContactDetailView: View {
             Text(L10n.Contacts.Contacts.Detail.info)
         }
     }
+}
 
-    // MARK: - Location Section
+private struct ContactLocationSection: View {
+    let currentContact: ContactDTO
 
-    private var locationSection: some View {
+    private var contactCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(
+            latitude: currentContact.latitude,
+            longitude: currentContact.longitude
+        )
+    }
+
+    var body: some View {
         Section {
             // Mini map
             Map(position: .constant(.region(MKCoordinateRegion(
@@ -646,22 +729,70 @@ struct ContactDetailView: View {
         }
     }
 
-    private var contactCoordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(
-            latitude: currentContact.latitude,
-            longitude: currentContact.longitude
-        )
-    }
-
     private func openInMaps() {
         let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: contactCoordinate))
         mapItem.name = currentContact.displayName
         mapItem.openInMaps()
     }
+}
 
-    // MARK: - Network Path Section
+private struct ContactNetworkPathSection: View {
+    @Environment(\.appState) private var appState
 
-    private var networkPathSection: some View {
+    let currentContact: ContactDTO
+    let pathViewModel: PathManagementViewModel
+    let onRefreshContact: () -> Void
+
+    // Computed property for path display with resolved names
+    private var pathDisplayWithNames: String {
+        let pathData = currentContact.outPath
+        let byteLength = currentContact.pathByteLength
+        let hashSize = currentContact.pathHashSize
+        guard byteLength > 0 else { return L10n.Contacts.Contacts.Route.direct }
+
+        let relevantPath = pathData.prefix(byteLength)
+        return stride(from: 0, to: relevantPath.count, by: hashSize).map { start in
+            let end = min(start + hashSize, relevantPath.count)
+            let hopBytes = Data(relevantPath[start..<end])
+            if let name = pathViewModel.resolveHashToName(hopBytes) {
+                return "\(name)"
+            }
+            return hopBytes.hexString()
+        }.joined(separator: " \u{2192} ")
+    }
+
+    // Route display text for simplified view
+    private var routeDisplayText: String {
+        if currentContact.isFloodRouted {
+            return L10n.Contacts.Contacts.Route.flood
+        } else if currentContact.pathHopCount == 0 {
+            return L10n.Contacts.Contacts.Route.direct
+        } else {
+            return pathDisplayWithNames
+        }
+    }
+
+    // Footer text for network path section
+    private var networkPathFooterText: String {
+        if currentContact.isFloodRouted {
+            return L10n.Contacts.Contacts.Detail.floodFooter
+        } else {
+            return L10n.Contacts.Contacts.Detail.pathFooter
+        }
+    }
+
+    // VoiceOver accessibility label for path
+    private var pathAccessibilityLabel: String {
+        if currentContact.isFloodRouted {
+            return L10n.Contacts.Contacts.Detail.routeFlood
+        } else if currentContact.pathHopCount == 0 {
+            return L10n.Contacts.Contacts.Detail.routeDirect
+        } else {
+            return L10n.Contacts.Contacts.Detail.routePrefix(pathDisplayWithNames)
+        }
+    }
+
+    var body: some View {
         Section {
             // Current routing path
             Label {
@@ -746,7 +877,7 @@ struct ContactDetailView: View {
             Button(role: .destructive) {
                 Task {
                     await pathViewModel.resetPath(for: currentContact)
-                    await refreshContact()
+                    onRefreshContact()
                 }
             } label: {
                 HStack {
@@ -765,59 +896,13 @@ struct ContactDetailView: View {
             Text(networkPathFooterText)
         }
     }
+}
 
-    // Computed property for path display with resolved names
-    private var pathDisplayWithNames: String {
-        let pathData = currentContact.outPath
-        let byteLength = currentContact.pathByteLength
-        let hashSize = currentContact.pathHashSize
-        guard byteLength > 0 else { return L10n.Contacts.Contacts.Route.direct }
+private struct ContactTechnicalSection: View {
+    let currentContact: ContactDTO
+    let contactTypeLabel: String
 
-        let relevantPath = pathData.prefix(byteLength)
-        return stride(from: 0, to: relevantPath.count, by: hashSize).map { start in
-            let end = min(start + hashSize, relevantPath.count)
-            let hopBytes = Data(relevantPath[start..<end])
-            if let name = pathViewModel.resolveHashToName(hopBytes) {
-                return "\(name)"
-            }
-            return hopBytes.hexString()
-        }.joined(separator: " \u{2192} ")
-    }
-
-    // Route display text for simplified view
-    private var routeDisplayText: String {
-        if currentContact.isFloodRouted {
-            return L10n.Contacts.Contacts.Route.flood
-        } else if currentContact.pathHopCount == 0 {
-            return L10n.Contacts.Contacts.Route.direct
-        } else {
-            return pathDisplayWithNames
-        }
-    }
-
-    // Footer text for network path section
-    private var networkPathFooterText: String {
-        if currentContact.isFloodRouted {
-            return L10n.Contacts.Contacts.Detail.floodFooter
-        } else {
-            return L10n.Contacts.Contacts.Detail.pathFooter
-        }
-    }
-
-    // VoiceOver accessibility label for path
-    private var pathAccessibilityLabel: String {
-        if currentContact.isFloodRouted {
-            return L10n.Contacts.Contacts.Detail.routeFlood
-        } else if currentContact.pathHopCount == 0 {
-            return L10n.Contacts.Contacts.Detail.routeDirect
-        } else {
-            return L10n.Contacts.Contacts.Detail.routePrefix(pathDisplayWithNames)
-        }
-    }
-
-    // MARK: - Technical Section
-
-    private var technicalSection: some View {
+    var body: some View {
         Section {
             // Public key
             VStack(alignment: .leading, spacing: 4) {
@@ -840,21 +925,20 @@ struct ContactDetailView: View {
             Text(L10n.Contacts.Contacts.Detail.technical)
         }
     }
+}
 
-    // MARK: - Danger Section
+private struct ContactDangerSection: View {
+    @Environment(\.appState) private var appState
 
-    private var dangerSection: some View {
+    let currentContact: ContactDTO
+    let contactTypeLabel: String
+    let onToggleBlock: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
         Section {
             if currentContact.type == .chat {
-                Button {
-                    if currentContact.isBlocked {
-                        Task {
-                            await toggleBlocked()
-                        }
-                    } else {
-                        showingBlockAlert = true
-                    }
-                } label: {
+                Button(action: onToggleBlock) {
                     Label(
                         currentContact.isBlocked ? L10n.Contacts.Contacts.Detail.unblockContact : L10n.Contacts.Contacts.Detail.blockContact,
                         systemImage: currentContact.isBlocked ? "hand.raised.slash" : "hand.raised"
@@ -863,40 +947,13 @@ struct ContactDetailView: View {
                 .radioDisabled(for: appState.connectionState)
             }
 
-            Button(role: .destructive) {
-                showingDeleteAlert = true
-            } label: {
+            Button(role: .destructive, action: onDelete) {
                 Label(L10n.Contacts.Contacts.Detail.deleteType(contactTypeLabel), systemImage: "trash")
             }
             .radioDisabled(for: appState.connectionState)
         } header: {
             Text(L10n.Contacts.Contacts.Detail.dangerZone)
         }
-    }
-
-    // MARK: - Helpers
-
-    private var contactTypeLabel: String {
-        switch currentContact.type {
-        case .chat: return L10n.Contacts.Contacts.NodeKind.contact
-        case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
-        case .room: return L10n.Contacts.Contacts.NodeKind.room
-        }
-    }
-
-    private func saveNickname() async {
-        isSaving = true
-        do {
-            try await appState.services?.contactService.updateContactPreferences(
-                contactID: currentContact.id,
-                nickname: nickname.isEmpty ? nil : nickname
-            )
-            await refreshContact()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isEditingNickname = false
-        isSaving = false
     }
 }
 

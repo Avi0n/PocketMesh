@@ -29,136 +29,28 @@ struct ScanChannelQRView: View {
 
     var body: some View {
         Group {
-            if scannedChannel != nil {
-                confirmationView
+            if let channel = scannedChannel {
+                ScanConfirmationContent(
+                    scannedChannel: channel,
+                    isJoining: isJoining,
+                    errorMessage: errorMessage,
+                    onJoin: { Task { await joinChannel() } },
+                    onScanAgain: {
+                        scannedChannel = nil
+                        errorMessage = nil
+                    }
+                )
             } else if cameraPermissionDenied {
-                cameraPermissionDeniedView
+                CameraPermissionDeniedContent()
             } else {
-                scannerView
+                ScannerContent(
+                    onScanResult: handleScanResult,
+                    cameraPermissionDenied: $cameraPermissionDenied
+                )
             }
         }
         .navigationTitle(L10n.Chats.Chats.ScanQR.title)
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    // MARK: - Scanner View
-
-    private var scannerView: some View {
-        ZStack {
-            if QRDataScannerView.isSupported && QRDataScannerView.isAvailable {
-                QRDataScannerView { result in
-                    handleScanResult(result)
-                } onPermissionDenied: {
-                    cameraPermissionDenied = true
-                }
-            } else {
-                // Fallback for unsupported devices
-                ContentUnavailableView(
-                    L10n.Chats.Chats.ScanQR.NotAvailable.title,
-                    systemImage: "qrcode.viewfinder",
-                    description: Text(L10n.Chats.Chats.ScanQR.NotAvailable.description)
-                )
-            }
-
-            // Overlay with scan frame
-            VStack {
-                Spacer()
-
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(.white, lineWidth: 3)
-                    .frame(width: 250, height: 250)
-
-                Spacer()
-
-                Text(L10n.Chats.Chats.ScanQR.instruction)
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
-                    .padding()
-                    .background(.black.opacity(0.6), in: .capsule)
-                    .padding(.bottom, 50)
-            }
-        }
-        .ignoresSafeArea()
-    }
-
-    // MARK: - Confirmation View
-
-    private var confirmationView: some View {
-        Form {
-            if let channel = scannedChannel {
-                Section {
-                    LabeledContent(L10n.Chats.Chats.CreatePrivate.channelName, value: channel.name)
-
-                    LabeledContent(L10n.Chats.Chats.ChannelInfo.secretKey) {
-                        Text(channel.secret.hexString())
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text(L10n.Chats.Chats.CreatePrivate.Section.details)
-                }
-
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                    }
-                }
-
-                Section {
-                    Button {
-                        Task {
-                            await joinChannel()
-                        }
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if isJoining {
-                                ProgressView()
-                            } else {
-                                Text(L10n.Chats.Chats.JoinPrivate.joinButton)
-                            }
-                            Spacer()
-                        }
-                    }
-                    .disabled(isJoining)
-
-                    Button(L10n.Chats.Chats.ScanQR.scanAgain) {
-                        scannedChannel = nil
-                        errorMessage = nil
-                    }
-                    .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    // MARK: - Permission Denied View
-
-    private var cameraPermissionDeniedView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "camera.fill")
-                .font(.system(size: 60))
-                .foregroundStyle(.secondary)
-
-            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.title)
-                .font(.title2)
-                .bold()
-
-            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-
-            Button(L10n.Chats.Chats.ScanQR.openSettings) {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding()
     }
 
     // MARK: - Private Methods
@@ -218,6 +110,128 @@ struct ScanChannelQRView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct ScannerContent: View {
+    let onScanResult: (String) -> Void
+    @Binding var cameraPermissionDenied: Bool
+
+    var body: some View {
+        ZStack {
+            if QRDataScannerView.isSupported && QRDataScannerView.isAvailable {
+                QRDataScannerView { result in
+                    onScanResult(result)
+                } onPermissionDenied: {
+                    cameraPermissionDenied = true
+                }
+            } else {
+                // Fallback for unsupported devices
+                ContentUnavailableView(
+                    L10n.Chats.Chats.ScanQR.NotAvailable.title,
+                    systemImage: "qrcode.viewfinder",
+                    description: Text(L10n.Chats.Chats.ScanQR.NotAvailable.description)
+                )
+            }
+
+            // Overlay with scan frame
+            VStack {
+                Spacer()
+
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(.white, lineWidth: 3)
+                    .frame(width: 250, height: 250)
+
+                Spacer()
+
+                Text(L10n.Chats.Chats.ScanQR.instruction)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .padding()
+                    .background(.black.opacity(0.6), in: .capsule)
+                    .padding(.bottom, 50)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct ScanConfirmationContent: View {
+    let scannedChannel: ScanChannelQRView.ScannedChannel
+    let isJoining: Bool
+    let errorMessage: String?
+    let onJoin: () -> Void
+    let onScanAgain: () -> Void
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent(L10n.Chats.Chats.CreatePrivate.channelName, value: scannedChannel.name)
+
+                LabeledContent(L10n.Chats.Chats.ChannelInfo.secretKey) {
+                    Text(scannedChannel.secret.hexString())
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text(L10n.Chats.Chats.CreatePrivate.Section.details)
+            }
+
+            if let errorMessage {
+                Section {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Section {
+                Button(action: onJoin) {
+                    HStack {
+                        Spacer()
+                        if isJoining {
+                            ProgressView()
+                        } else {
+                            Text(L10n.Chats.Chats.JoinPrivate.joinButton)
+                        }
+                        Spacer()
+                    }
+                }
+                .disabled(isJoining)
+
+                Button(L10n.Chats.Chats.ScanQR.scanAgain, action: onScanAgain)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct CameraPermissionDeniedContent: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "camera.fill")
+                .font(.system(size: 60))
+                .foregroundStyle(.secondary)
+
+            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.title)
+                .font(.title2)
+                .bold()
+
+            Text(L10n.Chats.Chats.ScanQR.PermissionDenied.message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Button(L10n.Chats.Chats.ScanQR.openSettings) {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding()
     }
 }
 

@@ -521,45 +521,49 @@ private struct ChatMessagesContent: View {
                 contactName: contact.displayName,
                 deviceName: deviceName,
                 configuration: .directMessage,
-                showTimestamp: item.showTimestamp,
-                showDirectionGap: item.showDirectionGap,
-                showSenderName: item.showSenderName,
-                showNewMessagesDivider: item.showNewMessagesDivider,
-                previewState: item.previewState,
-                loadedPreview: item.loadedPreview,
-                isImageURL: item.isImageURL,
-                decodedImage: viewModel.decodedImage(for: message.id),
-                isGIF: viewModel.isGIFImage(for: message.id),
-                showInlineImages: showInlineImages,
-                autoPlayGIFs: autoPlayGIFs,
-                onRetry: {
-                    logger.info("retryMessage called for message: \(message.id)")
-                    Task { await viewModel.retryMessage(message) }
-                },
-                onLongPress: { selectedMessageForActions = message },
-                onImageTap: {
-                    if let data = viewModel.imageData(for: message.id) {
-                        imageViewerData = ImageViewerData(
-                            imageData: data,
-                            isGIF: false
-                        )
+                displayState: MessageDisplayState(
+                    showTimestamp: item.showTimestamp,
+                    showDirectionGap: item.showDirectionGap,
+                    showSenderName: item.showSenderName,
+                    showNewMessagesDivider: item.showNewMessagesDivider,
+                    previewState: item.previewState,
+                    loadedPreview: item.loadedPreview,
+                    isImageURL: item.isImageURL,
+                    decodedImage: viewModel.decodedImage(for: message.id),
+                    isGIF: viewModel.isGIFImage(for: message.id),
+                    showInlineImages: showInlineImages,
+                    autoPlayGIFs: autoPlayGIFs
+                ),
+                callbacks: MessageBubbleCallbacks(
+                    onRetry: {
+                        logger.info("retryMessage called for message: \(message.id)")
+                        Task { await viewModel.retryMessage(message) }
+                    },
+                    onLongPress: { selectedMessageForActions = message },
+                    onImageTap: {
+                        if let data = viewModel.imageData(for: message.id) {
+                            imageViewerData = ImageViewerData(
+                                imageData: data,
+                                isGIF: false
+                            )
+                        }
+                    },
+                    onRetryImageFetch: {
+                        Task { await viewModel.retryImageFetch(for: message.id) }
+                    },
+                    onRequestPreviewFetch: {
+                        if item.isImageURL && showInlineImages {
+                            viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)
+                        } else {
+                            viewModel.requestPreviewFetch(for: message.id)
+                        }
+                    },
+                    onManualPreviewFetch: {
+                        Task {
+                            await viewModel.manualFetchPreview(for: message.id)
+                        }
                     }
-                },
-                onRetryImageFetch: {
-                    Task { await viewModel.retryImageFetch(for: message.id) }
-                },
-                onRequestPreviewFetch: {
-                    if item.isImageURL && showInlineImages {
-                        viewModel.requestImageFetch(for: message.id, showInlineImages: showInlineImages)
-                    } else {
-                        viewModel.requestPreviewFetch(for: message.id)
-                    }
-                },
-                onManualPreviewFetch: {
-                    Task {
-                        await viewModel.manualFetchPreview(for: message.id)
-                    }
-                }
+                )
             )
         } else {
             Text(L10n.Chats.Chats.Message.unavailable)

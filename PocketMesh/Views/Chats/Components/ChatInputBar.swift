@@ -27,57 +27,21 @@ struct ChatInputBar: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            textField
-            sendButtonWithCounter
+            ChatInputTextField(text: $text, placeholder: placeholder, isFocused: $isFocused)
+            ChatSendButtonWithCounter(
+                canSend: canSend,
+                isOverLimit: isOverLimit,
+                shouldShowCharacterCount: shouldShowCharacterCount,
+                byteCount: byteCount,
+                maxBytes: maxBytes,
+                sendAccessibilityLabel: sendAccessibilityLabel,
+                sendAccessibilityHint: sendAccessibilityHint,
+                onSend: send
+            )
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .inputBarBackground()
-    }
-
-    private var textField: some View {
-        TextField(placeholder, text: $text, axis: .vertical)
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .textFieldBackground()
-            .lineLimit(1...5)
-            .focused($isFocused)
-            .accessibilityLabel(L10n.Chats.Chats.Input.accessibilityLabel)
-            .accessibilityHint(L10n.Chats.Chats.Input.accessibilityHint)
-    }
-
-    private var sendButtonWithCounter: some View {
-        VStack(spacing: 4) {
-            sendButton
-            if shouldShowCharacterCount {
-                characterCountLabel
-            }
-        }
-    }
-
-    private var characterCountLabel: some View {
-        Text("\(byteCount)/\(maxBytes)")
-            .font(.caption2)
-            .monospacedDigit()
-            .foregroundStyle(isOverLimit ? .red : .secondary)
-            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(byteCount, maxBytes))
-    }
-
-    private var sendButton: some View {
-        Button(action: send) {
-            Image(systemName: "arrow.up.circle.fill")
-                .font(sendButtonFont)
-                .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
-        }
-        .sendButtonStyle()
-        .disabled(!canSend)
-        .accessibilityLabel(sendAccessibilityLabel)
-        .accessibilityHint(sendAccessibilityHint)
-    }
-
-    private var sendButtonFont: Font {
-        if #available(iOS 26.0, *) { .title2 } else { .title }
     }
 
     private var sendAccessibilityLabel: String {
@@ -113,6 +77,92 @@ struct ChatInputBar: View {
             try? await Task.sleep(for: .seconds(1))
             isCoolingDown = false
         }
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct ChatInputTextField: View {
+    @Binding var text: String
+    let placeholder: String
+    @FocusState.Binding var isFocused: Bool
+
+    var body: some View {
+        TextField(placeholder, text: $text, axis: .vertical)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .textFieldBackground()
+            .lineLimit(1...5)
+            .focused($isFocused)
+            .accessibilityLabel(L10n.Chats.Chats.Input.accessibilityLabel)
+            .accessibilityHint(L10n.Chats.Chats.Input.accessibilityHint)
+    }
+}
+
+private struct ChatSendButtonWithCounter: View {
+    let canSend: Bool
+    let isOverLimit: Bool
+    let shouldShowCharacterCount: Bool
+    let byteCount: Int
+    let maxBytes: Int
+    let sendAccessibilityLabel: String
+    let sendAccessibilityHint: String
+    let onSend: () -> Void
+
+    var body: some View {
+        VStack(spacing: 4) {
+            ChatSendButton(
+                canSend: canSend,
+                sendAccessibilityLabel: sendAccessibilityLabel,
+                sendAccessibilityHint: sendAccessibilityHint,
+                onSend: onSend
+            )
+            if shouldShowCharacterCount {
+                ChatCharacterCountLabel(
+                    byteCount: byteCount,
+                    maxBytes: maxBytes,
+                    isOverLimit: isOverLimit
+                )
+            }
+        }
+    }
+}
+
+private struct ChatCharacterCountLabel: View {
+    let byteCount: Int
+    let maxBytes: Int
+    let isOverLimit: Bool
+
+    var body: some View {
+        Text("\(byteCount)/\(maxBytes)")
+            .font(.caption2)
+            .monospacedDigit()
+            .foregroundStyle(isOverLimit ? .red : .secondary)
+            .accessibilityLabel(L10n.Chats.Chats.Input.characterCount(byteCount, maxBytes))
+    }
+}
+
+private struct ChatSendButton: View {
+    let canSend: Bool
+    let sendAccessibilityLabel: String
+    let sendAccessibilityHint: String
+    let onSend: () -> Void
+
+    private var sendButtonFont: Font {
+        if #available(iOS 26.0, *) { .title2 } else { .title }
+    }
+
+    var body: some View {
+        Button(action: onSend) {
+            Image(systemName: "arrow.up.circle.fill")
+                .font(sendButtonFont)
+                .foregroundStyle(canSend ? AppColors.Message.outgoingBubble : .secondary)
+        }
+        .sendButtonStyle()
+        .disabled(!canSend)
+        .accessibilityLabel(sendAccessibilityLabel)
+        .accessibilityHint(sendAccessibilityHint)
     }
 }
 

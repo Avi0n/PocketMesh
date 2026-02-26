@@ -32,13 +32,30 @@ struct JoinHashtagFromMessageView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if isLoading {
-                    loadingView
+                    HashtagLoadingContent()
                 } else if isMissingDevice {
-                    missingDeviceView
+                    HashtagMissingDeviceContent(
+                        fullChannelName: fullChannelName,
+                        onDismiss: {
+                            onComplete(nil)
+                            dismiss()
+                        }
+                    )
                 } else if availableSlots.isEmpty {
-                    noSlotsView
+                    HashtagNoSlotsContent(
+                        fullChannelName: fullChannelName,
+                        onDismiss: {
+                            onComplete(nil)
+                            dismiss()
+                        }
+                    )
                 } else {
-                    joinConfirmationView
+                    HashtagJoinConfirmationContent(
+                        fullChannelName: fullChannelName,
+                        errorMessage: errorMessage,
+                        isJoining: isJoining,
+                        onJoin: { Task { await joinChannel() } }
+                    )
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -57,98 +74,6 @@ struct JoinHashtagFromMessageView: View {
                 await loadAvailableSlots()
             }
             .sensoryFeedback(.success, trigger: successTrigger)
-        }
-    }
-
-    // MARK: - Loading View
-
-    private var loadingView: some View {
-        ProgressView(L10n.Chats.Chats.JoinFromMessage.loading)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private var missingDeviceView: some View {
-        ContentUnavailableView {
-            Label(L10n.Chats.Chats.JoinFromMessage.NoDevice.title, systemImage: "antenna.radiowaves.left.and.right.slash")
-        } description: {
-            Text(L10n.Chats.Chats.JoinFromMessage.NoDevice.description(fullChannelName))
-        } actions: {
-            Button(L10n.Chats.Chats.Common.ok) {
-                onComplete(nil)
-                dismiss()
-            }
-            .liquidGlassProminentButtonStyle()
-        }
-    }
-
-    // MARK: - No Slots View
-
-    private var noSlotsView: some View {
-        ContentUnavailableView {
-            Label(L10n.Chats.Chats.JoinFromMessage.NoSlots.title, systemImage: "number.circle.fill")
-        } description: {
-            Text(L10n.Chats.Chats.JoinFromMessage.NoSlots.description(fullChannelName))
-        } actions: {
-            Button(L10n.Chats.Chats.Common.ok) {
-                onComplete(nil)
-                dismiss()
-            }
-            .liquidGlassProminentButtonStyle()
-        }
-    }
-
-    // MARK: - Join Confirmation View
-
-    private var joinConfirmationView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(.cyan)
-                        .frame(width: 80, height: 80)
-
-                    Image(systemName: "number")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-
-                Text(fullChannelName)
-                    .font(.title)
-                    .bold()
-
-                Text(L10n.Chats.Chats.JoinFromMessage.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            Spacer()
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.callout)
-                    .foregroundStyle(.red)
-                    .padding(.horizontal)
-            }
-
-            Button {
-                Task {
-                    await joinChannel()
-                }
-            } label: {
-                if isJoining {
-                    ProgressView()
-                } else {
-                    Text(L10n.Chats.Chats.JoinFromMessage.joinButton(fullChannelName))
-                }
-            }
-            .liquidGlassProminentButtonStyle()
-            .disabled(isJoining)
-            .padding(.horizontal, 48)
-            .padding(.bottom, 32)
         }
     }
 
@@ -223,6 +148,103 @@ struct JoinHashtagFromMessageView: View {
         }
 
         isJoining = false
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct HashtagLoadingContent: View {
+    var body: some View {
+        ProgressView(L10n.Chats.Chats.JoinFromMessage.loading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct HashtagMissingDeviceContent: View {
+    let fullChannelName: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(L10n.Chats.Chats.JoinFromMessage.NoDevice.title, systemImage: "antenna.radiowaves.left.and.right.slash")
+        } description: {
+            Text(L10n.Chats.Chats.JoinFromMessage.NoDevice.description(fullChannelName))
+        } actions: {
+            Button(L10n.Chats.Chats.Common.ok, action: onDismiss)
+                .liquidGlassProminentButtonStyle()
+        }
+    }
+}
+
+private struct HashtagNoSlotsContent: View {
+    let fullChannelName: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(L10n.Chats.Chats.JoinFromMessage.NoSlots.title, systemImage: "number.circle.fill")
+        } description: {
+            Text(L10n.Chats.Chats.JoinFromMessage.NoSlots.description(fullChannelName))
+        } actions: {
+            Button(L10n.Chats.Chats.Common.ok, action: onDismiss)
+                .liquidGlassProminentButtonStyle()
+        }
+    }
+}
+
+private struct HashtagJoinConfirmationContent: View {
+    let fullChannelName: String
+    let errorMessage: String?
+    let isJoining: Bool
+    let onJoin: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(.cyan)
+                        .frame(width: 80, height: 80)
+
+                    Image(systemName: "number")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                Text(fullChannelName)
+                    .font(.title)
+                    .bold()
+
+                Text(L10n.Chats.Chats.JoinFromMessage.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal)
+            }
+
+            Button(action: onJoin) {
+                if isJoining {
+                    ProgressView()
+                } else {
+                    Text(L10n.Chats.Chats.JoinFromMessage.joinButton(fullChannelName))
+                }
+            }
+            .liquidGlassProminentButtonStyle()
+            .disabled(isJoining)
+            .padding(.horizontal, 48)
+            .padding(.bottom, 32)
+        }
     }
 }
 

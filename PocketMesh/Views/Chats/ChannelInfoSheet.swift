@@ -35,7 +35,7 @@ struct ChannelInfoSheet: View {
         NavigationStack {
             Form {
                 // Channel Header Section
-                channelHeaderSection
+                ChannelInfoHeaderSection(channel: channel)
 
                 // Quick Actions Section
                 ConversationQuickActionsSection(
@@ -62,12 +62,15 @@ struct ChannelInfoSheet: View {
 
                 // QR Code Section (only for private channels with secrets)
                 if channel.hasSecret && !channel.isPublicChannel {
-                    qrCodeSection
+                    ChannelInfoQRCodeSection(channel: channel)
                 }
 
                 // Secret Key Section (only for private channels)
                 if channel.hasSecret && !channel.isPublicChannel {
-                    secretKeySection
+                    ChannelInfoSecretKeySection(
+                        channel: channel,
+                        copyHapticTrigger: $copyHapticTrigger
+                    )
                 }
 
                 // Error Section
@@ -79,7 +82,13 @@ struct ChannelInfoSheet: View {
                 }
 
                 // Actions Section
-                actionsSection
+                ChannelInfoActionsSection(
+                    isActionInProgress: isDeleting || isClearingMessages,
+                    isClearingMessages: isClearingMessages,
+                    isDeleting: isDeleting,
+                    showingClearMessagesConfirmation: $showingClearMessagesConfirmation,
+                    showingDeleteConfirmation: $showingDeleteConfirmation
+                )
             }
             .navigationTitle(L10n.Chats.Chats.ChannelInfo.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -122,138 +131,6 @@ struct ChannelInfoSheet: View {
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
-    // MARK: - Channel Header Section
-
-    private var channelHeaderSection: some View {
-        Section {
-            HStack {
-                Spacer()
-                VStack(spacing: 12) {
-                    ChannelAvatar(channel: channel, size: 80)
-
-                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
-                        .font(.title2)
-                        .bold()
-
-                    Text(channelTypeLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            .listRowBackground(Color.clear)
-        }
-    }
-
-    private var channelTypeLabel: String {
-        if channel.isPublicChannel {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.`public`
-        } else if channel.name.hasPrefix("#") {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag
-        } else {
-            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`
-        }
-    }
-
-    // MARK: - QR Code Section
-
-    private var qrCodeSection: some View {
-        Section {
-            HStack {
-                Spacer()
-                VStack(spacing: 12) {
-                    if let qrImage = generateQRCode() {
-                        Image(uiImage: qrImage)
-                            .interpolation(.none)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 180, height: 180)
-                    }
-
-                    Text(L10n.Chats.Chats.ChannelInfo.scanToJoin)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-        } header: {
-            Text(L10n.Chats.Chats.ChannelInfo.shareChannel)
-        }
-    }
-
-    // MARK: - Secret Key Section
-
-    private var secretKeySection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.Chats.Chats.ChannelInfo.secretKey)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                HStack {
-                    Text(channel.secret.hexString())
-                        .font(.system(.body, design: .monospaced))
-                        .textSelection(.enabled)
-
-                    Spacer()
-
-                    Button(L10n.Chats.Chats.ChannelInfo.copy, systemImage: "doc.on.doc") {
-                        copyHapticTrigger += 1
-                        UIPasteboard.general.string = channel.secret.hexString()
-                    }
-                    .labelStyle(.iconOnly)
-                }
-            }
-        } header: {
-            Text(L10n.Chats.Chats.ChannelInfo.manualSharing)
-        } footer: {
-            Text(L10n.Chats.Chats.ChannelInfo.manualSharingFooter)
-        }
-    }
-
-    // MARK: - Actions Section
-
-    private var isActionInProgress: Bool {
-        isDeleting || isClearingMessages
-    }
-
-    private var actionsSection: some View {
-        Section {
-            Button {
-                showingClearMessagesConfirmation = true
-            } label: {
-                HStack {
-                    Spacer()
-                    if isClearingMessages {
-                        ProgressView()
-                    } else {
-                        Label(L10n.Chats.Chats.ChannelInfo.clearMessagesButton, systemImage: "xmark.circle")
-                    }
-                    Spacer()
-                }
-            }
-            .disabled(isActionInProgress)
-            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-
-            Button(role: .destructive) {
-                showingDeleteConfirmation = true
-            } label: {
-                HStack {
-                    Spacer()
-                    if isDeleting {
-                        ProgressView()
-                    } else {
-                        Label(L10n.Chats.Chats.ChannelInfo.deleteButton, systemImage: "trash")
-                    }
-                    Spacer()
-                }
-            }
-            .disabled(isActionInProgress)
-        } footer: {
-            Text(L10n.Chats.Chats.ChannelInfo.deleteFooter)
-        }
-    }
-
     // MARK: - Private Methods
 
     private func clearNotificationsForChannel(deviceID: UUID) async {
@@ -262,26 +139,6 @@ struct ChannelInfoSheet: View {
             deviceID: deviceID
         )
         await appState.services?.notificationService.updateBadgeCount()
-    }
-
-    private func generateQRCode() -> UIImage? {
-        // Format: meshcore://channel/add?name=<name>&secret=<hex>
-        let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString())"
-
-        let context = CIContext()
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(urlString.utf8)
-        filter.correctionLevel = "M"
-
-        guard let outputImage = filter.outputImage else { return nil }
-
-        // Scale up for better quality
-        let scale = 10.0
-        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-
-        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
-
-        return UIImage(cgImage: cgImage)
     }
 
     private func deleteChannel() async {
@@ -343,6 +200,169 @@ struct ChannelInfoSheet: View {
         } catch {
             errorMessage = error.localizedDescription
             isClearingMessages = false
+        }
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct ChannelInfoHeaderSection: View {
+    let channel: ChannelDTO
+
+    private var channelTypeLabel: String {
+        if channel.isPublicChannel {
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`public`
+        } else if channel.name.hasPrefix("#") {
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag
+        } else {
+            return L10n.Chats.Chats.ChannelInfo.ChannelType.`private`
+        }
+    }
+
+    var body: some View {
+        Section {
+            HStack {
+                Spacer()
+                VStack(spacing: 12) {
+                    ChannelAvatar(channel: channel, size: 80)
+
+                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
+                        .font(.title2)
+                        .bold()
+
+                    Text(channelTypeLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+        }
+    }
+}
+
+private struct ChannelInfoQRCodeSection: View {
+    let channel: ChannelDTO
+
+    var body: some View {
+        Section {
+            HStack {
+                Spacer()
+                VStack(spacing: 12) {
+                    if let qrImage = generateQRCode() {
+                        Image(uiImage: qrImage)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 180, height: 180)
+                    }
+
+                    Text(L10n.Chats.Chats.ChannelInfo.scanToJoin)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        } header: {
+            Text(L10n.Chats.Chats.ChannelInfo.shareChannel)
+        }
+    }
+
+    private func generateQRCode() -> UIImage? {
+        // Format: meshcore://channel/add?name=<name>&secret=<hex>
+        let urlString = "meshcore://channel/add?name=\(channel.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&secret=\(channel.secret.hexString())"
+
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(urlString.utf8)
+        filter.correctionLevel = "M"
+
+        guard let outputImage = filter.outputImage else { return nil }
+
+        // Scale up for better quality
+        let scale = 10.0
+        let scaledImage = outputImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+
+        guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
+
+        return UIImage(cgImage: cgImage)
+    }
+}
+
+private struct ChannelInfoSecretKeySection: View {
+    let channel: ChannelDTO
+    @Binding var copyHapticTrigger: Int
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(L10n.Chats.Chats.ChannelInfo.secretKey)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack {
+                    Text(channel.secret.hexString())
+                        .font(.system(.body, design: .monospaced))
+                        .textSelection(.enabled)
+
+                    Spacer()
+
+                    Button(L10n.Chats.Chats.ChannelInfo.copy, systemImage: "doc.on.doc") {
+                        copyHapticTrigger += 1
+                        UIPasteboard.general.string = channel.secret.hexString()
+                    }
+                    .labelStyle(.iconOnly)
+                }
+            }
+        } header: {
+            Text(L10n.Chats.Chats.ChannelInfo.manualSharing)
+        } footer: {
+            Text(L10n.Chats.Chats.ChannelInfo.manualSharingFooter)
+        }
+    }
+}
+
+private struct ChannelInfoActionsSection: View {
+    let isActionInProgress: Bool
+    let isClearingMessages: Bool
+    let isDeleting: Bool
+    @Binding var showingClearMessagesConfirmation: Bool
+    @Binding var showingDeleteConfirmation: Bool
+
+    var body: some View {
+        Section {
+            Button {
+                showingClearMessagesConfirmation = true
+            } label: {
+                HStack {
+                    Spacer()
+                    if isClearingMessages {
+                        ProgressView()
+                    } else {
+                        Label(L10n.Chats.Chats.ChannelInfo.clearMessagesButton, systemImage: "xmark.circle")
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(isActionInProgress)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+
+            Button(role: .destructive) {
+                showingDeleteConfirmation = true
+            } label: {
+                HStack {
+                    Spacer()
+                    if isDeleting {
+                        ProgressView()
+                    } else {
+                        Label(L10n.Chats.Chats.ChannelInfo.deleteButton, systemImage: "trash")
+                    }
+                    Spacer()
+                }
+            }
+            .disabled(isActionInProgress)
+        } footer: {
+            Text(L10n.Chats.Chats.ChannelInfo.deleteFooter)
         }
     }
 }

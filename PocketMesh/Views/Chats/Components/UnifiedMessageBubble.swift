@@ -54,41 +54,42 @@ struct MessageBubbleConfiguration: Sendable {
     }
 }
 
+/// Display state for a message bubble (typically derived from MessageDisplayItem)
+struct MessageDisplayState {
+    var showTimestamp: Bool = false
+    var showDirectionGap: Bool = false
+    var showSenderName: Bool = true
+    var showNewMessagesDivider: Bool = false
+    var previewState: PreviewLoadState = .idle
+    var loadedPreview: LinkPreviewDataDTO?
+    var isImageURL: Bool = false
+    var decodedImage: UIImage?
+    var isGIF: Bool = false
+    var showInlineImages: Bool = false
+    var autoPlayGIFs: Bool = true
+}
+
+/// Callbacks for message bubble interactions
+struct MessageBubbleCallbacks {
+    var onRetry: (() -> Void)?
+    var onReaction: ((String) -> Void)?
+    var onLongPress: (() -> Void)?
+    var onImageTap: (() -> Void)?
+    var onRetryImageFetch: (() -> Void)?
+    var onRequestPreviewFetch: (() -> Void)?
+    var onManualPreviewFetch: (() -> Void)?
+}
+
 /// Unified message bubble for both direct and channel messages
 struct UnifiedMessageBubble: View {
     let message: MessageDTO
     let contactName: String
     let deviceName: String
     let configuration: MessageBubbleConfiguration
-    let showTimestamp: Bool
-    let showDirectionGap: Bool
-    let showSenderName: Bool
-    let showNewMessagesDivider: Bool
-    let onRetry: (() -> Void)?
-    let onReaction: ((String) -> Void)?
-    let onLongPress: (() -> Void)?
-
-    // Preview state from display item (replaces @State)
-    let previewState: PreviewLoadState
-    let loadedPreview: LinkPreviewDataDTO?
-
-    // Inline image state
-    let isImageURL: Bool
-    let decodedImage: UIImage?
-    let isGIF: Bool
-    let showInlineImages: Bool
-    let autoPlayGIFs: Bool
-    let onImageTap: (() -> Void)?
-    let onRetryImageFetch: (() -> Void)?
-
-    // Callbacks for preview lifecycle
-    let onRequestPreviewFetch: (() -> Void)?
-    let onManualPreviewFetch: (() -> Void)?
+    let displayState: MessageDisplayState
+    let callbacks: MessageBubbleCallbacks
 
     @AppStorage("linkPreviewsEnabled") private var previewsEnabled = false
-    @AppStorage("showIncomingPath") private var showIncomingPath = false
-    @AppStorage("showIncomingHopCount") private var showIncomingHopCount = false
-    @Environment(\.openURL) private var openURL
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     @State private var showingReactionDetails = false
@@ -99,58 +100,26 @@ struct UnifiedMessageBubble: View {
         contactName: String,
         deviceName: String = "Me",
         configuration: MessageBubbleConfiguration,
-        showTimestamp: Bool = false,
-        showDirectionGap: Bool = false,
-        showSenderName: Bool = true,
-        showNewMessagesDivider: Bool = false,
-        previewState: PreviewLoadState = .idle,
-        loadedPreview: LinkPreviewDataDTO? = nil,
-        isImageURL: Bool = false,
-        decodedImage: UIImage? = nil,
-        isGIF: Bool = false,
-        showInlineImages: Bool = false,
-        autoPlayGIFs: Bool = true,
-        onRetry: (() -> Void)? = nil,
-        onReaction: ((String) -> Void)? = nil,
-        onLongPress: (() -> Void)? = nil,
-        onImageTap: (() -> Void)? = nil,
-        onRetryImageFetch: (() -> Void)? = nil,
-        onRequestPreviewFetch: (() -> Void)? = nil,
-        onManualPreviewFetch: (() -> Void)? = nil
+        displayState: MessageDisplayState = .init(),
+        callbacks: MessageBubbleCallbacks = .init()
     ) {
         self.message = message
         self.contactName = contactName
         self.deviceName = deviceName
         self.configuration = configuration
-        self.showTimestamp = showTimestamp
-        self.showDirectionGap = showDirectionGap
-        self.showSenderName = showSenderName
-        self.showNewMessagesDivider = showNewMessagesDivider
-        self.previewState = previewState
-        self.loadedPreview = loadedPreview
-        self.isImageURL = isImageURL
-        self.decodedImage = decodedImage
-        self.isGIF = isGIF
-        self.showInlineImages = showInlineImages
-        self.autoPlayGIFs = autoPlayGIFs
-        self.onRetry = onRetry
-        self.onReaction = onReaction
-        self.onLongPress = onLongPress
-        self.onImageTap = onImageTap
-        self.onRetryImageFetch = onRetryImageFetch
-        self.onRequestPreviewFetch = onRequestPreviewFetch
-        self.onManualPreviewFetch = onManualPreviewFetch
+        self.displayState = displayState
+        self.callbacks = callbacks
     }
 
     var body: some View {
         VStack(spacing: 2) {
-            if showNewMessagesDivider {
+            if displayState.showNewMessagesDivider {
                 NewMessagesDividerView()
                     .padding(.bottom, 4)
             }
 
             // Centered timestamp (iMessage-style)
-            if showTimestamp {
+            if displayState.showTimestamp {
                 MessageTimestampView(date: message.date)
             }
 
@@ -162,7 +131,7 @@ struct UnifiedMessageBubble: View {
 
                 VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
                     // Sender name for incoming channel messages (hidden for continuation messages in a group)
-                    if !message.isOutgoing && configuration.showSenderName && showSenderName {
+                    if !message.isOutgoing && configuration.showSenderName && displayState.showSenderName {
                         Text(senderName)
                             .font(.footnote)
                             .bold()
@@ -170,19 +139,24 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Message bubble with text and optional routing footer
-                    messageBubbleContent
-                        .onLongPressGesture(minimumDuration: 0.3) {
-                            longPressTriggered.toggle()
-                            onLongPress?()
-                        }
-                        .sensoryFeedback(.impact(weight: .medium), trigger: longPressTriggered)
+                    BubbleContent(
+                        message: message,
+                        deviceName: deviceName,
+                        displayState: displayState,
+                        callbacks: callbacks
+                    )
+                    .onLongPressGesture(minimumDuration: 0.3) {
+                        longPressTriggered.toggle()
+                        callbacks.onLongPress?()
+                    }
+                    .sensoryFeedback(.impact(weight: .medium), trigger: longPressTriggered)
 
                     // Reaction badges (for messages with reactions)
                     if let summary = message.reactionSummary, !summary.isEmpty {
                         ReactionBadgesView(
                             summary: summary,
                             onTapReaction: { emoji in
-                                onReaction?(emoji)
+                                callbacks.onReaction?(emoji)
                             },
                             onLongPress: {
                                 showingReactionDetails = true
@@ -193,13 +167,20 @@ struct UnifiedMessageBubble: View {
                     }
 
                     // Link preview (if applicable, skip for image URLs shown in bubble)
-                    if previewsEnabled && !(isImageURL && showInlineImages) {
-                        linkPreviewContent
+                    if previewsEnabled && !(displayState.isImageURL && displayState.showInlineImages) {
+                        BubbleLinkPreviewContent(
+                            message: message,
+                            displayState: displayState,
+                            onManualPreviewFetch: callbacks.onManualPreviewFetch
+                        )
                     }
 
                     // Status row for outgoing messages
                     if message.isOutgoing {
-                        statusRow
+                        BubbleStatusRow(
+                            message: message,
+                            onRetry: callbacks.onRetry
+                        )
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -211,13 +192,13 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, showDirectionGap ? 6 : (showSenderName ? 4 : 2))
+        .padding(.top, displayState.showDirectionGap ? 6 : (displayState.showSenderName ? 4 : 2))
         .padding(.bottom, 2)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
-            if previewState == .idle && detectedURL != nil && message.linkPreviewURL == nil {
-                onRequestPreviewFetch?()
+            if displayState.previewState == .idle && detectedURL != nil && message.linkPreviewURL == nil {
+                callbacks.onRequestPreviewFetch?()
             }
         }
         .sheet(isPresented: $showingReactionDetails) {
@@ -225,19 +206,115 @@ struct UnifiedMessageBubble: View {
         }
     }
 
-    // MARK: - Embedded Image Content
+    // MARK: - Computed Properties
 
-    @ViewBuilder
-    private var embeddedImageContent: some View {
-        switch previewState {
+    private var senderName: String {
+        configuration.senderNameResolver?(message) ?? L10n.Chats.Chats.Message.Sender.unknown
+    }
+
+    private var senderColor: Color {
+        AppColors.NameColor.color(for: senderName, highContrast: colorSchemeContrast == .increased)
+    }
+
+    private var detectedURL: URL? {
+        LinkPreviewService.extractFirstURL(from: message.text)
+    }
+
+    private var accessibilityMessageLabel: String {
+        var label = ""
+        // Always include sender name for screen readers, even when visually hidden
+        if !message.isOutgoing && configuration.showSenderName {
+            label = "\(senderName): "
+        }
+        label += message.text
+        if message.isOutgoing {
+            label += ", \(BubbleStatusRow.statusText(for: message))"
+        }
+        return label
+    }
+
+    // MARK: - Helpers
+
+}
+
+// MARK: - Extracted Views
+
+private struct BubbleContent: View {
+    let message: MessageDTO
+    let deviceName: String
+    let displayState: MessageDisplayState
+    let callbacks: MessageBubbleCallbacks
+
+    @AppStorage("showIncomingPath") private var showIncomingPath = false
+    @AppStorage("showIncomingHopCount") private var showIncomingHopCount = false
+
+    private var textColor: Color {
+        message.isOutgoing ? .white : .primary
+    }
+
+    private var bubbleColor: Color {
+        if message.isOutgoing {
+            return message.hasFailed ? AppColors.Message.outgoingBubbleFailed : AppColors.Message.outgoingBubble
+        } else {
+            return AppColors.Message.incomingBubble
+        }
+    }
+
+    private var isDirect: Bool {
+        message.pathLength == 0 || message.pathLength == 0xFF
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
+
+                if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
+                    HStack(spacing: 4) {
+                        if showIncomingHopCount && !isDirect {
+                            BubbleHopCountFooter(pathLength: message.pathLength)
+                        }
+                        if showIncomingPath {
+                            BubblePathFooter(message: message)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+
+            if displayState.isImageURL && displayState.showInlineImages {
+                BubbleEmbeddedImageContent(
+                    message: message,
+                    displayState: displayState,
+                    callbacks: callbacks
+                )
+            }
+        }
+        .background(bubbleColor)
+        .clipShape(.rect(cornerRadius: 16))
+    }
+}
+
+private struct BubbleEmbeddedImageContent: View {
+    let message: MessageDTO
+    let displayState: MessageDisplayState
+    let callbacks: MessageBubbleCallbacks
+
+    private var detectedURL: URL? {
+        LinkPreviewService.extractFirstURL(from: message.text)
+    }
+
+    var body: some View {
+        switch displayState.previewState {
         case .loaded:
-            if let image = decodedImage {
+            if let image = displayState.decodedImage {
                 InlineImageView(
                     image: image,
-                    isGIF: isGIF,
-                    autoPlayGIFs: autoPlayGIFs,
+                    isGIF: displayState.isGIF,
+                    autoPlayGIFs: displayState.autoPlayGIFs,
                     isEmbedded: true,
-                    onTap: { onImageTap?() }
+                    onTap: { callbacks.onImageTap?() }
                 )
                 .frame(maxWidth: .infinity)
             }
@@ -257,8 +334,8 @@ struct UnifiedMessageBubble: View {
             }
 
         case .noPreview, .disabled:
-            if isImageURL && showInlineImages && previewState == .noPreview {
-                Button(action: { onRetryImageFetch?() }) {
+            if displayState.isImageURL && displayState.showInlineImages && displayState.previewState == .noPreview {
+                Button(action: { callbacks.onRetryImageFetch?() }) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
                             .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
@@ -274,14 +351,23 @@ struct UnifiedMessageBubble: View {
             }
         }
     }
+}
 
-    // MARK: - Link Preview Content
+private struct BubbleLinkPreviewContent: View {
+    let message: MessageDTO
+    let displayState: MessageDisplayState
+    let onManualPreviewFetch: (() -> Void)?
 
-    @ViewBuilder
-    private var linkPreviewContent: some View {
-        switch previewState {
+    @Environment(\.openURL) private var openURL
+
+    private var detectedURL: URL? {
+        LinkPreviewService.extractFirstURL(from: message.text)
+    }
+
+    var body: some View {
+        switch displayState.previewState {
         case .loaded:
-            if let preview = loadedPreview,
+            if let preview = displayState.loadedPreview,
                let url = URL(string: preview.url) {
                 LinkPreviewCard(
                     url: url,
@@ -328,82 +414,13 @@ struct UnifiedMessageBubble: View {
             }
         }
     }
+}
 
-    // MARK: - Message Bubble Content
+private struct BubbleStatusRow: View {
+    let message: MessageDTO
+    let onRetry: (() -> Void)?
 
-    private var messageBubbleContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
-
-                if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
-                    HStack(spacing: 4) {
-                        if showIncomingHopCount && !isDirect {
-                            hopCountFooter
-                        }
-                        if showIncomingPath {
-                            pathFooter
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-
-            if isImageURL && showInlineImages {
-                embeddedImageContent
-            }
-        }
-        .background(bubbleColor)
-        .clipShape(.rect(cornerRadius: 16))
-    }
-
-    // MARK: - Computed Properties
-
-    private var senderName: String {
-        configuration.senderNameResolver?(message) ?? L10n.Chats.Chats.Message.Sender.unknown
-    }
-
-    private var senderColor: Color {
-        AppColors.NameColor.color(for: senderName, highContrast: colorSchemeContrast == .increased)
-    }
-
-    private var detectedURL: URL? {
-        LinkPreviewService.extractFirstURL(from: message.text)
-    }
-
-    private var bubbleColor: Color {
-        if message.isOutgoing {
-            return message.hasFailed ? AppColors.Message.outgoingBubbleFailed : AppColors.Message.outgoingBubble
-        } else {
-            return AppColors.Message.incomingBubble
-        }
-    }
-
-    private var textColor: Color {
-        message.isOutgoing ? .white : .primary
-    }
-
-    private var isDirect: Bool {
-        message.pathLength == 0 || message.pathLength == 0xFF
-    }
-
-    private var accessibilityMessageLabel: String {
-        var label = ""
-        // Always include sender name for screen readers, even when visually hidden
-        if !message.isOutgoing && configuration.showSenderName {
-            label = "\(senderName): "
-        }
-        label += message.text
-        if message.isOutgoing {
-            label += ", \(statusText)"
-        }
-        return label
-    }
-
-    // MARK: - Status Row
-
-    private var statusRow: some View {
+    var body: some View {
         HStack(spacing: 4) {
             // Only show retry button for failed messages (not retrying)
             if message.status == .failed, let onRetry {
@@ -427,39 +444,14 @@ struct UnifiedMessageBubble: View {
                     .foregroundStyle(.red)
             }
 
-            Text(statusText)
+            Text(Self.statusText(for: message))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
         .padding(.trailing, 4)
     }
 
-    // MARK: - Routing Info Footer Views
-
-    private var pathFooter: some View {
-        let formattedPath = MessagePathFormatter.format(message)
-        return HStack(spacing: 4) {
-            Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-            Text(formattedPath)
-        }
-        .font(.caption2.monospaced())
-        .foregroundStyle(.secondary)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Chats.Chats.Message.Path.accessibilityLabel(formattedPath))
-    }
-
-    private var hopCountFooter: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "arrowshape.bounce.right")
-            Text("\(message.pathLength)")
-        }
-        .font(.caption2)  // Not monospaced - only hex paths need alignment
-        .foregroundStyle(.secondary)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.Chats.Chats.Message.HopCount.accessibilityLabel(Int(message.pathLength)))
-    }
-
-    private var statusText: String {
+    static func statusText(for message: MessageDTO) -> String {
         switch message.status {
         case .pending, .sending:
             return L10n.Chats.Chats.Message.Status.sending
@@ -499,9 +491,37 @@ struct UnifiedMessageBubble: View {
             return L10n.Chats.Chats.Message.Status.retrying
         }
     }
+}
 
-    // MARK: - Helpers
+private struct BubblePathFooter: View {
+    let message: MessageDTO
 
+    var body: some View {
+        let formattedPath = MessagePathFormatter.format(message)
+        HStack(spacing: 4) {
+            Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+            Text(formattedPath)
+        }
+        .font(.caption2.monospaced())
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.Chats.Chats.Message.Path.accessibilityLabel(formattedPath))
+    }
+}
+
+private struct BubbleHopCountFooter: View {
+    let pathLength: UInt8
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrowshape.bounce.right")
+            Text("\(pathLength)")
+        }
+        .font(.caption2)  // Not monospaced - only hex paths need alignment
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.Chats.Chats.Message.HopCount.accessibilityLabel(Int(pathLength)))
+    }
 }
 
 // MARK: - Previews
@@ -553,7 +573,7 @@ struct UnifiedMessageBubble: View {
         contactName: "Charlie",
         deviceName: "My Device",
         configuration: .directMessage,
-        onRetry: { }
+        callbacks: MessageBubbleCallbacks(onRetry: { })
     )
 }
 

@@ -28,9 +28,19 @@ struct CreatePrivateChannelView: View {
     var body: some View {
         Form {
             if !isCreated {
-                createChannelForm
+                CreateChannelFormContent(
+                    channelName: $channelName,
+                    generatedSecret: generatedSecret,
+                    isCreating: isCreating,
+                    errorMessage: errorMessage,
+                    onCreate: { Task { await createChannel() } }
+                )
             } else {
-                shareChannelView
+                ShareChannelContent(
+                    channelName: channelName,
+                    generatedSecret: generatedSecret,
+                    copyHapticTrigger: $copyHapticTrigger
+                )
             }
         }
         .navigationTitle(isCreated ? L10n.Chats.Chats.CreatePrivate.titleShare : L10n.Chats.Chats.CreatePrivate.titleCreate)
@@ -50,9 +60,57 @@ struct CreatePrivateChannelView: View {
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
     }
 
-    // MARK: - Create Form
+    // MARK: - Private Methods
 
-    private var createChannelForm: some View {
+    private func generateSecret() {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        generatedSecret = Data(bytes)
+    }
+
+    private func createChannel() async {
+        guard let deviceID = appState.connectedDevice?.id,
+              let secret = generatedSecret else {
+            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
+            return
+        }
+
+        isCreating = true
+        defer { isCreating = false }
+        errorMessage = nil
+
+        do {
+            guard let channelService = appState.services?.channelService else {
+                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
+                return
+            }
+            try await channelService.setChannelWithSecret(
+                deviceID: deviceID,
+                index: selectedSlot,
+                name: channelName,
+                secret: secret
+            )
+
+            // Fetch the created channel to return it
+            if let channels = try? await appState.services?.dataStore.fetchChannels(deviceID: deviceID) {
+                createdChannel = channels.first { $0.index == selectedSlot }
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Extracted Views
+
+private struct CreateChannelFormContent: View {
+    @Binding var channelName: String
+    let generatedSecret: Data?
+    let isCreating: Bool
+    let errorMessage: String?
+    let onCreate: () -> Void
+
+    var body: some View {
         Group {
             Section {
                 TextField(L10n.Chats.Chats.CreatePrivate.channelName, text: $channelName)
@@ -88,11 +146,7 @@ struct CreatePrivateChannelView: View {
             }
 
             Section {
-                Button {
-                    Task {
-                        await createChannel()
-                    }
-                } label: {
+                Button(action: onCreate) {
                     HStack {
                         Spacer()
                         if isCreating {
@@ -107,10 +161,14 @@ struct CreatePrivateChannelView: View {
             }
         }
     }
+}
 
-    // MARK: - Share View
+private struct ShareChannelContent: View {
+    let channelName: String
+    let generatedSecret: Data?
+    @Binding var copyHapticTrigger: Int
 
-    private var shareChannelView: some View {
+    var body: some View {
         Group {
             Section {
                 HStack {
@@ -162,46 +220,6 @@ struct CreatePrivateChannelView: View {
             } footer: {
                 Text(L10n.Chats.Chats.CreatePrivate.shareManuallyFooter)
             }
-        }
-    }
-
-    // MARK: - Private Methods
-
-    private func generateSecret() {
-        var bytes = [UInt8](repeating: 0, count: 16)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        generatedSecret = Data(bytes)
-    }
-
-    private func createChannel() async {
-        guard let deviceID = appState.connectedDevice?.id,
-              let secret = generatedSecret else {
-            errorMessage = L10n.Chats.Chats.Error.noDeviceConnected
-            return
-        }
-
-        isCreating = true
-        defer { isCreating = false }
-        errorMessage = nil
-
-        do {
-            guard let channelService = appState.services?.channelService else {
-                errorMessage = L10n.Chats.Chats.Error.servicesUnavailable
-                return
-            }
-            try await channelService.setChannelWithSecret(
-                deviceID: deviceID,
-                index: selectedSlot,
-                name: channelName,
-                secret: secret
-            )
-
-            // Fetch the created channel to return it
-            if let channels = try? await appState.services?.dataStore.fetchChannels(deviceID: deviceID) {
-                createdChannel = channels.first { $0.index == selectedSlot }
-            }
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 
