@@ -40,8 +40,6 @@ struct ContactRowView: View {
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.blocked)
                     }
 
-                    Spacer()
-
                     if isTogglingFavorite {
                         ProgressView()
                             .controlSize(.small)
@@ -51,6 +49,8 @@ struct ContactRowView: View {
                             .foregroundStyle(.yellow)
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.favorite)
                     }
+
+                    Spacer()
 
                     RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
                 }

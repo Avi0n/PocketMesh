@@ -11,77 +11,62 @@ struct RelativeTimestampTextTests {
         UInt32(referenceDate.addingTimeInterval(-secondsAgo).timeIntervalSince1970)
     }
 
-    // MARK: - Now Threshold (< 60 seconds)
+    // MARK: - Same Day (clock time)
 
-    @Test("Returns 'Now' for timestamps under 60 seconds")
-    func format_justNow_returnsNow() {
+    @Test("Returns clock time for just now")
+    func format_justNow_returnsClockTime() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 0),
             relativeTo: referenceDate
         )
-        #expect(result == L10n.Chats.Chats.Timestamp.now)
+        // Should return clock time like "3:42 PM", which contains ":"
+        #expect(result.contains(":"))
     }
 
-    @Test("Returns 'Now' at 59 seconds ago")
-    func format_59Seconds_returnsNow() {
-        let result = RelativeTimestampText.format(
-            timestamp: timestamp(secondsAgo: 59),
-            relativeTo: referenceDate
-        )
-        #expect(result == L10n.Chats.Chats.Timestamp.now)
-    }
-
-    @Test("Returns relative format at exactly 60 seconds")
-    func format_60Seconds_returnsRelative() {
-        let result = RelativeTimestampText.format(
-            timestamp: timestamp(secondsAgo: 60),
-            relativeTo: referenceDate
-        )
-        #expect(result != L10n.Chats.Chats.Timestamp.now)
-        #expect(!result.isEmpty)
-    }
-
-    // MARK: - Relative Times (1 min to 1 week)
-
-    @Test("Returns non-empty string for minutes ago")
-    func format_minutesAgo_returnsNonEmpty() {
+    @Test("Returns clock time for minutes ago")
+    func format_minutesAgo_returnsClockTime() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 120),
             relativeTo: referenceDate
         )
-        #expect(!result.isEmpty)
+        #expect(result.contains(":"))
     }
 
-    @Test("Returns non-empty string for hours ago")
-    func format_hoursAgo_returnsNonEmpty() {
+    @Test("Returns clock time for hours ago")
+    func format_hoursAgo_returnsClockTime() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 3600),
             relativeTo: referenceDate
         )
-        #expect(!result.isEmpty)
+        #expect(result.contains(":"))
     }
 
-    @Test("Returns non-empty string for yesterday")
-    func format_yesterday_returnsNonEmpty() {
+    // MARK: - Yesterday
+
+    @Test("Returns 'Yesterday' for yesterday")
+    func format_yesterday_returnsYesterday() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 86400),
             relativeTo: referenceDate
         )
-        #expect(!result.isEmpty)
+        #expect(result == "Yesterday")
     }
 
-    @Test("Returns non-empty string for days ago")
-    func format_daysAgo_returnsNonEmpty() {
+    // MARK: - Day of Week (2-6 days ago)
+
+    @Test("Returns full weekday name for 2 days ago")
+    func format_2DaysAgo_returnsWeekday() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 172800),
             relativeTo: referenceDate
         )
-        #expect(!result.isEmpty)
+        let weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        #expect(weekdays.contains(result))
     }
 
     // MARK: - Week+ (formatted date)
 
-    @Test("Returns abbreviated date format for 7+ days ago")
+    @Test("Returns abbreviated date format for 7+ days ago (same year)")
     func format_7DaysAgo_returnsFormattedDate() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 604800),
@@ -91,8 +76,8 @@ struct RelativeTimestampTextTests {
         #expect(result.contains(" "))
     }
 
-    @Test("Returns abbreviated date format for old dates")
-    func format_oldDate_returnsFormattedDate() {
+    @Test("Returns abbreviated date format for 30 days ago (same year)")
+    func format_30DaysAgo_returnsFormattedDate() {
         let result = RelativeTimestampText.format(
             timestamp: timestamp(secondsAgo: 2_592_000), // 30 days
             relativeTo: referenceDate
@@ -101,21 +86,35 @@ struct RelativeTimestampTextTests {
         #expect(result.contains(" "))
     }
 
-    // MARK: - Boundary Tests
+    // MARK: - Previous Year
 
-    @Test("Uses relative format just before week threshold")
-    func format_justBeforeWeek_usesRelativeFormat() {
+    @Test("Returns date with year for previous year dates")
+    func format_previousYear_includesYear() {
+        // referenceDate is Nov 14, 2023 — go back ~365 days to 2022
         let result = RelativeTimestampText.format(
-            timestamp: timestamp(secondsAgo: 604799), // 1 second before 7 days
+            timestamp: timestamp(secondsAgo: 31_536_000),
             relativeTo: referenceDate
         )
-        #expect(!result.isEmpty)
+        // Should include year, e.g., "Nov 14, 2022"
+        #expect(result.contains("2022"))
     }
 
-    @Test("Uses date format at exactly week threshold")
-    func format_exactlyWeek_usesDateFormat() {
+    // MARK: - Boundary Tests
+
+    @Test("Uses weekday name just before week threshold")
+    func format_6DaysAgo_returnsWeekday() {
         let result = RelativeTimestampText.format(
-            timestamp: timestamp(secondsAgo: 604800), // exactly 7 days
+            timestamp: timestamp(secondsAgo: 518400), // 6 days
+            relativeTo: referenceDate
+        )
+        let weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        #expect(weekdays.contains(result))
+    }
+
+    @Test("Uses date format at 7 days ago")
+    func format_7Days_usesDateFormat() {
+        let result = RelativeTimestampText.format(
+            timestamp: timestamp(secondsAgo: 604800), // 7 days
             relativeTo: referenceDate
         )
         // Date format should contain a space (e.g., "Nov 7")

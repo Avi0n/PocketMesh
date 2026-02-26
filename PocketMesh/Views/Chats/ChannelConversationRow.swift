@@ -16,16 +16,16 @@ struct ChannelConversationRow: View {
                         .font(.headline)
                         .lineLimit(1)
 
-                    Spacer()
-
-                    NotificationLevelIndicator(level: channel.notificationLevel)
-
                     if channel.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
                             .accessibilityLabel(Strings.favorite)
                     }
+
+                    Spacer()
+
+                    NotificationLevelIndicator(level: channel.notificationLevel)
 
                     if let date = channel.lastMessageDate {
                         ConversationTimestamp(date: date)

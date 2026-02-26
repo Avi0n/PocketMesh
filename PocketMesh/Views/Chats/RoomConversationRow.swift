@@ -5,7 +5,7 @@ struct RoomConversationRow: View {
     let session: RemoteNodeSessionDTO
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 44)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -14,16 +14,16 @@ struct RoomConversationRow: View {
                         .font(.headline)
                         .lineLimit(1)
 
-                    Spacer()
-
-                    NotificationLevelIndicator(level: session.notificationLevel)
-
                     if session.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
                             .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
                     }
+
+                    Spacer()
+
+                    NotificationLevelIndicator(level: session.notificationLevel)
 
                     if let date = session.lastMessageDate {
                         ConversationTimestamp(date: date)
@@ -56,6 +56,7 @@ struct RoomConversationRow: View {
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.tertiary)
+                .offset(y: -11)
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
