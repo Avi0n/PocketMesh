@@ -7,6 +7,9 @@ struct RoomConversationRow: View {
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             NodeAvatar(publicKey: session.publicKey, role: .roomServer, size: 44)
+                .overlay(alignment: .topTrailing) {
+                    UnreadCountBadge(count: session.unreadCount)
+                }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
@@ -17,7 +20,7 @@ struct RoomConversationRow: View {
                     if session.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
-                            .font(.caption)
+                            .font(.system(size: 13.2))
                             .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
                     }
 
@@ -42,11 +45,6 @@ struct RoomConversationRow: View {
                     }
 
                     Spacer()
-
-                    UnreadBadges(
-                        unreadCount: session.unreadCount,
-                        notificationLevel: session.notificationLevel
-                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in

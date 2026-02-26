@@ -45,7 +45,7 @@ struct ContactRowView: View {
                             .controlSize(.small)
                     } else if contact.isFavorite {
                         Image(systemName: "star.fill")
-                            .font(.caption)
+                            .font(.system(size: 13.2))
                             .foregroundStyle(.yellow)
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.favorite)
                     }
