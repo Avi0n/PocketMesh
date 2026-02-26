@@ -13,6 +13,9 @@ struct UnreadCountBadge: View {
                 .padding(.horizontal, 4)
                 .frame(minWidth: 18, minHeight: 18)
                 .background(.red, in: .capsule)
+                .background {
+                    Capsule().fill(.white).padding(-2)
+                }
                 .offset(x: 4, y: -4)
         }
     }
