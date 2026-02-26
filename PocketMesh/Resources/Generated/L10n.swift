@@ -1489,7 +1489,11 @@ public enum L10n {
         public static let direct = L10n.tr("Contacts", "contacts.route.direct", fallback: "Direct")
         /// Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Flood routing label
         public static let flood = L10n.tr("Contacts", "contacts.route.flood", fallback: "Flood")
-        /// Location: ContactRowView.swift - Purpose: Hops count display
+        /// Location: ContactRowView.swift - Purpose: Singular hop count display
+        public static func hop(_ p1: Int) -> String {
+          return L10n.tr("Contacts", "contacts.route.hop", p1, fallback: "%d hop")
+        }
+        /// Location: ContactRowView.swift - Purpose: Plural hops count display
         public static func hops(_ p1: Int) -> String {
           return L10n.tr("Contacts", "contacts.route.hops", p1, fallback: "%d hops")
         }
@@ -3276,6 +3280,14 @@ public enum L10n {
         /// Error when export fails
         public static let exportFailed = L10n.tr("Settings", "diagnostics.error.exportFailed", fallback: "Failed to create export file")
       }
+    }
+    public enum Geocoding {
+      /// Footer for geocoding settings section
+      public static let footer = L10n.tr("Settings", "geocoding.footer", fallback: "Resolves City and State information for nodes that advert with their GPS location enabled. We use Apple Maps for lookup, which requires an internet connection. This lookup only occurs when a new node location is heard. When disabled, no internet lookups will occur, but previously resolved locations will still be shown from cached lookups.")
+      /// Section header for geocoding
+      public static let header = L10n.tr("Settings", "geocoding.header", fallback: "Geocoding")
+      /// Toggle label for node location lookup
+      public static let nodeLocationLookup = L10n.tr("Settings", "geocoding.nodeLocationLookup", fallback: "Node Location Lookup")
     }
     public enum InlineImages {
       /// Toggle label for auto-play GIFs

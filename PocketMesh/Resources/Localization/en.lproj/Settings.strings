@@ -740,6 +740,18 @@
 "location.notSharing" = "Not sharing";
 
 
+// MARK: - Geocoding Settings Section
+
+/* Section header for geocoding */
+"geocoding.header" = "Geocoding";
+
+/* Toggle label for node location lookup */
+"geocoding.nodeLocationLookup" = "Node Location Lookup";
+
+/* Footer for geocoding settings section */
+"geocoding.footer" = "Resolves City and State information for nodes that advert with their GPS location enabled. We use Apple Maps for lookup, which requires an internet connection. This lookup only occurs when a new node location is heard. When disabled, no internet lookups will occur, but previously resolved locations will still be shown from cached lookups.";
+
+
 // MARK: - Notification Settings Section
 
 /* Section header for notifications */
