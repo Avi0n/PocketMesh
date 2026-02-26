@@ -49,10 +49,10 @@ struct NodeAuthenticationSheet: View {
         NavigationStack {
             Form {
                 if !hideNodeDetails {
-                    nodeDetailsSection
+                    makeNodeDetailsSection()
                 }
-                authenticationSection
-                connectButton
+                makeAuthenticationSection()
+                makeConnectButton()
             }
             .navigationTitle(customTitle ?? (role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.adminAccess))
             .toolbar {
@@ -73,70 +73,30 @@ struct NodeAuthenticationSheet: View {
 
     // MARK: - Sections
 
-    private var nodeDetailsSection: some View {
-        Section {
-            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.name, value: contact.displayName)
-            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.type, value: role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.typeRoom : L10n.RemoteNodes.RemoteNodes.Auth.typeRepeater)
-        } header: {
-            Text(L10n.RemoteNodes.RemoteNodes.Auth.nodeDetails)
-        }
+    private func makeNodeDetailsSection() -> some View {
+        NodeDetailsSection(
+            displayName: contact.displayName,
+            role: role
+        )
     }
 
-    private var authenticationSection: some View {
-        Section {
-            SecureField(L10n.RemoteNodes.RemoteNodes.Auth.password, text: $password)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-
-            Toggle(L10n.RemoteNodes.RemoteNodes.Auth.rememberPassword, isOn: $rememberPassword)
-        } header: {
-            Text(L10n.RemoteNodes.RemoteNodes.Auth.authentication)
-        } footer: {
-            if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.circle.fill")
-                    .foregroundStyle(.red)
-                    .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Auth.errorPrefix(errorMessage))
-            } else if password.count > maxPasswordLength {
-                Text(role == .repeater ? L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRepeaters(maxPasswordLength) : L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRooms(maxPasswordLength))
-            } else if let remaining = authSecondsRemaining, remaining > 0 {
-                Text(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemaining(remaining))
-            } else {
-                // Reserve footer space to prevent layout shift when error appears
-                Text(" ")
-                    .accessibilityHidden(true)
-            }
-        }
-        .onChange(of: password) {
-            if errorMessage != nil {
-                errorMessage = nil
-            }
-        }
-        .onChange(of: authSecondsRemaining) { oldValue, newValue in
-            // Announce countdown for VoiceOver at meaningful intervals
-            guard let remaining = newValue, remaining > 0 else { return }
-            // Announce when countdown starts or at 30/15/10/5 second thresholds
-            let shouldAnnounce = oldValue == nil || remaining == 30 || remaining == 15 || remaining == 10 || remaining <= 5
-            if shouldAnnounce {
-                AccessibilityNotification.Announcement(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemainingAnnouncement(remaining)).post()
-            }
-        }
+    private func makeAuthenticationSection() -> some View {
+        AuthenticationSection(
+            password: $password,
+            rememberPassword: $rememberPassword,
+            errorMessage: $errorMessage,
+            authSecondsRemaining: $authSecondsRemaining,
+            role: role,
+            maxPasswordLength: maxPasswordLength
+        )
     }
 
-    private var connectButton: some View {
-        Section {
-            Button {
-                authenticate()
-            } label: {
-                if isAuthenticating {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text(role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.connect)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .disabled(isAuthenticating)
-        }
+    private func makeConnectButton() -> some View {
+        ConnectButton(
+            role: role,
+            isAuthenticating: isAuthenticating,
+            onAuthenticate: { authenticate() }
+        )
     }
 
     // MARK: - Authentication
@@ -244,6 +204,95 @@ struct NodeAuthenticationSheet: View {
         authSecondsRemaining = nil
         authStartTime = nil
         authTimeoutSeconds = nil
+    }
+}
+
+// MARK: - Node Details Section
+
+private struct NodeDetailsSection: View {
+    let displayName: String
+    let role: RemoteNodeRole
+
+    var body: some View {
+        Section {
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.name, value: displayName)
+            LabeledContent(L10n.RemoteNodes.RemoteNodes.Auth.type, value: role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.typeRoom : L10n.RemoteNodes.RemoteNodes.Auth.typeRepeater)
+        } header: {
+            Text(L10n.RemoteNodes.RemoteNodes.Auth.nodeDetails)
+        }
+    }
+}
+
+// MARK: - Authentication Section
+
+private struct AuthenticationSection: View {
+    @Binding var password: String
+    @Binding var rememberPassword: Bool
+    @Binding var errorMessage: String?
+    @Binding var authSecondsRemaining: Int?
+    let role: RemoteNodeRole
+    let maxPasswordLength: Int
+
+    var body: some View {
+        Section {
+            SecureField(L10n.RemoteNodes.RemoteNodes.Auth.password, text: $password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            Toggle(L10n.RemoteNodes.RemoteNodes.Auth.rememberPassword, isOn: $rememberPassword)
+        } header: {
+            Text(L10n.RemoteNodes.RemoteNodes.Auth.authentication)
+        } footer: {
+            if let errorMessage {
+                Label(errorMessage, systemImage: "exclamationmark.circle.fill")
+                    .foregroundStyle(.red)
+                    .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Auth.errorPrefix(errorMessage))
+            } else if password.count > maxPasswordLength {
+                Text(role == .repeater ? L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRepeaters(maxPasswordLength) : L10n.RemoteNodes.RemoteNodes.Auth.passwordTooLongRooms(maxPasswordLength))
+            } else if let remaining = authSecondsRemaining, remaining > 0 {
+                Text(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemaining(remaining))
+            } else {
+                Text(" ")
+                    .accessibilityHidden(true)
+            }
+        }
+        .onChange(of: password) {
+            if errorMessage != nil {
+                errorMessage = nil
+            }
+        }
+        .onChange(of: authSecondsRemaining) { oldValue, newValue in
+            guard let remaining = newValue, remaining > 0 else { return }
+            let shouldAnnounce = oldValue == nil || remaining == 30 || remaining == 15 || remaining == 10 || remaining <= 5
+            if shouldAnnounce {
+                AccessibilityNotification.Announcement(L10n.RemoteNodes.RemoteNodes.Auth.secondsRemainingAnnouncement(remaining)).post()
+            }
+        }
+    }
+}
+
+// MARK: - Connect Button
+
+private struct ConnectButton: View {
+    let role: RemoteNodeRole
+    let isAuthenticating: Bool
+    let onAuthenticate: () -> Void
+
+    var body: some View {
+        Section {
+            Button {
+                onAuthenticate()
+            } label: {
+                if isAuthenticating {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Text(role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.connect)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .disabled(isAuthenticating)
+        }
     }
 }
 

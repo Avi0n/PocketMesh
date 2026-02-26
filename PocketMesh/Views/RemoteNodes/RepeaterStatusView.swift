@@ -13,11 +13,11 @@ struct RepeaterStatusView: View {
     var body: some View {
         NavigationStack {
             List {
-                headerSection
-                statusSection
-                telemetrySection
-                neighborsSection
-                batteryCurveSection
+                makeHeaderSection()
+                makeStatusSection()
+                makeTelemetrySection()
+                makeNeighborsSection()
+                makeBatteryCurveSection()
             }
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(L10n.RemoteNodes.RemoteNodes.Status.title)
@@ -82,16 +82,68 @@ struct RepeaterStatusView: View {
         .presentationDetents([.large])
     }
 
-    // MARK: - Header Section
+    // MARK: - Subviews
 
-    private var headerSection: some View {
+    private func makeHeaderSection() -> some View {
+        HeaderSection(publicKey: session.publicKey, name: session.name)
+    }
+
+    private func makeStatusSection() -> some View {
+        StatusSection(viewModel: viewModel, session: session)
+    }
+
+    private func makeNeighborsSection() -> some View {
+        NeighborsSection(
+            viewModel: viewModel,
+            session: session,
+            contacts: contacts
+        )
+    }
+
+    private func makeBatteryCurveSection() -> some View {
+        BatteryCurveDisclosureSection(
+            viewModel: viewModel,
+            session: session,
+            connectionState: appState.connectionState,
+            connectedDeviceID: appState.connectedDevice?.id
+        )
+    }
+
+    private func makeTelemetrySection() -> some View {
+        TelemetrySection(viewModel: viewModel, session: session)
+    }
+
+    // MARK: - Actions
+
+    private func refresh() {
+        Task {
+            await viewModel.requestStatus(for: session)
+            // Refresh telemetry only if already loaded
+            if viewModel.telemetryLoaded {
+                await viewModel.requestTelemetry(for: session)
+            }
+            // Refresh neighbors only if already loaded
+            if viewModel.neighborsLoaded {
+                await viewModel.requestNeighbors(for: session)
+            }
+        }
+    }
+}
+
+// MARK: - Header Section
+
+private struct HeaderSection: View {
+    let publicKey: Data
+    let name: String
+
+    var body: some View {
         Section {
             HStack {
                 Spacer()
                 VStack(spacing: 8) {
-                    NodeAvatar(publicKey: session.publicKey, role: .repeater, size: 60)
+                    NodeAvatar(publicKey: publicKey, role: .repeater, size: 60)
 
-                    Text(session.name)
+                    Text(name)
                         .font(.headline)
                 }
                 Spacer()
@@ -99,10 +151,15 @@ struct RepeaterStatusView: View {
             .listRowBackground(Color.clear)
         }
     }
+}
 
-    // MARK: - Status Section
+// MARK: - Status Section
 
-    private var statusSection: some View {
+private struct StatusSection: View {
+    let viewModel: RepeaterStatusViewModel
+    let session: RemoteNodeSessionDTO
+
+    var body: some View {
         Section(L10n.RemoteNodes.RemoteNodes.Status.statusSection) {
             if viewModel.isLoadingStatus && viewModel.status == nil {
                 HStack {
@@ -114,7 +171,7 @@ struct RepeaterStatusView: View {
                 Text(errorMessage)
                     .foregroundStyle(.red)
             } else {
-                statusRows
+                StatusRows(viewModel: viewModel)
 
                 if let timestamp = viewModel.previousSnapshotTimestamp {
                     Text(timestamp)
@@ -130,9 +187,14 @@ struct RepeaterStatusView: View {
             }
         }
     }
+}
 
-    @ViewBuilder
-    private var statusRows: some View {
+// MARK: - Status Rows
+
+private struct StatusRows: View {
+    let viewModel: RepeaterStatusViewModel
+
+    var body: some View {
         MetricRow(
             label: L10n.RemoteNodes.RemoteNodes.Status.battery,
             value: viewModel.batteryDisplay,
@@ -170,10 +232,16 @@ struct RepeaterStatusView: View {
             LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.receiveErrors, value: receiveErrors)
         }
     }
+}
 
-    // MARK: - Neighbors Section
+// MARK: - Neighbors Section
 
-    private var neighborsSection: some View {
+private struct NeighborsSection: View {
+    @Bindable var viewModel: RepeaterStatusViewModel
+    let session: RemoteNodeSessionDTO
+    let contacts: [ContactDTO]
+
+    var body: some View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.neighborsExpanded) {
                 if viewModel.isLoadingNeighbors {
@@ -238,10 +306,17 @@ struct RepeaterStatusView: View {
             Text(L10n.RemoteNodes.RemoteNodes.Status.neighborsFooter)
         }
     }
+}
 
-    // MARK: - Battery Curve Section
+// MARK: - Battery Curve Disclosure Section
 
-    private var batteryCurveSection: some View {
+private struct BatteryCurveDisclosureSection: View {
+    @Bindable var viewModel: RepeaterStatusViewModel
+    let session: RemoteNodeSessionDTO
+    let connectionState: ConnectionState
+    let connectedDeviceID: UUID?
+
+    var body: some View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.isBatteryCurveExpanded) {
                 BatteryCurveSection(
@@ -251,7 +326,7 @@ struct RepeaterStatusView: View {
                     selectedPreset: $viewModel.selectedOCVPreset,
                     voltageValues: $viewModel.ocvValues,
                     onSave: viewModel.saveOCVSettings,
-                    isDisabled: appState.connectionState != .ready
+                    isDisabled: connectionState != .ready
                 )
 
                 if let error = viewModel.ocvError {
@@ -263,7 +338,7 @@ struct RepeaterStatusView: View {
                 Text(L10n.RemoteNodes.RemoteNodes.Status.batteryCurve)
             }
             .onChange(of: viewModel.isBatteryCurveExpanded) { _, isExpanded in
-                if isExpanded, let deviceID = appState.connectedDevice?.id {
+                if isExpanded, let deviceID = connectedDeviceID {
                     Task {
                         await viewModel.loadOCVSettings(publicKey: session.publicKey, deviceID: deviceID)
                     }
@@ -273,10 +348,15 @@ struct RepeaterStatusView: View {
             Text(L10n.RemoteNodes.RemoteNodes.Status.batteryCurveFooter)
         }
     }
+}
 
-    // MARK: - Telemetry Section
+// MARK: - Telemetry Section
 
-    private var telemetrySection: some View {
+private struct TelemetrySection: View {
+    @Bindable var viewModel: RepeaterStatusViewModel
+    let session: RemoteNodeSessionDTO
+
+    var body: some View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.telemetryExpanded) {
                 if viewModel.isLoadingTelemetry {
@@ -286,7 +366,6 @@ struct RepeaterStatusView: View {
                         Spacer()
                     }
                 } else if viewModel.telemetry != nil {
-                    // Use cached data points to avoid repeated LPP decoding during view updates
                     if viewModel.cachedDataPoints.isEmpty {
                         Text(L10n.RemoteNodes.RemoteNodes.Status.noSensorData)
                             .foregroundStyle(.secondary)
@@ -328,22 +407,6 @@ struct RepeaterStatusView: View {
             }
         } footer: {
             Text(L10n.RemoteNodes.RemoteNodes.Status.telemetryFooter)
-        }
-    }
-
-    // MARK: - Actions
-
-    private func refresh() {
-        Task {
-            await viewModel.requestStatus(for: session)
-            // Refresh telemetry only if already loaded
-            if viewModel.telemetryLoaded {
-                await viewModel.requestTelemetry(for: session)
-            }
-            // Refresh neighbors only if already loaded
-            if viewModel.neighborsLoaded {
-                await viewModel.requestNeighbors(for: session)
-            }
         }
     }
 }

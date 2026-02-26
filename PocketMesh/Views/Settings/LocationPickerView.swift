@@ -88,10 +88,10 @@ struct LocationPickerView: View {
                     Group {
                         if #available(iOS 26.0, *) {
                             GlassEffectContainer {
-                                buttonContent
+                                makeButtonContent()
                             }
                         } else {
-                            buttonContent
+                            makeButtonContent()
                         }
                     }
                     .padding()
@@ -180,20 +180,33 @@ struct LocationPickerView: View {
         }
     }
 
-    @ViewBuilder
-    private var buttonContent: some View {
+    private func makeButtonContent() -> some View {
+        ButtonContent(
+            hasSelectedCoordinate: selectedCoordinate != nil,
+            onClear: { selectedCoordinate = nil },
+            onDropPin: { dropPinAtCenter() }
+        )
+    }
+}
+
+private struct ButtonContent: View {
+    let hasSelectedCoordinate: Bool
+    let onClear: () -> Void
+    let onDropPin: () -> Void
+
+    var body: some View {
         HStack(spacing: 12) {
-            if selectedCoordinate != nil {
+            if hasSelectedCoordinate {
                 Button(L10n.Settings.LocationPicker.clearLocation, role: .destructive) {
-                    selectedCoordinate = nil
+                    onClear()
                 }
-                .modifier(GlassButtonModifier(isProminent: false))
+                .modifier(LocationPickerGlassButtonModifier(isProminent: false))
             }
 
             Button(L10n.Settings.LocationPicker.dropPin) {
-                dropPinAtCenter()
+                onDropPin()
             }
-            .modifier(GlassButtonModifier(isProminent: true))
+            .modifier(LocationPickerGlassButtonModifier(isProminent: true))
         }
     }
 }
@@ -233,7 +246,7 @@ private struct CoordinateGlassModifier: ViewModifier {
     }
 }
 
-private struct GlassButtonModifier: ViewModifier {
+private struct LocationPickerGlassButtonModifier: ViewModifier {
     let isProminent: Bool
 
     func body(content: Content) -> some View {

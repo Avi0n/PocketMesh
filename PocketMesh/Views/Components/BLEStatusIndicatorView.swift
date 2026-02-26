@@ -21,10 +21,10 @@ struct BLEStatusIndicatorView: View {
         Group {
             if appState.connectedDevice != nil {
                 // Connected: show menu with device info and actions
-                connectedMenu
+                makeConnectedMenu()
             } else {
                 // Disconnected: button that directly opens device selection
-                disconnectedButton
+                makeDisconnectedButton()
             }
         }
         .sheet(isPresented: $showingDeviceSelection) {
@@ -36,88 +36,35 @@ struct BLEStatusIndicatorView: View {
 
     // MARK: - View Components
 
-    /// Button shown when disconnected - tap to open device selection
-    private var disconnectedButton: some View {
-        Button {
-            showingDeviceSelection = true
-        } label: {
-            StatusIcon(iconName: iconName, iconColor: iconColor, isAnimating: isAnimating)
-        }
-        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
-        .accessibilityValue(statusTitle)
-        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.disconnected)
+    private func makeDisconnectedButton() -> some View {
+        DisconnectedButton(
+            iconName: iconName,
+            iconColor: iconColor,
+            isAnimating: isAnimating,
+            statusTitle: statusTitle,
+            onTap: { showingDeviceSelection = true }
+        )
     }
 
-    /// Menu shown when connected - tap to show device info and actions
-    private var connectedMenu: some View {
-        Menu {
-            // Device info section
-            if let device = appState.connectedDevice {
-                Section {
-                    if device.clientRepeat {
-                        Label(L10n.Settings.BleStatus.repeatModeActive, systemImage: "repeat")
-                            .foregroundStyle(AppColors.Radio.repeatMode)
-                    }
-                    VStack(alignment: .leading) {
-                        Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
-                        if let battery = appState.batteryMonitor.deviceBattery {
-                            let ocvArray = appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice)
-                            Label(
-                                "\(battery.percentage(using: ocvArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
-                                systemImage: battery.iconName(using: ocvArray)
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
+    private func makeConnectedMenu() -> some View {
+        ConnectedMenu(
+            iconName: iconName,
+            iconColor: iconColor,
+            isAnimating: isAnimating,
+            statusTitle: statusTitle,
+            isSendingAdvert: isSendingAdvert,
+            deviceMenuTip: deviceMenuTip,
+            successFeedbackTrigger: successFeedbackTrigger,
+            errorFeedbackTrigger: errorFeedbackTrigger,
+            onSendAdvert: { flood in sendAdvert(flood: flood) },
+            onChangeDevice: { showingDeviceSelection = true },
+            onDisconnect: {
+                logger.info("Disconnect tapped in BLE status menu")
+                Task {
+                    await appState.disconnect(reason: .statusMenuDisconnectTap)
                 }
             }
-
-            // Advert section
-            Section {
-                Button {
-                    sendAdvert(flood: false)
-                } label: {
-                    Label(L10n.Settings.BleStatus.sendZeroHopAdvert, systemImage: "dot.radiowaves.right")
-                }
-                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
-                .accessibilityHint(L10n.Settings.BleStatus.SendZeroHopAdvert.hint)
-
-                Button {
-                    sendAdvert(flood: true)
-                } label: {
-                    Label(L10n.Settings.BleStatus.sendFloodAdvert, systemImage: "dot.radiowaves.left.and.right")
-                }
-                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
-                .accessibilityHint(L10n.Settings.BleStatus.SendFloodAdvert.hint)
-            }
-
-            // Actions
-            Section {
-                Button {
-                    showingDeviceSelection = true
-                } label: {
-                    Label(L10n.Settings.BleStatus.changeDevice, systemImage: "gearshape")
-                }
-
-                Button(role: .destructive) {
-                    logger.info("Disconnect tapped in BLE status menu")
-                    Task {
-                        await appState.disconnect(reason: .statusMenuDisconnectTap)
-                    }
-                } label: {
-                    Label(L10n.Settings.BleStatus.disconnect, systemImage: "eject")
-                }
-            }
-        } label: {
-            StatusIcon(iconName: iconName, iconColor: iconColor, isAnimating: isAnimating)
-        }
-        .popoverTip(deviceMenuTip)
-        .sensoryFeedback(.success, trigger: successFeedbackTrigger)
-        .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
-        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
-        .accessibilityValue(statusTitle)
-        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.connected)
+        )
     }
 
     // MARK: - Computed Properties
@@ -166,7 +113,7 @@ struct BLEStatusIndicatorView: View {
 
     private var autoUpdateGPSSource: GPSSource? {
         guard let device = appState.connectedDevice,
-              device.advertLocationPolicy == 1,
+              device.sharesLocationPublicly,
               devicePreferenceStore.isAutoUpdateLocationEnabled(deviceID: device.id) else {
             return nil
         }
@@ -213,6 +160,112 @@ struct BLEStatusIndicatorView: View {
         }
     }
 }
+
+// MARK: - Disconnected Button
+
+private struct DisconnectedButton: View {
+    let iconName: String
+    let iconColor: Color
+    let isAnimating: Bool
+    let statusTitle: String
+    let onTap: () -> Void
+
+    var body: some View {
+        Button {
+            onTap()
+        } label: {
+            StatusIcon(iconName: iconName, iconColor: iconColor, isAnimating: isAnimating)
+        }
+        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
+        .accessibilityValue(statusTitle)
+        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.disconnected)
+    }
+}
+
+// MARK: - Connected Menu
+
+private struct ConnectedMenu: View {
+    @Environment(\.appState) private var appState
+
+    let iconName: String
+    let iconColor: Color
+    let isAnimating: Bool
+    let statusTitle: String
+    let isSendingAdvert: Bool
+    let deviceMenuTip: DeviceMenuTip
+    let successFeedbackTrigger: Bool
+    let errorFeedbackTrigger: Bool
+    let onSendAdvert: (Bool) -> Void
+    let onChangeDevice: () -> Void
+    let onDisconnect: () -> Void
+
+    var body: some View {
+        Menu {
+            if let device = appState.connectedDevice {
+                Section {
+                    if device.clientRepeat {
+                        Label(L10n.Settings.BleStatus.repeatModeActive, systemImage: "repeat")
+                            .foregroundStyle(AppColors.Radio.repeatMode)
+                    }
+                    VStack(alignment: .leading) {
+                        Label(device.nodeName, systemImage: "antenna.radiowaves.left.and.right")
+                        if let battery = appState.batteryMonitor.deviceBattery {
+                            let ocvArray = appState.batteryMonitor.activeBatteryOCVArray(for: appState.connectedDevice)
+                            Label(
+                                "\(battery.percentage(using: ocvArray))% (\(battery.voltage, format: .number.precision(.fractionLength(2)))v)",
+                                systemImage: battery.iconName(using: ocvArray)
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    onSendAdvert(false)
+                } label: {
+                    Label(L10n.Settings.BleStatus.sendZeroHopAdvert, systemImage: "dot.radiowaves.right")
+                }
+                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
+                .accessibilityHint(L10n.Settings.BleStatus.SendZeroHopAdvert.hint)
+
+                Button {
+                    onSendAdvert(true)
+                } label: {
+                    Label(L10n.Settings.BleStatus.sendFloodAdvert, systemImage: "dot.radiowaves.left.and.right")
+                }
+                .radioDisabled(for: appState.connectionState, or: isSendingAdvert)
+                .accessibilityHint(L10n.Settings.BleStatus.SendFloodAdvert.hint)
+            }
+
+            Section {
+                Button {
+                    onChangeDevice()
+                } label: {
+                    Label(L10n.Settings.BleStatus.changeDevice, systemImage: "gearshape")
+                }
+
+                Button(role: .destructive) {
+                    onDisconnect()
+                } label: {
+                    Label(L10n.Settings.BleStatus.disconnect, systemImage: "eject")
+                }
+            }
+        } label: {
+            StatusIcon(iconName: iconName, iconColor: iconColor, isAnimating: isAnimating)
+        }
+        .popoverTip(deviceMenuTip)
+        .sensoryFeedback(.success, trigger: successFeedbackTrigger)
+        .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
+        .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)
+        .accessibilityValue(statusTitle)
+        .accessibilityHint(L10n.Settings.BleStatus.AccessibilityHint.connected)
+    }
+}
+
+// MARK: - Status Icon
 
 private struct StatusIcon: View {
     let iconName: String

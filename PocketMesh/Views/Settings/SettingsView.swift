@@ -12,18 +12,32 @@ struct SettingsView: View {
     var body: some View {
         if horizontalSizeClass == .regular {
             NavigationSplitView {
-                settingsListContent
+                SettingsListContent(
+                    showingDeviceSelection: $showingDeviceSelection,
+                    demoModeManager: demoModeManager
+                )
             } detail: {
                 ContentUnavailableView(L10n.Settings.selectSetting, systemImage: "gear")
             }
         } else {
             NavigationStack {
-                settingsListContent
+                SettingsListContent(
+                    showingDeviceSelection: $showingDeviceSelection,
+                    demoModeManager: demoModeManager
+                )
             }
         }
     }
+}
 
-    private var settingsListContent: some View {
+// MARK: - Settings List Content
+
+private struct SettingsListContent: View {
+    @Environment(\.appState) private var appState
+    @Binding var showingDeviceSelection: Bool
+    let demoModeManager: DemoModeManager
+
+    var body: some View {
         List {
             if let device = appState.connectedDevice {
                 MyDeviceSection(device: device)
@@ -101,7 +115,6 @@ struct SettingsView: View {
                 .presentationDragIndicator(.visible)
         }
     }
-
 }
 
 // MARK: - My Device Section
@@ -146,7 +159,7 @@ private struct MyDeviceSection: View {
             NavigationLink {
                 AdvancedSettingsView()
             } label: {
-                advancedSettingsRowLabel
+                TintedLabel(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape.2")
             }
         } header: {
             Text(L10n.Settings.MyDevice.header)
@@ -173,13 +186,9 @@ private struct MyDeviceSection: View {
     }
 
     private var locationDetailText: String {
-        device.advertLocationPolicy == 1
+        device.sharesLocationPublicly
             ? L10n.Settings.Location.sharingPublicly
             : L10n.Settings.Location.notSharing
-    }
-
-    private var advancedSettingsRowLabel: some View {
-        TintedLabel(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape.2")
     }
 }
 

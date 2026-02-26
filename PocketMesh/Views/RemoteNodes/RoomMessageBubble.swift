@@ -14,7 +14,7 @@ struct RoomMessageBubble: View {
     var body: some View {
         VStack(spacing: 4) {
             if showTimestamp {
-                timestampView
+                makeTimestampView()
             }
 
             HStack(alignment: .bottom, spacing: 8) {
@@ -23,8 +23,8 @@ struct RoomMessageBubble: View {
                 }
 
                 VStack(alignment: isFromSelf ? .trailing : .leading, spacing: 2) {
-                    bubbleContent
-                    statusIndicator
+                    makeBubbleContent()
+                    makeStatusIndicator()
                 }
 
                 if !isFromSelf {
@@ -35,35 +35,28 @@ struct RoomMessageBubble: View {
         }
     }
 
-    // MARK: - Timestamp
+    // MARK: - Subviews
 
-    private var timestampView: some View {
-        Text(message.date, format: .dateTime.month().day().hour().minute())
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 8)
+    private func makeTimestampView() -> some View {
+        TimestampView(date: message.date)
     }
 
-    // MARK: - Bubble Content
+    private func makeBubbleContent() -> some View {
+        BubbleContent(
+            message: message,
+            isFromSelf: isFromSelf,
+            highContrast: colorSchemeContrast == .increased
+        )
+    }
 
-    private var bubbleContent: some View {
-        VStack(alignment: isFromSelf ? .trailing : .leading, spacing: 4) {
-            // Show author name for messages from others
-            if !isFromSelf {
-                Text(message.authorDisplayName)
-                    .font(.footnote)
-                    .bold()
-                    .foregroundStyle(AppColors.NameColor.color(for: message.authorDisplayName, highContrast: colorSchemeContrast == .increased))
-                    .padding(.horizontal, 12)
-            }
-
-            Text(message.text)
-                .foregroundStyle(textColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(bubbleBackground)
-                .clipShape(.rect(cornerRadius: 16, style: .continuous))
-        }
+    private func makeStatusIndicator() -> some View {
+        StatusIndicator(
+            message: message,
+            isFromSelf: isFromSelf,
+            statusText: statusText,
+            accessibilityStatusLabel: accessibilityStatusLabel,
+            onRetry: onRetry
+        )
     }
 
     private var bubbleBackground: Color {
@@ -80,10 +73,97 @@ struct RoomMessageBubble: View {
         isFromSelf ? .white : .primary
     }
 
-    // MARK: - Status Indicator
+    private var statusText: String {
+        switch message.status {
+        case .pending, .sending:
+            return L10n.Chats.Chats.Message.Status.sending
+        case .sent:
+            return L10n.Chats.Chats.Message.Status.sent
+        case .delivered:
+            return L10n.Chats.Chats.Message.Status.delivered
+        case .failed:
+            return L10n.Chats.Chats.Message.Status.failed
+        case .retrying:
+            return L10n.Chats.Chats.Message.Status.retrying
+        }
+    }
 
-    @ViewBuilder
-    private var statusIndicator: some View {
+    private var accessibilityStatusLabel: String {
+        switch message.status {
+        case .failed:
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.failedLabel
+        case .pending, .sending, .retrying:
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.sendingLabel
+        default:
+            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.deliveredLabel
+        }
+    }
+}
+
+// MARK: - Timestamp View
+
+private struct TimestampView: View {
+    let date: Date
+
+    var body: some View {
+        Text(date, format: .dateTime.month().day().hour().minute())
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Bubble Content
+
+private struct BubbleContent: View {
+    let message: RoomMessageDTO
+    let isFromSelf: Bool
+    let highContrast: Bool
+
+    private var bubbleBackground: Color {
+        if isFromSelf {
+            return message.status == .failed
+                ? AppColors.Message.outgoingBubbleFailed
+                : AppColors.Message.outgoingBubble
+        } else {
+            return AppColors.Message.incomingBubble
+        }
+    }
+
+    private var textColor: Color {
+        isFromSelf ? .white : .primary
+    }
+
+    var body: some View {
+        VStack(alignment: isFromSelf ? .trailing : .leading, spacing: 4) {
+            if !isFromSelf {
+                Text(message.authorDisplayName)
+                    .font(.footnote)
+                    .bold()
+                    .foregroundStyle(AppColors.NameColor.color(for: message.authorDisplayName, highContrast: highContrast))
+                    .padding(.horizontal, 12)
+            }
+
+            Text(message.text)
+                .foregroundStyle(textColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(bubbleBackground)
+                .clipShape(.rect(cornerRadius: 16, style: .continuous))
+        }
+    }
+}
+
+// MARK: - Status Indicator
+
+private struct StatusIndicator: View {
+    let message: RoomMessageDTO
+    let isFromSelf: Bool
+    let statusText: String
+    let accessibilityStatusLabel: String
+    let onRetry: (() -> Void)?
+
+    var body: some View {
         if isFromSelf {
             HStack(spacing: 4) {
                 if message.status == .failed, let onRetry {
@@ -115,32 +195,6 @@ struct RoomMessageBubble: View {
             .padding(.trailing, 4)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(accessibilityStatusLabel)
-        }
-    }
-
-    private var statusText: String {
-        switch message.status {
-        case .pending, .sending:
-            return L10n.Chats.Chats.Message.Status.sending
-        case .sent:
-            return L10n.Chats.Chats.Message.Status.sent
-        case .delivered:
-            return L10n.Chats.Chats.Message.Status.delivered
-        case .failed:
-            return L10n.Chats.Chats.Message.Status.failed
-        case .retrying:
-            return L10n.Chats.Chats.Message.Status.retrying
-        }
-    }
-
-    private var accessibilityStatusLabel: String {
-        switch message.status {
-        case .failed:
-            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.failedLabel
-        case .pending, .sending, .retrying:
-            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.sendingLabel
-        default:
-            return L10n.RemoteNodes.RemoteNodes.Room.Message.Status.deliveredLabel
         }
     }
 }

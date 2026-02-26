@@ -314,6 +314,9 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// Whether this device supports path hash mode configuration (firmware v10+)
     public var supportsPathHashMode: Bool { firmwareVersion >= 10 }
 
+    /// Whether location is shared publicly in advertisements (policy value 1)
+    public var sharesLocationPublicly: Bool { advertLocationPolicy == 1 }
+
     /// Whether pre-repeat radio settings are saved for restoration.
     public var hasPreRepeatSettings: Bool {
         preRepeatFrequency != nil && preRepeatBandwidth != nil &&
