@@ -181,6 +181,7 @@ struct CreatePrivateChannelView: View {
         }
 
         isCreating = true
+        defer { isCreating = false }
         errorMessage = nil
 
         do {
@@ -202,8 +203,6 @@ struct CreatePrivateChannelView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isCreating = false
     }
 
     private func generateQRCode() -> UIImage? {

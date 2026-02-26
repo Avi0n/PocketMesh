@@ -194,6 +194,7 @@ struct ScanChannelQRView: View {
         }
 
         isJoining = true
+        defer { isJoining = false }
         errorMessage = nil
 
         do {
@@ -217,8 +218,6 @@ struct ScanChannelQRView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isJoining = false
     }
 }
 

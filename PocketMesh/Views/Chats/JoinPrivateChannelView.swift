@@ -97,6 +97,7 @@ struct JoinPrivateChannelView: View {
         }
 
         isJoining = true
+        defer { isJoining = false }
         errorMessage = nil
 
         do {
@@ -120,8 +121,6 @@ struct JoinPrivateChannelView: View {
         } catch {
             errorMessage = error.localizedDescription
         }
-
-        isJoining = false
     }
 }
 

@@ -182,7 +182,7 @@ struct DeviceSelectionSheet: View {
         let stream = appState.connectionManager.startBLEScanning()
 
         // Expire stale RSSI entries every 2 seconds
-        Task {
+        let expiryTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 let cutoff = Date.now.addingTimeInterval(-4)
@@ -192,6 +192,7 @@ struct DeviceSelectionSheet: View {
                 }
             }
         }
+        defer { expiryTask.cancel() }
 
         for await (deviceID, rssi) in stream {
             // Filter invalid RSSI values (0, positive, or -127 indicate unavailable)

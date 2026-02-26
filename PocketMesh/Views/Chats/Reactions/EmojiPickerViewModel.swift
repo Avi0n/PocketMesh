@@ -6,10 +6,12 @@ import Observation
 @Observable
 final class EmojiPickerViewModel {
     private let provider = EmojiProvider()
+    private var searchTask: Task<Void, Never>?
 
     var searchQuery: String = "" {
         didSet {
-            Task {
+            searchTask?.cancel()
+            searchTask = Task {
                 await updateCategories()
             }
         }
@@ -27,6 +29,8 @@ final class EmojiPickerViewModel {
 
     private func updateCategories() async {
         let query = searchQuery.isEmpty ? nil : searchQuery
-        categories = await provider.categories(searchQuery: query)
+        let result = await provider.categories(searchQuery: query)
+        guard !Task.isCancelled else { return }
+        categories = result
     }
 }
