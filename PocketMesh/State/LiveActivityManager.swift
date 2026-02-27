@@ -13,11 +13,13 @@ public final class LiveActivityManager {
     private let logger = Logger(subsystem: "com.pocketmesh", category: "LiveActivityManager")
 
     private var currentActivity: Activity<MeshStatusAttributes>?
+    private var decayTimer: Task<Void, Never>?
     private var disconnectTimer: Task<Void, Never>?
     private var enablementTask: Task<Void, Never>?
     private var ocvArray: [Int] = []
     private var recentPacketTimestamps: [Date] = []
 
+    static let decayInterval: TimeInterval = 5
     static let packetWindowSeconds: TimeInterval = 60
     static let disconnectGracePeriod: TimeInterval = 300
 
@@ -59,6 +61,7 @@ public final class LiveActivityManager {
                 unreadCount: unreadCount,
                 disconnectedDate: .some(nil)
             )
+            startDecayTimer()
             return
         }
 
@@ -71,11 +74,13 @@ public final class LiveActivityManager {
             device: device,
             unreadCount: unreadCount
         )
+        startDecayTimer()
     }
 
     func handleConnectionLost() async {
         guard currentActivity != nil else { return }
 
+        stopDecayTimer()
         recentPacketTimestamps = []
         await updateActivity(
             isConnected: false,
@@ -144,6 +149,24 @@ public final class LiveActivityManager {
 
     // MARK: - Private
 
+    private func startDecayTimer() {
+        stopDecayTimer()
+        decayTimer = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Self.decayInterval))
+                guard !Task.isCancelled, let self else { return }
+                let cutoff = Date.now.addingTimeInterval(-Self.packetWindowSeconds)
+                self.recentPacketTimestamps.removeAll { $0 < cutoff }
+                await self.updateActivity(packetsPerMinute: self.recentPacketTimestamps.count)
+            }
+        }
+    }
+
+    private func stopDecayTimer() {
+        decayTimer?.cancel()
+        decayTimer = nil
+    }
+
     private func startActivity(
         device: DeviceDTO,
         unreadCount: Int
@@ -201,6 +224,7 @@ public final class LiveActivityManager {
     }
 
     func endActivity() async {
+        stopDecayTimer()
         disconnectTimer?.cancel()
         disconnectTimer = nil
         recentPacketTimestamps = []
