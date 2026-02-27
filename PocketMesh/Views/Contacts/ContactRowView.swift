@@ -9,6 +9,8 @@ struct ContactRowView: View {
     let index: Int
     let isTogglingFavorite: Bool
 
+    @State private var locality: String?
+
     init(
         contact: ContactDTO,
         showTypeLabel: Bool = false,
@@ -55,14 +57,25 @@ struct ContactRowView: View {
                     RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: 4) {
                     // Show type label only in search results
                     if showTypeLabel {
                         Text(contactTypeLabel)
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        Text("\u{00B7}")
+                        Text("·")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Locality from reverse geocode
+                    if let locality {
+                        Text(locality)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("·")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -71,20 +84,6 @@ struct ContactRowView: View {
                     Text(routeLabel)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-
-                    // Location indicator with optional distance
-                    if contact.hasLocation {
-                        Label(L10n.Contacts.Contacts.Row.location, systemImage: "location.fill")
-                            .labelStyle(.iconOnly)
-                            .font(.caption)
-                            .foregroundStyle(.green)
-
-                        if let distance = distanceToContact {
-                            Text(distance)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { dimensions in
@@ -92,6 +91,14 @@ struct ContactRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .task(id: "\(contact.id)-\(contact.latitude)-\(contact.longitude)") {
+            guard contact.hasLocation else { return }
+            let coordinate = CLLocationCoordinate2D(
+                latitude: contact.latitude,
+                longitude: contact.longitude
+            )
+            locality = await ReverseGeocodeCache.shared.locality(for: coordinate)
+        }
     }
 
     @ViewBuilder
@@ -119,25 +126,11 @@ struct ContactRowView: View {
             return L10n.Contacts.Contacts.Route.flood
         } else if contact.pathHopCount == 0 {
             return L10n.Contacts.Contacts.Route.direct
+        } else if contact.pathHopCount == 1 {
+            return L10n.Contacts.Contacts.Route.hop(contact.pathHopCount)
         } else {
             return L10n.Contacts.Contacts.Route.hops(contact.pathHopCount)
         }
     }
 
-    private var distanceToContact: String? {
-        guard let userLocation, contact.hasLocation else { return nil }
-
-        let contactLocation = CLLocation(
-            latitude: contact.latitude,
-            longitude: contact.longitude
-        )
-        let meters = userLocation.distance(from: contactLocation)
-        let measurement = Measurement(value: meters, unit: UnitLength.meters)
-
-        let formattedDistance = measurement.formatted(.measurement(
-            width: .abbreviated,
-            usage: .road
-        ))
-        return L10n.Contacts.Contacts.Row.away(formattedDistance)
-    }
 }

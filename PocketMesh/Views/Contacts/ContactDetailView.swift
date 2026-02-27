@@ -88,6 +88,7 @@ struct ContactDetailView: View {
     @State private var navigateToSettings = false
     // QR sharing state
     @State private var showQRShareSheet = false
+    @State private var locality: String?
     // Ping state
     @State private var isPinging = false
     @State private var pingResult: PingResult?
@@ -105,7 +106,8 @@ struct ContactDetailView: View {
             // Profile header
             ContactProfileSection(
                 currentContact: currentContact,
-                contactTypeLabel: contactTypeLabel
+                locality: locality,
+                userLocation: appState.locationService.currentLocation
             )
 
             // Quick actions
@@ -168,6 +170,7 @@ struct ContactDetailView: View {
                 onDelete: { showingDeleteAlert = true }
             )
         }
+        .contentMargins(.top, 0, for: .scrollContent)
         .errorAlert($errorMessage)
         .navigationTitle(contactTypeLabel)
         .navigationBarTitleDisplayMode(.inline)
@@ -193,6 +196,14 @@ struct ContactDetailView: View {
         }
         .onAppear {
             nickname = currentContact.nickname ?? ""
+        }
+        .task(id: "\(currentContact.id)-\(currentContact.latitude)-\(currentContact.longitude)") {
+            guard currentContact.hasLocation else { return }
+            let coordinate = CLLocationCoordinate2D(
+                latitude: currentContact.latitude,
+                longitude: currentContact.longitude
+            )
+            locality = await ReverseGeocodeCache.shared.locality(for: coordinate)
         }
         .task {
             pathViewModel.configure(appState: appState) {
@@ -469,7 +480,8 @@ private struct ContactDetailAvatarView: View {
 
 private struct ContactProfileSection: View {
     let currentContact: ContactDTO
-    let contactTypeLabel: String
+    let locality: String?
+    let userLocation: CLLocation?
 
     var body: some View {
         Section {
@@ -477,32 +489,45 @@ private struct ContactProfileSection: View {
                 ContactDetailAvatarView(contact: currentContact)
 
                 VStack(spacing: 4) {
-                    Text(currentContact.displayName)
-                        .font(.title2)
-                        .bold()
+                    HStack(spacing: 6) {
+                        Text(currentContact.displayName)
+                            .font(.title2)
+                            .bold()
 
-                    Text(contactTypeLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    // Status indicators
-                    HStack(spacing: 12) {
                         if currentContact.isFavorite {
-                            Label(L10n.Contacts.Contacts.Detail.favorite, systemImage: "star.fill")
-                                .font(.caption)
+                            Image(systemName: "star.fill")
                                 .foregroundStyle(.yellow)
+                                .font(.system(size: 13.2))
+                                .accessibilityLabel(L10n.Contacts.Contacts.Detail.favorite)
                         }
 
                         if currentContact.isBlocked {
-                            Label(L10n.Contacts.Contacts.Detail.blocked, systemImage: "hand.raised.fill")
-                                .font(.caption)
+                            Image(systemName: "hand.raised.fill")
                                 .foregroundStyle(.orange)
-                        }
-
-                        if currentContact.hasLocation {
-                            Label(L10n.Contacts.Contacts.Detail.hasLocation, systemImage: "location.fill")
                                 .font(.caption)
-                                .foregroundStyle(.green)
+                                .accessibilityLabel(L10n.Contacts.Contacts.Detail.blocked)
+                        }
+                    }
+
+                    if locality != nil || distanceToContact != nil {
+                        HStack(spacing: 4) {
+                            if let locality {
+                                Text(locality)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if locality != nil, distanceToContact != nil {
+                                Text("·")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            if let distance = distanceToContact {
+                                Text(distance)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -510,6 +535,23 @@ private struct ContactProfileSection: View {
             .frame(maxWidth: .infinity)
             .listRowBackground(Color.clear)
         }
+    }
+
+    private var distanceToContact: String? {
+        guard let userLocation, currentContact.hasLocation else { return nil }
+
+        let contactLocation = CLLocation(
+            latitude: currentContact.latitude,
+            longitude: currentContact.longitude
+        )
+        let meters = userLocation.distance(from: contactLocation)
+        let measurement = Measurement(value: meters, unit: UnitLength.meters)
+
+        let formatted = measurement.formatted(.measurement(
+            width: .wide,
+            usage: .road
+        ))
+        return "\(formatted) away"
     }
 }
 

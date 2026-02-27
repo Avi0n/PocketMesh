@@ -8,6 +8,8 @@ struct LocationSettingsView: View {
     var body: some View {
         List {
             LocationSettingsSection(showingLocationPicker: $showingLocationPicker)
+
+            GeocodingSettingsSection()
         }
         .navigationTitle(L10n.Settings.Location.header)
         .navigationBarTitleDisplayMode(.inline)

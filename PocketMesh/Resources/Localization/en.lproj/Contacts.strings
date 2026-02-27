@@ -60,7 +60,10 @@
 /* Location: ContactDetailView.swift, ContactRowView.swift - Purpose: Direct routing label */
 "contacts.route.direct" = "Direct";
 
-/* Location: ContactRowView.swift - Purpose: Hops count display */
+/* Location: ContactRowView.swift - Purpose: Singular hop count display */
+"contacts.route.hop" = "%d hop";
+
+/* Location: ContactRowView.swift - Purpose: Plural hops count display */
 "contacts.route.hops" = "%d hops";
 
 // MARK: - Node Segments
