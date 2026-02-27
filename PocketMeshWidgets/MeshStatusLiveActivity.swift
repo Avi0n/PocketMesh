@@ -61,7 +61,6 @@ struct MeshStatusLiveActivity: Widget {
                 if context.state.isConnected {
                     Text("↓\(context.state.packetsPerMinute)/m")
                         .monospacedDigit()
-                        .fixedSize()
                         .contentTransition(.numericText())
                 } else {
                     Text("—")
