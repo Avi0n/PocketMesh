@@ -1,0 +1,7 @@
+/* Widget localization — Polish */
+
+"Disconnected" = "Rozłączono";
+"Disconnected %@ ago" = "Rozłączono %@ temu";
+"Last received %@ ago" = "Ostatnio odebrano %@ temu";
+"No data received" = "Brak odebranych danych";
+"Battery %lld percent" = "Bateria %lld procent";

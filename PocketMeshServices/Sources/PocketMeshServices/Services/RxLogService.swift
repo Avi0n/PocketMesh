@@ -23,6 +23,9 @@ public actor RxLogService {
     // Stream for UI updates
     private var streamContinuation: AsyncStream<RxLogEntryDTO>.Continuation?
 
+    /// Called when any RF packet is received, for Live Activity freshness tracking
+    private var onPacketReceived: (@Sendable @MainActor () -> Void)?
+
     // Event monitoring
     private var eventMonitorTask: Task<Void, Never>?
 
@@ -40,6 +43,11 @@ public actor RxLogService {
     /// Sets the HeardRepeatsService for processing channel message repeats.
     public func setHeardRepeatsService(_ service: HeardRepeatsService) {
         self.heardRepeatsService = service
+    }
+
+    /// Sets the callback invoked when any RF packet is received.
+    public func setPacketReceivedHandler(_ handler: (@Sendable @MainActor () -> Void)?) {
+        onPacketReceived = handler
     }
 
     /// Whether a heard repeats service has been wired via `setHeardRepeatsService`.
@@ -298,6 +306,10 @@ public actor RxLogService {
 
         // Emit to stream
         streamContinuation?.yield(dto)
+
+        if let onPacketReceived {
+            await onPacketReceived()
+        }
 
         // Process for heard repeats (inline await provides natural backpressure,
         // preventing unbounded Task accumulation under high RX volume)

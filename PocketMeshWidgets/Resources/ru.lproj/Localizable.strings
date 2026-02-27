@@ -1,0 +1,7 @@
+/* Widget localization — Russian */
+
+"Disconnected" = "Отключено";
+"Disconnected %@ ago" = "Отключено %@ назад";
+"Last received %@ ago" = "Последний приём %@ назад";
+"No data received" = "Нет полученных данных";
+"Battery %lld percent" = "Батарея %lld процентов";

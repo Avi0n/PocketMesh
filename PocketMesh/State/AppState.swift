@@ -81,6 +81,9 @@ public final class AppState {
     /// Battery monitoring (polling, thresholds, low-battery notifications)
     let batteryMonitor = BatteryMonitor()
 
+    /// Live Activity lifecycle (start/update/stop on Lock Screen and Dynamic Island)
+    let liveActivityManager = LiveActivityManager()
+
     /// Task chain that serializes BLE lifecycle transitions across scene-phase changes.
     /// Do not cancel this task externally -- cancelling breaks the serialization
     /// guarantee because Task<Void, Never>.value returns immediately on cancellation.
@@ -184,8 +187,10 @@ public final class AppState {
 
     /// Initialize on app launch
     func initialize() async {
-        // activate() will trigger onConnectionReady callback if connection succeeds
-        // Notification delegate is set in wireServicesIfConnected() when services become available
+        // Recover any existing Live Activity before activate() so that onConnectionReady
+        // (which fires during activate) finds currentActivity populated and can update it.
+        await liveActivityManager.recoverExistingActivity()
+        liveActivityManager.startObservingEnablement()
         await connectionManager.activate()
         // Check if disconnected pill should show (for fresh launch after termination)
         connectionUI.updateDisconnectedPillState(
@@ -209,6 +214,7 @@ public final class AppState {
             cliToolViewModel?.reset()
             batteryMonitor.stop()
             batteryMonitor.clearThresholds()
+            await liveActivityManager.handleConnectionLost()
             return
         }
 
@@ -236,6 +242,7 @@ public final class AppState {
         wireSettingsEventStream(services: services)
         await wireDeviceUpdateCallbacks(services: services)
         await wireMessageBroadcasting(services: services)
+        await wireLiveActivityCallbacks(services: services)
 
         // Increment version to trigger UI refresh in views observing this
         servicesVersion += 1
@@ -277,6 +284,11 @@ public final class AppState {
             },
             onConversationsChanged: { @MainActor [weak self] in
                 self?.conversationsVersion += 1
+                Task { @MainActor [weak self] in
+                    guard let self, let services = self.services else { return }
+                    let total = await self.totalUnreadCount(from: services)
+                    await self.liveActivityManager.handleUnreadCountChanged(unreadCount: total)
+                }
             }
         )
     }
@@ -349,11 +361,50 @@ public final class AppState {
             services,
             onConversationsChanged: { [weak self] in
                 self?.conversationsVersion += 1
+                Task { @MainActor [weak self] in
+                    guard let self, let services = self.services else { return }
+                    let total = await self.totalUnreadCount(from: services)
+                    await self.liveActivityManager.handleUnreadCountChanged(unreadCount: total)
+                }
             },
             onReactionReceived: { [weak self] messageID in
                 await self?.handleReactionNotification(messageID: messageID)
             }
         )
+    }
+
+    /// Wire Live Activity callbacks for RX freshness, battery, and connection lifecycle.
+    private func wireLiveActivityCallbacks(services: ServiceContainer) async {
+        await services.rxLogService.setPacketReceivedHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                await self?.liveActivityManager.handlePacketReceived()
+            }
+        }
+
+        batteryMonitor.onBatteryChanged = { [weak self] battery in
+            Task { @MainActor [weak self] in
+                await self?.liveActivityManager.handleBatteryChanged(battery: battery)
+            }
+        }
+
+        let device = connectedDevice
+        let ocvArray = batteryMonitor.activeBatteryOCVArray(for: device)
+        let unreadCount = await totalUnreadCount(from: services)
+
+        if let device {
+            await liveActivityManager.handleConnectionReady(
+                device: device,
+                ocvArray: ocvArray,
+                unreadCount: unreadCount
+            )
+        }
+    }
+
+    private func totalUnreadCount(from services: ServiceContainer) async -> Int {
+        guard let deviceID = currentDeviceID else { return 0 }
+        let counts = (try? await services.dataStore.getTotalUnreadCounts(deviceID: deviceID))
+            ?? (contacts: 0, channels: 0, rooms: 0)
+        return counts.contacts + counts.channels + counts.rooms
     }
 
     // MARK: - Stale Node Cleanup

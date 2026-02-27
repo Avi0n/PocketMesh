@@ -1132,3 +1132,15 @@
 
 /* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
 "language.footer" = "Change the app language in System Settings.";
+
+
+// MARK: - Live Activity
+
+/* Label for the Live Status toggle in App Settings */
+"liveActivity.title" = "Live Status";
+
+/* Title for the Live Activity tip shown after first connection */
+"liveActivity.tip.title" = "Radio status at a glance";
+
+/* Message for the Live Activity tip */
+"liveActivity.tip.message" = "Your connection, battery, and messages stay visible — even without opening the app.";

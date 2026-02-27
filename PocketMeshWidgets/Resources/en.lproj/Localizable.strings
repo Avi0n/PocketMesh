@@ -1,0 +1,16 @@
+/* Widget localization — English (base) */
+
+/* Connection status shown when radio is disconnected */
+"Disconnected" = "Disconnected";
+
+/* Accessibility: disconnected duration on Lock Screen */
+"Disconnected %@ ago" = "Disconnected %@ ago";
+
+/* Accessibility: last packet received relative time */
+"Last received %@ ago" = "Last received %@ ago";
+
+/* Accessibility: no packets received yet */
+"No data received" = "No data received";
+
+/* Accessibility: battery level */
+"Battery %lld percent" = "Battery %lld percent";

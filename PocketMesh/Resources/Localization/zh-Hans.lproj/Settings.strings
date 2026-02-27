@@ -1100,3 +1100,15 @@
 
 /* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
 "language.footer" = "在系统设置中更改应用语言。";
+
+
+// MARK: - Live Activity
+
+/* Label for the Live Status toggle in App Settings */
+"liveActivity.title" = "实时状态";
+
+/* Title for the Live Activity tip shown after first connection */
+"liveActivity.tip.title" = "一目了然的电台状态";
+
+/* Message for the Live Activity tip */
+"liveActivity.tip.message" = "即使不打开应用，您的连接、电池和消息也清晰可见。";

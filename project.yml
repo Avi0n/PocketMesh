@@ -31,9 +31,11 @@ targets:
         excludes:
           - "**/*.md"
       - path: AppIcon.icon
+      - path: Shared
     dependencies:
       - package: PocketMeshServices
       - package: Emojibase
+      - target: PocketMeshWidgets
     preBuildScripts:
       - name: SwiftGen
         script: |
@@ -64,6 +66,7 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TARGETED_DEVICE_FAMILY: "1,2"
+        NSSupportsLiveActivities: true
         UIBackgroundModes:
           - bluetooth-central
         NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app."
@@ -112,12 +115,33 @@ targets:
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
+  PocketMeshWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PocketMeshWidgets
+      - path: Shared
+    settings:
+      base:
+        MARKETING_VERSION: 0.10.0
+        CURRENT_PROJECT_VERSION: 1
+        VERSIONING_SYSTEM: apple-generic
+        TARGETED_DEVICE_FAMILY: "1,2"
+      configs:
+        Debug:
+          INFOPLIST_FILE: PocketMeshWidgets/Info.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.debug.widgets
+        Release:
+          INFOPLIST_FILE: PocketMeshWidgets/Info.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.widgets
+
 schemes:
   PocketMesh:
     build:
       targets:
         PocketMesh: all
         PocketMeshTests: [test]
+        PocketMeshWidgets: [run]
     run:
       config: Debug
     test:

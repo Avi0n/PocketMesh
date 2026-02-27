@@ -1,0 +1,7 @@
+/* Widget localization — Dutch */
+
+"Disconnected" = "Niet verbonden";
+"Disconnected %@ ago" = "Niet verbonden sinds %@";
+"Last received %@ ago" = "Laatst ontvangen %@ geleden";
+"No data received" = "Geen gegevens ontvangen";
+"Battery %lld percent" = "Batterij %lld procent";

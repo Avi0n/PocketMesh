@@ -1,0 +1,7 @@
+/* Widget localization — Ukrainian */
+
+"Disconnected" = "Від'єднано";
+"Disconnected %@ ago" = "Від'єднано %@ тому";
+"Last received %@ ago" = "Останній прийом %@ тому";
+"No data received" = "Немає отриманих даних";
+"Battery %lld percent" = "Батарея %lld відсотків";

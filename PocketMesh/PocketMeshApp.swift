@@ -42,6 +42,10 @@ struct PocketMeshApp: App {
 
                     await runInitialForegroundReconciliationIfNeeded()
                 }
+                .onOpenURL { _ in
+                    // pocketmesh://status — tapped from Live Activity
+                    // Opening the app is sufficient; future: navigate based on url.host
+                }
                 .onChange(of: scenePhase) { oldPhase, newPhase in
                     handleScenePhaseChange(from: oldPhase, to: newPhase)
                 }

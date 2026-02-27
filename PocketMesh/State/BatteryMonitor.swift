@@ -25,6 +25,9 @@ public final class BatteryMonitor {
     /// Battery warning threshold levels (percentage)
     private let batteryWarningThresholds = [20, 10, 5]
 
+    /// Called when battery info is updated, for Live Activity
+    var onBatteryChanged: ((_ battery: BatteryInfo) -> Void)?
+
     /// The active OCV array for the connected device
     func activeBatteryOCVArray(for device: DeviceDTO?) -> [Int] {
         device?.activeOCVArray ?? OCVPreset.liIon.ocvArray
@@ -38,6 +41,9 @@ public final class BatteryMonitor {
 
         do {
             deviceBattery = try await settingsService.getBattery()
+            if let battery = deviceBattery {
+                onBatteryChanged?(battery)
+            }
             await checkBatteryThresholds(device: device, services: services)
         } catch {
             deviceBattery = nil
@@ -52,6 +58,9 @@ public final class BatteryMonitor {
 
             do {
                 self.deviceBattery = try await services.settingsService.getBattery()
+                if let battery = self.deviceBattery {
+                    self.onBatteryChanged?(battery)
+                }
             } catch {
                 self.logger.debug("Deferred battery bootstrap failed: \(error.localizedDescription, privacy: .public)")
                 self.deviceBattery = nil
@@ -86,6 +95,9 @@ public final class BatteryMonitor {
 
         do {
             deviceBattery = try await settingsService.getBattery()
+            if let battery = deviceBattery {
+                onBatteryChanged?(battery)
+            }
         } catch {
             return
         }

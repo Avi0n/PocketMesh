@@ -1127,3 +1127,15 @@
 
 /* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
 "language.footer" = "Змініть мову застосунку в Системних налаштуваннях.";
+
+
+// MARK: - Live Activity
+
+/* Label for the Live Status toggle in App Settings */
+"liveActivity.title" = "Стан наживо";
+
+/* Title for the Live Activity tip shown after first connection */
+"liveActivity.tip.title" = "Стан радіо з першого погляду";
+
+/* Message for the Live Activity tip */
+"liveActivity.tip.message" = "Ваше з'єднання, батарея та повідомлення залишаються видимими — навіть без відкриття застосунку.";

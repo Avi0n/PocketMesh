@@ -1,5 +1,6 @@
 import SwiftUI
 import PocketMeshServices
+import TipKit
 
 /// Main settings screen — navigation-link rows for device settings, always-visible app settings
 struct SettingsView: View {
@@ -36,6 +37,7 @@ private struct SettingsListContent: View {
     @Environment(\.appState) private var appState
     @Binding var showingDeviceSelection: Bool
     let demoModeManager: DemoModeManager
+    private let liveActivityTip = LiveActivityTip()
 
     var body: some View {
         List {
@@ -69,6 +71,25 @@ private struct SettingsListContent: View {
                         detail: currentLanguageDisplayName
                     )
                 }
+
+                HStack {
+                    TintedLabel(L10n.Settings.LiveActivity.title, systemImage: "antenna.radiowaves.left.and.right")
+                    Spacer()
+                    Toggle("", isOn: Binding(
+                        get: { appState.liveActivityManager.isEnabled },
+                        set: { newValue in
+                            Task {
+                                await appState.liveActivityManager.setEnabled(newValue)
+                                if newValue, appState.connectionState == .ready || appState.connectionState == .connected {
+                                    await appState.wireServicesIfConnected()
+                                }
+                            }
+                        }
+                    ))
+                    .labelsHidden()
+                }
+                .accessibilityElement(children: .combine)
+                .popoverTip(liveActivityTip)
             } header: {
                 Text(L10n.Settings.AppSettings.header)
             } footer: {

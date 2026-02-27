@@ -3303,6 +3303,16 @@ public enum L10n {
       /// Toggle label for link previews
       public static let toggle = L10n.tr("Settings", "linkPreviews.toggle", fallback: "Link Previews")
     }
+    public enum LiveActivity {
+      /// Label for the Live Status toggle in App Settings
+      public static let title = L10n.tr("Settings", "liveActivity.title", fallback: "Live Status")
+      public enum Tip {
+        /// Message for the Live Activity tip
+        public static let message = L10n.tr("Settings", "liveActivity.tip.message", fallback: "Your connection, battery, and messages stay visible — even without opening the app.")
+        /// Title for the Live Activity tip shown after first connection
+        public static let title = L10n.tr("Settings", "liveActivity.tip.title", fallback: "Radio status at a glance")
+      }
+    }
     public enum Location {
       /// Toggle label for auto-update location
       public static let autoUpdate = L10n.tr("Settings", "location.autoUpdate", fallback: "Auto-Update Location")
