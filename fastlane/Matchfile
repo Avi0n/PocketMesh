@@ -11,7 +11,7 @@ storage_mode("git")
 type("appstore")
 
 # App bundle identifier
-app_identifier("io.pocketmesh.app")
+app_identifier(["io.pocketmesh.app", "io.pocketmesh.app.widgets"])
 
 # Your Apple Developer account email
 username(ENV["APPLE_ID"])

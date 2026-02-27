@@ -30,7 +30,18 @@ platform :ios do
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app",
       code_sign_identity: "iPhone Distribution",
-      profile_name: "match AppStore io.pocketmesh.app"
+      profile_name: "match AppStore io.pocketmesh.app",
+      targets: ["PocketMesh"]
+    )
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "PocketMesh.xcodeproj",
+      team_id: ENV["TEAM_ID"],
+      bundle_identifier: "io.pocketmesh.app.widgets",
+      code_sign_identity: "iPhone Distribution",
+      profile_name: "match AppStore io.pocketmesh.app.widgets",
+      targets: ["PocketMeshWidgets"]
     )
 
     # Configure App Store Connect API key
@@ -84,7 +95,18 @@ platform :ios do
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app",
       code_sign_identity: "iPhone Distribution",
-      profile_name: "match AppStore io.pocketmesh.app"
+      profile_name: "match AppStore io.pocketmesh.app",
+      targets: ["PocketMesh"]
+    )
+
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: "PocketMesh.xcodeproj",
+      team_id: ENV["TEAM_ID"],
+      bundle_identifier: "io.pocketmesh.app.widgets",
+      code_sign_identity: "iPhone Distribution",
+      profile_name: "match AppStore io.pocketmesh.app.widgets",
+      targets: ["PocketMeshWidgets"]
     )
 
     # Configure App Store Connect API key
