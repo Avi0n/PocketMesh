@@ -89,6 +89,6 @@ struct RoomInfoSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+
     }
 }
