@@ -135,7 +135,7 @@ The primary entry point for communicating with a MeshCore device. Serializes all
 | Method | Description |
 |--------|-------------|
 | `exportPrivateKey() async throws -> Data` | Exports the device's 32-byte private key (sensitive operation) |
-| `importPrivateKey(_:) async throws` | Imports a 32-byte private key, replacing the device's identity |
+| `importPrivateKey(_:) async throws` | Imports a 64-byte expanded private key, replacing the device's identity |
 
 ### Channels
 

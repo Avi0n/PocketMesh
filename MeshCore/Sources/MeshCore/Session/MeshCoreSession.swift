@@ -1277,10 +1277,20 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// This replaces the device's cryptographic identity. Use with caution.
     ///
-    /// - Parameter key: The 32-byte private key to import.
-    /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
+    /// - Parameter key: The 64-byte expanded private key to import.
+    /// - Throws: ``MeshCoreError/featureDisabled`` if the device does not support key import,
+    ///   ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func importPrivateKey(_ key: Data) async throws {
-        try await sendSimpleCommand(PacketBuilder.importPrivateKey(key))
+        let succeeded: Bool = try await sendAndWaitWithError(
+            PacketBuilder.importPrivateKey(key)
+        ) { event in
+            if case .ok = event { return true }
+            if case .disabled = event { return false }
+            return nil
+        }
+        if !succeeded {
+            throw MeshCoreError.featureDisabled
+        }
     }
 
     // MARK: - Stats Commands

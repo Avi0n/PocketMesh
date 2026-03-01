@@ -74,6 +74,9 @@ public enum MeshCoreError: Error, Sendable {
 
     /// The session has not been started.
     case sessionNotStarted
+
+    /// The requested feature is disabled on the device.
+    case featureDisabled
 }
 
 /// Represents the result of a message fetch operation.
