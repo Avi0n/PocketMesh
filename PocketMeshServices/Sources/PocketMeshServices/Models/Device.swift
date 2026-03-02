@@ -477,6 +477,7 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// Used after device settings are changed via SettingsService.
     public func updating(from selfInfo: MeshCore.SelfInfo) -> DeviceDTO {
         copy {
+            $0.publicKey = selfInfo.publicKey
             $0.nodeName = selfInfo.name
             $0.frequency = UInt32(selfInfo.radioFrequency * 1000)
             $0.bandwidth = UInt32(selfInfo.radioBandwidth * 1000)
