@@ -78,20 +78,26 @@ struct ConversationListContent: View {
         let route = ChatRoute(conversation: conversation)
         switch conversation {
         case .direct(let contact):
-            NavigationLink(value: route) {
-                ConversationRow(contact: contact, viewModel: viewModel)
-            }
-            .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                onDeleteConversation(conversation)
-            }
+            ConversationRow(contact: contact, viewModel: viewModel)
+                .listChevron(offset: -11)
+                .background {
+                    NavigationLink(value: route) { EmptyView() }
+                        .opacity(0)
+                }
+                .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                    onDeleteConversation(conversation)
+                }
 
         case .channel(let channel):
-            NavigationLink(value: route) {
-                ChannelConversationRow(channel: channel, viewModel: viewModel)
-            }
-            .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
-                onDeleteConversation(conversation)
-            }
+            ChannelConversationRow(channel: channel, viewModel: viewModel)
+                .listChevron(offset: -11)
+                .background {
+                    NavigationLink(value: route) { EmptyView() }
+                        .opacity(0)
+                }
+                .conversationSwipeActions(conversation: conversation, viewModel: viewModel) {
+                    onDeleteConversation(conversation)
+                }
 
         case .room(let session):
             Button {

@@ -20,14 +20,17 @@ struct ContactsCompactList: View {
             .listSectionSeparator(.hidden)
 
             ForEach(Array(filteredContacts.enumerated()), id: \.element.id) { index, contact in
-                NavigationLink(value: contact) {
-                    ContactRowView(
-                        contact: contact,
-                        showTypeLabel: isSearching,
-                        userLocation: appState.locationService.currentLocation,
-                        index: index,
-                        isTogglingFavorite: viewModel.togglingFavoriteID == contact.id
-                    )
+                ContactRowView(
+                    contact: contact,
+                    showTypeLabel: isSearching,
+                    userLocation: appState.locationService.currentLocation,
+                    index: index,
+                    isTogglingFavorite: viewModel.togglingFavoriteID == contact.id
+                )
+                .listChevron()
+                .background {
+                    NavigationLink(value: contact) { EmptyView() }
+                        .opacity(0)
                 }
                 .contactSwipeActions(contact: contact, viewModel: viewModel)
             }

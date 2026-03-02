@@ -8,6 +8,9 @@ struct ConversationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ContactAvatar(contact: contact, size: 44)
+                .overlay(alignment: .topTrailing) {
+                    UnreadCountBadge(count: contact.unreadCount)
+                }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
@@ -15,19 +18,19 @@ struct ConversationRow: View {
                         .font(.headline)
                         .lineLimit(1)
 
-                    Spacer()
-
-                    MutedIndicator(isMuted: contact.isMuted)
-
                     if viewModel.togglingFavoriteID == contact.id {
                         ProgressView()
                             .controlSize(.small)
                     } else if contact.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
-                            .font(.caption)
+                            .font(.system(size: 13.2))
                             .accessibilityLabel(L10n.Chats.Chats.Row.favorite)
                     }
+
+                    Spacer()
+
+                    MutedIndicator(isMuted: contact.isMuted)
 
                     if let date = contact.lastMessageDate {
                         ConversationTimestamp(date: date)
@@ -41,12 +44,6 @@ struct ConversationRow: View {
                         .lineLimit(1)
 
                     Spacer()
-
-                    UnreadBadges(
-                        unreadCount: contact.unreadCount,
-                        unreadMentionCount: contact.unreadMentionCount,
-                        notificationLevel: contact.isMuted ? .muted : .all
-                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in

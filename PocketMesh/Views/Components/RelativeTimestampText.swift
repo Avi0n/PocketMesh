@@ -4,15 +4,6 @@ import SwiftUI
 struct RelativeTimestampText: View {
     let timestamp: UInt32
 
-    private static let relativeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter
-    }()
-
-    private static let weekThreshold: TimeInterval = 604_800
-    private static let nowThreshold: TimeInterval = 60
-
     var body: some View {
         TimelineView(.everyMinute) { context in
             Text(Self.format(timestamp: timestamp, relativeTo: context.date))
@@ -24,17 +15,29 @@ struct RelativeTimestampText: View {
     /// Formats a timestamp relative to the given date. Exposed for testing.
     static func format(timestamp: UInt32, relativeTo now: Date) -> String {
         let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
-        let interval = now.timeIntervalSince(date)
+        let calendar = Calendar.current
 
-        if interval < nowThreshold {
-            return L10n.Chats.Chats.Timestamp.now
+        let startOfNow = calendar.startOfDay(for: now)
+        let startOfDate = calendar.startOfDay(for: date)
+        let daysAgo = calendar.dateComponents([.day], from: startOfDate, to: startOfNow).day ?? 0
+
+        if daysAgo == 0 {
+            return date.formatted(date: .omitted, time: .shortened)
         }
 
-        if interval >= weekThreshold {
+        if daysAgo == 1 {
+            return "Yesterday"
+        }
+
+        if daysAgo < 7 {
+            return date.formatted(.dateTime.weekday(.wide))
+        }
+
+        if calendar.component(.year, from: date) == calendar.component(.year, from: now) {
             return date.formatted(.dateTime.month(.abbreviated).day())
         }
 
-        return relativeFormatter.localizedString(for: date, relativeTo: now)
+        return date.formatted(.dateTime.month(.abbreviated).day().year())
     }
 }
 

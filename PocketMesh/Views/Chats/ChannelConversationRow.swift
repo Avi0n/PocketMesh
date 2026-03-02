@@ -9,6 +9,9 @@ struct ChannelConversationRow: View {
     var body: some View {
         HStack(spacing: 12) {
             ChannelAvatar(channel: channel, size: 44)
+                .overlay(alignment: .topTrailing) {
+                    UnreadCountBadge(count: channel.unreadCount)
+                }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
@@ -16,16 +19,16 @@ struct ChannelConversationRow: View {
                         .font(.headline)
                         .lineLimit(1)
 
-                    Spacer()
-
-                    NotificationLevelIndicator(level: channel.notificationLevel)
-
                     if channel.isFavorite {
                         Image(systemName: "star.fill")
                             .foregroundStyle(.yellow)
-                            .font(.caption)
+                            .font(.system(size: 13.2))
                             .accessibilityLabel(Strings.favorite)
                     }
+
+                    Spacer()
+
+                    NotificationLevelIndicator(level: channel.notificationLevel)
 
                     if let date = channel.lastMessageDate {
                         ConversationTimestamp(date: date)
@@ -39,12 +42,6 @@ struct ChannelConversationRow: View {
                         .lineLimit(1)
 
                     Spacer()
-
-                    UnreadBadges(
-                        unreadCount: channel.unreadCount,
-                        unreadMentionCount: channel.unreadMentionCount,
-                        notificationLevel: channel.notificationLevel
-                    )
                 }
             }
             .alignmentGuide(.listRowSeparatorLeading) { d in

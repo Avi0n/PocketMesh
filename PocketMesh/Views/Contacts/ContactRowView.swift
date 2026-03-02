@@ -40,17 +40,17 @@ struct ContactRowView: View {
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.blocked)
                     }
 
-                    Spacer()
-
                     if isTogglingFavorite {
                         ProgressView()
                             .controlSize(.small)
                     } else if contact.isFavorite {
                         Image(systemName: "star.fill")
-                            .font(.caption)
+                            .font(.system(size: 13.2))
                             .foregroundStyle(.yellow)
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.favorite)
                     }
+
+                    Spacer()
 
                     RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
                 }
