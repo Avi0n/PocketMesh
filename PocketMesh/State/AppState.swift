@@ -377,7 +377,13 @@ public final class AppState {
     private func wireLiveActivityCallbacks(services: ServiceContainer) async {
         await services.rxLogService.setPacketReceivedHandler { [weak self] in
             Task { @MainActor [weak self] in
-                await self?.liveActivityManager.handlePacketReceived()
+                guard let self else { return }
+                await self.liveActivityManager.handlePacketReceived()
+                if self.liveActivityManager.hasActiveActivity {
+                    await self.batteryMonitor.fetchBatteryIfOverdue(
+                        services: self.services, device: self.connectedDevice
+                    )
+                }
             }
         }
 
@@ -571,6 +577,8 @@ public final class AppState {
         activeRecoveryFallbackTask?.cancel()
         activeRecoveryFallbackTask = nil
 
+        liveActivityManager.handleEnterBackground()
+
         // Keep battery polling alive when the live activity is visible on the lock screen
         if !liveActivityManager.hasActiveActivity {
             batteryMonitor.stop()
@@ -592,6 +600,9 @@ public final class AppState {
 
         // Room keepalives are managed by RoomConversationView lifecycle
         // (started on view appear, stopped on disappear, restarted via scenePhase)
+
+        // Restart decay timer and flush any buffered live activity state
+        liveActivityManager.handleReturnToForeground()
 
         // Validate live activity is still alive (may have ended while suspended)
         await liveActivityManager.validateActivityState()

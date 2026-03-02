@@ -128,6 +128,18 @@ public final class LiveActivityManager {
         }
     }
 
+    func handleEnterBackground() {
+        stopDecayTimer()
+    }
+
+    func handleReturnToForeground() {
+        guard hasActiveActivity else { return }
+        startDecayTimer()
+        if pendingUpdate != nil {
+            Task { await flushPendingUpdate() }
+        }
+    }
+
     func handlePacketReceived() async {
         let now = Date.now
         recentPacketTimestamps.append(now)
@@ -139,6 +151,7 @@ public final class LiveActivityManager {
     func handleBatteryChanged(battery: BatteryInfo) async {
         let percent = battery.percentage(using: ocvArray)
         await scheduleUpdate(battery: .some(percent))
+        await flushPendingUpdate()
     }
 
     func handleUnreadCountChanged(unreadCount: Int) async {
