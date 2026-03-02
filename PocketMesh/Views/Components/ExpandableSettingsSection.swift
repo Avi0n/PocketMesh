@@ -56,6 +56,8 @@ struct ExpandableSettingsSection<Content: View>: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
                 }
             } label: {
                 HStack {
