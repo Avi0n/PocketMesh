@@ -157,6 +157,7 @@ public final class LiveActivityManager {
 
     func handleUnreadCountChanged(unreadCount: Int) async {
         await scheduleUpdate(unreadCount: unreadCount)
+        await flushPendingUpdate()
     }
 
     func setEnabled(_ enabled: Bool) async {
