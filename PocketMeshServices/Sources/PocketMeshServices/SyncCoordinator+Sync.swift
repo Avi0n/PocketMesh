@@ -31,6 +31,7 @@ extension SyncCoordinator {
         messagePollingService: some MessagePollingServiceProtocol,
         appStateProvider: AppStateProvider? = nil,
         rxLogService: RxLogService? = nil,
+        notificationService: NotificationService? = nil,
         forceFullSync: Bool = false
     ) async throws {
         // Prevent concurrent syncs - check before logging to avoid noise
@@ -75,6 +76,17 @@ extension SyncCoordinator {
             await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
             let messageCount = try await messagePollingService.pollAllMessages()
             logger.info("[Sync] Phase end: messages - \(messageCount) polled")
+
+            // Clear notification suppression immediately after catch-up poll completes.
+            // All catch-up messages have been processed with suppression active;
+            // any subsequent event-monitor messages are genuinely new and should notify.
+            if let notificationService {
+                cancelSuppressionWatchdog()
+                await MainActor.run {
+                    notificationService.isSuppressingNotifications = false
+                }
+            }
+
             await notifyConversationsChanged()
 
             // Complete
@@ -129,6 +141,7 @@ extension SyncCoordinator {
                 messagePollingService: services.messagePollingService,
                 appStateProvider: services.appStateProvider,
                 rxLogService: services.rxLogService,
+                notificationService: services.notificationService,
                 forceFullSync: forceFullSync
             )
 
@@ -212,6 +225,7 @@ extension SyncCoordinator {
                 messagePollingService: services.messagePollingService,
                 appStateProvider: services.appStateProvider,
                 rxLogService: services.rxLogService,
+                notificationService: services.notificationService,
                 forceFullSync: forceFullSync
             )
 
@@ -371,19 +385,21 @@ extension SyncCoordinator {
         }
     }
 
-    /// Waits for pending message handlers to drain, then cancels the suppression watchdog
-    /// and resumes notifications.
+    /// Cancels the suppression watchdog, resumes notifications, then waits for pending
+    /// message handlers to drain. Suppression is cleared first as defense-in-depth for
+    /// error paths where `performFullSync` throws before reaching `pollAllMessages()`.
+    /// Both operations are idempotent, so double-clearing from the happy path is harmless.
     private func drainHandlersAndResumeNotifications(services: ServiceContainer, context: String) async {
-        let pendingHandlerDrainTimeout: Duration = .seconds(30)
-        let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
-        if !didDrainPendingHandlers {
-            logger.warning("Timed out waiting for pending message handlers")
-        }
-
         cancelSuppressionWatchdog()
         await MainActor.run {
             logger.info("Resuming message notifications (\(context))")
             services.notificationService.isSuppressingNotifications = false
+        }
+
+        let pendingHandlerDrainTimeout: Duration = .seconds(30)
+        let didDrainPendingHandlers = await services.messagePollingService.waitForPendingHandlers(timeout: pendingHandlerDrainTimeout)
+        if !didDrainPendingHandlers {
+            logger.warning("Timed out waiting for pending message handlers")
         }
     }
 

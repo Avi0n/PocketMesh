@@ -471,6 +471,37 @@ struct SyncCoordinatorTests {
         #expect(coordinator.state == .idle, "Sync state should reset to idle on cancellation")
     }
 
+    @Test("performFullSync clears notification suppression after poll completes")
+    @MainActor
+    func performFullSyncClearsSuppressionAfterPoll() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        let mockTransport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: mockTransport)
+        let services = try await ServiceContainer.forTesting(session: session)
+
+        // Simulate suppression being active (as it would be during a real sync)
+        services.notificationService.isSuppressingNotifications = true
+        #expect(services.notificationService.isSuppressingNotifications == true)
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService,
+            notificationService: services.notificationService
+        )
+
+        // Suppression should be cleared after pollAllMessages() completes
+        #expect(services.notificationService.isSuppressingNotifications == false)
+    }
+
     @Test("Contact sync passes lastContactSync timestamp from device")
     @MainActor
     func contactSyncPassesTimestamp() async throws {
