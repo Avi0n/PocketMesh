@@ -42,6 +42,7 @@ struct NodeDiscoveryResult: Identifiable, Sendable {
     let id = UUID()
     let name: String
     let publicKey: Data
+    let nodeType: UInt8
     let snr: Double
     let snrIn: Double
     let rssi: Int
@@ -69,11 +70,18 @@ final class NodeDiscoveryViewModel {
     var scanSuccessHapticTrigger = 0
     var scanEmptyHapticTrigger = 0
 
+    var addedPublicKeys: Set<Data> = []
+    var addingPublicKey: Data?
+    var addSuccessHapticTrigger = 0
+    var addErrorHapticTrigger = 0
+
     // MARK: - Dependencies
 
     private var session: MeshCoreSession?
     private var dataStore: PersistenceStore?
     private var deviceID: UUID?
+    private var contactService: ContactService?
+    private var maxContacts: UInt16?
 
     // MARK: - Tasks
 
@@ -90,6 +98,8 @@ final class NodeDiscoveryViewModel {
         self.session = appState.services?.session
         self.dataStore = appState.offlineDataStore
         self.deviceID = appState.connectedDevice?.id
+        self.contactService = appState.services?.contactService
+        self.maxContacts = appState.connectedDevice?.maxContacts
     }
 
     // MARK: - Scan
@@ -112,7 +122,7 @@ final class NodeDiscoveryViewModel {
             guard let self else { return }
 
             do {
-                // Pre-load name resolution data
+                // Pre-load name resolution data and existing contact keys
                 await self.loadNameResolutionData(deviceID: deviceID)
 
                 // Send discovery request
@@ -186,6 +196,7 @@ final class NodeDiscoveryViewModel {
             for contact in contacts {
                 namesByKey[contact.publicKey] = contact.name
             }
+            addedPublicKeys = Set(contacts.map(\.publicKey))
         } catch {
             Self.logger.error("Failed to load name resolution data: \(error.localizedDescription)")
         }
@@ -203,6 +214,7 @@ final class NodeDiscoveryViewModel {
         let result = NodeDiscoveryResult(
             name: resolveName(for: response.publicKey),
             publicKey: response.publicKey,
+            nodeType: response.nodeType,
             snr: response.snr,
             snrIn: response.snrIn,
             rssi: response.rssi,
@@ -222,6 +234,48 @@ final class NodeDiscoveryViewModel {
             scanSuccessHapticTrigger += 1
         } else {
             scanEmptyHapticTrigger += 1
+        }
+    }
+
+    // MARK: - Add Node
+
+    func isAdded(publicKey: Data) -> Bool {
+        addedPublicKeys.contains(publicKey)
+    }
+
+    func addNode(_ result: NodeDiscoveryResult) {
+        guard let contactService, let deviceID else { return }
+
+        addingPublicKey = result.publicKey
+        Task { [weak self] in
+            do {
+                let contact = ContactFrame(
+                    publicKey: result.publicKey,
+                    type: ContactType(rawValue: result.nodeType) ?? .repeater,
+                    flags: 0,
+                    outPathLength: 0xFF,
+                    outPath: Data(),
+                    name: result.name,
+                    lastAdvertTimestamp: 0,
+                    latitude: 0,
+                    longitude: 0,
+                    lastModified: 0
+                )
+                try await contactService.addOrUpdateContact(deviceID: deviceID, contact: contact)
+                self?.addedPublicKeys.insert(result.publicKey)
+                self?.addSuccessHapticTrigger += 1
+            } catch ContactServiceError.contactTableFull {
+                if let maxContacts = self?.maxContacts {
+                    self?.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFull(Int(maxContacts))
+                } else {
+                    self?.errorMessage = L10n.Contacts.Contacts.Add.Error.nodeListFullSimple
+                }
+                self?.addErrorHapticTrigger += 1
+            } catch {
+                self?.errorMessage = error.localizedDescription
+                self?.addErrorHapticTrigger += 1
+            }
+            self?.addingPublicKey = nil
         }
     }
 }

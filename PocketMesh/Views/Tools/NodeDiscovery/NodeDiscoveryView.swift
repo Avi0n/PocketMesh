@@ -1,3 +1,4 @@
+import PocketMeshServices
 import SwiftUI
 
 struct NodeDiscoveryView: View {
@@ -43,6 +44,8 @@ struct NodeDiscoveryView: View {
         .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.scanStartHapticTrigger)
         .sensoryFeedback(.success, trigger: viewModel.scanSuccessHapticTrigger)
         .sensoryFeedback(.warning, trigger: viewModel.scanEmptyHapticTrigger)
+        .sensoryFeedback(.success, trigger: viewModel.addSuccessHapticTrigger)
+        .sensoryFeedback(.error, trigger: viewModel.addErrorHapticTrigger)
         .task(id: appState.servicesVersion) {
             viewModel.configure(appState: appState)
         }
@@ -108,7 +111,14 @@ extension NodeDiscoveryView {
                     .listRowSeparator(.hidden)
                 } else {
                     ForEach(viewModel.sortedResults) { result in
-                        NodeDiscoveryRowView(result: result)
+                        NodeDiscoveryRowView(
+                            result: result,
+                            isAdded: viewModel.isAdded(publicKey: result.publicKey),
+                            isAdding: viewModel.addingPublicKey == result.publicKey,
+                            onAdd: ContactType(rawValue: result.nodeType) != nil
+                                ? { viewModel.addNode(result) }
+                                : nil
+                        )
                     }
                 }
             }

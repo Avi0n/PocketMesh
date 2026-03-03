@@ -3,6 +3,9 @@ import SwiftUI
 
 struct NodeDiscoveryRowView: View {
     let result: NodeDiscoveryResult
+    var isAdded = false
+    var isAdding = false
+    var onAdd: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -19,7 +22,24 @@ struct NodeDiscoveryRowView: View {
 
                 MetricsLine(result: result)
             }
+
+            if let onAdd {
+                Spacer()
+                if isAdded {
+                    Button(L10n.Contacts.Contacts.Discovery.added) {}
+                        .buttonStyle(.bordered)
+                        .disabled(true)
+                        .accessibilityLabel(L10n.Contacts.Contacts.Discovery.addedAccessibility)
+                } else {
+                    Button(L10n.Contacts.Contacts.Discovery.add) {
+                        onAdd()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isAdding)
+                }
+            }
         }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
