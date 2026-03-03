@@ -76,7 +76,7 @@ private struct SettingsListContent: View {
                         }
                     }
                 )) {
-                    TintedLabel(L10n.Settings.LiveActivity.title, systemImage: "antenna.radiowaves.left.and.right")
+                    TintedLabel(L10n.Settings.LiveActivity.title, systemImage: "platter.filled.bottom.and.arrow.down.iphone")
                 }
 
                 Button {
