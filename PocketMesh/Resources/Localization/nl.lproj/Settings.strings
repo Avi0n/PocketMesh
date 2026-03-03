@@ -1131,8 +1131,6 @@
 /* Location: SettingsView.swift - Purpose: Language row title */
 "language.title" = "Taal";
 
-/* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
-"language.footer" = "Wijzig de taal van de app in Systeeminstellingen.";
 
 
 // MARK: - Live Activity

@@ -92,8 +92,6 @@ private struct SettingsListContent: View {
                 }
             } header: {
                 Text(L10n.Settings.AppSettings.header)
-            } footer: {
-                Text(L10n.Settings.Language.footer)
             }
 
             AboutSection()

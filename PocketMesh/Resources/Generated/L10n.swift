@@ -3310,8 +3310,6 @@ public enum L10n {
       public static let toggle = L10n.tr("Settings", "inlineImages.toggle", fallback: "Inline Images")
     }
     public enum Language {
-      /// Location: SettingsView.swift - Purpose: Section footer explaining language setting
-      public static let footer = L10n.tr("Settings", "language.footer", fallback: "Change the app language in System Settings.")
       /// Location: SettingsView.swift - Purpose: Language row title
       public static let title = L10n.tr("Settings", "language.title", fallback: "Language")
     }

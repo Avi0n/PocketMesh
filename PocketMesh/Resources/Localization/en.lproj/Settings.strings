@@ -1136,8 +1136,6 @@
 /* Location: SettingsView.swift - Purpose: Language row title */
 "language.title" = "Language";
 
-/* Location: SettingsView.swift - Purpose: Section footer explaining language setting */
-"language.footer" = "Change the app language in System Settings.";
 
 
 // MARK: - Live Activity
