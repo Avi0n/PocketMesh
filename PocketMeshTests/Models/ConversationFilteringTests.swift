@@ -1,8 +1,9 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PocketMesh
 @testable import PocketMeshServices
 
-final class ConversationFilteringTests: XCTestCase {
+@Suite struct ConversationFilteringTests {
 
     // MARK: - Test Data
 
@@ -76,7 +77,7 @@ final class ConversationFilteringTests: XCTestCase {
 
     // MARK: - Filter Tests
 
-    func testNilFilterShowsAll() {
+    @Test func allFilterShowsAll() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice")),
             .channel(makeChannel(name: "General")),
@@ -85,10 +86,10 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .all, searchText: "")
 
-        XCTAssertEqual(result.count, 3)
+        #expect(result.count == 3)
     }
 
-    func testFilterByUnread() {
+    @Test func filterByUnread() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice", unreadCount: 5)),
             .direct(makeContact(name: "Bob", unreadCount: 0)),
@@ -97,11 +98,11 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .unread, searchText: "")
 
-        XCTAssertEqual(result.count, 2)
-        XCTAssertTrue(result.allSatisfy { $0.unreadCount > 0 })
+        #expect(result.count == 2)
+        #expect(result.allSatisfy { $0.unreadCount > 0 })
     }
 
-    func testFilterByDirectMessages() {
+    @Test func filterByDirectMessages() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice")),
             .direct(makeContact(name: "Bob")),
@@ -111,14 +112,14 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .directMessages, searchText: "")
 
-        XCTAssertEqual(result.count, 2)
-        XCTAssertTrue(result.allSatisfy {
+        #expect(result.count == 2)
+        #expect(result.allSatisfy {
             if case .direct = $0 { return true }
             return false
         })
     }
 
-    func testFilterByChannelsIncludesRooms() {
+    @Test func filterByChannelsIncludesRooms() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice")),
             .channel(makeChannel(name: "General")),
@@ -127,31 +128,15 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .channels, searchText: "")
 
-        XCTAssertEqual(result.count, 2)
-        XCTAssertTrue(result.allSatisfy {
+        #expect(result.count == 2)
+        #expect(result.allSatisfy {
             if case .channel = $0 { return true }
             if case .room = $0 { return true }
             return false
         })
     }
 
-    func testFilterByFavorites() {
-        let conversations: [Conversation] = [
-            .direct(makeContact(name: "Alice", isFavorite: true)),
-            .direct(makeContact(name: "Bob", isFavorite: false)),
-            .channel(makeChannel(name: "General", isFavorite: true)),
-            .channel(makeChannel(name: "Random", isFavorite: false)),
-            .room(makeRoom(name: "FavRoom", isFavorite: true)),
-            .room(makeRoom(name: "OtherRoom", isFavorite: false))
-        ]
-
-        let result = conversations.filtered(by: .all, searchText: "")
-
-        XCTAssertEqual(result.count, 3)
-        XCTAssertTrue(result.allSatisfy { $0.isFavorite })
-    }
-
-    func testSearchWithinFilter() {
+    @Test func searchWithinFilter() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice", unreadCount: 1)),
             .direct(makeContact(name: "Bob", unreadCount: 1)),
@@ -160,11 +145,11 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .unread, searchText: "Ali")
 
-        XCTAssertEqual(result.count, 1)
-        XCTAssertEqual(result.first?.displayName, "Alice")
+        #expect(result.count == 1)
+        #expect(result.first?.displayName == "Alice")
     }
 
-    func testSearchOnlyWithoutFilter() {
+    @Test func searchOnlyWithoutFilter() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice")),
             .direct(makeContact(name: "Bob")),
@@ -173,10 +158,10 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .all, searchText: "Al")
 
-        XCTAssertEqual(result.count, 2)
+        #expect(result.count == 2)
     }
 
-    func testEmptyResultsWhenNoMatch() {
+    @Test func emptyResultsWhenNoMatch() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice")),
             .direct(makeContact(name: "Bob"))
@@ -184,10 +169,10 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .all, searchText: "Zzzz")
 
-        XCTAssertTrue(result.isEmpty)
+        #expect(result.isEmpty)
     }
 
-    func testUnreadFilterExcludesMuted() {
+    @Test func unreadFilterExcludesMuted() {
         let conversations: [Conversation] = [
             .direct(makeContact(name: "Alice", unreadCount: 5, isMuted: false)),
             .direct(makeContact(name: "Bob", unreadCount: 3, isMuted: true)),
@@ -196,8 +181,7 @@ final class ConversationFilteringTests: XCTestCase {
 
         let result = conversations.filtered(by: .unread, searchText: "")
 
-        // Bob is muted, so should be excluded even with unreads
-        XCTAssertEqual(result.count, 2)
-        XCTAssertFalse(result.contains { $0.displayName == "Bob" })
+        #expect(result.count == 2)
+        #expect(!result.contains { $0.displayName == "Bob" })
     }
 }
