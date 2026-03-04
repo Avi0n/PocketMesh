@@ -459,4 +459,64 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
     public var pathStringForClipboard: String {
         pathNodesHex.joined(separator: ",")
     }
+
+    // MARK: - Same-Sender Reordering
+
+    /// Maximum time window (in seconds) within which consecutive messages from the same sender
+    /// are re-sorted by sender timestamp to preserve intended send order.
+    private static let sameSenderReorderWindow: TimeInterval = 5
+
+    /// Reorders messages within narrow same-sender clusters by sender timestamp.
+    ///
+    /// Messages are sorted by receive time (`createdAt`) for display. However, when multiple
+    /// messages from the same sender arrive within a short window, mesh relay may deliver them
+    /// out of order. This function detects those clusters and re-sorts them by the sender's
+    /// claimed timestamp to restore the intended conversation order.
+    public static func reorderSameSenderClusters(_ messages: [MessageDTO]) -> [MessageDTO] {
+        guard messages.count > 1 else { return messages }
+
+        var result = messages
+        var clusterStart = 0
+
+        while clusterStart < result.count {
+            var clusterEnd = clusterStart + 1
+
+            // Extend the cluster while consecutive messages match the same sender/direction
+            // and fall within the reorder window
+            while clusterEnd < result.count {
+                let gap = result[clusterEnd].createdAt.timeIntervalSince(result[clusterEnd - 1].createdAt)
+                guard isSameSender(result[clusterEnd], result[clusterEnd - 1]),
+                      gap <= sameSenderReorderWindow else { break }
+                clusterEnd += 1
+            }
+
+            // Sort the cluster by sender timestamp if it contains more than one message
+            if clusterEnd - clusterStart > 1 {
+                let sorted = result[clusterStart..<clusterEnd].sorted {
+                    if $0.timestamp != $1.timestamp { return $0.timestamp < $1.timestamp }
+                    return $0.createdAt < $1.createdAt
+                }
+                result.replaceSubrange(clusterStart..<clusterEnd, with: sorted)
+            }
+
+            clusterStart = clusterEnd
+        }
+
+        return result
+    }
+
+    private static func isSameSender(_ a: MessageDTO, _ b: MessageDTO) -> Bool {
+        guard a.direction == b.direction else { return false }
+        guard a.isChannelMessage == b.isChannelMessage else { return false }
+
+        // For channel messages, compare sender node name (nil = unknown, treat as different).
+        // senderNodeName isn't unique — two users with the same name may be falsely clustered.
+        if a.isChannelMessage {
+            guard let nameA = a.senderNodeName, let nameB = b.senderNodeName else { return false }
+            return nameA == nameB
+        }
+
+        // For DMs, same-direction messages share the same sender
+        return true
+    }
 }

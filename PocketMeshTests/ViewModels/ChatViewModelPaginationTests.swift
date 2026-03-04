@@ -759,8 +759,8 @@ struct CrossBoundaryReorderingTests {
         )
 
         // Simulate independent per-page reordering (as production does)
-        let page2Reordered = PersistenceStore.reorderSameSenderClusters([msg3])  // single msg, no-op
-        let page1Reordered = PersistenceStore.reorderSameSenderClusters([msg1, msg2])  // already ordered
+        let page2Reordered = MessageDTO.reorderSameSenderClusters([msg3])  // single msg, no-op
+        let page1Reordered = MessageDTO.reorderSameSenderClusters([msg1, msg2])  // already ordered
 
         // Merge: prepend older page
         var merged = page2Reordered
@@ -770,7 +770,7 @@ struct CrossBoundaryReorderingTests {
         #expect(merged.map(\.text) == ["msg3", "msg1", "msg2"])
 
         // After re-running reorderSameSenderClusters on the full merged array
-        let fixed = PersistenceStore.reorderSameSenderClusters(merged)
+        let fixed = MessageDTO.reorderSameSenderClusters(merged)
 
         // All three are from the same sender (DM, same direction), within 5s window,
         // so they're reordered by sender timestamp: msg1, msg2, msg3
@@ -812,7 +812,7 @@ struct CrossBoundaryReorderingTests {
         var merged = [oldMsg]
         merged.append(contentsOf: [newMsg1, newMsg2])
 
-        let result = PersistenceStore.reorderSameSenderClusters(merged)
+        let result = MessageDTO.reorderSameSenderClusters(merged)
 
         // The 10-second gap between oldMsg and newMsg1 exceeds the 5s window,
         // so they should NOT be clustered — order stays as-is

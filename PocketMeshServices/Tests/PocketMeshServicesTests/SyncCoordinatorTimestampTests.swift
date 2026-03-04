@@ -290,14 +290,14 @@ struct SameSenderReorderingTests {
 
     @Test("Empty array returns empty")
     func emptyArray() {
-        let result = PersistenceStore.reorderSameSenderClusters([])
+        let result = MessageDTO.reorderSameSenderClusters([])
         #expect(result.isEmpty)
     }
 
     @Test("Single message returns unchanged")
     func singleMessage() {
         let msg = makeDMMessage(timestamp: 100, createdAt: Date())
-        let result = PersistenceStore.reorderSameSenderClusters([msg])
+        let result = MessageDTO.reorderSameSenderClusters([msg])
         #expect(result.count == 1)
         #expect(result[0].id == msg.id)
     }
@@ -311,7 +311,7 @@ struct SameSenderReorderingTests {
 
         // Sorted by createdAt: [msg2(t=200), msg1(t=100)]
         let input = [msg2, msg1]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Should reorder by sender timestamp: [msg1(t=100), msg2(t=200)]
         #expect(result[0].timestamp == 100)
@@ -325,7 +325,7 @@ struct SameSenderReorderingTests {
         let msg2 = makeDMMessage(timestamp: 200, createdAt: base, direction: .outgoing)
 
         let input = [msg2, msg1]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         #expect(result[0].timestamp == 100)
         #expect(result[1].timestamp == 200)
@@ -338,7 +338,7 @@ struct SameSenderReorderingTests {
         let msg2 = makeDMMessage(timestamp: 200, createdAt: base.addingTimeInterval(6))
 
         let input = [msg1, msg2]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Beyond window — stays in createdAt order
         #expect(result[0].timestamp == 100)
@@ -353,7 +353,7 @@ struct SameSenderReorderingTests {
         let bob = makeChannelMessage(timestamp: 100, createdAt: base.addingTimeInterval(2), senderName: "Bob")
 
         let input = [alice, bob]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Different senders — no reordering
         #expect(result[0].senderNodeName == "Alice")
@@ -368,7 +368,7 @@ struct SameSenderReorderingTests {
 
         // createdAt order: [msg2(t=200), msg1(t=100)]
         let input = [msg2, msg1]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Same sender within window — reordered by timestamp
         #expect(result[0].timestamp == 100)
@@ -382,7 +382,7 @@ struct SameSenderReorderingTests {
         let outgoing = makeDMMessage(timestamp: 100, createdAt: base.addingTimeInterval(1), direction: .outgoing)
 
         let input = [incoming, outgoing]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Different directions — no reordering
         #expect(result[0].direction == .incoming)
@@ -398,7 +398,7 @@ struct SameSenderReorderingTests {
         let msg3 = makeDMMessage(timestamp: 200, createdAt: base.addingTimeInterval(4))
 
         let input = [msg1, msg2, msg3]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         #expect(result[0].timestamp == 100)
         #expect(result[1].timestamp == 200)
@@ -412,7 +412,7 @@ struct SameSenderReorderingTests {
         let msg2 = makeDMMessage(timestamp: 100, createdAt: base.addingTimeInterval(5))
 
         let input = [msg1, msg2]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // 5 seconds is within window (<=5)
         #expect(result[0].timestamp == 100)
@@ -432,7 +432,7 @@ struct SameSenderReorderingTests {
         let c2b = makeDMMessage(timestamp: 300, createdAt: base.addingTimeInterval(15))
 
         let input = [c1a, c1b, c2a, c2b]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         // Cluster 1 reordered by timestamp
         #expect(result[0].timestamp == 100)
@@ -448,7 +448,7 @@ struct SameSenderReorderingTests {
         let msg1 = makeChannelMessage(timestamp: 200, createdAt: base)
         let msg2 = makeChannelMessage(timestamp: 100, createdAt: base.addingTimeInterval(2))
 
-        let result = PersistenceStore.reorderSameSenderClusters([msg1, msg2])
+        let result = MessageDTO.reorderSameSenderClusters([msg1, msg2])
 
         // Nil senders should NOT cluster — stays in createdAt order
         #expect(result[0].timestamp == 200)
@@ -462,7 +462,7 @@ struct SameSenderReorderingTests {
         let msg2 = makeDMMessage(timestamp: 100, createdAt: base.addingTimeInterval(0.5))
 
         let input = [msg2, msg1]  // reverse createdAt order
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         #expect(result[0].id == msg1.id)
         #expect(result[1].id == msg2.id)
@@ -476,7 +476,7 @@ struct SameSenderReorderingTests {
         let msg3 = makeDMMessage(timestamp: 300, createdAt: base.addingTimeInterval(2))
 
         let input = [msg1, msg2, msg3]
-        let result = PersistenceStore.reorderSameSenderClusters(input)
+        let result = MessageDTO.reorderSameSenderClusters(input)
 
         #expect(result[0].id == msg1.id)
         #expect(result[1].id == msg2.id)

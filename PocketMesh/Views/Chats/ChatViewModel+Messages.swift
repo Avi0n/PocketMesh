@@ -588,7 +588,7 @@ extension ChatViewModel {
 
             // Re-run same-sender reordering across the page boundary to handle
             // clusters that were split between the existing and newly loaded pages
-            messages = PersistenceStore.reorderSameSenderClusters(messages)
+            messages = MessageDTO.reorderSameSenderClusters(messages)
 
             // Update lookup dictionary
             for message in olderMessages {
