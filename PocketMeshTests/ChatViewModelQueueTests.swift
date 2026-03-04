@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 @testable import PocketMesh
 @testable import PocketMeshServices
 import SwiftData
@@ -6,7 +7,7 @@ import MeshCore
 
 // MARK: - Mock Link Preview Cache
 
-actor MockLinkPreviewCache: LinkPreviewCaching {
+private actor MockLinkPreviewCache: LinkPreviewCaching {
     func preview(
         for url: URL,
         using dataStore: any PersistenceStoreProtocol,
@@ -31,256 +32,12 @@ actor MockLinkPreviewCache: LinkPreviewCaching {
     }
 }
 
-// MARK: - Tests
-
-@MainActor
-final class ChatViewModelQueueTests: XCTestCase {
-
-    var container: ModelContainer!
-    var dataStore: PersistenceStore!
-    var session: MeshCoreSession!
-    var messageService: MessageService!
-    var linkPreviewCache: MockLinkPreviewCache!
-
-    override func setUp() async throws {
-        // Create in-memory container
-        container = try PersistenceStore.createContainer(inMemory: true)
-
-        // Create persistence store
-        dataStore = PersistenceStore(modelContainer: container)
-
-        // Create test device
-        let device = Device(
-            publicKey: Data(repeating: 1, count: 32),
-            nodeName: "Test Device"
-        )
-        try container.mainContext.insert(device)
-        try container.mainContext.save()
-
-        // Create mock session
-        let transport = MockTransport()
-        session = MeshCoreSession(transport: transport)
-
-        // Create message service
-        messageService = MessageService(
-            session: session,
-            dataStore: dataStore
-        )
-
-        // Create mock link preview cache
-        linkPreviewCache = MockLinkPreviewCache()
-    }
-
-    override func tearDown() async throws {
-        container = nil
-        dataStore = nil
-        session = nil
-        messageService = nil
-        linkPreviewCache = nil
-    }
-
-    func testQueueStartsEmpty() {
-        let viewModel = ChatViewModel()
-        XCTAssertEqual(viewModel.sendQueueCount, 0)
-        XCTAssertFalse(viewModel.isProcessingQueue)
-    }
-
-    func testSendMessageClearsInputImmediately() async throws {
-        let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
-
-        // Get the device ID
-        let devices = try await dataStore.fetchDevices()
-        guard let device = devices.first else {
-            XCTFail("No device found")
-            return
-        }
-
-        // Create a contact
-        let contact = Contact(
-            deviceID: device.id,
-            publicKey: Data(repeating: 2, count: 32),
-            name: "Test Contact"
-        )
-        try container.mainContext.insert(contact)
-        try container.mainContext.save()
-
-        let contactDTO = try await dataStore.fetchContact(id: contact.id)!
-        viewModel.currentContact = contactDTO
-
-        // Send message
-        await viewModel.sendMessage(text: "Hello world")
-
-        // Message should be queued
-        XCTAssertEqual(viewModel.sendQueueCount, 1)
-    }
-
-    func testProcessQueueSendsMessagesInOrder() async throws {
-        let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
-
-        // Get the device ID
-        let devices = try await dataStore.fetchDevices()
-        guard let device = devices.first else {
-            XCTFail("No device found")
-            return
-        }
-
-        // Create a contact
-        let contact = Contact(
-            deviceID: device.id,
-            publicKey: Data(repeating: 2, count: 32),
-            name: "Test Contact"
-        )
-        try container.mainContext.insert(contact)
-        try container.mainContext.save()
-
-        let contactDTO = try await dataStore.fetchContact(id: contact.id)!
-        viewModel.currentContact = contactDTO
-
-        // Create messages in DB first
-        let msg1 = try await messageService.createPendingMessage(text: "First", to: contactDTO)
-        let msg2 = try await messageService.createPendingMessage(text: "Second", to: contactDTO)
-        let msg3 = try await messageService.createPendingMessage(text: "Third", to: contactDTO)
-
-        // Queue message IDs for sending
-        viewModel.enqueueMessage(msg1.id, contactID: contact.id)
-        viewModel.enqueueMessage(msg2.id, contactID: contact.id)
-        viewModel.enqueueMessage(msg3.id, contactID: contact.id)
-
-        XCTAssertEqual(viewModel.sendQueueCount, 3)
-
-        // Process the queue
-        await viewModel.processQueueForTesting()
-
-        // Verify queue is empty and processing is done
-        XCTAssertEqual(viewModel.sendQueueCount, 0)
-        XCTAssertFalse(viewModel.isProcessingQueue)
-
-        let messages = try await dataStore.fetchMessages(contactID: contact.id)
-        XCTAssertEqual(messages.count, 3)
-        XCTAssertEqual(messages[0].text, "First")
-        XCTAssertEqual(messages[1].text, "Second")
-        XCTAssertEqual(messages[2].text, "Third")
-    }
-
-    func testQueueContinuesAfterFailure() async throws {
-        // This test verifies that when one message fails, the queue continues
-        // processing remaining messages. With real services, we verify the queue
-        // processes all messages and ends in a clean state. The error handling
-        // behavior is implemented in processQueue() - the catch block sets
-        // errorMessage but doesn't break out of the loop.
-
-        let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
-
-        // Get the device ID
-        let devices = try await dataStore.fetchDevices()
-        guard let device = devices.first else {
-            XCTFail("No device found")
-            return
-        }
-
-        // Create a contact
-        let contact = Contact(
-            deviceID: device.id,
-            publicKey: Data(repeating: 2, count: 32),
-            name: "Test Contact"
-        )
-        try container.mainContext.insert(contact)
-        try container.mainContext.save()
-
-        let contactDTO = try await dataStore.fetchContact(id: contact.id)!
-        viewModel.currentContact = contactDTO
-
-        // Create messages in DB first
-        let msg1 = try await messageService.createPendingMessage(text: "First", to: contactDTO)
-        let msg2 = try await messageService.createPendingMessage(text: "Second", to: contactDTO)
-        let msg3 = try await messageService.createPendingMessage(text: "Third", to: contactDTO)
-
-        // Queue message IDs for sending
-        viewModel.enqueueMessage(msg1.id, contactID: contact.id)
-        viewModel.enqueueMessage(msg2.id, contactID: contact.id)
-        viewModel.enqueueMessage(msg3.id, contactID: contact.id)
-
-        // Process the queue
-        await viewModel.processQueueForTesting()
-
-        // Verify all messages were attempted (queue is empty)
-        XCTAssertEqual(viewModel.sendQueueCount, 0)
-        XCTAssertFalse(viewModel.isProcessingQueue)
-    }
-
-    func testMessagesGoToCorrectContactEvenAfterNavigatingAway() async throws {
-        let viewModel = ChatViewModel()
-        viewModel.configure(dataStore: dataStore, messageService: messageService, linkPreviewCache: linkPreviewCache)
-
-        // Get the device ID
-        let devices = try await dataStore.fetchDevices()
-        guard let device = devices.first else {
-            XCTFail("No device found")
-            return
-        }
-
-        // Create two contacts: Alice and Bob
-        let alice = Contact(
-            deviceID: device.id,
-            publicKey: Data(repeating: 2, count: 32),
-            name: "Alice"
-        )
-        let bob = Contact(
-            deviceID: device.id,
-            publicKey: Data(repeating: 3, count: 32),
-            name: "Bob"
-        )
-        try container.mainContext.insert(alice)
-        try container.mainContext.insert(bob)
-        try container.mainContext.save()
-
-        let aliceDTO = try await dataStore.fetchContact(id: alice.id)!
-        let bobDTO = try await dataStore.fetchContact(id: bob.id)!
-
-        // User is chatting with Alice
-        viewModel.currentContact = aliceDTO
-
-        // Create messages for Alice in DB first
-        let msg1 = try await messageService.createPendingMessage(text: "Hello Alice", to: aliceDTO)
-        let msg2 = try await messageService.createPendingMessage(text: "How are you?", to: aliceDTO)
-
-        // Queue message IDs for sending
-        viewModel.enqueueMessage(msg1.id, contactID: alice.id)
-        viewModel.enqueueMessage(msg2.id, contactID: alice.id)
-
-        // User navigates to Bob's chat before queue finishes
-        viewModel.currentContact = bobDTO
-
-        // Process the queue
-        await viewModel.processQueueForTesting()
-
-        let aliceMessages = try await dataStore.fetchMessages(contactID: alice.id)
-        let bobMessages = try await dataStore.fetchMessages(contactID: bob.id)
-
-        XCTAssertEqual(aliceMessages.count, 2, "Messages should go to Alice")
-        XCTAssertEqual(aliceMessages[0].text, "Hello Alice")
-        XCTAssertEqual(aliceMessages[1].text, "How are you?")
-        XCTAssertEqual(bobMessages.count, 0, "Bob should have no messages")
-    }
-}
-
 // MARK: - Mock Transport
 
-actor MockTransport: MeshTransport {
-    func connect() async throws {
-        // No-op for testing
-    }
-
-    func disconnect() async {
-        // No-op for testing
-    }
-
-    func send(_ data: Data) async throws {
-        // No-op for testing
-    }
+private actor MockTransport: MeshTransport {
+    func connect() async throws {}
+    func disconnect() async {}
+    func send(_ data: Data) async throws {}
 
     var receivedData: AsyncStream<Data> {
         AsyncStream { _ in }
@@ -288,5 +45,177 @@ actor MockTransport: MeshTransport {
 
     var isConnected: Bool {
         true
+    }
+}
+
+// MARK: - Test Context
+
+/// Bundles all dependencies needed for ChatViewModel queue tests.
+private struct TestContext: @unchecked Sendable {
+    let container: ModelContainer
+    let dataStore: PersistenceStore
+    let session: MeshCoreSession
+    let messageService: MessageService
+    let linkPreviewCache: MockLinkPreviewCache
+}
+
+// MARK: - Tests
+
+@Suite("ChatViewModel Queue Tests")
+@MainActor
+struct ChatViewModelQueueTests {
+
+    /// Creates an in-memory data store seeded with a device.
+    private static func makeTestContext() async throws -> TestContext {
+        let container = try PersistenceStore.createContainer(inMemory: true)
+        let dataStore = PersistenceStore(modelContainer: container)
+
+        let device = Device(
+            publicKey: Data(repeating: 1, count: 32),
+            nodeName: "Test Device"
+        )
+        try container.mainContext.insert(device)
+        try container.mainContext.save()
+
+        let transport = MockTransport()
+        let session = MeshCoreSession(transport: transport)
+        let messageService = MessageService(session: session, dataStore: dataStore)
+        let linkPreviewCache = MockLinkPreviewCache()
+
+        return TestContext(
+            container: container,
+            dataStore: dataStore,
+            session: session,
+            messageService: messageService,
+            linkPreviewCache: linkPreviewCache
+        )
+    }
+
+    /// Creates a contact in the given context and returns its DTO.
+    private static func makeContact(
+        context: TestContext,
+        name: String = "Test Contact",
+        keyByte: UInt8 = 2
+    ) async throws -> (Contact, ContactDTO) {
+        let devices = try await context.dataStore.fetchDevices()
+        let device = try #require(devices.first)
+
+        let contact = Contact(
+            deviceID: device.id,
+            publicKey: Data(repeating: keyByte, count: 32),
+            name: name
+        )
+        try context.container.mainContext.insert(contact)
+        try context.container.mainContext.save()
+
+        let dto = try #require(try await context.dataStore.fetchContact(id: contact.id))
+        return (contact, dto)
+    }
+
+    @Test("Queue starts empty")
+    func queueStartsEmpty() {
+        let viewModel = ChatViewModel()
+        #expect(viewModel.sendQueueCount == 0)
+        #expect(viewModel.isProcessingQueue == false)
+    }
+
+    @Test("Send message queues the message")
+    func sendMessageQueuesMessage() async throws {
+        let ctx = try await Self.makeTestContext()
+        let viewModel = ChatViewModel()
+        viewModel.configure(dataStore: ctx.dataStore, messageService: ctx.messageService, linkPreviewCache: ctx.linkPreviewCache)
+
+        let (_, contactDTO) = try await Self.makeContact(context: ctx)
+        viewModel.currentContact = contactDTO
+
+        await viewModel.sendMessage(text: "Hello world")
+
+        #expect(viewModel.sendQueueCount == 1)
+    }
+
+    @Test("Process queue sends messages in order")
+    func processQueueSendsMessagesInOrder() async throws {
+        let ctx = try await Self.makeTestContext()
+        let viewModel = ChatViewModel()
+        viewModel.configure(dataStore: ctx.dataStore, messageService: ctx.messageService, linkPreviewCache: ctx.linkPreviewCache)
+
+        let (contact, contactDTO) = try await Self.makeContact(context: ctx)
+        viewModel.currentContact = contactDTO
+
+        let msg1 = try await ctx.messageService.createPendingMessage(text: "First", to: contactDTO)
+        let msg2 = try await ctx.messageService.createPendingMessage(text: "Second", to: contactDTO)
+        let msg3 = try await ctx.messageService.createPendingMessage(text: "Third", to: contactDTO)
+
+        viewModel.enqueueMessage(msg1.id, contactID: contact.id)
+        viewModel.enqueueMessage(msg2.id, contactID: contact.id)
+        viewModel.enqueueMessage(msg3.id, contactID: contact.id)
+
+        #expect(viewModel.sendQueueCount == 3)
+
+        await viewModel.processQueueForTesting()
+
+        #expect(viewModel.sendQueueCount == 0)
+        #expect(viewModel.isProcessingQueue == false)
+
+        let messages = try await ctx.dataStore.fetchMessages(contactID: contact.id)
+        #expect(messages.count == 3)
+        #expect(messages[0].text == "First")
+        #expect(messages[1].text == "Second")
+        #expect(messages[2].text == "Third")
+    }
+
+    @Test("Queue continues after failure")
+    func queueContinuesAfterFailure() async throws {
+        let ctx = try await Self.makeTestContext()
+        let viewModel = ChatViewModel()
+        viewModel.configure(dataStore: ctx.dataStore, messageService: ctx.messageService, linkPreviewCache: ctx.linkPreviewCache)
+
+        let (contact, contactDTO) = try await Self.makeContact(context: ctx)
+        viewModel.currentContact = contactDTO
+
+        let msg1 = try await ctx.messageService.createPendingMessage(text: "First", to: contactDTO)
+        let msg2 = try await ctx.messageService.createPendingMessage(text: "Second", to: contactDTO)
+        let msg3 = try await ctx.messageService.createPendingMessage(text: "Third", to: contactDTO)
+
+        viewModel.enqueueMessage(msg1.id, contactID: contact.id)
+        viewModel.enqueueMessage(msg2.id, contactID: contact.id)
+        viewModel.enqueueMessage(msg3.id, contactID: contact.id)
+
+        await viewModel.processQueueForTesting()
+
+        #expect(viewModel.sendQueueCount == 0)
+        #expect(viewModel.isProcessingQueue == false)
+    }
+
+    @Test("Messages go to correct contact even after navigating away")
+    func messagesGoToCorrectContactAfterNavigatingAway() async throws {
+        let ctx = try await Self.makeTestContext()
+        let viewModel = ChatViewModel()
+        viewModel.configure(dataStore: ctx.dataStore, messageService: ctx.messageService, linkPreviewCache: ctx.linkPreviewCache)
+
+        let (alice, aliceDTO) = try await Self.makeContact(context: ctx, name: "Alice", keyByte: 2)
+        let (bob, _) = try await Self.makeContact(context: ctx, name: "Bob", keyByte: 3)
+        let bobDTO = try #require(try await ctx.dataStore.fetchContact(id: bob.id))
+
+        viewModel.currentContact = aliceDTO
+
+        let msg1 = try await ctx.messageService.createPendingMessage(text: "Hello Alice", to: aliceDTO)
+        let msg2 = try await ctx.messageService.createPendingMessage(text: "How are you?", to: aliceDTO)
+
+        viewModel.enqueueMessage(msg1.id, contactID: alice.id)
+        viewModel.enqueueMessage(msg2.id, contactID: alice.id)
+
+        // User navigates to Bob's chat before queue finishes
+        viewModel.currentContact = bobDTO
+
+        await viewModel.processQueueForTesting()
+
+        let aliceMessages = try await ctx.dataStore.fetchMessages(contactID: alice.id)
+        let bobMessages = try await ctx.dataStore.fetchMessages(contactID: bob.id)
+
+        #expect(aliceMessages.count == 2, "Messages should go to Alice")
+        #expect(aliceMessages[0].text == "Hello Alice")
+        #expect(aliceMessages[1].text == "How are you?")
+        #expect(bobMessages.count == 0, "Bob should have no messages")
     }
 }

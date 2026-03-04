@@ -1,91 +1,107 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PocketMeshServices
 
-final class DataExtensionsTests: XCTestCase {
+@Suite("Data Extensions Tests")
+struct DataExtensionsTests {
 
     // MARK: - hexString() Tests
 
-    func testHexStringEmpty() {
+    @Test("Empty data returns empty string")
+    func hexStringEmpty() {
         let data = Data()
-        XCTAssertEqual(data.hexString(), "")
+        #expect(data.hexString() == "")
     }
 
-    func testHexStringNoSeparator() {
+    @Test("Hex string with no separator")
+    func hexStringNoSeparator() {
         let data = Data([0xAA, 0xBB, 0xCC, 0xDD])
-        XCTAssertEqual(data.hexString(), "AABBCCDD")
+        #expect(data.hexString() == "AABBCCDD")
     }
 
-    func testHexStringWithSpaceSeparator() {
+    @Test("Hex string with space separator")
+    func hexStringWithSpaceSeparator() {
         let data = Data([0xAA, 0xBB, 0xCC, 0xDD])
-        XCTAssertEqual(data.hexString(separator: " "), "AA BB CC DD")
+        #expect(data.hexString(separator: " ") == "AA BB CC DD")
     }
 
-    func testHexStringWithCustomSeparator() {
+    @Test("Hex string with custom separator")
+    func hexStringWithCustomSeparator() {
         let data = Data([0xAA, 0xBB, 0xCC])
-        XCTAssertEqual(data.hexString(separator: ":"), "AA:BB:CC")
+        #expect(data.hexString(separator: ":") == "AA:BB:CC")
     }
 
-    func testHexStringSingleByte() {
+    @Test("Hex string for single byte")
+    func hexStringSingleByte() {
         let data = Data([0x0F])
-        XCTAssertEqual(data.hexString(), "0F")
+        #expect(data.hexString() == "0F")
     }
 
-    func testHexStringLeadingZero() {
+    @Test("Hex string preserves leading zeros")
+    func hexStringLeadingZero() {
         let data = Data([0x00, 0x01, 0x02])
-        XCTAssertEqual(data.hexString(), "000102")
+        #expect(data.hexString() == "000102")
     }
 
     // MARK: - init?(hexString:) Tests
 
-    func testInitFromHexStringValid() {
+    @Test("Init from valid hex string")
+    func initFromHexStringValid() {
         let data = Data(hexString: "AABBCCDD")
-        XCTAssertEqual(data, Data([0xAA, 0xBB, 0xCC, 0xDD]))
+        #expect(data == Data([0xAA, 0xBB, 0xCC, 0xDD]))
     }
 
-    func testInitFromHexStringWithSpaces() {
+    @Test("Init from hex string with spaces")
+    func initFromHexStringWithSpaces() {
         let data = Data(hexString: "AA BB CC DD")
-        XCTAssertEqual(data, Data([0xAA, 0xBB, 0xCC, 0xDD]))
+        #expect(data == Data([0xAA, 0xBB, 0xCC, 0xDD]))
     }
 
-    func testInitFromHexStringLowercase() {
+    @Test("Init from lowercase hex string")
+    func initFromHexStringLowercase() {
         let data = Data(hexString: "aabbccdd")
-        XCTAssertEqual(data, Data([0xAA, 0xBB, 0xCC, 0xDD]))
+        #expect(data == Data([0xAA, 0xBB, 0xCC, 0xDD]))
     }
 
-    func testInitFromHexStringMixedCase() {
+    @Test("Init from mixed case hex string")
+    func initFromHexStringMixedCase() {
         let data = Data(hexString: "AaBbCcDd")
-        XCTAssertEqual(data, Data([0xAA, 0xBB, 0xCC, 0xDD]))
+        #expect(data == Data([0xAA, 0xBB, 0xCC, 0xDD]))
     }
 
-    func testInitFromHexStringEmpty() {
+    @Test("Init from empty hex string")
+    func initFromHexStringEmpty() {
         let data = Data(hexString: "")
-        XCTAssertEqual(data, Data())
+        #expect(data == Data())
     }
 
-    func testInitFromHexStringOddLength() {
+    @Test("Init from odd-length hex string returns nil")
+    func initFromHexStringOddLength() {
         let data = Data(hexString: "ABC")
-        XCTAssertNil(data)
+        #expect(data == nil)
     }
 
-    func testInitFromHexStringWithNonHexCharacters() {
-        // Should filter out non-hex characters
+    @Test("Init filters out non-hex characters")
+    func initFromHexStringWithNonHexCharacters() {
         let data = Data(hexString: "AA-BB-CC")
-        XCTAssertEqual(data, Data([0xAA, 0xBB, 0xCC]))
+        #expect(data == Data([0xAA, 0xBB, 0xCC]))
     }
 
     // MARK: - Round-trip Tests
 
-    func testRoundTrip() {
+    @Test("Round-trip preserves data")
+    func roundTrip() {
         let original = Data([0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF])
         let hexString = original.hexString()
         let restored = Data(hexString: hexString)
-        XCTAssertEqual(restored, original)
+        #expect(restored == original)
     }
 
-    func testRoundTripWithSpaces() {
+    @Test("Round-trip with spaces preserves data")
+    func roundTripWithSpaces() {
         let original = Data([0xDE, 0xAD, 0xBE, 0xEF])
         let hexString = original.hexString(separator: " ")
         let restored = Data(hexString: hexString)
-        XCTAssertEqual(restored, original)
+        #expect(restored == original)
     }
 }
