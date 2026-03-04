@@ -1,4 +1,3 @@
-import OSLog
 import PocketMeshServices
 import SwiftUI
 
@@ -18,7 +17,6 @@ struct MessageActionsSheet: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let message: MessageDTO
     let senderName: String
     let recentEmojis: [String]
@@ -26,6 +24,21 @@ struct MessageActionsSheet: View {
 
     private var availability: MessageActionAvailability {
         MessageActionAvailability(message: message)
+    }
+
+    private func performAction(_ action: MessageAction) {
+        onAction(action)
+        dismiss()
+    }
+
+    private var emojiSection: some View {
+        ActionsEmojiSection(
+            recentEmojis: recentEmojis,
+            showEmojiPicker: $showEmojiPicker,
+            onSelectEmoji: { emoji in
+                performAction(.react(emoji))
+            }
+        )
     }
 
     @State private var longPressHapticTrigger = 0
@@ -46,14 +59,7 @@ struct MessageActionsSheet: View {
             Divider()
 
             if !dynamicTypeSize.isAccessibilitySize {
-                ActionsEmojiSection(
-                    recentEmojis: recentEmojis,
-                    showEmojiPicker: $showEmojiPicker,
-                    onSelectEmoji: { emoji in
-                        onAction(.react(emoji))
-                        dismiss()
-                    }
-                )
+                emojiSection
                 Divider()
             }
 
@@ -61,25 +67,16 @@ struct MessageActionsSheet: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         if dynamicTypeSize.isAccessibilitySize {
-                            ActionsEmojiSection(
-                                recentEmojis: recentEmojis,
-                                showEmojiPicker: $showEmojiPicker,
-                                onSelectEmoji: { emoji in
-                                    onAction(.react(emoji))
-                                    dismiss()
-                                }
-                            )
+                            emojiSection
                             Divider()
                         }
                         ActionsButtonsSection(
-                            message: message,
-                            onSelectAction: { action in
-                                onAction(action)
-                                dismiss()
-                            }
+                            availability: availability,
+                            onSelectAction: performAction
                         )
                         ActionsDetailsSection(
                             message: message,
+                            availability: availability,
                             isDetailExpanded: $isDetailExpanded,
                             repeats: repeats,
                             contacts: contacts,
@@ -87,18 +84,12 @@ struct MessageActionsSheet: View {
                             pathViewModel: pathViewModel
                         )
                         ActionsBlockSection(
-                            message: message,
-                            onSelectAction: { action in
-                                onAction(action)
-                                dismiss()
-                            }
+                            availability: availability,
+                            onSelectAction: performAction
                         )
                         ActionsDeleteSection(
-                            message: message,
-                            onSelectAction: { action in
-                                onAction(action)
-                                dismiss()
-                            }
+                            availability: availability,
+                            onSelectAction: performAction
                         )
                     }
                 }
@@ -111,7 +102,10 @@ struct MessageActionsSheet: View {
                 }
             }
         }
-        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large])
+        .presentationDetents(
+            (UIDevice.current.userInterfaceIdiom == .pad || dynamicTypeSize.isAccessibilitySize)
+                ? [.large] : [.medium, .large]
+        )
         .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color(.systemBackground))
@@ -230,12 +224,8 @@ private struct ActionsEmojiSection: View {
 }
 
 private struct ActionsButtonsSection: View {
-    let message: MessageDTO
+    let availability: MessageActionAvailability
     let onSelectAction: (MessageAction) -> Void
-
-    private var availability: MessageActionAvailability {
-        MessageActionAvailability(message: message)
-    }
 
     var body: some View {
         if availability.canReply {
@@ -263,12 +253,8 @@ private struct ActionsButtonsSection: View {
 }
 
 private struct ActionsBlockSection: View {
-    let message: MessageDTO
+    let availability: MessageActionAvailability
     let onSelectAction: (MessageAction) -> Void
-
-    private var availability: MessageActionAvailability {
-        MessageActionAvailability(message: message)
-    }
 
     var body: some View {
         if availability.canBlockSender {
@@ -285,12 +271,8 @@ private struct ActionsBlockSection: View {
 }
 
 private struct ActionsDeleteSection: View {
-    let message: MessageDTO
+    let availability: MessageActionAvailability
     let onSelectAction: (MessageAction) -> Void
-
-    private var availability: MessageActionAvailability {
-        MessageActionAvailability(message: message)
-    }
 
     var body: some View {
         if availability.canDelete {
@@ -308,15 +290,12 @@ private struct ActionsDeleteSection: View {
 
 private struct ActionsDetailsSection: View {
     let message: MessageDTO
+    let availability: MessageActionAvailability
     @Binding var isDetailExpanded: Bool
     let repeats: [MessageRepeatDTO]?
     let contacts: [ContactDTO]
     let discoveredNodes: [DiscoveredNodeDTO]
     let pathViewModel: MessagePathViewModel
-
-    private var availability: MessageActionAvailability {
-        MessageActionAvailability(message: message)
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
