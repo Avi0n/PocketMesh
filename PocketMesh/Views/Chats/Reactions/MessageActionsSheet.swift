@@ -207,18 +207,12 @@ private struct ActionsEmojiSection: View {
     var body: some View {
         EmojiPickerRow(
             emojis: recentEmojis,
-            onSelect: { emoji in
-                onSelectEmoji(emoji)
-            },
-            onOpenKeyboard: {
-                showEmojiPicker = true
-            }
+            onSelect: onSelectEmoji,
+            onOpenKeyboard: { showEmojiPicker = true }
         )
         .padding(.vertical, 4)
         .sheet(isPresented: $showEmojiPicker) {
-            EmojiPickerSheet { emoji in
-                onSelectEmoji(emoji)
-            }
+            EmojiPickerSheet(onSelect: onSelectEmoji)
         }
     }
 }
