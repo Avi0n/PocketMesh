@@ -112,7 +112,7 @@ struct UnifiedMessageBubble: View {
     }
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 0) {
             if displayState.showNewMessagesDivider {
                 NewMessagesDividerView()
                     .padding(.bottom, 4)
@@ -129,7 +129,7 @@ struct UnifiedMessageBubble: View {
                     Spacer(minLength: 40)
                 }
 
-                VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 2) {
+                VStack(alignment: message.isOutgoing ? .trailing : .leading, spacing: 0) {
                     // Sender name for incoming channel messages (hidden for continuation messages in a group)
                     if !message.isOutgoing && configuration.showSenderName && displayState.showSenderName {
                         Text(senderName)
@@ -198,8 +198,8 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, displayState.showDirectionGap ? 6 : (displayState.showSenderName ? 4 : 2))
-        .padding(.bottom, 2)
+        .padding(.top, displayState.showDirectionGap ? 6 : (displayState.showSenderName ? 4 : 1))
+        .padding(.bottom, 0)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
             // ViewModel handles deduplication and cancellation
