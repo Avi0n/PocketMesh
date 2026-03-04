@@ -22,11 +22,6 @@ struct CLIToolViewModelTests {
         return viewModel
     }
 
-    private func waitForCommand() async {
-        await Task.yield()
-        try? await Task.sleep(for: .milliseconds(10))
-    }
-
     // MARK: - Prompt Tests
 
     @Test("Prompt shows disconnected when no session")
@@ -62,12 +57,10 @@ struct CLIToolViewModelTests {
     // MARK: - History Tests
 
     @Test("History navigation up retrieves previous commands")
-    func historyNavigationUp() async {
+    func historyNavigationUp() {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("first")
-        await waitForCommand()
         viewModel.executeCommand("second")
-        await waitForCommand()
 
         viewModel.historyUp()
         #expect(viewModel.currentInput == "second")
@@ -77,12 +70,10 @@ struct CLIToolViewModelTests {
     }
 
     @Test("History navigation down moves forward through history")
-    func historyNavigationDown() async {
+    func historyNavigationDown() {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("first")
-        await waitForCommand()
         viewModel.executeCommand("second")
-        await waitForCommand()
 
         viewModel.historyUp()
         viewModel.historyUp()
@@ -92,11 +83,10 @@ struct CLIToolViewModelTests {
     }
 
     @Test("History is limited to 100 entries")
-    func historyLimitedTo100Entries() async {
+    func historyLimitedTo100Entries() {
         let viewModel = createConfiguredViewModel()
         for i in 0..<150 {
             viewModel.executeCommand("command\(i)")
-            await waitForCommand()
         }
 
         // Navigate to oldest entry
@@ -109,10 +99,9 @@ struct CLIToolViewModelTests {
     }
 
     @Test("Login command stored in history without password")
-    func loginCommandStoredInHistory() async {
+    func loginCommandStoredInHistory() {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("login MyRepeater")
-        await waitForCommand()
 
         viewModel.historyUp()
         #expect(viewModel.currentInput == "login MyRepeater")
@@ -121,22 +110,26 @@ struct CLIToolViewModelTests {
     // MARK: - Built-in Commands Tests
 
     @Test("Clear command removes output")
-    func clearCommandRemovesOutput() async {
+    func clearCommandRemovesOutput() async throws {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("help")
-        await waitForCommand()
-        #expect(!viewModel.outputLines.isEmpty)
+        try await waitUntil("help output should appear") {
+            !viewModel.outputLines.isEmpty
+        }
 
         viewModel.executeCommand("clear")
-        await waitForCommand()
-        #expect(viewModel.outputLines.isEmpty)
+        try await waitUntil("output should be cleared") {
+            viewModel.outputLines.isEmpty
+        }
     }
 
     @Test("Help command shows available commands")
-    func helpCommandShowsAvailableCommands() async {
+    func helpCommandShowsAvailableCommands() async throws {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("help")
-        await waitForCommand()
+        try await waitUntil("help output should appear") {
+            viewModel.outputLines.contains { $0.text.contains("login") }
+        }
 
         let output = viewModel.outputLines.map(\.text).joined(separator: "\n")
         #expect(output.contains("login"))
@@ -147,23 +140,26 @@ struct CLIToolViewModelTests {
     // MARK: - Output Management Tests
 
     @Test("Output lines are limited to prevent memory growth")
-    func outputLinesAreLimited() async {
+    func outputLinesAreLimited() async throws {
         let viewModel = createConfiguredViewModel()
         for i in 0..<1100 {
             viewModel.executeCommand("command\(i)")
-            await waitForCommand()
         }
 
-        #expect(viewModel.outputLines.count <= 1000)
+        try await waitUntil("output should be trimmed after commands") {
+            viewModel.outputLines.count <= 1000
+        }
     }
 
     // MARK: - Session Tests
 
     @Test("Session list shows local")
-    func sessionListShowsLocal() async {
+    func sessionListShowsLocal() async throws {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("session list")
-        await waitForCommand()
+        try await waitUntil("session list output should appear") {
+            viewModel.outputLines.contains { $0.text.contains("local") }
+        }
 
         let output = viewModel.outputLines.map(\.text).joined(separator: "\n")
         #expect(output.contains("local"))
@@ -172,10 +168,12 @@ struct CLIToolViewModelTests {
     // MARK: - Cancellation Tests
 
     @Test("Cancel command stops waiting")
-    func cancelCommandStopsWaiting() async {
+    func cancelCommandStopsWaiting() async throws {
         let viewModel = createConfiguredViewModel()
         viewModel.executeCommand("help")
-        await waitForCommand()
+        try await waitUntil("help output should appear") {
+            !viewModel.outputLines.isEmpty
+        }
 
         viewModel.cancelCurrentCommand()
 

@@ -12,13 +12,6 @@ struct BLEPhaseTests {
         #expect(phase.name == "idle")
     }
 
-    @Test("disconnecting phase has correct name")
-    func disconnectingPhaseHasCorrectName() {
-        // Can't easily create other phases without CBPeripheral
-        // but we can test idle
-        let phase = BLEPhase.idle
-        #expect(phase.name == "idle")
-    }
 
     // MARK: - isDiscoveryChain Tests
 

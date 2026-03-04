@@ -344,8 +344,9 @@ struct PreselectedContactTests {
         let contact = createTestContact(name: "Preselected", latitude: 37.8, longitude: -122.4)
         let viewModel = LineOfSightViewModel(preselectedContact: contact)
 
-        // Wait for elevation fetch to complete
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("preselected contact elevation should load") {
+            viewModel.pointA?.isLoadingElevation == false
+        }
 
         #expect(viewModel.pointA != nil)
         #expect(viewModel.pointA?.contact?.name == "Preselected")
@@ -523,8 +524,9 @@ struct ElevationFetchingTests {
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
 
-        // Wait for elevation fetches
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         #expect(viewModel.canAnalyze == true)
     }
@@ -535,7 +537,9 @@ struct ElevationFetchingTests {
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
         viewModel.setPointA(coordinate: sanFrancisco)
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point A elevation should load") {
+            viewModel.pointA?.isLoadingElevation == false
+        }
 
         viewModel.updateAdditionalHeight(for: .pointA, meters: 10)
 
@@ -557,7 +561,9 @@ struct HeightAdjustmentTests {
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
         viewModel.setPointA(coordinate: sanFrancisco)
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point A elevation should load") {
+            viewModel.pointA?.isLoadingElevation == false
+        }
 
         viewModel.updateAdditionalHeight(for: .pointA, meters: -10)
 
@@ -570,7 +576,9 @@ struct HeightAdjustmentTests {
         let viewModel = LineOfSightViewModel(elevationService: mockService)
 
         viewModel.setPointA(coordinate: sanFrancisco)
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point A elevation should load") {
+            viewModel.pointA?.isLoadingElevation == false
+        }
 
         viewModel.updateAdditionalHeight(for: .pointA, meters: 15)
 
@@ -584,7 +592,9 @@ struct HeightAdjustmentTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.updateAdditionalHeight(for: .pointB, meters: 20)
 
@@ -642,7 +652,9 @@ struct ClearTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.clear()
 
@@ -659,7 +671,9 @@ struct ClearTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.clearPointA()
 
@@ -674,7 +688,9 @@ struct ClearTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.clearPointB()
 
@@ -689,10 +705,14 @@ struct ClearTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.analyze()
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("analysis should complete") {
+            !viewModel.isAnalyzing
+        }
 
         viewModel.clearPointA()
 
@@ -717,8 +737,9 @@ struct TaskCancellationTests {
         // Immediately set second point (should cancel first fetch)
         viewModel.setPointA(coordinate: oakland)
 
-        // Wait for fetch to complete
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point A elevation should load") {
+            viewModel.pointA?.isLoadingElevation == false
+        }
 
         // Should have the second coordinate
         #expect(viewModel.pointA?.coordinate.latitude == oakland.latitude)
@@ -735,8 +756,9 @@ struct TaskCancellationTests {
         // Immediately set new point B (should cancel first fetch)
         viewModel.setPointB(coordinate: berkeley)
 
-        // Wait for fetch to complete
-        try await Task.sleep(for: .milliseconds(100))
+        try await waitUntil("point B elevation should load") {
+            viewModel.pointB?.isLoadingElevation == false
+        }
 
         // Should have the second coordinate
         #expect(viewModel.pointB?.coordinate.latitude == berkeley.latitude)
@@ -810,10 +832,14 @@ struct AnalysisTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         viewModel.analyze()
-        try await Task.sleep(for: .milliseconds(300))
+        try await waitUntil("analysis should complete") {
+            !viewModel.isAnalyzing
+        }
 
         #expect(!viewModel.elevationProfile.isEmpty)
     }
@@ -866,7 +892,9 @@ struct AnalysisTests {
 
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         // Start analysis
         viewModel.analyze()
@@ -874,8 +902,9 @@ struct AnalysisTests {
         // Start another immediately
         viewModel.analyze()
 
-        // Should complete without issues
-        try await Task.sleep(for: .milliseconds(300))
+        try await waitUntil("analysis should complete") {
+            !viewModel.isAnalyzing
+        }
 
         if case .result = viewModel.analysisStatus {
             // Expected
@@ -1496,7 +1525,9 @@ struct RelayAnalysisTests {
         // Set points first (this clears profile via invalidateAnalysis)
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         // Create and set profile AFTER points are set
         let profile = (0...100).map { i in
@@ -1534,7 +1565,9 @@ struct RelayAnalysisTests {
         // Set points first (this clears profile via invalidateAnalysis)
         viewModel.setPointA(coordinate: sanFrancisco)
         viewModel.setPointB(coordinate: oakland)
-        try await Task.sleep(for: .milliseconds(200))
+        try await waitUntil("both elevations should load") {
+            viewModel.canAnalyze
+        }
 
         // Create and set profile AFTER points are set
         let profile = (0...100).map { i in

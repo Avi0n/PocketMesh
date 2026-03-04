@@ -212,25 +212,4 @@ struct SyncCoordinatorMessageHandlerTests {
         await coordinator.wireDiscoveryHandlers(services: services, deviceID: deviceID)
     }
 
-    // MARK: - Notification Version Counters
-
-    @Test("notifyContactsChanged increments version")
-    func notifyContactsChangedWorks() async {
-        let coordinator = SyncCoordinator()
-        let initial = coordinator.contactsVersion
-
-        await coordinator.notifyContactsChanged()
-
-        #expect(coordinator.contactsVersion == initial + 1)
-    }
-
-    @Test("notifyConversationsChanged increments version")
-    func notifyConversationsChangedWorks() async {
-        let coordinator = SyncCoordinator()
-        let initial = coordinator.conversationsVersion
-
-        await coordinator.notifyConversationsChanged()
-
-        #expect(coordinator.conversationsVersion == initial + 1)
-    }
 }

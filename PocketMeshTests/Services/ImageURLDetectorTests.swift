@@ -6,22 +6,16 @@ struct ImageURLDetectorTests {
 
     // MARK: - Direct Image URL Detection
 
-    @Test("Detects common image extensions")
-    func detectsImageExtensions() {
-        let extensions = ["jpg", "jpeg", "png", "gif", "webp", "heic"]
-        for ext in extensions {
-            let url = URL(string: "https://example.com/photo.\(ext)")!
-            #expect(ImageURLDetector.isDirectImageURL(url), "Should detect .\(ext)")
-        }
+    @Test("Detects common image extensions", arguments: ["jpg", "jpeg", "png", "gif", "webp", "heic"])
+    func detectsImageExtensions(ext: String) {
+        let url = URL(string: "https://example.com/photo.\(ext)")!
+        #expect(ImageURLDetector.isDirectImageURL(url), "Should detect .\(ext)")
     }
 
-    @Test("Rejects non-image extensions")
-    func rejectsNonImageExtensions() {
-        let extensions = ["html", "pdf", "mp4", "txt", "js", "css"]
-        for ext in extensions {
-            let url = URL(string: "https://example.com/file.\(ext)")!
-            #expect(!ImageURLDetector.isDirectImageURL(url), "Should reject .\(ext)")
-        }
+    @Test("Rejects non-image extensions", arguments: ["html", "pdf", "mp4", "txt", "js", "css"])
+    func rejectsNonImageExtensions(ext: String) {
+        let url = URL(string: "https://example.com/file.\(ext)")!
+        #expect(!ImageURLDetector.isDirectImageURL(url), "Should reject .\(ext)")
     }
 
     @Test("Case insensitive extension detection")

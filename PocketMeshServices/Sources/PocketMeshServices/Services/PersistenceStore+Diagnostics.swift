@@ -358,7 +358,35 @@ extension PersistenceStore {
         packetsSent: UInt32?,
         packetsReceived: UInt32?
     ) throws -> UUID {
+        try saveNodeStatusSnapshot(
+            timestamp: .now,
+            nodePublicKey: nodePublicKey,
+            batteryMillivolts: batteryMillivolts,
+            lastSNR: lastSNR,
+            lastRSSI: lastRSSI,
+            noiseFloor: noiseFloor,
+            uptimeSeconds: uptimeSeconds,
+            rxAirtimeSeconds: rxAirtimeSeconds,
+            packetsSent: packetsSent,
+            packetsReceived: packetsReceived
+        )
+    }
+
+    /// Overload that accepts an explicit timestamp, used by tests to avoid timing-dependent sleeps.
+    public func saveNodeStatusSnapshot(
+        timestamp: Date,
+        nodePublicKey: Data,
+        batteryMillivolts: UInt16?,
+        lastSNR: Double?,
+        lastRSSI: Int16?,
+        noiseFloor: Int16?,
+        uptimeSeconds: UInt32?,
+        rxAirtimeSeconds: UInt32?,
+        packetsSent: UInt32?,
+        packetsReceived: UInt32?
+    ) throws -> UUID {
         let snapshot = NodeStatusSnapshot(
+            timestamp: timestamp,
             nodePublicKey: nodePublicKey,
             batteryMillivolts: batteryMillivolts,
             lastSNR: lastSNR,

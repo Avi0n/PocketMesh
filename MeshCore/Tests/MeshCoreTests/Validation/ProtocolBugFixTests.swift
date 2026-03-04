@@ -591,9 +591,8 @@ struct ProtocolBugFixTests {
             try await session.start()
         }
 
-        for _ in 0..<50 {
-            if (await transport.sentData).count >= 1 { break }
-            try? await Task.sleep(for: .milliseconds(10))
+        try await waitUntil("transport should have sent appStart") {
+            await transport.sentData.count >= 1
         }
 
         var selfInfoPayload = Data()
@@ -624,9 +623,8 @@ struct ProtocolBugFixTests {
             try await session.requestStatus(from: publicKey)
         }
 
-        for _ in 0..<50 {
-            if (await transport.sentData).count >= 2 { break }
-            try? await Task.sleep(for: .milliseconds(10))
+        try await waitUntil("transport should have sent status request") {
+            await transport.sentData.count >= 2
         }
 
         await transport.simulateError(code: 10)

@@ -14,7 +14,7 @@ struct DemoModeManagerTests {
 
     // MARK: - Singleton Pattern Tests
 
-    @Test("shared returns the same instance")
+    @Test("shared returns the same instance", .serialized)
     func testSingletonPattern() {
         let instance1 = DemoModeManager.shared
         let instance2 = DemoModeManager.shared

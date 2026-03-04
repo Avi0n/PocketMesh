@@ -7,33 +7,24 @@ struct HashtagUtilitiesTests {
 
     // MARK: - Regex Pattern Tests
 
-    @Test("hashtag pattern matches valid hashtags")
-    func testPatternMatchesValid() {
-        let pattern = HashtagUtilities.hashtagPattern
+    @Test("hashtag pattern matches valid hashtags", arguments: ["#general", "#General", "#test-channel", "#abc123", "#a"])
+    func testPatternMatchesValid(text: String) {
         // swiftlint:disable:next force_try
-        let regex = try! NSRegularExpression(pattern: pattern)
-
-        let validCases = ["#general", "#General", "#test-channel", "#abc123", "#a"]
-        for text in validCases {
-            let range = NSRange(text.startIndex..., in: text)
-            let matches = regex.matches(in: text, range: range)
-            #expect(matches.count == 1, "Expected match for: \(text)")
-        }
+        let regex = try! NSRegularExpression(pattern: HashtagUtilities.hashtagPattern)
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex.matches(in: text, range: range)
+        #expect(matches.count == 1, "Expected match for: \(text)")
     }
 
-    @Test("hashtag pattern rejects invalid hashtags")
-    func testPatternRejectsInvalid() {
+    @Test("hashtag pattern rejects invalid hashtags", arguments: ["#test_underscore", "#test.dot", "#", "#-bad", "#bad!", "#white space"])
+    func testPatternRejectsInvalid(text: String) {
         // Use anchored pattern for full-string validation (extraction pattern finds partial matches)
         let anchoredPattern = "^" + HashtagUtilities.hashtagPattern + "$"
         // swiftlint:disable:next force_try
         let regex = try! NSRegularExpression(pattern: anchoredPattern)
-
-        let invalidCases = ["#test_underscore", "#test.dot", "#", "#-bad", "#bad!", "#white space"]
-        for text in invalidCases {
-            let range = NSRange(text.startIndex..., in: text)
-            let matches = regex.matches(in: text, range: range)
-            #expect(matches.isEmpty, "Expected no match for: \(text)")
-        }
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex.matches(in: text, range: range)
+        #expect(matches.isEmpty, "Expected no match for: \(text)")
     }
 
     // MARK: - extractHashtags Tests

@@ -4,28 +4,22 @@ import Testing
 @Suite("OCVPreset Tests")
 struct OCVPresetTests {
 
-    @Test("All presets have exactly 11 values")
-    func presetsHaveCorrectLength() {
-        for preset in OCVPreset.allCases where preset != .custom {
-            #expect(preset.ocvArray.count == 11, "Preset \(preset) should have 11 values")
+    @Test("All presets have exactly 11 values", arguments: OCVPreset.allCases.filter { $0 != .custom })
+    func presetsHaveCorrectLength(preset: OCVPreset) {
+        #expect(preset.ocvArray.count == 11, "Preset \(preset) should have 11 values")
+    }
+
+    @Test("All preset arrays are descending", arguments: OCVPreset.allCases.filter { $0 != .custom })
+    func presetsAreDescending(preset: OCVPreset) {
+        let array = preset.ocvArray
+        for i in 0..<(array.count - 1) {
+            #expect(array[i] > array[i + 1], "Preset \(preset) should be descending at index \(i)")
         }
     }
 
-    @Test("All preset arrays are descending")
-    func presetsAreDescending() {
-        for preset in OCVPreset.allCases where preset != .custom {
-            let array = preset.ocvArray
-            for i in 0..<(array.count - 1) {
-                #expect(array[i] > array[i + 1], "Preset \(preset) should be descending at index \(i)")
-            }
-        }
-    }
-
-    @Test("All presets have display names")
-    func presetsHaveDisplayNames() {
-        for preset in OCVPreset.allCases {
-            #expect(!preset.displayName.isEmpty, "Preset \(preset) should have a display name")
-        }
+    @Test("All presets have display names", arguments: OCVPreset.allCases)
+    func presetsHaveDisplayNames(preset: OCVPreset) {
+        #expect(!preset.displayName.isEmpty, "Preset \(preset) should have a display name")
     }
 
     @Test("Selectable presets excludes custom")

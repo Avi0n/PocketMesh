@@ -144,16 +144,19 @@ struct NodeSnapshotServiceTests {
     @Test("Fetch previous snapshot returns correct result")
     func previousSnapshot() async throws {
         let (service, store) = try await createTestService()
+        let t1 = Date.now.addingTimeInterval(-20)
+        let t2 = Date.now.addingTimeInterval(-10)
 
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t1,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3700,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
             packetsSent: nil, packetsReceived: nil
         )
-        try await Task.sleep(for: .milliseconds(10))
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t2,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
@@ -168,16 +171,19 @@ struct NodeSnapshotServiceTests {
     @Test("Fetch snapshots returns ascending order")
     func fetchSnapshotsOrdering() async throws {
         let (service, store) = try await createTestService()
+        let t1 = Date.now.addingTimeInterval(-20)
+        let t2 = Date.now.addingTimeInterval(-10)
 
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t1,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
             packetsSent: nil, packetsReceived: nil
         )
-        try await Task.sleep(for: .milliseconds(10))
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t2,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
@@ -194,9 +200,13 @@ struct NodeSnapshotServiceTests {
     @Test("Prune only deletes snapshots older than cutoff")
     func pruneOldSnapshots() async throws {
         let (service, store) = try await createTestService()
+        let oldTime = Date.now.addingTimeInterval(-60)
+        let cutoff = Date.now.addingTimeInterval(-30)
+        let recentTime = Date.now.addingTimeInterval(-10)
 
         // Save an "old" snapshot by writing directly to the store (bypass throttle)
-        let oldID = try await store.saveNodeStatusSnapshot(
+        _ = try await store.saveNodeStatusSnapshot(
+            timestamp: oldTime,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
@@ -204,12 +214,9 @@ struct NodeSnapshotServiceTests {
             packetsSent: nil, packetsReceived: nil
         )
 
-        // Capture cutoff between saves so it's reliably between their timestamps
-        let cutoff = Date.now
-        try await Task.sleep(for: .milliseconds(10))
-
         // Save a "recent" snapshot
         let recentID = try await store.saveNodeStatusSnapshot(
+            timestamp: recentTime,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
@@ -246,20 +253,20 @@ struct NodeSnapshotServiceTests {
     @Test("Fetch snapshots with since filter")
     func fetchSnapshotsSinceDate() async throws {
         let (service, store) = try await createTestService()
+        let t1 = Date.now.addingTimeInterval(-30)
+        let cutoff = Date.now.addingTimeInterval(-15)
+        let t2 = Date.now.addingTimeInterval(-5)
 
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t1,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
             packetsSent: nil, packetsReceived: nil
         )
-        try await Task.sleep(for: .milliseconds(10))
-
-        let cutoff = Date.now
-
-        try await Task.sleep(for: .milliseconds(10))
         _ = try await store.saveNodeStatusSnapshot(
+            timestamp: t2,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
@@ -279,15 +286,18 @@ struct NodeSnapshotServiceTests {
         let (service, store) = try await createTestService()
 
         // Save two snapshots directly to the store (bypass throttle)
+        let t1 = Date.now.addingTimeInterval(-20)
+        let t2 = Date.now.addingTimeInterval(-10)
         let id1 = try await store.saveNodeStatusSnapshot(
+            timestamp: t1,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3600,
             lastSNR: 7.0, lastRSSI: -90, noiseFloor: -120,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
             packetsSent: nil, packetsReceived: nil
         )
-        try await Task.sleep(for: .milliseconds(10))
         let id2 = try await store.saveNodeStatusSnapshot(
+            timestamp: t2,
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800,
             lastSNR: 8.5, lastRSSI: -85, noiseFloor: -118,

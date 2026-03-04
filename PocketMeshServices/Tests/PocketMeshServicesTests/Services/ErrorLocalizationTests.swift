@@ -14,20 +14,17 @@ struct ErrorLocalizationTests {
         #expect(error.localizedDescription == "The operation timed out. Please try again.")
     }
 
-    @Test("MeshCoreError.deviceError maps known firmware codes")
-    func meshCoreDeviceErrorKnownCodes() {
-        let expectations: [(UInt8, String)] = [
-            (0x01, "Command not supported by device firmware."),
-            (0x02, "Item not found on device."),
-            (0x03, "Device storage is full."),
-            (0x04, "Device is in an invalid state for this operation."),
-            (0x05, "Device file system error."),
-            (0x06, "Invalid parameter sent to device."),
-        ]
-        for (code, expected) in expectations {
-            let error: MeshCoreError = .deviceError(code: code)
-            #expect(error.localizedDescription == expected, "Code \(code) should produce: \(expected)")
-        }
+    @Test("MeshCoreError.deviceError maps known firmware codes", arguments: [
+        (UInt8(0x01), "Command not supported by device firmware."),
+        (UInt8(0x02), "Item not found on device."),
+        (UInt8(0x03), "Device storage is full."),
+        (UInt8(0x04), "Device is in an invalid state for this operation."),
+        (UInt8(0x05), "Device file system error."),
+        (UInt8(0x06), "Invalid parameter sent to device."),
+    ])
+    func meshCoreDeviceErrorKnownCodes(code: UInt8, expected: String) {
+        let error: MeshCoreError = .deviceError(code: code)
+        #expect(error.localizedDescription == expected, "Code \(code) should produce: \(expected)")
     }
 
     @Test("MeshCoreError.deviceError falls back for unknown codes")
@@ -75,17 +72,14 @@ struct ErrorLocalizationTests {
 
     // MARK: - ProtocolError Tests
 
-    @Test("ProtocolError cases produce non-empty, readable descriptions")
-    func protocolErrorDescriptions() {
-        let cases: [ProtocolError] = [
-            .unsupportedCommand, .notFound, .tableFull,
-            .badState, .fileIOError, .illegalArgument,
-        ]
-        for protocolError in cases {
-            let description = protocolError.localizedDescription
-            #expect(!description.isEmpty, "ProtocolError.\(protocolError) should have a description")
-            #expect(!description.contains("ProtocolError"), "Should not contain raw type name")
-        }
+    @Test("ProtocolError cases produce non-empty, readable descriptions", arguments: [
+        ProtocolError.unsupportedCommand, .notFound, .tableFull,
+        .badState, .fileIOError, .illegalArgument,
+    ])
+    func protocolErrorDescriptions(protocolError: ProtocolError) {
+        let description = protocolError.localizedDescription
+        #expect(!description.isEmpty, "ProtocolError.\(protocolError) should have a description")
+        #expect(!description.contains("ProtocolError"), "Should not contain raw type name")
     }
 
     // MARK: - Service Error Session Pass-Through Tests
