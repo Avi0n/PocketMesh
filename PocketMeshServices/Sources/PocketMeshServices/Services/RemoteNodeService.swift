@@ -32,7 +32,7 @@ public enum RemoteNodeError: Error, LocalizedError, Sendable {
         case .permissionDenied:
             return "Permission denied"
         case .timeout:
-            return "Request timed out or incorrect password"
+            return "Request timed out"
         case .sessionNotFound:
             return "Remote node session not found"
         case .passwordNotFound:
@@ -97,9 +97,32 @@ public enum LoginTimeoutConfig {
     public static func timeout(forPathLength pathLength: UInt8) -> Duration {
         let base = directTimeout
         let hopCount = decodePathLen(pathLength)?.hopCount ?? 0
-        let additional = Duration.seconds(hopCount * 10)
+        let additional = perHopTimeout * hopCount
         let total = base + additional
         return min(total, maximumTimeout)
+    }
+}
+
+// MARK: - Remote Timeout Policy
+
+public enum RemoteOperationTimeoutPolicy {
+    static let firmwareRoundTripMultiplier = 2
+    static let loginMaximum: Duration = .seconds(20)
+    public static let binaryMaximum: Duration = .seconds(15)
+    static let cliMaximum: Duration = .seconds(15)
+    static let fireAndForgetCLI: Duration = .seconds(2)
+    static let pollInterval: Duration = .milliseconds(500)
+
+    static func firmwareRoundTripTimeout(from sentInfo: MessageSentInfo) -> Duration {
+        .milliseconds(Int(sentInfo.suggestedTimeoutMs) * firmwareRoundTripMultiplier)
+    }
+
+    static func loginTimeout(for sentInfo: MessageSentInfo, pathLength: UInt8) -> Duration {
+        min(max(firmwareRoundTripTimeout(from: sentInfo), LoginTimeoutConfig.timeout(forPathLength: pathLength)), loginMaximum)
+    }
+
+    static func cliTimeout(for sentInfo: MessageSentInfo, requestedTimeout: Duration) -> Duration {
+        min(max(requestedTimeout, firmwareRoundTripTimeout(from: sentInfo)), cliMaximum)
     }
 }
 
@@ -308,6 +331,29 @@ public actor RemoteNodeService {
         return (nil, matchingIndices.count)
     }
 
+    private func timeInterval(for duration: Duration) -> TimeInterval {
+        let (seconds, attoseconds) = duration.components
+        return TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18
+    }
+
+    private func cancelPendingLogin(for prefix: Data) {
+        pendingLoginTimeoutTasks.removeValue(forKey: prefix)?.cancel()
+        if let continuation = pendingLogins.removeValue(forKey: prefix) {
+            continuation.resume(throwing: RemoteNodeError.cancelled)
+        }
+    }
+
+    private func cancelPendingCLIRequest(for prefix: Data, timestamp: Date) {
+        guard var requests = pendingCLIRequests[prefix],
+              let index = requests.firstIndex(where: { $0.timestamp == timestamp }) else {
+            return
+        }
+
+        let cancelled = requests.remove(at: index)
+        pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
+        cancelled.continuation.resume(throwing: CancellationError())
+    }
+
     // MARK: - Session Management
 
     /// Create a session DTO for a contact, optionally preserving data from an existing session.
@@ -456,44 +502,46 @@ public actor RemoteNodeService {
         // Register continuation BEFORE sending to avoid race condition with loginSuccess event
         let prefixHex = prefix.map { String(format: "%02x", $0) }.joined()
         logger.info("login: registering pending login for prefix \(prefixHex)")
-        return try await withCheckedThrowingContinuation { continuation in
-            pendingLogins[prefix] = continuation
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                pendingLogins[prefix] = continuation
 
-            let timeoutTask = Task { [self] in
-                // Send login via MeshCore session
-                let sentInfo: MessageSentInfo
-                do {
-                    sentInfo = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
-                } catch {
-                    // Send failed - remove pending and resume with error
-                    pendingLoginTimeoutTasks.removeValue(forKey: prefix)
-                    if let pending = pendingLogins.removeValue(forKey: prefix) {
-                        let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
-                        pending.resume(throwing: RemoteNodeError.sessionError(meshError))
+                let timeoutTask = Task { [self] in
+                    let sentInfo: MessageSentInfo
+                    do {
+                        sentInfo = try await session.sendLogin(to: remoteSession.publicKey, password: pwd)
+                    } catch {
+                        pendingLoginTimeoutTasks.removeValue(forKey: prefix)
+                        if let pending = pendingLogins.removeValue(forKey: prefix) {
+                            let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
+                            pending.resume(throwing: RemoteNodeError.sessionError(meshError))
+                        }
+                        return
                     }
-                    return
-                }
 
-                // Send succeeded - use 2x firmware's suggested timeout (round trip)
-                let timeoutMs = Int(sentInfo.suggestedTimeoutMs) * 2
-                let timeout = Duration.milliseconds(timeoutMs)
-                logger.info("login: send succeeded, starting \(timeout) timeout for prefix \(prefixHex)")
+                    let timeout = RemoteOperationTimeoutPolicy.loginTimeout(for: sentInfo, pathLength: pathLength)
+                    logger.info("login: send succeeded, starting \(timeout) timeout for prefix \(prefixHex)")
 
-                // Notify caller of timeout so they can show countdown
-                if let onTimeoutKnown {
-                    await onTimeoutKnown(timeoutMs / 1000)
+                    if let onTimeoutKnown {
+                        let timeoutSeconds = max(1, Int(timeInterval(for: timeout).rounded(.up)))
+                        await onTimeoutKnown(timeoutSeconds)
+                    }
+                    try? await Task.sleep(for: timeout)
+                    guard !Task.isCancelled else { return }
+                    if let pending = pendingLogins.removeValue(forKey: prefix) {
+                        logger.warning("Login timeout after \(timeout) for session \(sessionID), prefix \(prefixHex)")
+                        pendingLoginTimeoutTasks.removeValue(forKey: prefix)
+                        pending.resume(throwing: RemoteNodeError.timeout)
+                    } else {
+                        logger.info("login: timeout elapsed but continuation already consumed for prefix \(prefixHex)")
+                    }
                 }
-                try? await Task.sleep(for: timeout)
-                guard !Task.isCancelled else { return }
-                if let pending = pendingLogins.removeValue(forKey: prefix) {
-                    logger.warning("Login timeout after \(timeout) for session \(sessionID), prefix \(prefixHex)")
-                    pendingLoginTimeoutTasks.removeValue(forKey: prefix)
-                    pending.resume(throwing: RemoteNodeError.timeout)
-                } else {
-                    logger.info("login: timeout elapsed but continuation already consumed for prefix \(prefixHex)")
-                }
+                pendingLoginTimeoutTasks[prefix] = timeoutTask
             }
-            pendingLoginTimeoutTasks[prefix] = timeoutTask
+        } onCancel: { [weak self] in
+            Task { [weak self] in
+                await self?.cancelPendingLogin(for: prefix)
+            }
         }
     }
 
@@ -721,7 +769,7 @@ public actor RemoteNodeService {
     // MARK: - Status
 
     /// Request status from a remote node.
-    public func requestStatus(sessionID: UUID) async throws -> StatusResponse {
+    public func requestStatus(sessionID: UUID, timeout: Duration? = nil) async throws -> StatusResponse {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
         }
@@ -731,7 +779,12 @@ public actor RemoteNodeService {
         await auditLogger.logStatusRequest(target: targetType, publicKey: remoteSession.publicKey)
 
         do {
-            return try await session.requestStatus(from: remoteSession.publicKey)
+            let effectiveTimeout = timeout ?? RemoteOperationTimeoutPolicy.binaryMaximum
+            return try await withTimeout(effectiveTimeout, operationName: "remoteStatus") {
+                try await self.session.requestStatus(from: remoteSession.publicKey)
+            }
+        } catch is TimeoutError {
+            throw RemoteNodeError.timeout
         } catch let error as MeshCoreError {
             throw RemoteNodeError.sessionError(error)
         }
@@ -740,7 +793,7 @@ public actor RemoteNodeService {
     // MARK: - Telemetry
 
     /// Request telemetry from a remote node
-    public func requestTelemetry(sessionID: UUID) async throws -> TelemetryResponse {
+    public func requestTelemetry(sessionID: UUID, timeout: Duration? = nil) async throws -> TelemetryResponse {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID) else {
             throw RemoteNodeError.sessionNotFound
         }
@@ -750,7 +803,12 @@ public actor RemoteNodeService {
         await auditLogger.logTelemetryRequest(target: targetType, publicKey: remoteSession.publicKey)
 
         do {
-            return try await session.requestTelemetry(from: remoteSession.publicKey)
+            let effectiveTimeout = timeout ?? RemoteOperationTimeoutPolicy.binaryMaximum
+            return try await withTimeout(effectiveTimeout, operationName: "remoteTelemetry") {
+                try await self.session.requestTelemetry(from: remoteSession.publicKey)
+            }
+        } catch is TimeoutError {
+            throw RemoteNodeError.timeout
         } catch let error as MeshCoreError {
             throw RemoteNodeError.sessionError(error)
         }
@@ -762,7 +820,7 @@ public actor RemoteNodeService {
     /// - Parameters:
     ///   - sessionID: The remote node session ID.
     ///   - command: The CLI command to send.
-    ///   - timeout: Maximum time to wait for response (default 10 seconds).
+    ///   - timeout: Hard maximum time to wait for response (default 10 seconds).
     /// - Returns: The CLI response text from the remote node.
     public func sendCLICommand(
         sessionID: UUID,
@@ -783,69 +841,60 @@ public actor RemoteNodeService {
         let destinationPrefix = Data(remoteSession.publicKey.prefix(6))
         let requestTimestamp = Date()
 
-        // Register continuation BEFORE sending to avoid race condition
-        return try await withCheckedThrowingContinuation { continuation in
-            let request = PendingCLIRequest(
-                command: command,
-                continuation: continuation,
-                timestamp: requestTimestamp
-            )
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let request = PendingCLIRequest(
+                    command: command,
+                    continuation: continuation,
+                    timestamp: requestTimestamp
+                )
 
-            if pendingCLIRequests[destinationPrefix] == nil {
-                pendingCLIRequests[destinationPrefix] = []
-            }
-            pendingCLIRequests[destinationPrefix]!.append(request)
+                if pendingCLIRequests[destinationPrefix] == nil {
+                    pendingCLIRequests[destinationPrefix] = []
+                }
+                pendingCLIRequests[destinationPrefix]!.append(request)
 
-            Task { [self] in
-                // Send CLI command
-                let sentInfo: MessageSentInfo
-                do {
-                    sentInfo = try await session.sendCommand(to: remoteSession.publicKey, command: command)
-                } catch {
-                    // Send failed - remove our specific request and resume with error
+                Task { [self] in
+                    let sentInfo: MessageSentInfo
+                    do {
+                        sentInfo = try await session.sendCommand(to: remoteSession.publicKey, command: command)
+                    } catch {
+                        if var requests = pendingCLIRequests[destinationPrefix],
+                           let index = requests.firstIndex(where: { $0.timestamp == requestTimestamp }) {
+                            let failed = requests.remove(at: index)
+                            pendingCLIRequests[destinationPrefix] = requests.isEmpty ? nil : requests
+                            let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
+                            failed.continuation.resume(throwing: RemoteNodeError.sessionError(meshError))
+                        }
+                        return
+                    }
+
+                    let effectiveTimeout = RemoteOperationTimeoutPolicy.cliTimeout(for: sentInfo, requestedTimeout: timeout)
+                    let deadline = ContinuousClock.now.advanced(by: effectiveTimeout)
+                    while ContinuousClock.now < deadline {
+                        if let requests = pendingCLIRequests[destinationPrefix],
+                           !requests.contains(where: { $0.timestamp == requestTimestamp }) {
+                            return
+                        } else if pendingCLIRequests[destinationPrefix] == nil {
+                            return
+                        }
+
+                        let remaining = deadline - .now
+                        let pollDuration = min(RemoteOperationTimeoutPolicy.pollInterval, remaining)
+                        _ = try? await session.getMessage(timeout: max(0.1, timeInterval(for: pollDuration)))
+                    }
+
                     if var requests = pendingCLIRequests[destinationPrefix],
                        let index = requests.firstIndex(where: { $0.timestamp == requestTimestamp }) {
-                        let failed = requests.remove(at: index)
+                        let timedOut = requests.remove(at: index)
                         pendingCLIRequests[destinationPrefix] = requests.isEmpty ? nil : requests
-                        let meshError = error as? MeshCoreError ?? MeshCoreError.connectionLost(underlying: error)
-                        failed.continuation.resume(throwing: RemoteNodeError.sessionError(meshError))
+                        timedOut.continuation.resume(throwing: RemoteNodeError.timeout)
                     }
-                    return
                 }
-
-                // Use firmware-suggested timeout (2x for round-trip), with caller timeout as floor
-                let firmwareTimeout = Duration.milliseconds(Int(sentInfo.suggestedTimeoutMs) * 2)
-                let effectiveTimeout = max(timeout, firmwareTimeout)
-
-                // Actively poll for response instead of passive wait
-                // Device may buffer responses without immediately sending messagesWaiting notification
-                let (seconds, attoseconds) = effectiveTimeout.components
-                let deadline = Date().addingTimeInterval(TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18)
-                while Date() < deadline {
-                    // Check if our specific request was already satisfied
-                    if let requests = pendingCLIRequests[destinationPrefix],
-                       !requests.contains(where: { $0.timestamp == requestTimestamp }) {
-                        return  // Our request was matched and removed
-                    } else if pendingCLIRequests[destinationPrefix] == nil {
-                        return  // All requests cleared
-                    }
-
-                    // Poll device for pending messages
-                    // This triggers message delivery through the event dispatcher,
-                    // which will call our handleCLIResponse() if a CLI response arrives
-                    _ = try? await session.getMessage()
-
-                    // Small delay between polls
-                    try? await Task.sleep(for: .milliseconds(500))
-                }
-
-                // Timeout - remove our specific request and resume with error
-                if var requests = pendingCLIRequests[destinationPrefix],
-                   let index = requests.firstIndex(where: { $0.timestamp == requestTimestamp }) {
-                    let timedOut = requests.remove(at: index)
-                    pendingCLIRequests[destinationPrefix] = requests.isEmpty ? nil : requests
-                    timedOut.continuation.resume(throwing: RemoteNodeError.timeout)
-                }
+            }
+        } onCancel: { [weak self] in
+            Task { [weak self] in
+                await self?.cancelPendingCLIRequest(for: destinationPrefix, timestamp: requestTimestamp)
             }
         }
     }
@@ -856,7 +905,7 @@ public actor RemoteNodeService {
     /// - Parameters:
     ///   - sessionID: The remote node session ID.
     ///   - command: The CLI command to send.
-    ///   - timeout: Maximum time to wait for response (default 10 seconds).
+    ///   - timeout: Hard maximum time to wait for response (default 10 seconds).
     /// - Returns: The raw response text from the remote node.
     public func sendRawCLICommand(
         sessionID: UUID,
@@ -901,14 +950,11 @@ public actor RemoteNodeService {
                         return
                     }
 
-                    // Use firmware-suggested timeout (2x for round-trip), with caller timeout as floor
-                    let firmwareTimeout = Duration.milliseconds(Int(sentInfo.suggestedTimeoutMs) * 2)
-                    let effectiveTimeout = max(timeout, firmwareTimeout)
+                    let effectiveTimeout = RemoteOperationTimeoutPolicy.cliTimeout(for: sentInfo, requestedTimeout: timeout)
 
                     // Poll for response
-                    let (seconds, attoseconds) = effectiveTimeout.components
-                    let deadline = Date().addingTimeInterval(TimeInterval(seconds) + TimeInterval(attoseconds) / 1e18)
-                    while Date() < deadline {
+                    let deadline = ContinuousClock.now.advanced(by: effectiveTimeout)
+                    while ContinuousClock.now < deadline {
                         // Check if our request was already satisfied
                         guard pendingRawCLIRequests[destinationPrefix] != nil else {
                             return  // Request was matched and removed by handleCLIResponse
@@ -923,10 +969,9 @@ public actor RemoteNodeService {
                         }
 
                         // Poll device for pending messages
-                        _ = try? await session.getMessage()
-
-                        // Small delay between polls
-                        try? await Task.sleep(for: .milliseconds(500))
+                        let remaining = deadline - .now
+                        let pollDuration = min(RemoteOperationTimeoutPolicy.pollInterval, remaining)
+                        _ = try? await session.getMessage(timeout: max(0.1, timeInterval(for: pollDuration)))
                     }
 
                     // Timeout - remove pending request and resume with error

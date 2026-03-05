@@ -239,7 +239,11 @@ extension CLIToolViewModel {
             isWaitingForResponse = true
             defer { isWaitingForResponse = false }
             do {
-                _ = try await service.sendRawCommand(sessionID: session.id, command: command, timeout: .seconds(2))
+                _ = try await service.sendRawCommand(
+                    sessionID: session.id,
+                    command: command,
+                    timeout: .seconds(2)
+                )
                 appendOutput(L10n.Tools.Tools.Cli.rebootSent, type: .success)
             } catch RemoteNodeError.timeout {
                 appendOutput(L10n.Tools.Tools.Cli.rebootSent, type: .success)
@@ -253,13 +257,7 @@ extension CLIToolViewModel {
         defer { isWaitingForResponse = false }
 
         do {
-            let timeout = LoginTimeoutConfig.timeout(forPathLength: session.pathLength)
-
-            let response = try await service.sendRawCommand(
-                sessionID: session.id,
-                command: command,
-                timeout: timeout
-            )
+            let response = try await service.sendRawCommand(sessionID: session.id, command: command)
 
             guard !Task.isCancelled else { return }
 

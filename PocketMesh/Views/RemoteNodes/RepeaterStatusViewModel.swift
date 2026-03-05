@@ -127,16 +127,7 @@ final class RepeaterStatusViewModel {
     // MARK: - Status
 
     /// Timeout duration for status/neighbors requests
-    private static let requestTimeout: Duration = .seconds(15)
-
-    /// Timeout task for status request
-    private var statusTimeoutTask: Task<Void, Never>?
-
-    /// Timeout task for neighbors request
-    private var neighborsTimeoutTask: Task<Void, Never>?
-
-    /// Timeout task for telemetry request
-    private var telemetryTimeoutTask: Task<Void, Never>?
+    private static let requestTimeout: Duration = RemoteOperationTimeoutPolicy.binaryMaximum
 
     /// Check if error is a transient "not ready" error that should be retried.
     /// Error code 10 occurs when the firmware isn't fully ready after login.
@@ -149,58 +140,67 @@ final class RepeaterStatusViewModel {
         return code == 10
     }
 
-    private static let statusRetryDelays: [Duration] = [
+    private static let transientRetryDelays: [Duration] = [
         .milliseconds(500),
         .seconds(1),
         .seconds(2),
     ]
 
-    private func requestStatusWithRetries(sessionID: UUID) async throws -> RemoteNodeStatus {
-        guard let repeaterAdminService else {
-            throw RemoteNodeError.notConnected
-        }
+    private func remainingBudget(until deadline: ContinuousClock.Instant) -> Duration? {
+        let remaining = deadline - .now
+        return remaining > .zero ? remaining : nil
+    }
 
-        var delayIterator = Self.statusRetryDelays.makeIterator()
+    private func waitForRetry(delay: Duration, until deadline: ContinuousClock.Instant) async throws {
+        guard let remaining = remainingBudget(until: deadline) else {
+            throw RemoteNodeError.timeout
+        }
+        try await Task.sleep(for: min(delay, remaining))
+    }
+
+    private func performWithTransientRetries<T>(
+        operationName: String,
+        operation: @escaping @Sendable (Duration) async throws -> T
+    ) async throws -> T {
+        let deadline = ContinuousClock.now.advanced(by: Self.requestTimeout)
+        var delayIterator = Self.transientRetryDelays.makeIterator()
+
         while true {
+            guard let timeout = remainingBudget(until: deadline) else {
+                logger.warning("\(operationName, privacy: .public) request exhausted its shared timeout budget")
+                throw RemoteNodeError.timeout
+            }
+
             do {
-                return try await repeaterAdminService.requestStatus(sessionID: sessionID)
+                return try await operation(timeout)
             } catch {
                 guard isTransientError(error), let delay = delayIterator.next() else {
                     throw error
                 }
-                try? await Task.sleep(for: delay)
+                try await waitForRetry(delay: delay, until: deadline)
             }
         }
     }
 
     /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
-        guard repeaterAdminService != nil else { return }
+        guard let repeaterAdminService else { return }
 
         self.session = session
         isLoadingStatus = true
         errorMessage = nil
 
-        // Start timeout
-        statusTimeoutTask?.cancel()
-        statusTimeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.requestTimeout)
-            guard !Task.isCancelled else { return }
-            await MainActor.run { [weak self] in
-                if self?.isLoadingStatus == true && self?.status == nil {
-                    self?.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
-                    self?.isLoadingStatus = false
-                }
-            }
-        }
-
         do {
-            let response = try await requestStatusWithRetries(sessionID: session.id)
+            let response = try await performWithTransientRetries(operationName: "status") { [repeaterAdminService] timeout in
+                return try await repeaterAdminService.requestStatus(sessionID: session.id, timeout: timeout)
+            }
             await handleStatusResponse(response)
+        } catch RemoteNodeError.timeout {
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            isLoadingStatus = false
         } catch {
             errorMessage = error.localizedDescription
             isLoadingStatus = false
-            statusTimeoutTask?.cancel()
         }
     }
 
@@ -212,28 +212,18 @@ final class RepeaterStatusViewModel {
         isLoadingNeighbors = true
         errorMessage = nil
 
-        // Start timeout
-        neighborsTimeoutTask?.cancel()
-        neighborsTimeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.requestTimeout)
-            guard !Task.isCancelled else { return }
-            await MainActor.run { [weak self] in
-                if self?.isLoadingNeighbors == true && (self?.neighbors.isEmpty ?? true) {
-                    self?.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
-                    self?.isLoadingNeighbors = false
-                }
-            }
-        }
-
         do {
-            let response = try await repeaterAdminService.requestNeighbors(sessionID: session.id)
+            let response = try await performWithTransientRetries(operationName: "neighbors") { [repeaterAdminService] timeout in
+                return try await repeaterAdminService.requestNeighbors(sessionID: session.id, timeout: timeout)
+            }
             handleNeighboursResponse(response)
+        } catch RemoteNodeError.timeout {
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            isLoadingNeighbors = false
         } catch {
             errorMessage = error.localizedDescription
-            isLoadingNeighbors = false  // Only clear on error
-            neighborsTimeoutTask?.cancel()
+            isLoadingNeighbors = false
         }
-        // Note: Don't clear isLoadingNeighbors here - it's cleared by handleNeighboursResponse
     }
 
     /// Handle status response from push notification
@@ -244,7 +234,6 @@ final class RepeaterStatusViewModel {
               response.publicKeyPrefix == expectedPrefix else {
             return  // Ignore responses for other sessions
         }
-        statusTimeoutTask?.cancel()  // Cancel timeout on success
         self.status = response
         self.isLoadingStatus = false
 
@@ -292,7 +281,6 @@ final class RepeaterStatusViewModel {
     /// Handle neighbours response from push notification
     func handleNeighboursResponse(_ response: NeighboursResponse) {
         // Note: NeighboursResponse may not include source prefix - validate if available
-        neighborsTimeoutTask?.cancel()  // Cancel timeout on success
         self.neighbors = response.neighbours
         self.isLoadingNeighbors = false
         self.neighborsLoaded = true
@@ -316,37 +304,19 @@ final class RepeaterStatusViewModel {
 
         self.session = session
         isLoadingTelemetry = true
-
-        // Start timeout
-        telemetryTimeoutTask?.cancel()
-        telemetryTimeoutTask = Task { [weak self] in
-            try? await Task.sleep(for: Self.requestTimeout)
-            guard !Task.isCancelled else { return }
-            await MainActor.run { [weak self] in
-                if self?.isLoadingTelemetry == true && self?.telemetry == nil {
-                    self?.isLoadingTelemetry = false
-                }
-            }
-        }
+        errorMessage = nil
 
         do {
-            let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
-            handleTelemetryResponse(response)
-        } catch {
-            // Retry once on transient "not ready" errors (error code 10)
-            if isTransientError(error) {
-                try? await Task.sleep(for: .milliseconds(500))
-                do {
-                    let response = try await repeaterAdminService.requestTelemetry(sessionID: session.id)
-                    handleTelemetryResponse(response)
-                    return
-                } catch {
-                    // Retry failed, fall through to show error
-                }
+            let response = try await performWithTransientRetries(operationName: "telemetry") { [repeaterAdminService] timeout in
+                return try await repeaterAdminService.requestTelemetry(sessionID: session.id, timeout: timeout)
             }
+            handleTelemetryResponse(response)
+        } catch RemoteNodeError.timeout {
+            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            isLoadingTelemetry = false
+        } catch {
             errorMessage = error.localizedDescription
             isLoadingTelemetry = false
-            telemetryTimeoutTask?.cancel()
         }
     }
 
@@ -357,7 +327,6 @@ final class RepeaterStatusViewModel {
               response.publicKeyPrefix == expectedPrefix else {
             return  // Ignore responses for other sessions
         }
-        telemetryTimeoutTask?.cancel()  // Cancel timeout on success
         self.telemetry = response
         // Decode and cache data points once to avoid repeated LPP decoding during view updates
         self.cachedDataPoints = response.dataPoints

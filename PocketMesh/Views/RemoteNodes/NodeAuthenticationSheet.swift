@@ -28,6 +28,7 @@ struct NodeAuthenticationSheet: View {
     @State private var authStartTime: Date?
     @State private var authTimeoutSeconds: Int?
     @State private var countdownTask: Task<Void, Never>?
+    @State private var authenticationTask: Task<Void, Never>?
 
     private let maxPasswordLength = 15
 
@@ -57,7 +58,10 @@ struct NodeAuthenticationSheet: View {
             .navigationTitle(customTitle ?? (role == .roomServer ? L10n.RemoteNodes.RemoteNodes.Auth.joinRoom : L10n.RemoteNodes.RemoteNodes.Auth.adminAccess))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.RemoteNodes.RemoteNodes.Auth.cancel) { dismiss() }
+                    Button(L10n.RemoteNodes.RemoteNodes.Auth.cancel) {
+                        authenticationTask?.cancel()
+                        dismiss()
+                    }
                 }
             }
             .task {
@@ -68,6 +72,10 @@ struct NodeAuthenticationSheet: View {
                 }
             }
             .sensoryFeedback(.error, trigger: errorMessage)
+            .onDisappear {
+                authenticationTask?.cancel()
+                cleanupCountdownState()
+            }
         }
     }
 
@@ -105,9 +113,10 @@ struct NodeAuthenticationSheet: View {
         // Clear any previous error
         errorMessage = nil
         isAuthenticating = true
+        authenticationTask?.cancel()
         cleanupCountdownState()
 
-        Task {
+        authenticationTask = Task {
             do {
                 guard let device = appState.connectedDevice else {
                     throw RemoteNodeError.notConnected
@@ -166,12 +175,27 @@ struct NodeAuthenticationSheet: View {
                 }
 
                 await MainActor.run {
+                    authenticationTask = nil
                     cleanupCountdownState()
                     dismiss()
                     onSuccess(session)
                 }
+            } catch is CancellationError {
+                await MainActor.run {
+                    authenticationTask = nil
+                    cleanupCountdownState()
+                    isAuthenticating = false
+                }
+            } catch RemoteNodeError.timeout {
+                await MainActor.run {
+                    authenticationTask = nil
+                    cleanupCountdownState()
+                    errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+                    isAuthenticating = false
+                }
             } catch {
                 await MainActor.run {
+                    authenticationTask = nil
                     cleanupCountdownState()
                     errorMessage = error.localizedDescription
                     isAuthenticating = false

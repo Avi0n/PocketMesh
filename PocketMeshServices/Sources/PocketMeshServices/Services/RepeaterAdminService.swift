@@ -105,7 +105,8 @@ public actor RepeaterAdminService {
         count: UInt8 = 20,
         offset: UInt16 = 0,
         orderBy: NeighborSortOrder = .newestFirst,
-        pubkeyPrefixLength: UInt8 = defaultPubkeyPrefixLength
+        pubkeyPrefixLength: UInt8 = defaultPubkeyPrefixLength,
+        timeout: Duration? = nil
     ) async throws -> NeighboursResponse {
         guard let remoteSession = try await dataStore.fetchRemoteNodeSession(id: sessionID),
               remoteSession.isRepeater else {
@@ -116,13 +117,18 @@ public actor RepeaterAdminService {
         await auditLogger.logNeighborsRequest(publicKey: remoteSession.publicKey, count: count, offset: offset)
 
         do {
-            return try await session.requestNeighbours(
-                from: remoteSession.publicKey,
-                count: count,
-                offset: offset,
-                orderBy: orderBy.rawValue,
-                pubkeyPrefixLength: pubkeyPrefixLength
-            )
+            let effectiveTimeout = timeout ?? RemoteOperationTimeoutPolicy.binaryMaximum
+            return try await withTimeout(effectiveTimeout, operationName: "remoteNeighbours") {
+                try await self.session.requestNeighbours(
+                    from: remoteSession.publicKey,
+                    count: count,
+                    offset: offset,
+                    orderBy: orderBy.rawValue,
+                    pubkeyPrefixLength: pubkeyPrefixLength
+                )
+            }
+        } catch is TimeoutError {
+            throw RemoteNodeError.timeout
         } catch let error as MeshCoreError {
             throw RemoteNodeError.sessionError(error)
         }
@@ -153,15 +159,15 @@ public actor RepeaterAdminService {
     // MARK: - Status
 
     /// Request status from a repeater.
-    public func requestStatus(sessionID: UUID) async throws -> StatusResponse {
-        try await remoteNodeService.requestStatus(sessionID: sessionID)
+    public func requestStatus(sessionID: UUID, timeout: Duration? = nil) async throws -> StatusResponse {
+        try await remoteNodeService.requestStatus(sessionID: sessionID, timeout: timeout)
     }
 
     // MARK: - Telemetry
 
     /// Request telemetry from a repeater.
-    public func requestTelemetry(sessionID: UUID) async throws -> TelemetryResponse {
-        try await remoteNodeService.requestTelemetry(sessionID: sessionID)
+    public func requestTelemetry(sessionID: UUID, timeout: Duration? = nil) async throws -> TelemetryResponse {
+        try await remoteNodeService.requestTelemetry(sessionID: sessionID, timeout: timeout)
     }
 
     // MARK: - CLI Commands

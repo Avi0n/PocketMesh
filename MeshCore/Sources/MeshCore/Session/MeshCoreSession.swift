@@ -1530,11 +1530,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// until `.noMoreMessages` is returned to drain the queue.
     /// Use ``startAutoMessageFetching()`` to automate this process.
     ///
+    /// - Parameter timeout: Optional timeout override in seconds. Uses `configuration.defaultTimeout` when `nil`.
     /// - Returns: A ``MessageResult`` containing either a contact message, channel message,
     ///            or indication that no more messages are waiting.
     /// - Throws: ``MeshCoreError`` if the fetch fails.
-    public func getMessage() async throws -> MessageResult {
-        let timeoutSeconds = configuration.defaultTimeout
+    public func getMessage(timeout: TimeInterval? = nil) async throws -> MessageResult {
+        let timeoutSeconds = timeout ?? configuration.defaultTimeout
 
         let stream = await dispatcher.subscribe { event in
             switch event {

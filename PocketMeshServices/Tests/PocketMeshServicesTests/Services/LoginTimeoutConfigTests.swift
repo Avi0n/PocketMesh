@@ -6,6 +6,10 @@ import Testing
 @Suite("LoginTimeoutConfig Tests")
 struct LoginTimeoutConfigTests {
 
+    private func makeSentInfo(timeoutMs: UInt32) -> MessageSentInfo {
+        MessageSentInfo(type: 0, expectedAck: Data([0x00]), suggestedTimeoutMs: timeoutMs)
+    }
+
     @Test("Direct path (mode 0) uses base timeout only")
     func directPathMode0() {
         // Mode 0, 0 hops → encoded as 0x00
@@ -52,5 +56,41 @@ struct LoginTimeoutConfigTests {
         // Mode 0, 6 hops → 5 + 60 = 65, should cap at 60
         let timeout = LoginTimeoutConfig.timeout(forPathLength: 6)
         #expect(timeout == .seconds(60))
+    }
+
+    @Test("Login timeout policy clamps long firmware suggestions")
+    func loginTimeoutPolicyClampsFirmwareSuggestion() {
+        let sentInfo = makeSentInfo(timeoutMs: 20_000)
+
+        let timeout = RemoteOperationTimeoutPolicy.loginTimeout(for: sentInfo, pathLength: 0)
+
+        #expect(timeout == .seconds(20))
+    }
+
+    @Test("Login timeout policy respects path floor when firmware is shorter")
+    func loginTimeoutPolicyUsesPathFloor() {
+        let sentInfo = makeSentInfo(timeoutMs: 1_000)
+
+        let timeout = RemoteOperationTimeoutPolicy.loginTimeout(for: sentInfo, pathLength: 0x43)
+
+        #expect(timeout == .seconds(20))
+    }
+
+    @Test("CLI timeout policy clamps long firmware suggestions")
+    func cliTimeoutPolicyClampsFirmwareSuggestion() {
+        let sentInfo = makeSentInfo(timeoutMs: 20_000)
+
+        let timeout = RemoteOperationTimeoutPolicy.cliTimeout(for: sentInfo, requestedTimeout: .seconds(10))
+
+        #expect(timeout == .seconds(15))
+    }
+
+    @Test("CLI timeout policy keeps caller budget when firmware is shorter")
+    func cliTimeoutPolicyUsesCallerBudgetFloor() {
+        let sentInfo = makeSentInfo(timeoutMs: 1_000)
+
+        let timeout = RemoteOperationTimeoutPolicy.cliTimeout(for: sentInfo, requestedTimeout: .seconds(10))
+
+        #expect(timeout == .seconds(10))
     }
 }
