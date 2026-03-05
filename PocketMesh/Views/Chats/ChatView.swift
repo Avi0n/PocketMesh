@@ -9,6 +9,7 @@ private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
 struct ChatView: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.linkPreviewCache) private var linkPreviewCache
 
     @State private var contact: ContactDTO
@@ -97,6 +98,7 @@ struct ChatView: View {
                     handleMessageAction(action, for: message)
                 }
             )
+            .environment(\.horizontalSizeClass, horizontalSizeClass)
         }
         .fullScreenCover(item: $imageViewerData) { data in
             FullScreenImageViewer(data: data)

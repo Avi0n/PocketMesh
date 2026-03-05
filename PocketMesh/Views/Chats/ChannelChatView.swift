@@ -14,6 +14,7 @@ private struct BlockSenderContext: Identifiable {
 struct ChannelChatView: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.linkPreviewCache) private var linkPreviewCache
 
     let channel: ChannelDTO
@@ -103,6 +104,7 @@ struct ChannelChatView: View {
                     handleMessageAction(action, for: message)
                 }
             )
+            .environment(\.horizontalSizeClass, horizontalSizeClass)
         }
         .sheet(item: $blockSenderContext) { context in
             BlockSenderSheet(

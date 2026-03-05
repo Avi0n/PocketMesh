@@ -17,6 +17,7 @@ struct MessageActionsSheet: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let message: MessageDTO
     let senderName: String
     let recentEmojis: [String]
@@ -103,7 +104,7 @@ struct MessageActionsSheet: View {
             }
         }
         .presentationDetents(
-            (UIDevice.current.userInterfaceIdiom == .pad || dynamicTypeSize.isAccessibilitySize)
+            (horizontalSizeClass == .regular || dynamicTypeSize.isAccessibilitySize)
                 ? [.large] : [.medium, .large]
         )
         .presentationContentInteraction(.scrolls)
@@ -531,6 +532,7 @@ private struct ActionInfoRow: View {
         message: MessageDTO(from: message),
         senderName: "My Device",
         recentEmojis: RecentEmojisStore.defaultEmojis,
+
         onAction: { print("Action: \($0)") }
     )
 }
@@ -550,6 +552,7 @@ private struct ActionInfoRow: View {
         message: MessageDTO(from: message),
         senderName: "Alice",
         recentEmojis: RecentEmojisStore.defaultEmojis,
+
         onAction: { print("Action: \($0)") }
     )
 }
