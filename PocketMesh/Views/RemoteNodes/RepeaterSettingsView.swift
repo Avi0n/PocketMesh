@@ -375,6 +375,7 @@ private struct IdentitySection: View {
                     .textContentType(.name)
                     .submitLabel(.done)
                     .focused(focusedField, equals: .identityName)
+                    .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
             }
 
             HStack {
@@ -420,6 +421,7 @@ private struct IdentitySection: View {
             } label: {
                 Label(L10n.RemoteNodes.RemoteNodes.Settings.pickOnMap, systemImage: "mappin.and.ellipse")
             }
+            .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
 
             Button {
                 Task { await viewModel.applyIdentitySettings() }
