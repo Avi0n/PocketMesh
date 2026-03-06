@@ -427,6 +427,7 @@ private struct ChatMessagesContent: View {
     let onMentionSeen: (UUID) async -> Void
     let onScrollToMention: () -> Void
 
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @State private var hasDismissedDividerFAB = false
 
     private var showDividerFAB: Bool {
@@ -530,7 +531,14 @@ private struct ChatMessagesContent: View {
                     decodedPreviewIcon: viewModel.decodedPreviewIcon(for: message.id),
                     isGIF: viewModel.isGIFImage(for: message.id),
                     showInlineImages: showInlineImages,
-                    autoPlayGIFs: autoPlayGIFs
+                    autoPlayGIFs: autoPlayGIFs,
+                    formattedText: viewModel.formattedText(
+                        for: message.id,
+                        text: message.text,
+                        isOutgoing: message.isOutgoing,
+                        currentUserName: deviceName,
+                        isHighContrast: colorSchemeContrast == .increased
+                    )
                 ),
                 callbacks: MessageBubbleCallbacks(
                     onRetry: {

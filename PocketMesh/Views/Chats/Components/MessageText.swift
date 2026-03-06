@@ -5,18 +5,28 @@ import PocketMeshServices
 struct MessageText: View {
     let text: String
     let baseColor: Color
+    let isOutgoing: Bool
     let currentUserName: String?
+    let precomputedText: AttributedString?
 
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
-    init(_ text: String, baseColor: Color = .primary, currentUserName: String? = nil) {
+    init(
+        _ text: String,
+        baseColor: Color = .primary,
+        isOutgoing: Bool = false,
+        currentUserName: String? = nil,
+        precomputedText: AttributedString? = nil
+    ) {
         self.text = text
         self.baseColor = baseColor
+        self.isOutgoing = isOutgoing
         self.currentUserName = currentUserName
+        self.precomputedText = precomputedText
     }
 
     var body: some View {
-        Text(formattedText)
+        Text(precomputedText ?? formattedText)
     }
 
     /// Exposes formatted text for testing
@@ -25,27 +35,53 @@ struct MessageText: View {
     }
 
     private var formattedText: AttributedString {
+        Self.buildFormattedText(
+            text: text,
+            isOutgoing: isOutgoing,
+            currentUserName: currentUserName,
+            isHighContrast: colorSchemeContrast == .increased
+        )
+    }
+
+    /// Builds an AttributedString with mention, URL, and hashtag formatting.
+    /// Static so it can be called from both the view and the ViewModel cache.
+    static func buildFormattedText(
+        text: String,
+        isOutgoing: Bool,
+        currentUserName: String?,
+        isHighContrast: Bool
+    ) -> AttributedString {
+        let baseColor: Color = isOutgoing ? .white : .primary
         var result = AttributedString(text)
         result.foregroundColor = baseColor
 
-        // Apply mention formatting (@[name] -> bold @name)
-        applyMentionFormatting(&result)
+        applyMentionFormatting(
+            &result,
+            text: text,
+            baseColor: baseColor,
+            isOutgoing: isOutgoing,
+            currentUserName: currentUserName,
+            isHighContrast: isHighContrast
+        )
 
-        // Apply URL formatting (make links tappable)
-        applyURLFormatting(&result)
+        let (urlRanges, currentString) = applyURLFormatting(&result, baseColor: baseColor)
 
-        // Apply hashtag formatting (make #channels tappable)
-        applyHashtagFormatting(&result)
+        applyHashtagFormatting(&result, isOutgoing: isOutgoing, urlRanges: urlRanges, currentString: currentString)
 
         return result
     }
 
     // MARK: - Mention Formatting
 
-    private func applyMentionFormatting(_ attributedString: inout AttributedString) {
-        let pattern = MentionUtilities.mentionPattern
-
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return }
+    private static func applyMentionFormatting(
+        _ attributedString: inout AttributedString,
+        text: String,
+        baseColor: Color,
+        isOutgoing: Bool,
+        currentUserName: String?,
+        isHighContrast: Bool
+    ) {
+        guard let regex = MentionUtilities.mentionRegex else { return }
 
         let nsRange = NSRange(text.startIndex..., in: text)
         let matches = regex.matches(in: text, range: nsRange)
@@ -64,14 +100,11 @@ struct MessageText: View {
                 name.localizedCaseInsensitiveCompare($0) == .orderedSame
             } ?? false
 
-            // Determine if we're on a dark bubble (outgoing messages use white text)
-            let isOnDarkBubble = baseColor == .white
-
             // Replace @[name] with @name, styled appropriately for bubble color
             var replacement = AttributedString("@\(name)")
             replacement.underlineStyle = .single
 
-            if isOnDarkBubble {
+            if isOutgoing {
                 // On dark bubbles: use white text, with background only for self-mentions
                 replacement.foregroundColor = .white
                 if isSelfMention {
@@ -81,7 +114,7 @@ struct MessageText: View {
                 // On light bubbles: use sender color for the mentioned name
                 let mentionColor = AppColors.NameColor.color(
                     for: name,
-                    highContrast: colorSchemeContrast == .increased
+                    highContrast: isHighContrast
                 )
                 replacement.foregroundColor = mentionColor
                 if isSelfMention {
@@ -99,8 +132,12 @@ struct MessageText: View {
         try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
     }()
 
-    private func applyURLFormatting(_ attributedString: inout AttributedString) {
-        guard let detector = Self.urlDetector else { return }
+    /// Applies URL formatting and returns the detected URL ranges + current string for reuse
+    private static func applyURLFormatting(
+        _ attributedString: inout AttributedString,
+        baseColor: Color
+    ) -> (urlRanges: [Range<String.Index>], currentString: String) {
+        guard let detector = urlDetector else { return ([], "") }
 
         // Collect ranges already styled as mentions (have underline style)
         // URLs within these ranges should not be converted to links
@@ -116,6 +153,8 @@ struct MessageText: View {
         let nsRange = NSRange(currentString.startIndex..., in: currentString)
         let matches = detector.matches(in: currentString, options: [], range: nsRange)
 
+        var urlRanges: [Range<String.Index>] = []
+
         // Process matches in reverse to preserve indices
         for match in matches.reversed() {
             guard let url = match.url,
@@ -123,6 +162,8 @@ struct MessageText: View {
                   scheme == "http" || scheme == "https",
                   let matchRange = Range(match.range, in: currentString),
                   let attrRange = Range(matchRange, in: attributedString) else { continue }
+
+            urlRanges.append(matchRange)
 
             // Skip URLs that overlap with mention ranges
             let overlapsWithMention = mentionRanges.contains { mentionRange in
@@ -136,13 +177,19 @@ struct MessageText: View {
             attributedString[attrRange].foregroundColor = baseColor
             attributedString[attrRange].underlineStyle = .single
         }
+
+        return (urlRanges, currentString)
     }
 
     // MARK: - Hashtag Formatting
 
-    private func applyHashtagFormatting(_ attributedString: inout AttributedString) {
-        let currentString = String(attributedString.characters)
-        let hashtags = HashtagUtilities.extractHashtags(from: currentString)
+    private static func applyHashtagFormatting(
+        _ attributedString: inout AttributedString,
+        isOutgoing: Bool,
+        urlRanges: [Range<String.Index>],
+        currentString: String
+    ) {
+        let hashtags = HashtagUtilities.extractHashtags(from: currentString, urlRanges: urlRanges)
 
         // Process in reverse to preserve indices
         for hashtag in hashtags.reversed() {
@@ -155,8 +202,7 @@ struct MessageText: View {
                 attributedString[attrRange].link = url
                 // Hashtags: bold + cyan (or white on dark bubbles), no underline
                 // This distinguishes them from URLs which remain underlined
-                let isOnDarkBubble = baseColor == .white
-                attributedString[attrRange].foregroundColor = isOnDarkBubble ? .white : .cyan
+                attributedString[attrRange].foregroundColor = isOutgoing ? .white : .cyan
                 attributedString[attrRange].inlinePresentationIntent = .stronglyEmphasized
             }
         }
@@ -189,19 +235,19 @@ struct MessageText: View {
 }
 
 #Preview("Outgoing message") {
-    MessageText("Visit https://github.com", baseColor: .white)
+    MessageText("Visit https://github.com", baseColor: .white, isOutgoing: true)
         .padding()
         .background(.blue)
 }
 
 #Preview("Outgoing with mention") {
-    MessageText("Hey @[Alice], check this out!", baseColor: .white)
+    MessageText("Hey @[Alice], check this out!", baseColor: .white, isOutgoing: true)
         .padding()
         .background(.blue)
 }
 
 #Preview("Outgoing with self-mention") {
-    MessageText("@[MyDevice] check this!", baseColor: .white, currentUserName: "MyDevice")
+    MessageText("@[MyDevice] check this!", baseColor: .white, isOutgoing: true, currentUserName: "MyDevice")
         .padding()
         .background(.blue)
 }

@@ -5,6 +5,11 @@ public enum MentionUtilities {
     /// The regex pattern for matching mentions: @[name]
     public static let mentionPattern = #"@\[([^\]]+)\]"#
 
+    /// Pre-compiled regex for mention matching (avoids recompilation per call)
+    public static let mentionRegex: NSRegularExpression? = {
+        try? NSRegularExpression(pattern: mentionPattern)
+    }()
+
     /// Creates a mention string from a node contact name
     /// - Parameter name: The mesh network contact name (not nickname)
     /// - Returns: Formatted mention string "@[name]"
@@ -16,9 +21,7 @@ public enum MentionUtilities {
     /// - Parameter text: The message text to parse
     /// - Returns: Array of mentioned contact names (without @[] wrapper)
     public static func extractMentions(from text: String) -> [String] {
-        guard let regex = try? NSRegularExpression(pattern: mentionPattern) else {
-            return []
-        }
+        guard let regex = mentionRegex else { return [] }
 
         let range = NSRange(text.startIndex..., in: text)
         let matches = regex.matches(in: text, range: range)
@@ -137,12 +140,19 @@ public enum MentionUtilities {
         return mentions.contains { $0.caseInsensitiveCompare(selfName) == .orderedSame }
     }
 
+    /// Pre-compiled regex for stripping a leading mention from reply text
+    private static let leadingMentionRegex: NSRegularExpression? = {
+        try? NSRegularExpression(pattern: #"^@\[[^\]]+\]\s*"#)
+    }()
+
     /// Builds reply text with a mention and quoted preview of the original message.
     /// Strips any leading mention from the message text before generating the preview.
     public static func buildReplyText(mentionName: String, messageText: String) -> String {
         let previewSource: String
-        if let range = messageText.range(of: #"^@\[[^\]]+\]\s*"#, options: .regularExpression) {
-            previewSource = String(messageText[range.upperBound...])
+        if let regex = leadingMentionRegex,
+           let match = regex.firstMatch(in: messageText, range: NSRange(messageText.startIndex..., in: messageText)),
+           let matchRange = Range(match.range, in: messageText) {
+            previewSource = String(messageText[matchRange.upperBound...])
         } else {
             previewSource = messageText
         }

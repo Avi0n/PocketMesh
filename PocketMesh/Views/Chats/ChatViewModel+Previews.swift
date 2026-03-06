@@ -168,6 +168,7 @@ extension ChatViewModel {
         decodedPreviewIcons.removeAll()
         legacyPreviewDecodeInFlight.removeAll()
         cachedURLs.removeAll()
+        formattedTexts.removeAll()
         clearImageState()
     }
 
@@ -177,6 +178,7 @@ extension ChatViewModel {
         loadedPreviews.removeValue(forKey: messageID)
         decodedPreviewImages.removeValue(forKey: messageID)
         decodedPreviewIcons.removeValue(forKey: messageID)
+        formattedTexts.removeValue(forKey: messageID)
         previewFetchTasks[messageID]?.cancel()
         previewFetchTasks.removeValue(forKey: messageID)
         cleanupImageState(for: messageID)

@@ -5,6 +5,11 @@ public enum HashtagUtilities {
 
     public static let hashtagPattern = "#[A-Za-z0-9][A-Za-z0-9-]*"
 
+    /// Pre-compiled regex for hashtag matching (avoids recompilation per call)
+    public static let hashtagRegex: NSRegularExpression? = {
+        try? NSRegularExpression(pattern: hashtagPattern)
+    }()
+
     /// Represents a detected hashtag with its location in the source text
     public struct DetectedHashtag: Equatable, Sendable {
         public let name: String
@@ -20,15 +25,21 @@ public enum HashtagUtilities {
     /// - Parameter text: The message text to search
     /// - Returns: Array of detected hashtags with their ranges
     public static func extractHashtags(from text: String) -> [DetectedHashtag] {
+        extractHashtags(from: text, urlRanges: findURLRanges(in: text))
+    }
+
+    /// Extracts all valid hashtags from text, using pre-computed URL ranges to skip
+    /// - Parameters:
+    ///   - text: The message text to search
+    ///   - urlRanges: Pre-computed URL ranges (avoids duplicate NSDataDetector scan)
+    /// - Returns: Array of detected hashtags with their ranges
+    public static func extractHashtags(
+        from text: String,
+        urlRanges: [Range<String.Index>]
+    ) -> [DetectedHashtag] {
         guard !text.isEmpty else { return [] }
 
-        // First, find all URL ranges to exclude
-        let urlRanges = findURLRanges(in: text)
-
-        // Find all hashtag matches
-        guard let regex = try? NSRegularExpression(pattern: hashtagPattern) else {
-            return []
-        }
+        guard let regex = hashtagRegex else { return [] }
 
         let nsRange = NSRange(text.startIndex..., in: text)
         let matches = regex.matches(in: text, range: nsRange)
@@ -37,14 +48,8 @@ public enum HashtagUtilities {
             guard let range = Range(match.range, in: text) else { return nil }
 
             // Skip hashtags that fall within URL ranges
-            let matchStart = text.distance(from: text.startIndex, to: range.lowerBound)
-            let matchEnd = text.distance(from: text.startIndex, to: range.upperBound)
-
             for urlRange in urlRanges {
-                let urlStart = text.distance(from: text.startIndex, to: urlRange.lowerBound)
-                let urlEnd = text.distance(from: text.startIndex, to: urlRange.upperBound)
-
-                if matchStart >= urlStart && matchEnd <= urlEnd {
+                if range.lowerBound >= urlRange.lowerBound && range.upperBound <= urlRange.upperBound {
                     return nil
                 }
             }

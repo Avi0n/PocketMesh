@@ -70,6 +70,7 @@ struct MessageDisplayState {
     var isGIF: Bool = false
     var showInlineImages: Bool = false
     var autoPlayGIFs: Bool = true
+    var formattedText: AttributedString?
 }
 
 /// Callbacks for message bubble interactions
@@ -272,7 +273,7 @@ private struct BubbleContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                MessageText(message.text, baseColor: textColor, currentUserName: deviceName)
+                MessageText(message.text, baseColor: textColor, isOutgoing: message.isOutgoing, currentUserName: deviceName, precomputedText: displayState.formattedText)
 
                 if !message.isOutgoing && (showIncomingHopCount && !isDirect || showIncomingPath) {
                     HStack(spacing: 4) {

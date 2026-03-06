@@ -192,6 +192,28 @@ final class ChatViewModel {
     /// Cached URL detection results to avoid re-running NSDataDetector on rebuilds
     var cachedURLs: [UUID: URL?] = [:]
 
+    /// Cached formatted text per message (avoids rebuilding AttributedString on every render)
+    @ObservationIgnored var formattedTexts: [UUID: AttributedString] = [:]
+
+    /// Returns cached formatted text for a message, building and caching on first access
+    func formattedText(
+        for messageID: UUID,
+        text: String,
+        isOutgoing: Bool,
+        currentUserName: String?,
+        isHighContrast: Bool
+    ) -> AttributedString {
+        if let cached = formattedTexts[messageID] { return cached }
+        let result = MessageText.buildFormattedText(
+            text: text,
+            isOutgoing: isOutgoing,
+            currentUserName: currentUserName,
+            isHighContrast: isHighContrast
+        )
+        formattedTexts[messageID] = result
+        return result
+    }
+
     // MARK: - Pagination State
 
     /// Whether currently fetching older messages (exposed for UI binding)
