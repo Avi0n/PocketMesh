@@ -244,7 +244,7 @@ extension LocationPickerView {
             }
 
             if previousDevice.sharesLocationPublicly,
-               previousDevice.advertLocationPolicy == AdvertLocationPolicy.share.rawValue {
+               previousDevice.advertLocationPolicyMode == .share {
                 let telemetryModes = TelemetryModes(
                     base: verifiedInfo.telemetryModeBase,
                     location: verifiedInfo.telemetryModeLocation,

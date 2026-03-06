@@ -522,7 +522,7 @@ public actor SettingsService {
         let scaledLatSent = Int32(latitude * 1_000_000)
         let scaledLonSent = Int32(longitude * 1_000_000)
         
-        // DEBUG: Log when attempting to clear location
+        // log when attempting to clear location
         let isClearingLocation = scaledLatSent == 0 && scaledLonSent == 0
         logger.debug("[Location] setLocationVerified called - lat: \(latitude), lon: \(longitude), isClearing: \(isClearingLocation)")
 
@@ -542,7 +542,6 @@ public actor SettingsService {
         guard latDiff <= tolerance && lonDiff <= tolerance else {
             logger.error("[Location] Verification failed - sent: (\(scaledLatSent), \(scaledLonSent)), received: (\(scaledLatReceived), \(scaledLonReceived)), diff: (lat=\(latDiff), lon=\(lonDiff))")
             
-            // DEBUG: Additional context for clearing location failure
             if isClearingLocation {
                 logger.warning("[Location] Clear location failed - device reports non-zero coordinates. Device may have active GPS or firmware doesn't support (0,0).")
             }

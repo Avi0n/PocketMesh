@@ -256,7 +256,7 @@ struct LocationSettingsSection: View {
               let settingsService = appState.services?.settingsService else { return }
         let policy = selectedAdvertLocationPolicy(share: share)
 
-        if device.advertLocationPolicy == policy.rawValue {
+        if device.advertLocationPolicyMode == policy {
             return
         }
 
@@ -327,7 +327,7 @@ struct LocationSettingsSection: View {
     private func applyDeviceGPSDisabledSharePolicyIfNeeded() async throws {
         guard shareLocation,
               let device = appState.connectedDevice,
-              device.advertLocationPolicy == AdvertLocationPolicy.share.rawValue,
+              device.advertLocationPolicyMode == .share,
               let settingsService = appState.services?.settingsService else { return }
 
         try await applyShareLocationPolicy(.prefs, using: device, settingsService: settingsService)
