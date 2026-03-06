@@ -335,7 +335,7 @@ public enum L10n {
         public static let typeFirst = L10n.tr("Chats", "chats.input.typeFirst", fallback: "Type a message first")
         public enum Placeholder {
           /// Location: ChatView.swift - Input bar placeholder for direct messages
-          public static let directMessage = L10n.tr("Chats", "chats.input.placeholder.directMessage", fallback: "Private Message")
+          public static let directMessage = L10n.tr("Chats", "chats.input.placeholder.directMessage", fallback: "Direct Message")
         }
       }
       public enum JoinFromMessage {
