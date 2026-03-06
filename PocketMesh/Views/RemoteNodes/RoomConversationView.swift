@@ -161,7 +161,8 @@ struct RoomConversationView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: L10n.RemoteNodes.RemoteNodes.Room.publicMessage,
-            maxBytes: ProtocolLimits.maxDirectMessageLength
+            maxBytes: ProtocolLimits.maxDirectMessageLength,
+            isEncrypted: false
         ) { text in
             scrollToBottomRequest += 1
             Task { await viewModel.sendMessage(text: text) }

@@ -357,7 +357,8 @@ struct ChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: L10n.Chats.Chats.Input.Placeholder.directMessage,
-            maxBytes: ProtocolLimits.maxDirectMessageLength
+            maxBytes: ProtocolLimits.maxDirectMessageLength,
+            isEncrypted: true
         ) { text in
             scrollToBottomRequest += 1
             Task { await viewModel.sendMessage(text: text) }

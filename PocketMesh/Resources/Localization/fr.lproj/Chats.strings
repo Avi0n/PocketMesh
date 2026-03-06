@@ -684,6 +684,8 @@
 
 /* Location: ChatInputBar.swift - Accessibility hint when message is empty */
 "chats.input.typeFirst" = "Tapez d'abord un message";
+"chats.input.encrypted" = "Chiffré";
+"chats.input.notEncrypted" = "Non chiffré";
 
 // MARK: - Message Path Sheet
 

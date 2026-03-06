@@ -485,7 +485,8 @@ struct ChannelChatView: View {
             text: $viewModel.composingText,
             isFocused: $isInputFocused,
             placeholder: channel.isPublicChannel || channel.name.hasPrefix("#") ? L10n.Chats.Chats.Channel.typePublic : L10n.Chats.Chats.Channel.typePrivate,
-            maxBytes: maxChannelMessageLength
+            maxBytes: maxChannelMessageLength,
+            isEncrypted: channel.isEncryptedChannel
         ) { text in
             scrollToBottomRequest += 1
             Task { await viewModel.sendChannelMessage(text: text) }

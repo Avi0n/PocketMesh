@@ -751,6 +751,12 @@
 /* Location: ChatInputBar.swift - Accessibility hint when message is empty */
 "chats.input.typeFirst" = "Type a message first";
 
+/* Location: ChatInputBar.swift - Accessibility label for encrypted indicator */
+"chats.input.encrypted" = "Encrypted";
+
+/* Location: ChatInputBar.swift - Accessibility label for not encrypted indicator */
+"chats.input.notEncrypted" = "Not encrypted";
+
 // MARK: - Message Path Sheet
 
 /* Location: MessagePathSheet.swift - Empty state title */

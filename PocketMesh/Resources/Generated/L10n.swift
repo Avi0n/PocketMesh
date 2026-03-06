@@ -319,6 +319,10 @@ public enum L10n {
         public static func characterCount(_ p1: Int, _ p2: Int) -> String {
           return L10n.tr("Chats", "chats.input.characterCount", p1, p2, fallback: "%d of %d characters")
         }
+        /// Location: ChatInputBar.swift - Accessibility label for encrypted indicator
+        public static let encrypted = L10n.tr("Chats", "chats.input.encrypted", fallback: "Encrypted")
+        /// Location: ChatInputBar.swift - Accessibility label for not encrypted indicator
+        public static let notEncrypted = L10n.tr("Chats", "chats.input.notEncrypted", fallback: "Not encrypted")
         /// Location: ChatInputBar.swift - Accessibility hint when over character limit - %d is characters to remove
         public static func removeCharacters(_ p1: Int) -> String {
           return L10n.tr("Chats", "chats.input.removeCharacters", p1, fallback: "Remove %d characters to send")

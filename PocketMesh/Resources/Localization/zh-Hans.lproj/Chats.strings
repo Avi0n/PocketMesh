@@ -750,6 +750,8 @@
 
 /* Location: ChatInputBar.swift - Accessibility hint when message is empty */
 "chats.input.typeFirst" = "请先输入消息";
+"chats.input.encrypted" = "已加密";
+"chats.input.notEncrypted" = "未加密";
 
 // MARK: - Message Path Sheet
 

@@ -8,6 +8,7 @@ struct ChatInputBar: View {
     @FocusState.Binding var isFocused: Bool
     let placeholder: String
     let maxBytes: Int
+    let isEncrypted: Bool
     let onSend: (String) -> Void
 
     @State private var isCoolingDown = false
@@ -27,7 +28,7 @@ struct ChatInputBar: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
-            ChatInputTextField(text: $text, placeholder: placeholder, isFocused: $isFocused)
+            ChatInputTextField(text: $text, placeholder: placeholder, isFocused: $isFocused, isEncrypted: isEncrypted)
             ChatSendButtonWithCounter(
                 canSend: canSend,
                 isOverLimit: isOverLimit,
@@ -89,17 +90,27 @@ private struct ChatInputTextField: View {
     @Binding var text: String
     let placeholder: String
     @FocusState.Binding var isFocused: Bool
+    let isEncrypted: Bool
 
     var body: some View {
         TextField(placeholder, text: $text, axis: .vertical)
             .textFieldStyle(.plain)
-            .padding(.horizontal, 12)
+            .padding(.leading, 12)
+            .padding(.trailing, 28)
             .padding(.vertical, 8)
+            .overlay(alignment: .trailing) {
+                Image(systemName: isEncrypted ? "lock.fill" : "lock.open.fill")
+                    .font(.footnote)
+                    .foregroundStyle(isEncrypted ? .blue : .orange)
+                    .padding(.trailing, 10)
+                    .accessibilityHidden(true)
+            }
             .textFieldBackground()
             .lineLimit(1...5)
             .focused($isFocused)
             .accessibilityLabel(L10n.Chats.Chats.Input.accessibilityLabel)
             .accessibilityHint(L10n.Chats.Chats.Input.accessibilityHint)
+            .accessibilityValue(isEncrypted ? L10n.Chats.Chats.Input.encrypted : L10n.Chats.Chats.Input.notEncrypted)
     }
 }
 
