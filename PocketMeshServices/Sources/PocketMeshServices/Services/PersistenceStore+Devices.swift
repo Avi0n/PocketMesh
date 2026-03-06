@@ -74,6 +74,7 @@ extension PersistenceStore {
                 preRepeatCodingRate: dto.preRepeatCodingRate,
                 manualAddContacts: dto.manualAddContacts,
                 autoAddConfig: dto.autoAddConfig,
+                autoAddMaxHops: dto.autoAddMaxHops,
                 multiAcks: dto.multiAcks,
                 telemetryModeBase: dto.telemetryModeBase,
                 telemetryModeLoc: dto.telemetryModeLoc,

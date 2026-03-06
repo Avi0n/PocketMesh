@@ -3440,6 +3440,8 @@ public enum L10n {
       public static let autoAddRoomServers = L10n.tr("Settings", "nodes.autoAddRoomServers", fallback: "Room Servers")
       /// Section header for nodes settings
       public static let header = L10n.tr("Settings", "nodes.header", fallback: "Nodes")
+      /// Picker label for max hop distance
+      public static let maxHops = L10n.tr("Settings", "nodes.maxHops", fallback: "Max Hop Distance")
       /// Toggle label for overwrite oldest
       public static let overwriteOldest = L10n.tr("Settings", "nodes.overwriteOldest", fallback: "Overwrite Oldest")
       /// Description for overwrite oldest toggle
@@ -3461,6 +3463,20 @@ public enum L10n {
       public enum AutoAddTypes {
         /// Section header for auto-add types
         public static let header = L10n.tr("Settings", "nodes.autoAddTypes.header", fallback: "Auto-Add Types")
+      }
+      public enum MaxHops {
+        /// Direct only option (0 hops)
+        public static let directOnly = L10n.tr("Settings", "nodes.maxHops.directOnly", fallback: "Direct Only")
+        /// Footer text when hop limit is active
+        public static let footerActive = L10n.tr("Settings", "nodes.maxHops.footerActive", fallback: "Nodes beyond the selected hop distance will not be auto-added.")
+        /// Plural hops format string
+        public static func hops(_ p1: Int) -> String {
+          return L10n.tr("Settings", "nodes.maxHops.hops", p1, fallback: "%d Hops")
+        }
+        /// No limit option
+        public static let noLimit = L10n.tr("Settings", "nodes.maxHops.noLimit", fallback: "No Limit")
+        /// Singular 1 hop option
+        public static let oneHop = L10n.tr("Settings", "nodes.maxHops.oneHop", fallback: "1 Hop")
       }
       public enum StaleCleanup {
         /// Threshold option: number of days (%d = day count)

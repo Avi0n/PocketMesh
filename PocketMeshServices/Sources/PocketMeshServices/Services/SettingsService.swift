@@ -288,7 +288,7 @@ public struct DeviceGPSState: Sendable, Equatable {
 /// Events emitted by SettingsService when device settings change.
 public enum SettingsEvent: Sendable {
     case deviceUpdated(MeshCore.SelfInfo)
-    case autoAddConfigUpdated(UInt8)
+    case autoAddConfigUpdated(MeshCore.AutoAddConfig)
     case clientRepeatUpdated(Bool)
     case pathHashModeUpdated(UInt8)
     case allowedRepeatFreqUpdated([MeshCore.FrequencyRange])
@@ -700,7 +700,7 @@ public actor SettingsService {
     // MARK: - Auto-Add Config
 
     /// Get auto-add configuration from device
-    public func getAutoAddConfig() async throws -> UInt8 {
+    public func getAutoAddConfig() async throws -> MeshCore.AutoAddConfig {
         do {
             return try await session.getAutoAddConfig()
         } catch let error as MeshCoreError {
@@ -740,7 +740,7 @@ public actor SettingsService {
     }
 
     /// Set auto-add configuration on device
-    public func setAutoAddConfig(_ config: UInt8) async throws {
+    public func setAutoAddConfig(_ config: MeshCore.AutoAddConfig) async throws {
         do {
             try await session.setAutoAddConfig(config)
         } catch let error as MeshCoreError {
@@ -749,15 +749,15 @@ public actor SettingsService {
     }
 
     /// Set auto-add configuration with verification
-    public func setAutoAddConfigVerified(_ config: UInt8) async throws -> UInt8 {
+    public func setAutoAddConfigVerified(_ config: MeshCore.AutoAddConfig) async throws -> MeshCore.AutoAddConfig {
         try await setAutoAddConfig(config)
 
         let actualConfig = try await getAutoAddConfig()
 
         guard actualConfig == config else {
             throw SettingsServiceError.verificationFailed(
-                expected: "config=\(config)",
-                actual: "config=\(actualConfig)"
+                expected: "bitmask=\(config.bitmask), maxHops=\(config.maxHops)",
+                actual: "bitmask=\(actualConfig.bitmask), maxHops=\(actualConfig.maxHops)"
             )
         }
 

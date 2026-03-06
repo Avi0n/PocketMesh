@@ -16,12 +16,17 @@ struct NodesSettingsSection: View {
     @State private var autoAddRepeaters = false
     @State private var autoAddRoomServers = false
     @State private var overwriteOldest = false
+    @State private var autoAddMaxHops: UInt8 = 0
 
     private var device: DeviceDTO? { appState.connectedDevice }
 
     /// Whether the device supports v1.12+ auto-add config features
     private var supportsAutoAddConfig: Bool {
         device?.supportsAutoAddConfig ?? false
+    }
+
+    private var supportsAutoAddMaxHops: Bool {
+        device?.supportsAutoAddMaxHops ?? false
     }
 
     private var settingsModified: Bool {
@@ -31,7 +36,8 @@ struct NodesSettingsSection: View {
                 autoAddContacts != device.autoAddContacts ||
                 autoAddRepeaters != device.autoAddRepeaters ||
                 autoAddRoomServers != device.autoAddRoomServers ||
-                overwriteOldest != device.overwriteOldest
+                overwriteOldest != device.overwriteOldest ||
+                autoAddMaxHops != device.autoAddMaxHops
         } else {
             let deviceMode: AutoAddMode = device.manualAddContacts ? .manual : .all
             return autoAddMode != deviceMode
@@ -51,6 +57,8 @@ struct NodesSettingsSection: View {
         hasher.combine(appState.connectedDevice?.autoAddRoomServers)
         hasher.combine(appState.connectedDevice?.overwriteOldest)
         hasher.combine(appState.connectedDevice?.supportsAutoAddConfig)
+        hasher.combine(appState.connectedDevice?.autoAddMaxHops)
+        hasher.combine(appState.connectedDevice?.supportsAutoAddMaxHops)
         return hasher.finalize()
     }
 
@@ -65,7 +73,7 @@ struct NodesSettingsSection: View {
             }
             .pickerStyle(.menu)
             .onChange(of: autoAddMode) { _, newValue in
-                if newValue == .selectedTypes {
+                if newValue != .manual {
                     UIAccessibility.post(notification: .screenChanged, argument: nil)
                 }
             }
@@ -74,6 +82,18 @@ struct NodesSettingsSection: View {
                 Toggle(L10n.Settings.Nodes.autoAddContacts, isOn: $autoAddContacts)
                 Toggle(L10n.Settings.Nodes.autoAddRepeaters, isOn: $autoAddRepeaters)
                 Toggle(L10n.Settings.Nodes.autoAddRoomServers, isOn: $autoAddRoomServers)
+            }
+
+            if supportsAutoAddMaxHops && autoAddMode != .manual {
+                Picker(L10n.Settings.Nodes.maxHops, selection: $autoAddMaxHops) {
+                    Text(L10n.Settings.Nodes.MaxHops.noLimit).tag(UInt8(0))
+                    Text(L10n.Settings.Nodes.MaxHops.directOnly).tag(UInt8(1))
+                    Text(L10n.Settings.Nodes.MaxHops.oneHop).tag(UInt8(2))
+                    ForEach(Array(2...6), id: \.self) { hops in
+                        Text(L10n.Settings.Nodes.MaxHops.hops(hops)).tag(UInt8(hops + 1))
+                    }
+                }
+                .pickerStyle(.menu)
             }
 
             if supportsAutoAddConfig {
@@ -111,7 +131,7 @@ struct NodesSettingsSection: View {
         } header: {
             Text(L10n.Settings.Nodes.header)
         } footer: {
-            Text(autoAddModeDescription)
+            Text(footerDescription)
         }
         .radioDisabled(for: appState.connectionState, or: isApplying)
         .onAppear {
@@ -122,6 +142,14 @@ struct NodesSettingsSection: View {
         }
         .errorAlert($showError)
         .retryAlert(retryAlert)
+    }
+
+    private var footerDescription: String {
+        var description = autoAddModeDescription
+        if supportsAutoAddMaxHops && autoAddMode != .manual && autoAddMaxHops > 0 {
+            description += "\n" + L10n.Settings.Nodes.MaxHops.footerActive
+        }
+        return description
     }
 
     private var autoAddModeDescription: String {
@@ -144,6 +172,7 @@ struct NodesSettingsSection: View {
             autoAddRepeaters = device.autoAddRepeaters
             autoAddRoomServers = device.autoAddRoomServers
             overwriteOldest = device.overwriteOldest
+            autoAddMaxHops = device.autoAddMaxHops
         } else {
             // Older firmware only supports manual/all toggle via manualAddContacts
             autoAddMode = device.manualAddContacts ? .manual : .all
@@ -193,7 +222,9 @@ struct NodesSettingsSection: View {
                         break
                     }
 
-                    _ = try await settingsService.setAutoAddConfigVerified(config)
+                    _ = try await settingsService.setAutoAddConfigVerified(
+                        AutoAddConfig(bitmask: config, maxHops: autoAddMaxHops)
+                    )
                 }
 
                 retryAlert.reset()

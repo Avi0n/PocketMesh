@@ -303,9 +303,12 @@ extension ConnectionManager {
 
     /// Updates the connected device's auto-add config.
     /// Called by SettingsService after auto-add config is successfully changed.
-    public func updateAutoAddConfig(_ config: UInt8) {
+    public func updateAutoAddConfig(_ config: MeshCore.AutoAddConfig) {
         guard let device = connectedDevice else { return }
-        connectedDevice = device.copy { $0.autoAddConfig = config }
+        connectedDevice = device.copy {
+            $0.autoAddConfig = config.bitmask
+            $0.autoAddMaxHops = config.maxHops
+        }
     }
 
     /// Updates the connected device's client repeat state.

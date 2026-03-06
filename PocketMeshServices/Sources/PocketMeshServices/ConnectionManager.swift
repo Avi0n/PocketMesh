@@ -711,7 +711,7 @@ public final class ConnectionManager {
         deviceID: UUID,
         selfInfo: MeshCore.SelfInfo,
         capabilities: MeshCore.DeviceCapabilities,
-        autoAddConfig: UInt8,
+        autoAddConfig: MeshCore.AutoAddConfig,
         existingDevice: DeviceDTO? = nil,
         connectionMethods: [ConnectionMethod] = []
     ) -> Device {
@@ -747,7 +747,8 @@ public final class ConnectionManager {
             preRepeatSpreadingFactor: existingDevice?.preRepeatSpreadingFactor,
             preRepeatCodingRate: existingDevice?.preRepeatCodingRate,
             manualAddContacts: selfInfo.manualAddContacts,
-            autoAddConfig: autoAddConfig,
+            autoAddConfig: autoAddConfig.bitmask,
+            autoAddMaxHops: autoAddConfig.maxHops,
             multiAcks: selfInfo.multiAcks,
             telemetryModeBase: selfInfo.telemetryModeBase,
             telemetryModeLoc: selfInfo.telemetryModeLocation,

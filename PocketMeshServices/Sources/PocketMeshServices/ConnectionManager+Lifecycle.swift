@@ -587,7 +587,7 @@ extension ConnectionManager {
         async let existingDeviceResult = newServices.dataStore.fetchDevice(id: deviceID)
         async let autoAddConfigResult = newSession.getAutoAddConfig()
         let existingDevice = try? await existingDeviceResult
-        let autoAddConfig = (try? await autoAddConfigResult) ?? 0
+        let autoAddConfig = (try? await autoAddConfigResult) ?? MeshCore.AutoAddConfig(bitmask: 0)
 
         let repeatFreqRanges: [MeshCore.FrequencyRange] = deviceCapabilities.clientRepeat
             ? (try? await newSession.getRepeatFreq()) ?? []

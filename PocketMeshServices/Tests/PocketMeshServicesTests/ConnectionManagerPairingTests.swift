@@ -63,16 +63,17 @@ struct ConnectionManagerPairingTests {
         let device = DeviceDTO.testDevice()
         manager.updateDevice(with: device)
 
-        manager.updateAutoAddConfig(5)
+        manager.updateAutoAddConfig(AutoAddConfig(bitmask: 5, maxHops: 3))
 
         #expect(manager.connectedDevice?.autoAddConfig == 5)
+        #expect(manager.connectedDevice?.autoAddMaxHops == 3)
     }
 
     @Test("updateAutoAddConfig does nothing when not connected")
     func updateAutoAddConfigWhenDisconnected() throws {
         let (manager, _) = try ConnectionManager.createForTesting()
 
-        manager.updateAutoAddConfig(5)
+        manager.updateAutoAddConfig(AutoAddConfig(bitmask: 5, maxHops: 3))
 
         #expect(manager.connectedDevice == nil)
     }
