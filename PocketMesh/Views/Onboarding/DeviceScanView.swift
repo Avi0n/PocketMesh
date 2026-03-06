@@ -206,6 +206,8 @@ struct DeviceScanView: View {
                 await appState.wireServicesIfConnected()
                 pairingSuccessTrigger.toggle()
                 appState.onboarding.onboardingPath.append(.radioPreset)
+            } catch BLEError.deviceConnectedToOtherApp {
+                appState.connectionUI.otherAppWarningDeviceID = UUID()
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show
             } catch AccessorySetupKitError.pickerAlreadyActive {

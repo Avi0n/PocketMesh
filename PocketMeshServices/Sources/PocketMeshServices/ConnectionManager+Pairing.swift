@@ -18,6 +18,11 @@ extension ConnectionManager {
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
 
+        // Check if device is connected to another app before attempting connection
+        if await isDeviceConnectedToOtherApp(deviceID) {
+            throw BLEError.deviceConnectedToOtherApp
+        }
+
         // Set connecting state for immediate UI feedback
         connectionState = .connecting
 
