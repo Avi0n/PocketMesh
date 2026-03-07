@@ -18,9 +18,10 @@ extension ConnectionManager {
         // Show AccessorySetupKit picker
         let deviceID = try await accessorySetupKit.showPicker()
 
-        // Check if device is connected to another app before attempting connection
-        if await isDeviceConnectedToOtherApp(deviceID) {
-            throw BLEError.deviceConnectedToOtherApp
+        // Poll for other-app reconnection — ASK pairing severs existing BLE connections,
+        // so the other app needs time to auto-reconnect before we can detect it
+        if await waitForOtherAppReconnection(deviceID) {
+            throw PairingError.deviceConnectedToOtherApp(deviceID: deviceID)
         }
 
         // Set connecting state for immediate UI feedback
@@ -105,6 +106,33 @@ extension ConnectionManager {
 
         // All retries exhausted - caller's catch block sets .disconnected
         throw lastError
+    }
+
+    // MARK: - Other-App Detection
+
+    /// Polls for other-app reconnection after ASK pairing disrupts existing BLE connections.
+    /// ASK pairing severs the other app's BLE link; it auto-reconnects seconds later via
+    /// `CBConnectPeripheralOptionEnableAutoReconnect`. This method gives it time to reappear.
+    /// - Parameter deviceID: The UUID of the newly paired device
+    /// - Returns: `true` if the device was detected as connected to another app
+    func waitForOtherAppReconnection(_ deviceID: UUID) async -> Bool {
+        let maxChecks = 6
+        let interval: Duration = .milliseconds(400)
+
+        for check in 1...maxChecks {
+            let connected = await stateMachine.isDeviceConnectedToSystem(deviceID)
+            if connected {
+                logger.info("[OtherAppCheck] Detected other-app connection on check \(check)/\(maxChecks)")
+                return true
+            }
+
+            if check < maxChecks {
+                try? await Task.sleep(for: interval)
+            }
+        }
+
+        logger.info("[OtherAppCheck] No other-app connection detected after \(maxChecks) checks")
+        return false
     }
 
     // MARK: - Forget Device

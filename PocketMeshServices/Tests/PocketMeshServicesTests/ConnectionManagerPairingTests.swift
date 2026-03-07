@@ -1,6 +1,20 @@
 import Foundation
+import os
 import Testing
 @testable import PocketMeshServices
+
+/// Thread-safe counter for tracking call counts in mock handlers.
+private final class Counter: Sendable {
+    private let lock = OSAllocatedUnfairLock(initialState: 0)
+
+    /// Increments the counter and returns the new value.
+    func increment() -> Int {
+        lock.withLock { value in
+            value += 1
+            return value
+        }
+    }
+}
 
 @Suite("ConnectionManager Pairing Tests")
 @MainActor
@@ -134,6 +148,54 @@ struct ConnectionManagerPairingTests {
         let afterClear = manager.connectedDevice
 
         #expect(afterSave != afterClear)
+    }
+
+    // MARK: - Other-App Reconnection Polling
+
+    @Test("waitForOtherAppReconnection returns true on immediate detection")
+    func waitForOtherAppReconnectionImmediate() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsDeviceConnectedToSystem(true)
+
+        let result = await manager.waitForOtherAppReconnection(deviceID)
+
+        #expect(result == true)
+        let callCount = await mock.isDeviceConnectedToSystemCalls.count
+        #expect(callCount == 1)
+    }
+
+    @Test("waitForOtherAppReconnection returns false after all checks")
+    func waitForOtherAppReconnectionNoOtherApp() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsDeviceConnectedToSystem(false)
+
+        let result = await manager.waitForOtherAppReconnection(deviceID)
+
+        #expect(result == false)
+        let callCount = await mock.isDeviceConnectedToSystemCalls.count
+        #expect(callCount == 6)
+    }
+
+    @Test("waitForOtherAppReconnection detects delayed reconnection")
+    func waitForOtherAppReconnectionDelayed() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        // Return true on the 3rd call using a counter outside the actor
+        let callCounter = Counter()
+        await mock.setIsDeviceConnectedToSystemHandler { _ in
+            return callCounter.increment() >= 3
+        }
+
+        let result = await manager.waitForOtherAppReconnection(deviceID)
+
+        #expect(result == true)
+        let callCount = await mock.isDeviceConnectedToSystemCalls.count
+        #expect(callCount == 3)
     }
 
     // MARK: - Data Operations
