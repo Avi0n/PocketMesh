@@ -29,19 +29,35 @@ extension ConnectionManager {
     /// - Parameter deviceID: The UUID of the device to check
     /// - Returns: `true` if device appears connected to another app
     public func isDeviceConnectedToOtherApp(_ deviceID: UUID) async -> Bool {
-        // Don't check during auto-reconnect - that's our own connection
         let isAutoReconnecting = await stateMachine.isAutoReconnecting
+        let smIsConnected = await stateMachine.isConnected
+        let smConnectedDeviceID = await stateMachine.connectedDeviceID
+        let systemConnected = await stateMachine.isDeviceConnectedToSystem(deviceID)
+        let allSystemConnected = await stateMachine.systemConnectedPeripheralIDs()
+
+        logger.info(
+            "[OtherAppCheck] device=\(deviceID.uuidString.prefix(8)), " +
+            "connectionState=\(String(describing: self.connectionState)), " +
+            "isAutoReconnecting=\(isAutoReconnecting), " +
+            "smIsConnected=\(smIsConnected), " +
+            "smConnectedDevice=\(smConnectedDeviceID?.uuidString.prefix(8) ?? "nil"), " +
+            "isDeviceConnectedToSystem=\(systemConnected), " +
+            "allSystemConnectedCount=\(allSystemConnected.count), " +
+            "allSystemConnected=\(allSystemConnected.map { String($0.uuidString.prefix(8)) })"
+        )
+
+        // Don't check during auto-reconnect - that's our own connection
         guard !isAutoReconnecting else { return false }
 
         // Don't check if we're already connected (switching devices)
         guard connectionState == .disconnected else { return false }
 
         // Don't report our own connection as "another app" (state restoration may have completed)
-        if await stateMachine.isConnected, await stateMachine.connectedDeviceID == deviceID {
+        if smIsConnected, smConnectedDeviceID == deviceID {
             return false
         }
 
-        return await stateMachine.isDeviceConnectedToSystem(deviceID)
+        return systemConnected
     }
 
     /// Attempts to adopt a system-connected BLE link for the *last connected* device.

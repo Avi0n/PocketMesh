@@ -37,6 +37,10 @@ public protocol BLEStateMachineProtocol: Actor {
     /// - Returns: `true` if the device is connected to the system
     func isDeviceConnectedToSystem(_ deviceID: UUID) -> Bool
 
+    /// Returns the UUIDs of all peripherals currently connected to the system via Nordic UART.
+    /// Used for diagnostics — exposes the raw `retrieveConnectedPeripherals` result.
+    func systemConnectedPeripheralIDs() -> [UUID]
+
     /// Starts a best-effort adoption of an already system-connected peripheral.
     ///
     /// This is used to recover from cases where iOS keeps the BLE link alive across app termination

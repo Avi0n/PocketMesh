@@ -43,11 +43,15 @@ public enum ConnectionError: LocalizedError {
 public enum PairingError: LocalizedError {
     /// ASK pairing succeeded but BLE connection failed (e.g., wrong PIN)
     case connectionFailed(deviceID: UUID, underlying: Error)
+    /// ASK pairing succeeded but device is connected to another app
+    case deviceConnectedToOtherApp(deviceID: UUID)
 
     public var errorDescription: String? {
         switch self {
         case .connectionFailed(_, let underlying):
             return "Connection failed: \(underlying.localizedDescription)"
+        case .deviceConnectedToOtherApp:
+            return "Device is connected to another app."
         }
     }
 
@@ -55,6 +59,8 @@ public enum PairingError: LocalizedError {
     public var deviceID: UUID? {
         switch self {
         case .connectionFailed(let deviceID, _):
+            return deviceID
+        case .deviceConnectedToOtherApp(let deviceID):
             return deviceID
         }
     }

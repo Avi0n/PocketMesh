@@ -12,6 +12,7 @@ struct DeviceScanView: View {
     @State private var didInitiatePairing = false
     @State private var tapTimes: [Date] = []
     @State private var showDemoModeAlert = false
+    @State private var otherAppDeviceID: UUID?
     private var demoModeManager = DemoModeManager.shared
 
     private var hasConnectedDevice: Bool {
@@ -125,6 +126,26 @@ struct DeviceScanView: View {
                         }
                         .liquidGlassProminentButtonStyle()
                         .disabled(appState.connectionUI.isPairing)
+                    } else if let deviceID = otherAppDeviceID {
+                        Button {
+                            retryConnection(deviceID: deviceID)
+                        } label: {
+                            HStack(spacing: 8) {
+                                if appState.connectionUI.isPairing {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text(L10n.Onboarding.DeviceScan.connecting)
+                                } else {
+                                    Image(systemName: "arrow.clockwise.circle.fill")
+                                    Text(L10n.Onboarding.DeviceScan.retryConnection)
+                                }
+                            }
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                        }
+                        .liquidGlassProminentButtonStyle()
+                        .disabled(appState.connectionUI.isPairing)
                     } else {
                         Button {
                             startPairing()
@@ -206,8 +227,9 @@ struct DeviceScanView: View {
                 await appState.wireServicesIfConnected()
                 pairingSuccessTrigger.toggle()
                 appState.onboarding.onboardingPath.append(.radioPreset)
-            } catch BLEError.deviceConnectedToOtherApp {
-                appState.connectionUI.otherAppWarningDeviceID = UUID()
+            } catch PairingError.deviceConnectedToOtherApp(let deviceID) {
+                otherAppDeviceID = deviceID
+                appState.connectionUI.otherAppWarningDeviceID = deviceID
             } catch AccessorySetupKitError.pickerDismissed {
                 // User cancelled - no error to show
             } catch AccessorySetupKitError.pickerAlreadyActive {
@@ -220,6 +242,26 @@ struct DeviceScanView: View {
                 appState.connectionUI.showingConnectionFailedAlert = true
             } catch {
                 // Other errors - show via AppState's alert
+                appState.connectionUI.connectionFailedMessage = error.localizedDescription
+                appState.connectionUI.showingConnectionFailedAlert = true
+            }
+        }
+    }
+
+    private func retryConnection(deviceID: UUID) {
+        appState.connectionUI.isPairing = true
+
+        Task { @MainActor in
+            defer { appState.connectionUI.isPairing = false }
+
+            do {
+                try await appState.connectionManager.connect(to: deviceID)
+                await appState.wireServicesIfConnected()
+                pairingSuccessTrigger.toggle()
+                appState.onboarding.onboardingPath.append(.radioPreset)
+            } catch BLEError.deviceConnectedToOtherApp {
+                appState.connectionUI.otherAppWarningDeviceID = deviceID
+            } catch {
                 appState.connectionUI.connectionFailedMessage = error.localizedDescription
                 appState.connectionUI.showingConnectionFailedAlert = true
             }

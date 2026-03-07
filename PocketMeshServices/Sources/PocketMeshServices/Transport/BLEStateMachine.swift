@@ -297,6 +297,13 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
         return connectedPeripherals.contains { $0.identifier == deviceID }
     }
 
+    public func systemConnectedPeripheralIDs() -> [UUID] {
+        activate()
+        return centralManager.retrieveConnectedPeripherals(
+            withServices: [nordicUARTServiceUUID]
+        ).map(\.identifier)
+    }
+
     /// Starts a best-effort adoption of an already system-connected peripheral.
     ///
     /// When iOS keeps the BLE link alive but state restoration does not fire (common across app updates),

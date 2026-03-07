@@ -117,6 +117,9 @@
 /* Location: DeviceScanView.swift - Button to add a new device */
 "deviceScan.addDevice" = "Añadir dispositivo";
 
+/* Location: DeviceScanView.swift - Button to retry connection after other-app conflict */
+"deviceScan.retryConnection" = "Reintentar conexión";
+
 /* Location: DeviceScanView.swift - Button for troubleshooting */
 "deviceScan.deviceNotAppearing" = "¿El dispositivo no aparece?";
 

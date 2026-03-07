@@ -2080,6 +2080,8 @@ public enum L10n {
       public static let continueDemo = L10n.tr("Onboarding", "deviceScan.continueDemo", fallback: "Continue in Demo Mode")
       /// Location: DeviceScanView.swift - Button for troubleshooting
       public static let deviceNotAppearing = L10n.tr("Onboarding", "deviceScan.deviceNotAppearing", fallback: "Device not appearing?")
+      /// Location: DeviceScanView.swift - Button to retry connection after other-app conflict
+      public static let retryConnection = L10n.tr("Onboarding", "deviceScan.retryConnection", fallback: "Retry Connection")
       /// Location: DeviceScanView.swift - Subtitle with pairing instructions
       public static let subtitle = L10n.tr("Onboarding", "deviceScan.subtitle", fallback: "Make sure your MeshCore device is powered on and nearby")
       /// Location: DeviceScanView.swift - Screen title for device pairing
