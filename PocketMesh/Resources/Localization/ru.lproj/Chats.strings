@@ -154,7 +154,7 @@
 "chats.contactInfo.hasLocation" = "Есть местоположение";
 
 /* Location: ChatView.swift - Input bar placeholder for direct messages */
-"chats.input.placeholder.directMessage" = "Личное сообщение";
+"chats.input.placeholder.directMessage" = "Прямое сообщение";
 
 // MARK: - Channel Chat View
 
