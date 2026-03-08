@@ -50,6 +50,7 @@ extension ConnectionManager: BLEReconnectionDelegate {
     // Full sync is deferred until performInitialSync returns to foreground via onConnectionEstablished.
     func rebuildSession(deviceID: UUID) async throws {
         logger.info("[BLE] Rebuilding session for auto-reconnect: \(deviceID.uuidString.prefix(8))")
+        let expectedGeneration = reconnectionCoordinator.reconnectGeneration
 
         // Stop any existing session to prevent multiple receive loops racing for transport data
         await session?.stop()
@@ -65,11 +66,16 @@ extension ConnectionManager: BLEReconnectionDelegate {
             throw error
         }
 
-        // Check after await — user may have disconnected
+        // Check after await — user may have disconnected or a new reconnect cycle may have started
         guard connectionIntent.wantsConnection else {
             logger.info("User disconnected during session setup")
             await newSession.stop()
             connectionState = .disconnected
+            return
+        }
+        guard reconnectionCoordinator.reconnectGeneration == expectedGeneration else {
+            logger.info("[BLE] rebuildSession superseded by new reconnect cycle during session setup")
+            await newSession.stop()
             return
         }
 
@@ -95,6 +101,11 @@ extension ConnectionManager: BLEReconnectionDelegate {
             connectionState = .disconnected
             return
         }
+        guard reconnectionCoordinator.reconnectGeneration == expectedGeneration else {
+            logger.info("[BLE] rebuildSession superseded by new reconnect cycle during device query")
+            await newSession.stop()
+            return
+        }
 
         let newServices = ServiceContainer(
             session: newSession,
@@ -108,6 +119,11 @@ extension ConnectionManager: BLEReconnectionDelegate {
             logger.info("User disconnected during service wiring")
             await newSession.stop()
             connectionState = .disconnected
+            return
+        }
+        guard reconnectionCoordinator.reconnectGeneration == expectedGeneration else {
+            logger.info("[BLE] rebuildSession superseded by new reconnect cycle during service wiring")
+            await newSession.stop()
             return
         }
 
@@ -132,16 +148,33 @@ extension ConnectionManager: BLEReconnectionDelegate {
         await onConnectionReady?()
         await performInitialSync(deviceID: deviceID, services: newServices, context: "[BLE] iOS auto-reconnect")
 
-        // User may have disconnected while sync was in progress
-        guard connectionIntent.wantsConnection else { return }
+        // User may have disconnected or a new reconnect cycle may have started while sync was in progress
+        guard connectionIntent.wantsConnection,
+              reconnectionCoordinator.reconnectGeneration == expectedGeneration
+        else {
+            await newSession.stop()
+            return
+        }
 
         await syncDeviceTimeIfNeeded()
-        guard connectionIntent.wantsConnection else { return }
+        guard connectionIntent.wantsConnection,
+              reconnectionCoordinator.reconnectGeneration == expectedGeneration
+        else {
+            await newSession.stop()
+            return
+        }
 
         // Re-authenticate room sessions that were connected before BLE loss
         let sessionIDs = sessionsAwaitingReauth
         sessionsAwaitingReauth = []
         await newServices.remoteNodeService.handleBLEReconnection(sessionIDs: sessionIDs)
+
+        guard connectionIntent.wantsConnection,
+              reconnectionCoordinator.reconnectGeneration == expectedGeneration
+        else {
+            await newSession.stop()
+            return
+        }
 
         currentTransportType = .bluetooth
         connectionState = .ready

@@ -20,8 +20,8 @@ final class BLEReconnectionCoordinator {
 
     private var timeoutTask: Task<Void, Never>?
 
-    /// Incremented each time a reconnection cycle starts, used to detect stale retries.
-    private var reconnectGeneration = 0
+    /// Incremented each time a reconnection cycle starts, used to detect stale rebuilds and retries.
+    private(set) var reconnectGeneration = 0
 
     /// UI timeout duration before transitioning from "connecting" to "disconnected".
     /// iOS auto-reconnect continues in the background even after this fires.
