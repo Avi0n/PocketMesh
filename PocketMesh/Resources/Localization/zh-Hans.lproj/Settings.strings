@@ -492,9 +492,7 @@
 "nodes.overwriteOldestDescription" = "当存储已满时，替换最旧的非收藏节点";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "最大跳数距离";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "根据跳数限制自动添加的节点。";
+"nodes.maxHops" = "自动添加最大跳数限制";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "无限制";

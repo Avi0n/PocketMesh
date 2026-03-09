@@ -505,9 +505,7 @@
 "nodes.overwriteOldestDescription" = "Когда хранилище заполнено, заменить старейший неизбранный узел";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "Макс. расстояние хопов";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "Ограничить автоматическое добавление узлов на основе количества переходов.";
+"nodes.maxHops" = "Макс. лимит хопов (авто-добавление)";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Без ограничений";

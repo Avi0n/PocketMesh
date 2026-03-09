@@ -505,9 +505,7 @@
 "nodes.overwriteOldestDescription" = "Wanneer de opslag vol is, het oudste niet-favoriete knooppunt vervangen";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "Max. hopafstand";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "Beperk welke knooppunten automatisch worden toegevoegd op basis van hun hopafstand.";
+"nodes.maxHops" = "Max. hoplimiet (auto-toevoegen)";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Geen limiet";

@@ -85,19 +85,12 @@ struct NodesSettingsSection: View {
             }
 
             if supportsAutoAddMaxHops && autoAddMode != .manual {
-                Picker(selection: $autoAddMaxHops) {
+                Picker(L10n.Settings.Nodes.maxHops, selection: $autoAddMaxHops) {
                     Text(L10n.Settings.Nodes.MaxHops.noLimit).tag(UInt8(0))
                     Text(L10n.Settings.Nodes.MaxHops.directOnly).tag(UInt8(1))
                     Text(L10n.Settings.Nodes.MaxHops.oneHop).tag(UInt8(2))
                     ForEach(Array(2...6), id: \.self) { hops in
                         Text(L10n.Settings.Nodes.MaxHops.hops(hops)).tag(UInt8(hops + 1))
-                    }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.Settings.Nodes.maxHops)
-                        Text(L10n.Settings.Nodes.maxHopsDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
                     }
                 }
                 .pickerStyle(.menu)

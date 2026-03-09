@@ -505,9 +505,7 @@
 "nodes.overwriteOldestDescription" = "Lorsque le stockage est plein, remplacer le nœud non favori le plus ancien";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "Distance max. de sauts";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "Limiter les nœuds ajoutés automatiquement selon leur nombre de sauts.";
+"nodes.maxHops" = "Limite max. de sauts (auto-ajout)";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Aucune limite";

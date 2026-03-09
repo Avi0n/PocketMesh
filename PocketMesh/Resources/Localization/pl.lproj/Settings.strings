@@ -505,9 +505,7 @@
 "nodes.overwriteOldestDescription" = "Gdy pamięć jest pełna, zastąp najstarszy nieulubiony węzeł";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "Maks. odległość skoków";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "Ogranicz automatyczne dodawanie węzłów na podstawie ich liczby skoków.";
+"nodes.maxHops" = "Maks. limit skoków (auto-dodawanie)";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Bez limitu";

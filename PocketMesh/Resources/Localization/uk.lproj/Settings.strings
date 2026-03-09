@@ -505,9 +505,7 @@
 "nodes.overwriteOldestDescription" = "Коли сховище заповнене, замінити найстаріший необраний вузол";
 
 /* Picker label for max hop distance */
-"nodes.maxHops" = "Макс. відстань хопів";
-/* Description for max hop distance picker */
-"nodes.maxHopsDescription" = "Обмежити автоматичне додавання вузлів на основі кількості переходів.";
+"nodes.maxHops" = "Макс. ліміт хопів (авто-додавання)";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Без обмежень";
