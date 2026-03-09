@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Max. hopafstand";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Beperk welke knooppunten automatisch worden toegevoegd op basis van hun hopafstand.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Geen limiet";

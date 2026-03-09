@@ -3448,6 +3448,8 @@ public enum L10n {
       public static let header = L10n.tr("Settings", "nodes.header", fallback: "Nodes")
       /// Picker label for max hop distance
       public static let maxHops = L10n.tr("Settings", "nodes.maxHops", fallback: "Max Hop Distance")
+      /// Description for max hop distance picker
+      public static let maxHopsDescription = L10n.tr("Settings", "nodes.maxHopsDescription", fallback: "Restrict which nodes are auto-added based on their hop count.")
       /// Toggle label for overwrite oldest
       public static let overwriteOldest = L10n.tr("Settings", "nodes.overwriteOldest", fallback: "Overwrite Oldest")
       /// Description for overwrite oldest toggle

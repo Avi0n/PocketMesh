@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Distance max. de sauts";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Limiter les nœuds ajoutés automatiquement selon leur nombre de sauts.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Aucune limite";

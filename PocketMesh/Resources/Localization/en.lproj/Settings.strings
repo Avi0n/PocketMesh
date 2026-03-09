@@ -507,6 +507,9 @@
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Max Hop Distance";
 
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Restrict which nodes are auto-added based on their hop count.";
+
 /* No limit option */
 "nodes.maxHops.noLimit" = "No Limit";
 

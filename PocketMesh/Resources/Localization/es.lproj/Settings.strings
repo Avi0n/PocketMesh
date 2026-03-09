@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Distancia máx. de saltos";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Restringir qué nodos se añaden automáticamente según su número de saltos.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Sin límite";

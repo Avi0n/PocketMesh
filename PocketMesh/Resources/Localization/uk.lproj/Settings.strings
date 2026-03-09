@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Макс. відстань хопів";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Обмежити автоматичне додавання вузлів на основі кількості переходів.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Без обмежень";

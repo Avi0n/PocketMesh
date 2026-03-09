@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Maks. odległość skoków";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Ogranicz automatyczne dodawanie węzłów na podstawie ich liczby skoków.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Bez limitu";

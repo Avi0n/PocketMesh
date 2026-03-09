@@ -506,6 +506,8 @@
 
 /* Picker label for max hop distance */
 "nodes.maxHops" = "Max. Hop-Distanz";
+/* Description for max hop distance picker */
+"nodes.maxHopsDescription" = "Einschränken, welche Knoten basierend auf ihrer Hop-Anzahl automatisch hinzugefügt werden.";
 
 /* No limit option */
 "nodes.maxHops.noLimit" = "Kein Limit";
