@@ -1,6 +1,6 @@
 /*
   Contacts.strings
-  PocketMesh
+  MC1
 
   Strings for the Contacts feature, including contact lists,
   contact details, adding/editing contacts, and contact management.
@@ -432,7 +432,7 @@
 "contacts.qr.title" = "Share Contact";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Share subject */
-"contacts.qr.shareSubject" = "PocketMesh Contact";
+"contacts.qr.shareSubject" = "MeshCore One Contact";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Copy button when not copied */
 "contacts.qr.copy" = "Copy";

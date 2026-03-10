@@ -1,6 +1,6 @@
 /*
   Tools.strings
-  PocketMesh
+  MC1
 
   Strings for Tools feature, including utilities,
   diagnostics, radio configuration, and device management tools.
@@ -675,7 +675,7 @@
 "tools.cli.channelEmpty" = "空";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 1 */
-"tools.cli.welcomeLine1" = "PocketMesh CLI";
+"tools.cli.welcomeLine1" = "MeshCore One CLI";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 2 */
 "tools.cli.welcomeConnected" = "已连接到 %@";

@@ -1,6 +1,6 @@
 /*
   Contacts.strings
-  PocketMesh
+  MC1
 
   German translation of strings for the Contacts feature.
   AI-translated - please verify with native speakers.
@@ -432,7 +432,7 @@
 "contacts.qr.title" = "Kontakt teilen";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Share subject */
-"contacts.qr.shareSubject" = "PocketMesh-Kontakt";
+"contacts.qr.shareSubject" = "MeshCore One-Kontakt";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Copy button when not copied */
 "contacts.qr.copy" = "Kopieren";

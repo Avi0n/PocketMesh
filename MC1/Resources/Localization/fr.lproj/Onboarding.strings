@@ -1,6 +1,6 @@
 /*
   Onboarding.strings
-  PocketMesh
+  MC1
 
   French translation of strings for the Onboarding feature.
   AI-translated - please verify with native speakers.
@@ -10,7 +10,7 @@
 // MARK: - Welcome View
 
 /* Location: WelcomeView.swift - App title displayed on welcome screen */
-"welcome.title" = "PocketMesh";
+"welcome.title" = "MeshCore One";
 
 /* Location: WelcomeView.swift - Subtitle describing the app */
 "welcome.subtitle" = "Client MeshCore non officiel pour iOS";
@@ -190,7 +190,7 @@
 "radioPreset.title" = "Réglages radio";
 
 /* Location: RadioPresetOnboardingView.swift - Subtitle with instructions and Discord link */
-"radioPreset.subtitle" = "Vous pouvez modifier ces réglages à tout moment dans les Réglages de PocketMesh. Si vous ne savez pas quel préréglage utiliser, demandez sur le [Discord de MeshCore](https://meshcore.co.uk/contact.html)";
+"radioPreset.subtitle" = "Vous pouvez modifier ces réglages à tout moment dans les Réglages de MeshCore One. Si vous ne savez pas quel préréglage utiliser, demandez sur le [Discord de MeshCore](https://meshcore.co.uk/contact.html)";
 
 /* Location: RadioPresetOnboardingView.swift - Button label while applying preset */
 "radioPreset.applying" = "Application...";

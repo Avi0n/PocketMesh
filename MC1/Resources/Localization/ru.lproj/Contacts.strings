@@ -1,6 +1,6 @@
 /*
   Contacts.strings
-  PocketMesh
+  MC1
 
   Russian translation of strings for the Contacts feature.
   AI-translated - please verify with native speakers.
@@ -432,7 +432,7 @@
 "contacts.qr.title" = "Поделиться контактом";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Share subject */
-"contacts.qr.shareSubject" = "Контакт PocketMesh";
+"contacts.qr.shareSubject" = "Контакт MeshCore One";
 
 /* Location: ContactQRShareSheet.swift - Purpose: Copy button when not copied */
 "contacts.qr.copy" = "Копировать";

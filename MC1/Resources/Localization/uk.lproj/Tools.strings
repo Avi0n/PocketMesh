@@ -1,6 +1,6 @@
 /*
   Tools.strings
-  PocketMesh
+  MC1
 
   Ukrainian translation of strings for the Tools feature.
   AI-translated - please verify with native speakers.
@@ -678,7 +678,7 @@
 "tools.cli.channelEmpty" = "порожній";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 1 */
-"tools.cli.welcomeLine1" = "PocketMesh CLI";
+"tools.cli.welcomeLine1" = "MeshCore One CLI";
 
 /* Location: CLIToolViewModel.swift - Welcome banner line 2 */
 "tools.cli.welcomeConnected" = "Підключено до %@";
