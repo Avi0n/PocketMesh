@@ -1,6 +1,6 @@
 # Messaging Guide
 
-This guide covers the message lifecycle, delivery states, retry logic, and ACK handling in PocketMesh.
+This guide covers the message lifecycle, delivery states, retry logic, and ACK handling in MeshCore One.
 
 ## Message Lifecycle
 
@@ -55,7 +55,7 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 
 ### Automatic Retry (sendMessageWithRetry)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/MessageService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/MessageService.swift`
 
 Default configuration:
 - `floodFallbackOnRetry: true` - Use flood on manual retry
@@ -223,7 +223,7 @@ Repeat ACKs indicate the message was heard by multiple nodes - useful for mesh d
 
 ## Message Deduplication
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Message.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/Message.swift`
 
 Messages include a `deduplicationKey` field to prevent duplicate incoming messages from being stored. The key is generated using a combination of timestamp, sender's public key prefix, and a hash of the message content:
 
@@ -280,7 +280,7 @@ try await session.sendChannelMessage(channel: channelIndex, text: text)
 
 ## MessageEventBroadcaster Integration
 
-**File:** `PocketMesh/Services/MessageEventBroadcaster.swift`
+**File:** `MC1/Services/MessageEventBroadcaster.swift`
 
 The broadcaster bridges service callbacks to SwiftUI:
 
@@ -317,7 +317,7 @@ func handleAcknowledgement(ackCode: UInt32) {
 
 ## Message Polling
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/MessagePollingService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/MessagePollingService.swift`
 
 Messages are pulled from the device queue:
 
@@ -353,6 +353,6 @@ Reactions are sent as special message payloads and rendered as badges below mess
 
 ## See Also
 
-- [MessageService API](../api/PocketMeshServices.md#messageservice-public-actor)
+- [MessageService API](../api/MC1Services.md#messageservice-public-actor)
 - [Architecture Overview](../Architecture.md)
 - [BLE Transport Guide](BLE_Transport.md)

@@ -1,14 +1,14 @@
 # Sync Guide
 
-This guide covers the SyncCoordinator, connection lifecycle phases, and sync flows in PocketMesh.
+This guide covers the SyncCoordinator, connection lifecycle phases, and sync flows in MeshCore One.
 
 ## Overview
 
-When PocketMesh connects to a MeshCore device, it must synchronize local data with the device's state. The `SyncCoordinator` orchestrates this process through three phases: contacts, channels, and messages.
+When MeshCore One connects to a MeshCore device, it must synchronize local data with the device's state. The `SyncCoordinator` orchestrates this process through three phases: contacts, channels, and messages.
 
 ## SyncCoordinator
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/SyncCoordinator.swift`
+**File:** `MC1Services/Sources/MC1Services/SyncCoordinator.swift`
 
 ```swift
 public actor SyncCoordinator {
@@ -662,6 +662,6 @@ struct ContactsView: View {
 
 ## See Also
 
-- [SyncCoordinator API](../api/PocketMeshServices.md#synccoordinator-public-actor)
+- [SyncCoordinator API](../api/MC1Services.md#synccoordinator-public-actor)
 - [Architecture Overview](../Architecture.md)
 - [Messaging Guide](Messaging.md)

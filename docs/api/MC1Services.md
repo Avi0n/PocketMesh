@@ -1,10 +1,10 @@
-# PocketMeshServices API Reference
+# MC1Services API Reference
 
-The `PocketMeshServices` layer provides actor-isolated business logic, managing services, persistence, and device connections.
+The `MC1Services` layer provides actor-isolated business logic, managing services, persistence, and device connections.
 
 ## Package Information
 
-- **Location:** `PocketMeshServices/`
+- **Location:** `MC1Services/`
 - **Type:** Swift Package (single library target)
 - **Dependencies:** MeshCore
 
@@ -12,7 +12,7 @@ The `PocketMeshServices` layer provides actor-isolated business logic, managing 
 
 ## ConnectionManager (public, @MainActor, @Observable class)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/ConnectionManager.swift`
+**File:** `MC1Services/Sources/MC1Services/ConnectionManager.swift`
 
 The primary entry point for managing the connection to a MeshCore device and coordinating services.
 
@@ -54,7 +54,7 @@ The primary entry point for managing the connection to a MeshCore device and coo
 
 ## SyncCoordinator (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/SyncCoordinator.swift`
+**File:** `MC1Services/Sources/MC1Services/SyncCoordinator.swift`
 
 Orchestrates data synchronization between the MeshCore device and local database through three phases.
 
@@ -98,7 +98,7 @@ public enum SyncState: Sendable, Equatable {
 
 ## MessageService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/MessageService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/MessageService.swift`
 
 Handles message sending with automatic retry logic, flood routing fallback, and ACK tracking.
 
@@ -169,7 +169,7 @@ public struct MessageServiceConfig: Sendable {
 
 ## ContactService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/ContactService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/ContactService.swift`
 
 Manages discovery, synchronization, and storage of mesh contacts.
 
@@ -221,7 +221,7 @@ Manages discovery, synchronization, and storage of mesh contacts.
 
 ## ChannelService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/ChannelService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/ChannelService.swift`
 
 Manages group messaging channels and secure slot configuration.
 
@@ -274,7 +274,7 @@ Manages group messaging channels and secure slot configuration.
 
 ## RemoteNodeService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/RemoteNodeService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/RemoteNodeService.swift`
 
 Queries remote mesh nodes using the binary protocol.
 
@@ -341,7 +341,7 @@ Note: Neighbor fetching is performed via `MeshCoreSession.fetchAllNeighbours()` 
 
 ## PersistenceStore (public, @ModelActor actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/PersistenceStore.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/PersistenceStore.swift`
 
 Type alias: `DataStore = PersistenceStore`
 
@@ -431,7 +431,7 @@ The unified interface for SwiftData persistence, shared across all services.
 
 ### MessageDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Message.swift` (search for `public struct MessageDTO`)
+**File:** `MC1Services/Sources/MC1Services/Models/Message.swift` (search for `public struct MessageDTO`)
 
 A sendable snapshot of `Message` for cross-actor transfers. The DTO evolves as features are added (link previews, reactions, mentions, etc.), so this doc intentionally describes the shape at a high level.
 
@@ -447,7 +447,7 @@ Key fields you can rely on:
 
 ### ContactDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Contact.swift` (search for `public struct ContactDTO`)
+**File:** `MC1Services/Sources/MC1Services/Models/Contact.swift` (search for `public struct ContactDTO`)
 
 A sendable snapshot of `Contact` for cross-actor transfers.
 
@@ -466,7 +466,7 @@ Notes:
 
 ### DeviceDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Device.swift:152`
+**File:** `MC1Services/Sources/MC1Services/Models/Device.swift:152`
 
 A sendable snapshot of Device for cross-actor transfers. Total: 27 properties.
 
@@ -508,7 +508,7 @@ A sendable snapshot of Device for cross-actor transfers. Total: 27 properties.
 
 ### ChannelDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Channel.swift:92`
+**File:** `MC1Services/Sources/MC1Services/Models/Channel.swift:92`
 
 A sendable snapshot of Channel for cross-actor transfers. Total: 8 properties.
 
@@ -531,7 +531,7 @@ A sendable snapshot of Channel for cross-actor transfers. Total: 8 properties.
 
 ### ChatFilterDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ChatFilter.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/ChatFilter.swift`
 
 User preferences for filtering chat/conversation lists.
 
@@ -575,7 +575,7 @@ User preferences for filtering chat/conversation lists.
 
 ### RxLogService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/RxLogService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/RxLogService.swift`
 
 Captures and stores RF packet log entries for network diagnostics.
 
@@ -596,7 +596,7 @@ Captures and stores RF packet log entries for network diagnostics.
 
 ### PersistentLogger (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/PersistentLogger.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/PersistentLogger.swift`
 
 Writes to OSLog and enqueues debug log entries into `DebugLogBuffer` for persistence.
 
@@ -613,7 +613,7 @@ Writes to OSLog and enqueues debug log entries into `DebugLogBuffer` for persist
 
 ### DebugLogBuffer (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/DebugLogBuffer.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/DebugLogBuffer.swift`
 
 Buffered log sink that batches debug log entries and writes to SwiftData.
 
@@ -631,7 +631,7 @@ Buffered log sink that batches debug log entries and writes to SwiftData.
 
 ### CommandAuditLogger (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/CommandAuditLogger.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/CommandAuditLogger.swift`
 
 Audits CLI commands sent to devices for security and debugging.
 
@@ -651,7 +651,7 @@ Audits CLI commands sent to devices for security and debugging.
 
 ### DeviceService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/DeviceService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/DeviceService.swift`
 
 Provides device information and management operations.
 
@@ -667,7 +667,7 @@ Provides device information and management operations.
 
 ### HeardRepeatsService (public, actor)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Services/HeardRepeatsService.swift`
+**File:** `MC1Services/Sources/MC1Services/Services/HeardRepeatsService.swift`
 
 Tracks message repeat counts for channel message propagation analysis.
 
@@ -684,7 +684,7 @@ Tracks message repeat counts for channel message propagation analysis.
 - Stored with Message model
 - Used for displaying "Heard by X" in channel messages
 
-Note: `ElevationService` and `LocationService` are app-layer utilities in PocketMesh (not part of the PocketMeshServices package). See `docs/api/PocketMesh.md` for app-layer references.
+Note: `ElevationService` and `LocationService` are app-layer utilities in MeshCore One (not part of the MC1Services package). See `docs/api/MeshCore One.md` for app-layer references.
 
 ---
 
@@ -692,7 +692,7 @@ Note: `ElevationService` and `LocationService` are app-layer utilities in Pocket
 
 ### RxLogEntryDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/RxLogEntry.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/RxLogEntry.swift`
 
 A sendable snapshot of RF packet log entry.
 
@@ -712,7 +712,7 @@ A sendable snapshot of RF packet log entry.
 
 ### DebugLogEntryDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/DebugLogEntry.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/DebugLogEntry.swift`
 
 A sendable snapshot of debug log entry.
 
@@ -729,7 +729,7 @@ A sendable snapshot of debug log entry.
 
 ### DiscoveredNodeDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/DiscoveredNode.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/DiscoveredNode.swift`
 
 A sendable snapshot of a discovered node (advertisement cache for Discovery).
 
@@ -751,7 +751,7 @@ A sendable snapshot of a discovered node (advertisement cache for Discovery).
 
 ### ReactionDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/Reaction.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/Reaction.swift`
 
 A sendable snapshot of a reaction on a message.
 
@@ -772,7 +772,7 @@ A sendable snapshot of a reaction on a message.
 
 ### CommandAuditEntryDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/CommandAuditEntry.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/CommandAuditEntry.swift`
 
 A sendable snapshot of a CLI command audit entry.
 
@@ -790,7 +790,7 @@ A sendable snapshot of a CLI command audit entry.
 
 ### ElevationSample (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ElevationSample.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/ElevationSample.swift`
 
 Represents a terrain elevation data point.
 
@@ -804,7 +804,7 @@ Represents a terrain elevation data point.
 
 ### OCVPresetDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/OCVPreset.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/OCVPreset.swift`
 
 Represents an Open Circuit Voltage (OCV) battery discharge curve preset.
 
@@ -819,7 +819,7 @@ Represents an Open Circuit Voltage (OCV) battery discharge curve preset.
 
 ### NotificationPreferencesDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/NotificationPreferences.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/NotificationPreferences.swift`
 
 User notification preferences.
 
@@ -835,7 +835,7 @@ User notification preferences.
 
 ### TrustedContactsDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/TrustedContacts.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/TrustedContacts.swift`
 
 List of trusted contacts for enhanced security features.
 
@@ -849,7 +849,7 @@ List of trusted contacts for enhanced security features.
 
 ### LinkPreviewPreferencesDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/LinkPreviewPreferences.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/LinkPreviewPreferences.swift`
 
 User preferences for link preview behavior.
 
@@ -864,7 +864,7 @@ User preferences for link preview behavior.
 
 ### ChatFilterDTO (public, struct)
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Models/ChatFilter.swift`
+**File:** `MC1Services/Sources/MC1Services/Models/ChatFilter.swift`
 
 User preferences for filtering chat/conversation lists.
 

@@ -1,10 +1,10 @@
 # Diagnostics Guide
 
-This guide explains PocketMesh's network diagnostic tools for optimizing mesh network performance and troubleshooting connectivity issues.
+This guide explains MeshCore One's network diagnostic tools for optimizing mesh network performance and troubleshooting connectivity issues.
 
 ## Overview
 
-PocketMesh includes three powerful diagnostic tools:
+MeshCore One includes three powerful diagnostic tools:
 
 1. **Line of Sight (LoS)** - Analyze radio propagation and terrain clearance between two points
 2. **Trace Path** - Discover and save optimal routing paths through your mesh network
@@ -387,7 +387,7 @@ Save logs for offline analysis:
 
 ## Debug Logging
 
-PocketMesh includes persistent debug logging for troubleshooting.
+MeshCore One includes persistent debug logging for troubleshooting.
 
 ### Exporting Logs
 

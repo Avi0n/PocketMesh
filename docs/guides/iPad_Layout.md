@@ -1,10 +1,10 @@
 # iPad Layout Guide
 
-This guide describes how PocketMesh adapts its UI for iPad.
+This guide describes how MeshCore One adapts its UI for iPad.
 
 ## Overview
 
-PocketMesh uses a `TabView` (see `PocketMesh/ContentView.swift`) with five tabs:
+MeshCore One uses a `TabView` (see `MC1/ContentView.swift`) with five tabs:
 
 - Chats (0)
 - Nodes (1)
@@ -28,22 +28,22 @@ In regular size class, split views follow a consistent pattern:
 
 Concrete implementations in this repo:
 
-- Chats: `PocketMesh/Views/Chats/ChatsView.swift`
-- Nodes: `PocketMesh/Views/Contacts/ContactsListView.swift`
-- Tools: `PocketMesh/Views/Tools/ToolsView.swift`
-- Settings: `PocketMesh/Views/Settings/SettingsView.swift`
+- Chats: `MC1/Views/Chats/ChatsView.swift`
+- Nodes: `MC1/Views/Contacts/ContactsListView.swift`
+- Tools: `MC1/Views/Tools/ToolsView.swift`
+- Settings: `MC1/Views/Settings/SettingsView.swift`
 
 The Map tab uses a single `NavigationStack` for all size classes:
 
-- Map: `PocketMesh/Views/Map/MapView.swift`
+- Map: `MC1/Views/Map/MapView.swift`
 
 ## Testing
 
 Use an iPad simulator destination when running from the command line:
 
 ```bash
-xcodebuild test -project PocketMesh.xcodeproj \
-  -scheme PocketMesh \
+xcodebuild test -project MC1.xcodeproj \
+  -scheme MeshCore One \
   -destination "platform=iOS Simulator,name=iPad Pro (13-inch)"
 ```
 

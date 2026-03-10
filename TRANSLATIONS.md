@@ -1,6 +1,6 @@
 # Translations
 
-PocketMesh supports multiple languages. You can help improve translations entirely through GitHub's website — no coding tools or experience required.
+MeshCore One supports multiple languages. You can help improve translations entirely through GitHub's website — no coding tools or experience required.
 
 ## Supported Languages
 
@@ -37,7 +37,7 @@ Translation files use a simple format:
 
 You can fix a translation directly on GitHub — no tools needed.
 
-1. Go to the [Localization folder](https://github.com/Avi0n/PocketMesh/tree/dev/PocketMesh/Resources/Localization) and open your language's folder (e.g., `de.lproj` for German).
+1. Go to the [Localization folder](https://github.com/Avi0n/MeshCoreOne/tree/dev/MC1/Resources/Localization) and open your language's folder (e.g., `de.lproj` for German).
 2. Click the `.strings` file you want to edit (e.g., `Settings.strings`).
 3. Click the **pencil icon** (Edit this file) near the top-right of the file.
 4. GitHub will ask you to **fork the repository** — click **"Fork this repository"**. This creates your own copy so you can make changes.
@@ -60,9 +60,9 @@ You can fix a translation directly on GitHub — no tools needed.
 
 ## How to Add Missing Translations
 
-If you see English text while using PocketMesh in another language, a translation is missing. Here's how to add it:
+If you see English text while using MeshCore One in another language, a translation is missing. Here's how to add it:
 
-1. First, find the English text. Go to `PocketMesh/Resources/Localization/en.lproj/` and search through the `.strings` files until you find the line with that English text.
+1. First, find the English text. Go to `MC1/Resources/Localization/en.lproj/` and search through the `.strings` files until you find the line with that English text.
 2. Note the **key** (the left side of the `=` sign) and which **file** it's in.
 3. Go to the same file in your language's folder (e.g., `de.lproj/`).
 4. Click the **pencil icon** to edit, then click **"Fork this repository"** when prompted.
@@ -76,7 +76,7 @@ If you see English text while using PocketMesh in another language, a translatio
 
 ## How to Request a New Language
 
-Open an [issue](https://github.com/Avi0n/PocketMesh/issues) and include:
+Open an [issue](https://github.com/Avi0n/MeshCoreOne/issues) and include:
 
 - The language name and code (e.g., "Japanese — ja")
 - Whether you'd be willing to help review translations
@@ -85,7 +85,7 @@ We can generate AI translations for new languages, but native speaker review mak
 
 ## File Structure
 
-Translation files are organized by feature under `PocketMesh/Resources/Localization/`:
+Translation files are organized by feature under `MC1/Resources/Localization/`:
 
 ```
 Localization/
@@ -201,7 +201,7 @@ Example for Russian:
 
 1. Build the app
 2. Change the simulator/device language in Settings
-3. Launch PocketMesh and verify strings appear correctly
+3. Launch MeshCore One and verify strings appear correctly
 
 For German translations, test at the largest Dynamic Type size since German words are often longer than English.
 

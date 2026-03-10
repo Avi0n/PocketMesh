@@ -1,18 +1,18 @@
-# PocketMesh App API Reference
+# MeshCore One App API Reference
 
-The `PocketMesh` app layer manages the user interface, application lifecycle, and coordinates services.
+The `MeshCore One` app layer manages the user interface, application lifecycle, and coordinates services.
 
 ## Target Information
 
-- **Location:** `PocketMesh/`
+- **Location:** `MC1/`
 - **Type:** iOS Application
-- **Dependencies:** PocketMeshServices, MeshCore
+- **Dependencies:** MC1Services, MeshCore
 
 ---
 
 ## AppState (public, @MainActor, @Observable class)
 
-**File:** `PocketMesh/AppState.swift`
+**File:** `MC1/AppState.swift`
 
 The central state management object for the application.
 
@@ -81,7 +81,7 @@ The central state management object for the application.
 
 ## MessageEventBroadcaster (public, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Services/MessageEventBroadcaster.swift`
+**File:** `MC1/Services/MessageEventBroadcaster.swift`
 
 Bridges service layer callbacks to SwiftUI's `@MainActor` context for real-time UI updates.
 
@@ -137,7 +137,7 @@ public enum MessageEvent: Sendable, Equatable {
 
 ### ChatViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/Chats/ChatViewModel.swift`
+**File:** `MC1/Views/Chats/ChatViewModel.swift`
 
 Manages state for the chat conversation view.
 
@@ -165,7 +165,7 @@ Manages state for the chat conversation view.
 
 ### ContactsViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/Contacts/ContactsViewModel.swift`
+**File:** `MC1/Views/Contacts/ContactsViewModel.swift`
 
 Manages state for the contacts list view.
 
@@ -188,7 +188,7 @@ Manages state for the contacts list view.
 
 ### MapViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/Map/MapViewModel.swift`
+**File:** `MC1/Views/Map/MapViewModel.swift`
 
 Manages state for the map view showing contact locations.
 
@@ -213,7 +213,7 @@ Manages state for the map view showing contact locations.
 
 ### LineOfSightViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/LineOfSight/LineOfSightViewModel.swift`
+**File:** `MC1/Views/LineOfSight/LineOfSightViewModel.swift`
 
 Manages state and calculations for RF line of sight analysis.
 
@@ -241,7 +241,7 @@ Manages state and calculations for RF line of sight analysis.
 
 ### TracePathViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/Contacts/TracePathViewModel.swift`
+**File:** `MC1/Views/Contacts/TracePathViewModel.swift`
 
 Manages manual path construction, path tracing, and saved path management for network routing.
 
@@ -270,7 +270,7 @@ Manages manual path construction, path tracing, and saved path management for ne
 
 ### RxLogViewModel (internal, @MainActor, @Observable class)
 
-**File:** `PocketMesh/Views/Tools/RxLogViewModel.swift`
+**File:** `MC1/Views/Tools/RxLogViewModel.swift`
 
 Manages RF packet capture and log display for network diagnostics.
 
@@ -301,7 +301,7 @@ Manages RF packet capture and log display for network diagnostics.
 
 ### Conversation (enum)
 
-**File:** `PocketMesh/Models/Conversation.swift`
+**File:** `MC1/Models/Conversation.swift`
 
 Represents different types of conversations in the app. Provides a unified interface for displaying direct chats, channels, and room sessions in the conversation list.
 
@@ -346,7 +346,7 @@ enum Conversation: Identifiable, Hashable {
 
 ### OnboardingStep (enum)
 
-**File:** `PocketMesh/AppState.swift`
+**File:** `MC1/AppState.swift`
 
 Represents the steps in the onboarding flow.
 
@@ -377,7 +377,7 @@ enum OnboardingStep: Int, CaseIterable {
 
 ### PathHop (struct)
 
-**File:** `PocketMesh/Views/Contacts/PathManagementViewModel.swift`
+**File:** `MC1/Views/Contacts/PathManagementViewModel.swift`
 
 Represents a single hop in a routing path with stable identity for SwiftUI.
 
@@ -400,7 +400,7 @@ struct PathHop: Identifiable, Equatable {
 
 ### PathDiscoveryResult (enum)
 
-**File:** `PocketMesh/Views/Contacts/PathManagementViewModel.swift`
+**File:** `MC1/Views/Contacts/PathManagementViewModel.swift`
 
 Result of a path discovery operation.
 
@@ -430,13 +430,13 @@ enum PathDiscoveryResult: Equatable {
 
 ## Entry Points
 
-### PocketMeshApp (@main)
+### MeshCore OneApp (@main)
 
 The main entry point. Initializes `AppState` with a SwiftData `ModelContainer` and injects it into the environment.
 
 ### ContentView
 
-**File:** `PocketMesh/ContentView.swift`
+**File:** `MC1/ContentView.swift`
 
 Root view that switches between `OnboardingView()` and `MainTabView()` based on `appState.hasCompletedOnboarding`. Manages the overall app navigation structure and coordinates with `AppState` for navigation events.
 
