@@ -1,5 +1,5 @@
 // PocketMeshServices - iOS-specific services for PocketMesh
-// Re-exports MeshCore so consumers only need to import PocketMeshServices
+// Re-exports MeshCore so consumers only need to import MC1Services
 
 @_exported import MeshCore
 
@@ -15,7 +15,7 @@ extension Locale {
 /// - iOS BLE transport with state restoration and background mode
 /// - Notification, Keychain, and AccessorySetupKit services
 /// - High-level service layer (ContactService, MessageService, ChannelService)
-public enum PocketMeshServicesVersion {
+public enum MC1ServicesVersion {
     public static let version = "0.1.0"
 }
 

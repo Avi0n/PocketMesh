@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import CoreLocation
 
 struct ContactsCompactList: View {

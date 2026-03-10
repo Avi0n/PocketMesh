@@ -1,7 +1,7 @@
 import SwiftUI
 import VisionKit
 import AudioToolbox
-import PocketMeshServices
+import MC1Services
 
 /// View for scanning a channel QR code to join
 struct ScanChannelQRView: View {

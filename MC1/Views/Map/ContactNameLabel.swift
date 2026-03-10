@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Small label displaying contact name above map pins
 struct ContactNameLabel: View {

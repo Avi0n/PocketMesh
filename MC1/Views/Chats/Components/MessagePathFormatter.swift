@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 /// Formats message routing path for display in message bubbles
 enum MessagePathFormatter {

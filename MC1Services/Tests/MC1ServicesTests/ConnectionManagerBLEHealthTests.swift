@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Tests for ConnectionManager.checkBLEConnectionHealth() - stale connection state detection.
 /// Verifies the fix from commit b2ab8f17 that detects when connectionState is stale after

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import CoreImage.CIFilterBuiltins
 
 /// View for creating a private channel with auto-generated secret and QR code

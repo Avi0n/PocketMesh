@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("NodeSnapshotService Tests")
 struct NodeSnapshotServiceTests {

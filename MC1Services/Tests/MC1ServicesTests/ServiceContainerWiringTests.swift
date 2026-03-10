@@ -1,6 +1,6 @@
 import Testing
 import MeshCore
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("ServiceContainer Wiring Tests")
 struct ServiceContainerWiringTests {

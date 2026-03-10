@@ -1,6 +1,6 @@
 import SwiftUI
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 
 struct ContactRowView: View {
     let contact: ContactDTO

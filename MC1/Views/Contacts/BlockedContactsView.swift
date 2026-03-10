@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// View showing only blocked contacts for management
 struct BlockedContactsView: View {

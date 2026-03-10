@@ -1,7 +1,7 @@
 // NotificationServiceTests.swift
 import Foundation
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("NotificationService Tests")
 struct NotificationServiceTests {

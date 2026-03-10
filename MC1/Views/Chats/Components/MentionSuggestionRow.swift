@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// A single row in the mention suggestions popup
 struct MentionSuggestionRow: View {

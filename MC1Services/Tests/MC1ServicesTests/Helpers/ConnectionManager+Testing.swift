@@ -1,6 +1,6 @@
 import Foundation
 import SwiftData
-@testable import PocketMeshServices
+@testable import MC1Services
 
 extension ConnectionManager {
     static func createForTesting(

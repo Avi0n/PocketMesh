@@ -2,7 +2,7 @@ import OSLog
 import SwiftUI
 import TipKit
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStatus")
 

@@ -1,6 +1,6 @@
 @preconcurrency import CoreBluetooth
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Mock BLE state machine for testing ConnectionManager.
 /// Uses actor for thread-safe mutable state access.

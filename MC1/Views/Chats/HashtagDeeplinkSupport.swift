@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 struct HashtagJoinRequest: Identifiable, Hashable {
     let id: String

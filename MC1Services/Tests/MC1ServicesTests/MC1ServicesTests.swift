@@ -1,12 +1,12 @@
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
-@Suite("PocketMeshServices Basic Tests")
-struct PocketMeshServicesTests {
+@Suite("MC1Services Basic Tests")
+struct MC1ServicesTests {
 
     @Test("Version is accessible")
     func versionAccessible() {
-        #expect(PocketMeshServicesVersion.version == "0.1.0")
+        #expect(MC1ServicesVersion.version == "0.1.0")
     }
 
     @Test("MeshCore types are re-exported")

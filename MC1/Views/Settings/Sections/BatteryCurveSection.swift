@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Battery curve configuration section
 /// Pure UI component - caller provides data and save callback

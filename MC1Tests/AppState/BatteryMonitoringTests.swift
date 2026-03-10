@@ -1,8 +1,8 @@
 import Testing
 import Foundation
 import MeshCore
-import PocketMeshServices
-@testable import PocketMesh
+import MC1Services
+@testable import MC1
 
 @Suite("Battery Monitoring Tests")
 @MainActor

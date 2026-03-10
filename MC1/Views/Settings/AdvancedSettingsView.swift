@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Advanced settings sheet for power users
 struct AdvancedSettingsView: View {

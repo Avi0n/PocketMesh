@@ -1,8 +1,8 @@
 import Testing
 import Foundation
 import MeshCore
-@testable import PocketMesh
-@testable import PocketMeshServices
+@testable import MC1
+@testable import MC1Services
 
 @Suite("LinkPreviewCache Tests")
 struct LinkPreviewCacheTests {

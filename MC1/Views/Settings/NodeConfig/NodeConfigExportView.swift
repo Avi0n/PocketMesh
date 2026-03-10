@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 struct NodeConfigExportView: View {
     @Environment(\.appState) private var appState

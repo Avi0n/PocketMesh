@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-@testable import PocketMesh
-@testable import PocketMeshServices
+@testable import MC1
+@testable import MC1Services
 
 @Suite("Hashtag Channel Navigation Tests")
 struct HashtagChannelNavigationTests {

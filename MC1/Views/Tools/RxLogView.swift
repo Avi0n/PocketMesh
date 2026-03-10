@@ -1,7 +1,7 @@
 // PocketMesh/Views/Tools/RxLogView.swift
 import SwiftUI
 import UIKit
-import PocketMeshServices
+import MC1Services
 import MeshCore
 
 struct RxLogView: View {

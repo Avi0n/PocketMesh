@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 /// State of link preview loading for a message
 enum PreviewLoadState: Sendable, Hashable {

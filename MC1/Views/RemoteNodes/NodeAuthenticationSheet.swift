@@ -1,6 +1,6 @@
 import os
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeAuthenticationSheet")
 

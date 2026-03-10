@@ -1,6 +1,6 @@
 import Foundation
 import MeshCore
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Mock implementation of PersistenceStoreProtocol for testing.
 ///

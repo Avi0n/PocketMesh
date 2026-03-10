@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 @testable import MeshCore
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("SettingsService location and device GPS")
 struct SettingsServiceLocationTests {

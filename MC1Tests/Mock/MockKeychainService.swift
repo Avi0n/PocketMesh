@@ -1,5 +1,5 @@
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Mock keychain service for testing remote node authentication
 public actor MockKeychainService: KeychainServiceProtocol {

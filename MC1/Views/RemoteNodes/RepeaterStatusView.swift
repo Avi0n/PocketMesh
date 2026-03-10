@@ -1,4 +1,4 @@
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Display view for repeater stats, telemetry, and neighbors

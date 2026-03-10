@@ -1,6 +1,6 @@
 import CoreLocation
 import MapKit
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 private let analysisSheetDetentCollapsed: PresentationDetent = .fraction(0.25)

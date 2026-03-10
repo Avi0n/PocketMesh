@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import CoreImage.CIFilterBuiltins
 
 /// Sheet displaying channel info with sharing and deletion options

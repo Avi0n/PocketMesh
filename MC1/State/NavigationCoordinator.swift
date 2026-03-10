@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Manages tab selection, pending navigation targets, and cross-tab navigation coordination.
 @Observable

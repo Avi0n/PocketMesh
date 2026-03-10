@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Picker for selecting trusted contacts for telemetry
 struct TrustedContactsPickerView: View {

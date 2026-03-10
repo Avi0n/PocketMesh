@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 extension View {
     /// Disables the view when radio connection is not ready, applying visual

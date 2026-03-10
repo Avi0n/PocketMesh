@@ -1,6 +1,6 @@
 import MapKit
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// UIViewRepresentable for trace path map with custom overlays and interactions
 struct TracePathMKMapView: UIViewRepresentable {

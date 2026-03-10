@@ -1,6 +1,6 @@
 // PocketMesh/Views/Chats/Reactions/ReactionDetailsSheet.swift
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import OSLog
 
 /// Element X-style sheet showing who reacted with each emoji.

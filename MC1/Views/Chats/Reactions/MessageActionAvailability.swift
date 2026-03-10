@@ -1,4 +1,4 @@
-import PocketMeshServices
+import MC1Services
 
 /// Determines which message actions are available based on message state.
 /// Extracted for testability and reuse across UI components.

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// A Text view that formats message content with tappable links and styled mentions
 struct MessageText: View {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import CoreImage.CIFilterBuiltins
 
 /// Sheet for sharing a contact via QR code

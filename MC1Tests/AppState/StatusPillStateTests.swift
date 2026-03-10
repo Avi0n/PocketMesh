@@ -1,6 +1,6 @@
 import Testing
-import PocketMeshServices
-@testable import PocketMesh
+import MC1Services
+@testable import MC1
 
 @Suite("StatusPillState Tests")
 struct StatusPillStateTests {

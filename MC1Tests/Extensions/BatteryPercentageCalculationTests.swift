@@ -1,6 +1,6 @@
 import Testing
 import MeshCore
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("Battery Percentage Calculation Tests")
 struct BatteryPercentageCalculationTests {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import TipKit
 
 /// Main settings screen — navigation-link rows for device settings, always-visible app settings

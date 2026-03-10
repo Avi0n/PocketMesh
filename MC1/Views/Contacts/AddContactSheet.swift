@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import os
 
 /// Sheet for manually adding a contact or scanning a QR code

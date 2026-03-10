@@ -1,8 +1,8 @@
 import Testing
 import Foundation
 import SwiftData
-@testable import PocketMesh
-@testable import PocketMeshServices
+@testable import MC1
+@testable import MC1Services
 
 @Suite("Disconnected Pill Tests")
 @MainActor

@@ -1,5 +1,5 @@
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("BLEPhase Tests")
 struct BLEPhaseTests {

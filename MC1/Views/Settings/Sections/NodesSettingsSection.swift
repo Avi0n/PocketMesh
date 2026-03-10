@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Auto-add mode and type settings for node discovery
 struct NodesSettingsSection: View {

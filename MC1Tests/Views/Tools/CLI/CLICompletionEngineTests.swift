@@ -1,5 +1,5 @@
 import Testing
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("CLICompletionEngine Tests")
 @MainActor

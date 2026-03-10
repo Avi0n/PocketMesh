@@ -1,5 +1,5 @@
 import Charts
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Reusable mini-chart for a single time-series metric.

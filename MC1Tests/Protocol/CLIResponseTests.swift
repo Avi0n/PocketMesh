@@ -1,5 +1,5 @@
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 struct CLIResponseTests {
 

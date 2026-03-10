@@ -1,6 +1,6 @@
 import SwiftUI
 import MeshCore
-import PocketMeshServices
+import MC1Services
 
 struct NoiseFloorReading: Identifiable {
     let id: UUID

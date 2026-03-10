@@ -1,6 +1,6 @@
 // PocketMesh/Views/Chats/Components/RepeatDetailsContent.swift
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Inline content for repeat details, extracted from RepeatDetailsSheet.

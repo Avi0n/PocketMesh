@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 struct ConversationQuickActionsSection: View {
     @Binding var notificationLevel: NotificationLevel

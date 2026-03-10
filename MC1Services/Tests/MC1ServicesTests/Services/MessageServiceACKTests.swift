@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import MeshCoreTestSupport
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("MessageService ACK Tests")
 struct MessageServiceACKTests {

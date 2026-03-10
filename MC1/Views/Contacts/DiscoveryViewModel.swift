@@ -1,6 +1,6 @@
 import CoreLocation
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Segment for the discovery picker
 enum DiscoverSegment: String, CaseIterable {

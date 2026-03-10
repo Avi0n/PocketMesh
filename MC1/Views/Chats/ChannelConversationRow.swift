@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 struct ChannelConversationRow: View {
     private typealias Strings = L10n.Chats.Chats.Row

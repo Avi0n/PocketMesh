@@ -1,5 +1,5 @@
 import Charts
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Drill-down view showing historical charts for telemetry metrics grouped by channel and type.

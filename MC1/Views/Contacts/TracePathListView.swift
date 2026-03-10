@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import PocketMeshServices
+import MC1Services
 
 /// List-based view for building trace paths
 struct TracePathListView: View {

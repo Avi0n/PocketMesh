@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Maximum number of retries before showing final error
 private let maxRetries = 3

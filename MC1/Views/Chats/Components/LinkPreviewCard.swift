@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Displays a link preview with image, title, and domain
 struct LinkPreviewCard: View {

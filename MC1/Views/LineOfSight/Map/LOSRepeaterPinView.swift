@@ -1,6 +1,6 @@
 import MapKit
 import UIKit
-import PocketMeshServices
+import MC1Services
 
 /// Custom pin view for repeaters in line of sight map with selection state and clustering
 final class LOSRepeaterPinView: MKAnnotationView {

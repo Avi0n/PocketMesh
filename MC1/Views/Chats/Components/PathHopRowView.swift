@@ -1,6 +1,6 @@
 // PocketMesh/Views/Chats/Components/PathHopRowView.swift
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Type of hop in the message path.
 enum PathHopType {

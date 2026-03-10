@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// SwiftUI content view displayed inside the native MKAnnotationView callout
 struct ContactCalloutContent: View {

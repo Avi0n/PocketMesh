@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Telemetry sharing configuration
 struct TelemetrySettingsSection: View {

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 @testable import MeshCore
 
 @Suite("NodeConfigService Tests")

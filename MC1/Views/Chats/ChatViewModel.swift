@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import PocketMeshServices
+import MC1Services
 import OSLog
 
 /// Decoded preview hero image and icon, stored together to batch Observable notifications

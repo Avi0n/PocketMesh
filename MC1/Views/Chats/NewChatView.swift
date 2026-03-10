@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 struct NewChatView: View {
     @Environment(\.dismiss) private var dismiss

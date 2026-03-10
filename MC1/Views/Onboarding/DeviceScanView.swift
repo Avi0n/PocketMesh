@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import os
 
 /// Third screen of onboarding - pairs MeshCore device via AccessorySetupKit

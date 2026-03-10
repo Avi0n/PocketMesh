@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Sheet presenting channel creation and joining options
 struct ChannelOptionsSheet: View {

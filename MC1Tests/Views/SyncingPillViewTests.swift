@@ -1,6 +1,6 @@
 import Testing
 import SwiftUI
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("SyncingPillView Tests")
 struct SyncingPillViewTests {

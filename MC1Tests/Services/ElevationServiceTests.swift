@@ -1,7 +1,7 @@
 import CoreLocation
 import Testing
 
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("ElevationService Tests")
 struct ElevationServiceTests {

@@ -1,6 +1,6 @@
 import Network
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 // MARK: - Local Network Permission Trigger
 

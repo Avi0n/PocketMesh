@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 enum ChatRoute: Hashable {
     case direct(ContactDTO)

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Picker for configuring the path hash size on firmware v10+ devices.
 struct PathHashModeSection: View {

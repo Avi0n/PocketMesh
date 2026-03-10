@@ -3,7 +3,7 @@ import CoreLocation
 import SwiftUI
 import UIKit
 import MeshCore
-import PocketMeshServices
+import MC1Services
 import os.log
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePath")

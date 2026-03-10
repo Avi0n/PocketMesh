@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("RelativeTimestampText Tests")
 struct RelativeTimestampTextTests {

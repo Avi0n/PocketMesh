@@ -1,6 +1,6 @@
 import SwiftUI
 import Charts
-import PocketMeshServices
+import MC1Services
 
 struct SavedPathDetailView: View {
     @Environment(\.appState) private var appState

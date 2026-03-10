@@ -1,5 +1,5 @@
 import MapKit
-import PocketMeshServices
+import MC1Services
 
 /// MKAnnotation wrapper for ContactDTO to display on MKMapView
 final class ContactAnnotation: NSObject, MKAnnotation {

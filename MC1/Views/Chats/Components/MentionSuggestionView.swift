@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Floating popup displaying mention suggestions
 struct MentionSuggestionView: View {

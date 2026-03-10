@@ -1,5 +1,5 @@
 import Charts
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Drill-down view showing historical charts for status metrics (battery, SNR, RSSI, noise floor).

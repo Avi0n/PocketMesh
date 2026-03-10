@@ -1,6 +1,6 @@
 import MapKit
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import os.log
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePathMapView")

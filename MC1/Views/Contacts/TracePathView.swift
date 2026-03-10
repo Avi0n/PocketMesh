@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// View mode for trace path building
 enum TracePathViewMode: String, CaseIterable {

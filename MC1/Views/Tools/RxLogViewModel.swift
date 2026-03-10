@@ -1,6 +1,6 @@
 // PocketMesh/Views/Tools/RxLogViewModel.swift
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 @MainActor
 @Observable

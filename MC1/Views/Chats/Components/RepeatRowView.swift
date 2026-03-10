@@ -1,6 +1,6 @@
 // PocketMesh/Views/Chats/Components/RepeatRowView.swift
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Row displaying a single heard repeat with repeater info and signal quality.

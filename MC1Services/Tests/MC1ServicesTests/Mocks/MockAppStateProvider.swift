@@ -1,5 +1,5 @@
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Mock implementation of AppStateProvider for testing.
 /// Uses actor for thread-safe mutable state access.

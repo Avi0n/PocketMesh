@@ -1,7 +1,7 @@
 import Foundation
 import MeshCore
 import OSLog
-import PocketMeshServices
+import MC1Services
 import UIKit
 
 /// Service for exporting debug logs and app state for troubleshooting

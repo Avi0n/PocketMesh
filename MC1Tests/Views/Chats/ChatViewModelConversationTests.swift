@@ -1,7 +1,7 @@
 import Foundation
 import Testing
-@testable import PocketMesh
-@testable import PocketMeshServices
+@testable import MC1
+@testable import MC1Services
 
 @MainActor
 struct ChatViewModelConversationTests {

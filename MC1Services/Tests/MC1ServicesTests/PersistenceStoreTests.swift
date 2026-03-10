@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 import Testing
 import MeshCore
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("PersistenceStore Tests")
 struct PersistenceStoreTests {

@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import CryptoKit
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("DeviceIdentity Tests")
 struct DeviceIdentityTests {

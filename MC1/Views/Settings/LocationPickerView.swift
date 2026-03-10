@@ -1,7 +1,7 @@
 import SwiftUI
 import MapKit
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 
 /// Map-based location picker for setting node position
 struct LocationPickerView: View {

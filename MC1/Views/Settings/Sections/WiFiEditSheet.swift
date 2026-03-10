@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Sheet for editing WiFi connection parameters.
 /// Pre-populates with current connection details and allows updating them.

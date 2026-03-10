@@ -1,6 +1,6 @@
 import CoreLocation
 import OSLog
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "BlockSenderSheet")

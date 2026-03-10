@@ -1,6 +1,6 @@
 import Foundation
 import MeshCoreTestSupport
-@testable import PocketMeshServices
+@testable import MC1Services
 
 extension MessageService {
     static func createForTesting() async throws -> (MessageService, PersistenceStore) {

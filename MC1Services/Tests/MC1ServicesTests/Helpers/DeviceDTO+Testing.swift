@@ -1,5 +1,5 @@
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 extension DeviceDTO {
 

@@ -1,6 +1,6 @@
 import Foundation
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Protocol for link preview caching, enabling dependency injection and testing
 protocol LinkPreviewCaching: Sendable {

@@ -1,7 +1,7 @@
 import Testing
 import SwiftUI
 import UIKit
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("ChatTableView Snapshot Regression Tests")
 @MainActor

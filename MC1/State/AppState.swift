@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
-import PocketMeshServices
+import MC1Services
 import MeshCore
 import OSLog
 import TipKit
@@ -30,7 +30,7 @@ public final class AppState {
     private let bootstrapDebugLogBuffer: DebugLogBuffer
 
     // Convenience accessors
-    public var connectionState: PocketMeshServices.ConnectionState { connectionManager.connectionState }
+    public var connectionState: MC1Services.ConnectionState { connectionManager.connectionState }
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
 

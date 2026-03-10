@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// View for re-adding the public channel on slot 0
 struct JoinPublicChannelView: View {

@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Displays a radio parameter summary line, e.g. "915.000 MHz • BW125 kHz • SF12 • CR8".
 /// Uses POSIX locale to always render a period decimal separator regardless of user locale.

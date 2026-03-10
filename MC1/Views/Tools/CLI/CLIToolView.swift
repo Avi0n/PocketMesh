@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 import UIKit
 
 /// Terminal font optimized for mobile screens

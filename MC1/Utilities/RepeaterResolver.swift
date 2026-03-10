@@ -1,6 +1,6 @@
 import CoreLocation
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 /// Resolves repeater collisions by proximity and recency.
 enum RepeaterResolver {

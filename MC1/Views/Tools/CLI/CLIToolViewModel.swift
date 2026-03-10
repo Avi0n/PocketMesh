@@ -1,6 +1,6 @@
 import Foundation
 import OSLog
-import PocketMeshServices
+import MC1Services
 import UIKit
 
 @MainActor

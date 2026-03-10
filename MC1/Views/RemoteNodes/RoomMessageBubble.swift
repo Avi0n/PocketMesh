@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Message bubble for room server messages
 struct RoomMessageBubble: View {

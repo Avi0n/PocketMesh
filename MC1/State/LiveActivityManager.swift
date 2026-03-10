@@ -2,7 +2,7 @@
 import Foundation
 import MeshCore
 import OSLog
-import PocketMeshServices
+import MC1Services
 
 @Observable
 @MainActor

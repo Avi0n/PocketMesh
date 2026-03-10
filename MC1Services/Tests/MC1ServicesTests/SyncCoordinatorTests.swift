@@ -3,7 +3,7 @@ import Testing
 import Foundation
 import MeshCore
 import MeshCoreTestSupport
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("SyncCoordinator Tests")
 struct SyncCoordinatorTests {

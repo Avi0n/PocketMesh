@@ -1,6 +1,6 @@
 import SwiftUI
 import VisionKit
-import PocketMeshServices
+import MC1Services
 import os
 
 /// View for scanning a contact QR code to import

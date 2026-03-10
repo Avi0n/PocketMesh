@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import PocketMeshServices
+import MC1Services
 
 /// Configuration for message bubble appearance and behavior
 struct MessageBubbleConfiguration: Sendable {

@@ -1,6 +1,6 @@
 import SwiftUI
 import MapKit
-import PocketMeshServices
+import MC1Services
 
 /// ViewModel for map contact locations
 @Observable

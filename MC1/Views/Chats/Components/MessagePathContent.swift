@@ -1,6 +1,6 @@
 // PocketMesh/Views/Chats/Components/MessagePathContent.swift
 import CoreLocation
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Inline content for message path visualization, extracted from MessagePathSheet.

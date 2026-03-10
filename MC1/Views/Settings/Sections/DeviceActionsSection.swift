@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Device maintenance actions (reboot)
 struct DeviceActionsSection: View {

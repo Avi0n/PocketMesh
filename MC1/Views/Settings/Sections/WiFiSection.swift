@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// WiFi connection settings - shown when connected via WiFi instead of Bluetooth.
 struct WiFiSection: View {

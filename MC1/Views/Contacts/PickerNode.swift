@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 /// Unified node type for the repeater picker list
 enum PickerNode: Identifiable {

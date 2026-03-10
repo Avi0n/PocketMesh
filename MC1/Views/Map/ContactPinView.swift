@@ -1,6 +1,6 @@
 import MapKit
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Custom annotation view displaying a colored circle with icon and pointer triangle
 final class ContactPinView: MKAnnotationView {

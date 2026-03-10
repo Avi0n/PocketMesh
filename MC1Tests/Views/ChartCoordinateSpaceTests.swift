@@ -1,6 +1,6 @@
 import SwiftUI
 import Testing
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("ChartCoordinateSpace Tests")
 struct ChartCoordinateSpaceTests {

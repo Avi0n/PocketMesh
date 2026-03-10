@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Manual radio parameter configuration
 struct AdvancedRadioSection: View {

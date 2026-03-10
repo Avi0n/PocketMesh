@@ -1,7 +1,7 @@
 import Foundation
 import os
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 /// Thread-safe counter for tracking call counts in mock handlers.
 private final class Counter: Sendable {

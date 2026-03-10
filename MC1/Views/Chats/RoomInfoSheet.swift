@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 private typealias Strings = L10n.RemoteNodes.RemoteNodes.Room
 

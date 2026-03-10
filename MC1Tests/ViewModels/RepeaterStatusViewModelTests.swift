@@ -2,8 +2,8 @@ import Foundation
 import MeshCore
 import Testing
 
-@testable import PocketMesh
-@testable import PocketMeshServices
+@testable import MC1
+@testable import MC1Services
 
 @Suite("RepeaterStatusViewModel Enrichment Tests")
 @MainActor

@@ -1,4 +1,4 @@
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Sheet for generating a new Ed25519 identity and importing it to the device

@@ -1,6 +1,6 @@
 import Testing
 
-@testable import PocketMesh
+@testable import MC1
 
 @Suite("LinkPreviewService Tests")
 @MainActor

@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 import TipKit
-import PocketMeshServices
+import MC1Services
 
 @main
-struct PocketMeshApp: App {
+struct MC1App: App {
     @State private var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
 

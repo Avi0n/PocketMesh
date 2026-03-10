@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("Remote Node Model Tests")
 struct RemoteNodeModelTests {

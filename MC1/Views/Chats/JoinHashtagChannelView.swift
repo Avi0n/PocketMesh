@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// View for joining a hashtag channel (public, name-based)
 @MainActor

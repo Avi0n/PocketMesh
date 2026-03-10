@@ -1,5 +1,5 @@
 import Foundation
-import PocketMeshServices
+import MC1Services
 
 /// App-layer implementation of NotificationStringProvider using L10n.
 struct NotificationStringProviderImpl: NotificationStringProvider {

@@ -1,6 +1,6 @@
 import SwiftUI
 import UIKit
-import PocketMeshServices
+import MC1Services
 
 extension ChatViewModel {
 

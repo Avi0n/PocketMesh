@@ -1,4 +1,4 @@
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Settings section for diagnostic tools including log export and clearing

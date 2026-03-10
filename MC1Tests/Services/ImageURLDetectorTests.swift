@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import PocketMesh
+@testable import MC1
 
 struct ImageURLDetectorTests {
 

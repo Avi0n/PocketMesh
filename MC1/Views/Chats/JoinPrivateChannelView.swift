@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// View for joining a private channel by entering name and hex secret key
 struct JoinPrivateChannelView: View {

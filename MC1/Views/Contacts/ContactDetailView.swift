@@ -1,7 +1,7 @@
 import Accessibility
 import MapKit
 import os
-import PocketMeshServices
+import MC1Services
 import SwiftUI
 
 /// Result of a ping operation

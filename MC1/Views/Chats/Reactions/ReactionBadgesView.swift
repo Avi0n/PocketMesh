@@ -1,5 +1,5 @@
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Horizontal row of reaction badges displayed below message bubbles
 struct ReactionBadgesView: View {

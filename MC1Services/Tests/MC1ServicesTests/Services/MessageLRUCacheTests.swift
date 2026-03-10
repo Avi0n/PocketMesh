@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("MessageLRUCache Tests")
 struct MessageLRUCacheTests {

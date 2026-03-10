@@ -1,6 +1,6 @@
 import CoreLocation
 import SwiftUI
-import PocketMeshServices
+import MC1Services
 
 /// Shows contacts discovered via advertisement that haven't been added to the device
 struct DiscoveryView: View {

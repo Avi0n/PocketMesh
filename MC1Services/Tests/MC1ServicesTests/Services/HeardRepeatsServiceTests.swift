@@ -1,7 +1,7 @@
 // PocketMeshServices/Tests/PocketMeshServicesTests/Services/HeardRepeatsServiceTests.swift
 import Testing
 import Foundation
-@testable import PocketMeshServices
+@testable import MC1Services
 
 @Suite("HeardRepeatsService Tests")
 struct HeardRepeatsServiceTests {
