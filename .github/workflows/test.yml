@@ -24,8 +24,8 @@ jobs:
       - name: Test MeshCore
         run: swift test --package-path MeshCore
 
-      - name: Test PocketMeshServices
-        run: swift test --package-path PocketMeshServices
+      - name: Test MC1Services
+        run: swift test --package-path MC1Services
 
   xcode-build:
     name: Xcode Build
@@ -57,7 +57,7 @@ jobs:
       - name: Build
         run: |
           xcodebuild build \
-            -scheme PocketMesh \
+            -scheme MC1 \
             -destination "generic/platform=iOS Simulator" \
             -derivedDataPath .derivedData \
             CODE_SIGN_IDENTITY="-" \
