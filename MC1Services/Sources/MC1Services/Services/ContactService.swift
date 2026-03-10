@@ -65,7 +65,7 @@ public actor ContactService {
 
     private let session: any MeshCoreSessionProtocol
     private let dataStore: any PersistenceStoreProtocol
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "ContactService")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "ContactService")
 
     /// Sync coordinator for UI refresh notifications
     private weak var syncCoordinator: SyncCoordinator?

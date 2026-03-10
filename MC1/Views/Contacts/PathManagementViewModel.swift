@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "PathManagement")
+private let logger = Logger(subsystem: "com.mc1", category: "PathManagement")
 
 /// Represents a single hop in the routing path with stable identity for SwiftUI
 struct PathHop: Identifiable, Equatable {

@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "SavedPaths")
+private let logger = Logger(subsystem: "com.mc1", category: "SavedPaths")
 
 @MainActor @Observable
 final class SavedPathsViewModel {

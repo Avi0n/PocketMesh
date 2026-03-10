@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import OSLog
 
-private let sidebarLogger = Logger(subsystem: "com.pocketmesh", category: "NodesListView")
+private let sidebarLogger = Logger(subsystem: "com.mc1", category: "NodesListView")
 
 struct ContactsSidebarContent: View {
     @Environment(\.appState) private var appState

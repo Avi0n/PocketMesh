@@ -2,7 +2,7 @@ import os
 import SwiftUI
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "DeviceSelectionSheet")
+private let logger = Logger(subsystem: "com.mc1", category: "DeviceSelectionSheet")
 
 /// Represents a device that can be selected for connection
 private enum SelectableDevice: Identifiable, Equatable {

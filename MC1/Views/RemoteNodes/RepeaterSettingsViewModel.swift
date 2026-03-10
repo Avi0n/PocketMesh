@@ -148,7 +148,7 @@ final class RepeaterSettingsViewModel {
     // MARK: - Dependencies
 
     private var repeaterAdminService: RepeaterAdminService?
-    private let logger = Logger(subsystem: "PocketMesh", category: "RepeaterSettings")
+    private let logger = Logger(subsystem: "MC1", category: "RepeaterSettings")
 
     // MARK: - Cleanup
 

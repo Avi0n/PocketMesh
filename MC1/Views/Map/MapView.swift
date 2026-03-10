@@ -3,7 +3,7 @@ import SwiftUI
 import MapKit
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "MapView")
+private let logger = Logger(subsystem: "com.mc1", category: "MapView")
 
 /// Map view displaying contacts with their locations
 struct MapView: View {

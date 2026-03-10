@@ -92,7 +92,7 @@ struct ContactDetailView: View {
     @State private var isPinging = false
     @State private var pingResult: PingResult?
 
-    private let pingLogger = Logger(subsystem: "com.pocketmesh", category: "Ping")
+    private let pingLogger = Logger(subsystem: "com.mc1", category: "Ping")
 
     init(contact: ContactDTO, showFromDirectChat: Bool = false) {
         self.contact = contact

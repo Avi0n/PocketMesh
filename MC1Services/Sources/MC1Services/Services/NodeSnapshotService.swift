@@ -4,7 +4,7 @@ import OSLog
 /// Service for managing node status snapshots with throttled capture.
 public actor NodeSnapshotService {
     private let dataStore: any PersistenceStoreProtocol
-    private let logger = Logger(subsystem: "com.pocketmesh.services", category: "NodeSnapshotService")
+    private let logger = Logger(subsystem: "com.mc1.services", category: "NodeSnapshotService")
 
     /// Minimum interval between snapshots for the same node (15 minutes)
     private static let minimumInterval: TimeInterval = 15 * 60

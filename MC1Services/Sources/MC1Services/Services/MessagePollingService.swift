@@ -30,7 +30,7 @@ public actor MessagePollingService {
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "MessagePolling")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "MessagePolling")
 
     /// Handler for incoming contact messages
     private var contactMessageHandler: (@Sendable (ContactMessage, ContactDTO?) async -> Void)?

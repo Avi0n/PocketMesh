@@ -3,7 +3,7 @@ import SwiftUI
 import MC1Services
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePathMapView")
+private let logger = Logger(subsystem: "com.mc1", category: "TracePathMapView")
 
 /// Map-based view for building and visualizing trace paths
 struct TracePathMapView: View {

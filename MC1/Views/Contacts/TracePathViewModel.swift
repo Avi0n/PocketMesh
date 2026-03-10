@@ -6,7 +6,7 @@ import MeshCore
 import MC1Services
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePath")
+private let logger = Logger(subsystem: "com.mc1", category: "TracePath")
 
 @MainActor @Observable
 final class TracePathViewModel {

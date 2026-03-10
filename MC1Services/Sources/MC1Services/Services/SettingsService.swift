@@ -300,7 +300,7 @@ public enum SettingsEvent: Sendable {
 /// Handles radio configuration, node settings, Bluetooth settings, and device info.
 public actor SettingsService {
     private let session: MeshCoreSession
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "SettingsService")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "SettingsService")
 
     private var eventContinuation: AsyncStream<SettingsEvent>.Continuation?
 

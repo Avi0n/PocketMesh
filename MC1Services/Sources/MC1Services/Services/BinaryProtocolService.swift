@@ -34,7 +34,7 @@ public actor BinaryProtocolService {
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "BinaryProtocol")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "BinaryProtocol")
 
     /// Handler for status responses (from push notifications)
     private var statusResponseHandler: (@Sendable (StatusResponse) async -> Void)?

@@ -3,7 +3,7 @@ import UIKit
 import MC1Services
 import OSLog
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "ChatView")
+private let logger = Logger(subsystem: "com.mc1", category: "ChatView")
 
 /// Individual chat conversation view with iMessage-style UI
 struct ChatView: View {

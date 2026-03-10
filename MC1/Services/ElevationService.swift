@@ -2,7 +2,7 @@ import CoreLocation
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "ElevationService")
+private let logger = Logger(subsystem: "com.mc1", category: "ElevationService")
 
 // MARK: - Errors
 

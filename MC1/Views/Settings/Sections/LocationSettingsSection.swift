@@ -2,7 +2,7 @@ import OSLog
 import SwiftUI
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "LocationSettings")
+private let logger = Logger(subsystem: "com.mc1", category: "LocationSettings")
 
 /// Location settings: set location, share publicly, auto-update from GPS
 struct LocationSettingsSection: View {

@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import OSLog
 
-private let splitSidebarLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
+private let splitSidebarLogger = Logger(subsystem: "com.mc1", category: "ChatsView")
 
 struct ChatsSplitSidebarContent: View {
     @Environment(\.appState) private var appState

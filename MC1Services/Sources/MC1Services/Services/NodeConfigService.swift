@@ -46,7 +46,7 @@ public actor NodeConfigService {
     private let channelService: ChannelService
     private let dataStore: any PersistenceStoreProtocol
     private weak var syncCoordinator: SyncCoordinator?
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeConfigService")
+    private let logger = Logger(subsystem: "com.mc1", category: "NodeConfigService")
 
     public init(
         session: MeshCoreSession,

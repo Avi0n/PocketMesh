@@ -14,7 +14,7 @@ struct AddContactSheet: View {
     @State private var isSubmitting = false
     @State private var errorMessage: String?
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "AddContactSheet")
+    private let logger = Logger(subsystem: "com.mc1", category: "AddContactSheet")
 
     // MARK: - Validation
 

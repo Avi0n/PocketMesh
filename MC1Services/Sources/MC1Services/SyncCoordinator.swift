@@ -77,7 +77,7 @@ public actor SyncCoordinator {
 
     // MARK: - Logging
 
-    let logger = PersistentLogger(subsystem: "com.pocketmesh.services", category: "SyncCoordinator")
+    let logger = PersistentLogger(subsystem: "com.mc1.services", category: "SyncCoordinator")
 
     /// In-memory cache for message deduplication
     let deduplicationCache = MessageDeduplicationCache()

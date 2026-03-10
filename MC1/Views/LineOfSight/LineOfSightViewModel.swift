@@ -4,7 +4,7 @@ import MC1Services
 import SwiftUI
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "LineOfSight")
+private let logger = Logger(subsystem: "com.mc1", category: "LineOfSight")
 
 // MARK: - Point Identification
 

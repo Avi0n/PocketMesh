@@ -12,7 +12,7 @@ final class NodeConfigExportViewModel {
     var showFileExporter = false
     var errorMessage: String?
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeConfigExportVM")
+    private let logger = Logger(subsystem: "com.mc1", category: "NodeConfigExportVM")
 
     func exportConfig(appState: AppState) async {
         guard let service = appState.services?.nodeConfigService else { return }

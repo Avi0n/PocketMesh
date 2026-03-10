@@ -8,7 +8,7 @@ import UIKit
 final class CLIToolViewModel {
     private static let maxOutputLines = 1000
     private static let maxHistoryEntries = 100
-    static let logger = Logger(subsystem: "com.pocketmesh", category: "CLIToolViewModel")
+    static let logger = Logger(subsystem: "com.mc1", category: "CLIToolViewModel")
 
     // MARK: - State
 

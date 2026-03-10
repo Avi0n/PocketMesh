@@ -10,7 +10,7 @@ public final class LiveActivityManager {
 
     static let enabledKey = "liveActivityEnabled"
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "LiveActivityManager")
+    private let logger = Logger(subsystem: "com.mc1", category: "LiveActivityManager")
 
     private var currentActivity: Activity<MeshStatusAttributes>?
     private var decayTimer: Task<Void, Never>?

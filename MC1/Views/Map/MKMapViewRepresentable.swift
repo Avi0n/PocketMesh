@@ -3,7 +3,7 @@ import os
 import SwiftUI
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "MapRepresentable")
+private let logger = Logger(subsystem: "com.mc1", category: "MapRepresentable")
 
 /// UIViewRepresentable wrapper for MKMapView with custom contact annotations
 struct MKMapViewRepresentable: UIViewRepresentable {

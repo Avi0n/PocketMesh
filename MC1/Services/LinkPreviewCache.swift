@@ -14,7 +14,7 @@ private enum CacheConfig {
 /// Uses actor isolation for thread safety without blocking the main thread.
 /// Limits concurrent LPMetadataProvider instances to prevent WKWebView spawn bursts.
 actor LinkPreviewCache: LinkPreviewCaching {
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewCache")
+    private let logger = Logger(subsystem: "com.mc1", category: "LinkPreviewCache")
     private let memoryCache = NSCache<NSString, CachedPreview>()
     private let service = LinkPreviewService()
     private nonisolated let preferences = LinkPreviewPreferences()

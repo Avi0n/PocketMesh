@@ -1,7 +1,7 @@
 import SwiftUI
 import os
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "DemoMode")
+private let logger = Logger(subsystem: "com.mc1", category: "DemoMode")
 
 @MainActor
 @Observable

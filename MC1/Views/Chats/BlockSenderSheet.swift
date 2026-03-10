@@ -3,7 +3,7 @@ import OSLog
 import MC1Services
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "BlockSenderSheet")
+private let logger = Logger(subsystem: "com.mc1", category: "BlockSenderSheet")
 
 /// Confirmation sheet for blocking a channel sender name.
 /// Shows name-based limitation warning and any matching contacts the user can optionally block.

@@ -2,7 +2,7 @@ import OSLog
 import MC1Services
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "BlockedChannelSendersView")
+private let logger = Logger(subsystem: "com.mc1", category: "BlockedChannelSendersView")
 
 /// Settings screen listing blocked channel sender names with swipe-to-unblock.
 struct BlockedChannelSendersView: View {

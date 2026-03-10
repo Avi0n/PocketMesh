@@ -16,7 +16,7 @@ public final class AppState {
 
     // MARK: - Logging
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "AppState")
+    private let logger = Logger(subsystem: "com.mc1", category: "AppState")
 
     // MARK: - Location
 

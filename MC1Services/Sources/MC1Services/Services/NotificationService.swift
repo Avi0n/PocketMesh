@@ -30,7 +30,7 @@ public final class NotificationService: NSObject {
 
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "Notifications")
+    private let logger = Logger(subsystem: "com.mc1", category: "Notifications")
 
     /// Whether notification permissions are authorized
     public private(set) var isAuthorized: Bool = false

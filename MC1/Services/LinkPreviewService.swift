@@ -15,7 +15,7 @@ struct LinkPreviewMetadata: Sendable {
 
 /// Service for extracting URLs from text and fetching link metadata
 final class LinkPreviewService: Sendable {
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "LinkPreviewService")
+    private let logger = Logger(subsystem: "com.mc1", category: "LinkPreviewService")
 
     /// Shared URL detector instance to avoid creating NSDataDetector on every call
     private static let urlDetector: NSDataDetector? = {

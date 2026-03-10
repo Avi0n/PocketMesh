@@ -17,7 +17,7 @@ public actor DebugLogBuffer {
     private let flushInterval: Duration = .seconds(5)
     private let maxBufferSize = 50
 
-    private static let logger = Logger(subsystem: "com.pocketmesh", category: "DebugLogBuffer")
+    private static let logger = Logger(subsystem: "com.mc1", category: "DebugLogBuffer")
 
     public init(dataStore: any PersistenceStoreProtocol) {
         self.dataStore = dataStore

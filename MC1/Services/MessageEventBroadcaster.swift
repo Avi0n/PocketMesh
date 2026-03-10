@@ -27,7 +27,7 @@ public final class MessageEventBroadcaster {
 
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessageEventBroadcaster")
+    private let logger = Logger(subsystem: "com.mc1", category: "MessageEventBroadcaster")
 
     /// Latest received message (for simple observation)
     var latestMessage: MessageDTO?

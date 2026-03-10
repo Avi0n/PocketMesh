@@ -3,7 +3,7 @@ import MC1Services
 import MeshCore
 import OSLog
 
-private let deviceInfoLogger = Logger(subsystem: "com.pocketmesh", category: "DeviceInfoView")
+private let deviceInfoLogger = Logger(subsystem: "com.mc1", category: "DeviceInfoView")
 
 /// Detailed device information screen
 struct DeviceInfoView: View {

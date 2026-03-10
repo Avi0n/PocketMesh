@@ -39,7 +39,7 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
 
     // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "LocationService")
+    private let logger = Logger(subsystem: "com.mc1", category: "LocationService")
     private let locationManager: CLLocationManager
 
     private var requestContinuation: CheckedContinuation<CLLocation, Error>?

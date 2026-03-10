@@ -55,7 +55,7 @@ struct NodeDiscoveryResult: Identifiable, Sendable {
 @Observable
 @MainActor
 final class NodeDiscoveryViewModel {
-    private static let logger = Logger(subsystem: "com.pocketmesh", category: "NodeDiscoveryViewModel")
+    private static let logger = Logger(subsystem: "com.mc1", category: "NodeDiscoveryViewModel")
     private static let scanDuration: Duration = .seconds(15)
 
     // MARK: - Published state

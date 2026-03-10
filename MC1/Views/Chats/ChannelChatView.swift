@@ -3,7 +3,7 @@ import UIKit
 import MC1Services
 import OSLog
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "ChannelChatView")
+private let logger = Logger(subsystem: "com.mc1", category: "ChannelChatView")
 
 private struct BlockSenderContext: Identifiable {
     let id = UUID()

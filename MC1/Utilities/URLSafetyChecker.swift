@@ -4,7 +4,7 @@ import OSLog
 /// Validates URLs before fetching to prevent SSRF attacks via private network access.
 /// Rejects non-HTTP(S) schemes and private/reserved IPs.
 enum URLSafetyChecker {
-    private static let logger = Logger(subsystem: "com.pocketmesh", category: "URLSafetyChecker")
+    private static let logger = Logger(subsystem: "com.mc1", category: "URLSafetyChecker")
 
     /// Hosts that bypass safety checks (known-safe CDN domains)
     private static let allowedHosts: Set<String> = [

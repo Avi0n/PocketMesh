@@ -2,7 +2,7 @@ import OSLog
 import MC1Services
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "RepeaterStatusVM")
+private let logger = Logger(subsystem: "com.mc1", category: "RepeaterStatusVM")
 
 /// ViewModel for repeater status display
 @Observable

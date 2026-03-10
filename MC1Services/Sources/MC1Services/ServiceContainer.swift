@@ -269,7 +269,7 @@ public final class ServiceContainer {
     ) async {
         guard !isMonitoringEvents else { return }
 
-        let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+        let logger = Logger(subsystem: "com.mc1.services", category: "ServiceContainer")
 
         // Configure HeardRepeatsService with device info
         do {
@@ -340,7 +340,7 @@ public final class ServiceContainer {
     ///
     /// - Parameter deviceID: The connected device's UUID
     public func performInitialSync(deviceID: UUID) async {
-        let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+        let logger = Logger(subsystem: "com.mc1.services", category: "ServiceContainer")
 
         // Migrate app favorites to device BEFORE sync (one-time on upgrade)
         // Must run first because sync overwrites isFavorite with device flags
@@ -398,7 +398,7 @@ public final class ServiceContainer {
             )
             await rxLogService.updateChannels(secrets: secrets, names: names)
         } catch {
-            let logger = Logger(subsystem: "com.pocketmesh.services", category: "ServiceContainer")
+            let logger = Logger(subsystem: "com.mc1.services", category: "ServiceContainer")
             logger.warning("Failed to update RX log channels: \(error)")
         }
     }

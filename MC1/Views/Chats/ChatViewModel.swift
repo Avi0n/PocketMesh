@@ -16,7 +16,7 @@ final class ChatViewModel {
 
     // MARK: - Properties
 
-    let logger = Logger(subsystem: "com.pocketmesh", category: "ChatViewModel")
+    let logger = Logger(subsystem: "com.mc1", category: "ChatViewModel")
 
     /// Current conversations (contacts with messages)
     var conversations: [ContactDTO] = []

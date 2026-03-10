@@ -8,7 +8,7 @@ import OSLog
 @MainActor
 public final class BatteryMonitor {
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "BatteryMonitor")
+    private let logger = Logger(subsystem: "com.mc1", category: "BatteryMonitor")
 
     /// Current device battery info (nil if not fetched or disconnected)
     var deviceBattery: BatteryInfo?

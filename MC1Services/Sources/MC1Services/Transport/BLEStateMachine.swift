@@ -12,7 +12,7 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
 
     // MARK: - Logging
 
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "BLEStateMachine")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "BLEStateMachine")
     private let instanceID = String(UUID().uuidString.prefix(8))
     private var lastCentralState: CBManagerState?
 

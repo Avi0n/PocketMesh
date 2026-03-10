@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import OSLog
 
-private let nodesListLogger = Logger(subsystem: "com.pocketmesh", category: "NodesListView")
+private let nodesListLogger = Logger(subsystem: "com.mc1", category: "NodesListView")
 
 /// List of all contacts discovered on the mesh network
 struct ContactsListView: View {

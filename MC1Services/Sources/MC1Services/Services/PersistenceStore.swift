@@ -152,7 +152,7 @@ public actor PersistenceStore: PersistenceStoreProtocol {
             for node in toDelete {
                 modelContext.delete(node)
             }
-            let logger = Logger(subsystem: "com.pocketmesh", category: "PersistenceStore")
+            let logger = Logger(subsystem: "com.mc1", category: "PersistenceStore")
             logger.warning("DiscoveredNode cap exceeded, evicted \(toDelete.count) oldest nodes")
         }
     }

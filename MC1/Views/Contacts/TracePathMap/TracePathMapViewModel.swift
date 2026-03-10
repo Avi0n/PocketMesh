@@ -4,7 +4,7 @@ import SwiftUI
 import MC1Services
 import os.log
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "TracePathMap")
+private let logger = Logger(subsystem: "com.mc1", category: "TracePathMap")
 
 /// View model for map-specific state in trace path map view
 @MainActor @Observable

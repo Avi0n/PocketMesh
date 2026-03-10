@@ -156,7 +156,7 @@ extension PersistenceStore {
         }
 
         if !duplicates.isEmpty {
-            let logger = Logger(subsystem: "com.pocketmesh", category: "PersistenceStore")
+            let logger = Logger(subsystem: "com.mc1", category: "PersistenceStore")
             logger.warning("Found \(duplicates.count) duplicate session(s) for public key, cleaning up")
 
             for duplicate in duplicates {

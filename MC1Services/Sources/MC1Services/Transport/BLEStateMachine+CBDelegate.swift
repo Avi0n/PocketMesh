@@ -26,7 +26,7 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
 
     weak var stateMachine: BLEStateMachine?
 
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "BLEDelegateHandler")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "BLEDelegateHandler")
 
     /// Lock-protected continuation for yielding received data directly.
     /// Using OSAllocatedUnfairLock ensures thread-safe access from the CBCentralManager queue.

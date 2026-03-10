@@ -9,7 +9,7 @@ struct ReactionDetailsSheet: View {
 
     @Environment(\.appState) private var appState
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "ReactionDetailsSheet")
+    private let logger = Logger(subsystem: "com.mc1", category: "ReactionDetailsSheet")
 
     @State private var reactions: [ReactionDTO] = []
     @State private var selectedEmoji: String?

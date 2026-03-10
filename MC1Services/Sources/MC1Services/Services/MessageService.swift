@@ -147,7 +147,7 @@ public actor MessageService {
 
     // MARK: - Properties
 
-    let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "MessageService")
+    let logger = PersistentLogger(subsystem: "com.mc1", category: "MessageService")
 
     let session: MeshCoreSession
     let dataStore: PersistenceStore

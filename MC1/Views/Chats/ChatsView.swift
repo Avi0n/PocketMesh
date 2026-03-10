@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import OSLog
 
-private let chatsViewLogger = Logger(subsystem: "com.pocketmesh", category: "ChatsView")
+private let chatsViewLogger = Logger(subsystem: "com.mc1", category: "ChatsView")
 
 struct ChatsView: View {
     @Environment(\.appState) private var appState

@@ -11,7 +11,7 @@ final class MessagePathViewModel {
     var discoveredRepeaters: [DiscoveredNodeDTO] = []
     var isLoading = true
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "MessagePathViewModel")
+    private let logger = Logger(subsystem: "com.mc1", category: "MessagePathViewModel")
 
     func loadContacts(services: ServiceContainer?, deviceID: UUID) async {
         isLoading = true

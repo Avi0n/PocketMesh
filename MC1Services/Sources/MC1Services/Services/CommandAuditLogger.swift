@@ -20,7 +20,7 @@ public actor CommandAuditLogger {
 
     // MARK: - Properties
 
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "CommandAudit")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "CommandAudit")
     private let prefix = "[CMD]"
 
     // MARK: - Initialization

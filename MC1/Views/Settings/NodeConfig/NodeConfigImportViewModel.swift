@@ -28,7 +28,7 @@ final class NodeConfigImportViewModel {
 
     private var importTask: Task<Void, Never>?
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeConfigImportVM")
+    private let logger = Logger(subsystem: "com.mc1", category: "NodeConfigImportVM")
 
     // MARK: - Dynamic confirmation text
 

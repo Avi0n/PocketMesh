@@ -6,7 +6,7 @@ import UIKit
 
 /// Service for exporting debug logs and app state for troubleshooting
 enum LogExportService {
-    private static let logger = Logger(subsystem: "com.pocketmesh", category: "LogExportService")
+    private static let logger = Logger(subsystem: "com.mc1", category: "LogExportService")
 
     /// Generates a debug export containing app logs and current state
     @MainActor

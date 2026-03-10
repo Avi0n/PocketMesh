@@ -16,7 +16,7 @@ struct ScanContactQRView: View {
     @State private var cameraPermissionDenied = false
     @State private var scanSuccessTrigger = false
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "ScanContactQRView")
+    private let logger = Logger(subsystem: "com.mc1", category: "ScanContactQRView")
 
     // MARK: - Constants
 

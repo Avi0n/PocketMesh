@@ -4,7 +4,7 @@ import TipKit
 import CoreLocation
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "BLEStatus")
+private let logger = Logger(subsystem: "com.mc1", category: "BLEStatus")
 
 /// BLE connection status indicator for toolbar display
 /// Shows connection state via color-coded icon with menu details

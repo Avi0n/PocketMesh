@@ -14,7 +14,7 @@ enum InlineImageResult: Sendable {
 actor InlineImageCache {
     static let shared = InlineImageCache()
 
-    private let logger = Logger(subsystem: "com.pocketmesh", category: "InlineImageCache")
+    private let logger = Logger(subsystem: "com.mc1", category: "InlineImageCache")
 
     private let memoryCache = NSCache<NSString, CachedImageData>()
     private let fetchSemaphore = AsyncSemaphore(value: 3)

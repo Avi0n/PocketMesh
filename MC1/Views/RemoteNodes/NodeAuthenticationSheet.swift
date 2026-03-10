@@ -2,7 +2,7 @@ import os
 import SwiftUI
 import MC1Services
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "NodeAuthenticationSheet")
+private let logger = Logger(subsystem: "com.mc1", category: "NodeAuthenticationSheet")
 
 /// Reusable password entry sheet for both room servers and repeaters
 struct NodeAuthenticationSheet: View {

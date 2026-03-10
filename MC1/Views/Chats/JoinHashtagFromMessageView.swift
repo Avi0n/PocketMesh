@@ -2,7 +2,7 @@ import SwiftUI
 import MC1Services
 import OSLog
 
-private let logger = Logger(subsystem: "com.pocketmesh", category: "JoinHashtagFromMessageView")
+private let logger = Logger(subsystem: "com.mc1", category: "JoinHashtagFromMessageView")
 
 /// Sheet view for joining a hashtag channel tapped in a message
 @MainActor

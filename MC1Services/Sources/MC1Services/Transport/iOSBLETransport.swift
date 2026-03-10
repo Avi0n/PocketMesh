@@ -27,7 +27,7 @@ import os
 /// ```
 public actor iOSBLETransport: MeshTransport {
 
-    private let logger = PersistentLogger(subsystem: "com.pocketmesh", category: "iOSBLETransport")
+    private let logger = PersistentLogger(subsystem: "com.mc1", category: "iOSBLETransport")
 
     private let stateMachine: BLEStateMachine
     private var deviceID: UUID?
