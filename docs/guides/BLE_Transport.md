@@ -4,11 +4,11 @@ This guide covers the BLE transport architecture, connection state machine, and 
 
 ## Overview
 
-PocketMesh uses CoreBluetooth to communicate with MeshCore devices over Bluetooth Low Energy. The transport layer is abstracted behind the `MeshTransport` protocol, with `iOSBLETransport` (actor) + `BLEStateMachine` (actor) providing the production implementation.
+MeshCore One uses CoreBluetooth to communicate with MeshCore devices over Bluetooth Low Energy. The transport layer is abstracted behind the `MeshTransport` protocol, with `iOSBLETransport` (actor) + `BLEStateMachine` (actor) providing the production implementation.
 
 **Important:** Both `iOSBLETransport` and `BLEStateMachine` are Swift actors, not classes. This means all property access and method calls require `await`, providing automatic thread-safety and isolation guarantees under Swift's concurrency model.
 
-**Note:** MeshCore contains a separate, simpler `BLETransport` implementation that uses a delegate-based pattern. This is distinct from the more complex `iOSBLETransport + BLEStateMachine` implementation in PocketMeshServices, which provides full state machine management, auto-reconnection, and production features.
+**Note:** MeshCore contains a separate, simpler `BLETransport` implementation that uses a delegate-based pattern. This is distinct from the more complex `iOSBLETransport + BLEStateMachine` implementation in MC1Services, which provides full state machine management, auto-reconnection, and production features.
 
 ## Architecture
 
@@ -69,7 +69,7 @@ All transports conform to the `MeshTransport` protocol, which requires `Sendable
 
 ## Nordic UART Service (NUS)
 
-PocketMesh uses the Nordic UART Service for BLE communication with the following standard UUIDs:
+MeshCore One uses the Nordic UART Service for BLE communication with the following standard UUIDs:
 
 - **Service UUID:** `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
 - **TX Characteristic UUID:** `6E400002-B5A3-F393-E0A9-E50E24DCCA9E` (write to device)
@@ -79,7 +79,7 @@ The TX characteristic is used to send data to the device, and the RX characteris
 
 ## Connection State Machine
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Transport/BLEPhase.swift`
+**File:** `MC1Services/Sources/MC1Services/Transport/BLEPhase.swift`
 
 The `BLEStateMachine` actor uses explicit phases that own their resources:
 
@@ -173,7 +173,7 @@ connected
 
 ### Handling Reconnection
 
-**File:** `PocketMeshServices/Sources/PocketMeshServices/Transport/iOSBLETransport.swift`
+**File:** `MC1Services/Sources/MC1Services/Transport/iOSBLETransport.swift`
 
 ```swift
 public func setReconnectionHandler(_ handler: @escaping @Sendable (UUID) -> Void) async {

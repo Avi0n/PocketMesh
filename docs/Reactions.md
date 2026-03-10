@@ -1,6 +1,6 @@
 # Reactions Interoperability Guide
 
-How to implement emoji reactions compatible with PocketMesh.
+How to implement emoji reactions compatible with MeshCore One.
 
 ## Message Hashing
 

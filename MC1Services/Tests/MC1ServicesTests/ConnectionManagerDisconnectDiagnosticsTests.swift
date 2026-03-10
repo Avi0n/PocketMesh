@@ -1,0 +1,136 @@
+import Foundation
+import Testing
+@testable import MC1Services
+
+@Suite("ConnectionManager Disconnect Diagnostics Tests")
+@MainActor
+struct ConnectionManagerDisconnectDiagnosticsTests {
+
+    private let defaults: UserDefaults
+
+    init() {
+        defaults = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+    }
+
+    @Test("auto-reconnect entry persists disconnect diagnostic with error info")
+    func autoReconnectEntryPersistsDisconnectDiagnostic() async throws {
+
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
+        let deviceID = UUID()
+        manager.setTestState(
+            connectionState: .ready,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection()
+        )
+
+        // Wait for ConnectionManager init to wire auto-reconnect handler.
+        try await waitUntil("auto-reconnect handler should be installed") {
+            await mock.hasAutoReconnectingHandler
+        }
+
+        await mock.simulateAutoReconnecting(
+            deviceID: deviceID,
+            errorInfo: "domain=CBErrorDomain, code=15, desc=Failed to encrypt"
+        )
+
+        // Wait for auto-reconnect handler to propagate state
+        try await waitUntil("connectionState should transition to .connecting") {
+            manager.connectionState == .connecting
+        }
+
+        let diagnostic = manager.lastDisconnectDiagnostic ?? ""
+        #expect(
+            diagnostic.localizedStandardContains("source=bleStateMachine.autoReconnectingHandler")
+        )
+        #expect(diagnostic.localizedStandardContains("code=15"))
+        #expect(manager.connectionState == .connecting)
+    }
+
+    @Test("health check preserves intent and persists diagnostic when other app is connected")
+    func healthCheckPersistsDiagnosticWhenOtherAppConnected() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(true)
+
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection()
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        let diagnostic = manager.lastDisconnectDiagnostic ?? ""
+        #expect(
+            diagnostic.localizedStandardContains("source=checkBLEConnectionHealth.otherAppConnected")
+        )
+        #expect(manager.connectionIntent.wantsConnection)
+        #expect(manager.isReconnectionWatchdogRunning)
+
+        await manager.appDidEnterBackground()
+    }
+
+    @Test("health check adopts system-connected last device when adoption can start")
+    func healthCheckAdoptsSystemConnectedPeripheral() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsBluetoothPoweredOff(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(true)
+        await mock.setStubbedDidStartAdoptingSystemConnectedPeripheral(true)
+
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection()
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        let calls = await mock.startAdoptingSystemConnectedPeripheralCalls
+        #expect(calls == [deviceID])
+
+        let diagnostic = manager.lastDisconnectDiagnostic ?? ""
+        #expect(
+            diagnostic.localizedStandardContains("source=checkBLEConnectionHealth.adoptSystemConnectedPeripheral")
+        )
+        #expect(manager.connectionState == .connecting)
+        #expect(manager.connectionIntent.wantsConnection)
+    }
+
+    @Test("manual connect adopts system-connected last device instead of throwing deviceConnectedToOtherApp")
+    func manualConnectAdoptsSystemConnectedPeripheral() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting(defaults: defaults)
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedIsBluetoothPoweredOff(false)
+        await mock.setStubbedIsDeviceConnectedToSystem(true)
+        await mock.setStubbedDidStartAdoptingSystemConnectedPeripheral(true)
+
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .none
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        try await manager.connect(to: deviceID, forceFullSync: true, forceReconnect: true)
+
+        let calls = await mock.startAdoptingSystemConnectedPeripheralCalls
+        #expect(calls == [deviceID])
+
+        let diagnostic = manager.lastDisconnectDiagnostic ?? ""
+        #expect(diagnostic.localizedStandardContains("source=connect(to:).adoptSystemConnectedPeripheral"))
+        #expect(manager.connectionState == .connecting)
+        #expect(manager.connectionIntent.wantsConnection)
+    }
+}

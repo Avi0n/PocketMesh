@@ -71,16 +71,17 @@ jobs:
       - name: Update acknowledgements
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
-          mkdir -p PocketMesh.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
-          xcodebuild -resolvePackageDependencies -project PocketMesh.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages
-          swift-package-list PocketMesh.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path PocketMesh
+          mkdir -p MC1.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+          xcodebuild -resolvePackageDependencies -project MC1.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages
+          swift-package-list MC1.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path MC1
           rm -rf SourcePackages
 
       - name: Build Debug
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
-            -scheme PocketMesh \
+            -project MC1.xcodeproj \
+            -scheme MC1 \
             -configuration Debug \
             -destination "generic/platform=iOS" \
             -derivedDataPath ./DerivedData \
@@ -92,7 +93,8 @@ jobs:
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
-            -scheme PocketMesh \
+            -project MC1.xcodeproj \
+            -scheme MC1 \
             -configuration Release \
             -destination "generic/platform=iOS" \
             -derivedDataPath ./DerivedData \
@@ -104,31 +106,31 @@ jobs:
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p Payload
-          cp -r DerivedData/Build/Products/Debug-iphoneos/PocketMesh.app Payload/
-          zip -r "PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa" Payload
+          cp -r DerivedData/Build/Products/Debug-iphoneos/MC1.app Payload/
+          zip -r "MC1-Debug-${{ steps.version.outputs.version }}.ipa" Payload
           rm -rf Payload
 
       - name: Package Release IPA
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p Payload
-          cp -r DerivedData/Build/Products/Release-iphoneos/PocketMesh.app Payload/
-          zip -r "PocketMesh-Release-${{ steps.version.outputs.version }}.ipa" Payload
+          cp -r DerivedData/Build/Products/Release-iphoneos/MC1.app Payload/
+          zip -r "MC1-Release-${{ steps.version.outputs.version }}.ipa" Payload
           rm -rf Payload
 
       - name: Upload Debug IPA
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: PocketMesh-Debug-${{ steps.version.outputs.version }}
-          path: PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa
+          name: MC1-Debug-${{ steps.version.outputs.version }}
+          path: MC1-Debug-${{ steps.version.outputs.version }}.ipa
 
       - name: Upload Release IPA
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: PocketMesh-Release-${{ steps.version.outputs.version }}
-          path: PocketMesh-Release-${{ steps.version.outputs.version }}.ipa
+          name: MC1-Release-${{ steps.version.outputs.version }}
+          path: MC1-Release-${{ steps.version.outputs.version }}.ipa
 
       - name: Create tag
         if: steps.version_check.outputs.should_build == 'true'
@@ -144,7 +146,7 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           draft: true
-          name: PocketMesh ${{ steps.version.outputs.version }}
+          name: MeshCore One ${{ steps.version.outputs.version }}
           files: |
-            PocketMesh-Debug-${{ steps.version.outputs.version }}.ipa
-            PocketMesh-Release-${{ steps.version.outputs.version }}.ipa
+            MC1-Debug-${{ steps.version.outputs.version }}.ipa
+            MC1-Release-${{ steps.version.outputs.version }}.ipa

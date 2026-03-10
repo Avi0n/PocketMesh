@@ -10,8 +10,8 @@ platform :ios do
   desc "Update acknowledgements from SPM dependencies"
   lane :update_acknowledgements do
     sh("cd .. && xcodegen generate")
-    sh("cd .. && xcodebuild -resolvePackageDependencies -project PocketMesh.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages")
-    sh("cd .. && swift-package-list PocketMesh.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path PocketMesh")
+    sh("cd .. && xcodebuild -resolvePackageDependencies -project MC1.xcodeproj -clonedSourcePackagesDirPath ./SourcePackages")
+    sh("cd .. && swift-package-list MC1.xcodeproj --custom-source-packages-path ./SourcePackages --output-type settings-bundle --requires-license --output-path MC1")
     sh("cd .. && rm -rf SourcePackages")
   end
 
@@ -26,22 +26,22 @@ platform :ios do
     # Configure manual code signing for App Store distribution
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: "PocketMesh.xcodeproj",
+      path: "MC1.xcodeproj",
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app",
       code_sign_identity: "iPhone Distribution",
       profile_name: "match AppStore io.pocketmesh.app",
-      targets: ["PocketMesh"]
+      targets: ["MC1"]
     )
 
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: "PocketMesh.xcodeproj",
+      path: "MC1.xcodeproj",
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app.widgets",
       code_sign_identity: "iPhone Distribution",
       profile_name: "match AppStore io.pocketmesh.app.widgets",
-      targets: ["PocketMeshWidgets"]
+      targets: ["MC1Widgets"]
     )
 
     # Configure App Store Connect API key
@@ -68,10 +68,10 @@ platform :ios do
 
     # Build the app
     build_app(
-      scheme: "PocketMesh",
+      scheme: "MC1",
       export_method: "app-store",
       output_directory: "./build",
-      output_name: "PocketMesh.ipa",
+      output_name: "MC1.ipa",
       xcargs: "DEVELOPMENT_TEAM='#{ENV['TEAM_ID']}'"
     )
 
@@ -91,22 +91,22 @@ platform :ios do
     # Configure manual code signing for App Store distribution
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: "PocketMesh.xcodeproj",
+      path: "MC1.xcodeproj",
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app",
       code_sign_identity: "iPhone Distribution",
       profile_name: "match AppStore io.pocketmesh.app",
-      targets: ["PocketMesh"]
+      targets: ["MC1"]
     )
 
     update_code_signing_settings(
       use_automatic_signing: false,
-      path: "PocketMesh.xcodeproj",
+      path: "MC1.xcodeproj",
       team_id: ENV["TEAM_ID"],
       bundle_identifier: "io.pocketmesh.app.widgets",
       code_sign_identity: "iPhone Distribution",
       profile_name: "match AppStore io.pocketmesh.app.widgets",
-      targets: ["PocketMeshWidgets"]
+      targets: ["MC1Widgets"]
     )
 
     # Configure App Store Connect API key
@@ -132,10 +132,10 @@ platform :ios do
     end
 
     build_app(
-      scheme: "PocketMesh",
+      scheme: "MC1",
       export_method: "app-store",
       output_directory: "./build",
-      output_name: "PocketMesh.ipa",
+      output_name: "MC1.ipa",
       xcargs: "DEVELOPMENT_TEAM='#{ENV['TEAM_ID']}'"
     )
 
@@ -155,10 +155,10 @@ platform :ios do
     sh("cd .. && xcodegen generate")
 
     build_app(
-      scheme: "PocketMesh",
+      scheme: "MC1",
       export_method: "app-store",
       output_directory: "./build",
-      output_name: "PocketMesh.ipa",
+      output_name: "MC1.ipa",
       skip_archive: false,
       xcargs: "DEVELOPMENT_TEAM='#{ENV['TEAM_ID']}'"
     )

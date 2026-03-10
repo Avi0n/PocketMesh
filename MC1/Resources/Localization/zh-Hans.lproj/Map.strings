@@ -1,0 +1,154 @@
+/*
+  Map.strings
+  MC1
+
+  Strings for Map feature, including node locations,
+  map controls, location details, and geographic UI elements.
+ */
+
+// MARK: - Common
+
+/* Location: MapView.swift - Purpose: Done button for sheets */
+"map.common.done" = "完成";
+
+/* Location: MapView.swift - Purpose: Refresh button label */
+"map.common.refresh" = "刷新";
+
+// MARK: - Map View Empty State
+
+/* Location: MapView.swift - Purpose: Empty state title when no contacts have location */
+"map.emptyState.title" = "地图上无联系人";
+
+/* Location: MapView.swift - Purpose: Empty state description */
+"map.emptyState.description" = "带有位置数据的联系人将在Mesh网络上发现后显示在此处";
+
+// MARK: - Map Controls
+
+/* Location: MapView.swift - Purpose: Accessibility label when labels are visible */
+"map.controls.hideLabels" = "隐藏标签";
+
+/* Location: MapView.swift - Purpose: Accessibility label when labels are hidden */
+"map.controls.showLabels" = "显示标签";
+
+/* Location: MapView.swift - Purpose: Accessibility label for center on all contacts button */
+"map.controls.centerAll" = "以所有联系人为中心";
+
+/* Location: MapControlsToolbar.swift - Purpose: Accessibility label for user location button */
+"map.controls.centerOnMyLocation" = "以我的位置为中心";
+
+/* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
+"map.controls.layers" = "地图图层";
+
+// MARK: - Map Style Selection
+
+/* Location: MapStyleSelection.swift - Purpose: Standard map style option */
+"map.style.standard" = "标准";
+
+/* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
+"map.style.satellite" = "卫星";
+
+/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
+"map.style.hybrid" = "混合";
+
+// MARK: - Contact Detail Sheet
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for contact information */
+"map.detail.section.contactInfo" = "联系人信息";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for contact name */
+"map.detail.name" = "名称";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for contact type */
+"map.detail.type" = "类型";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for favorite status */
+"map.detail.status" = "状态";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Value showing contact is favorited */
+"map.detail.favorite" = "收藏";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for last advertisement timestamp */
+"map.detail.lastAdvert" = "最后广播";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for location coordinates */
+"map.detail.section.location" = "位置";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for latitude coordinate */
+"map.detail.latitude" = "纬度";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for longitude coordinate */
+"map.detail.longitude" = "经度";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Section header for network path info */
+"map.detail.section.networkPath" = "网络链路";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for routing type */
+"map.detail.routing" = "路由";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Flood routing type value */
+"map.detail.routingFlood" = "泛洪";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Label for path length */
+"map.detail.pathLength" = "路径长度";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Path length value with hop count */
+"map.detail.hops" = "%d 跳";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Path length value for single hop */
+"map.detail.hopSingular" = "1 跳";
+
+// MARK: - Contact Detail Sheet Actions
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry */
+"map.detail.action.telemetry" = "遥测数据";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Sheet title for telemetry authentication */
+"map.detail.action.telemetryAccessTitle" = "遥测数据访问权限";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to access repeater admin settings */
+"map.detail.action.adminAccess" = "管理员访问权限";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to join a room */
+"map.detail.action.joinRoom" = "加入房间";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to send a message */
+"map.detail.action.sendMessage" = "发送消息";
+
+// MARK: - Contact Type Names
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type */
+"map.nodeKind.chatContact" = "聊天联系人";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for repeater type */
+"map.nodeKind.repeater" = "转发节点";
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type */
+"map.nodeKind.room" = "房间";
+
+// MARK: - Contact Callout
+
+/* Location: MapView.swift ContactDetailSheet - Purpose: Button to view contact details */
+"map.callout.details" = "详情";
+
+/* Location: ContactCalloutContent.swift - Purpose: Button to send message from callout */
+"map.callout.message" = "消息";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for contact in callout */
+"map.callout.nodeKind.contact" = "联系人";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for repeater in callout */
+"map.callout.nodeKind.repeater" = "转发节点";
+
+/* Location: ContactCalloutContent.swift - Purpose: Display name for room in callout */
+"map.callout.nodeKind.room" = "房间";
+
+// MARK: - Contact Annotation
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for favorite contacts */
+"map.annotation.favorite" = "收藏";
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for repeater nodes */
+"map.annotation.repeater" = "转发节点";
+
+/* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
+"map.annotation.room" = "房间";
