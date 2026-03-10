@@ -26,7 +26,7 @@ struct AboutSection: View {
             }
             .foregroundStyle(.primary)
 
-            Link(destination: URL(string: "https://github.com/Avi0n/PocketMesh")!) {
+            Link(destination: URL(string: "https://github.com/Avi0n/MeshCoreOne")!) {
                 HStack {
                     TintedLabel(L10n.Settings.About.github, systemImage: "chevron.left.forwardslash.chevron.right")
                     Spacer()

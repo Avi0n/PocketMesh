@@ -1,4 +1,4 @@
-// PocketMesh/Views/Tools/RxLogView.swift
+// MC1/Views/Tools/RxLogView.swift
 import SwiftUI
 import UIKit
 import MC1Services

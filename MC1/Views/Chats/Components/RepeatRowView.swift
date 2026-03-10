@@ -1,4 +1,4 @@
-// PocketMesh/Views/Chats/Components/RepeatRowView.swift
+// MC1/Views/Chats/Components/RepeatRowView.swift
 import CoreLocation
 import MC1Services
 import SwiftUI

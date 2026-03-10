@@ -1,4 +1,4 @@
-// PocketMesh/Views/Chats/Components/MessagePathContent.swift
+// MC1/Views/Chats/Components/MessagePathContent.swift
 import CoreLocation
 import MC1Services
 import SwiftUI

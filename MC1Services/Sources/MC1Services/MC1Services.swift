@@ -1,4 +1,4 @@
-// PocketMeshServices - iOS-specific services for PocketMesh
+// MC1Services - iOS-specific services for MeshCore One
 // Re-exports MeshCore so consumers only need to import MC1Services
 
 @_exported import MeshCore
@@ -9,7 +9,7 @@ extension Locale {
     public static let posix = Locale(identifier: "en_US_POSIX")
 }
 
-/// PocketMeshServices provides iOS-specific implementations on top of MeshCore:
+/// MC1Services provides iOS-specific implementations on top of MeshCore:
 /// - SwiftData models (Device, Contact, Message, Channel)
 /// - PersistenceStore (@ModelActor for SwiftData operations)
 /// - iOS BLE transport with state restoration and background mode

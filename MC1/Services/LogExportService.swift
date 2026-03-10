@@ -48,7 +48,7 @@ enum LogExportService {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd-HHmmss"
         let timestamp = formatter.string(from: Date())
-        let filename = "PocketMesh-Debug-\(timestamp).txt"
+        let filename = "MeshCore-One-Debug-\(timestamp).txt"
 
         let tempURL = FileManager.default.temporaryDirectory.appending(path: filename)
 
@@ -75,7 +75,7 @@ enum LogExportService {
         let exportedAt = formatter.string(from: Date())
 
         return """
-            === PocketMesh Debug Export ===
+            === MeshCore One Debug Export ===
             Exported: \(exportedAt)
             App Version: \(appVersion) (\(buildNumber))
             Device: \(deviceModel), iOS \(systemVersion)

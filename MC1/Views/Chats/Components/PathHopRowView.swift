@@ -1,4 +1,4 @@
-// PocketMesh/Views/Chats/Components/PathHopRowView.swift
+// MC1/Views/Chats/Components/PathHopRowView.swift
 import SwiftUI
 import MC1Services
 

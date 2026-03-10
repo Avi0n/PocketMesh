@@ -1,4 +1,4 @@
-// PocketMeshServices/Sources/PocketMeshServices/Models/RxLogEntry.swift
+// MC1Services/Sources/MC1Services/Models/RxLogEntry.swift
 import Foundation
 import MeshCore
 import SwiftData

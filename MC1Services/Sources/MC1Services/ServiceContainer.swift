@@ -3,9 +3,9 @@ import OSLog
 import SwiftData
 import MeshCore
 
-/// Dependency injection container for PocketMeshServices.
+/// Dependency injection container for MC1Services.
 ///
-/// `ServiceContainer` creates and manages all services needed by the PocketMesh app,
+/// `ServiceContainer` creates and manages all services needed by the MeshCore One app,
 /// handling the dependency graph between services. It provides a single point of
 /// initialization for the service layer.
 ///

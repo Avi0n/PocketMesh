@@ -366,7 +366,7 @@ public actor ChannelService {
                     )
                 }
 
-                // Convert MeshCore.ChannelInfo to PocketMeshServices.ChannelInfo
+                // Convert MeshCore.ChannelInfo to MC1Services.ChannelInfo
                 return ChannelInfo(
                     index: meshChannelInfo.index,
                     name: meshChannelInfo.name,

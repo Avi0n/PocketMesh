@@ -304,7 +304,7 @@ public final class MessageEventBroadcaster {
     }
 
     // Note: Login results and binary responses are handled internally by
-    // PocketMeshServices via MeshCore event monitoring. No external handlers needed.
+    // MC1Services via MeshCore event monitoring. No external handlers needed.
 
     /// Handle telemetry response
     func handleTelemetryResponse(_ response: TelemetryResponse) async {

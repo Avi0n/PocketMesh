@@ -37,7 +37,7 @@ extension PersistenceStoreError: LocalizedError {
 @ModelActor
 public actor PersistenceStore: PersistenceStoreProtocol {
 
-    /// Shared schema for PocketMesh models
+    /// Shared schema for MeshCore One models
     public static let schema = Schema([
         Device.self,
         Contact.self,

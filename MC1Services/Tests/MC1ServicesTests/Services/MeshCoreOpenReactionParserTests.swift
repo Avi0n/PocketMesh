@@ -86,13 +86,13 @@ struct MeshCoreOpenReactionParserTests {
         #expect(MeshCoreOpenReactionParser.parse("r:a1b2:b8") == nil)
     }
 
-    @Test("Rejects PocketMesh channel reaction format")
-    func rejectsPocketMeshChannelFormat() {
+    @Test("Rejects legacy channel reaction format")
+    func rejectsLegacyChannelFormat() {
         #expect(MeshCoreOpenReactionParser.parse("👍@[AlphaNode]\n7f3a9c12") == nil)
     }
 
-    @Test("Rejects PocketMesh DM reaction format")
-    func rejectsPocketMeshDMFormat() {
+    @Test("Rejects legacy DM reaction format")
+    func rejectsLegacyDMFormat() {
         #expect(MeshCoreOpenReactionParser.parse("👍\n7f3a9c12") == nil)
     }
 
@@ -428,8 +428,8 @@ struct MeshCoreOpenReactionParserTests {
         #expect(MeshCoreOpenReactionParser.parseV1("r:1700000000000_100_200:") == nil)
     }
 
-    @Test("V1 rejects PocketMesh channel format")
-    func v1RejectsPocketMeshChannel() {
+    @Test("V1 rejects legacy channel format")
+    func v1RejectsLegacyChannel() {
         #expect(MeshCoreOpenReactionParser.parseV1("👍@[AlphaNode]\n7f3a9c12") == nil)
     }
 

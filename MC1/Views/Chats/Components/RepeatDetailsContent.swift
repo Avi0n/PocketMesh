@@ -1,4 +1,4 @@
-// PocketMesh/Views/Chats/Components/RepeatDetailsContent.swift
+// MC1/Views/Chats/Components/RepeatDetailsContent.swift
 import CoreLocation
 import MC1Services
 import SwiftUI

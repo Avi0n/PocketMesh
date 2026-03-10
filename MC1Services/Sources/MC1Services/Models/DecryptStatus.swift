@@ -1,4 +1,4 @@
-// PocketMeshServices/Sources/PocketMeshServices/Models/DecryptStatus.swift
+// MC1Services/Sources/MC1Services/Models/DecryptStatus.swift
 import Foundation
 
 /// Decryption outcome for channel messages.

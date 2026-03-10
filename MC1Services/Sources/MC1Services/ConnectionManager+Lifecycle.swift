@@ -539,7 +539,7 @@ extension ConnectionManager {
             // Persist for auto-reconnect
             persistConnection(
                 deviceID: MockDataProvider.simulatorDeviceID,
-                deviceName: "PocketMesh Sim"
+                deviceName: "MeshCore One Sim"
             )
 
             // Notify observers

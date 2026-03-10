@@ -1,4 +1,4 @@
-// PocketMesh/Views/Chats/Reactions/ReactionDetailsSheet.swift
+// MC1/Views/Chats/Reactions/ReactionDetailsSheet.swift
 import SwiftUI
 import MC1Services
 import OSLog

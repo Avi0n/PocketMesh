@@ -166,7 +166,7 @@ extension MeshCoreNodeConfig {
     public struct ContactConfig: Codable, Sendable, Equatable {
         public var type: UInt8
         public var name: String
-        /// PocketMesh-local nickname (not part of wire protocol).
+        /// App-local nickname (not part of wire protocol).
         /// Decoded from JSON for companion app compatibility but not imported to firmware.
         public var customName: String?
         /// Hex-encoded 32-byte public key (64 hex characters)
