@@ -73,12 +73,6 @@
 
 // MARK: - Refresh & Offline Alerts
 
-/* Location: ChatsView.swift - Alert title when offline refresh attempted */
-"chats.alert.cannotRefresh.title" = "Не удаётся обновить";
-
-/* Location: ChatsView.swift - Alert message for offline refresh */
-"chats.alert.cannotRefresh.message" = "Подключись к устройству для получения последних сообщений.";
-
 /* Location: ChatsView.swift - VoiceOver announcement when viewing cached data offline */
 "chats.accessibility.offlineAnnouncement" = "Просмотр кэшированных данных. Подключись к устройству для обновления.";
 

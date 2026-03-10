@@ -18,7 +18,6 @@ struct ChatsSplitSidebarContent: View {
     @Binding var searchText: String
     @Binding var showingNewChat: Bool
     @Binding var showingChannelOptions: Bool
-    @Binding var showOfflineRefreshAlert: Bool
     @Binding var roomToAuthenticate: RemoteNodeSessionDTO?
     @Binding var lastSelectedRoomIsConnected: Bool?
     @Binding var routeBeingDeleted: ChatRoute?
@@ -116,18 +115,6 @@ struct ChatsSplitSidebarContent: View {
                         Label(L10n.Chats.Chats.Compose.newMessage, systemImage: "square.and.pencil")
                     }
                 }
-            }
-            .refreshable {
-                if appState.connectionState != .ready {
-                    showOfflineRefreshAlert = true
-                } else {
-                    await onLoadConversations()
-                }
-            }
-            .alert(L10n.Chats.Chats.Alert.CannotRefresh.title, isPresented: $showOfflineRefreshAlert) {
-                Button(L10n.Chats.Chats.Common.ok, role: .cancel) { }
-            } message: {
-                Text(L10n.Chats.Chats.Alert.CannotRefresh.message)
             }
             .task {
                 await onTaskStart()

@@ -19,12 +19,6 @@ public enum L10n {
         public static let offlineAnnouncement = L10n.tr("Chats", "chats.accessibility.offlineAnnouncement", fallback: "Viewing cached data. Connect to device for updates.")
       }
       public enum Alert {
-        public enum CannotRefresh {
-          /// Location: ChatsView.swift - Alert message for offline refresh
-          public static let message = L10n.tr("Chats", "chats.alert.cannotRefresh.message", fallback: "Connect to your device to get the latest messages.")
-          /// Location: ChatsView.swift - Alert title when offline refresh attempted
-          public static let title = L10n.tr("Chats", "chats.alert.cannotRefresh.title", fallback: "Cannot Refresh")
-        }
         public enum LeaveRoom {
           /// Location: ChatsView.swift - Button to confirm leaving a room
           public static let confirm = L10n.tr("Chats", "chats.alert.leaveRoom.confirm", fallback: "Leave")

@@ -74,12 +74,6 @@
 
 // MARK: - Refresh & Offline Alerts
 
-/* Location: ChatsView.swift - Alert title when offline refresh attempted */
-"chats.alert.cannotRefresh.title" = "无法刷新";
-
-/* Location: ChatsView.swift - Alert message for offline refresh */
-"chats.alert.cannotRefresh.message" = "连接您的设备以获取最新消息";
-
 /* Location: ChatsView.swift - VoiceOver announcement when viewing cached data offline */
 "chats.accessibility.offlineAnnouncement" = "正在查看缓存数据，连接设备以获取更新。";
 

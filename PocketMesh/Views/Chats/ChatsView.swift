@@ -28,8 +28,6 @@ struct ChatsView: View {
     @State private var pendingChatContact: ContactDTO?
     @State private var pendingChannel: ChannelDTO?
     @State private var hashtagToJoin: HashtagJoinRequest?
-    @State private var showOfflineRefreshAlert = false
-
     private var shouldUseSplitView: Bool {
         horizontalSizeClass == .regular
     }
@@ -70,7 +68,6 @@ struct ChatsView: View {
                         searchText: $searchText,
                         showingNewChat: $showingNewChat,
                         showingChannelOptions: $showingChannelOptions,
-                        showOfflineRefreshAlert: $showOfflineRefreshAlert,
                         roomToAuthenticate: $roomToAuthenticate,
                         lastSelectedRoomIsConnected: $lastSelectedRoomIsConnected,
                         routeBeingDeleted: $routeBeingDeleted,
@@ -101,7 +98,6 @@ struct ChatsView: View {
                         searchText: $searchText,
                         showingNewChat: $showingNewChat,
                         showingChannelOptions: $showingChannelOptions,
-                        showOfflineRefreshAlert: $showOfflineRefreshAlert,
                         roomToAuthenticate: $roomToAuthenticate,
                         navigationPath: $navigationPath,
                         onNavigate: { navigate(to: $0) },
