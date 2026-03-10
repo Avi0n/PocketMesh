@@ -21,9 +21,6 @@ packages:
   Emojibase:
     url: https://github.com/matrix-org/emojibase-bindings
     from: 1.5.0
-  MapLibre:
-    url: https://github.com/maplibre/maplibre-gl-native-distribution
-    from: 6.23.0
 
 targets:
   MC1:
@@ -38,7 +35,6 @@ targets:
     dependencies:
       - package: MC1Services
       - package: Emojibase
-      - package: MapLibre
       - target: MC1Widgets
     preBuildScripts:
       - name: SwiftGen
@@ -66,7 +62,7 @@ targets:
       base:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        MARKETING_VERSION: 0.11.0
+        MARKETING_VERSION: 0.10.2
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -113,7 +109,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: MC1Tests/Info.plist
-        MARKETING_VERSION: 0.11.0
+        MARKETING_VERSION: 0.10.2
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MC1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MC1"
@@ -127,7 +123,7 @@ targets:
       - path: Shared
     settings:
       base:
-        MARKETING_VERSION: 0.11.0
+        MARKETING_VERSION: 0.10.2
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
         TARGETED_DEVICE_FAMILY: "1,2"
