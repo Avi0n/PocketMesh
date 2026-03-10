@@ -4,11 +4,11 @@ excluded:
   - .worktrees
   - build
   - tmp
-  - PocketMesh.xcodeproj
-  - PocketMesh/Resources/Generated
+  - MC1.xcodeproj
+  - MC1/Resources/Generated
   - MeshCore/.build
   - MeshCore-references
-  - PocketMeshServices/.build
+  - MC1Services/.build
   - fastlane
   - scripts
 

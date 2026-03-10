@@ -1,12 +1,12 @@
 # WiFi Transport Guide
 
-This guide explains PocketMesh's WiFi/TCP transport path for connecting to MeshCore devices over the local network.
+This guide explains MeshCore One's WiFi/TCP transport path for connecting to MeshCore devices over the local network.
 
 ## Overview
 
-PocketMesh supports two transport types:
+MeshCore One supports two transport types:
 
-- BLE (Bluetooth Low Energy) via `iOSBLETransport` in PocketMeshServices
+- BLE (Bluetooth Low Energy) via `iOSBLETransport` in MC1Services
 - WiFi/TCP via `WiFiTransport` in MeshCore
 
 WiFi is configured manually (host + port) and is typically used for fixed installations or devices that expose a TCP service.
@@ -15,9 +15,9 @@ WiFi is configured manually (host + port) and is typically used for fixed instal
 
 - MeshCore transport: `MeshCore/Sources/MeshCore/Transport/WiFiTransport.swift`
 - WiFi frame codec: `MeshCore/Sources/MeshCore/Transport/WiFiFrameCodec.swift`
-- PocketMesh connection orchestration: `PocketMeshServices/Sources/PocketMeshServices/ConnectionManager.swift`
-- UI for entering connection details: `PocketMesh/Views/Onboarding/WiFiConnectionSheet.swift`
-- UI for editing connection details while connected: `PocketMesh/Views/Settings/Sections/WiFiEditSheet.swift`
+- MeshCore One connection orchestration: `MC1Services/Sources/MC1Services/ConnectionManager.swift`
+- UI for entering connection details: `MC1/Views/Onboarding/WiFiConnectionSheet.swift`
+- UI for editing connection details while connected: `MC1/Views/Settings/Sections/WiFiEditSheet.swift`
 
 ## Transport Architecture
 
@@ -60,7 +60,7 @@ Notes:
 
 ## WiFi Reconnection & Health (ConnectionManager)
 
-PocketMesh manages WiFi reconnection and connection health at the app layer:
+MeshCore One manages WiFi reconnection and connection health at the app layer:
 
 - **Heartbeat probes:** When connected, the app sends a lightweight `getTime()` probe every 30 seconds to detect dead TCP connections (ESP32 stacks often ignore TCP keepalives).
 - **Auto-reconnect:** If the probe fails, `ConnectionManager` tears down the session and starts a reconnect loop.
@@ -71,7 +71,7 @@ PocketMesh manages WiFi reconnection and connection health at the app layer:
 ## Troubleshooting
 
 - Verify the iPhone and device are on the same reachable network.
-- Double check the host and port (PocketMesh defaults to port 5000 in the WiFi connection UI).
+- Double check the host and port (MeshCore One defaults to port 5000 in the WiFi connection UI).
 - If you have a dev machine on the same network, `nc -zv <host> <port>` can help validate basic reachability.
 
 ## Further Reading

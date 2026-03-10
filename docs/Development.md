@@ -1,6 +1,6 @@
 # Development Documentation
 
-This guide provides information for developers who want to contribute to the PocketMesh project.
+This guide provides information for developers who want to contribute to the MeshCore One project.
 
 ## Getting Started
 
@@ -28,22 +28,22 @@ This guide provides information for developers who want to contribute to the Poc
    ```bash
    xcodegen generate
    ```
-   > **Note:** Do not edit `PocketMesh.xcodeproj` directly — it is generated from `project.yml` and will be overwritten. Make project configuration changes in `project.yml` and regenerate.
-3. **Open `PocketMesh.xcodeproj`**.
+   > **Note:** Do not edit `MC1.xcodeproj` directly — it is generated from `project.yml` and will be overwritten. Make project configuration changes in `project.yml` and regenerate.
+3. **Open `MC1.xcodeproj`**.
 
 ## Building the Project
 
-PocketMesh uses a modular structure with Swift Packages:
+MeshCore One uses a modular structure with Swift Packages:
 
 - `MeshCore`: The protocol framework.
-- `PocketMeshServices`: The business logic framework.
-- `PocketMesh`: The main iOS application.
+- `MC1Services`: The business logic framework.
+- `MeshCore One`: The main iOS application.
 
 ### Command Line Build
 
 ```bash
-xcodebuild -project PocketMesh.xcodeproj \
-  -scheme PocketMesh \
+xcodebuild -project MC1.xcodeproj \
+  -scheme MeshCore One \
   -destination "platform=iOS Simulator,name=iPhone 16e" \
   build
 ```
@@ -71,20 +71,20 @@ xcodebuild test -enableCodeCoverage YES 2>&1 | xcsift --coverage
 
 ## Testing Strategy
 
-PocketMesh emphasizes comprehensive testing at all layers.
+MeshCore One emphasizes comprehensive testing at all layers.
 
 ### Unit Tests
 
 - **MeshCoreTests**: Tests packet building, parsing, LPP decoding, and session state.
-- **PocketMeshServicesTests**: Tests business logic services, actor isolation, and persistence.
-- **PocketMeshTests**: Tests app state and view models.
+- **MC1ServicesTests**: Tests business logic services, actor isolation, and persistence.
+- **MC1Tests**: Tests app state and view models.
 
 ### Running Tests
 
 ```bash
 # Run all tests
-xcodebuild test -project PocketMesh.xcodeproj \
-  -scheme PocketMesh \
+xcodebuild test -project MC1.xcodeproj \
+  -scheme MeshCore One \
   -destination "platform=iOS Simulator,name=iPhone 16e"
 
 # With xcsift for concise output
@@ -175,7 +175,7 @@ struct MessageServiceTests {
 
 ### Persistence
 
-- **SwiftData**: All persistence should use SwiftData models defined in `PocketMeshServices`.
+- **SwiftData**: All persistence should use SwiftData models defined in `MC1Services`.
 - **No Direct Store Access**: Services should interact with data via the `PersistenceStore` actor.
 
 ## Linting and Formatting
@@ -233,7 +233,7 @@ packages:
 
 ### AccessorySetupKit
 
-For iOS 18+ device pairing, the project uses AccessorySetupKit. The `AccessorySetupKitService` in PocketMeshServices handles the pairing flow.
+For iOS 18+ device pairing, the project uses AccessorySetupKit. The `AccessorySetupKitService` in MC1Services handles the pairing flow.
 
 Required Info.plist keys:
 
@@ -254,7 +254,7 @@ Required Info.plist keys:
 
 ### iOS 18+ Features
 
-PocketMesh leverages several modern iOS 18+ APIs and frameworks:
+MeshCore One leverages several modern iOS 18+ APIs and frameworks:
 
 **AccessorySetupKit**:
 - Native device discovery and pairing interface
@@ -283,11 +283,11 @@ The app requires Bluetooth and location permissions plus background BLE mode:
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
-<string>PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app.</string>
+<string>MeshCore One uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app.</string>
 <key>NSBluetoothPeripheralUsageDescription</key>
-<string>PocketMesh uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
+<string>MeshCore One uses Bluetooth to connect to MeshCore radio devices for mesh messaging.</string>
 <key>NSLocationWhenInUseUsageDescription</key>
-<string>PocketMesh can share your location with contacts on the mesh network.</string>
+<string>MeshCore One can share your location with contacts on the mesh network.</string>
 <key>UIBackgroundModes</key>
 <array>
     <string>bluetooth-central</string>
@@ -297,13 +297,13 @@ The app requires Bluetooth and location permissions plus background BLE mode:
 ## BLE Transport Architecture
 
 - **MeshCore/Sources/MeshCore/Transport/BLETransport.swift**: Base BLE transport protocol implementation
-- **PocketMeshServices/Transport/iOSBLETransport.swift**: iOS-specific BLE transport with CoreBluetooth integration
-- **PocketMeshServices/Transport/BLEStateMachine.swift**: Connection state management
-- **PocketMeshServices/Services/AccessorySetupKitService.swift**: iOS 18+ pairing flow
+- **MC1Services/Transport/iOSBLETransport.swift**: iOS-specific BLE transport with CoreBluetooth integration
+- **MC1Services/Transport/BLEStateMachine.swift**: Connection state management
+- **MC1Services/Services/AccessorySetupKitService.swift**: iOS 18+ pairing flow
 
 ### WiFi Transport
 
-PocketMesh also supports WiFi transport for MeshCore firmware devices:
+MeshCore One also supports WiFi transport for MeshCore firmware devices:
 
 - **MeshCore/Sources/MeshCore/Transport/WiFiTransport.swift**: TCP transport (Network.framework) that conforms to `MeshTransport`
 - **Connection Type**: Automatic detection based on device capability
@@ -350,8 +350,8 @@ The iPad interface uses split-view navigation:
 ```bash
 # Build for iPad Simulator
 xcodebuild test \
-  -project PocketMesh.xcodeproj \
-  -scheme PocketMesh \
+  -project MC1.xcodeproj \
+  -scheme MeshCore One \
   -destination "platform=iOS Simulator,name=iPad Pro (13-inch)"
 
 # Test on physical iPad (requires development team)
@@ -438,7 +438,7 @@ When working on diagnostic features (Line of Sight, Trace Path, RX Log), keep th
 
 - [Architecture Overview](Architecture.md)
 - [MeshCore API Reference](api/MeshCore.md)
-- [PocketMeshServices API Reference](api/PocketMeshServices.md)
+- [MC1Services API Reference](api/MC1Services.md)
 - [BLE Transport Guide](guides/BLE_Transport.md)
 - [WiFi Transport Guide](guides/WiFi_Transport.md)
 - [Diagnostics Guide](guides/Diagnostics.md)

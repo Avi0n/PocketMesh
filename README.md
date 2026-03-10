@@ -1,9 +1,9 @@
-# PocketMesh
+# MeshCore One
 
-An unofficial MeshCore client built for iOS in Swift.   
+A MeshCore client built for iOS in Swift.   
 Disclaimer: Built entirely with AI.
 
-Join the beta on TestFlight or sideload using unsigned IPA files under [Releases](https://github.com/Avi0n/PocketMesh/releases).
+Join the beta on TestFlight or sideload using unsigned IPA files under [Releases](https://github.com/Avi0n/MeshCoreOne/releases).
 
 <a href="https://testflight.apple.com/join/YjGNDTaE">
   <img src="https://img.shields.io/badge/Download_on-TestFlight-0D96F6?style=for-the-badge&logo=apple&logoColor=white" alt="Download on TestFlight">
@@ -86,12 +86,12 @@ Join the beta on TestFlight or sideload using unsigned IPA files under [Releases
 
 1.  Install [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 2.  Run `xcodegen generate`.
-3.  Open `PocketMesh.xcodeproj`.
+3.  Open `MC1.xcodeproj`.
 
 For more details, see the [Development Guide](docs/Development.md).
 
   
 ## License
 
-PocketMesh - GNU General Public License v3.0   
+MeshCore One - GNU General Public License v3.0   
 Swift MeshCore - MIT

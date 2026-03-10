@@ -1,0 +1,189 @@
+import Foundation
+import os
+import SwiftData
+
+// MARK: - PersistenceStore Errors
+
+public enum PersistenceStoreError: Error, Sendable {
+    case deviceNotFound
+    case contactNotFound
+    case messageNotFound
+    case channelNotFound
+    case remoteNodeSessionNotFound
+    case saveFailed(String)
+    case fetchFailed(String)
+    case invalidData
+}
+
+extension PersistenceStoreError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .deviceNotFound: "Device not found."
+        case .contactNotFound: "Contact not found."
+        case .messageNotFound: "Message not found."
+        case .channelNotFound: "Channel not found."
+        case .remoteNodeSessionNotFound: "Remote node session not found."
+        case .saveFailed(let msg): "Failed to save: \(msg)"
+        case .fetchFailed(let msg): "Failed to fetch: \(msg)"
+        case .invalidData: "Invalid data."
+        }
+    }
+}
+
+// MARK: - PersistenceStore Actor
+
+/// ModelActor for background SwiftData operations.
+/// Provides per-device data isolation and thread-safe access.
+@ModelActor
+public actor PersistenceStore: PersistenceStoreProtocol {
+
+    /// Shared schema for MeshCore One models
+    public static let schema = Schema([
+        Device.self,
+        Contact.self,
+        Message.self,
+        MessageRepeat.self,
+        Reaction.self,
+        Channel.self,
+        RemoteNodeSession.self,
+        RoomMessage.self,
+        SavedTracePath.self,
+        TracePathRun.self,
+        RxLogEntry.self,
+        DebugLogEntry.self,
+        LinkPreviewData.self,
+        DiscoveredNode.self,
+        NodeStatusSnapshot.self,
+        BlockedChannelSender.self
+    ])
+
+    /// Creates a ModelContainer for the app.
+    ///
+    /// Schema evolution (no VersionedSchema — handled via lightweight migration):
+    /// - v1→v2: Contact.outPathLength, DiscoveredNode.outPathLength changed Int8→UInt8
+    ///          (SQLite INTEGER is identical for both; bit pattern -1 == 0xFF).
+    ///          Added MessageRepeat.pathLength (UInt8, default 0).
+    ///          Added SavedTracePath.hashSize (Int, default 1).
+    public static func createContainer(inMemory: Bool = false) throws -> ModelContainer {
+        if !inMemory {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
+        }
+
+        let configuration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: inMemory,
+            allowsSave: true
+        )
+        return try ModelContainer(for: schema, configurations: [configuration])
+    }
+
+    // MARK: - Database Warm-up
+
+    /// Forces SwiftData to initialize the database.
+    /// Call this early in app lifecycle to avoid lazy initialization during user operations.
+    public func warmUp() throws {
+        // Perform a simple fetch to trigger modelContext initialization
+        _ = try modelContext.fetchCount(FetchDescriptor<Device>())
+    }
+
+    // MARK: - Discovered Nodes
+
+    private let maxDiscoveredNodes = 1000
+
+    public func upsertDiscoveredNode(deviceID: UUID, from frame: ContactFrame) throws -> (node: DiscoveredNodeDTO, isNew: Bool) {
+        let targetDeviceID = deviceID
+        let publicKey = frame.publicKey
+        let predicate = #Predicate<DiscoveredNode> { node in
+            node.deviceID == targetDeviceID && node.publicKey == publicKey
+        }
+        var descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        let existing = try modelContext.fetch(descriptor)
+
+        let node: DiscoveredNode
+        let isNew: Bool
+        if let existingNode = existing.first {
+            existingNode.name = frame.name
+            existingNode.typeRawValue = frame.type.rawValue
+            existingNode.lastHeard = Date()
+            existingNode.lastAdvertTimestamp = frame.lastAdvertTimestamp
+            existingNode.latitude = frame.latitude
+            existingNode.longitude = frame.longitude
+            existingNode.outPathLength = frame.outPathLength
+            existingNode.outPath = frame.outPath
+            node = existingNode
+            isNew = false
+        } else {
+            node = DiscoveredNode(
+                deviceID: deviceID,
+                publicKey: frame.publicKey,
+                name: frame.name,
+                typeRawValue: frame.type.rawValue,
+                lastAdvertTimestamp: frame.lastAdvertTimestamp,
+                latitude: frame.latitude,
+                longitude: frame.longitude,
+                outPathLength: frame.outPathLength,
+                outPath: frame.outPath
+            )
+            modelContext.insert(node)
+            isNew = true
+
+            try enforceDiscoveredNodeCap(deviceID: deviceID)
+        }
+
+        try modelContext.save()
+        return (node: DiscoveredNodeDTO(from: node), isNew: isNew)
+    }
+
+    private func enforceDiscoveredNodeCap(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let countPredicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let countDescriptor = FetchDescriptor<DiscoveredNode>(predicate: countPredicate)
+        let count = try modelContext.fetchCount(countDescriptor)
+
+        if count > maxDiscoveredNodes {
+            var oldestDescriptor = FetchDescriptor<DiscoveredNode>(
+                predicate: countPredicate,
+                sortBy: [SortDescriptor(\.lastHeard, order: .forward)]
+            )
+            oldestDescriptor.fetchLimit = count - maxDiscoveredNodes
+            let toDelete = try modelContext.fetch(oldestDescriptor)
+            for node in toDelete {
+                modelContext.delete(node)
+            }
+            let logger = Logger(subsystem: "com.mc1", category: "PersistenceStore")
+            logger.warning("DiscoveredNode cap exceeded, evicted \(toDelete.count) oldest nodes")
+        }
+    }
+
+    public func fetchDiscoveredNodes(deviceID: UUID) throws -> [DiscoveredNodeDTO] {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        let nodes = try modelContext.fetch(descriptor)
+        return nodes.map { DiscoveredNodeDTO(from: $0) }
+    }
+
+    public func deleteDiscoveredNode(id: UUID) throws {
+        let targetID = id
+        let predicate = #Predicate<DiscoveredNode> { $0.id == targetID }
+        var descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        descriptor.fetchLimit = 1
+        if let node = try modelContext.fetch(descriptor).first {
+            modelContext.delete(node)
+            try modelContext.save()
+        }
+    }
+
+    public func clearDiscoveredNodes(deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let predicate = #Predicate<DiscoveredNode> { $0.deviceID == targetDeviceID }
+        let descriptor = FetchDescriptor<DiscoveredNode>(predicate: predicate)
+        let nodes = try modelContext.fetch(descriptor)
+        for node in nodes {
+            modelContext.delete(node)
+        }
+        try modelContext.save()
+    }
+}

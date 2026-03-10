@@ -3,7 +3,7 @@ import Foundation
 /// Defines the interface for MeshCore device communication.
 ///
 /// This protocol abstracts the core mesh communication operations used by services
-/// in the PocketMeshServices layer, allowing them to be tested without a real BLE connection.
+/// in the MC1Services layer, allowing them to be tested without a real BLE connection.
 ///
 /// ## Usage
 ///

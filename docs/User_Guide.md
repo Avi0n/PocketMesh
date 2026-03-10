@@ -1,6 +1,6 @@
-# PocketMesh User Guide
+# MeshCore One User Guide
 
-PocketMesh is a messaging app designed for off-grid communication using MeshCore-compatible mesh networking radios.
+MeshCore One is a messaging app designed for off-grid communication using MeshCore-compatible mesh networking radios.
 
 ## 1. Getting Started
 
@@ -50,7 +50,7 @@ Mention other contacts in group chats to get their attention:
 
 ### Link Previews
 
-PocketMesh automatically generates rich previews for URLs shared in messages:
+MeshCore One automatically generates rich previews for URLs shared in messages:
 
 1. Paste a URL into the message input (e.g., `https://example.com`).
 2. The app will fetch metadata (title, description, image) when the message is sent.
@@ -114,7 +114,7 @@ If a message fails to deliver:
 
 ### Group Channels
 
-- PocketMesh supports up to the device's channel limit (commonly 8 slots).
+- MeshCore One supports up to the device's channel limit (commonly 8 slots).
 - **Slot 0 (Public)**: A default public channel for open communication.
 - **Private Channels**: Configure a channel with a name and a passphrase to create a private group. Others must use the same name and passphrase to join.
 
@@ -167,7 +167,7 @@ Share your contact info or a channel via QR code:
 1. Go to **Nodes** tab.
 2. Tap the **ellipsis menu** (top right).
 3. Select **Share My Contact**.
-4. Show the QR code to another PocketMesh user.
+4. Show the QR code to another MeshCore One user.
 5. They scan it to add you as a contact.
 
 #### Sharing a Channel
@@ -185,7 +185,7 @@ Share your contact info or a channel via QR code:
 2. Tap the **ellipsis menu** (top right).
 3. Select **Add Contact**.
 4. Tap **Scan QR Code**.
-5. Point your camera at a PocketMesh QR code.
+5. Point your camera at a MeshCore One QR code.
 6. The contact or channel is automatically added.
 
 ### Map View
@@ -305,7 +305,7 @@ Advanced settings include:
 
 ## 7. Network Diagnostics Tools
 
-PocketMesh includes powerful diagnostic tools for optimizing your mesh network performance and troubleshooting connectivity issues.
+MeshCore One includes powerful diagnostic tools for optimizing your mesh network performance and troubleshooting connectivity issues.
 
 ### Line of Sight Analysis
 
@@ -416,7 +416,7 @@ The log shows:
 
 ## 8. iPad Experience
 
-PocketMesh provides an optimized experience on iPad with split-view navigation and enhanced layouts.
+MeshCore One provides an optimized experience on iPad with split-view navigation and enhanced layouts.
 
 ### Split-View Navigation
 

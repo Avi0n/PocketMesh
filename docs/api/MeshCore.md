@@ -209,7 +209,7 @@ WiFi transport provides connection to MeshCore devices over TCP/IP networks.
 
 **Connection Characteristics:**
 - **Protocol:** TCP over WiFi
-- **Port:** Configurable (the PocketMesh app UI defaults to 5000)
+- **Port:** Configurable (the MeshCore One app UI defaults to 5000)
 - **Timeout:** 10 seconds (see `WiFiTransport.connectionTimeout`)
 - **Framing:** Length-prefixed frames (see `WiFiFrameCodec`)
 - **Keep-Alive / Auto-Reconnect:** Not implemented in `WiFiTransport` itself; higher layers can reconnect as needed

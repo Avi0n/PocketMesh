@@ -1,6 +1,6 @@
 # Glossary
 
-Domain-specific terms and acronyms used throughout the PocketMesh codebase.
+Domain-specific terms and acronyms used throughout the MeshCore One codebase.
 
 ## Radio & Protocol
 

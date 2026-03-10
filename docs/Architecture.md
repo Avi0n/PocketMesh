@@ -1,6 +1,6 @@
-# PocketMesh Architecture
+# MeshCore One Architecture
 
-PocketMesh is built using a modern, three-tier modular architecture designed for high performance, reliability, and maintainability. It leverages Swift 6's strict concurrency model, actor isolation, and modern iOS frameworks.
+MeshCore One is built using a modern, three-tier modular architecture designed for high performance, reliability, and maintainability. It leverages Swift 6's strict concurrency model, actor isolation, and modern iOS frameworks.
 
 ## Platform Requirements
 
@@ -14,12 +14,12 @@ PocketMesh is built using a modern, three-tier modular architecture designed for
 The project is divided into three main layers:
 
 1. **MeshCore (Protocol Layer)**: A pure Swift implementation of the MeshCore mesh networking protocol.
-2. **PocketMeshServices (Business Logic Layer)**: Manages higher-level business logic, actor isolation, and shared persistence.
-3. **PocketMesh (UI Layer)**: The SwiftUI-based user interface and application state management.
+2. **MC1Services (Business Logic Layer)**: Manages higher-level business logic, actor isolation, and shared persistence.
+3. **MeshCore One (UI Layer)**: The SwiftUI-based user interface and application state management.
 
 ```mermaid
 graph TD
-    subgraph PocketMesh [UI Layer]
+    subgraph MeshCore One [UI Layer]
         AppState[AppState @Observable @MainActor]
         Views[SwiftUI Views]
         MEB[MessageEventBroadcaster]
@@ -29,7 +29,7 @@ graph TD
         LES[LogExportService enum]
     end
 
-    subgraph PocketMeshServices [Business Logic Layer]
+    subgraph MC1Services [Business Logic Layer]
         ServiceContainer[ServiceContainer DI]
         CM[ConnectionManager @MainActor @Observable]
         SC[SyncCoordinator actor]
@@ -70,7 +70,7 @@ graph TD
         PP[PacketParser enum]
     end
 
-    subgraph Transport [Transport Layer - in PocketMeshServices]
+    subgraph Transport [Transport Layer - in MC1Services]
         BT[iOSBLETransport]
         BSM[BLEStateMachine]
     end
@@ -150,7 +150,7 @@ The foundation of the project, responsible for low-level communication with Mesh
 - **Actor-Based**: `MeshCoreSession` is an actor that serializes all device communication, ensuring thread safety.
 - **Event-Driven**: Uses an `EventDispatcher` to broadcast `MeshEvent`s via `AsyncStream`.
 - **Stateless Protocol Handlers**: `PacketBuilder` and `PacketParser` are stateless enums that handle the binary encoding/decoding of the Companion Radio Protocol.
-- **Transport Abstraction**: The `MeshTransport` protocol allows for different underlying transports. `MockTransport`, `BLETransport`, and `WiFiTransport` live in MeshCore. PocketMeshServices provides `iOSBLETransport` (CoreBluetooth + `BLEStateMachine`) for production BLE on iOS.
+- **Transport Abstraction**: The `MeshTransport` protocol allows for different underlying transports. `MockTransport`, `BLETransport`, and `WiFiTransport` live in MeshCore. MC1Services provides `iOSBLETransport` (CoreBluetooth + `BLEStateMachine`) for production BLE on iOS.
 - **Dual Transport Support**: Supports both Bluetooth Low Energy (BLE) and WiFi transports simultaneously. Each transport has its own state machine for managing connection lifecycle.
 - **Auto-Reconnection**: Both transports automatically reconnect when connection is lost, with configurable retry logic and backoff strategies.
 - **LPP Telemetry**: Includes a full implementation of the Cayenne Low Power Payload (LPP) for efficient sensor data transmission.
@@ -159,7 +159,7 @@ See: [MeshCore API Reference](api/MeshCore.md) | [BLE Transport Guide](guides/BL
 
 ---
 
-## 2. PocketMeshServices (Business Logic Layer)
+## 2. MC1Services (Business Logic Layer)
 
 Bridges the protocol layer and the UI, handling complex business rules and data persistence.
 
@@ -174,14 +174,14 @@ Bridges the protocol layer and the UI, handling complex business rules and data 
 
 ### ServiceContainer & Dependency Injection
 
-The `ServiceContainer` is the central dependency injection container for PocketMeshServices. It creates and manages all services, handling the dependency graph and lifecycle:
+The `ServiceContainer` is the central dependency injection container for MC1Services. It creates and manages all services, handling the dependency graph and lifecycle:
 
 **Independent Services** (no service dependencies):
 - `KeychainService`: Secure credential storage using system keychain
 - `NotificationService`: Local notification management for message alerts
 - `ReactionService`: Reaction parsing, indexing, and pending-queue handling
 
-Note: `ElevationService`, `LocationService`, `LinkPreviewService`, and `LogExportService` are app-scoped utilities in the PocketMesh UI layer, not part of the PocketMeshServices package.
+Note: `ElevationService`, `LocationService`, `LinkPreviewService`, and `LogExportService` are app-scoped utilities in the MeshCore One UI layer, not part of the MC1Services package.
 
 **Core Services** (depend on session/dataStore):
 - `ContactService`: Contact management and synchronization
@@ -292,11 +292,11 @@ let messageDTOs = await messageService.fetchMessages(deviceID: deviceID)
 - **Actor Isolation**: Services work with SwiftData models; UI and callbacks receive DTOs
 - **Clean Boundaries**: Clear separation between persistence and business logic layers
 
-See: [PocketMeshServices API Reference](api/PocketMeshServices.md) | [Sync Guide](guides/Sync.md) | [Messaging Guide](guides/Messaging.md)
+See: [MC1Services API Reference](api/MC1Services.md) | [Sync Guide](guides/Sync.md) | [Messaging Guide](guides/Messaging.md)
 
 ---
 
-## 3. PocketMesh (UI Layer)
+## 3. MeshCore One (UI Layer)
 
 A modern SwiftUI application that provides a user-friendly experience for mesh messaging.
 
@@ -307,7 +307,7 @@ A modern SwiftUI application that provides a user-friendly experience for mesh m
 - **iMessage-Style Chat**: Rich messaging interface with delivery status, timestamps, and metadata (SNR, path length).
 - **MapKit Integration**: Displays contact locations on a map with real-time updates and type-based markers.
 
-See: [PocketMesh API Reference](api/PocketMesh.md) | [User Guide](User_Guide.md)
+See: [MeshCore One API Reference](api/MeshCore One.md) | [User Guide](User_Guide.md)
 
 ---
 
@@ -315,7 +315,7 @@ See: [PocketMesh API Reference](api/PocketMesh.md) | [User Guide](User_Guide.md)
 
 ### Concurrency Model
 
-PocketMesh strictly adheres to the **Swift 6 concurrency model**:
+MeshCore One strictly adheres to the **Swift 6 concurrency model**:
 
 - **Actors**: Used for all services and session management to prevent data races.
 - **MainActor**: UI updates, `ConnectionManager`, and `MessageEventBroadcaster` are isolated to the main thread.
@@ -377,7 +377,7 @@ The codebase has four uses of `nonisolated(unsafe)`. Each bypasses Swift's actor
 
 ## Debug Logging Infrastructure
 
-PocketMesh includes a comprehensive debug logging system designed to help diagnose issues in the field without requiring a developer machine.
+MeshCore One includes a comprehensive debug logging system designed to help diagnose issues in the field without requiring a developer machine.
 
 ### Architecture
 
@@ -424,7 +424,7 @@ Debug logs can be exported for analysis:
 
 ## iPad Split-View Architecture
 
-On iPad, PocketMesh uses a split-view layout that provides a more efficient workflow and better use of available screen real estate.
+On iPad, MeshCore One uses a split-view layout that provides a more efficient workflow and better use of available screen real estate.
 
 ### Navigation Pattern
 
@@ -468,7 +468,7 @@ Views access sub-objects directly (e.g., `appState.navigation.selectedTab`). Cro
 
 ## Diagnostic Tools Architecture
 
-PocketMesh includes several diagnostic tools built on a shared infrastructure for RF analysis and network troubleshooting.
+MeshCore One includes several diagnostic tools built on a shared infrastructure for RF analysis and network troubleshooting.
 
 ### Shared Services
 
@@ -532,8 +532,8 @@ PocketMesh includes several diagnostic tools built on a shared infrastructure fo
 
 ### API References
 - [MeshCore API](api/MeshCore.md)
-- [PocketMeshServices API](api/PocketMeshServices.md)
-- [PocketMesh API](api/PocketMesh.md)
+- [MC1Services API](api/MC1Services.md)
+- [MeshCore One API](api/MeshCore One.md)
 
 ### Topic Guides
 - [BLE Transport](guides/BLE_Transport.md)

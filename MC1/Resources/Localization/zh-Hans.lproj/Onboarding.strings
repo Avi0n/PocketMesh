@@ -1,0 +1,235 @@
+/*
+  Onboarding.strings
+  MC1
+
+  Strings for Onboarding feature, including welcome screens,
+  permission requests, device scanning, and initial setup flow.
+ */
+
+
+// MARK: - Welcome View
+
+/* Location: WelcomeView.swift - App title displayed on welcome screen */
+"welcome.title" = "MeshCore One";
+
+/* Location: WelcomeView.swift - Subtitle describing the app */
+"welcome.subtitle" = "Apple 设备的 MeshCore 客户端";
+
+/* Location: WelcomeView.swift - Feature title for multi-hop routing */
+"welcome.feature.multiHop.title" = "多跳路由";
+
+/* Location: WelcomeView.swift - Feature description for multi-hop routing */
+"welcome.feature.multiHop.description" = "您的消息在Mesh网络中找到路径";
+
+/* Location: WelcomeView.swift - Feature title for community network */
+"welcome.feature.community.title" = "社区网络";
+
+/* Location: WelcomeView.swift - Feature description for community network */
+"welcome.feature.community.description" = "由像您这样的用户建立的网络";
+
+/* Location: WelcomeView.swift - Button to proceed to next onboarding step */
+"welcome.getStarted" = "开始使用";
+
+// MARK: - Permissions View
+
+/* Location: PermissionsView.swift - Screen title for permissions */
+"permissions.title" = "权限";
+
+/* Location: PermissionsView.swift - Subtitle encouraging notification permission */
+"permissions.subtitle" = "允许通知以获得最佳体验";
+
+/* Location: PermissionsView.swift - Permission card title for notifications */
+"permissions.notifications.title" = "通知";
+
+/* Location: PermissionsView.swift - Permission card description for notifications */
+"permissions.notifications.description" = "接收新消息的警报";
+
+/* Location: PermissionsView.swift - Permission card title for location */
+"permissions.location.title" = "位置";
+
+/* Location: PermissionsView.swift - Permission card description for location */
+"permissions.location.description" = "在地图上查看您的位置";
+
+/* Location: PermissionsView.swift - Button when all permissions granted */
+"permissions.continue" = "继续";
+
+/* Location: PermissionsView.swift - Button when some permissions skipped */
+"permissions.skipForNow" = "暂时跳过";
+
+/* Location: PermissionsView.swift - Button to go back */
+"permissions.back" = "返回";
+
+/* Location: PermissionsView.swift - Badge shown for optional permissions */
+"permissions.optional" = "可选";
+
+/* Location: PermissionsView.swift - Button to open system settings */
+"permissions.openSettings" = "设置";
+
+/* Location: PermissionsView.swift - Button to allow a permission */
+"permissions.allow" = "允许";
+
+/* Location: PermissionsView.swift - Alert title for location permission */
+"permissions.locationAlert.title" = "位置权限";
+
+/* Location: PermissionsView.swift - Alert button to open settings */
+"permissions.locationAlert.openSettings" = "打开设置";
+
+/* Location: PermissionsView.swift - Alert message explaining denied location permission */
+"permissions.locationAlert.message" = "位置权限先前被拒绝。请在设置中启用它以与Mesh网络联系人共享您的位置。";
+
+// MARK: - Device Scan View
+
+/* Location: DeviceScanView.swift - Screen title for device pairing */
+"deviceScan.title" = "配对您的设备";
+
+/* Location: DeviceScanView.swift - Subtitle with pairing instructions */
+"deviceScan.subtitle" = "确保您的 MeshCore 设备已开机并在附近";
+
+/* Location: DeviceScanView.swift - Message shown when device is already paired */
+"deviceScan.alreadyPaired" = "您的设备已配对";
+
+/* Location: DeviceScanView.swift - Instruction step 1 */
+"deviceScan.instruction.powerOn" = "打开您的 MeshCore 设备";
+
+/* Location: DeviceScanView.swift - Instruction step 2 */
+"deviceScan.instruction.tapAdd" = "点击下方的\"添加设备\"";
+
+/* Location: DeviceScanView.swift - Instruction step 3 */
+"deviceScan.instruction.selectDevice" = "从列表中选择您的设备";
+
+/* Location: DeviceScanView.swift - Instruction step 4 */
+"deviceScan.instruction.enterPin" = "出现提示时输入 PIN";
+
+/* Location: DeviceScanView.swift - Button to continue after pairing */
+"deviceScan.continue" = "继续";
+
+/* Location: DeviceScanView.swift - Button label while connecting */
+"deviceScan.connecting" = "连接中...";
+
+/* Location: DeviceScanView.swift - Button to connect simulator (debug) */
+"deviceScan.connectSimulator" = "连接模拟器";
+
+/* Location: DeviceScanView.swift - Button to continue in demo mode */
+"deviceScan.continueDemo" = "在演示模式下继续";
+
+/* Location: DeviceScanView.swift - Button to add a new device */
+"deviceScan.addDevice" = "添加设备";
+
+/* Location: DeviceScanView.swift - Button to retry connection after other-app conflict */
+"deviceScan.retryConnection" = "重试连接";
+
+/* Location: DeviceScanView.swift - Button for troubleshooting */
+"deviceScan.deviceNotAppearing" = "设备未显示？";
+
+/* Location: DeviceScanView.swift - Button to connect via WiFi */
+"deviceScan.connectViaWifi" = "通过 WiFi 连接";
+
+/* Location: DeviceScanView.swift - Alert title when demo mode is unlocked */
+"deviceScan.demoModeAlert.title" = "演示模式已解锁";
+
+/* Location: DeviceScanView.swift - Alert message for demo mode */
+"deviceScan.demoModeAlert.message" = "您现在可以无需设备继续。随时在设置中切换演示模式。";
+
+// MARK: - Troubleshooting Sheet
+
+/* Location: DeviceScanView.swift - Navigation title for troubleshooting sheet */
+"troubleshooting.title" = "故障排除";
+
+/* Location: DeviceScanView.swift - Section header for basic checks */
+"troubleshooting.basicChecks.header" = "基本检查";
+
+/* Location: DeviceScanView.swift - Check to ensure device is powered on */
+"troubleshooting.basicChecks.powerOn" = "确保您的设备已开机";
+
+/* Location: DeviceScanView.swift - Check to move device closer */
+"troubleshooting.basicChecks.moveCloser" = "将设备移近您的手机";
+
+/* Location: DeviceScanView.swift - Check to restart device */
+"troubleshooting.basicChecks.restart" = "重启 MeshCore 设备";
+
+/* Location: DeviceScanView.swift - Section header for factory reset help */
+"troubleshooting.factoryReset.header" = "恢复出厂设置设备？";
+
+/* Location: DeviceScanView.swift - Explanation about stale pairings */
+"troubleshooting.factoryReset.explanation" = "如果您对 MeshCore 设备进行了恢复出厂设置，iOS 可能仍存储旧的配对。在系统设置中清除此操作允许设备再次出现。";
+
+/* Location: DeviceScanView.swift - Additional explanation about removal confirmation */
+"troubleshooting.factoryReset.confirmationNote" = "点击下方将要求您确认删除旧的配对。这是正常的 — 它允许您恢复出厂设置的设备再次出现。";
+
+/* Location: DeviceScanView.swift - Button to clear previous pairing */
+"troubleshooting.factoryReset.clearPairing" = "清除之前的配对";
+
+/* Location: DeviceScanView.swift - Footer when no pairings found */
+"troubleshooting.factoryReset.noPairings" = "未找到之前的配对";
+
+/* Location: DeviceScanView.swift - Footer showing pairing count - uses stringsdict */
+"troubleshooting.factoryReset.pairingsFound" = "找到 %d 个之前的配对";
+
+/* Location: DeviceScanView.swift - Section header for system settings info */
+"troubleshooting.systemSettings.header" = "系统设置";
+
+/* Location: DeviceScanView.swift - Info about managing accessories */
+"troubleshooting.systemSettings.manageAccessories" = "您也可以在以下位置管理蓝牙配件：";
+
+/* Location: DeviceScanView.swift - Path to accessories in settings */
+"troubleshooting.systemSettings.path" = "设置 → 隐私与安全 → 配件";
+
+// MARK: - Mesh Animation View
+
+/* Location: MeshAnimationView.swift - Accessibility label for mesh visualization */
+"meshAnimation.accessibilityLabel" = "网络可视化";
+
+// MARK: - Radio Preset Onboarding View
+
+/* Location: RadioPresetOnboardingView.swift - Screen title for radio settings */
+"radioPreset.title" = "无线电设置";
+
+/* Location: RadioPresetOnboardingView.swift - Subtitle with instructions and Discord link */
+"radioPreset.subtitle" = "您可以随时在 MeshCore One 设置中更改这些设置。如果您不确定使用哪个预设，请在 [MeshCore Discord](https://meshcore.co.uk/contact.html) 中询问。";
+
+/* Location: RadioPresetOnboardingView.swift - Button label while applying preset */
+"radioPreset.applying" = "正在应用...";
+
+/* Location: RadioPresetOnboardingView.swift - Button to apply selected preset */
+"radioPreset.apply" = "应用";
+
+/* Location: RadioPresetOnboardingView.swift - Button to continue */
+"radioPreset.continue" = "继续";
+
+/* Location: RadioPresetOnboardingView.swift - Button to skip radio setup */
+"radioPreset.skip" = "跳过";
+
+/* Location: RadioPresetOnboardingView.swift - Label for custom (non-preset) radio settings */
+"radioPreset.custom" = "自定义";
+
+// MARK: - WiFi Connection Sheet
+
+/* Location: WiFiConnectionSheet.swift - Navigation title */
+"wifiConnection.title" = "通过 WiFi 连接";
+
+/* Location: WiFiConnectionSheet.swift - Section header for connection details */
+"wifiConnection.connectionDetails.header" = "连接详情";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for IP address field */
+"wifiConnection.ipAddress.placeholder" = "IP 地址";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear IP button */
+"wifiConnection.ipAddress.clearAccessibility" = "清除 IP 地址";
+
+/* Location: WiFiConnectionSheet.swift - Placeholder for port field */
+"wifiConnection.port.placeholder" = "端口";
+
+/* Location: WiFiConnectionSheet.swift - Accessibility label for clear port button */
+"wifiConnection.port.clearAccessibility" = "清除端口";
+
+/* Location: WiFiConnectionSheet.swift - Footer explaining connection details */
+"wifiConnection.connectionDetails.footer" = "输入您的 MeshCore 设备的本地网络地址。默认端口为 5000。";
+
+/* Location: WiFiConnectionSheet.swift - Button label while connecting */
+"wifiConnection.connecting" = "连接中...";
+
+/* Location: WiFiConnectionSheet.swift - Button to initiate connection */
+"wifiConnection.connect" = "连接";
+
+/* Location: WiFiConnectionSheet.swift - Error message for invalid port */
+"wifiConnection.error.invalidPort" = "无效的端口号";

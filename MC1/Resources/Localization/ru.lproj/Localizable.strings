@@ -1,0 +1,212 @@
+/*
+  Localizable.strings
+  MC1
+
+  Russian translation of common and shared strings used across the application.
+*/
+
+
+// MARK: - Generic Buttons
+
+/* Standard confirmation button for dialogs */
+"common.ok" = "ОК";
+
+/* Standard cancel button for dialogs and sheets */
+"common.cancel" = "Отмена";
+
+/* Standard done button for completing an action */
+"common.done" = "Готово";
+
+/* Standard save button for persisting changes */
+"common.save" = "Сохранить";
+
+/* Standard delete button for removing items */
+"common.delete" = "Удалить";
+
+/* Standard edit button for entering edit mode */
+"common.edit" = "Изменить";
+
+/* Standard close button for dismissing views */
+"common.close" = "Закрыть";
+
+/* Button to retry a failed operation */
+"common.tryAgain" = "Попробовать снова";
+
+/* Error label when content fails to load */
+"common.error.failedToLoad" = "Не удалось загрузить";
+
+/* Generic connection error title */
+"common.error.connectionError" = "Ошибка подключения";
+
+/* Network error with underlying error description - %@ is the error description */
+"common.error.networkError" = "Ошибка сети: %@";
+
+/* Invalid response from API */
+"common.error.invalidResponse" = "Недействительный ответ от API высот";
+
+/* API error with message - %@ is the error message */
+"common.error.apiError" = "Ошибка API: %@";
+
+/* No data returned from API */
+"common.error.noElevationData" = "Данные о высоте не получены";
+
+/* Standard remove button for removing items from a list or group */
+"common.remove" = "Удалить";
+
+"common.accessibility.connectHint" = "Нажмите дважды, чтобы подключить устройство";
+
+
+// MARK: - Connection Status
+
+/* Location: SyncingPillView.swift - Status shown when syncing data */
+"common.status.syncing" = "Синхронизация";
+
+/* Location: SyncingPillView.swift - Status shown when connecting to device */
+"common.status.connecting" = "Подключение";
+
+/* Location: SyncingPillView.swift - Status shown when device is ready */
+"common.status.ready" = "Готово";
+
+/* Location: SyncingPillView.swift - Status shown when device is disconnected */
+"common.status.disconnected" = "Отключено";
+
+
+// MARK: - Tab Bar
+
+/* Tab bar title for the messaging/conversations screen */
+"tabs.chats" = "Чаты";
+
+/* Tab bar title for the nodes/contacts list screen */
+"tabs.nodes" = "Узлы";
+
+/* Tab bar title for the map screen showing node locations */
+"tabs.map" = "Карта";
+
+/* Tab bar title for the tools/utilities screen */
+"tabs.tools" = "Инструменты";
+
+/* Tab bar title for the app settings screen */
+"tabs.settings" = "Настройки";
+
+
+// MARK: - Connection Alerts
+
+/* Alert title when device connection fails */
+"alert.connectionFailed.title" = "Ошибка подключения";
+
+/* Alert title when connection cannot be established */
+"alert.couldNotConnect.title" = "Не удалось подключиться";
+
+/* Default message when device connection fails */
+"alert.connectionFailed.defaultMessage" = "Не удалось подключиться к устройству.";
+
+/* Message suggesting another app may be connected to the device */
+"alert.couldNotConnect.otherAppMessage" = "Убедись, что к устройству не подключено другое приложение, и попробуй снова.";
+
+/* Button to remove failed pairing and retry connection */
+"alert.connectionFailed.removeAndRetry" = "Удалить и попробовать снова";
+
+
+// MARK: - Accessibility
+
+/* VoiceOver announcement when viewing cached data while disconnected from device */
+"accessibility.viewingCachedData" = "Просмотр кэшированных данных. Подключись к устройству для обновления.";
+
+
+// MARK: - Node Types
+
+/* Node type for a person or contact */
+"nodeType.contact" = "Контакт";
+
+/* Node type for a mesh network repeater device */
+"nodeType.repeater" = "Ретранслятор";
+
+/* Node type for a group chat room */
+"nodeType.room" = "Комната";
+
+
+// MARK: - Permission Levels
+
+/* Permission level with limited access */
+"permission.guest" = "Гость";
+
+/* Permission level with standard access */
+"permission.member" = "Участник";
+
+/* Permission level with full administrative access */
+"permission.admin" = "Администратор";
+
+
+// MARK: - Discovery Notifications
+
+/* Notification title when a new contact is discovered on the mesh network */
+"notifications.discovery.contact" = "Обнаружен новый контакт";
+
+/* Notification title when a new repeater node is discovered on the mesh network */
+"notifications.discovery.repeater" = "Обнаружен новый ретранслятор";
+
+/* Notification title when a new room is discovered on the mesh network */
+"notifications.discovery.room" = "Обнаружена новая комната";
+
+
+// MARK: - Notification Actions
+
+/* Notification action button to reply to a message */
+"notifications.action.reply" = "Ответить";
+
+/* Notification action button to send a quick reply */
+"notifications.action.send" = "Отправить";
+
+/* Notification action placeholder for quick reply text input */
+"notifications.action.messagePlaceholder" = "Сообщение...";
+
+/* Notification action button to mark a message as read */
+"notifications.action.markAsRead" = "Отметить как прочитанное";
+
+
+// MARK: - Low Battery Notifications
+
+/* Notification title for low battery warning */
+"notifications.lowBattery.title" = "Низкий заряд батареи";
+
+/* Notification body for low battery warning - %1$@ is device name, %2$d is battery percentage */
+"notifications.lowBattery.body" = "Заряд батареи %1$@ составляет %2$d%%";
+
+
+// MARK: - Connection VoiceOver Announcements
+
+/* VoiceOver announcement when sync fails and device is disconnecting */
+"accessibility.connection.syncFailedDisconnecting" = "Синхронизация не удалась. Отключение.";
+
+/* VoiceOver announcement when device connection is lost */
+"accessibility.connection.deviceConnectionLost" = "Соединение с устройством потеряно";
+
+/* VoiceOver announcement when device reconnects */
+"accessibility.connection.deviceReconnected" = "Устройство переподключено";
+
+
+// MARK: - Status Pill
+
+/* Status pill message when sync has failed */
+"statusPill.syncFailed" = "Ошибка синхронизации";
+
+
+// MARK: - Accessibility Toggle States
+
+/* Accessibility value for off state */
+"accessibility.off" = "Выкл.";
+
+/* Accessibility value for on state */
+"accessibility.on" = "Вкл.";
+
+
+// MARK: - Rate Limiting
+
+/* Error message when user hits rate limit */
+"common.error.rateLimited" = "Слишком много запросов. Попробуйте позже.";
+
+
+// MARK: - Reaction Notifications
+
+/* Notification body when someone reacts to your message - %1$@ is emoji, %2$@ is message text */
+"notifications.reaction.body" = "Отреагировал(а) %1$@ на ваше сообщение: «%2$@»";

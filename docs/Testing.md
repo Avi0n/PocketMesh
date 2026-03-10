@@ -9,15 +9,15 @@ Use the Test navigator (Cmd+6) or Cmd+U to run all tests.
 ### Command Line
 
 ```bash
-# App-layer tests (PocketMeshTests)
+# App-layer tests (MC1Tests)
 xcodebuild test \
-  -project PocketMesh.xcodeproj \
-  -scheme PocketMesh \
+  -project MC1.xcodeproj \
+  -scheme MeshCore One \
   -destination "platform=iOS Simulator,name=iPhone 16e" \
   2>&1 | xcsift -f toon
 
 # Services package tests
-cd PocketMeshServices && swift test 2>&1 | xcsift -f toon
+cd MC1Services && swift test 2>&1 | xcsift -f toon
 
 # MeshCore package tests
 cd MeshCore && swift test 2>&1 | xcsift -f toon
@@ -29,8 +29,8 @@ Use `xcsift` to get structured output. Add `-c` for code coverage or `-w` for a 
 
 | Target | Package | Framework | Scope |
 |--------|---------|-----------|-------|
-| `PocketMeshTests` | Xcode project | Swift Testing | ViewModels, AppState, views, models, utilities |
-| `PocketMeshServicesTests` | PocketMeshServices (SPM) | Swift Testing | Services, transport, persistence, connection management |
+| `MC1Tests` | Xcode project | Swift Testing | ViewModels, AppState, views, models, utilities |
+| `MC1ServicesTests` | MC1Services (SPM) | Swift Testing | Services, transport, persistence, connection management |
 | `MeshCoreTests` | MeshCore (SPM) | Swift Testing + XCTest | Protocol parsing, crypto, transport codecs |
 
 **Framework split**: Swift Testing (`@Suite`, `@Test`, `#expect`) is used throughout, except `MeshCoreTests/Validation/` and `MeshCoreTests/Protocol/` which use XCTest for byte-level protocol compatibility tests.
@@ -63,7 +63,7 @@ public actor MockChannelService: ChannelServiceProtocol {
 - **`reset()`** clears recorded state between tests
 - Actor isolation provides thread safety under strict concurrency
 
-Mocks live in `PocketMeshServicesTests/Mocks/` and `PocketMeshTests/Mock/`.
+Mocks live in `MC1ServicesTests/Mocks/` and `MC1Tests/Mock/`.
 
 ## ServiceContainer.forTesting()
 
@@ -84,9 +84,9 @@ let container = try await ServiceContainer.forTesting(session: session)
 
 | Utility | Location | Purpose |
 |---------|----------|---------|
-| `MutableBox<T>` | `PocketMeshTests/Helpers/TestHelpers.swift` | Captures mutable values in async closures under strict concurrency |
-| `DeviceDTO.testDevice()` | `PocketMeshServicesTests/Helpers/DeviceDTO+Testing.swift` | Factory with sensible defaults for building test fixtures |
-| `SimulatorMockTransport` | `PocketMeshServices/.../Simulator/SimulatorMockTransport.swift` | No-op `MeshTransport` for creating sessions without hardware |
+| `MutableBox<T>` | `MC1Tests/Helpers/TestHelpers.swift` | Captures mutable values in async closures under strict concurrency |
+| `DeviceDTO.testDevice()` | `MC1ServicesTests/Helpers/DeviceDTO+Testing.swift` | Factory with sensible defaults for building test fixtures |
+| `SimulatorMockTransport` | `MC1Services/.../Simulator/SimulatorMockTransport.swift` | No-op `MeshTransport` for creating sessions without hardware |
 | `PythonReferenceBytes` | `MeshCoreTests/Fixtures/PythonReferenceBytes.swift` | Static byte arrays from the Python reference implementation |
 
 ## Conventions
@@ -99,7 +99,7 @@ let container = try await ServiceContainer.forTesting(session: session)
 ## File Organization
 
 ```
-PocketMeshTests/
+MC1Tests/
 ├── AppState/          # AppState sub-object tests
 ├── Calculations/      # RF calculator, segment analysis
 ├── Extensions/        # Data extensions, battery info
@@ -113,7 +113,7 @@ PocketMeshTests/
 ├── ViewModels/        # ViewModel unit tests
 └── Views/             # View-level logic tests
 
-PocketMeshServicesTests/
+MC1ServicesTests/
 ├── Helpers/           # Test fixture builders
 ├── Mocks/             # Protocol-based mock actors
 ├── Models/            # DTO and connection model tests
