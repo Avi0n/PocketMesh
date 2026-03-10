@@ -80,6 +80,7 @@ jobs:
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
+            -project MC1.xcodeproj \
             -scheme MC1 \
             -configuration Debug \
             -destination "generic/platform=iOS" \
@@ -92,6 +93,7 @@ jobs:
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           xcodebuild build \
+            -project MC1.xcodeproj \
             -scheme MC1 \
             -configuration Release \
             -destination "generic/platform=iOS" \

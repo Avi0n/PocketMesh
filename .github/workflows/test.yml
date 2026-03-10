@@ -57,6 +57,7 @@ jobs:
       - name: Build
         run: |
           xcodebuild build \
+            -project MC1.xcodeproj \
             -scheme MC1 \
             -destination "generic/platform=iOS Simulator" \
             -derivedDataPath .derivedData \
