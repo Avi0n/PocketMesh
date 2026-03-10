@@ -2,23 +2,23 @@
 import PackageDescription
 
 let package = Package(
-    name: "PocketMeshServices",
+    name: "MC1Services",
     platforms: [.iOS(.v18), .macOS(.v15)],
     products: [
-        .library(name: "PocketMeshServices", targets: ["PocketMeshServices"])
+        .library(name: "MC1Services", targets: ["MC1Services"])
     ],
     dependencies: [
         .package(path: "../MeshCore")
     ],
     targets: [
         .target(
-            name: "PocketMeshServices",
+            name: "MC1Services",
             dependencies: ["MeshCore"]
         ),
         .testTarget(
-            name: "PocketMeshServicesTests",
+            name: "MC1ServicesTests",
             dependencies: [
-                "PocketMeshServices",
+                "MC1Services",
                 .product(name: "MeshCoreTestSupport", package: "MeshCore")
             ]
         )

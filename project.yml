@@ -1,6 +1,6 @@
-name: PocketMesh
+name: MC1
 options:
-  bundleIdPrefix: com.pocketmesh
+  bundleIdPrefix: com.meshcoreone
   deploymentTarget:
     iOS: "18.0"
   xcodeVersion: "26.0"
@@ -16,26 +16,26 @@ settings:
 packages:
   MeshCore:
     path: MeshCore
-  PocketMeshServices:
-    path: PocketMeshServices
+  MC1Services:
+    path: MC1Services
   Emojibase:
     url: https://github.com/matrix-org/emojibase-bindings
     from: 1.5.0
 
 targets:
-  PocketMesh:
+  MC1:
     type: application
     platform: iOS
     sources:
-      - path: PocketMesh
+      - path: MC1
         excludes:
           - "**/*.md"
       - path: AppIcon.icon
       - path: Shared
     dependencies:
-      - package: PocketMeshServices
+      - package: MC1Services
       - package: Emojibase
-      - target: PocketMeshWidgets
+      - target: MC1Widgets
     preBuildScripts:
       - name: SwiftGen
         script: |
@@ -47,16 +47,16 @@ targets:
           swiftgen config run --config "${PROJECT_DIR}/swiftgen.yml"
         inputFiles:
           - $(PROJECT_DIR)/swiftgen.yml
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Localizable.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Chats.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Contacts.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Map.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Settings.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Tools.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
-          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Localizable.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Chats.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Contacts.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Map.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Settings.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Tools.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/Onboarding.strings
+          - $(PROJECT_DIR)/MC1/Resources/Localization/en.lproj/RemoteNodes.strings
         outputFiles:
-          - $(PROJECT_DIR)/PocketMesh/Resources/Generated/L10n.swift
+          - $(PROJECT_DIR)/MC1/Resources/Generated/L10n.swift
         basedOnDependencyAnalysis: false
     settings:
       base:
@@ -69,9 +69,9 @@ targets:
         NSSupportsLiveActivities: true
         UIBackgroundModes:
           - bluetooth-central
-        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app."
-        NSBluetoothPeripheralUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios."
-        NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
+        NSBluetoothAlwaysUsageDescription: "MeshCore One uses Bluetooth to maintain connections with MeshCore radios, even in the background, so you can send and receive messages without opening the app."
+        NSBluetoothPeripheralUsageDescription: "MeshCore One uses Bluetooth to connect to MeshCore radios."
+        NSLocationWhenInUseUsageDescription: "MeshCore One can share your location with contacts on the mesh network."
         NSAccessorySetupKitSupports:
           - Bluetooth
         NSAccessorySetupBluetoothServices:
@@ -93,33 +93,33 @@ targets:
           - "NRF52 DK"
       configs:
         Debug:
-          INFOPLIST_FILE: PocketMesh/Info-Debug.plist
+          INFOPLIST_FILE: MC1/Info-Debug.plist
           PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.debug
         Release:
-          INFOPLIST_FILE: PocketMesh/Info.plist
+          INFOPLIST_FILE: MC1/Info.plist
           PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app
 
-  PocketMeshTests:
+  MC1Tests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: PocketMeshTests
+      - path: MC1Tests
     dependencies:
-      - target: PocketMesh
+      - target: MC1
     settings:
       base:
-        INFOPLIST_FILE: PocketMeshTests/Info.plist
+        INFOPLIST_FILE: MC1Tests/Info.plist
         MARKETING_VERSION: 0.10.1
         CURRENT_PROJECT_VERSION: 1
         VERSIONING_SYSTEM: apple-generic
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PocketMesh.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/PocketMesh"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/MC1.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MC1"
         BUNDLE_LOADER: "$(TEST_HOST)"
 
-  PocketMeshWidgets:
+  MC1Widgets:
     type: app-extension
     platform: iOS
     sources:
-      - path: PocketMeshWidgets
+      - path: MC1Widgets
       - path: Shared
     settings:
       base:
@@ -129,25 +129,25 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
       configs:
         Debug:
-          INFOPLIST_FILE: PocketMeshWidgets/Info.plist
+          INFOPLIST_FILE: MC1Widgets/Info.plist
           PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.debug.widgets
         Release:
-          INFOPLIST_FILE: PocketMeshWidgets/Info.plist
+          INFOPLIST_FILE: MC1Widgets/Info.plist
           PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.widgets
 
 schemes:
-  PocketMesh:
+  MC1:
     build:
       targets:
-        PocketMesh: all
-        PocketMeshTests: [test]
-        PocketMeshWidgets: [run]
+        MC1: all
+        MC1Tests: [test]
+        MC1Widgets: [run]
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - PocketMeshTests
+        - MC1Tests
     profile:
       config: Release
     analyze:
