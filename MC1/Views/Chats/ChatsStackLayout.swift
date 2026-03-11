@@ -17,7 +17,7 @@ struct ChatsStackLayout<RootContent: View>: View {
                 .navigationDestination(for: ChatRoute.self) { route in
                     switch route {
                     case .direct(let contact):
-                        ChatView(contact: contact, parentViewModel: viewModel)
+                        ChatConversationView(conversationType: .dm(contact), parentViewModel: viewModel)
                             .id(contact.id)
                             .onAppear {
                                 activeRoute = route
@@ -25,7 +25,7 @@ struct ChatsStackLayout<RootContent: View>: View {
                             }
 
                     case .channel(let channel):
-                        ChannelChatView(channel: channel, parentViewModel: viewModel)
+                        ChatConversationView(conversationType: .channel(channel), parentViewModel: viewModel)
                             .id(channel.id)
                             .onAppear {
                                 activeRoute = route
