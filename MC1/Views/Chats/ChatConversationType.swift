@@ -26,9 +26,11 @@ enum ChatConversationType: Sendable {
             } else {
                 L10n.Chats.Chats.ConnectionStatus.direct(contact.pathHopCount)
             }
-        case .channel:
-            if isPublicStyleChannel {
+        case .channel(let channel):
+            if channel.isPublicChannel {
                 L10n.Chats.Chats.Channel.typePublic
+            } else if channel.name.hasPrefix("#") {
+                L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag
             } else {
                 L10n.Chats.Chats.Channel.typePrivate
             }

@@ -107,11 +107,11 @@ struct ChatConversationTypeTests {
         #expect(sut.navigationSubtitle == L10n.Chats.Chats.Channel.typePublic)
     }
 
-    @Test("Channel subtitle shows public for hash-prefixed channel")
+    @Test("Channel subtitle shows hashtag for hash-prefixed channel")
     func channelSubtitleHashPrefixed() {
         let channel = makeChannel(index: 5, name: "#random")
         let sut = ChatConversationType.channel(channel)
-        #expect(sut.navigationSubtitle == L10n.Chats.Chats.Channel.typePublic)
+        #expect(sut.navigationSubtitle == L10n.Chats.Chats.ChannelInfo.ChannelType.hashtag)
     }
 
     @Test("Channel subtitle shows private for private channel")
