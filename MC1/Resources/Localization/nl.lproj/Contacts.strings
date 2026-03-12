@@ -762,8 +762,8 @@
 /* Location: TracePathListView.swift - Purpose: Empty path instruction */
 "contacts.trace.list.emptyPath" = "Tik op een repeater hierboven om je pad te bouwen";
 
-/* Location: TracePathListView.swift - Purpose: Outbound path section header */
-"contacts.trace.list.outboundPath" = "Uitgaand pad";
+/* Location: TracePathListView.swift - Purpose: Round trip path section header */
+"contacts.trace.list.roundTripPath" = "Heen- en terugpad";
 
 /* Location: TracePathListView.swift - Purpose: Auto return toggle label */
 "contacts.trace.list.autoReturn" = "Automatisch retourpad";

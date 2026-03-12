@@ -762,8 +762,8 @@
 /* Location: TracePathListView.swift - Purpose: Empty path instruction */
 "contacts.trace.list.emptyPath" = "点击上方的转发节点以开始构建您的路径";
 
-/* Location: TracePathListView.swift - Purpose: Outbound path section header */
-"contacts.trace.list.outboundPath" = "出站路径";
+/* Location: TracePathListView.swift - Purpose: Round trip path section header */
+"contacts.trace.list.roundTripPath" = "往返路径";
 
 /* Location: TracePathListView.swift - Purpose: Auto return toggle label */
 "contacts.trace.list.autoReturn" = "自动返回路径";

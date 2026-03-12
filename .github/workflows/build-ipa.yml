@@ -107,7 +107,7 @@ jobs:
         run: |
           mkdir -p Payload
           cp -r DerivedData/Build/Products/Debug-iphoneos/MC1.app Payload/
-          zip -r "MC1-Debug-${{ steps.version.outputs.version }}.ipa" Payload
+          zip -r "MeshCore-One-Debug-${{ steps.version.outputs.version }}.ipa" Payload
           rm -rf Payload
 
       - name: Package Release IPA
@@ -115,38 +115,31 @@ jobs:
         run: |
           mkdir -p Payload
           cp -r DerivedData/Build/Products/Release-iphoneos/MC1.app Payload/
-          zip -r "MC1-Release-${{ steps.version.outputs.version }}.ipa" Payload
+          zip -r "MeshCore-One-Release-${{ steps.version.outputs.version }}.ipa" Payload
           rm -rf Payload
 
       - name: Upload Debug IPA
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: MC1-Debug-${{ steps.version.outputs.version }}
-          path: MC1-Debug-${{ steps.version.outputs.version }}.ipa
+          name: MeshCore-One-Debug-${{ steps.version.outputs.version }}
+          path: MeshCore-One-Debug-${{ steps.version.outputs.version }}.ipa
 
       - name: Upload Release IPA
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: MC1-Release-${{ steps.version.outputs.version }}
-          path: MC1-Release-${{ steps.version.outputs.version }}.ipa
+          name: MeshCore-One-Release-${{ steps.version.outputs.version }}
+          path: MeshCore-One-Release-${{ steps.version.outputs.version }}.ipa
 
-      - name: Create tag
-        if: steps.version_check.outputs.should_build == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
-
-      - name: Create Draft Release
+      - name: Create tag and draft release
         if: steps.version_check.outputs.should_build == 'true' || github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          draft: true
-          name: MeshCore One ${{ steps.version.outputs.version }}
-          files: |
-            MC1-Debug-${{ steps.version.outputs.version }}.ipa
-            MC1-Release-${{ steps.version.outputs.version }}.ipa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --draft \
+            --title "MeshCore One ${{ steps.version.outputs.version }}" \
+            --target "${{ github.sha }}" \
+            "MeshCore-One-Debug-${{ steps.version.outputs.version }}.ipa" \
+            "MeshCore-One-Release-${{ steps.version.outputs.version }}.ipa"

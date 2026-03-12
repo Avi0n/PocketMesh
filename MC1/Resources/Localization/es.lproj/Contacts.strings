@@ -792,8 +792,8 @@
 /* Location: TracePathListView.swift - Purpose: Empty path instruction */
 "contacts.trace.list.emptyPath" = "Toca un repetidor arriba para empezar a construir tu ruta";
 
-/* Location: TracePathListView.swift - Purpose: Outbound path section header */
-"contacts.trace.list.outboundPath" = "Ruta de salida";
+/* Location: TracePathListView.swift - Purpose: Round trip path section header */
+"contacts.trace.list.roundTripPath" = "Ruta de ida y vuelta";
 
 /* Location: TracePathListView.swift - Purpose: Auto return toggle label */
 "contacts.trace.list.autoReturn" = "Ruta de retorno automática";

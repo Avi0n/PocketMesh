@@ -22,6 +22,9 @@ public protocol PersistenceStoreProtocol: Actor {
 
     // MARK: - Message Operations
 
+    /// Check if a message with this deduplication key already exists
+    func isDuplicateMessage(deduplicationKey: String) async throws -> Bool
+
     /// Save a new message
     func saveMessage(_ dto: MessageDTO) async throws
 

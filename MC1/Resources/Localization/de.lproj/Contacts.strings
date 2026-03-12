@@ -792,8 +792,8 @@
 /* Location: TracePathListView.swift - Purpose: Empty path instruction */
 "contacts.trace.list.emptyPath" = "Tippe oben auf einen Repeater, um deinen Pfad zu erstellen";
 
-/* Location: TracePathListView.swift - Purpose: Outbound path section header */
-"contacts.trace.list.outboundPath" = "Ausgehender Pfad";
+/* Location: TracePathListView.swift - Purpose: Round trip path section header */
+"contacts.trace.list.roundTripPath" = "Hin- und Rückweg";
 
 /* Location: TracePathListView.swift - Purpose: Auto return toggle label */
 "contacts.trace.list.autoReturn" = "Automatischer Rückweg";

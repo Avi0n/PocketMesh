@@ -1678,14 +1678,14 @@ public enum L10n {
           public static let includeDiscovered = L10n.tr("Contacts", "contacts.trace.list.includeDiscovered", fallback: "Include Discovered")
           /// Location: TracePathListView.swift - Purpose: Toggle to include room servers in the list
           public static let includeRooms = L10n.tr("Contacts", "contacts.trace.list.includeRooms", fallback: "Include Rooms")
-          /// Location: TracePathListView.swift - Purpose: Outbound path section header
-          public static let outboundPath = L10n.tr("Contacts", "contacts.trace.list.outboundPath", fallback: "Outbound Path")
           /// Location: TracePathListView.swift - Purpose: Paste button
           public static let paste = L10n.tr("Contacts", "contacts.trace.list.paste", fallback: "Paste from clipboard")
           /// Location: TracePathListView.swift - Purpose: Range warning footer
           public static let rangeWarning = L10n.tr("Contacts", "contacts.trace.list.rangeWarning", fallback: "You must be within range of the last repeater to receive a response.")
           /// Location: TracePathListView.swift - Purpose: Repeaters section label
           public static let repeaters = L10n.tr("Contacts", "contacts.trace.list.repeaters", fallback: "Repeaters")
+          /// Location: TracePathListView.swift - Purpose: Round trip path section header
+          public static let roundTripPath = L10n.tr("Contacts", "contacts.trace.list.roundTripPath", fallback: "Round Trip Path")
           /// Location: TracePathListView.swift - Purpose: Running trace with batch count
           public static func runningBatch(_ p1: Int, _ p2: Int) -> String {
             return L10n.tr("Contacts", "contacts.trace.list.runningBatch", p1, p2, fallback: "Running Trace %d of %d")

@@ -1,60 +1,77 @@
 {
-  "fill": {
-    "automatic-gradient": "srgb:0.10501,0.15000,0.21834,1.00000"
+  "fill" : {
+    "automatic-gradient" : "srgb:0.10501,0.15000,0.21834,1.00000"
   },
-  "groups": [
+  "groups" : [
     {
-      "blend-mode": "normal",
-      "blur-material": 0.5,
-      "hidden": false,
-      "layers": [
+      "blend-mode" : "normal",
+      "blur-material" : 0.5,
+      "hidden" : false,
+      "layers" : [
         {
-          "image-name": "app-icon.png",
-          "name": "app-icon"
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.20143,0.28887,0.42359,1.00000"
+              }
+            }
+          ],
+          "image-name" : "app-icon.png",
+          "name" : "app-icon",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -20,
+              -20
+            ]
+          }
         },
         {
-          "blend-mode-specializations": [
+          "blend-mode-specializations" : [
             {
-              "value": "normal"
+              "value" : "normal"
             },
             {
-              "appearance": "dark",
-              "value": "normal"
+              "appearance" : "dark",
+              "value" : "normal"
             }
           ],
-          "fill-specializations": [
+          "fill-specializations" : [
             {
-              "value": {
-                "solid": "srgb:0.14566,0.20807,0.30287,1.00000"
+              "value" : {
+                "solid" : "srgb:0.14566,0.20807,0.30287,1.00000"
               }
             },
             {
-              "appearance": "dark",
-              "value": {
-                "solid": "extended-gray:0.25000,1.00000"
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.12582,0.12582,0.12582,1.00000"
               }
             }
           ],
-          "glass": true,
-          "hidden": false,
-          "image-name": "background.png",
-          "name": "background"
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "background.png",
+          "name" : "background"
         }
       ],
-      "lighting": "individual",
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.6
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.6
       },
-      "specular": true,
-      "translucency": {
-        "enabled": true,
-        "value": 0.2
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.2
       }
     }
   ],
-  "supported-platforms": {
-    "circles": ["watchOS"],
-    "squares": "shared"
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
   }
 }

@@ -11,23 +11,25 @@ struct DiagnosticsSection: View {
 
     var body: some View {
         Section {
-            if let url = exportedFileURL {
-                ShareLink(item: url, preview: SharePreview(L10n.Settings.Diagnostics.exportLogs)) {
+            Button {
+                exportLogs()
+            } label: {
+                HStack {
                     TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
-                }
-            } else {
-                Button {
-                    exportLogs()
-                } label: {
-                    HStack {
-                        TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
-                        Spacer()
-                        if isExporting {
-                            ProgressView()
-                        }
+                    Spacer()
+                    if isExporting {
+                        ProgressView()
                     }
                 }
-                .disabled(isExporting)
+            }
+            .disabled(isExporting)
+            .sheet(isPresented: Binding(
+                get: { exportedFileURL != nil },
+                set: { if !$0 { exportedFileURL = nil } }
+            )) {
+                if let url = exportedFileURL {
+                    ShareSheet(items: [url])
+                }
             }
 
             Button(role: .destructive) {

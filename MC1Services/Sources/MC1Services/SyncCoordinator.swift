@@ -79,9 +79,6 @@ public actor SyncCoordinator {
 
     let logger = PersistentLogger(subsystem: "com.mc1.services", category: "SyncCoordinator")
 
-    /// In-memory cache for message deduplication
-    let deduplicationCache = MessageDeduplicationCache()
-
     /// Cached blocked names (contacts + channel senders) for O(1) lookup in message handlers
     private var blockedNames: Set<String> = []
 

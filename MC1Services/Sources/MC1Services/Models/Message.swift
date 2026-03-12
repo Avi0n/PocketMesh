@@ -26,7 +26,8 @@ public final class Message {
         [\.deviceID, \.channelIndex, \.timestamp],
         [\.contactID, \.createdAt],
         [\.contactID, \.containsSelfMention, \.mentionSeen],
-        [\.deviceID, \.channelIndex, \.containsSelfMention, \.mentionSeen]
+        [\.deviceID, \.channelIndex, \.containsSelfMention, \.mentionSeen],
+        [\.deduplicationKey]
     )
 
     /// Unique message identifier

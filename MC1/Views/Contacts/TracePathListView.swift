@@ -218,7 +218,7 @@ struct TracePathListView: View {
                 }
             }
         } header: {
-            Text(L10n.Contacts.Contacts.Trace.List.outboundPath)
+            Text(L10n.Contacts.Contacts.Trace.List.roundTripPath)
         }
     }
 

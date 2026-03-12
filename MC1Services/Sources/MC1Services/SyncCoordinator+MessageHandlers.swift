@@ -1,4 +1,5 @@
 // SyncCoordinator+MessageHandlers.swift
+import CryptoKit
 import Foundation
 
 // MARK: - Message & Discovery Handler Wiring
@@ -70,13 +71,24 @@ extension SyncCoordinator {
             }
 
             // Look up path data from RxLogEntry (for direct messages, channelIndex is nil)
-            let (pathNodes, pathLength) = await self.lookupRxLogEntry(
+            let rxResult = await self.lookupRxLogEntry(
                 services: services,
                 channelIndex: nil,
                 senderTimestamp: timestamp,
                 defaultPathLength: message.pathLength,
                 contactName: contact?.displayName
             )
+
+            // Compute deduplication key from RX log packet hash, falling back to content hash
+            let deduplicationKey: String
+            if let hash = rxResult.packetHash, !hash.isEmpty {
+                deduplicationKey = hash
+            } else {
+                deduplicationKey = Self.fallbackDeduplicationKey(
+                    contactID: contact?.id, channelIndex: nil,
+                    senderNodeName: nil, timestamp: timestamp, content: message.text
+                )
+            }
 
             // Check for self-mention before creating DTO
             let hasSelfMention = !selfNodeName.isEmpty &&
@@ -94,9 +106,9 @@ extension SyncCoordinator {
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
                 ackCode: nil,
-                pathLength: pathLength,
+                pathLength: rxResult.pathLength,
                 snr: message.snr,
-                pathNodes: pathNodes,
+                pathNodes: rxResult.pathNodes,
                 senderKeyPrefix: message.senderPublicKeyPrefix,
                 senderNodeName: nil,
                 isRead: false,
@@ -105,6 +117,7 @@ extension SyncCoordinator {
                 heardRepeats: 0,
                 retryAttempt: 0,
                 maxRetryAttempts: 0,
+                deduplicationKey: deduplicationKey,
                 containsSelfMention: hasSelfMention,
                 mentionSeen: false,
                 timestampCorrected: timestampCorrected,
@@ -112,13 +125,13 @@ extension SyncCoordinator {
             )
 
             // Check for duplicate before saving
-            if await self.deduplicationCache.isDuplicateDirectMessage(
-                contactID: contact?.id ?? MessageDeduplicationCache.unknownContactID,
-                timestamp: timestamp,
-                content: message.text
-            ) {
-                self.logger.info("Skipping duplicate direct message")
-                return
+            do {
+                if try await services.dataStore.isDuplicateMessage(deduplicationKey: deduplicationKey) {
+                    self.logger.info("Skipping duplicate direct message")
+                    return
+                }
+            } catch {
+                self.logger.warning("Dedup check failed, proceeding with save: \(error)")
             }
 
             // Check if this is a DM reaction
@@ -210,12 +223,23 @@ extension SyncCoordinator {
             }
 
             // Look up path data from RxLogEntry using sender timestamp (stored during decryption)
-            let (pathNodes, pathLength) = await self.lookupRxLogEntry(
+            let rxResult = await self.lookupRxLogEntry(
                 services: services,
                 channelIndex: message.channelIndex,
                 senderTimestamp: timestamp,
                 defaultPathLength: message.pathLength
             )
+
+            // Compute deduplication key from RX log packet hash, falling back to content hash
+            let deduplicationKey: String
+            if let hash = rxResult.packetHash, !hash.isEmpty {
+                deduplicationKey = hash
+            } else {
+                deduplicationKey = Self.fallbackDeduplicationKey(
+                    contactID: nil, channelIndex: message.channelIndex,
+                    senderNodeName: senderNodeName, timestamp: timestamp, content: messageText
+                )
+            }
 
             // Check for self-mention before creating DTO
             // Filter out messages where user mentions themselves
@@ -235,9 +259,9 @@ extension SyncCoordinator {
                 status: .delivered,
                 textType: TextType(rawValue: message.textType) ?? .plain,
                 ackCode: nil,
-                pathLength: pathLength,
+                pathLength: rxResult.pathLength,
                 snr: message.snr,
-                pathNodes: pathNodes,
+                pathNodes: rxResult.pathNodes,
                 senderKeyPrefix: nil,
                 senderNodeName: senderNodeName,
                 isRead: false,
@@ -246,6 +270,7 @@ extension SyncCoordinator {
                 heardRepeats: 0,
                 retryAttempt: 0,
                 maxRetryAttempts: 0,
+                deduplicationKey: deduplicationKey,
                 containsSelfMention: hasSelfMention,
                 mentionSeen: false,
                 timestampCorrected: timestampCorrected,
@@ -253,14 +278,13 @@ extension SyncCoordinator {
             )
 
             // Check for duplicate before saving
-            if await self.deduplicationCache.isDuplicateChannelMessage(
-                channelIndex: message.channelIndex,
-                timestamp: timestamp,
-                username: senderNodeName ?? "",
-                content: messageText
-            ) {
-                self.logger.info("Skipping duplicate channel message")
-                return
+            do {
+                if try await services.dataStore.isDuplicateMessage(deduplicationKey: deduplicationKey) {
+                    self.logger.info("Skipping duplicate channel message")
+                    return
+                }
+            } catch {
+                self.logger.warning("Dedup check failed, proceeding with save: \(error)")
             }
 
             // Check if this is a reaction
@@ -425,6 +449,12 @@ extension SyncCoordinator {
 
     // MARK: - Message Handler Helpers
 
+    private struct RxLogLookupResult {
+        let pathNodes: Data?
+        let pathLength: UInt8
+        let packetHash: String?
+    }
+
     /// Looks up path data from an RxLogEntry to correlate with an incoming message.
     private func lookupRxLogEntry(
         services: ServiceContainer,
@@ -432,7 +462,7 @@ extension SyncCoordinator {
         senderTimestamp: UInt32,
         defaultPathLength: UInt8,
         contactName: String? = nil
-    ) async -> (pathNodes: Data?, pathLength: UInt8) {
+    ) async -> RxLogLookupResult {
         if let channelIndex {
             logger.debug("Looking up RxLogEntry for channel \(channelIndex) with senderTimestamp: \(senderTimestamp)")
         }
@@ -451,7 +481,7 @@ extension SyncCoordinator {
                 } else {
                     logger.debug("Correlated incoming direct message to RxLogEntry, pathLength: \(pathLength), pathNodes: \(pathNodes.count) bytes")
                 }
-                return (pathNodes, pathLength)
+                return RxLogLookupResult(pathNodes: pathNodes, pathLength: pathLength, packetHash: rxEntry.packetHash)
             } else {
                 if channelIndex != nil {
                     logger.warning("No RxLogEntry found for channel \(channelIndex!), senderTimestamp: \(senderTimestamp)")
@@ -467,7 +497,7 @@ extension SyncCoordinator {
             }
         }
 
-        return (nil, defaultPathLength)
+        return RxLogLookupResult(pathNodes: nil, pathLength: defaultPathLength, packetHash: nil)
     }
 
     /// Handles an incoming DM reaction by looking up the target message and persisting the reaction.
@@ -1035,6 +1065,21 @@ extension SyncCoordinator {
 
         logger.debug("MCO v1 channel reaction \(v1Reaction.emoji): no hash match found")
         return true
+    }
+
+    nonisolated static func fallbackDeduplicationKey(
+        contactID: UUID?,
+        channelIndex: UInt8?,
+        senderNodeName: String?,
+        timestamp: UInt32,
+        content: String
+    ) -> String {
+        let contentHash = SHA256.hash(data: Data(content.utf8))
+        let hashPrefix = contentHash.prefix(4).map { String(format: "%02X", $0) }.joined()
+        if let channelIndex {
+            return "ch-\(channelIndex)-\(timestamp)-\(senderNodeName ?? "")-\(hashPrefix)"
+        }
+        return "dm-\(contactID?.uuidString ?? "unknown")-\(timestamp)-\(hashPrefix)"
     }
 
     nonisolated static func parseChannelMessage(_ text: String) -> (senderNodeName: String?, messageText: String) {

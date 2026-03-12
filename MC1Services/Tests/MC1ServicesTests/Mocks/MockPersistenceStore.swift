@@ -46,6 +46,10 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
 
     // MARK: - Message Operations
 
+    public func isDuplicateMessage(deduplicationKey: String) async throws -> Bool {
+        messages.values.contains { $0.deduplicationKey == deduplicationKey }
+    }
+
     public func saveMessage(_ dto: MessageDTO) async throws {
         savedMessages.append(dto)
         if let error = stubbedSaveMessageError {

@@ -18,7 +18,7 @@ struct TraceResultsSheet: View {
         NavigationStack {
             List {
                 resultsSection
-                outboundPathSection
+                roundTripPathSection
             }
             .navigationTitle(L10n.Contacts.Contacts.Results.title)
             .navigationBarTitleDisplayMode(.inline)
@@ -36,7 +36,7 @@ struct TraceResultsSheet: View {
 
     // MARK: - Outbound Path Section
 
-    private var outboundPathSection: some View {
+    private var roundTripPathSection: some View {
         Section {
             HStack {
                 Text(result.tracedPathString)
@@ -53,7 +53,7 @@ struct TraceResultsSheet: View {
                 .buttonStyle(.borderless)
             }
         } header: {
-            Text(L10n.Contacts.Contacts.Trace.List.outboundPath)
+            Text(L10n.Contacts.Contacts.Trace.List.roundTripPath)
         }
     }
 
