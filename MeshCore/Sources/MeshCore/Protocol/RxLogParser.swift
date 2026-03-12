@@ -50,13 +50,13 @@ public enum RxLogParser {
         let packetPayload = payload.count > offset ? Data(payload[offset...]) : Data()
 
         // Extract dest and src hashes for direct text messages
-        // Payload format: [dest: hashSize B] [src: hashSize B] [MAC + encrypted content]
-        let hashSize = decodePathLen(pathLength)?.hashSize ?? 1
+        // DM payload hashes are always 1 byte per MeshCore spec (PATH_HASH_SIZE = 1)
         var senderPubkeyPrefix: Data?
         var recipientPubkeyPrefix: Data?
-        if (routeType == .direct || routeType == .tcDirect) && payloadType == .textMessage && packetPayload.count >= hashSize * 2 {
-            recipientPubkeyPrefix = Data(packetPayload[0..<hashSize])
-            senderPubkeyPrefix = Data(packetPayload[hashSize..<hashSize * 2])
+        let payloadHashSize = 1
+        if (routeType == .direct || routeType == .tcDirect) && payloadType == .textMessage && packetPayload.count >= payloadHashSize * 2 {
+            recipientPubkeyPrefix = Data(packetPayload[0..<payloadHashSize])
+            senderPubkeyPrefix = Data(packetPayload[payloadHashSize..<payloadHashSize * 2])
         }
 
         return ParsedRxLogData(

@@ -144,6 +144,31 @@ struct RxLogParserTests {
         #expect(result?.recipientPubkeyPrefix == Data([destHash]))
     }
 
+    @Test("Parse DIRECT TEXT_MSG with hashSize > 1 path still extracts 1-byte payload hashes")
+    func parseDirectTextMsgHashSize2() {
+        // Header: routeType=2 (DIRECT), payloadType=2 (TEXT_MSG), version=0
+        // Header byte: 0b00_0010_10 = 0x0A
+        // pathLen: hashSize=2, hopCount=1 → mode=1 (0b01), encoded = 0b01_000001 = 0x41
+        // path: 2 bytes (hashSize * hopCount)
+        // payload hashes are always 1 byte per spec, regardless of path hash size
+        let destHash: UInt8 = 0x07
+        let srcHash: UInt8 = 0x0A
+        let pathLenByte: UInt8 = 0x41  // hashSize=2, hopCount=1
+        let payload = Data([
+            0x0A,                       // header
+            pathLenByte,                // pathLen (hashSize=2, 1 hop)
+            0xAB, 0xCD,                 // path (2 bytes: hashSize * hopCount)
+            destHash, srcHash,          // 1-byte dest, 1-byte src (per spec)
+            0xDE, 0xAD, 0xBE, 0xEF     // MAC + content
+        ])
+
+        let result = RxLogParser.parse(snr: 5.0, rssi: -80, payload: payload)
+
+        #expect(result != nil)
+        #expect(result?.senderPubkeyPrefix == Data([srcHash]))
+        #expect(result?.recipientPubkeyPrefix == Data([destHash]))
+    }
+
     @Test("Parse FLOOD GROUP_TEXT has nil sender pubkey prefix")
     func parseFloodGroupTextNoSender() {
         let payload = Data([0x15, 0x00, 0xAA, 0xBB, 0xCC])
