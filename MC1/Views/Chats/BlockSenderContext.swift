@@ -4,4 +4,5 @@ import Foundation
 struct BlockSenderContext: Identifiable {
     let id = UUID()
     let senderName: String
+    let deviceID: UUID
 }

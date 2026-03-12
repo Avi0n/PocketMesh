@@ -22,7 +22,7 @@ extension ChatViewModel {
         inFlightReactions.insert(reactionKey)
         defer { inFlightReactions.remove(reactionKey) }
 
-        let localNodeName = appState?.connectedDevice?.nodeName ?? "Me"
+        let localNodeName = appState?.localNodeName ?? "Me"
 
         // Check if user already reacted with this emoji
         if let alreadyReacted = try? await dataStore.reactionExists(
@@ -85,8 +85,6 @@ extension ChatViewModel {
                 deviceID: message.deviceID
             )
 
-            recentEmojisStore.recordUsage(emoji)
-
             // Optimistic local update
             let messageHash = ReactionParser.generateMessageHash(
                 text: message.text,
@@ -134,16 +132,12 @@ extension ChatViewModel {
             targetText: message.text,
             targetTimestamp: message.reactionTimestamp
         )
-        logger.debug("[DM-REACTION-SEND] Building reaction: timestamp=\(message.timestamp), senderTimestamp=\(message.senderTimestamp ?? 0), reactionTimestamp=\(message.reactionTimestamp), text=\(message.text.prefix(30))")
-
         do {
             // Send as DM to the contact
             _ = try await messageService.sendDirectMessage(
                 text: reactionText,
                 to: contact
             )
-
-            recentEmojisStore.recordUsage(emoji)
 
             // Optimistic local update
             let messageHash = ReactionParser.generateMessageHash(

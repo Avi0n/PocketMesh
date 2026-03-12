@@ -6,7 +6,6 @@ import OSLog
 private let logger = Logger(subsystem: "com.mc1", category: "ChatConversationView")
 
 /// Unified chat conversation view supporting both DMs and Channels.
-/// Replaces the separate `ChatView` and `ChannelChatView`.
 struct ChatConversationView: View {
     @Environment(\.appState) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -64,7 +63,7 @@ struct ChatConversationView: View {
         ChatConversationMessagesContent(
             conversationType: conversationType,
             viewModel: chatViewModel,
-            deviceName: appState.connectedDevice?.nodeName ?? "Me",
+            deviceName: appState.localNodeName,
             recentEmojisStore: recentEmojisStore,
             showInlineImages: showInlineImages,
             autoPlayGIFs: autoPlayGIFs,
@@ -113,21 +112,20 @@ struct ChatConversationView: View {
         // Message actions sheet — shared
         .sheet(item: $selectedMessageForActions) { message in
             messageActionsSheet(for: message)
+                .environment(\.horizontalSizeClass, horizontalSizeClass)
         }
         // Block sender sheet — channel only
         .sheet(item: $blockSenderContext) { context in
-            if case .channel(let channel) = conversationType {
-                BlockSenderSheet(
-                    senderName: context.senderName,
-                    deviceID: channel.deviceID
-                ) { blockedContactIDs in
-                    Task {
-                        await performBlock(
-                            channel: channel,
-                            senderName: context.senderName,
-                            contactIDs: blockedContactIDs
-                        )
-                    }
+            BlockSenderSheet(
+                senderName: context.senderName,
+                deviceID: context.deviceID
+            ) { blockedContactIDs in
+                Task {
+                    await performBlock(
+                        senderName: context.senderName,
+                        deviceID: context.deviceID,
+                        contactIDs: blockedContactIDs
+                    )
                 }
             }
         }
@@ -143,7 +141,7 @@ struct ChatConversationView: View {
         .onDisappear {
             performCleanup()
         }
-        .onChange(of: isMentionActive) { _, isActive in
+        .onChange(of: activeMentionQuery != nil) { _, isActive in
             if isActive {
                 mentionSenderOrder = chatViewModel.channelSenderOrder
             } else {
@@ -163,6 +161,10 @@ struct ChatConversationView: View {
     // MARK: - Initial Load (.task)
 
     private func performInitialLoad() async {
+        // Cancel any in-flight mention paging from a previous servicesVersion
+        mentionScrollTask?.cancel()
+        mentionScrollTask = nil
+
         // Capture pending scroll target before loading
         let pendingTarget = appState.navigation.pendingScrollToMessageID
         if pendingTarget != nil {
@@ -241,20 +243,35 @@ struct ChatConversationView: View {
         }
 
         if needsReload {
-            Task {
-                switch conversationType {
-                case .dm(let contact):
-                    await chatViewModel.loadMessages(for: contact)
-                case .channel(let channel):
-                    await chatViewModel.loadChannelMessages(for: channel)
-                }
-            }
+            reloadMessages()
         }
         if case .dm = conversationType, needsContactRefresh || droppedEvents {
             Task { await refreshContact() }
         }
         if droppedEvents {
             Task { await loadUnseenMentions() }
+        }
+    }
+
+    private func reloadMessages() {
+        Task {
+            switch conversationType {
+            case .dm(let contact):
+                await chatViewModel.loadMessages(for: contact)
+            case .channel(let channel):
+                await chatViewModel.loadChannelMessages(for: channel)
+            }
+        }
+    }
+
+    private func handleIncomingMentionIfNeeded(_ message: MessageDTO) {
+        guard message.containsSelfMention else { return }
+        Task {
+            if isAtBottom {
+                await markNewArrivalMentionSeen(messageID: message.id)
+            } else {
+                await loadUnseenMentions()
+            }
         }
     }
 
@@ -267,15 +284,7 @@ struct ChatConversationView: View {
             switch event {
             case .directMessageReceived(let message, _) where message.contactID == contact.id:
                 chatViewModel.appendMessageIfNew(message)
-                if message.containsSelfMention {
-                    Task {
-                        if isAtBottom {
-                            await markNewArrivalMentionSeen(messageID: message.id)
-                        } else {
-                            await loadUnseenMentions()
-                        }
-                    }
-                }
+                handleIncomingMentionIfNeeded(message)
             case .messageStatusUpdated, .messageRetrying:
                 needsReload = true
             case .messageFailed(let messageID):
@@ -304,15 +313,7 @@ struct ChatConversationView: View {
             case .channelMessageReceived(let message, let channelIndex)
                 where channelIndex == channel.index && message.deviceID == channel.deviceID:
                 chatViewModel.appendMessageIfNew(message)
-                if message.containsSelfMention {
-                    Task {
-                        if isAtBottom {
-                            await markNewArrivalMentionSeen(messageID: message.id)
-                        } else {
-                            await loadUnseenMentions()
-                        }
-                    }
-                }
+                handleIncomingMentionIfNeeded(message)
             case .messageStatusUpdated:
                 needsReload = true
             case .messageFailed(let messageID):
@@ -339,7 +340,8 @@ struct ChatConversationView: View {
     private func refreshContact() async {
         guard case .dm(let contact) = conversationType else { return }
         if let updated = try? await appState.services?.dataStore.fetchContact(id: contact.id) {
-            conversationType.replacing(contact: updated)
+            conversationType = conversationType.replacingContact(updated)
+            chatViewModel.currentContact = updated
         }
     }
 
@@ -473,14 +475,12 @@ struct ChatConversationView: View {
 
     // MARK: - Mention Suggestions
 
-    private var isMentionActive: Bool {
-        MentionUtilities.detectActiveMention(in: chatViewModel.composingText) != nil
+    private var activeMentionQuery: String? {
+        MentionUtilities.detectActiveMention(in: chatViewModel.composingText)
     }
 
     private var mentionSuggestions: [ContactDTO] {
-        guard let query = MentionUtilities.detectActiveMention(in: chatViewModel.composingText) else {
-            return []
-        }
+        guard let query = activeMentionQuery else { return [] }
         switch conversationType {
         case .dm:
             return MentionUtilities.filterContacts(chatViewModel.allContacts, query: query)
@@ -493,27 +493,25 @@ struct ChatConversationView: View {
 
     @ViewBuilder
     private var mentionSuggestionsOverlay: some View {
-        Group {
-            if !mentionSuggestions.isEmpty {
-                VStack {
-                    Spacer()
-                    MentionSuggestionView(contacts: mentionSuggestions) { contact in
-                        insertMention(for: contact)
-                    }
-                    .padding(.horizontal)
-                    .padding(.bottom, 60)
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .bottom)
-                                .combined(with: .opacity)
-                                .combined(with: .scale(scale: 0.95, anchor: .bottom)),
-                            removal: .move(edge: .bottom).combined(with: .opacity)
-                        )
-                    )
+        if !mentionSuggestions.isEmpty {
+            VStack {
+                Spacer()
+                MentionSuggestionView(contacts: mentionSuggestions) { contact in
+                    insertMention(for: contact)
                 }
+                .padding(.horizontal)
+                .padding(.bottom, 60)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .bottom)
+                            .combined(with: .opacity)
+                            .combined(with: .scale(scale: 0.95, anchor: .bottom)),
+                        removal: .move(edge: .bottom).combined(with: .opacity)
+                    )
+                )
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: mentionSuggestions.isEmpty)
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: mentionSuggestions.isEmpty)
     }
 
     private func insertMention(for contact: ContactDTO) {
@@ -598,7 +596,7 @@ struct ChatConversationView: View {
     private func messageActionsSheet(for message: MessageDTO) -> some View {
         let senderName: String = {
             if message.isOutgoing {
-                return appState.connectedDevice?.nodeName ?? "Me"
+                return appState.localNodeName
             }
             switch conversationType {
             case .dm(let contact):
@@ -616,7 +614,6 @@ struct ChatConversationView: View {
                 handleMessageAction(action, for: message)
             }
         )
-        .environment(\.horizontalSizeClass, horizontalSizeClass)
     }
 
     // MARK: - Message Action Handling
@@ -628,24 +625,20 @@ struct ChatConversationView: View {
             Task { await chatViewModel.sendReaction(emoji: emoji, to: message) }
         case .reply:
             let replyText = buildReplyText(for: message)
-            setReplyText(replyText)
+            chatViewModel.composingText = replyText
+            isInputFocused = true
         case .copy:
             UIPasteboard.general.string = message.text
         case .sendAgain:
-            sendAgain(message)
+            Task { await chatViewModel.sendAgain(message) }
         case .blockSender:
-            switch conversationType {
-            case .dm:
-                break  // DMs don't support blocking
-            case .channel:
-                guard let name = message.senderNodeName else { return }
-                Task {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    blockSenderContext = BlockSenderContext(senderName: name)
-                }
+            guard case .channel(let channel) = conversationType, let name = message.senderNodeName else { return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                blockSenderContext = BlockSenderContext(senderName: name, deviceID: channel.deviceID)
             }
         case .delete:
-            deleteMessage(message)
+            Task { await chatViewModel.deleteMessage(message) }
         }
     }
 
@@ -658,23 +651,6 @@ struct ChatConversationView: View {
             mentionName = message.senderNodeName ?? L10n.Chats.Chats.Message.Sender.unknown
         }
         return MentionUtilities.buildReplyText(mentionName: mentionName, messageText: message.text)
-    }
-
-    private func setReplyText(_ text: String) {
-        chatViewModel.composingText = text
-        isInputFocused = true
-    }
-
-    private func deleteMessage(_ message: MessageDTO) {
-        Task {
-            await chatViewModel.deleteMessage(message)
-        }
-    }
-
-    private func sendAgain(_ message: MessageDTO) {
-        Task {
-            await chatViewModel.sendAgain(message)
-        }
     }
 
     private func retryMessage(_ message: MessageDTO) {
@@ -690,10 +666,10 @@ struct ChatConversationView: View {
 
     // MARK: - Blocking (Channel only)
 
-    private func performBlock(channel: ChannelDTO, senderName: String, contactIDs: Set<UUID>) async {
+    private func performBlock(senderName: String, deviceID: UUID, contactIDs: Set<UUID>) async {
         guard let services = appState.services else { return }
 
-        let dto = BlockedChannelSenderDTO(name: senderName, deviceID: channel.deviceID)
+        let dto = BlockedChannelSenderDTO(name: senderName, deviceID: deviceID)
         do {
             try await services.dataStore.saveBlockedChannelSender(dto)
         } catch {
@@ -713,7 +689,7 @@ struct ChatConversationView: View {
         }
 
         await services.syncCoordinator.refreshBlockedContactsCache(
-            deviceID: channel.deviceID,
+            deviceID: deviceID,
             dataStore: services.dataStore
         )
 
@@ -721,7 +697,9 @@ struct ChatConversationView: View {
             await services.syncCoordinator.notifyContactsChanged()
         }
 
-        await chatViewModel.loadChannelMessages(for: channel)
+        if case .channel(let channel) = conversationType {
+            await chatViewModel.loadChannelMessages(for: channel)
+        }
         await services.syncCoordinator.notifyConversationsChanged()
     }
 }

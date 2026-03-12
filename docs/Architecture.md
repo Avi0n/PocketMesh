@@ -351,7 +351,7 @@ The codebase has four uses of `nonisolated(unsafe)`. Each bypasses Swift's actor
 
 ### Data Flow (Sending a Message)
 
-1. **User Action**: User types message in `ChatView` and taps send.
+1. **User Action**: User types message in `ChatConversationView` and taps send.
 2. **Service Call**: `MessageService.sendMessageWithRetry()` is called.
 3. **Queue**: Message is saved to `PersistenceStore` with status `.pending`.
 4. **Retry Loop**: `MeshCoreSession.sendMessageWithRetry()` attempts delivery (up to 4 times by default, switching to flood after 2 failed direct attempts).

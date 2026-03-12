@@ -158,9 +158,6 @@ final class ChatViewModel {
     /// Last message previews cache
     var lastMessageCache: [UUID: MessageDTO] = [:]
 
-    /// Store for recently used reaction emojis
-    let recentEmojisStore = RecentEmojisStore()
-
     /// Preview state per message (keyed by message ID)
     var previewStates: [UUID: PreviewLoadState] = [:]
 
@@ -353,13 +350,6 @@ final class ChatViewModel {
 
 // MARK: - Environment Key
 
-private struct ChatViewModelKey: EnvironmentKey {
-    static let defaultValue: ChatViewModel? = nil
-}
-
 extension EnvironmentValues {
-    var chatViewModel: ChatViewModel? {
-        get { self[ChatViewModelKey.self] }
-        set { self[ChatViewModelKey.self] = newValue }
-    }
+    @Entry var chatViewModel: ChatViewModel? = nil
 }

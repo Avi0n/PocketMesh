@@ -15,30 +15,24 @@ struct ChatsStackLayout<RootContent: View>: View {
         NavigationStack(path: $navigationPath) {
             rootContent()
                 .navigationDestination(for: ChatRoute.self) { route in
-                    switch route {
-                    case .direct(let contact):
-                        ChatConversationView(conversationType: .dm(contact), parentViewModel: viewModel)
-                            .id(contact.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.navigation.tabBarVisibility = .hidden
-                            }
+                    Group {
+                        switch route {
+                        case .direct(let contact):
+                            ChatConversationView(conversationType: .dm(contact), parentViewModel: viewModel)
+                                .id(contact.id)
 
-                    case .channel(let channel):
-                        ChatConversationView(conversationType: .channel(channel), parentViewModel: viewModel)
-                            .id(channel.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.navigation.tabBarVisibility = .hidden
-                            }
+                        case .channel(let channel):
+                            ChatConversationView(conversationType: .channel(channel), parentViewModel: viewModel)
+                                .id(channel.id)
 
-                    case .room(let session):
-                        RoomConversationView(session: session)
-                            .id(session.id)
-                            .onAppear {
-                                activeRoute = route
-                                appState.navigation.tabBarVisibility = .hidden
-                            }
+                        case .room(let session):
+                            RoomConversationView(session: session)
+                                .id(session.id)
+                        }
+                    }
+                    .onAppear {
+                        activeRoute = route
+                        appState.navigation.tabBarVisibility = .hidden
                     }
                 }
                 .onChange(of: navigationPath) { _, newPath in

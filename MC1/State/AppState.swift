@@ -5,7 +5,7 @@ import MC1Services
 import MeshCore
 import OSLog
 import TipKit
-import UIKit
+
 
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.
@@ -33,6 +33,9 @@ public final class AppState {
     public var connectionState: MC1Services.ConnectionState { connectionManager.connectionState }
     public var connectedDevice: DeviceDTO? { connectionManager.connectedDevice }
     public var services: ServiceContainer? { connectionManager.services }
+
+    /// Local node name with fallback for display purposes.
+    public var localNodeName: String { connectedDevice?.nodeName ?? "Me" }
 
     /// The sync coordinator for data synchronization
     public private(set) var syncCoordinator: SyncCoordinator?

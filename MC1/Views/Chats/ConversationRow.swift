@@ -18,7 +18,7 @@ struct ConversationRow: View {
 
                     Spacer()
 
-                    MutedIndicator(isMuted: contact.isMuted)
+                    NotificationLevelIndicator(level: contact.isMuted ? .muted : .all)
 
                     if viewModel.togglingFavoriteID == contact.id {
                         ProgressView()

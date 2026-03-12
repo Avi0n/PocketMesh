@@ -14,9 +14,7 @@ enum ChatConversationType: Sendable {
         case .dm(let contact):
             contact.displayName
         case .channel(let channel):
-            channel.name.isEmpty
-                ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index))
-                : channel.name
+            channel.displayName
         }
     }
 
@@ -51,15 +49,15 @@ enum ChatConversationType: Sendable {
         case .dm:
             false
         case .channel(let channel):
-            channel.isPublicChannel || channel.name.hasPrefix("#")
+            !channel.isEncryptedChannel
         }
     }
 
-    // MARK: - Mutation
+    // MARK: - Transforms
 
-    /// Replaces the contact for DM conversations (contact refresh on dismiss).
-    /// Channels are never mutated this way.
-    mutating func replacing(contact: ContactDTO) {
-        if case .dm = self { self = .dm(contact) }
+    /// Returns a copy with the contact replaced (DM only). Returns self unchanged for channels.
+    func replacingContact(_ contact: ContactDTO) -> ChatConversationType {
+        guard case .dm = self else { return self }
+        return .dm(contact)
     }
 }

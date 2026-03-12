@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import MC1Services
 import OSLog
 
@@ -170,9 +169,8 @@ struct ChatConversationMessagesContent: View {
         }
     }
 
-    private func onReaction(for message: MessageDTO) -> ((String) -> Void)? {
-        guard case .channel = conversationType else { return nil }
-        return { emoji in
+    private func onReaction(for message: MessageDTO) -> ((String) -> Void) {
+        { emoji in
             recentEmojisStore.recordUsage(emoji)
             Task { await viewModel.sendReaction(emoji: emoji, to: message) }
         }
@@ -223,7 +221,7 @@ struct ChatConversationMessagesContent: View {
                         if let data = viewModel.imageData(for: message.id) {
                             imageViewerData = ImageViewerData(
                                 imageData: data,
-                                isGIF: false
+                                isGIF: viewModel.isGIFImage(for: message.id)
                             )
                         }
                     },

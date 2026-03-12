@@ -378,4 +378,54 @@ struct MessageDeduplicationCacheTests {
         #expect(!directDup)
         #expect(!channelDup)
     }
+
+    // MARK: - Edge Cases
+
+    @Test("Empty string content is deduplicated correctly")
+    func emptyStringContentDedup() async {
+        let cache = MessageDeduplicationCache()
+        let contactID = UUID()
+
+        let first = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: ""
+        )
+        let second = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: ""
+        )
+
+        #expect(!first)
+        #expect(second)
+    }
+
+    @Test("Multi-byte unicode content is deduplicated correctly")
+    func multiBytUnicodeDedup() async {
+        let cache = MessageDeduplicationCache()
+        let contactID = UUID()
+        let emoji = "Hello \u{1F30D}\u{1F525} \u{4F60}\u{597D}"
+
+        let first = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: emoji
+        )
+        let second = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: emoji
+        )
+        // Different unicode content with same timestamp should not be a duplicate
+        let different = await cache.isDuplicateDirectMessage(
+            contactID: contactID,
+            timestamp: 1704067200,
+            content: "\u{1F600}\u{1F601}\u{1F602}"
+        )
+
+        #expect(!first)
+        #expect(second)
+        #expect(!different)
+    }
 }

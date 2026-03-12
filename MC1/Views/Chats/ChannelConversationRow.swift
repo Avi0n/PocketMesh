@@ -13,7 +13,7 @@ struct ChannelConversationRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 4) {
-                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
+                    Text(channel.displayName)
                         .font(.headline)
                         .lineLimit(1)
 

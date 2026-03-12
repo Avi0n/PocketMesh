@@ -229,7 +229,7 @@ private struct ChannelInfoHeaderSection: View {
                 VStack(spacing: 12) {
                     ChannelAvatar(channel: channel, size: 80)
 
-                    Text(channel.name.isEmpty ? L10n.Chats.Chats.Channel.defaultName(Int(channel.index)) : channel.name)
+                    Text(channel.displayName)
                         .font(.title2)
                         .bold()
 

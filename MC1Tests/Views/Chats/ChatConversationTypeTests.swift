@@ -168,34 +168,26 @@ struct ChatConversationTypeTests {
         #expect(sut.isPublicStyleChannel == false)
     }
 
-    // MARK: - replacing(contact:)
+    // MARK: - replacingContact(_:)
 
-    @Test("replacing(contact:) updates DM contact")
+    @Test("replacingContact returns DM with updated contact")
     func replacingContactUpdatesDM() {
         let original = makeContact(name: "Alice")
-        var sut = ChatConversationType.dm(original)
+        let sut = ChatConversationType.dm(original)
         let updated = makeContact(name: "Bob")
-        sut.replacing(contact: updated)
+        let result = sut.replacingContact(updated)
 
-        #expect(sut.navigationTitle == "Bob")
+        #expect(result.navigationTitle == "Bob")
     }
 
-    @Test("replacing(contact:) is no-op for channel")
+    @Test("replacingContact returns self for channel")
     func replacingContactNoOpForChannel() {
         let channel = makeChannel(name: "General")
-        var sut = ChatConversationType.channel(channel)
+        let sut = ChatConversationType.channel(channel)
         let contact = makeContact(name: "Alice")
-        sut.replacing(contact: contact)
+        let result = sut.replacingContact(contact)
 
-        #expect(sut.navigationTitle == "General")
+        #expect(result.navigationTitle == "General")
     }
 
-    // MARK: - Sendable Conformance
-
-    @Test("ChatConversationType is Sendable")
-    func isSendable() {
-        let contact = makeContact()
-        let sut: any Sendable = ChatConversationType.dm(contact)
-        #expect(sut is ChatConversationType)
-    }
 }

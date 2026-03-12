@@ -5,7 +5,6 @@ struct NewChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appState) private var appState
 
-    let viewModel: ChatViewModel
     let onSelectContact: (ContactDTO) -> Void
 
     @State private var contacts: [ContactDTO] = []

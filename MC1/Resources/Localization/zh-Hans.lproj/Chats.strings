@@ -121,54 +121,51 @@
 
 // MARK: - Chat View (Direct Messages)
 
-/* Location: ChatView.swift - Alert title when message send fails */
+/* Location: ChatConversationView.swift - Alert title when message send fails */
 "chats.alert.unableToSend.title" = "无法发送";
 
-/* Location: ChatView.swift - Alert message when message send fails */
+/* Location: ChatConversationView.swift - Alert message when message send fails */
 "chats.alert.unableToSend.message" = "请确保您的设备已连接并重试";
 
-/* Location: ChatView.swift - Connection status for flood routed contacts */
+/* Location: ChatConversationView.swift - Connection status for flood routed contacts */
 "chats.connectionStatus.floodRouting" = "泛洪路由";
 
-/* Location: ChatView.swift - Connection status format for direct path - %d is hop count */
+/* Location: ChatConversationView.swift - Connection status format for direct path - %d is hop count */
 "chats.connectionStatus.direct" = "直连 • %d 跳";
 
-/* Location: ChatView.swift - Connection status when route is unknown */
-"chats.connectionStatus.unknown" = "未知路由";
-
-/* Location: ChatView.swift - Placeholder when message data is unavailable */
+/* Location: ChatConversationView.swift - Placeholder when message data is unavailable */
 "chats.message.unavailable" = "消息不可用";
 
-/* Location: ChatView.swift - Accessibility label for unavailable message */
+/* Location: ChatConversationView.swift - Accessibility label for unavailable message */
 "chats.message.unavailableAccessibility" = "消息无法加载";
 
-/* Location: ChatView.swift - Empty state text prompting user to start chatting */
+/* Location: ChatConversationView.swift - Empty state text prompting user to start chatting */
 "chats.emptyState.startConversation" = "开始对话";
 
-/* Location: ChatView.swift - Label showing contact has location */
+/* Location: ChatConversationView.swift - Label showing contact has location */
 "chats.contactInfo.hasLocation" = "有位置";
 
-/* Location: ChatView.swift - Input bar placeholder for direct messages */
+/* Location: ChatConversationView.swift - Input bar placeholder for direct messages */
 "chats.input.placeholder.directMessage" = "私信";
 
 // MARK: - Channel Chat View
 
-/* Location: ChannelChatView.swift - Fallback channel name format - %d is channel index */
+/* Location: ChatConversationView.swift - Fallback channel name format - %d is channel index */
 "chats.channel.defaultName" = "频道 %d";
 
-/* Location: ChannelChatView.swift - Header subtitle for public channels */
+/* Location: ChatConversationView.swift - Header subtitle for public channels */
 "chats.channel.typePublic" = "公共频道";
 
-/* Location: ChannelChatView.swift - Header subtitle for private channels */
+/* Location: ChatConversationView.swift - Header subtitle for private channels */
 "chats.channel.typePrivate" = "私人频道";
 
-/* Location: ChannelChatView.swift - Empty state message */
+/* Location: ChatConversationView.swift - Empty state message */
 "chats.channel.emptyState.noMessages" = "暂无消息";
 
-/* Location: ChannelChatView.swift - Empty state description for public channel */
+/* Location: ChatConversationView.swift - Empty state description for public channel */
 "chats.channel.emptyState.publicDescription" = "这是一个公共频道";
 
-/* Location: ChannelChatView.swift - Empty state description for private channel */
+/* Location: ChatConversationView.swift - Empty state description for private channel */
 "chats.channel.emptyState.privateDescription" = "这是一个私人频道";
 
 // MARK: - Channel Info Sheet
@@ -239,7 +236,7 @@
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "服务不可用";
 
-/* Location: ChatView.swift - Error when loading older messages fails */
+/* Location: ChatConversationView.swift - Error when loading older messages fails */
 "chats.errors.loadOlderMessagesFailed" = "加载更早的消息失败";
 
 // MARK: - Channel Options Sheet
