@@ -261,7 +261,6 @@ extension SyncCoordinator {
             "[Sync] onDisconnected called - syncState: \(String(describing: currentState)), hasEndedSyncActivity: \(hasEndedSyncActivity)"
         )
 
-        await deduplicationCache.clear()
         // Note: pending reactions are NOT cleared on disconnect - they persist for the app session
         // This handles temporary BLE disconnects without losing queued reactions
         unresolvedChannelIndices.removeAll()

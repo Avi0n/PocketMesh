@@ -269,6 +269,13 @@ extension PersistenceStore {
         return try modelContext.fetch(descriptor).first.map { MessageDTO(from: $0) }
     }
 
+    /// Check if a message with this deduplication key already exists
+    public func isDuplicateMessage(deduplicationKey: String) throws -> Bool {
+        let targetKey = deduplicationKey
+        let predicate = #Predicate<Message> { $0.deduplicationKey == targetKey }
+        return try modelContext.fetchCount(FetchDescriptor(predicate: predicate)) > 0
+    }
+
     /// Save a new message
     public func saveMessage(_ dto: MessageDTO) throws {
         let message = Message(
@@ -294,7 +301,7 @@ extension PersistenceStore {
             heardRepeats: dto.heardRepeats,
             retryAttempt: dto.retryAttempt,
             maxRetryAttempts: dto.maxRetryAttempts,
-            deduplicationKey: nil,
+            deduplicationKey: dto.deduplicationKey,
             containsSelfMention: dto.containsSelfMention,
             mentionSeen: dto.mentionSeen,
             timestampCorrected: dto.timestampCorrected,

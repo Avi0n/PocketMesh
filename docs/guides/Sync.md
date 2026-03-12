@@ -537,7 +537,7 @@ This separation ensures:
 
 ## Message Filtering and Deduplication
 
-- **Deduplication:** `MessageDeduplicationCache` drops duplicate mesh packets before they hit persistence.
+- **Deduplication:** Persistent dedup via `deduplicationKey` on `Message`. Uses the RX log packet hash when available, falling back to a content-based key. Checked before save via `isDuplicateMessage()`.
 - **Blocked contacts:** `SyncCoordinator` caches blocked contact names for O(1) checks during polling.
 
 ## Discovery Handlers
