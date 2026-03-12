@@ -91,74 +91,46 @@ extension ChatViewModel {
             do {
                 try await contactService?.setContactFavorite(contact.id, isFavorite: newState)
                 // Device confirmed - update local UI
-                if disableAnimation {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        updateConversationFavoriteState(conversation, isFavorite: newState)
-                    }
-                } else {
-                    updateConversationFavoriteState(conversation, isFavorite: newState)
-                }
+                applyFavoriteUpdate(conversation, isFavorite: newState, disableAnimation: disableAnimation)
             } catch {
                 logger.error("Failed to toggle contact favorite: \(error)")
             }
 
         case .channel(let channel):
             // Channels are app-only - optimistic update
-            if disableAnimation {
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    updateConversationFavoriteState(conversation, isFavorite: newState)
-                }
-            } else {
-                updateConversationFavoriteState(conversation, isFavorite: newState)
-            }
+            applyFavoriteUpdate(conversation, isFavorite: newState, disableAnimation: disableAnimation)
 
             do {
                 try await dataStore?.setChannelFavorite(channel.id, isFavorite: newState)
             } catch {
                 // Rollback on failure
-                if disableAnimation {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        updateConversationFavoriteState(conversation, isFavorite: originalState)
-                    }
-                } else {
-                    updateConversationFavoriteState(conversation, isFavorite: originalState)
-                }
+                applyFavoriteUpdate(conversation, isFavorite: originalState, disableAnimation: disableAnimation)
                 logger.error("Failed to toggle channel favorite: \(error)")
             }
 
         case .room(let session):
             // Rooms are app-only - optimistic update
-            if disableAnimation {
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    updateConversationFavoriteState(conversation, isFavorite: newState)
-                }
-            } else {
-                updateConversationFavoriteState(conversation, isFavorite: newState)
-            }
+            applyFavoriteUpdate(conversation, isFavorite: newState, disableAnimation: disableAnimation)
 
             do {
                 try await dataStore?.setSessionFavorite(session.id, isFavorite: newState)
             } catch {
                 // Rollback on failure
-                if disableAnimation {
-                    var transaction = Transaction()
-                    transaction.disablesAnimations = true
-                    withTransaction(transaction) {
-                        updateConversationFavoriteState(conversation, isFavorite: originalState)
-                    }
-                } else {
-                    updateConversationFavoriteState(conversation, isFavorite: originalState)
-                }
+                applyFavoriteUpdate(conversation, isFavorite: originalState, disableAnimation: disableAnimation)
                 logger.error("Failed to toggle room favorite: \(error)")
             }
+        }
+    }
+
+    private func applyFavoriteUpdate(_ conversation: Conversation, isFavorite: Bool, disableAnimation: Bool) {
+        if disableAnimation {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                updateConversationFavoriteState(conversation, isFavorite: isFavorite)
+            }
+        } else {
+            updateConversationFavoriteState(conversation, isFavorite: isFavorite)
         }
     }
 
@@ -235,19 +207,6 @@ extension ChatViewModel {
             invalidateConversationCache()
         } catch {
             // Silently handle - channels are optional
-        }
-    }
-
-    /// Load room sessions for a device
-    func loadRoomSessions(deviceID: UUID) async {
-        guard let dataStore else { return }
-
-        do {
-            let sessions = try await dataStore.fetchRemoteNodeSessions(deviceID: deviceID)
-            roomSessions = sessions.filter { $0.isRoom }
-            invalidateConversationCache()
-        } catch {
-            // Silently handle - rooms are optional
         }
     }
 
@@ -880,33 +839,14 @@ extension ChatViewModel {
         }
     }
 
-    /// Maximum messages to fetch when deleting a conversation
-    private static let deleteConversationFetchLimit = 10_000
-
-    /// Delete all messages for a contact (conversation deletion)
-    func deleteConversation(for contact: ContactDTO) async throws {
+    /// Delete all messages for a direct conversation
+    func deleteDirectConversation(for contact: ContactDTO) async throws {
         guard appState?.connectionState == .ready else { return }
         guard let dataStore else { return }
 
-        // Fetch all messages for this contact
-        let messages = try await dataStore.fetchMessages(contactID: contact.id, limit: Self.deleteConversationFetchLimit)
-
-        if messages.count == Self.deleteConversationFetchLimit {
-            logger.warning("deleteConversation hit fetch limit of \(Self.deleteConversationFetchLimit) for contact \(contact.id) — some messages may remain")
-        }
-
-        // Delete each message
-        for message in messages {
-            try await dataStore.deleteMessage(id: message.id)
-        }
-
-        // Clear unread count before hiding from list
+        try await dataStore.deleteMessagesForContact(contactID: contact.id)
         try await dataStore.clearUnreadCount(contactID: contact.id)
-
-        // Clear last message date on contact (nil removes it from conversations list)
         try await dataStore.updateContactLastMessage(contactID: contact.id, date: nil)
-
-        // Recalculate badge
         await notificationService?.updateBadgeCount()
     }
 

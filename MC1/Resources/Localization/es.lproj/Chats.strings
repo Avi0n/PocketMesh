@@ -121,54 +121,51 @@
 
 // MARK: - Chat View (Direct Messages)
 
-/* Location: ChatView.swift - Alert title when message send fails */
+/* Location: ChatConversationView.swift - Alert title when message send fails */
 "chats.alert.unableToSend.title" = "No se puede enviar";
 
-/* Location: ChatView.swift - Alert message when message send fails */
+/* Location: ChatConversationView.swift - Alert message when message send fails */
 "chats.alert.unableToSend.message" = "Asegúrate de que tu dispositivo esté conectado e inténtalo de nuevo.";
 
-/* Location: ChatView.swift - Connection status for flood routed contacts */
+/* Location: ChatConversationView.swift - Connection status for flood routed contacts */
 "chats.connectionStatus.floodRouting" = "Enrutamiento por inundación";
 
-/* Location: ChatView.swift - Connection status format for direct path - %d is hop count */
+/* Location: ChatConversationView.swift - Connection status format for direct path - %d is hop count */
 "chats.connectionStatus.direct" = "Directo • %d saltos";
 
-/* Location: ChatView.swift - Connection status when route is unknown */
-"chats.connectionStatus.unknown" = "Ruta desconocida";
-
-/* Location: ChatView.swift - Placeholder when message data is unavailable */
+/* Location: ChatConversationView.swift - Placeholder when message data is unavailable */
 "chats.message.unavailable" = "Mensaje no disponible";
 
-/* Location: ChatView.swift - Accessibility label for unavailable message */
+/* Location: ChatConversationView.swift - Accessibility label for unavailable message */
 "chats.message.unavailableAccessibility" = "No se pudo cargar el mensaje";
 
-/* Location: ChatView.swift - Empty state text prompting user to start chatting */
+/* Location: ChatConversationView.swift - Empty state text prompting user to start chatting */
 "chats.emptyState.startConversation" = "Inicia una conversación";
 
-/* Location: ChatView.swift - Label showing contact has location */
+/* Location: ChatConversationView.swift - Label showing contact has location */
 "chats.contactInfo.hasLocation" = "Tiene ubicación";
 
-/* Location: ChatView.swift - Input bar placeholder for direct messages */
+/* Location: ChatConversationView.swift - Input bar placeholder for direct messages */
 "chats.input.placeholder.directMessage" = "Mensaje directo";
 
 // MARK: - Channel Chat View
 
-/* Location: ChannelChatView.swift - Fallback channel name format - %d is channel index */
+/* Location: ChatConversationView.swift - Fallback channel name format - %d is channel index */
 "chats.channel.defaultName" = "Canal %d";
 
-/* Location: ChannelChatView.swift - Header subtitle for public channels */
+/* Location: ChatConversationView.swift - Header subtitle for public channels */
 "chats.channel.typePublic" = "Canal público";
 
-/* Location: ChannelChatView.swift - Header subtitle for private channels */
+/* Location: ChatConversationView.swift - Header subtitle for private channels */
 "chats.channel.typePrivate" = "Canal privado";
 
-/* Location: ChannelChatView.swift - Empty state message */
+/* Location: ChatConversationView.swift - Empty state message */
 "chats.channel.emptyState.noMessages" = "Sin mensajes aún";
 
-/* Location: ChannelChatView.swift - Empty state description for public channel */
+/* Location: ChatConversationView.swift - Empty state description for public channel */
 "chats.channel.emptyState.publicDescription" = "Este es un canal de difusión público";
 
-/* Location: ChannelChatView.swift - Empty state description for private channel */
+/* Location: ChatConversationView.swift - Empty state description for private channel */
 "chats.channel.emptyState.privateDescription" = "Este es un canal privado";
 
 // MARK: - Channel Info Sheet
@@ -239,7 +236,7 @@
 /* Location: ChannelInfoSheet.swift - Error when services unavailable */
 "chats.error.servicesUnavailable" = "Servicios no disponibles";
 
-/* Location: ChatView.swift - Error when loading older messages fails */
+/* Location: ChatConversationView.swift - Error when loading older messages fails */
 "chats.errors.loadOlderMessagesFailed" = "Error al cargar mensajes anteriores";
 
 // MARK: - Channel Options Sheet

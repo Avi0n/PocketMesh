@@ -54,6 +54,11 @@ enum ChatRoute: Hashable {
         }
     }
 
+    var roomIsConnected: Bool? {
+        guard case .room(let session) = self else { return nil }
+        return session.isConnected
+    }
+
     func toConversation() -> Conversation {
         switch self {
         case .direct(let contact):

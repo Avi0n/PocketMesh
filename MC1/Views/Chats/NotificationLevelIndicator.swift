@@ -21,13 +21,3 @@ struct NotificationLevelIndicator: View {
         }
     }
 }
-
-// Keep old name for compatibility during migration
-typealias MutedIndicator = NotificationLevelIndicator
-
-extension NotificationLevelIndicator {
-    /// Backwards-compatible initializer
-    init(isMuted: Bool) {
-        self.level = isMuted ? .muted : .all
-    }
-}

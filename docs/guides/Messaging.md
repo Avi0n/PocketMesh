@@ -7,7 +7,7 @@ This guide covers the message lifecycle, delivery states, retry logic, and ACK h
 ```
 ┌──────────────────────────────────────────────────────┐
 │                        COMPOSE                       │
-│  User types message in ChatView                      │
+│  User types message in ChatConversationView            │
 └──────────────────────────────────────────────────────┘
                             │
                             ▼

@@ -23,7 +23,7 @@ enum Conversation: Identifiable, Hashable {
         case .direct(let contact):
             return contact.displayName
         case .channel(let channel):
-            return channel.name.isEmpty ? "Channel \(channel.index)" : channel.name
+            return channel.displayName
         case .room(let session):
             return session.name
         }
@@ -77,45 +77,4 @@ enum Conversation: Identifiable, Hashable {
         }
     }
 
-    var isChannel: Bool {
-        if case .channel = self { return true }
-        return false
-    }
-
-    var isRoom: Bool {
-        if case .room = self { return true }
-        return false
-    }
-
-    /// For channels, returns the channel index
-    var channelIndex: UInt8? {
-        if case .channel(let channel) = self {
-            return channel.index
-        }
-        return nil
-    }
-
-    /// For direct chats, returns the contact
-    var contact: ContactDTO? {
-        if case .direct(let contact) = self {
-            return contact
-        }
-        return nil
-    }
-
-    /// For channels, returns the channel
-    var channel: ChannelDTO? {
-        if case .channel(let channel) = self {
-            return channel
-        }
-        return nil
-    }
-
-    /// For rooms, returns the session
-    var roomSession: RemoteNodeSessionDTO? {
-        if case .room(let session) = self {
-            return session
-        }
-        return nil
-    }
 }

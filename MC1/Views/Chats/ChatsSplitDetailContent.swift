@@ -9,10 +9,10 @@ struct ChatsSplitDetailContent: View {
     var body: some View {
         switch appState.navigation.chatsSelectedRoute {
         case .direct(let contact):
-            ChatView(contact: contact, parentViewModel: viewModel)
+            ChatConversationView(conversationType: .dm(contact), parentViewModel: viewModel)
                 .id(contact.id)
         case .channel(let channel):
-            ChannelChatView(channel: channel, parentViewModel: viewModel)
+            ChatConversationView(conversationType: .channel(channel), parentViewModel: viewModel)
                 .id(channel.id)
         case .room(let session):
             RoomConversationView(session: session)

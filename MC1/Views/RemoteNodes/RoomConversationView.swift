@@ -152,10 +152,6 @@ struct RoomConversationView: View {
         )
     }
 
-    private func makeEmptyMessagesView() -> some View {
-        EmptyMessagesView(session: session)
-    }
-
     private func makeInputBar() -> some View {
         ChatInputBar(
             text: $viewModel.composingText,
