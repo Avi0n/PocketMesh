@@ -5,6 +5,8 @@ import SwiftData
 /// Used for both room servers and repeater admin connections.
 @Model
 public final class RemoteNodeSession {
+    #Index<RemoteNodeSession>([\.deviceID])
+
     /// Unique session identifier
     @Attribute(.unique)
     public var id: UUID
