@@ -4,6 +4,7 @@ import MC1Services
 /// Shared modifiers applied to the conversation list in both stack and split layouts.
 struct ChatsListModifiers: ViewModifier {
     @Environment(\.appState) private var appState
+    @State private var reloadTask: Task<Void, Never>?
 
     let viewModel: ChatViewModel
 
@@ -65,13 +66,15 @@ struct ChatsListModifiers: ViewModifier {
             }
             .onChange(of: appState.servicesVersion) { _, _ in
                 guard routeBeingDeleted == nil else { return }
-                Task {
+                reloadTask?.cancel()
+                reloadTask = Task {
                     await onLoadConversations()
                 }
             }
             .onChange(of: appState.conversationsVersion) { _, _ in
                 guard routeBeingDeleted == nil else { return }
-                Task {
+                reloadTask?.cancel()
+                reloadTask = Task {
                     await onLoadConversations()
                 }
             }

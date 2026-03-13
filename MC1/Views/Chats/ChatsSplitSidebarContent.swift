@@ -3,6 +3,7 @@ import MC1Services
 
 struct ChatsSplitSidebarContent: View {
     @Environment(\.appState) private var appState
+    @State private var reloadTask: Task<Void, Never>?
 
     let viewModel: ChatViewModel
     let filteredFavorites: [Conversation]
@@ -54,7 +55,8 @@ struct ChatsSplitSidebarContent: View {
             if oldValue != nil {
                 let didClearSelectionForDeletion = (newValue == nil && oldValue == routeBeingDeleted)
                 if !didClearSelectionForDeletion {
-                    Task {
+                    reloadTask?.cancel()
+                    reloadTask = Task {
                         await onLoadConversations()
                     }
                 }
