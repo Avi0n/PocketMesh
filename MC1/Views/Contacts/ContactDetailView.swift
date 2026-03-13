@@ -368,7 +368,8 @@ struct ContactDetailView: View {
                 throw PingError.notConnected
             }
 
-            let pathData = Data(currentContact.publicKey.prefix(6))
+            let device = appState.connectedDevice
+            let pathData = Data(currentContact.publicKey.prefix(device?.traceHashSize ?? 1))
 
             // Task group: listener starts BEFORE sendTrace to avoid race with fast responses
             let (snrThere, snrBack) = try await withThrowingTaskGroup(
@@ -387,7 +388,7 @@ struct ContactDetailView: View {
                 }
 
                 // Send trace (listeners are already active above)
-                let sentInfo = try await services.binaryProtocolService.sendTrace(tag: tag, path: pathData)
+                let sentInfo = try await services.binaryProtocolService.sendTrace(tag: tag, flags: device?.pathHashMode ?? 0, path: pathData)
 
                 // Timeout using actual suggested timeout from device
                 group.addTask {

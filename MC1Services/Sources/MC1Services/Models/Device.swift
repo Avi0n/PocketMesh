@@ -265,6 +265,10 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// The hash size per hop in bytes (1, 2, or 3), derived from ``pathHashMode``.
     public var hashSize: Int { Int(pathHashMode) + 1 }
 
+    /// Hash size per hop in trace packets (1, 2, or 4 bytes), derived from ``pathHashMode``.
+    /// Trace protocol uses power-of-2 encoding: `1 << pathHashMode`.
+    public var traceHashSize: Int { 1 << Int(pathHashMode) }
+
     public var preRepeatFrequency: UInt32?
     public var preRepeatBandwidth: UInt32?
     public var preRepeatSpreadingFactor: UInt8?

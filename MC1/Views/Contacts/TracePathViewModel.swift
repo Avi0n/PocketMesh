@@ -696,7 +696,7 @@ final class TracePathViewModel {
             let sentInfo = try await session.sendTrace(
                 tag: tag,
                 authCode: 0,  // Not used for basic trace
-                flags: 0,
+                flags: UInt8(appState.connectedDevice?.pathHashMode ?? 0),
                 path: pathData
             )
             timeoutSeconds = Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
@@ -863,7 +863,7 @@ final class TracePathViewModel {
             let sentInfo = try await session.sendTrace(
                 tag: tag,
                 authCode: 0,
-                flags: 0,
+                flags: UInt8(appState.connectedDevice?.pathHashMode ?? 0),
                 path: pathData
             )
             timeoutSeconds = Double(sentInfo.suggestedTimeoutMs) / 1000.0 * 1.2
