@@ -204,7 +204,7 @@ struct UnifiedMessageBubble: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.top, displayState.showDirectionGap ? 6 : (displayState.showSenderName ? 4 : 1))
+        .padding(.top, displayState.showDirectionGap ? 6 : (displayState.showSenderName ? 4 : (message.isOutgoing ? 1 : 2)))
         .padding(.bottom, 0)
         .onAppear {
             // Request preview/image fetch when cell becomes visible
@@ -285,8 +285,7 @@ private struct BubbleContent: View {
                     }
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .bubbleContentPadding()
 
             if displayState.isImageURL && displayState.showInlineImages {
                 BubbleEmbeddedImageContent(
@@ -330,8 +329,7 @@ private struct BubbleEmbeddedImageContent: View {
                         .font(.subheadline)
                         .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .bubbleContentPadding()
             }
 
         case .noPreview, .disabled:
@@ -344,8 +342,7 @@ private struct BubbleEmbeddedImageContent: View {
                             .font(.subheadline)
                             .foregroundStyle(message.isOutgoing ? .white.opacity(0.7) : .secondary)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .bubbleContentPadding()
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(L10n.Chats.Chats.InlineImage.retryHint)
@@ -524,6 +521,15 @@ private struct BubbleHopCountFooter: View {
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(L10n.Chats.Chats.Message.HopCount.accessibilityLabel(Int(pathLength)))
+    }
+}
+
+// MARK: - Helpers
+
+private extension View {
+    func bubbleContentPadding() -> some View {
+        padding(.horizontal, 10)
+            .padding(.vertical, 8)
     }
 }
 
