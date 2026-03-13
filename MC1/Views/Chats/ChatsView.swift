@@ -239,14 +239,10 @@ struct ChatsView: View {
     }
 
     private func announceOfflineStateIfNeeded() {
-        guard UIAccessibility.isVoiceOverRunning,
-              appState.connectionState == .disconnected,
+        guard appState.connectionState == .disconnected,
               appState.currentDeviceID != nil else { return }
 
-        UIAccessibility.post(
-            notification: .announcement,
-            argument: L10n.Chats.Chats.Accessibility.offlineAnnouncement
-        )
+        AccessibilityNotification.Announcement(L10n.Chats.Chats.Accessibility.offlineAnnouncement).post()
     }
 
     private func navigate(to route: ChatRoute) {
