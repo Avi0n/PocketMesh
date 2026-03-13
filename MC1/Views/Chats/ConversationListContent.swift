@@ -57,15 +57,6 @@ struct ConversationListContent: View {
         self.onDeleteConversation = onDeleteConversation
     }
 
-    private var pickerSection: some View {
-        Section {
-            ChatFilterPicker(selection: $selectedFilter)
-        }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
-        .listSectionSeparator(.hidden)
-    }
-
     var body: some View {
         if !hasLoadedOnce {
             ProgressView()
@@ -97,7 +88,7 @@ struct ConversationListContent: View {
         switch mode {
         case .selection(let selection):
             List(selection: selection) {
-                pickerSection
+                ConversationFilterSection(selection: $selectedFilter)
 
                 Section {
                     ForEach(favoriteConversations) { conversation in
@@ -129,7 +120,7 @@ struct ConversationListContent: View {
 
         case .navigation(let onNavigate, let onRequestRoomAuth):
             List {
-                pickerSection
+                ConversationFilterSection(selection: $selectedFilter)
 
                 Section {
                     ForEach(favoriteConversations) { conversation in
@@ -166,7 +157,20 @@ struct ConversationListContent: View {
     }
 }
 
-// MARK: - Extracted Row Views
+// MARK: - Extracted Views
+
+private struct ConversationFilterSection: View {
+    @Binding var selection: ChatFilter
+
+    var body: some View {
+        Section {
+            ChatFilterPicker(selection: $selection)
+        }
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+        .listSectionSeparator(.hidden)
+    }
+}
 
 private struct ConversationSelectionRow: View {
     let conversation: Conversation
