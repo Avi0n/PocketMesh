@@ -23,6 +23,11 @@ public final class AppState {
     /// App-wide location service for permission management
     public let locationService = LocationService()
 
+    // MARK: - Offline Maps
+
+    /// Offline map pack management and network monitoring
+    let offlineMapService = OfflineMapService()
+
     // MARK: - Connection (via ConnectionManager)
 
     /// The connection manager for device lifecycle
@@ -628,6 +633,8 @@ public final class AppState {
             await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
             batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
         }
+
+        offlineMapService.resumeAllPacks()
     }
 
     // MARK: - Onboarding

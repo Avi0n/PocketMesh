@@ -1,25 +1,16 @@
-import os
 import SwiftUI
 import MapKit
 import MC1Services
 
-private let logger = Logger(subsystem: "com.mc1", category: "MapView")
-
 /// Map view displaying contacts with their locations
 struct MapView: View {
-    /// Estimated duration for sheet presentation animation. SwiftUI doesn't provide a completion callback,
-    /// so we use this delay before switching to the snapshot to hide the transition from the user.
-    private static let sheetPresentationDuration: Duration = .milliseconds(500)
-
     @Environment(\.appState) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = MapViewModel()
+    @State private var selectedCalloutContact: ContactDTO?
+    @State private var selectedPointScreenPosition: CGPoint?
     @State private var selectedContactForDetail: ContactDTO?
-    /// Static snapshot of the map shown while sheets are presented to prevent memory growth from SwiftUI keyboard layout cycles
-    @State private var mapSnapshot: UIImage?
-    /// Controls when snapshot is shown - delayed until after sheet presents to hide the transition
-    @State private var isSnapshotActive = false
-    /// Closure to get snapshot parameters directly from MKMapView (camera + bounds, avoids async binding lag)
-    @State private var getSnapshotParams: (() -> (camera: MKMapCamera, size: CGSize)?)?
+    @State private var isStyleLoaded = false
 
     var body: some View {
         NavigationStack {
@@ -39,7 +30,7 @@ struct MapView: View {
                     await viewModel.loadContactsWithLocation()
                     viewModel.centerOnAllContacts()
                 }
-                .sheet(item: $selectedContactForDetail, onDismiss: clearMapSnapshot) { contact in
+                .sheet(item: $selectedContactForDetail) { contact in
                     ContactDetailSheet(
                         contact: contact,
                         onMessage: { navigateToChat(with: contact) }
@@ -56,6 +47,11 @@ struct MapView: View {
         ZStack {
             mapContent
                 .ignoresSafeArea()
+
+            // Offline badge
+            if !appState.offlineMapService.isNetworkAvailable {
+                OfflineBadge()
+            }
 
             // Floating controls
             VStack {
@@ -98,47 +94,77 @@ struct MapView: View {
         if viewModel.contactsWithLocation.isEmpty && !viewModel.isLoading {
             emptyState
         } else {
-            // Keep MKMapView always in tree to prevent Metal deallocation crashes
-            // Hide it with opacity when showing snapshot instead of removing from hierarchy
-            let showingSnapshot = isSnapshotActive && mapSnapshot != nil
-
-            ZStack {
-                MKMapViewRepresentable(
-                    contacts: viewModel.contactsWithLocation,
-                    mapType: viewModel.mapStyleSelection.mkMapType,
-                    showLabels: viewModel.showLabels,
-                    showsUserLocation: true,
-                    selectedContact: $viewModel.selectedContact,
-                    cameraRegion: $viewModel.cameraRegion,
-                    onDetailTap: { contact in
-                        showContactDetail(contact)
-                    },
-                    onMessageTap: { contact in
-                        navigateToChat(with: contact)
-                    },
-                    onSnapshotParamsGetter: { getter in
-                        Task { @MainActor in
-                            await Task.yield()
-                            getSnapshotParams = getter
-                        }
-                    }
+            MC1MapView(
+                points: mapPoints,
+                lines: [],
+                mapStyle: viewModel.mapStyleSelection,
+                isDarkMode: colorScheme == .dark,
+                showLabels: viewModel.showLabels,
+                showsUserLocation: true,
+                isInteractive: true,
+                showsScale: true,
+                cameraRegion: $viewModel.cameraRegion,
+                cameraRegionVersion: viewModel.cameraRegionVersion,
+                onPointTap: { point, screenPosition in
+                    selectedCalloutContact = viewModel.contactsWithLocation.first { $0.id == point.id }
+                    selectedPointScreenPosition = screenPosition
+                },
+                onMapTap: { _ in
+                    selectedCalloutContact = nil
+                    selectedPointScreenPosition = nil
+                },
+                onCameraRegionChange: { region in
+                    viewModel.cameraRegion = region
+                    selectedCalloutContact = nil
+                    selectedPointScreenPosition = nil
+                },
+                isStyleLoaded: $isStyleLoaded
+            )
+            .popover(
+                item: $selectedCalloutContact,
+                attachmentAnchor: .rect(.rect(CGRect(
+                    origin: selectedPointScreenPosition ?? .zero,
+                    size: CGSize(width: 1, height: 1)
+                ))),
+                arrowEdge: .bottom
+            ) { contact in
+                ContactCalloutContent(
+                    contact: contact,
+                    onDetail: { showContactDetail(contact) },
+                    onMessage: { navigateToChat(with: contact) }
                 )
-                .opacity(showingSnapshot ? 0 : 1)
-
-                if showingSnapshot, let snapshot = mapSnapshot {
-                    // Show static snapshot while sheet is presented to prevent memory growth
-                    // MKMapView clustering causes unbounded memory growth during keyboard layout cycles
-                    // Must ignore safe area to match MKMapView's positioning (UIView fills entire area)
-                    Image(uiImage: snapshot)
-                        .resizable()
-                        .ignoresSafeArea()
-                }
+                .presentationCompactAdaptation(.popover)
             }
             .overlay {
-                if viewModel.isLoading {
+                if !isStyleLoaded {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                } else if viewModel.isLoading {
                     loadingOverlay
                 }
             }
+        }
+    }
+
+    private var mapPoints: [MapPoint] {
+        viewModel.contactsWithLocation.map { contact in
+            MapPoint(
+                id: contact.id,
+                coordinate: contact.coordinate,
+                pinStyle: pinStyle(for: contact),
+                label: contact.displayName,
+                isClusterable: true,
+                hopIndex: nil,
+                badgeText: nil
+            )
+        }
+    }
+
+    private func pinStyle(for contact: ContactDTO) -> MapPoint.PinStyle {
+        switch contact.type {
+        case .chat: .contactChat
+        case .repeater: .contactRepeater
+        case .room: .contactRoom
         }
     }
 
@@ -240,12 +266,9 @@ struct MapView: View {
 
     // MARK: - Actions
 
-    private func selectContact(_ contact: ContactDTO) {
-        viewModel.centerOnContact(contact)
-    }
-
     private func clearSelection() {
-        viewModel.clearSelection()
+        selectedCalloutContact = nil
+        selectedPointScreenPosition = nil
     }
 
     private func navigateToChat(with contact: ContactDTO) {
@@ -254,53 +277,36 @@ struct MapView: View {
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
-        // Clear selection to prevent MKSmallCalloutView constraint corruption
-        viewModel.selectedContact = nil
-        // Present sheet immediately so user sees it animating in
+        selectedCalloutContact = nil
+        selectedPointScreenPosition = nil
         selectedContactForDetail = contact
-
-        // Capture snapshot after sheet animation completes to hide the transition
-        Task {
-            try? await Task.sleep(for: Self.sheetPresentationDuration)
-            // Guard against race condition if sheet was dismissed during delay
-            guard selectedContactForDetail != nil else { return }
-            await captureMapSnapshot()
-            isSnapshotActive = true
-        }
-    }
-
-    /// Captures a static snapshot of the current map view to display while sheets are presented
-    private func captureMapSnapshot() async {
-        // Get camera and bounds directly from MKMapView for pixel-perfect match
-        // Using camera instead of region avoids MKMapSnapshotter's automatic aspect ratio adjustment
-        guard let params = getSnapshotParams?() else { return }
-
-        let options = MKMapSnapshotter.Options()
-        options.camera = params.camera
-        options.size = params.size
-        options.scale = UIScreen.main.scale
-        options.mapType = viewModel.mapStyleSelection.mkMapType
-        options.showsBuildings = true
-
-        let snapshotter = MKMapSnapshotter(options: options)
-        do {
-            let snapshot = try await snapshotter.start()
-            mapSnapshot = snapshot.image
-        } catch {
-            logger.warning("Map snapshot capture failed: \(error.localizedDescription)")
-            mapSnapshot = nil
-        }
-    }
-
-    private func clearMapSnapshot() {
-        isSnapshotActive = false
-        mapSnapshot = nil
     }
 
     private func centerOnUserLocation() {
         guard let location = appState.locationService.currentLocation else { return }
         let span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
         viewModel.cameraRegion = MKCoordinateRegion(center: location.coordinate, span: span)
+        viewModel.cameraRegionVersion += 1
+    }
+}
+
+// MARK: - Offline Badge
+
+private struct OfflineBadge: View {
+    var body: some View {
+        VStack {
+            HStack {
+                Text(L10n.Map.Map.OfflineBadge.label)
+                    .font(.caption)
+                    .bold()
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: .capsule)
+                Spacer()
+            }
+            .padding(.leading)
+            Spacer()
+        }
     }
 }
 

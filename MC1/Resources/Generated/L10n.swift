@@ -2046,13 +2046,17 @@ public enum L10n {
         /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type
         public static let room = L10n.tr("Map", "map.nodeKind.room", fallback: "Room")
       }
+      public enum OfflineBadge {
+        /// Label shown on map when device has no internet connection
+        public static let label = L10n.tr("Map", "map.offlineBadge.label", fallback: "Offline")
+      }
       public enum Style {
-        /// Location: MapStyleSelection.swift - Purpose: Hybrid map style option
-        public static let hybrid = L10n.tr("Map", "map.style.hybrid", fallback: "Hybrid")
         /// Location: MapStyleSelection.swift - Purpose: Satellite map style option
         public static let satellite = L10n.tr("Map", "map.style.satellite", fallback: "Satellite")
         /// Location: MapStyleSelection.swift - Purpose: Standard map style option
         public static let standard = L10n.tr("Map", "map.style.standard", fallback: "Standard")
+        /// Location: MapStyleSelection.swift - Purpose: Topo map style option
+        public static let topo = L10n.tr("Map", "map.style.topo", fallback: "Topo")
       }
     }
   }
@@ -3646,12 +3650,6 @@ public enum L10n {
         /// Navigation title for the regenerate identity sheet
         public static let title = L10n.tr("Settings", "regenerateIdentity.sheet.title", fallback: "Regenerate Key")
       }
-    }
-    public enum ReplyWithQuote {
-      /// Replying includes a preview of the original message.
-      public static let footer = L10n.tr("Settings", "replyWithQuote.footer", fallback: "Replying includes a preview of the original message.")
-      /// Reply with Quote
-      public static let toggle = L10n.tr("Settings", "replyWithQuote.toggle", fallback: "Reply with Quote")
     }
     public enum Telemetry {
       /// Toggle label for allowing telemetry requests

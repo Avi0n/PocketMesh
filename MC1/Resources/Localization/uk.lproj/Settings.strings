@@ -1264,3 +1264,56 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Офлайн-карти";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Немає офлайн-карт";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Завантажте регіони карти для використання без інтернету.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Завантажити регіон";
+
+/* Section header for downloaded maps list */
+"offlineMaps.downloaded" = "Завантажені";
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Сховище";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Використано";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Невідомий регіон";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Завершено";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Завантаження…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Оберіть регіон";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Назва регіону";
+
+/* Button to start download */
+"offlineMaps.download" = "Завантажити";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Скасувати";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Видалити офлайн-карту?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "Завантажені дані карти буде видалено.";
+
+/* Delete button */
+"offlineMaps.delete" = "Видалити";

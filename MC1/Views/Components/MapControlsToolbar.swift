@@ -7,7 +7,7 @@ struct MapControlsToolbar<CustomContent: View>: View {
     /// MapScope for SwiftUI Map's MapUserLocationButton. Mutually exclusive with onLocationTap.
     var mapScope: Namespace.ID?
 
-    /// Custom action for location button. Used when MapScope isn't available (e.g., MKMapViewRepresentable).
+    /// Custom action for location button. Used when MapScope isn't available (e.g., MapLibre views).
     var onLocationTap: (() -> Void)?
 
     /// Binding to control layers menu visibility. Parent view handles menu presentation.
