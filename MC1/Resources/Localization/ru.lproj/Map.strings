@@ -47,8 +47,8 @@
 /* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
 "map.style.satellite" = "Спутниковая";
 
-/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
-"map.style.hybrid" = "Гибридная";
+/* Location: MapStyleSelection.swift - Purpose: Topo map style option */
+"map.style.topo" = "Топо";
 
 // MARK: - Contact Detail Sheet
 
@@ -155,3 +155,8 @@
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
 "map.annotation.room" = "Комната";
+
+// MARK: - Offline Badge
+
+/* Label shown on map when device has no internet connection */
+"map.offlineBadge.label" = "Офлайн";

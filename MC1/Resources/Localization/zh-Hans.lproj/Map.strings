@@ -47,8 +47,8 @@
 /* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
 "map.style.satellite" = "卫星";
 
-/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
-"map.style.hybrid" = "混合";
+/* Location: MapStyleSelection.swift - Purpose: Topo map style option */
+"map.style.topo" = "地形";
 
 // MARK: - Contact Detail Sheet
 
@@ -155,3 +155,8 @@
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
 "map.annotation.room" = "房间";
+
+// MARK: - Offline Badge
+
+/* Label shown on map when device has no internet connection */
+"map.offlineBadge.label" = "离线";

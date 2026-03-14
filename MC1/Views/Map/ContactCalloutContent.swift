@@ -9,7 +9,9 @@ struct ContactCalloutContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Type indicator only (name is in native callout title)
+            Text(contact.displayName)
+                .font(.headline)
+
             HStack(spacing: 6) {
                 Image(systemName: typeIconName)
                     .foregroundStyle(typeColor)

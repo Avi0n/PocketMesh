@@ -90,6 +90,12 @@ private struct SettingsListContent: View {
                         detail: currentLanguageDisplayName
                     )
                 }
+
+                NavigationLink {
+                    OfflineMapSettingsView()
+                } label: {
+                    TintedLabel(L10n.Settings.OfflineMaps.title, systemImage: "map.fill")
+                }
             } header: {
                 Text(L10n.Settings.AppSettings.header)
             }
