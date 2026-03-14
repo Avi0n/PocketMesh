@@ -1233,3 +1233,57 @@
 
 /* Error when key fails Ed25519 validation */
 "importKey.error.invalidKey" = "不是有效的 Ed25519 私钥";
+
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "离线地图";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "无离线地图";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "下载地图区域以便在无网络时使用。";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "下载区域";
+
+/* Section header for downloaded maps list */
+"offlineMaps.downloaded" = "已下载";
+
+/* Section header for storage info */
+"offlineMaps.storage" = "存储空间";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "已使用";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "未知区域";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "已完成";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "下载中…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "选择区域";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "区域名称";
+
+/* Button to start download */
+"offlineMaps.download" = "下载";
+
+/* Cancel button */
+"offlineMaps.cancel" = "取消";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "删除离线地图？";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "已下载的地图数据将被删除。";
+
+/* Delete button */
+"offlineMaps.delete" = "删除";

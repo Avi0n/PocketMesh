@@ -1260,3 +1260,57 @@
 
 /* Error when key fails Ed25519 validation */
 "importKey.error.invalidKey" = "Geen geldige Ed25519-privésleutel";
+
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Offline kaarten";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Geen offline kaarten";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Download kaartregio's voor gebruik zonder internet.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Regio downloaden";
+
+/* Section header for downloaded maps list */
+"offlineMaps.downloaded" = "Gedownload";
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Opslag";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Opslag gebruikt";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Onbekende regio";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Voltooid";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Downloaden…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Selecteer regio";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Regionaam";
+
+/* Button to start download */
+"offlineMaps.download" = "Downloaden";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Annuleren";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Offline kaart verwijderen?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "De gedownloade kaartgegevens worden verwijderd.";
+
+/* Delete button */
+"offlineMaps.delete" = "Verwijderen";

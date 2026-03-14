@@ -22,19 +22,10 @@ final class TracePathMapViewModel {
     /// Tracks whether initial centering on repeaters has been performed
     private(set) var hasInitiallyCenteredOnRepeaters = false
 
-    /// MKMapType for UIKit map view
-    var mapType: MKMapType {
-        switch mapStyleSelection {
-        case .standard: .standard
-        case .satellite: .satellite
-        case .hybrid: .hybrid
-        }
-    }
-
     // MARK: - Path Overlays
 
-    private(set) var lineOverlays: [PathLineOverlay] = []
-    private(set) var badgeAnnotations: [StatsBadgeAnnotation] = []
+    private(set) var mapLines: [MapLine] = []
+    private(set) var badgePoints: [MapPoint] = []
 
     // MARK: - Dependencies
 
@@ -203,96 +194,119 @@ final class TracePathMapViewModel {
 
     // MARK: - Overlay Management
 
-    /// Rebuild line overlays and badge annotations based on current path
+    /// Rebuild map lines based on current path
     func rebuildOverlays() {
         clearOverlays()
 
         guard let traceViewModel,
               !traceViewModel.outboundPath.isEmpty else { return }
 
-        // Start from user location or default
         var previousCoordinate: CLLocationCoordinate2D?
         if let userLocation {
             previousCoordinate = userLocation.coordinate
         }
 
-        // Build overlays for each hop
         for (index, hop) in traceViewModel.outboundPath.enumerated() {
-            // Find repeater location
             guard let repeater = findRepeater(for: hop),
-                  repeater.hasLocation else {
-                logger.warning("Hop \(index) has no location data, skipping line segment")
-                continue
-            }
+                  repeater.hasLocation else { continue }
 
             let hopCoordinate = CLLocationCoordinate2D(
                 latitude: repeater.latitude,
                 longitude: repeater.longitude
             )
 
-            // Validate coordinate
-            guard CLLocationCoordinate2DIsValid(hopCoordinate) else {
-                logger.warning("Invalid coordinate for hop \(index): (\(repeater.latitude), \(repeater.longitude))")
-                continue
-            }
+            guard CLLocationCoordinate2DIsValid(hopCoordinate) else { continue }
 
-            // Create line from previous point
             if let prevCoord = previousCoordinate, CLLocationCoordinate2DIsValid(prevCoord) {
-                let overlay = PathLineOverlay.line(
-                    from: prevCoord,
-                    to: hopCoordinate,
-                    segmentIndex: index
-                )
-                lineOverlays.append(overlay)
+                mapLines.append(MapLine(
+                    id: "trace-\(index)",
+                    coordinates: [prevCoord, hopCoordinate],
+                    style: .traceUntraced,
+                    opacity: 1.0
+                ))
             }
 
             previousCoordinate = hopCoordinate
         }
-
-        logger.debug("Rebuilt \(self.lineOverlays.count) line overlays")
     }
 
-    /// Update overlays with trace results (creates new overlays since they're immutable)
+    /// Update lines with trace results and add badge points at segment midpoints
     func updateOverlaysWithResults() {
         guard let result = traceViewModel?.result, result.success else { return }
 
-        // Clear existing badges
-        badgeAnnotations.removeAll()
+        badgePoints.removeAll()
 
-        // Create new overlays with signal quality (immutable pattern)
-        var updatedOverlays: [PathLineOverlay] = []
-        for (index, overlay) in lineOverlays.enumerated() {
-            // Find corresponding hop SNR (index + 1 because 0 is start node)
+        var updatedLines: [MapLine] = []
+        for (index, line) in mapLines.enumerated() {
             let hopIndex = index + 1
             if hopIndex < result.hops.count {
                 let hop = result.hops[hopIndex]
-                let quality = PathLineOverlay.SignalQuality(snr: hop.snr)
+                let quality = signalQuality(snr: hop.snr)
+                let style = lineStyle(for: quality)
 
-                // Create new overlay with signal quality
-                let updatedOverlay = overlay.withSignalQuality(quality, snr: hop.snr)
-                updatedOverlays.append(updatedOverlay)
+                updatedLines.append(MapLine(
+                    id: line.id,
+                    coordinates: line.coordinates,
+                    style: style,
+                    opacity: 1.0
+                ))
 
-                // Add badge annotation at midpoint
-                let badge = StatsBadgeAnnotation(
-                    coordinate: updatedOverlay.midpoint,
-                    distanceMeters: updatedOverlay.distanceMeters,
-                    snr: hop.snr,
-                    segmentIndex: index
-                )
-                badgeAnnotations.append(badge)
+                // Badge at midpoint
+                if line.coordinates.count >= 2 {
+                    let mid = CLLocationCoordinate2D(
+                        latitude: (line.coordinates[0].latitude + line.coordinates[1].latitude) / 2,
+                        longitude: (line.coordinates[0].longitude + line.coordinates[1].longitude) / 2
+                    )
+                    let distance = CLLocation(latitude: line.coordinates[0].latitude, longitude: line.coordinates[0].longitude)
+                        .distance(from: CLLocation(latitude: line.coordinates[1].latitude, longitude: line.coordinates[1].longitude))
+                    let miles = distance / 1609.34
+                    let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
+                    let distFormatted = miles.formatted(.number.precision(.fractionLength(1)))
+
+                    // swiftlint:disable:next force_unwrapping
+                    badgePoints.append(MapPoint(
+                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", index))")!,
+                        coordinate: mid,
+                        pinStyle: .badge,
+                        label: nil,
+                        isClusterable: false,
+                        hopIndex: nil,
+                        badgeText: "\(distFormatted) mi · \(snrFormatted) dB"
+                    ))
+                }
             } else {
-                updatedOverlays.append(overlay)
+                updatedLines.append(line)
             }
         }
 
-        lineOverlays = updatedOverlays
-        logger.debug("Updated overlays with results, added \(self.badgeAnnotations.count) badges")
+        mapLines = updatedLines
+    }
+
+    // MARK: - Signal Quality
+
+    private enum SignalQuality {
+        case untraced, weak, medium, good
+    }
+
+    private func signalQuality(snr: Double) -> SignalQuality {
+        if snr <= 0 { return .weak }
+        if snr < 5 { return .medium }
+        return .good
+    }
+
+    private func lineStyle(for quality: SignalQuality) -> MapLine.LineStyle {
+        switch quality {
+        case .untraced: .traceUntraced
+        case .weak: .traceWeak
+        case .medium: .traceMedium
+        case .good: .traceGood
+        }
     }
 
     /// Clear all overlays
     func clearOverlays() {
-        lineOverlays.removeAll()
-        badgeAnnotations.removeAll()
+        mapLines.removeAll()
+        badgePoints.removeAll()
     }
 
     // MARK: - Camera
@@ -305,11 +319,8 @@ final class TracePathMapViewModel {
             coordinates.append(userLocation.coordinate)
         }
 
-        for overlay in lineOverlays {
-            let points = overlay.points()
-            for i in 0..<overlay.pointCount {
-                coordinates.append(points[i].coordinate)
-            }
+        for line in mapLines {
+            coordinates.append(contentsOf: line.coordinates)
         }
 
         guard !coordinates.isEmpty else { return }
