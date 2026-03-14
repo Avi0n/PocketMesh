@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.mc1", category: "TracePathMapView")
 /// Map-based view for building and visualizing trace paths
 struct TracePathMapView: View {
     @Environment(\.appState) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var traceViewModel: TracePathViewModel
     @Binding var presentedResult: TraceResult?
     @State private var mapViewModel = TracePathMapViewModel()
@@ -96,24 +97,56 @@ struct TracePathMapView: View {
 
     // MARK: - Map Content
 
+    private var mapPoints: [MapPoint] {
+        var points: [MapPoint] = []
+        let pathState = mapViewModel.pathState
+
+        for repeater in mapViewModel.repeatersWithLocation {
+            let info = pathState[repeater.id]
+            let inPath = info?.inPath ?? false
+            let style: MapPoint.PinStyle = inPath ? .repeaterRingWhite : .repeater
+            points.append(MapPoint(
+                id: repeater.id,
+                coordinate: repeater.coordinate,
+                pinStyle: style,
+                label: mapViewModel.showLabels ? repeater.displayName : nil,
+                isClusterable: !inPath,
+                hopIndex: info?.hopIndex,
+                badgeText: nil
+            ))
+        }
+
+        points.append(contentsOf: mapViewModel.badgePoints)
+        return points
+    }
+
     private var mapContent: some View {
-        TracePathMKMapView(
-            repeaters: mapViewModel.repeatersWithLocation,
-            lineOverlays: mapViewModel.lineOverlays,
-            badgeAnnotations: mapViewModel.badgeAnnotations,
-            mapType: mapViewModel.mapType,
+        MC1MapView(
+            points: mapPoints,
+            lines: mapViewModel.mapLines,
+            mapStyle: mapViewModel.mapStyleSelection,
+            isDarkMode: colorScheme == .dark,
             showLabels: mapViewModel.showLabels,
+            showsUserLocation: true,
+            isInteractive: true,
+            showsScale: true,
             cameraRegion: $mapViewModel.cameraRegion,
             cameraRegionVersion: mapViewModel.cameraRegionVersion,
-            pathState: { mapViewModel.pathState },
-            onRepeaterTap: { repeater in
-                let result = mapViewModel.handleRepeaterTap(repeater)
-                if result == .rejectedMiddleHop {
-                    rejectedTapHaptic += 1
-                } else {
-                    pinTapHaptic += 1
+            onPointTap: { point, _ in
+                if let repeater = mapViewModel.repeatersWithLocation.first(where: { $0.id == point.id }) {
+                    let result = mapViewModel.handleRepeaterTap(repeater)
+                    if result == .rejectedMiddleHop {
+                        rejectedTapHaptic += 1
+                    } else {
+                        pinTapHaptic += 1
+                    }
                 }
-            }
+            },
+            onMapTap: nil,
+            onCameraRegionChange: { region in
+                mapViewModel.cameraRegion = region
+            },
+            isStyleLoaded: .constant(true)
         )
         .ignoresSafeArea()
     }

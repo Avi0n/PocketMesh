@@ -18,11 +18,11 @@ final class MapViewModel {
     /// Error message if any
     var errorMessage: String?
 
-    /// Selected contact for detail display
-    var selectedContact: ContactDTO?
-
-    /// Camera region for map centering (MKCoordinateRegion for UIKit MKMapView)
+    /// Camera region for map centering
     var cameraRegion: MKCoordinateRegion?
+
+    /// Version counter for the camera region, incremented to signal a new camera target
+    var cameraRegionVersion = 1
 
     /// Current map style selection
     var mapStyleSelection: MapStyleSelection = .standard
@@ -87,7 +87,7 @@ final class MapViewModel {
         // 5000 meters corresponds to roughly 0.045 degrees latitude span
         let span = MKCoordinateSpan(latitudeDelta: 0.045, longitudeDelta: 0.045)
         cameraRegion = MKCoordinateRegion(center: coordinate, span: span)
-        selectedContact = contact
+        cameraRegionVersion += 1
     }
 
     /// Center map to show all contacts
@@ -122,11 +122,7 @@ final class MapViewModel {
         let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
 
         cameraRegion = MKCoordinateRegion(center: center, span: span)
-    }
-
-    /// Clear selection
-    func clearSelection() {
-        selectedContact = nil
+        cameraRegionVersion += 1
     }
 }
 

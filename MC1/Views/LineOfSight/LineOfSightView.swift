@@ -6,7 +6,6 @@ import SwiftUI
 private let analysisSheetDetentCollapsed: PresentationDetent = .fraction(0.25)
 private let analysisSheetDetentHalf: PresentationDetent = .fraction(0.5)
 private let analysisSheetDetentExpanded: PresentationDetent = .large
-private let analysisSheetBottomInsetPadding: CGFloat = 16
 
 enum LineOfSightLayoutMode {
     case map
@@ -20,35 +19,6 @@ extension PointID: Identifiable {
     var id: Self { self }
 }
 
-// MARK: - Map Style Selection
-
-/// Map style selection for Picker, maps to MKMapType
-private enum LOSMapStyleSelection: String, CaseIterable, Hashable {
-    case standard
-    case terrain
-
-    var label: String {
-        switch self {
-        case .standard: L10n.Tools.Tools.LineOfSight.MapStyle.standard
-        case .terrain: L10n.Tools.Tools.LineOfSight.MapStyle.terrain
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .standard: "map"
-        case .terrain: "mountain.2"
-        }
-    }
-
-    var mkMapType: MKMapType {
-        switch self {
-        case .standard: .standard
-        case .terrain: .hybridFlyover
-        }
-    }
-}
-
 // MARK: - Line of Sight View
 
 /// Full-screen map view for analyzing line-of-sight between two points
@@ -59,12 +29,10 @@ struct LineOfSightView: View {
     @State private var viewModel: LineOfSightViewModel
     @State private var sheetDetent: PresentationDetent = analysisSheetDetentCollapsed
     @State private var enableHalfDetent = false
-    @State private var screenHeight: CGFloat = 0
-    @State private var baseScreenHeight: CGFloat = 0
     @State private var showAnalysisSheet: Bool
     @State private var editingPoint: PointID?
     @State private var isDropPinMode = false
-    @State private var mapStyleSelection: LOSMapStyleSelection = .terrain
+    @State private var mapStyleSelection: MapStyleSelection = .topo
     @State private var sheetBottomInset: CGFloat = 220
     @State private var isResultsExpanded = false
     @State private var isRFSettingsExpanded = false
@@ -141,29 +109,10 @@ struct LineOfSightView: View {
             showLabels: $showLabels,
             isDropPinMode: $isDropPinMode,
             mapOverlayBottomPadding: mapOverlayBottomPadding,
+            cameraBottomSheetFraction: showSheet ? 0.25 : 0,
             onRepeaterTap: { handleRepeaterTap($0) },
             onMapTap: { handleMapTap(at: $0) }
         )
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.size.height
-            } action: { height in
-                if height > 0 {
-                    screenHeight = height
-
-                    if baseScreenHeight == 0 || height > baseScreenHeight || height < baseScreenHeight * 0.7 {
-                        baseScreenHeight = height
-                    }
-                }
-
-                if showSheet, showAnalysisSheet {
-                    updateSheetBottomInset()
-                }
-            }
-            .onChange(of: sheetDetent) { _, _ in
-                if showSheet, showAnalysisSheet {
-                    updateSheetBottomInset()
-                }
-            }
             .onChange(of: viewModel.pointA) { oldValue, newValue in
                 if oldValue == nil, newValue != nil, viewModel.pointB != nil {
                     if showSheet {
@@ -255,6 +204,13 @@ struct LineOfSightView: View {
                 }
                 .sheet(isPresented: $showAnalysisSheet) {
                     analysisSheet
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.size.height - proxy.safeAreaInsets.bottom + 15
+                        } action: { inset in
+                            if sheetDetent == analysisSheetDetentCollapsed {
+                                sheetBottomInset = max(0, inset)
+                            }
+                        }
                         .presentationDetents(availableSheetDetents, selection: $sheetDetent)
                         .presentationDragIndicator(.visible)
                         .presentationBackgroundInteraction(.enabled)
@@ -279,11 +235,6 @@ struct LineOfSightView: View {
             await Task.yield()
             dismiss()
         }
-    }
-
-    private var collapsedSheetFraction: Double {
-        guard showAnalysisSheet else { return 0 }
-        return 0.30
     }
 
     // MARK: - Analysis Sheet
@@ -1045,23 +996,6 @@ struct LineOfSightView: View {
 
     // MARK: - Helper Methods
 
-    private func updateSheetBottomInset() {
-        let fraction: CGFloat
-        if sheetDetent == analysisSheetDetentExpanded {
-            // When fullscreen, map is covered - cap inset at 0.9 to avoid layout issues
-            fraction = 0.9
-        } else if sheetDetent == analysisSheetDetentHalf {
-            fraction = 0.5
-        } else {
-            fraction = 0.25
-        }
-
-        let referenceHeight = baseScreenHeight > 0 ? baseScreenHeight : screenHeight
-        guard referenceHeight > 0 else { return }
-
-        sheetBottomInset = referenceHeight * fraction + analysisSheetBottomInsetPadding
-    }
-
     private func handleMapTap(at coordinate: CLLocationCoordinate2D) {
         // Handle relocation mode
         if let relocating = viewModel.relocatingPoint {
@@ -1098,9 +1032,7 @@ struct LineOfSightView: View {
         switch status {
         case .result:
             if showSheet {
-                withAnimation {
-                    sheetDetent = analysisSheetDetentExpanded
-                }
+                sheetDetent = analysisSheetDetentExpanded
             }
         case .relayResult:
             break
@@ -1110,7 +1042,7 @@ struct LineOfSightView: View {
 
         if viewModel.shouldAutoZoomOnNextResult {
             viewModel.shouldAutoZoomOnNextResult = false
-            viewModel.zoomToShowBothPoints(bottomInsetFraction: collapsedSheetFraction)
+            viewModel.zoomToShowBothPoints()
         }
     }
 
@@ -1124,29 +1056,40 @@ struct LineOfSightView: View {
 private struct LOSMapCanvasView: View {
     @Bindable var viewModel: LineOfSightViewModel
     let appState: AppState
-    @Binding var mapStyleSelection: LOSMapStyleSelection
+    @Environment(\.colorScheme) private var colorScheme
+    @Binding var mapStyleSelection: MapStyleSelection
     @Binding var showingMapStyleMenu: Bool
     @Binding var showLabels: Bool
     @Binding var isDropPinMode: Bool
     let mapOverlayBottomPadding: CGFloat
+    let cameraBottomSheetFraction: CGFloat?
     let onRepeaterTap: (ContactDTO) -> Void
     let onMapTap: (CLLocationCoordinate2D) -> Void
 
     var body: some View {
         ZStack {
-            LOSMKMapView(
-                repeaters: viewModel.repeatersWithLocation,
-                pointA: viewModel.pointA,
-                pointB: viewModel.pointB,
-                repeaterTarget: viewModel.repeaterPoint,
-                relocatingPoint: viewModel.relocatingPoint,
-                mapType: mapStyleSelection.mkMapType,
+            MC1MapView(
+                points: mapPoints,
+                lines: mapLines,
+                mapStyle: mapStyleSelection,
+                isDarkMode: colorScheme == .dark,
                 showLabels: showLabels,
+                showsUserLocation: true,
+                isInteractive: true,
+                showsScale: true,
                 cameraRegion: $viewModel.cameraRegion,
                 cameraRegionVersion: viewModel.cameraRegionVersion,
-                selectionState: { [viewModel] in viewModel.selectionState },
-                onRepeaterTap: onRepeaterTap,
-                onMapTap: onMapTap
+                cameraBottomSheetFraction: cameraBottomSheetFraction,
+                onPointTap: { point, _ in
+                    if let repeater = viewModel.repeatersWithLocation.first(where: { $0.id == point.id }) {
+                        onRepeaterTap(repeater)
+                    }
+                },
+                onMapTap: onMapTap,
+                onCameraRegionChange: { region in
+                    viewModel.cameraRegion = region
+                },
+                isStyleLoaded: .constant(true)
             )
             .ignoresSafeArea()
 
@@ -1212,7 +1155,7 @@ private struct LOSMapCanvasView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 0) {
-                            ForEach(LOSMapStyleSelection.allCases, id: \.self) { style in
+                            ForEach(MapStyleSelection.allCases, id: \.self) { style in
                                 Button {
                                     mapStyleSelection = style
                                     withAnimation {
@@ -1232,7 +1175,7 @@ private struct LOSMapCanvasView: View {
                                     .padding(.vertical, 12)
                                 }
 
-                                if style != LOSMapStyleSelection.allCases.last {
+                                if style != MapStyleSelection.allCases.last {
                                     Divider()
                                 }
                             }
@@ -1245,6 +1188,91 @@ private struct LOSMapCanvasView: View {
                 }
                 .padding(.bottom, mapOverlayBottomPadding)
             }
+        }
+    }
+
+    // MARK: - Map Data
+
+    private var mapPoints: [MapPoint] {
+        var points: [MapPoint] = []
+
+        let selectionState = viewModel.selectionState
+        for repeater in viewModel.repeatersWithLocation {
+            let selectedAs = selectionState[repeater.id]?.selectedAs
+            let style: MapPoint.PinStyle = switch selectedAs {
+            case .pointA: .repeaterRingBlue
+            case .pointB: .repeaterRingGreen
+            case .repeater, nil: .repeater
+            }
+            points.append(MapPoint(
+                id: repeater.id,
+                coordinate: repeater.coordinate,
+                pinStyle: style,
+                label: showLabels ? repeater.displayName : nil,
+                isClusterable: selectedAs == nil,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let pointA = viewModel.pointA, pointA.contact == nil {
+            points.append(MapPoint(
+                id: viewModel.pointAMapID,
+                coordinate: pointA.coordinate,
+                pinStyle: .pointA,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let pointB = viewModel.pointB, pointB.contact == nil {
+            points.append(MapPoint(
+                id: viewModel.pointBMapID,
+                coordinate: pointB.coordinate,
+                pinStyle: .pointB,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let target = viewModel.repeaterPoint {
+            points.append(MapPoint(
+                id: viewModel.repeaterTargetMapID,
+                coordinate: target.coordinate,
+                pinStyle: .crosshair,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        return points
+    }
+
+    private var mapLines: [MapLine] {
+        guard let a = viewModel.pointA?.coordinate,
+              let b = viewModel.pointB?.coordinate else { return [] }
+
+        let activeOpacity = 0.7
+        let dimOpacity = 0.3
+
+        if let r = viewModel.repeaterPoint?.coordinate {
+            let opacityAR = viewModel.relocatingPoint == .pointA ? dimOpacity : activeOpacity
+            let opacityRB = viewModel.relocatingPoint == .pointB ? dimOpacity : activeOpacity
+            return [
+                MapLine(id: "los-ar", coordinates: [a, r], style: .los,
+                        opacity: viewModel.relocatingPoint == .repeater ? dimOpacity : opacityAR),
+                MapLine(id: "los-rb", coordinates: [r, b], style: .los,
+                        opacity: viewModel.relocatingPoint == .repeater ? dimOpacity : opacityRB)
+            ]
+        } else {
+            let opacity = viewModel.relocatingPoint != nil ? dimOpacity : activeOpacity
+            return [MapLine(id: "los-ab", coordinates: [a, b], style: .los, opacity: opacity)]
         }
     }
 }

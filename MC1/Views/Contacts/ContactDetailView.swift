@@ -683,6 +683,8 @@ private struct ContactInfoSection: View {
 }
 
 private struct ContactLocationSection: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let currentContact: ContactDTO
 
     private var contactCoordinate: CLLocationCoordinate2D {
@@ -695,12 +697,33 @@ private struct ContactLocationSection: View {
     var body: some View {
         Section {
             // Mini map
-            Map(position: .constant(.region(MKCoordinateRegion(
-                center: contactCoordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-            )))) {
-                Marker(currentContact.displayName, coordinate: contactCoordinate)
-            }
+            MC1MapView(
+                points: [MapPoint(
+                    id: currentContact.id,
+                    coordinate: contactCoordinate,
+                    pinStyle: pinStyle(for: currentContact),
+                    label: currentContact.displayName,
+                    isClusterable: false,
+                    hopIndex: nil,
+                    badgeText: nil
+                )],
+                lines: [],
+                mapStyle: .standard,
+                isDarkMode: colorScheme == .dark,
+                showLabels: false,
+                showsUserLocation: false,
+                isInteractive: false,
+                showsScale: false,
+                cameraRegion: .constant(MKCoordinateRegion(
+                    center: contactCoordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                )),
+                cameraRegionVersion: 1,
+                onPointTap: nil,
+                onMapTap: nil,
+                onCameraRegionChange: nil,
+                isStyleLoaded: .constant(true)
+            )
             .frame(height: 200)
             .clipShape(.rect(cornerRadius: 12))
             .listRowInsets(EdgeInsets())
@@ -735,6 +758,14 @@ private struct ContactLocationSection: View {
         let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: contactCoordinate))
         mapItem.name = currentContact.displayName
         mapItem.openInMaps()
+    }
+
+    private func pinStyle(for contact: ContactDTO) -> MapPoint.PinStyle {
+        switch contact.type {
+        case .chat: .contactChat
+        case .repeater: .contactRepeater
+        case .room: .contactRoom
+        }
     }
 }
 

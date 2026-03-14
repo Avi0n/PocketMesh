@@ -2044,13 +2044,17 @@ public enum L10n {
         /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for room type
         public static let room = L10n.tr("Map", "map.nodeKind.room", fallback: "Room")
       }
+      public enum OfflineBadge {
+        /// Label shown on map when device has no internet connection
+        public static let label = L10n.tr("Map", "map.offlineBadge.label", fallback: "Offline")
+      }
       public enum Style {
-        /// Location: MapStyleSelection.swift - Purpose: Hybrid map style option
-        public static let hybrid = L10n.tr("Map", "map.style.hybrid", fallback: "Hybrid")
         /// Location: MapStyleSelection.swift - Purpose: Satellite map style option
         public static let satellite = L10n.tr("Map", "map.style.satellite", fallback: "Satellite")
         /// Location: MapStyleSelection.swift - Purpose: Standard map style option
         public static let standard = L10n.tr("Map", "map.style.standard", fallback: "Standard")
+        /// Location: MapStyleSelection.swift - Purpose: Topo map style option
+        public static let topo = L10n.tr("Map", "map.style.topo", fallback: "Topo")
       }
     }
   }
@@ -3532,6 +3536,42 @@ public enum L10n {
       public static let reactions = L10n.tr("Settings", "notifications.reactions", fallback: "Reactions")
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
+    }
+    public enum OfflineMaps {
+      /// Cancel button
+      public static let cancel = L10n.tr("Settings", "offlineMaps.cancel", fallback: "Cancel")
+      /// Status when pack download is complete
+      public static let complete = L10n.tr("Settings", "offlineMaps.complete", fallback: "Complete")
+      /// Delete button
+      public static let delete = L10n.tr("Settings", "offlineMaps.delete", fallback: "Delete")
+      /// Delete confirmation message
+      public static let deleteMessage = L10n.tr("Settings", "offlineMaps.deleteMessage", fallback: "The downloaded map data will be removed.")
+      /// Delete confirmation title
+      public static let deleteTitle = L10n.tr("Settings", "offlineMaps.deleteTitle", fallback: "Delete Offline Map?")
+      /// Button to start download
+      public static let download = L10n.tr("Settings", "offlineMaps.download", fallback: "Download")
+      /// Section header for downloaded maps list
+      public static let downloaded = L10n.tr("Settings", "offlineMaps.downloaded", fallback: "Downloaded")
+      /// Status when pack is downloading
+      public static let downloading = L10n.tr("Settings", "offlineMaps.downloading", fallback: "Downloading…")
+      /// Button to download a new offline region
+      public static let downloadRegion = L10n.tr("Settings", "offlineMaps.downloadRegion", fallback: "Download Region")
+      /// Description for empty state
+      public static let emptyDescription = L10n.tr("Settings", "offlineMaps.emptyDescription", fallback: "Download map regions for use without internet.")
+      /// Title for empty state when no offline packs exist
+      public static let emptyTitle = L10n.tr("Settings", "offlineMaps.emptyTitle", fallback: "No Offline Maps")
+      /// Navigation title for region picker sheet
+      public static let pickRegion = L10n.tr("Settings", "offlineMaps.pickRegion", fallback: "Select Region")
+      /// Placeholder for region name text field
+      public static let regionName = L10n.tr("Settings", "offlineMaps.regionName", fallback: "Region Name")
+      /// Section header for storage info
+      public static let storage = L10n.tr("Settings", "offlineMaps.storage", fallback: "Storage")
+      /// Label for total storage used
+      public static let storageUsed = L10n.tr("Settings", "offlineMaps.storageUsed", fallback: "Storage Used")
+      /// Navigation title for offline maps settings
+      public static let title = L10n.tr("Settings", "offlineMaps.title", fallback: "Offline Maps")
+      /// Fallback name for unknown region
+      public static let unknownRegion = L10n.tr("Settings", "offlineMaps.unknownRegion", fallback: "Unknown Region")
     }
     public enum PathHashMode {
       /// Footer explaining path hash mode tradeoff
