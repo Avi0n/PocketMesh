@@ -755,7 +755,7 @@ private struct ContactLocationSection: View {
             }
             .listRowBackground(
                 UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .fill(Color(.secondarySystemGroupedBackground))
             )
 
             // Open in Maps
