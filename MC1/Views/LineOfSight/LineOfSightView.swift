@@ -13,18 +13,6 @@ private let analysisSheetDetentCollapsed: PresentationDetent = .fraction(0.25)
 private let analysisSheetDetentHalf: PresentationDetent = .fraction(0.5)
 private let analysisSheetDetentExpanded: PresentationDetent = .large
 
-enum LineOfSightLayoutMode {
-    case map
-    case panel
-    case mapWithSheet
-}
-
-// MARK: - PointID Identifiable Conformance
-
-extension PointID: Identifiable {
-    var id: Self { self }
-}
-
 // MARK: - Line of Sight View
 
 /// Full-screen map view for analyzing line-of-sight between two points
@@ -1309,28 +1297,6 @@ private struct FrequencyInputRow: View {
         if let parsed = Double(text) {
             viewModel.frequencyMHz = parsed
             viewModel.commitFrequencyChange()
-        }
-    }
-}
-
-// MARK: - Glass Button Style Helpers
-
-extension View {
-    @ViewBuilder
-    func glassButtonStyle() -> some View {
-        if #available(iOS 26, *) {
-            self.buttonStyle(.glass)
-        } else {
-            self.buttonStyle(.bordered)
-        }
-    }
-
-    @ViewBuilder
-    func glassProminentButtonStyle() -> some View {
-        if #available(iOS 26, *) {
-            self.buttonStyle(.glassProminent)
-        } else {
-            self.buttonStyle(.borderedProminent)
         }
     }
 }
