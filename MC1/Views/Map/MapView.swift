@@ -216,35 +216,31 @@ struct MapView: View {
     }
 
     private var labelsToggleButton: some View {
-        Button {
+        Button(viewModel.showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels, systemImage: "character.textbox") {
             withAnimation {
                 viewModel.showLabels.toggle()
             }
-        } label: {
-            Image(systemName: "character.textbox")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(viewModel.showLabels ? .blue : .primary)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
         }
+        .font(.body.weight(.medium))
+        .foregroundStyle(viewModel.showLabels ? .blue : .primary)
+        .frame(width: 44, height: 44)
+        .contentShape(.rect)
         .buttonStyle(.plain)
-        .accessibilityLabel(viewModel.showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
+        .labelStyle(.iconOnly)
     }
 
     private var centerAllButton: some View {
-        Button {
+        Button(L10n.Map.Map.Controls.centerAll, systemImage: "arrow.up.left.and.arrow.down.right") {
             clearSelection()
             viewModel.centerOnAllContacts()
-        } label: {
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
         }
+        .font(.body.weight(.medium))
+        .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
+        .frame(width: 44, height: 44)
+        .contentShape(.rect)
         .buttonStyle(.plain)
         .disabled(viewModel.contactsWithLocation.isEmpty)
-        .accessibilityLabel(L10n.Map.Map.Controls.centerAll)
+        .labelStyle(.iconOnly)
     }
 
     // MARK: - Refresh Button

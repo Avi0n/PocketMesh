@@ -43,34 +43,30 @@ struct MapControlsToolbar<CustomContent: View>: View {
                 .frame(width: 44, height: 44)
                 .contentShape(.rect)
         } else if let onLocationTap {
-            Button(action: onLocationTap) {
-                Image(systemName: "location.fill")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(L10n.Map.Map.Controls.centerOnMyLocation)
+            Button(L10n.Map.Map.Controls.centerOnMyLocation, systemImage: "location.fill", action: onLocationTap)
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+                .buttonStyle(.plain)
+                .labelStyle(.iconOnly)
         }
     }
 
     // MARK: - Layers Button
 
     private var layersButton: some View {
-        Button {
+        Button(L10n.Map.Map.Controls.layers, systemImage: "square.3.layers.3d.down.right") {
             withAnimation(.spring(response: 0.3)) {
                 showingLayersMenu.toggle()
             }
-        } label: {
-            Image(systemName: "square.3.layers.3d.down.right")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(.primary)
-                .frame(width: 44, height: 44)
-                .contentShape(.rect)
         }
+        .font(.body.weight(.medium))
+        .foregroundStyle(.primary)
+        .frame(width: 44, height: 44)
+        .contentShape(.rect)
         .buttonStyle(.plain)
-        .accessibilityLabel(L10n.Map.Map.Controls.layers)
+        .labelStyle(.iconOnly)
     }
 }
 

@@ -1113,29 +1113,25 @@ private struct LOSMapCanvasView: View {
                         },
                         showingLayersMenu: $showingMapStyleMenu
                     ) {
-                        Button {
+                        Button(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels, systemImage: "character.textbox") {
                             showLabels.toggle()
-                        } label: {
-                            Image(systemName: "character.textbox")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundStyle(showLabels ? .blue : .primary)
-                                .frame(width: 44, height: 44)
-                                .contentShape(.rect)
                         }
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(showLabels ? .blue : .primary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
                         .buttonStyle(.plain)
-                        .accessibilityLabel(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels)
+                        .labelStyle(.iconOnly)
 
-                        Button {
+                        Button(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin, systemImage: isDropPinMode ? "mappin.slash" : "mappin") {
                             isDropPinMode.toggle()
-                        } label: {
-                            Image(systemName: isDropPinMode ? "mappin.slash" : "mappin")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundStyle(isDropPinMode ? .blue : .primary)
-                                .frame(width: 44, height: 44)
-                                .contentShape(.rect)
                         }
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(isDropPinMode ? .blue : .primary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
                         .buttonStyle(.plain)
-                        .accessibilityLabel(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin)
+                        .labelStyle(.iconOnly)
                     }
                 }
             }

@@ -282,30 +282,27 @@ struct TracePathMapView: View {
                     showingLayersMenu: $mapViewModel.showingLayersMenu
                 ) {
                     // Labels toggle
-                    Button {
+                    Button(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels, systemImage: "character.textbox") {
                         mapViewModel.showLabels.toggle()
-                    } label: {
-                        Image(systemName: "character.textbox")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(.rect)
                     }
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
                     .buttonStyle(.plain)
-                    .accessibilityLabel(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels)
+                    .labelStyle(.iconOnly)
 
                     // Center on path
                     if mapViewModel.hasPath {
-                        Button {
+                        Button(L10n.Contacts.Contacts.Trace.Map.centerOnPath, systemImage: "arrow.up.left.and.arrow.down.right") {
                             mapViewModel.centerOnPath()
-                        } label: {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundStyle(.primary)
-                                .frame(width: 44, height: 44)
-                                .contentShape(.rect)
                         }
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(.rect)
                         .buttonStyle(.plain)
+                        .labelStyle(.iconOnly)
                     }
                 }
             }
