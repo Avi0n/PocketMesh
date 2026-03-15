@@ -3,7 +3,7 @@ import MapKit
 import MC1Services
 import SwiftUI
 
-private extension CLLocationCoordinate2D {
+extension CLLocationCoordinate2D {
     var formattedString: String {
         "\(latitude.formatted(.number.precision(.fractionLength(6)))), \(longitude.formatted(.number.precision(.fractionLength(6))))"
     }
@@ -33,7 +33,6 @@ struct LineOfSightView: View {
     @State private var showingMapStyleMenu = false
     @State private var showLabels = true
     @State private var copyHapticTrigger = 0
-    @ScaledMetric(relativeTo: .body) private var iconButtonSize: CGFloat = 16
 
     private let layoutMode: LineOfSightLayoutMode
 
@@ -244,18 +243,18 @@ struct LineOfSightView: View {
     }
 
     private var analysisSheetContent: some View {
-        analysisSheetVStack
-            .padding()
-    }
-
-    private var analysisSheetVStack: some View {
         VStack(alignment: .leading, spacing: 16) {
-            pointsSummarySection
+            PointsSummarySectionView(
+                viewModel: viewModel,
+                copyHapticTrigger: $copyHapticTrigger,
+                editingPoint: $editingPoint,
+                onRelocate: { withAnimation { sheetDetent = analysisSheetDetentCollapsed } }
+            )
 
             // Before analysis: show analyze button, then RF settings
             if viewModel.canAnalyze, !hasAnalysisResult {
                 analyzeButtonSection
-                rfSettingsSection
+                RFSettingsSectionView(viewModel: viewModel, isRFSettingsExpanded: $isRFSettingsExpanded)
             }
 
             // After analysis: show button, results, terrain, then RF settings
@@ -265,8 +264,12 @@ struct LineOfSightView: View {
                 resultSummarySection(result)
 
                 if shouldShowExpandedAnalysis {
-                    terrainProfileSection
-                    rfSettingsSection
+                    TerrainProfileSectionView(
+                        viewModel: viewModel,
+                        showDragHint: $showDragHint,
+                        repeaterMarkerCenter: $repeaterMarkerCenter
+                    )
+                    RFSettingsSectionView(viewModel: viewModel, isRFSettingsExpanded: $isRFSettingsExpanded)
                 }
             }
 
@@ -277,541 +280,30 @@ struct LineOfSightView: View {
                 RelayResultsCardView(result: result, isExpanded: $isResultsExpanded)
 
                 if shouldShowExpandedAnalysis {
-                    terrainProfileSection
-                    rfSettingsSection
+                    TerrainProfileSectionView(
+                        viewModel: viewModel,
+                        showDragHint: $showDragHint,
+                        repeaterMarkerCenter: $repeaterMarkerCenter
+                    )
+                    RFSettingsSectionView(viewModel: viewModel, isRFSettingsExpanded: $isRFSettingsExpanded)
                 }
             }
 
             if case .error(let message) = viewModel.analysisStatus {
-                errorSection(message)
-            }
-        }
-    }
-
-    // MARK: - Points Summary Section
-
-    private var pointsSummarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with optional cancel button
-            HStack {
-                Text(L10n.Tools.Tools.LineOfSight.points)
-                    .font(.headline)
-
-                Spacer()
-
-                if isRelocating {
-                    Button(L10n.Tools.Tools.LineOfSight.cancel) {
-                        viewModel.relocatingPoint = nil
+                AnalysisErrorView(
+                    message: message,
+                    hasRepeater: viewModel.repeaterPoint != nil,
+                    onRetry: {
+                        if viewModel.repeaterPoint != nil {
+                            viewModel.analyzeWithRepeater()
+                        } else {
+                            viewModel.analyze()
+                        }
                     }
-                    .glassButtonStyle()
-                    .controlSize(.small)
-                }
-            }
-
-            // Show relocating message OR point rows
-            if let relocatingPoint = viewModel.relocatingPoint {
-                relocatingMessageView(for: relocatingPoint)
-            } else {
-                // Point A row
-                pointRow(
-                    label: "A",
-                    color: .blue,
-                    point: viewModel.pointA,
-                    pointID: .pointA,
-                    onClear: { viewModel.clearPointA() }
                 )
-
-                // Repeater row (placeholder or full, positioned between A and B)
-                // Inline check for repeaterPoint to ensure SwiftUI properly tracks the dependency
-                if let repeater = viewModel.repeaterPoint {
-                    repeaterRow
-                        .id("repeater-\(repeater.coordinate.latitude)-\(repeater.coordinate.longitude)")
-                } else if viewModel.shouldShowRepeaterPlaceholder {
-                    addRepeaterRow
-                }
-
-                // Point B row
-                pointRow(
-                    label: "B",
-                    color: .green,
-                    point: viewModel.pointB,
-                    pointID: .pointB,
-                    onClear: { viewModel.clearPointB() }
-                )
-
-                if viewModel.pointA == nil || viewModel.pointB == nil {
-                    Text(L10n.Tools.Tools.LineOfSight.selectPointsHint)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if viewModel.elevationFetchFailed {
-                    Label(
-                        L10n.Tools.Tools.LineOfSight.elevationUnavailable,
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func relocatingMessageView(for pointID: PointID) -> some View {
-        let pointName: String = switch pointID {
-        case .pointA: L10n.Tools.Tools.LineOfSight.pointA
-        case .pointB: L10n.Tools.Tools.LineOfSight.pointB
-        case .repeater: L10n.Tools.Tools.LineOfSight.repeater
-        }
-
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.Tools.Tools.LineOfSight.relocating(pointName))
-                .font(.subheadline)
-                .bold()
-
-            Text(L10n.Tools.Tools.LineOfSight.tapMapInstruction)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(L10n.Tools.Tools.LineOfSight.relocating(pointName)) \(L10n.Tools.Tools.LineOfSight.tapMapInstruction)")
-    }
-
-    @ViewBuilder
-    private func pointRow(
-        label: String,
-        color: Color,
-        point: SelectedPoint?,
-        pointID: PointID,
-        onClear: @escaping () -> Void
-    ) -> some View {
-        let isEditing = editingPoint == pointID
-
-        VStack(alignment: .leading, spacing: 12) {
-            // Header row (always visible)
-            HStack {
-                // Point marker
-                Circle()
-                    .fill(point != nil ? color : .gray.opacity(0.3))
-                    .frame(width: 24, height: 24)
-                    .overlay {
-                        Text(label)
-                            .font(.caption)
-                            .bold()
-                            .foregroundStyle(.white)
-                    }
-
-                // Point info
-                if let point {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(point.displayName)
-                            .font(.subheadline)
-                            .lineLimit(1)
-
-                        if point.isLoadingElevation {
-                            HStack(spacing: 4) {
-                                ProgressView()
-                                    .controlSize(.mini)
-                                Text(L10n.Tools.Tools.LineOfSight.loadingElevation)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else if let elevation = point.groundElevation {
-                            Text("\(Int(elevation) + point.additionalHeight)m")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Spacer()
-
-                    pointRowButtons(
-                        pointID: pointID,
-                        isEditing: isEditing,
-                        onClear: onClear
-                    )
-                } else {
-                    Text(L10n.Tools.Tools.LineOfSight.notSelected)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-                }
-            }
-
-            // Expanded editor (when editing)
-            if isEditing, let point {
-                Divider()
-
-                pointHeightEditor(point: point, pointID: pointID)
-            }
-        }
-        .padding(12)
-        .animation(.easeInOut(duration: 0.2), value: isEditing)
-    }
-
-    @ViewBuilder
-    private func pointRowButtons(
-        pointID: PointID,
-        isEditing: Bool,
-        onClear: @escaping () -> Void
-    ) -> some View {
-        let point = pointID == .pointA ? viewModel.pointA : viewModel.pointB
-
-        // Share menu
-        Menu {
-            if let coord = point?.coordinate {
-                Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
-                    let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                    mapItem.name = pointID == .pointA ? L10n.Tools.Tools.LineOfSight.pointA : L10n.Tools.Tools.LineOfSight.pointB
-                    mapItem.openInMaps()
-                }
-
-                Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
-                    copyHapticTrigger += 1
-                    UIPasteboard.general.string = coord.formattedString
-                }
-
-                ShareLink(item: coord.formattedString) {
-                    Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
-                }
-            }
-        } label: {
-            Label(L10n.Tools.Tools.LineOfSight.shareLabel, systemImage: "square.and.arrow.up")
-                .labelStyle(.iconOnly)
-                .frame(width: iconButtonSize, height: iconButtonSize)
-        }
-        .glassButtonStyle()
-        .sensoryFeedback(.success, trigger: copyHapticTrigger)
-        .controlSize(.small)
-
-        // Relocate button (toggles on/off)
-        Button {
-            if viewModel.relocatingPoint == pointID {
-                viewModel.relocatingPoint = nil
-            } else {
-                viewModel.relocatingPoint = pointID
-                withAnimation {
-                    sheetDetent = analysisSheetDetentCollapsed
-                }
-            }
-        } label: {
-            Label(L10n.Tools.Tools.LineOfSight.relocate, systemImage: "mappin")
-                .labelStyle(.iconOnly)
-                .frame(width: iconButtonSize, height: iconButtonSize)
-        }
-        .glassButtonStyle()
-        .controlSize(.small)
-        .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != pointID)
-
-        // Edit/Done toggle
-        Button {
-            withAnimation {
-                editingPoint = isEditing ? nil : pointID
-            }
-        } label: {
-            Group {
-                if isEditing {
-                    Label(L10n.Tools.Tools.LineOfSight.done, systemImage: "checkmark")
-                        .labelStyle(.iconOnly)
-                } else {
-                    Label(L10n.Tools.Tools.LineOfSight.edit, systemImage: "ruler")
-                        .labelStyle(.iconOnly)
-                        .rotationEffect(.degrees(90))
-                }
-            }
-            .frame(width: iconButtonSize, height: iconButtonSize)
-        }
-        .glassButtonStyle()
-        .controlSize(.small)
-
-        // Clear button
-        Button(action: onClear) {
-            Label(L10n.Tools.Tools.LineOfSight.clear, systemImage: "xmark")
-                .labelStyle(.iconOnly)
-                .frame(width: iconButtonSize, height: iconButtonSize)
-        }
-        .glassButtonStyle()
-        .controlSize(.small)
-    }
-
-    @ViewBuilder
-    private func pointHeightEditor(point: SelectedPoint, pointID: PointID) -> some View {
-        Grid(alignment: .leading, verticalSpacing: 8) {
-            // Ground elevation row
-            GridRow {
-                Text(L10n.Tools.Tools.LineOfSight.groundElevation)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                if let elevation = point.groundElevation {
-                    Text("\(Int(elevation)) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                } else {
-                    ProgressView()
-                        .controlSize(.mini)
-                }
-            }
-
-            // Additional height row
-            GridRow {
-                Text(L10n.Tools.Tools.LineOfSight.additionalHeight)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Stepper(
-                    value: Binding(
-                        get: { point.additionalHeight },
-                        set: { viewModel.updateAdditionalHeight(for: pointID, meters: $0) }
-                    ),
-                    in: 0...200
-                ) {
-                    Text("\(point.additionalHeight) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                }
-                .controlSize(.small)
-            }
-
-            // Total row
-            if let elevation = point.groundElevation {
-                Divider()
-                    .gridCellColumns(2)
-
-                GridRow {
-                    Text(L10n.Tools.Tools.LineOfSight.totalHeight)
-                        .font(.caption)
-                        .bold()
-
-                    Spacer()
-
-                    Text("\(Int(elevation) + point.additionalHeight) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .bold()
-                }
-            }
-        }
-    }
-
-    // MARK: - Repeater Row
-
-    @ViewBuilder
-    private var repeaterRow: some View {
-        let isEditing = editingPoint == .repeater
-
-        VStack(alignment: .leading, spacing: 12) {
-            // Header row
-            HStack {
-                // Repeater marker (purple)
-                Circle()
-                    .fill(.purple)
-                    .frame(width: 24, height: 24)
-                    .overlay {
-                        Text("R")
-                            .font(.caption)
-                            .bold()
-                            .foregroundStyle(.white)
-                    }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.Tools.Tools.LineOfSight.repeater)
-                        .font(.subheadline)
-                        .lineLimit(1)
-
-                    if let elevation = viewModel.repeaterGroundElevation {
-                        let totalHeight = Int(elevation) + (viewModel.repeaterPoint?.additionalHeight ?? 0)
-                        Text("\(totalHeight)m")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                // Share menu
-                Menu {
-                    if let coord = viewModel.repeaterPoint?.coordinate {
-                        Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
-                            let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                            mapItem.name = L10n.Tools.Tools.LineOfSight.repeaterLocation
-                            mapItem.openInMaps()
-                        }
-
-                        Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
-                            copyHapticTrigger += 1
-                            UIPasteboard.general.string = coord.formattedString
-                        }
-
-                        ShareLink(item: coord.formattedString) {
-                            Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
-                        }
-                    }
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.shareLabel, systemImage: "square.and.arrow.up")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .glassButtonStyle()
-                .sensoryFeedback(.success, trigger: copyHapticTrigger)
-                .controlSize(.small)
-
-                // Relocate button (toggles on/off)
-                Button {
-                    if viewModel.relocatingPoint == .repeater {
-                        viewModel.relocatingPoint = nil
-                    } else {
-                        viewModel.relocatingPoint = .repeater
-                        withAnimation {
-                            sheetDetent = analysisSheetDetentCollapsed
-                        }
-                    }
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.relocate, systemImage: "mappin")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .glassButtonStyle()
-                .controlSize(.small)
-                .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != .repeater)
-
-                // Edit/Done toggle
-                Button {
-                    withAnimation {
-                        editingPoint = isEditing ? nil : .repeater
-                    }
-                } label: {
-                    Group {
-                        if isEditing {
-                            Label(L10n.Tools.Tools.LineOfSight.done, systemImage: "checkmark")
-                                .labelStyle(.iconOnly)
-                        } else {
-                            Label(L10n.Tools.Tools.LineOfSight.edit, systemImage: "ruler")
-                                .labelStyle(.iconOnly)
-                                .rotationEffect(.degrees(90))
-                        }
-                    }
-                    .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .glassButtonStyle()
-                .controlSize(.small)
-
-                // Clear button
-                Button {
-                    viewModel.clearRepeater()
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.clear, systemImage: "xmark")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .glassButtonStyle()
-                .controlSize(.small)
-            }
-
-            // Expanded editor
-            if isEditing, let repeaterPoint = viewModel.repeaterPoint {
-                Divider()
-                repeaterHeightEditor(repeaterPoint: repeaterPoint)
-            }
-        }
-        .padding(12)
-        .animation(.easeInOut(duration: 0.2), value: isEditing)
-    }
-
-    @ViewBuilder
-    private func repeaterHeightEditor(repeaterPoint: RepeaterPoint) -> some View {
-        Grid(alignment: .leading, verticalSpacing: 8) {
-            if let groundElevation = viewModel.repeaterGroundElevation {
-                GridRow {
-                    Text(L10n.Tools.Tools.LineOfSight.groundElevation)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(Int(groundElevation)) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                }
-            }
-
-            GridRow {
-                Text(L10n.Tools.Tools.LineOfSight.additionalHeight)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper(
-                    value: Binding(
-                        get: { repeaterPoint.additionalHeight },
-                        set: {
-                            viewModel.updateRepeaterHeight(meters: $0)
-                            viewModel.analyzeWithRepeater()
-                        }
-                    ),
-                    in: 0...200
-                ) {
-                    Text("\(repeaterPoint.additionalHeight) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                }
-                .controlSize(.small)
-            }
-
-            if let groundElevation = viewModel.repeaterGroundElevation {
-                Divider()
-                    .gridCellColumns(2)
-
-                GridRow {
-                    Text(L10n.Tools.Tools.LineOfSight.totalHeight)
-                        .font(.caption)
-                        .bold()
-                    Spacer()
-                    Text("\(Int(groundElevation) + repeaterPoint.additionalHeight) m")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .bold()
-                }
-            }
-        }
-    }
-
-    // MARK: - Add Repeater Row (Placeholder)
-
-    /// Placeholder row shown when analysis is marginal/obstructed but no repeater exists yet
-    private var addRepeaterRow: some View {
-        Button {
-            viewModel.addRepeater()
-            viewModel.analyzeWithRepeater()
-        } label: {
-            HStack {
-                // Purple R marker (matches full row)
-                Circle()
-                    .fill(.purple)
-                    .frame(width: 24, height: 24)
-                    .overlay {
-                        Text("R")
-                            .font(.caption)
-                            .bold()
-                            .foregroundStyle(.white)
-                    }
-
-                Text(L10n.Tools.Tools.LineOfSight.addRepeater)
-                    .font(.subheadline)
-
-                Spacer()
-
-                Image(systemName: "plus.circle.fill")
-                    .foregroundStyle(.purple)
-            }
-            .padding(.vertical, 8)
-        }
-        .glassButtonStyle()
     }
 
     // MARK: - Analyze Button Section
@@ -851,122 +343,6 @@ struct LineOfSightView: View {
     @ViewBuilder
     private func resultSummarySection(_ result: PathAnalysisResult) -> some View {
         ResultsCardView(result: result, isExpanded: $isResultsExpanded)
-    }
-
-    // MARK: - Terrain Profile Section
-
-    private var terrainProfileSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(L10n.Tools.Tools.LineOfSight.terrainProfile)
-                    .font(.headline)
-
-                Spacer()
-
-                Label(
-                    L10n.Tools.Tools.LineOfSight.earthCurvature(LOSFormatters.formatKFactor(viewModel.refractionK)),
-                    systemImage: "globe"
-                )
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
-
-            TerrainProfileCanvas(
-                elevationProfile: viewModel.terrainElevationProfile,
-                profileSamples: viewModel.profileSamples,
-                profileSamplesRB: viewModel.profileSamplesRB,
-                // Show repeater marker for both on-path and off-path
-                repeaterPathFraction: viewModel.repeaterVisualizationPathFraction,
-                repeaterHeight: viewModel.repeaterPoint.map { Double($0.additionalHeight) },
-                // Only enable drag for on-path repeaters
-                onRepeaterDrag: viewModel.repeaterPoint?.isOnPath == true ? { pathFraction in
-                    viewModel.updateRepeaterPosition(pathFraction: pathFraction)
-                    viewModel.analyzeWithRepeater()
-                } : nil,
-                onRepeaterMarkerPosition: { center in
-                    repeaterMarkerCenter = center
-                },
-                // Off-path segment distances for separator and labels
-                segmentARDistanceMeters: viewModel.segmentARDistanceMeters,
-                segmentRBDistanceMeters: viewModel.segmentRBDistanceMeters
-            )
-            .overlay {
-                if showDragHint, let center = repeaterMarkerCenter {
-                    Text(L10n.Tools.Tools.LineOfSight.dragToAdjust)
-                        .font(.caption)
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.regularMaterial, in: .capsule)
-                        .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-                        .transition(.opacity.combined(with: .scale))
-                        .position(x: center.x, y: center.y + 30)
-                }
-            }
-        }
-    }
-
-    // MARK: - RF Settings Section
-
-    private var rfSettingsSection: some View {
-        DisclosureGroup(isExpanded: $isRFSettingsExpanded) {
-            VStack(spacing: 12) {
-                // Frequency input - extracted to separate view for @FocusState to work in sheet
-                FrequencyInputRow(viewModel: viewModel)
-
-                Divider()
-
-                // Refraction k-factor picker
-                HStack {
-                    Label(L10n.Tools.Tools.LineOfSight.refraction, systemImage: "globe")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Picker("", selection: Binding(
-                        get: { viewModel.refractionK },
-                        set: { viewModel.refractionK = $0 }
-                    )) {
-                        Text(L10n.Tools.Tools.LineOfSight.Refraction.none).tag(1.0)
-                        Text(L10n.Tools.Tools.LineOfSight.Refraction.standard).tag(4.0 / 3.0)
-                        Text(L10n.Tools.Tools.LineOfSight.Refraction.ducting).tag(4.0)
-                    }
-                    .pickerStyle(.menu)
-                }
-            }
-            .padding(.top, 8)
-        } label: {
-            Label(L10n.Tools.Tools.LineOfSight.rfSettings, systemImage: "antenna.radiowaves.left.and.right")
-                .font(.headline)
-        }
-        .tint(.primary)
-    }
-
-    // MARK: - Error Section
-
-    private func errorSection(_ message: String) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.largeTitle)
-                .foregroundStyle(.orange)
-
-            Text(L10n.Tools.Tools.LineOfSight.analysisFailed)
-                .font(.headline)
-
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button(L10n.Tools.Tools.LineOfSight.retry) {
-                if viewModel.repeaterPoint != nil {
-                    viewModel.analyzeWithRepeater()
-                } else {
-                    viewModel.analyze()
-                }
-            }
-            .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
     }
 
     // MARK: - Computed Properties
@@ -1240,7 +616,7 @@ private struct LOSMapCanvasView: View {
 /// Extracted view for frequency input with its own @FocusState
 /// This is necessary because @FocusState doesn't work properly when declared in a parent view
 /// and used in sheet content.
-private struct FrequencyInputRow: View {
+struct FrequencyInputRow: View {
     @Bindable var viewModel: LineOfSightViewModel
     @FocusState private var isFocused: Bool
     @State private var text: String = ""
