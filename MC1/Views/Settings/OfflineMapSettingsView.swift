@@ -43,15 +43,14 @@ struct OfflineMapSettingsView: View {
             isPresented: .init(
                 get: { packToDelete != nil },
                 set: { if !$0 { packToDelete = nil } }
-            )
-        ) {
+            ),
+            presenting: packToDelete
+        ) { pack in
             Button(L10n.Settings.OfflineMaps.delete, role: .destructive) {
-                if let pack = packToDelete {
-                    Task { await appState.offlineMapService.deletePack(pack) }
-                }
+                Task { await appState.offlineMapService.deletePack(pack) }
             }
             Button(L10n.Settings.OfflineMaps.cancel, role: .cancel) {}
-        } message: {
+        } message: { _ in
             Text(L10n.Settings.OfflineMaps.deleteMessage)
         }
     }
