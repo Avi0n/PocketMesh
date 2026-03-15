@@ -38,10 +38,15 @@ struct TracePathMapView: View {
             }
 
             // Floating buttons
-            floatingButtons
+            TracePathFloatingButtonsView(
+                mapViewModel: mapViewModel,
+                showingClearConfirmation: $showingClearConfirmation,
+                presentedResult: $presentedResult,
+                buttonNamespace: buttonNamespace
+            )
 
             // Map controls toolbar
-            mapToolbar
+            TracePathMapToolbarView(mapViewModel: mapViewModel)
         }
         .onAppear {
             mapViewModel.configure(
@@ -192,132 +197,4 @@ struct TracePathMapView: View {
         .background(.regularMaterial)
     }
 
-    // MARK: - Floating Buttons
-
-    private var floatingButtons: some View {
-        VStack {
-            Spacer()
-
-            LiquidGlassContainer(spacing: 12) {
-                HStack(spacing: 12) {
-                    if mapViewModel.hasPath {
-                        // Clear button
-                        Button {
-                            showingClearConfirmation = true
-                        } label: {
-                            Text(L10n.Contacts.Contacts.Trace.Map.clear)
-                        }
-                        .liquidGlassButtonStyle()
-                        .liquidGlassID("clear", in: buttonNamespace)
-                        .confirmationDialog(
-                            L10n.Contacts.Contacts.Trace.clearPath,
-                            isPresented: $showingClearConfirmation,
-                            titleVisibility: .visible
-                        ) {
-                            Button(L10n.Contacts.Contacts.Trace.clearPath, role: .destructive) {
-                                mapViewModel.clearPath()
-                            }
-                        } message: {
-                            Text(L10n.Contacts.Contacts.Trace.clearPathMessage)
-                        }
-
-                        // Run Trace button
-                        Button {
-                            Task {
-                                await mapViewModel.runTrace()
-                            }
-                        } label: {
-                            if mapViewModel.isRunning {
-                                HStack {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                    Text(L10n.Contacts.Contacts.Trace.List.runningTrace)
-                                }
-                            } else {
-                                Text(L10n.Contacts.Contacts.Trace.List.runTrace)
-                            }
-                        }
-                        .liquidGlassProminentButtonStyle()
-                        .liquidGlassID("trace", in: buttonNamespace)
-                        .disabled(!mapViewModel.canRunTrace)
-
-                        // View Results button
-                        if let result = mapViewModel.result, result.success {
-                            Button {
-                                presentedResult = result
-                            } label: {
-                                Text(L10n.Contacts.Contacts.Trace.Map.viewResults)
-                            }
-                            .liquidGlassButtonStyle()
-                            .liquidGlassID("viewResults", in: buttonNamespace)
-                        }
-                    }
-                }
-            }
-            .animation(.spring(response: 0.3), value: mapViewModel.hasPath)
-            .animation(.spring(response: 0.3), value: mapViewModel.result?.id)
-            .padding(.bottom, 24)
-        }
-    }
-
-    // MARK: - Map Toolbar
-
-    private var mapToolbar: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                MapControlsToolbar(
-                    onLocationTap: {
-                        if let location = appState.locationService.currentLocation {
-                            mapViewModel.cameraRegion = MKCoordinateRegion(
-                                center: location.coordinate,
-                                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                            )
-                            mapViewModel.cameraRegionVersion += 1
-                        } else {
-                            appState.locationService.requestLocation()
-                        }
-                    },
-                    showingLayersMenu: $mapViewModel.showingLayersMenu
-                ) {
-                    // Labels toggle
-                    Button(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels, systemImage: "character.textbox") {
-                        mapViewModel.showLabels.toggle()
-                    }
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-                    .buttonStyle(.plain)
-                    .labelStyle(.iconOnly)
-
-                    // Center on path
-                    if mapViewModel.hasPath {
-                        Button(L10n.Contacts.Contacts.Trace.Map.centerOnPath, systemImage: "arrow.up.left.and.arrow.down.right") {
-                            mapViewModel.centerOnPath()
-                        }
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                        .buttonStyle(.plain)
-                        .labelStyle(.iconOnly)
-                    }
-                }
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if mapViewModel.showingLayersMenu {
-                LayersMenu(
-                    selection: $mapViewModel.mapStyleSelection,
-                    isPresented: $mapViewModel.showingLayersMenu
-                )
-                .padding(.trailing, 16)
-                .padding(.bottom, 160)
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.3), value: mapViewModel.showingLayersMenu)
-    }
 }
