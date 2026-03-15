@@ -14,135 +14,41 @@ struct MapView: View {
 
     var body: some View {
         NavigationStack {
-            mapCanvas
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        BLEStatusIndicatorView()
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        refreshButton
-                    }
-                }
-                .task {
-                    appState.locationService.requestPermissionIfNeeded()
-                    appState.locationService.requestLocation()
-                    viewModel.configure(appState: appState)
-                    await viewModel.loadContactsWithLocation()
-                    viewModel.centerOnAllContacts()
-                }
-                .sheet(item: $selectedContactForDetail) { contact in
-                    ContactDetailSheet(
-                        contact: contact,
-                        onMessage: { navigateToChat(with: contact) }
-                    )
-                    .presentationDetents([.large])
-                }
-                .liquidGlassToolbarBackground()
-        }
-    }
-
-    // MARK: - Map Canvas
-
-    private var mapCanvas: some View {
-        ZStack {
-            mapContent
-                .ignoresSafeArea()
-
-            // Offline badge
-            if !appState.offlineMapService.isNetworkAvailable {
-                OfflineBadge()
-            }
-
-            // Floating controls
-            VStack {
-                Spacer()
-                mapControls
-            }
-
-            // Layers menu overlay
-            if viewModel.showingLayersMenu {
-                Button {
-                    withAnimation {
-                        viewModel.showingLayersMenu = false
-                    }
-                } label: {
-                    Color.black.opacity(0.3)
-                        .ignoresSafeArea()
-                }
-                .buttonStyle(.plain)
-
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        LayersMenu(
-                            selection: $viewModel.mapStyleSelection,
-                            isPresented: $viewModel.showingLayersMenu
-                        )
-                        .padding(.trailing, 72)
-                        .padding(.bottom)
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Map Content
-
-    @ViewBuilder
-    private var mapContent: some View {
-        if viewModel.contactsWithLocation.isEmpty && !viewModel.isLoading {
-            emptyState
-        } else {
-            MC1MapView(
-                points: mapPoints,
-                lines: [],
-                mapStyle: viewModel.mapStyleSelection,
-                isDarkMode: colorScheme == .dark,
-                showLabels: viewModel.showLabels,
-                showsUserLocation: true,
-                isInteractive: true,
-                showsScale: true,
-                cameraRegion: $viewModel.cameraRegion,
-                cameraRegionVersion: viewModel.cameraRegionVersion,
-                onPointTap: { point, screenPosition in
-                    selectedCalloutContact = viewModel.contactsWithLocation.first { $0.id == point.id }
-                    selectedPointScreenPosition = screenPosition
-                },
-                onMapTap: { _ in
-                    selectedCalloutContact = nil
-                    selectedPointScreenPosition = nil
-                },
-                onCameraRegionChange: { region in
-                    viewModel.cameraRegion = region
-                    selectedCalloutContact = nil
-                    selectedPointScreenPosition = nil
-                },
-                isStyleLoaded: $isStyleLoaded
+            MapCanvasView(
+                viewModel: viewModel,
+                mapPoints: mapPoints,
+                colorScheme: colorScheme,
+                selectedCalloutContact: $selectedCalloutContact,
+                selectedPointScreenPosition: $selectedPointScreenPosition,
+                isStyleLoaded: $isStyleLoaded,
+                onShowContactDetail: { showContactDetail($0) },
+                onNavigateToChat: { navigateToChat(with: $0) },
+                onCenterOnUser: { centerOnUserLocation() },
+                onClearSelection: { clearSelection() }
             )
-            .popover(
-                item: $selectedCalloutContact,
-                attachmentAnchor: .rect(.rect(CGRect(
-                    origin: selectedPointScreenPosition ?? .zero,
-                    size: CGSize(width: 1, height: 1)
-                ))),
-                arrowEdge: .bottom
-            ) { contact in
-                ContactCalloutContent(
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    BLEStatusIndicatorView()
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    refreshButton
+                }
+            }
+            .task {
+                appState.locationService.requestPermissionIfNeeded()
+                appState.locationService.requestLocation()
+                viewModel.configure(appState: appState)
+                await viewModel.loadContactsWithLocation()
+                viewModel.centerOnAllContacts()
+            }
+            .sheet(item: $selectedContactForDetail) { contact in
+                ContactDetailSheet(
                     contact: contact,
-                    onDetail: { showContactDetail(contact) },
                     onMessage: { navigateToChat(with: contact) }
                 )
-                .presentationCompactAdaptation(.popover)
+                .presentationDetents([.large])
             }
-            .overlay {
-                if !isStyleLoaded {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                } else if viewModel.isLoading {
-                    loadingOverlay
-                }
-            }
+            .liquidGlassToolbarBackground()
         }
     }
 
@@ -166,81 +72,6 @@ struct MapView: View {
         case .repeater: .contactRepeater
         case .room: .contactRoom
         }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label(L10n.Map.Map.EmptyState.title, systemImage: "map")
-        } description: {
-            Text(L10n.Map.Map.EmptyState.description)
-        } actions: {
-            Button(L10n.Map.Map.Common.refresh) {
-                Task {
-                    await viewModel.loadContactsWithLocation()
-                }
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-
-    // MARK: - Loading Overlay
-
-    private var loadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.1)
-            ProgressView()
-                .padding()
-                .background(.regularMaterial, in: .rect(cornerRadius: 8))
-        }
-    }
-
-    // MARK: - Map Controls
-
-    private var mapControls: some View {
-        HStack {
-            Spacer()
-            mapControlsStack
-        }
-    }
-
-    private var mapControlsStack: some View {
-        MapControlsToolbar(
-            onLocationTap: { centerOnUserLocation() },
-            showingLayersMenu: $viewModel.showingLayersMenu
-        ) {
-            labelsToggleButton
-            centerAllButton
-        }
-    }
-
-    private var labelsToggleButton: some View {
-        Button(viewModel.showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels, systemImage: "character.textbox") {
-            withAnimation {
-                viewModel.showLabels.toggle()
-            }
-        }
-        .font(.body.weight(.medium))
-        .foregroundStyle(viewModel.showLabels ? .blue : .primary)
-        .frame(width: 44, height: 44)
-        .contentShape(.rect)
-        .buttonStyle(.plain)
-        .labelStyle(.iconOnly)
-    }
-
-    private var centerAllButton: some View {
-        Button(L10n.Map.Map.Controls.centerAll, systemImage: "arrow.up.left.and.arrow.down.right") {
-            clearSelection()
-            viewModel.centerOnAllContacts()
-        }
-        .font(.body.weight(.medium))
-        .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
-        .frame(width: 44, height: 44)
-        .contentShape(.rect)
-        .buttonStyle(.plain)
-        .disabled(viewModel.contactsWithLocation.isEmpty)
-        .labelStyle(.iconOnly)
     }
 
     // MARK: - Refresh Button
