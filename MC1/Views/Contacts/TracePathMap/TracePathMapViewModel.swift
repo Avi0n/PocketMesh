@@ -259,9 +259,9 @@ final class TracePathMapViewModel {
                     )
                     let distance = CLLocation(latitude: line.coordinates[0].latitude, longitude: line.coordinates[0].longitude)
                         .distance(from: CLLocation(latitude: line.coordinates[1].latitude, longitude: line.coordinates[1].longitude))
-                    let miles = distance / 1609.34
+                    let distFormatted = Measurement(value: distance, unit: UnitLength.meters)
+                        .formatted(.measurement(width: .abbreviated, usage: .road))
                     let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
-                    let distFormatted = miles.formatted(.number.precision(.fractionLength(1)))
 
                     // swiftlint:disable:next force_unwrapping
                     badgePoints.append(MapPoint(
@@ -271,7 +271,7 @@ final class TracePathMapViewModel {
                         label: nil,
                         isClusterable: false,
                         hopIndex: nil,
-                        badgeText: "\(distFormatted) mi · \(snrFormatted) dB"
+                        badgeText: "\(distFormatted) · \(snrFormatted) dB"
                     ))
                 }
             } else {
