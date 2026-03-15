@@ -1139,12 +1139,9 @@ private struct LOSMapCanvasView: View {
 
             if showingMapStyleMenu {
                 Button {
-                    withAnimation {
-                        showingMapStyleMenu = false
-                    }
+                    withAnimation { showingMapStyleMenu = false }
                 } label: {
-                    Color.primary.opacity(0.3)
-                        .ignoresSafeArea()
+                    Color.primary.opacity(0.3).ignoresSafeArea()
                 }
                 .buttonStyle(.plain)
 
@@ -1152,35 +1149,10 @@ private struct LOSMapCanvasView: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        VStack(spacing: 0) {
-                            ForEach(MapStyleSelection.allCases, id: \.self) { style in
-                                Button {
-                                    mapStyleSelection = style
-                                    withAnimation {
-                                        showingMapStyleMenu = false
-                                    }
-                                } label: {
-                                    HStack {
-                                        Text(style.label)
-                                            .foregroundStyle(.primary)
-                                        Spacer()
-                                        if mapStyleSelection == style {
-                                            Image(systemName: "checkmark")
-                                                .foregroundStyle(.blue)
-                                        }
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                }
-
-                                if style != MapStyleSelection.allCases.last {
-                                    Divider()
-                                }
-                            }
-                        }
-                        .frame(width: 140)
-                        .background(.regularMaterial, in: .rect(cornerRadius: 12))
-                        .shadow(radius: 8)
+                        LayersMenu(
+                            selection: $mapStyleSelection,
+                            isPresented: $showingMapStyleMenu
+                        )
                         .padding(.trailing)
                     }
                 }
