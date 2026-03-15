@@ -15,6 +15,12 @@ enum PointID: Hashable {
     case repeater
 }
 
+// MARK: - PointID Identifiable Conformance
+
+extension PointID: Identifiable {
+    var id: Self { self }
+}
+
 // MARK: - Repeater Point
 
 /// A repeater point for relay analysis.
