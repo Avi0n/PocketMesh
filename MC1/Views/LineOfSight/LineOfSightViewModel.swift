@@ -416,7 +416,7 @@ final class LineOfSightViewModel {
         )
 
         // Fetch elevation asynchronously
-        pointAElevationTask = Task { @MainActor in
+        pointAElevationTask = Task {
             await fetchElevationForPointA()
         }
     }
@@ -444,7 +444,7 @@ final class LineOfSightViewModel {
         )
 
         // Fetch elevation asynchronously
-        pointBElevationTask = Task { @MainActor in
+        pointBElevationTask = Task {
             await fetchElevationForPointB()
         }
     }

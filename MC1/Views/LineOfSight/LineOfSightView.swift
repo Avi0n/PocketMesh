@@ -3,6 +3,12 @@ import MapKit
 import MC1Services
 import SwiftUI
 
+private extension CLLocationCoordinate2D {
+    var formattedString: String {
+        "\(latitude.formatted(.number.precision(.fractionLength(6)))), \(longitude.formatted(.number.precision(.fractionLength(6))))"
+    }
+}
+
 private let analysisSheetDetentCollapsed: PresentationDetent = .fraction(0.25)
 private let analysisSheetDetentHalf: PresentationDetent = .fraction(0.5)
 private let analysisSheetDetentExpanded: PresentationDetent = .large
@@ -245,7 +251,7 @@ struct LineOfSightView: View {
                 analysisSheetContent
             }
             .scrollDismissesKeyboard(.immediately)
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -478,12 +484,10 @@ struct LineOfSightView: View {
 
                 Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
                     copyHapticTrigger += 1
-                    let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                    UIPasteboard.general.string = coordText
+                    UIPasteboard.general.string = coord.formattedString
                 }
 
-                let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                ShareLink(item: coordText) {
+                ShareLink(item: coord.formattedString) {
                     Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
                 }
             }
@@ -656,12 +660,10 @@ struct LineOfSightView: View {
 
                         Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
                             copyHapticTrigger += 1
-                            let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                            UIPasteboard.general.string = coordText
+                            UIPasteboard.general.string = coord.formattedString
                         }
 
-                        let coordText = "\(coord.latitude.formatted(.number.precision(.fractionLength(6)))), \(coord.longitude.formatted(.number.precision(.fractionLength(6))))"
-                        ShareLink(item: coordText) {
+                        ShareLink(item: coord.formattedString) {
                             Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
                         }
                     }
@@ -1145,7 +1147,7 @@ private struct LOSMapCanvasView: View {
                         showingMapStyleMenu = false
                     }
                 } label: {
-                    Color.black.opacity(0.3)
+                    Color.primary.opacity(0.3)
                         .ignoresSafeArea()
                 }
                 .buttonStyle(.plain)
