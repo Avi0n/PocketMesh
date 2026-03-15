@@ -881,6 +881,9 @@
 /* Location: TracePathMapView.swift - Purpose: Show labels accessibility */
 "contacts.trace.map.showLabels" = "Mostrar etiquetas";
 
+/* Location: TracePathMapView.swift - Purpose: Center on path accessibility */
+"contacts.trace.map.centerOnPath" = "Centrar en la ruta";
+
 /* Location: TracePathMapView.swift - Purpose: Save path alert title */
 "contacts.trace.map.saveTitle" = "Guardar ruta";
 

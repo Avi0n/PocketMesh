@@ -1718,6 +1718,8 @@ public enum L10n {
           }
         }
         public enum Map {
+          /// Location: TracePathMapView.swift - Purpose: Center on path accessibility
+          public static let centerOnPath = L10n.tr("Contacts", "contacts.trace.map.centerOnPath", fallback: "Center on path")
           /// Location: TracePathMapView.swift - Purpose: Clear button
           public static let clear = L10n.tr("Contacts", "contacts.trace.map.clear", fallback: "Clear")
           /// Location: TracePathMapView.swift - Purpose: Hide labels accessibility
