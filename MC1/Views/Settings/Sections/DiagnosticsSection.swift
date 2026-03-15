@@ -77,9 +77,7 @@ struct DiagnosticsSection: View {
             do {
                 try await dataStore.clearDebugLogEntries()
             } catch {
-                await MainActor.run {
-                    showError = error.localizedDescription
-                }
+                showError = error.localizedDescription
             }
         }
     }

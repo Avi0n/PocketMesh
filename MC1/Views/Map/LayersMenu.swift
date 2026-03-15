@@ -23,7 +23,7 @@ struct LayersMenu: View {
                         Spacer()
                         if selection == style {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.tint)
                         }
                     }
                     .padding(.horizontal, 16)

@@ -249,7 +249,7 @@ extension MC1MapView {
 
             // Debounce: cancel previous pending write-back
             pendingRegionTask?.cancel()
-            pendingRegionTask = Task { @MainActor in
+            pendingRegionTask = Task {
                 try? await Task.sleep(for: .milliseconds(50))
                 guard !Task.isCancelled else { return }
                 let region = mapView.mlnRegion

@@ -274,7 +274,6 @@ struct TracePathListView: View {
                 Button(L10n.Contacts.Contacts.Trace.clearPath, systemImage: "trash", role: .destructive) {
                     showingClearConfirmation = true
                 }
-                .foregroundStyle(.red)
             }
         } footer: {
             if !viewModel.outboundPath.isEmpty {
