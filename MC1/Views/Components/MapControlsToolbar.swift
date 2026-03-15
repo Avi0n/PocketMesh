@@ -81,19 +81,12 @@ private struct CustomContentStack<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        _VariadicView.Tree(DividerLayout()) {
-            content
-        }
-    }
-}
-
-/// Layout that prepends a divider before each child view.
-private struct DividerLayout: _VariadicView_MultiViewRoot {
-    func body(children: _VariadicView.Children) -> some View {
-        ForEach(children) { child in
-            Divider()
-                .frame(width: 36)
-            child
+        Group(subviews: content) { subviews in
+            ForEach(subviews) { subview in
+                Divider()
+                    .frame(width: 36)
+                subview
+            }
         }
     }
 }
