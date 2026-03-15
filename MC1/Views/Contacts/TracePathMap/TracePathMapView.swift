@@ -161,8 +161,8 @@ struct TracePathMapView: View {
 
                 if let distance = traceViewModel.totalPathDistance {
                     Text("•")
-                    let miles = distance / 1609.34
-                    Text("\(miles, format: .number.precision(.fractionLength(1))) mi")
+                    Text(Measurement(value: distance, unit: UnitLength.meters),
+                         format: .measurement(width: .abbreviated, usage: .road))
                 }
             }
             .font(.subheadline.weight(.medium))
