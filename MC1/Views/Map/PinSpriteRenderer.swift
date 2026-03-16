@@ -12,7 +12,7 @@ enum PinSpriteRenderer {
             style.setImage(image, forName: spec.name)
         }
         // Transparent 1px sprite for badge points (only badge-text layer renders)
-        let transparent = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1)).image { _ in }
+        let transparent = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1), format: .preferred()).image { _ in }
         style.setImage(transparent, forName: "pin-badge")
 
         // Hop badge variants for ring-white pins (trace path)
@@ -81,7 +81,7 @@ enum PinSpriteRenderer {
         let totalWidth = max(circleSize, ringSize)
         let totalHeight = circleSize + triangleSize - 3 + ringPadding
 
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalWidth, height: totalHeight))
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalWidth, height: totalHeight), format: .preferred())
         return renderer.image { ctx in
             let cgContext = ctx.cgContext
             let centerX = totalWidth / 2
@@ -188,7 +188,7 @@ enum PinSpriteRenderer {
         let totalSize = size + shadowPadding * 2
         let capInset = cornerRadius + shadowPadding
 
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalSize, height: totalSize))
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: totalSize, height: totalSize), format: .preferred())
         let image = renderer.image { ctx in
             let cgContext = ctx.cgContext
             let pillRect = CGRect(x: shadowPadding, y: shadowPadding, width: size, height: size)
@@ -223,7 +223,7 @@ enum PinSpriteRenderer {
         let badgeHeight: CGFloat = 20
         let totalHeight = size + badgeHeight + 2
 
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: totalHeight))
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: totalHeight), format: .preferred())
         return renderer.image { ctx in
             let cgContext = ctx.cgContext
             let center = CGPoint(x: size / 2, y: size / 2)
