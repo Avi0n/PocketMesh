@@ -7,16 +7,12 @@ private nonisolated(unsafe) let mapFontNames = NSExpression(forConstantValue: ["
 
 extension MC1MapView.Coordinator {
 
-    // MARK: - Point layers
-
-    /// Point sources and layers use deferred creation: they are created in
-    /// `updatePointSource` on first data arrival, not here. This avoids a
-    /// MapLibre bug where sources initialized without features ignore later
-    /// `.shape` updates.
-    func setupPointLayers(style: MLNStyle) {}
-
     // MARK: - Update point source data
 
+    /// Point sources and layers use deferred creation: they are created here
+    /// on first data arrival, not during style load. This avoids a MapLibre
+    /// bug where sources initialized without features ignore later `.shape`
+    /// updates.
     func updatePointSource(mapView: MLNMapView) {
         guard let style = mapView.style else { return }
 
@@ -246,7 +242,7 @@ extension MC1MapView.Coordinator {
 
     // MARK: - Raster tile sources
 
-    func setupRasterSources(style: MLNStyle) {
+    func setupRasterSources(style: MLNStyle, mapView: MLNMapView) {
         let satSource = MLNRasterTileSource(
             identifier: "satellite-tiles",
             tileURLTemplates: [MapTileURLs.esriWorldImagery],
