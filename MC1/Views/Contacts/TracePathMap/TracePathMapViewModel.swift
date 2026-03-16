@@ -31,6 +31,7 @@ final class TracePathMapViewModel {
 
     private weak var traceViewModel: TracePathViewModel?
     private var userLocation: CLLocation?
+    private var lastRebuildLocation: CLLocation?
 
     // MARK: - Path State
 
@@ -110,6 +111,11 @@ final class TracePathMapViewModel {
 
     func updateUserLocation(_ location: CLLocation?) {
         self.userLocation = location
+
+        // Only rebuild if the path is non-empty and user moved meaningfully
+        guard traceViewModel?.outboundPath.isEmpty == false else { return }
+        if let location, let last = lastRebuildLocation, location.distance(from: last) < 10 { return }
+        lastRebuildLocation = location
         rebuildOverlays()
     }
 
@@ -323,34 +329,7 @@ final class TracePathMapViewModel {
             coordinates.append(contentsOf: line.coordinates)
         }
 
-        guard !coordinates.isEmpty else { return }
-
-        // Calculate bounding region
-        var minLat = coordinates[0].latitude
-        var maxLat = coordinates[0].latitude
-        var minLon = coordinates[0].longitude
-        var maxLon = coordinates[0].longitude
-
-        for coord in coordinates {
-            minLat = min(minLat, coord.latitude)
-            maxLat = max(maxLat, coord.latitude)
-            minLon = min(minLon, coord.longitude)
-            maxLon = max(maxLon, coord.longitude)
-        }
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-
-        // Clamp spans to valid MKCoordinateSpan bounds (lat: 0-180, lon: 0-360)
-        let span = MKCoordinateSpan(
-            latitudeDelta: min(180, (maxLat - minLat) * 1.5 + 0.01),
-            longitudeDelta: min(360, (maxLon - minLon) * 1.5 + 0.01)
-        )
-
-        cameraRegion = MKCoordinateRegion(center: center, span: span)
-        cameraRegionVersion += 1
+        setCameraRegion(fitting: coordinates)
     }
 
     /// Center map to show all repeaters
@@ -361,29 +340,10 @@ final class TracePathMapViewModel {
             return
         }
 
-        var minLat = Double.greatestFiniteMagnitude
-        var maxLat = -Double.greatestFiniteMagnitude
-        var minLon = Double.greatestFiniteMagnitude
-        var maxLon = -Double.greatestFiniteMagnitude
-
-        for repeater in repeaters {
-            minLat = min(minLat, repeater.latitude)
-            maxLat = max(maxLat, repeater.latitude)
-            minLon = min(minLon, repeater.longitude)
-            maxLon = max(maxLon, repeater.longitude)
+        let coordinates = repeaters.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }
-
-        let centerLat = (minLat + maxLat) / 2
-        let centerLon = (minLon + maxLon) / 2
-        // Clamp spans to valid MKCoordinateSpan bounds (lat: 0-180, lon: 0-360)
-        let latDelta = min(180, max(0.01, (maxLat - minLat) * 1.5))
-        let lonDelta = min(360, max(0.01, (maxLon - minLon) * 1.5))
-
-        let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
-        let span = MKCoordinateSpan(latitudeDelta: latDelta, longitudeDelta: lonDelta)
-
-        cameraRegion = MKCoordinateRegion(center: center, span: span)
-        cameraRegionVersion += 1
+        setCameraRegion(fitting: coordinates)
         hasInitiallyCenteredOnRepeaters = true
     }
 
@@ -406,12 +366,10 @@ final class TracePathMapViewModel {
 
         var coordinates: [CLLocationCoordinate2D] = []
 
-        // Include user location if available
         if let userLocation {
             coordinates.append(userLocation.coordinate)
         }
 
-        // Get coordinates from path repeaters
         for hop in traceViewModel.outboundPath {
             guard let repeater = findRepeater(for: hop),
                   repeater.hasLocation else {
@@ -432,7 +390,14 @@ final class TracePathMapViewModel {
             return
         }
 
-        // Calculate bounding region
+        setCameraRegion(fitting: coordinates)
+        hasInitiallyCenteredOnRepeaters = true
+    }
+
+    /// Compute a bounding region for the given coordinates and update the camera.
+    private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D]) {
+        guard !coordinates.isEmpty else { return }
+
         var minLat = coordinates[0].latitude
         var maxLat = coordinates[0].latitude
         var minLon = coordinates[0].longitude
@@ -451,12 +416,11 @@ final class TracePathMapViewModel {
         )
 
         let span = MKCoordinateSpan(
-            latitudeDelta: min(180, (maxLat - minLat) * 1.5 + 0.01),
-            longitudeDelta: min(360, (maxLon - minLon) * 1.5 + 0.01)
+            latitudeDelta: min(180, max(0.01, (maxLat - minLat) * 1.5)),
+            longitudeDelta: min(360, max(0.01, (maxLon - minLon) * 1.5))
         )
 
         cameraRegion = MKCoordinateRegion(center: center, span: span)
         cameraRegionVersion += 1
-        hasInitiallyCenteredOnRepeaters = true
     }
 }

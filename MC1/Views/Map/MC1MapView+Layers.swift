@@ -5,6 +5,34 @@ import UIKit
 /// MapLibre's default ("Open Sans Regular") returns 404, causing silent symbol dropout.
 private nonisolated(unsafe) let mapFontNames = NSExpression(forConstantValue: ["Noto Sans Regular"])
 
+// MARK: - Layer and source identifiers
+
+enum MapLayerID {
+    static let clusterCircles = "cluster-circles"
+    static let clusterLabels = "cluster-labels"
+    static let unclusteredIcons = "unclustered-icons"
+    static let nameLabels = "name-labels"
+    static let badgeText = "badge-text"
+    static let fixedIcons = "fixed-icons"
+    static let fixedNameLabels = "fixed-name-labels"
+    static let fixedBadgeText = "fixed-badge-text"
+    static let lineLOS = "line-los"
+    static let lineTraceUntraced = "line-trace-untraced"
+    static let lineTraceWeak = "line-trace-weak"
+    static let lineTraceMedium = "line-trace-medium"
+    static let lineTraceGood = "line-trace-good"
+    static let satelliteLayer = "satellite-layer"
+    static let topoLayer = "topo-layer"
+}
+
+enum MapSourceID {
+    static let points = "points"
+    static let fixedPoints = "fixed-points"
+    static let lines = "lines"
+    static let satelliteTiles = "satellite-tiles"
+    static let topoTiles = "topo-tiles"
+}
+
 extension MC1MapView.Coordinator {
 
     // MARK: - Update point source data
@@ -27,7 +55,7 @@ extension MC1MapView.Coordinator {
         } else if !clusterablePoints.isEmpty {
             let features = clusterablePoints.map { pointFeature(for: $0) }
             let source = MLNShapeSource(
-                identifier: "points",
+                identifier: MapSourceID.points,
                 features: features,
                 options: [
                     .clustered: true,
@@ -47,7 +75,7 @@ extension MC1MapView.Coordinator {
             )
         } else if !fixedPoints.isEmpty {
             let features = fixedPoints.map { pointFeature(for: $0) }
-            let source = MLNShapeSource(identifier: "fixed-points", features: features, options: nil)
+            let source = MLNShapeSource(identifier: MapSourceID.fixedPoints, features: features, options: nil)
             style.addSource(source)
             self.fixedSource = source
             addFixedPointLayers(source: source, style: style)
@@ -55,7 +83,7 @@ extension MC1MapView.Coordinator {
     }
 
     func updateLabelVisibility(mapView: MLNMapView) {
-        for layerId in ["name-labels", "fixed-name-labels"] {
+        for layerId in [MapLayerID.nameLabels, MapLayerID.fixedNameLabels] {
             guard let layer = mapView.style?.layer(withIdentifier: layerId) as? MLNSymbolStyleLayer else { continue }
             layer.isVisible = showLabels
         }
@@ -65,7 +93,7 @@ extension MC1MapView.Coordinator {
 
     private func addClusteredPointLayers(source: MLNShapeSource, style: MLNStyle) {
         // Cluster circles
-        let circleLayer = MLNCircleStyleLayer(identifier: "cluster-circles", source: source)
+        let circleLayer = MLNCircleStyleLayer(identifier: MapLayerID.clusterCircles, source: source)
         circleLayer.predicate = NSPredicate(format: "cluster == YES")
         let radiusStops: [NSNumber: NSNumber] = [0: 18, 50: 24, 100: 30, 200: 38]
         circleLayer.circleRadius = NSExpression(
@@ -80,7 +108,7 @@ extension MC1MapView.Coordinator {
         style.addLayer(circleLayer)
 
         // Cluster count labels
-        let clusterLabelLayer = MLNSymbolStyleLayer(identifier: "cluster-labels", source: source)
+        let clusterLabelLayer = MLNSymbolStyleLayer(identifier: MapLayerID.clusterLabels, source: source)
         clusterLabelLayer.predicate = NSPredicate(format: "cluster == YES")
         clusterLabelLayer.text = NSExpression(format: "CAST(point_count, 'NSString')")
         clusterLabelLayer.textColor = NSExpression(forConstantValue: UIColor.white)
@@ -91,7 +119,7 @@ extension MC1MapView.Coordinator {
         style.addLayer(clusterLabelLayer)
 
         // Unclustered pin icons
-        let iconLayer = MLNSymbolStyleLayer(identifier: "unclustered-icons", source: source)
+        let iconLayer = MLNSymbolStyleLayer(identifier: MapLayerID.unclusteredIcons, source: source)
         iconLayer.predicate = NSPredicate(format: "cluster != YES")
         iconLayer.iconImageName = NSExpression(forKeyPath: "spriteName")
         iconLayer.iconAnchor = NSExpression(forConstantValue: "bottom")
@@ -101,7 +129,7 @@ extension MC1MapView.Coordinator {
         style.addLayer(iconLayer)
 
         // Name labels (above pins) with pill background
-        let nameLabelLayer = MLNSymbolStyleLayer(identifier: "name-labels", source: source)
+        let nameLabelLayer = MLNSymbolStyleLayer(identifier: MapLayerID.nameLabels, source: source)
         nameLabelLayer.predicate = NSPredicate(format: "cluster != YES AND nameLabel != nil")
         nameLabelLayer.text = NSExpression(forKeyPath: "nameLabel")
         nameLabelLayer.textFontSize = NSExpression(forConstantValue: 10)
@@ -121,7 +149,7 @@ extension MC1MapView.Coordinator {
         style.addLayer(nameLabelLayer)
 
         // Stats badge text (trace path midpoints) with pill background
-        let badgeLayer = MLNSymbolStyleLayer(identifier: "badge-text", source: source)
+        let badgeLayer = MLNSymbolStyleLayer(identifier: MapLayerID.badgeText, source: source)
         badgeLayer.predicate = NSPredicate(format: "cluster != YES AND badgeText != nil")
         badgeLayer.text = NSExpression(forKeyPath: "badgeText")
         badgeLayer.textFontSize = NSExpression(forConstantValue: 11)
@@ -140,7 +168,7 @@ extension MC1MapView.Coordinator {
     // MARK: - Fixed point layers
 
     private func addFixedPointLayers(source: MLNShapeSource, style: MLNStyle) {
-        let fixedIconLayer = MLNSymbolStyleLayer(identifier: "fixed-icons", source: source)
+        let fixedIconLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedIcons, source: source)
         fixedIconLayer.iconImageName = NSExpression(forKeyPath: "spriteName")
         fixedIconLayer.iconAnchor = NSExpression(forConstantValue: "bottom")
         fixedIconLayer.iconAllowsOverlap = NSExpression(forConstantValue: true)
@@ -148,7 +176,7 @@ extension MC1MapView.Coordinator {
         fixedIconLayer.text = nil
         style.addLayer(fixedIconLayer)
 
-        let fixedNameLayer = MLNSymbolStyleLayer(identifier: "fixed-name-labels", source: source)
+        let fixedNameLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedNameLabels, source: source)
         fixedNameLayer.predicate = NSPredicate(format: "nameLabel != nil")
         fixedNameLayer.text = NSExpression(forKeyPath: "nameLabel")
         fixedNameLayer.textFontSize = NSExpression(forConstantValue: 10)
@@ -167,7 +195,7 @@ extension MC1MapView.Coordinator {
         fixedNameLayer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)))
         style.addLayer(fixedNameLayer)
 
-        let fixedBadgeLayer = MLNSymbolStyleLayer(identifier: "fixed-badge-text", source: source)
+        let fixedBadgeLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedBadgeText, source: source)
         fixedBadgeLayer.predicate = NSPredicate(format: "badgeText != nil")
         fixedBadgeLayer.text = NSExpression(forKeyPath: "badgeText")
         fixedBadgeLayer.textFontSize = NSExpression(forConstantValue: 11)
@@ -186,10 +214,10 @@ extension MC1MapView.Coordinator {
     // MARK: - Line layers
 
     func setupLineLayers(style: MLNStyle) {
-        let source = MLNShapeSource(identifier: "lines", features: [], options: nil)
+        let source = MLNShapeSource(identifier: MapSourceID.lines, features: [], options: nil)
         style.addSource(source)
 
-        let losLayer = MLNLineStyleLayer(identifier: "line-los", source: source)
+        let losLayer = MLNLineStyleLayer(identifier: MapLayerID.lineLOS, source: source)
         losLayer.predicate = NSPredicate(format: "lineStyle == 'los'")
         losLayer.lineColor = NSExpression(forConstantValue: UIColor.systemBlue)
         losLayer.lineWidth = NSExpression(forConstantValue: 3)
@@ -197,28 +225,28 @@ extension MC1MapView.Coordinator {
         losLayer.lineOpacity = NSExpression(forKeyPath: "segmentOpacity")
         style.addLayer(losLayer)
 
-        let untracedLayer = MLNLineStyleLayer(identifier: "line-trace-untraced", source: source)
+        let untracedLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceUntraced, source: source)
         untracedLayer.predicate = NSPredicate(format: "lineStyle == 'traceUntraced'")
         untracedLayer.lineColor = NSExpression(forConstantValue: UIColor.systemGray)
         untracedLayer.lineWidth = NSExpression(forConstantValue: 2)
         untracedLayer.lineDashPattern = NSExpression(forConstantValue: [8, 6])
         style.addLayer(untracedLayer)
 
-        let weakLayer = MLNLineStyleLayer(identifier: "line-trace-weak", source: source)
+        let weakLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceWeak, source: source)
         weakLayer.predicate = NSPredicate(format: "lineStyle == 'traceWeak'")
         weakLayer.lineColor = NSExpression(forConstantValue: UIColor.systemRed)
         weakLayer.lineWidth = NSExpression(forConstantValue: 3)
         weakLayer.lineDashPattern = NSExpression(forConstantValue: [4, 4])
         style.addLayer(weakLayer)
 
-        let mediumLayer = MLNLineStyleLayer(identifier: "line-trace-medium", source: source)
+        let mediumLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceMedium, source: source)
         mediumLayer.predicate = NSPredicate(format: "lineStyle == 'traceMedium'")
         mediumLayer.lineColor = NSExpression(forConstantValue: UIColor.systemYellow)
         mediumLayer.lineWidth = NSExpression(forConstantValue: 3)
         mediumLayer.lineDashPattern = NSExpression(forConstantValue: [12, 4])
         style.addLayer(mediumLayer)
 
-        let goodLayer = MLNLineStyleLayer(identifier: "line-trace-good", source: source)
+        let goodLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceGood, source: source)
         goodLayer.predicate = NSPredicate(format: "lineStyle == 'traceGood'")
         goodLayer.lineColor = NSExpression(forConstantValue: UIColor.systemGreen)
         goodLayer.lineWidth = NSExpression(forConstantValue: 4)
@@ -226,7 +254,7 @@ extension MC1MapView.Coordinator {
     }
 
     func updateLineSource(mapView: MLNMapView) {
-        guard let source = mapView.style?.source(withIdentifier: "lines") as? MLNShapeSource else { return }
+        guard let source = mapView.style?.source(withIdentifier: MapSourceID.lines) as? MLNShapeSource else { return }
 
         let features = currentLines.map { line -> MLNPolylineFeature in
             var coords = line.coordinates
@@ -244,7 +272,7 @@ extension MC1MapView.Coordinator {
 
     func setupRasterSources(style: MLNStyle, mapView: MLNMapView) {
         let satSource = MLNRasterTileSource(
-            identifier: "satellite-tiles",
+            identifier: MapSourceID.satelliteTiles,
             tileURLTemplates: [MapTileURLs.esriWorldImagery],
             options: [
                 .tileSize: 256,
@@ -253,12 +281,12 @@ extension MC1MapView.Coordinator {
             ]
         )
         style.addSource(satSource)
-        let satLayer = MLNRasterStyleLayer(identifier: "satellite-layer", source: satSource)
+        let satLayer = MLNRasterStyleLayer(identifier: MapLayerID.satelliteLayer, source: satSource)
         satLayer.isVisible = false
         style.addLayer(satLayer)
 
         let topoSource = MLNRasterTileSource(
-            identifier: "topo-tiles",
+            identifier: MapSourceID.topoTiles,
             tileURLTemplates: [MapTileURLs.openTopoMapA],
             options: [
                 .tileSize: 256,
@@ -267,7 +295,7 @@ extension MC1MapView.Coordinator {
             ]
         )
         style.addSource(topoSource)
-        let topoLayer = MLNRasterStyleLayer(identifier: "topo-layer", source: topoSource)
+        let topoLayer = MLNRasterStyleLayer(identifier: MapLayerID.topoLayer, source: topoSource)
         topoLayer.isVisible = false
         style.addLayer(topoLayer)
 
@@ -276,8 +304,8 @@ extension MC1MapView.Coordinator {
 
     func updateRasterLayerVisibility(mapView: MLNMapView) {
         guard let style = mapView.style else { return }
-        style.layer(withIdentifier: "satellite-layer")?.isVisible = currentMapStyle == .satellite
-        style.layer(withIdentifier: "topo-layer")?.isVisible = currentMapStyle == .topo
+        style.layer(withIdentifier: MapLayerID.satelliteLayer)?.isVisible = currentMapStyle == .satellite
+        style.layer(withIdentifier: MapLayerID.topoLayer)?.isVisible = currentMapStyle == .topo
     }
 
     // MARK: - Private helpers

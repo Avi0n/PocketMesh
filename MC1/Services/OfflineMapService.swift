@@ -16,6 +16,7 @@ final class OfflineMapService {
 
     private let monitor = NWPathMonitor()
     private var observationTasks: [Task<Void, Never>] = []
+    private var pendingLoadTask: Task<Void, Never>?
 
     init() {
         let networkStream = AsyncStream<NWPath> { continuation in
@@ -31,7 +32,7 @@ final class OfflineMapService {
 
         observationTasks.append(Task { [weak self] in
             for await _ in NotificationCenter.default.notifications(named: .MLNOfflinePackProgressChanged) {
-                self?.loadPacks()
+                self?.scheduleLoadPacks()
             }
         })
         observationTasks.append(Task { [weak self] in
@@ -47,6 +48,7 @@ final class OfflineMapService {
 
     isolated deinit {
         monitor.cancel()
+        pendingLoadTask?.cancel()
         for task in observationTasks {
             task.cancel()
         }
@@ -54,6 +56,16 @@ final class OfflineMapService {
 
     func loadPacks() {
         packs = (MLNOfflineStorage.shared.packs ?? []).map { OfflinePack(pack: $0) }
+    }
+
+    /// Coalesces rapid progress notifications into a single `loadPacks()` call.
+    private func scheduleLoadPacks() {
+        pendingLoadTask?.cancel()
+        pendingLoadTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            loadPacks()
+        }
     }
 
     func downloadRegion(

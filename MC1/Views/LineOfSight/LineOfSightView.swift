@@ -3,12 +3,6 @@ import MapKit
 import MC1Services
 import SwiftUI
 
-extension CLLocationCoordinate2D {
-    var formattedString: String {
-        "\(latitude.formatted(.number.precision(.fractionLength(6)))), \(longitude.formatted(.number.precision(.fractionLength(6))))"
-    }
-}
-
 private let analysisSheetDetentCollapsed: PresentationDetent = .fraction(0.25)
 private let analysisSheetDetentHalf: PresentationDetent = .fraction(0.5)
 private let analysisSheetDetentExpanded: PresentationDetent = .large
@@ -333,7 +327,7 @@ struct LineOfSightView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .glassProminentButtonStyle()
+        .liquidGlassProminentButtonStyle()
         .controlSize(.large)
         .disabled(viewModel.isAnalyzing || hasAnalysisResult)
     }

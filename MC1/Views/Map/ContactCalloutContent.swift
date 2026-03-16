@@ -13,8 +13,8 @@ struct ContactCalloutContent: View {
                 .font(.headline)
 
             HStack(spacing: 6) {
-                Image(systemName: typeIconName)
-                    .foregroundStyle(typeColor)
+                Image(systemName: contact.type.iconSystemName)
+                    .foregroundStyle(contact.type.displayColor)
                 Text(typeDisplayName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -41,28 +41,6 @@ struct ContactCalloutContent: View {
     }
 
     // MARK: - Computed Properties
-
-    private var typeIconName: String {
-        switch contact.type {
-        case .chat:
-            "person.fill"
-        case .repeater:
-            "antenna.radiowaves.left.and.right"
-        case .room:
-            "person.3.fill"
-        }
-    }
-
-    private var typeColor: Color {
-        switch contact.type {
-        case .chat:
-            .blue
-        case .repeater:
-            .green
-        case .room:
-            .purple
-        }
-    }
 
     private var typeDisplayName: String {
         switch contact.type {

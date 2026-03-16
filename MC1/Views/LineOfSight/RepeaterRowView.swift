@@ -65,7 +65,7 @@ struct RepeaterRowView: View {
                         .labelStyle(.iconOnly)
                         .frame(width: iconButtonSize, height: iconButtonSize)
                 }
-                .glassButtonStyle()
+                .liquidGlassSecondaryButtonStyle()
                 .sensoryFeedback(.success, trigger: copyHapticTrigger)
                 .controlSize(.small)
 
@@ -82,7 +82,7 @@ struct RepeaterRowView: View {
                         .labelStyle(.iconOnly)
                         .frame(width: iconButtonSize, height: iconButtonSize)
                 }
-                .glassButtonStyle()
+                .liquidGlassSecondaryButtonStyle()
                 .controlSize(.small)
                 .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != .repeater)
 
@@ -104,7 +104,7 @@ struct RepeaterRowView: View {
                     }
                     .frame(width: iconButtonSize, height: iconButtonSize)
                 }
-                .glassButtonStyle()
+                .liquidGlassSecondaryButtonStyle()
                 .controlSize(.small)
 
                 // Clear button
@@ -115,7 +115,7 @@ struct RepeaterRowView: View {
                         .labelStyle(.iconOnly)
                         .frame(width: iconButtonSize, height: iconButtonSize)
                 }
-                .glassButtonStyle()
+                .liquidGlassSecondaryButtonStyle()
                 .controlSize(.small)
             }
 

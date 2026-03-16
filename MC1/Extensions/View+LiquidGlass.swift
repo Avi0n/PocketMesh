@@ -21,6 +21,16 @@ extension View {
         }
     }
 
+    /// Applies glass button style on iOS 26+, falls back to bordered (secondary weight) on earlier versions
+    @ViewBuilder
+    func liquidGlassSecondaryButtonStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+
     /// Applies prominent glass button style with tint on iOS 26+, falls back to borderedProminent on earlier versions
     @ViewBuilder
     func liquidGlassProminentButtonStyle() -> some View {
