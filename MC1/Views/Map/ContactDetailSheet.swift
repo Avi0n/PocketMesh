@@ -40,10 +40,10 @@ struct ContactDetailSheet: View {
 
                     LabeledContent(L10n.Map.Map.Detail.type) {
                         HStack {
-                            Image(systemName: typeIconName)
+                            Image(systemName: contact.type.iconSystemName)
                             Text(typeDisplayName)
                         }
-                        .foregroundStyle(typeColor)
+                        .foregroundStyle(contact.type.displayColor)
                     }
 
                     if contact.isFavorite {
@@ -192,17 +192,6 @@ struct ContactDetailSheet: View {
 
     // MARK: - Computed Properties
 
-    private var typeIconName: String {
-        switch contact.type {
-        case .chat:
-            "person.fill"
-        case .repeater:
-            "antenna.radiowaves.left.and.right"
-        case .room:
-            "person.3.fill"
-        }
-    }
-
     private var typeDisplayName: String {
         switch contact.type {
         case .chat:
@@ -214,14 +203,4 @@ struct ContactDetailSheet: View {
         }
     }
 
-    private var typeColor: Color {
-        switch contact.type {
-        case .chat:
-            .blue
-        case .repeater:
-            .green
-        case .room:
-            .purple
-        }
-    }
 }

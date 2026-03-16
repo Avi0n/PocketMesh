@@ -41,7 +41,7 @@ struct PointRowButtonsView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: iconButtonSize, height: iconButtonSize)
         }
-        .glassButtonStyle()
+        .liquidGlassSecondaryButtonStyle()
         .sensoryFeedback(.success, trigger: copyHapticTrigger)
         .controlSize(.small)
 
@@ -58,7 +58,7 @@ struct PointRowButtonsView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: iconButtonSize, height: iconButtonSize)
         }
-        .glassButtonStyle()
+        .liquidGlassSecondaryButtonStyle()
         .controlSize(.small)
         .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != pointID)
 
@@ -80,7 +80,7 @@ struct PointRowButtonsView: View {
             }
             .frame(width: iconButtonSize, height: iconButtonSize)
         }
-        .glassButtonStyle()
+        .liquidGlassSecondaryButtonStyle()
         .controlSize(.small)
 
         // Clear button
@@ -89,7 +89,7 @@ struct PointRowButtonsView: View {
                 .labelStyle(.iconOnly)
                 .frame(width: iconButtonSize, height: iconButtonSize)
         }
-        .glassButtonStyle()
+        .liquidGlassSecondaryButtonStyle()
         .controlSize(.small)
     }
 }

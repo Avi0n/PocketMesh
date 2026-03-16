@@ -212,13 +212,15 @@ private struct ButtonContent: View {
                 Button(L10n.Settings.LocationPicker.clearLocation, role: .destructive) {
                     onClear()
                 }
-                .modifier(LocationPickerGlassButtonModifier(isProminent: false))
+                .liquidGlassSecondaryButtonStyle()
+                .controlSize(.regular)
             }
 
             Button(L10n.Settings.LocationPicker.dropPin) {
                 onDropPin()
             }
-            .modifier(LocationPickerGlassButtonModifier(isProminent: true))
+            .liquidGlassProminentButtonStyle()
+            .controlSize(.regular)
         }
     }
 }
@@ -281,30 +283,6 @@ private struct CoordinateGlassModifier: ViewModifier {
             content.glassEffect(.regular, in: .rect(cornerRadius: 8))
         } else {
             content
-        }
-    }
-}
-
-private struct LocationPickerGlassButtonModifier: ViewModifier {
-    let isProminent: Bool
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            if isProminent {
-                content
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.regular)
-            } else {
-                content
-                    .buttonStyle(.glass)
-                    .controlSize(.regular)
-            }
-        } else {
-            if isProminent {
-                content.buttonStyle(.borderedProminent)
-            } else {
-                content.buttonStyle(.bordered)
-            }
         }
     }
 }

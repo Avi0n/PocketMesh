@@ -367,10 +367,10 @@ extension MC1MapView {
             // 1. Check cluster layers
             let clusterFeatures = mapView.visibleFeatures(
                 in: clusterRect,
-                styleLayerIdentifiers: ["cluster-circles"]
+                styleLayerIdentifiers: [MapLayerID.clusterCircles]
             )
             if let cluster = clusterFeatures.first(where: { $0 is MLNPointFeatureCluster }) as? MLNPointFeatureCluster,
-               let source = mapView.style?.source(withIdentifier: "points") as? MLNShapeSource {
+               let source = mapView.style?.source(withIdentifier: MapSourceID.points) as? MLNShapeSource {
                 let zoom = source.zoomLevel(forExpanding: cluster)
                 guard zoom >= 0 else { return }
                 mapView.setCenter(cluster.coordinate, zoomLevel: zoom + 2.0, animated: true)
@@ -380,7 +380,7 @@ extension MC1MapView {
             // 2. Check point layers (both clustered and fixed)
             let pointFeatures = mapView.visibleFeatures(
                 at: point,
-                styleLayerIdentifiers: ["unclustered-icons", "fixed-icons"]
+                styleLayerIdentifiers: [MapLayerID.unclusteredIcons, MapLayerID.fixedIcons]
             )
             logger.debug("pointFeatures: \(pointFeatures.count, privacy: .public), clusterFeatures: \(clusterFeatures.count, privacy: .public)")
             if let feature = pointFeatures.first,
@@ -397,7 +397,7 @@ extension MC1MapView {
             // 3. Check badge text layers
             let badgeFeatures = mapView.visibleFeatures(
                 at: point,
-                styleLayerIdentifiers: ["badge-text", "fixed-badge-text"]
+                styleLayerIdentifiers: [MapLayerID.badgeText, MapLayerID.fixedBadgeText]
             )
             if badgeFeatures.first != nil {
                 return // absorb tap on badges

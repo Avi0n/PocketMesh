@@ -29,6 +29,6 @@ struct AddRepeaterRowView: View {
             }
             .padding(.vertical, 8)
         }
-        .glassButtonStyle()
+        .liquidGlassSecondaryButtonStyle()
     }
 }

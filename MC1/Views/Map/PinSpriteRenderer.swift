@@ -6,25 +6,33 @@ enum PinSpriteRenderer {
     /// Used by the map Coordinator to position callout anchors above the pin icon.
     static let standardHeight: CGFloat = 43 // 36 (circle) + 10 (triangle) - 3 (overlap)
 
+    private nonisolated(unsafe) static var cachedImages: [String: UIImage]?
+
     static func renderAll(into style: MLNStyle) {
-        for spec in allSpecs {
-            let image = render(spec)
-            style.setImage(image, forName: spec.name)
-        }
-        // Transparent 1px sprite for badge points (only badge-text layer renders)
-        let transparent = UIGraphicsImageRenderer(size: CGSize(width: 1, height: 1), format: .preferred()).image { _ in }
-        style.setImage(transparent, forName: "pin-badge")
-
-        // Hop badge variants for ring-white pins (trace path)
-        if let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) {
-            for hop in 1...20 {
-                let image = render(ringWhiteSpec, hopIndex: hop)
-                style.setImage(image, forName: "pin-repeater-ring-white-hop-\(hop)")
+        let images: [String: UIImage]
+        if let cached = cachedImages {
+            images = cached
+        } else {
+            var rendered: [String: UIImage] = [:]
+            for spec in allSpecs {
+                rendered[spec.name] = render(spec)
             }
+            rendered["pin-badge"] = UIGraphicsImageRenderer(
+                size: CGSize(width: 1, height: 1), format: .preferred()
+            ).image { _ in }
+            if let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) {
+                for hop in 1...20 {
+                    rendered["pin-repeater-ring-white-hop-\(hop)"] = render(ringWhiteSpec, hopIndex: hop)
+                }
+            }
+            rendered["pill-bg"] = renderPillBackground()
+            cachedImages = rendered
+            images = rendered
         }
 
-        // Stretchable pill background for label and badge layers
-        style.setImage(renderPillBackground(), forName: "pill-bg")
+        for (name, image) in images {
+            style.setImage(image, forName: name)
+        }
     }
 
     // MARK: - Sprite specifications

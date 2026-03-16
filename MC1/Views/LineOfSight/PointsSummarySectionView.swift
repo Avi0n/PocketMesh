@@ -21,7 +21,7 @@ struct PointsSummarySectionView: View {
                     Button(L10n.Tools.Tools.LineOfSight.cancel) {
                         viewModel.relocatingPoint = nil
                     }
-                    .glassButtonStyle()
+                    .liquidGlassSecondaryButtonStyle()
                     .controlSize(.small)
                 }
             }
