@@ -123,6 +123,29 @@ struct ConnectionManagerBLEHealthTests {
         #expect(manager.sessionRebuildDeviceID == deviceID)
     }
 
+    @Test("health check does not attempt adoption while BLE restoration is already in progress")
+    func healthCheckSkipsAdoptionDuringRestoration() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+        await mock.setStubbedCurrentPhaseName("restoringState")
+        await mock.setStubbedIsDeviceConnectedToSystem(true)
+
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection()
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        let adoptionCalls = await mock.startAdoptingSystemConnectedPeripheralCalls
+        #expect(adoptionCalls.isEmpty)
+    }
+
     @Test("health check skips reconnection when Bluetooth is powered off")
     func healthCheckSkipsReconnectionWhenPoweredOff() async throws {
         let (manager, mock) = try ConnectionManager.createForTesting()

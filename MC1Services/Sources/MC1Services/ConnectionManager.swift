@@ -653,6 +653,16 @@ public final class ConnectionManager {
                           self.connectionState == .disconnected,
                           let deviceID = self.lastConnectedDeviceID else { return }
 
+                    let blePhase = await self.stateMachine.currentPhaseName
+                    let bleConnectedDeviceID = await self.stateMachine.connectedDeviceID
+                    if blePhase != "idle" || bleConnectedDeviceID == deviceID {
+                        self.logger.info(
+                            "[BLE] Bluetooth powered on: BLE already owns reconnect flow for \(deviceID.uuidString.prefix(8)) " +
+                            "(phase: \(blePhase), bleConnectedDevice: \(bleConnectedDeviceID?.uuidString.prefix(8) ?? "none"))"
+                        )
+                        return
+                    }
+
                     if self.activeReconnectDeviceID == deviceID {
                         self.logger.info("[BLE] Bluetooth powered on: reconnect/session rebuild already in progress for \(deviceID.uuidString.prefix(8))")
                         return

@@ -194,4 +194,12 @@ extension MockBLEStateMachine {
     func setStubbedDidStartAdoptingSystemConnectedPeripheral(_ value: Bool) {
         stubbedDidStartAdoptingSystemConnectedPeripheral = value
     }
+
+    func setStubbedCurrentPhaseName(_ value: String) {
+        stubbedCurrentPhaseName = value
+    }
+
+    func setStubbedConnectedDeviceID(_ value: UUID?) {
+        stubbedConnectedDeviceID = value
+    }
 }
