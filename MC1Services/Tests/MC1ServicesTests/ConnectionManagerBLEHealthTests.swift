@@ -101,6 +101,28 @@ struct ConnectionManagerBLEHealthTests {
         #expect(manager.connectionState == .connecting)
     }
 
+    @Test("skips reconnect while session rebuild is in progress")
+    func skipsWhenSessionRebuildInProgress() async throws {
+        let (manager, mock) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        await mock.setStubbedIsConnected(false)
+        await mock.setStubbedIsAutoReconnecting(false)
+
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection(),
+            sessionRebuildDeviceID: deviceID
+        )
+        manager.testLastConnectedDeviceID = deviceID
+
+        await manager.checkBLEConnectionHealth()
+
+        #expect(manager.connectionState == .disconnected)
+        #expect(manager.sessionRebuildDeviceID == deviceID)
+    }
+
     @Test("health check skips reconnection when Bluetooth is powered off")
     func healthCheckSkipsReconnectionWhenPoweredOff() async throws {
         let (manager, mock) = try ConnectionManager.createForTesting()

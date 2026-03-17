@@ -67,6 +67,37 @@ struct ConnectionManagerSessionTests {
         #expect(result)
     }
 
+    @Test("activeConnectionAttemptDeviceID prefers session rebuild device")
+    func activeConnectionAttemptDeviceIDPrefersSessionRebuildDevice() throws {
+        let (manager, _) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        manager.setTestState(sessionRebuildDeviceID: deviceID)
+
+        #expect(manager.activeConnectionAttemptDeviceID == deviceID)
+        #expect(manager.activeReconnectDeviceID == deviceID)
+    }
+
+    @Test("connect to same device returns early while session rebuild is in progress")
+    func connectToSameDeviceReturnsEarlyDuringSessionRebuild() async throws {
+        let (manager, _) = try ConnectionManager.createForTesting()
+        let deviceID = UUID()
+
+        manager.testLastConnectedDeviceID = deviceID
+        manager.setTestState(
+            connectionState: .disconnected,
+            currentTransportType: .bluetooth,
+            connectionIntent: .wantsConnection(),
+            sessionRebuildDeviceID: deviceID
+        )
+
+        try await manager.connect(to: deviceID)
+
+        #expect(manager.connectionState == .disconnected)
+        #expect(manager.sessionRebuildDeviceID == deviceID)
+        #expect(manager.connectionIntent == .wantsConnection())
+    }
+
     // MARK: - handleReconnectionFailure Tests
 
     @Test("handleReconnectionFailure clears state and sets disconnected")

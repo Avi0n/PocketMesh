@@ -244,6 +244,11 @@ extension ConnectionManager {
         guard connectionIntent.wantsConnection,
               let deviceID = lastConnectedDeviceID else { return }
 
+        if activeReconnectDeviceID == deviceID {
+            logger.info("[BLE] Skipping foreground reconnect: reconnect/session rebuild already in progress for \(deviceID.uuidString.prefix(8))")
+            return
+        }
+
         // Check actual BLE state - if connected at BLE level, no action needed
         let bleConnected = await stateMachine.isConnected
         if bleConnected {

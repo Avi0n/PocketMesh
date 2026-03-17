@@ -2,6 +2,13 @@ import Foundation
 import MeshCore
 
 extension ConnectionManager {
+    var activeConnectionAttemptDeviceID: UUID? {
+        connectingDeviceID ?? sessionRebuildDeviceID ?? reconnectionCoordinator.reconnectingDeviceID
+    }
+
+    var activeReconnectDeviceID: UUID? {
+        sessionRebuildDeviceID ?? reconnectionCoordinator.reconnectingDeviceID
+    }
 
     // MARK: - App Lifecycle
 
@@ -264,9 +271,17 @@ extension ConnectionManager {
             throw BLEError.connectionFailed("Connection blocked by circuit breaker (cooling down)")
         }
 
+        if activeReconnectDeviceID == deviceID {
+            connectionIntent = .wantsConnection(forceFullSync: forceFullSync)
+            persistIntent()
+            reconnectionCoordinator.restartTimeout(deviceID: deviceID)
+            logger.info("[BLE] Reconnect already in progress for \(deviceID.uuidString.prefix(8)), deferring duplicate connect request")
+            return
+        }
+
         // Prevent concurrent connection attempts
         if connectionState == .connecting {
-            let currentDeviceID = connectingDeviceID ?? reconnectionCoordinator.reconnectingDeviceID
+            let currentDeviceID = activeConnectionAttemptDeviceID
 
             if currentDeviceID == deviceID {
                 if connectingDeviceID == nil {
