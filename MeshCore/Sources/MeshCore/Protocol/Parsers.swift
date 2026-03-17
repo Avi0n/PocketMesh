@@ -7,8 +7,9 @@ import os
 enum PacketSize {
     /// Full contact structure size.
     static let contact = 147
-    /// Minimum size for self info response.
-    static let selfInfoMinimum = 55
+    /// Minimum size for self info response before optional device name bytes.
+    /// Format: fixed fields through radio SF/CR = 57 bytes.
+    static let selfInfoMinimum = 57
     /// Minimum size for message sent confirmation.
     static let messageSentMinimum = 9
     /// Minimum size for version 1 contact messages.

@@ -170,6 +170,66 @@ struct RoundTripTests {
         #expect(info.name == "NegPwr")
     }
 
+    @Test("SelfInfo parses minimum-length payload without device name")
+    func selfInfoMinimumLengthPayload() {
+        var data = Data()
+        data.append(0x01)  // advType
+        data.append(UInt8(bitPattern: Int8(20)))  // txPower
+        data.append(UInt8(bitPattern: Int8(30)))  // maxTxPower
+        data.append(Data(repeating: 0xAA, count: 32))  // publicKey
+        data.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Data($0) })  // lat
+        data.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Data($0) })  // lon
+        data.append(0x02)  // multiAcks
+        data.append(0x01)  // advLocPolicy
+        data.append(0x00)  // telemetryMode
+        data.append(0x01)  // manualAdd
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(915_000).littleEndian) { Data($0) })  // radioFreq
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(250_000).littleEndian) { Data($0) })  // radioBW
+        data.append(0x0A)  // radioSF
+        data.append(0x05)  // radioCR
+
+        #expect(data.count == 57)
+
+        let event = Parsers.SelfInfo.parse(data)
+
+        guard case .selfInfo(let info) = event else {
+            Issue.record("Expected .selfInfo event, got \(event)")
+            return
+        }
+
+        #expect(info.radioSpreadingFactor == 0x0A)
+        #expect(info.radioCodingRate == 0x05)
+        #expect(info.name.isEmpty)
+    }
+
+    @Test("SelfInfo rejects truncated fixed-width payload")
+    func selfInfoRejectsTruncatedPayload() {
+        var data = Data()
+        data.append(0x01)  // advType
+        data.append(UInt8(bitPattern: Int8(20)))  // txPower
+        data.append(UInt8(bitPattern: Int8(30)))  // maxTxPower
+        data.append(Data(repeating: 0xAA, count: 32))  // publicKey
+        data.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Data($0) })  // lat
+        data.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Data($0) })  // lon
+        data.append(0x02)  // multiAcks
+        data.append(0x01)  // advLocPolicy
+        data.append(0x00)  // telemetryMode
+        data.append(0x01)  // manualAdd
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(915_000).littleEndian) { Data($0) })  // radioFreq
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(250_000).littleEndian) { Data($0) })  // radioBW
+
+        #expect(data.count == 55)
+
+        let event = Parsers.SelfInfo.parse(data)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected .parseFailure event, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("SelfInfo response too short"))
+    }
+
     // MARK: - Message Round-Trip
 
     @Test("ContactMessage v3 round trip")
