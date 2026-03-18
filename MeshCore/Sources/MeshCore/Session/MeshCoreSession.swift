@@ -877,9 +877,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
-
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -896,6 +893,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
                     case .statusResponse(let response):
                         // Handle already-routed response (if routing happens elsewhere)
+                        guard response.publicKeyPrefix == publicKeyPrefix else { continue }
                         let elapsed = ContinuousClock.now - startTime
                         logger.info("Status request to \(prefixHex): routed response received in \(elapsed)")
                         return response
@@ -1844,9 +1842,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
-
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1861,6 +1856,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
                     case .telemetryResponse(let response):
                         // Handle already-routed response (if routing happens elsewhere)
+                        guard response.publicKeyPrefix == publicKeyPrefix else { continue }
                         let elapsed = ContinuousClock.now - startTime
                         logger.info("Telemetry request to \(prefixHex): routed response received in \(elapsed)")
                         return response
@@ -1958,9 +1954,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
 
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
-
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
                         let entries = MMAParser.parse(responseData)
@@ -2033,9 +2026,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 2.0
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
-
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -2141,9 +2131,6 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 2.0
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
-
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }

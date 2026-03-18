@@ -222,6 +222,73 @@ struct MeshCoreSessionCommandCorrelationTests {
         #expect(channel.name == "Right")
         await session.stop()
     }
+
+    @Test("requestStatus ignores unrelated errors and wrong-node status responses")
+    func requestStatusIgnoresUnrelatedErrorsAndWrongNodeResponses() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let target = Data(repeating: 0x31, count: 32)
+        let statusTask = Task {
+            try await session.requestStatus(from: target)
+        }
+
+        try await waitUntil("requestStatus should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateError(code: 10)
+        await transport.simulateReceive(makeStatusResponsePacket(publicKeyPrefix: Data(repeating: 0x99, count: 6), battery: 3900))
+        await transport.simulateReceive(makeStatusResponsePacket(publicKeyPrefix: Data(repeating: 0x31, count: 6), battery: 4010))
+
+        let response = try await statusTask.value
+        #expect(response.publicKeyPrefix == Data(repeating: 0x31, count: 6))
+        #expect(response.battery == 4010)
+        await session.stop()
+    }
+
+    @Test("requestTelemetry ignores unrelated errors and wrong-node telemetry responses")
+    func requestTelemetryIgnoresUnrelatedErrorsAndWrongNodeResponses() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let target = Data(repeating: 0x31, count: 32)
+        let telemetryTask = Task {
+            try await session.requestTelemetry(from: target)
+        }
+
+        try await waitUntil("requestTelemetry should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateError(code: 11)
+        await transport.simulateReceive(
+            makeTelemetryPacket(
+                publicKeyPrefix: Data(repeating: 0x88, count: 6),
+                lppPayload: Data([0x01, 0x67, 0x00, 0xFA])
+            )
+        )
+        await transport.simulateReceive(
+            makeTelemetryPacket(
+                publicKeyPrefix: Data(repeating: 0x31, count: 6),
+                lppPayload: Data([0x01, 0x67, 0x00, 0xF0])
+            )
+        )
+
+        let response = try await telemetryTask.value
+        #expect(response.publicKeyPrefix == Data(repeating: 0x31, count: 6))
+        await session.stop()
+    }
 }
 
 private func startSession(
@@ -274,6 +341,29 @@ private func makeTelemetryPacket(publicKeyPrefix: Data, lppPayload: Data) -> Dat
     packet.append(0x00)
     packet.append(publicKeyPrefix)
     packet.append(lppPayload)
+    return packet
+}
+
+private func makeStatusResponsePacket(publicKeyPrefix: Data, battery: UInt16) -> Data {
+    var packet = Data([ResponseCode.statusResponse.rawValue, 0x00])
+    packet.append(publicKeyPrefix)
+    packet.append(contentsOf: withUnsafeBytes(of: battery.littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: Int16(-110).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: Int16(-85).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(100).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(50).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(25).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(3600).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(5).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(10).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(15).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(20).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: Int16(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(0).littleEndian) { Array($0) })
     return packet
 }
 
