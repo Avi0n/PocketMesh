@@ -1044,6 +1044,62 @@ struct PersistenceStoreTests {
         #expect(entries.first?.senderTimestamp == 1703123456)
     }
 
+    @Test("RX log prune is deferred until threshold is exceeded")
+    func rxLogPruneDefersUntilThresholdExceeded() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        for index in 0..<1_100 {
+            let dto = createTestRxLogEntryDTO(
+                deviceID: device.id,
+                senderTimestamp: UInt32(index)
+            )
+            try await store.saveRxLogEntry(dto)
+            try await store.pruneRxLogEntries(deviceID: device.id)
+        }
+
+        let entriesBeforeThreshold = try await store.fetchRxLogEntries(deviceID: device.id, limit: 1_200)
+        #expect(entriesBeforeThreshold.count == 1_100)
+
+        let thresholdEntry = createTestRxLogEntryDTO(
+            deviceID: device.id,
+            senderTimestamp: UInt32(1_100)
+        )
+        try await store.saveRxLogEntry(thresholdEntry)
+        try await store.pruneRxLogEntries(deviceID: device.id)
+
+        let entriesAfterThreshold = try await store.fetchRxLogEntries(deviceID: device.id, limit: 1_200)
+        #expect(entriesAfterThreshold.count == 1_000)
+        #expect(entriesAfterThreshold.first?.senderTimestamp == 1_100)
+        #expect(entriesAfterThreshold.last?.senderTimestamp == 101)
+    }
+
+    @Test("Clearing RX log resets cached count for future pruning")
+    func clearRxLogResetsCachedCount() async throws {
+        let store = try await createTestStore()
+        let device = createTestDevice()
+        try await store.saveDevice(device)
+
+        for index in 0..<1_101 {
+            let dto = createTestRxLogEntryDTO(
+                deviceID: device.id,
+                senderTimestamp: UInt32(index)
+            )
+            try await store.saveRxLogEntry(dto)
+        }
+        try await store.pruneRxLogEntries(deviceID: device.id)
+        try await store.clearRxLogEntries(deviceID: device.id)
+
+        let replacement = createTestRxLogEntryDTO(deviceID: device.id, senderTimestamp: 42)
+        try await store.saveRxLogEntry(replacement)
+        try await store.pruneRxLogEntries(deviceID: device.id)
+
+        let entries = try await store.fetchRxLogEntries(deviceID: device.id)
+        #expect(entries.count == 1)
+        #expect(entries.first?.senderTimestamp == 42)
+    }
+
     // MARK: - Mute Tests
 
     @Test("Set contact muted")

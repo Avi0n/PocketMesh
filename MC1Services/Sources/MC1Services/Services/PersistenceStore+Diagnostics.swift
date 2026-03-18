@@ -129,6 +129,7 @@ extension PersistenceStore {
         )
         modelContext.insert(entry)
         try modelContext.save()
+        rxLogEntryCountsByDevice[dto.deviceID, default: 0] += 1
     }
 
     /// Fetch RX log entries for a device, most recent first.
@@ -152,10 +153,17 @@ extension PersistenceStore {
         return try modelContext.fetchCount(descriptor)
     }
 
-    /// Delete oldest entries if count exceeds limit.
-    public func pruneRxLogEntries(deviceID: UUID, keepCount: Int = 1000) throws {
-        let count = try countRxLogEntries(deviceID: deviceID)
-        guard count > keepCount else { return }
+    /// Delete oldest entries once the log materially exceeds the retention cap.
+    ///
+    /// This avoids repeated count/fetch/delete maintenance on every RX packet while keeping
+    /// retention bounded to `keepCount + pruneThreshold` entries between prune passes.
+    public func pruneRxLogEntries(
+        deviceID: UUID,
+        keepCount: Int = 1000,
+        pruneThreshold: Int = 100
+    ) throws {
+        let count = try cachedRxLogEntryCount(deviceID: deviceID)
+        guard count > keepCount + pruneThreshold else { return }
 
         let deleteCount = count - keepCount
         let targetDeviceID = deviceID
@@ -171,6 +179,7 @@ extension PersistenceStore {
             modelContext.delete(entry)
         }
         try modelContext.save()
+        rxLogEntryCountsByDevice[deviceID] = keepCount
     }
 
     /// Clear all RX log entries for a device.
@@ -184,6 +193,17 @@ extension PersistenceStore {
             modelContext.delete(entry)
         }
         try modelContext.save()
+        rxLogEntryCountsByDevice[deviceID] = 0
+    }
+
+    private func cachedRxLogEntryCount(deviceID: UUID) throws -> Int {
+        if let cached = rxLogEntryCountsByDevice[deviceID] {
+            return cached
+        }
+
+        let count = try countRxLogEntries(deviceID: deviceID)
+        rxLogEntryCountsByDevice[deviceID] = count
+        return count
     }
 
     /// Find RxLogEntry matching an incoming message for path correlation.

@@ -36,6 +36,7 @@ extension PersistenceStoreError: LocalizedError {
 /// Provides per-device data isolation and thread-safe access.
 @ModelActor
 public actor PersistenceStore: PersistenceStoreProtocol {
+    var rxLogEntryCountsByDevice: [UUID: Int] = [:]
 
     /// Shared schema for MeshCore One models
     public static let schema = Schema([
