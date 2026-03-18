@@ -573,7 +573,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func sendAppStart() async throws -> SelfInfo {
         let data = PacketBuilder.appStart(clientId: configuration.clientIdentifier)
-        return try await sendAndWaitWithError(data) { event in
+        return try await sendAndWait(data) { event in
             if case .selfInfo(let info) = event { return info }
             return nil
         }
@@ -586,7 +586,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func queryDevice() async throws -> DeviceCapabilities {
         let data = PacketBuilder.deviceQuery()
-        return try await sendAndWaitWithError(data) { event in
+        return try await sendAndWait(data) { event in
             if case .deviceInfo(let info) = event { return info }
             return nil
         }
@@ -598,8 +598,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getBattery() async throws -> BatteryInfo {
-        let data = PacketBuilder.getBattery()
-        return try await sendAndWaitWithError(data) { event in
+        try await sendAndWait(PacketBuilder.getBattery()) { event in
             if case .battery(let info) = event { return info }
             return nil
         }
@@ -1048,7 +1047,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getRepeatFreq() async throws -> [FrequencyRange] {
-        try await sendAndWaitWithError(PacketBuilder.getRepeatFreq()) { event in
+        try await sendAndWait(PacketBuilder.getRepeatFreq()) { event in
             if case .allowedRepeatFreq(let ranges) = event { return ranges }
             return nil
         }
@@ -1177,7 +1176,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getAutoAddConfig() async throws -> AutoAddConfig {
-        try await sendAndWaitWithError(PacketBuilder.getAutoAddConfig()) { event in
+        try await sendAndWait(PacketBuilder.getAutoAddConfig()) { event in
             if case .autoAddConfig(let config) = event { return config }
             return nil
         }
@@ -1239,8 +1238,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Device telemetry including battery, temperature, and sensor data.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getSelfTelemetry() async throws -> TelemetryResponse {
-        try await sendAndWait(PacketBuilder.getSelfTelemetry()) { event in
-            if case .telemetryResponse(let response) = event { return response }
+        let expectedPrefix = selfInfo.map { Data($0.publicKey.prefix(6)) }
+        return try await sendAndWait(PacketBuilder.getSelfTelemetry()) { event in
+            if case .telemetryResponse(let response) = event,
+               expectedPrefix == nil || response.publicKeyPrefix == expectedPrefix {
+                return response
+            }
             return nil
         }
     }
@@ -1757,7 +1760,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getChannel(index: UInt8) async throws -> ChannelInfo {
         try await sendAndWait(PacketBuilder.getChannel(index: index)) { event in
-            if case .channelInfo(let info) = event { return info }
+            if case .channelInfo(let info) = event, info.index == index { return info }
             return nil
         }
     }
