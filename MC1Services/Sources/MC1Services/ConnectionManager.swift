@@ -219,6 +219,10 @@ public final class ConnectionManager {
     /// Nil during auto-reconnect (tracked by reconnectionCoordinator.reconnectingDeviceID instead).
     var connectingDeviceID: UUID?
 
+    /// The device whose MeshCore session is currently being rebuilt after a BLE auto-reconnect.
+    /// Used to suppress duplicate reconnect attempts while session startup is still in flight.
+    var sessionRebuildDeviceID: UUID?
+
     // MARK: - Callbacks
 
     /// Called when connection is ready and services are available.
@@ -649,6 +653,21 @@ public final class ConnectionManager {
                           self.connectionState == .disconnected,
                           let deviceID = self.lastConnectedDeviceID else { return }
 
+                    let blePhase = await self.stateMachine.currentPhaseName
+                    let bleConnectedDeviceID = await self.stateMachine.connectedDeviceID
+                    if blePhase != "idle" || bleConnectedDeviceID == deviceID {
+                        self.logger.info(
+                            "[BLE] Bluetooth powered on: BLE already owns reconnect flow for \(deviceID.uuidString.prefix(8)) " +
+                            "(phase: \(blePhase), bleConnectedDevice: \(bleConnectedDeviceID?.uuidString.prefix(8) ?? "none"))"
+                        )
+                        return
+                    }
+
+                    if self.activeReconnectDeviceID == deviceID {
+                        self.logger.info("[BLE] Bluetooth powered on: reconnect/session rebuild already in progress for \(deviceID.uuidString.prefix(8))")
+                        return
+                    }
+
                     self.logger.info("[BLE] Bluetooth powered on: attempting reconnection to \(deviceID.uuidString.prefix(8))")
                     try? await self.connect(to: deviceID)
                 }
@@ -857,7 +876,8 @@ public final class ConnectionManager {
         connectionState: ConnectionState? = nil,
         currentTransportType: TransportType?? = nil,
         connectionIntent: ConnectionIntent? = nil,
-        connectingDeviceID: UUID?? = nil
+        connectingDeviceID: UUID?? = nil,
+        sessionRebuildDeviceID: UUID?? = nil
     ) {
         suppressInvariantChecks = true
         defer { suppressInvariantChecks = false }
@@ -873,6 +893,9 @@ public final class ConnectionManager {
         }
         if let deviceID = connectingDeviceID {
             self.connectingDeviceID = deviceID
+        }
+        if let deviceID = sessionRebuildDeviceID {
+            self.sessionRebuildDeviceID = deviceID
         }
     }
     #endif

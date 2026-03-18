@@ -85,11 +85,15 @@ extension ConnectionManager {
             return false
         }
 
+        // Adoption is only valid from an idle BLE state machine. If restoration or another
+        // discovery chain is already in progress, let that flow own the reconnect.
+        let blePhase = await stateMachine.currentPhaseName
+        guard blePhase == "idle" else { return false }
+
         // Avoid doing teardown/UI transitions when there is no system-level link.
         guard await stateMachine.isDeviceConnectedToSystem(deviceID) else { return false }
 
         let bleState = await stateMachine.centralManagerStateName
-        let blePhase = await stateMachine.currentPhaseName
         let blePeripheralState = await stateMachine.currentPeripheralState ?? "none"
         logger.warning(
             "[BLE] \(context): device appears system-connected while disconnected; attempting adoption - " +
@@ -243,6 +247,11 @@ extension ConnectionManager {
         // Check if user expects to be connected
         guard connectionIntent.wantsConnection,
               let deviceID = lastConnectedDeviceID else { return }
+
+        if activeReconnectDeviceID == deviceID {
+            logger.info("[BLE] Skipping foreground reconnect: reconnect/session rebuild already in progress for \(deviceID.uuidString.prefix(8))")
+            return
+        }
 
         // Check actual BLE state - if connected at BLE level, no action needed
         let bleConnected = await stateMachine.isConnected

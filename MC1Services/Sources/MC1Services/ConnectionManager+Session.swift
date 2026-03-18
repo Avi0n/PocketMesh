@@ -51,6 +51,12 @@ extension ConnectionManager: BLEReconnectionDelegate {
     func rebuildSession(deviceID: UUID) async throws {
         logger.info("[BLE] Rebuilding session for auto-reconnect: \(deviceID.uuidString.prefix(8))")
         let expectedGeneration = reconnectionCoordinator.reconnectGeneration
+        sessionRebuildDeviceID = deviceID
+        defer {
+            if sessionRebuildDeviceID == deviceID {
+                sessionRebuildDeviceID = nil
+            }
+        }
 
         // Stop any existing session to prevent multiple receive loops racing for transport data
         await session?.stop()
@@ -60,7 +66,7 @@ extension ConnectionManager: BLEReconnectionDelegate {
         self.session = newSession
 
         do {
-            try await newSession.start()
+            try await newSession.start(reconnectingAttempt: 1)
         } catch {
             logger.warning("[BLE] rebuildSession: session.start() failed: \(error.localizedDescription)")
             throw error

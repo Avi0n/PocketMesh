@@ -134,6 +134,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     }
 
     private func updateConnectionState(_ state: ConnectionState) {
+        logger.info("Session connection state -> \(String(describing: state))")
         _connectionState = state
         for continuation in connectionStateContinuations.values {
             continuation.yield(state)
@@ -173,9 +174,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// The session becomes ready for use after this method returns successfully.
     /// Subscribe to events via ``events()`` to receive incoming messages and notifications.
     ///
+    /// - Parameter reconnectingAttempt: When non-nil, publishes `.reconnecting(attempt:)`
+    ///   instead of `.connecting` before establishing the transport/session.
     /// - Throws: ``MeshTransportError`` if the transport connection fails.
     ///           ``MeshCoreError/timeout`` if the device doesn't respond to appStart.
-    public func start() async throws {
+    public func start(reconnectingAttempt: Int? = nil) async throws {
         // Guard against being called multiple times
         if isRunning {
             logger.warning("Session already running - skipping redundant start()")
@@ -183,7 +186,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
 
         logger.info("Starting MeshCore session...")
-        updateConnectionState(.connecting)
+        if let reconnectingAttempt {
+            updateConnectionState(.reconnecting(attempt: max(1, reconnectingAttempt)))
+        } else {
+            updateConnectionState(.connecting)
+        }
         logger.info("Connecting via transport...")
         do {
             try await transport.connect()
