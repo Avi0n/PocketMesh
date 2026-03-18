@@ -464,6 +464,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Sends a command and waits for a matching response.
     ///
     /// This method avoids race conditions by subscribing to events before sending the command.
+    /// Events that do not satisfy the matcher, including unrelated `.error` events, are
+    /// ignored until a matching response arrives or the timeout expires.
     ///
     /// - Parameters:
     ///   - data: The command data to send.
@@ -489,9 +491,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameters:
     ///   - data: Command data to send.
     ///   - successPredicate: Predicate to match success events and extract result.
+    ///   - errorMatcher: Optional matcher for request-specific error events. Errors that
+    ///     do not match are ignored so unrelated commands cannot fail the active request.
     ///   - timeout: Optional timeout override.
     /// - Returns: The extracted result on success.
-    /// - Throws: ``MeshCoreError/deviceError(code:)`` on error response,
+    /// - Throws: A matched ``MeshCoreError`` from `errorMatcher`,
     ///           ``MeshCoreError/timeout`` on timeout.
     private func sendAndWaitWithError<T: Sendable>(
         _ data: Data,
@@ -524,7 +528,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         try await requestResponseSerializer.withSerialization { [self] in
             let effectiveTimeout = timeout ?? configuration.defaultTimeout
 
-            // Subscribe BEFORE sending to avoid race condition
+            // Subscribe BEFORE sending to avoid race condition, then ignore all
+            // non-matching events until this request sees its own response.
             let events = await dispatcher.subscribe()
 
             // Send after subscribing
@@ -569,8 +574,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// This is typically called automatically by ``start()``.
     ///
     /// - Returns: Information about the device itself.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit `selfInfo`.
     public func sendAppStart() async throws -> SelfInfo {
         let data = PacketBuilder.appStart(clientId: configuration.clientIdentifier)
         return try await sendAndWait(data) { event in
@@ -582,8 +586,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Queries the device for its capabilities and system information.
     ///
     /// - Returns: Information about the device hardware, firmware, and supported features.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit `deviceInfo`.
     public func queryDevice() async throws -> DeviceCapabilities {
         let data = PacketBuilder.deviceQuery()
         return try await sendAndWait(data) { event in
@@ -595,8 +598,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Retrieves the current battery status from the device.
     ///
     /// - Returns: Battery voltage and charge level information.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit battery info.
     public func getBattery() async throws -> BatteryInfo {
         try await sendAndWait(PacketBuilder.getBattery()) { event in
             if case .battery(let info) = event { return info }
@@ -683,8 +685,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// - Parameter publicKey: The full 32-byte public key of the contact.
     /// - Returns: The contact if found, or `nil` if no contact exists with that key.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit a matching contact response.
     public func getContact(publicKey: Data) async throws -> MeshContact? {
         let data = PacketBuilder.getContactByKey(publicKey: publicKey)
         return try await sendAndWait(data) { event in
@@ -1042,8 +1043,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Gets the allowed frequency ranges for client repeat mode (v9+ firmware).
     ///
     /// - Returns: The allowed frequency ranges for repeat mode.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit repeat-frequency data.
     public func getRepeatFreq() async throws -> [FrequencyRange] {
         try await sendAndWait(PacketBuilder.getRepeatFreq()) { event in
             if case .allowedRepeatFreq(let ranges) = event { return ranges }
@@ -1171,8 +1171,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Gets the current auto-add configuration from the device.
     ///
     /// - Returns: The auto-add configuration (bitmask + max hops).
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
-    ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit auto-add configuration.
     public func getAutoAddConfig() async throws -> AutoAddConfig {
         try await sendAndWait(PacketBuilder.getAutoAddConfig()) { event in
             if case .autoAddConfig(let config) = event { return config }
@@ -1234,6 +1233,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// Retrieves telemetry data from the device.
     ///
     /// - Returns: Device telemetry including battery, temperature, and sensor data.
+    ///   When `selfInfo` is available, only telemetry for the current device is accepted.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getSelfTelemetry() async throws -> TelemetryResponse {
         let expectedPrefix = selfInfo.map { Data($0.publicKey.prefix(6)) }
@@ -1288,7 +1288,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// - Parameter key: The 64-byte expanded private key to import.
     /// - Throws: ``MeshCoreError/featureDisabled`` if the device does not support key import,
-    ///   ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
+    ///   ``MeshCoreError/timeout`` if the device does not acknowledge the import,
+    ///   or ``MeshCoreError/deviceError(code:)`` for a matched device error response.
     public func importPrivateKey(_ key: Data) async throws {
         let succeeded: Bool = try await sendAndWaitWithError(
             PacketBuilder.importPrivateKey(key)
@@ -1758,7 +1759,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///
     /// - Parameter index: Channel index (0-255).
     /// - Returns: Channel information including name and secret.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit configuration for the requested channel.
     public func getChannel(index: UInt8) async throws -> ChannelInfo {
         try await sendAndWait(PacketBuilder.getChannel(index: index)) { event in
             if case .channelInfo(let info) = event, info.index == index { return info }
