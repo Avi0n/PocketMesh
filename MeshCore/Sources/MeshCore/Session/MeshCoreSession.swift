@@ -690,7 +690,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         return try await sendAndWait(data) { event in
             switch event {
             case .contact(let contact):
-                return contact
+                return contact.publicKey == publicKey ? contact : nil
             case .error:
                 // Contact not found returns error, treat as nil
                 return nil as MeshContact?
@@ -1293,9 +1293,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         let succeeded: Bool = try await sendAndWaitWithError(
             PacketBuilder.importPrivateKey(key)
         ) { event in
-            if case .ok = event { return true }
+            if case .ok(value: nil) = event { return true }
             if case .disabled = event { return false }
             return nil
+        } errorMatcher: { event in
+            guard case .error(let code?) = event else { return nil }
+            return MeshCoreError.deviceError(code: code)
         }
         if !succeeded {
             throw MeshCoreError.featureDisabled

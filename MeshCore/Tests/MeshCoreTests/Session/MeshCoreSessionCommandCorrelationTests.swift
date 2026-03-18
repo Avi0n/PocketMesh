@@ -223,6 +223,70 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
+    @Test("getContact ignores responses for other public keys")
+    func getContactIgnoresResponsesForOtherPublicKeys() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let requestedKey = Data(repeating: 0x11, count: 32)
+        let contactTask = Task {
+            try await session.getContact(publicKey: requestedKey)
+        }
+
+        try await waitUntil("getContact should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateReceive(
+            makeContactPacket(publicKey: Data(repeating: 0x22, count: 32), name: "Wrong")
+        )
+        await transport.simulateReceive(
+            makeContactPacket(publicKey: requestedKey, name: "Right")
+        )
+
+        let contact = try #require(await contactTask.value)
+        #expect(contact.publicKey == requestedKey)
+        #expect(contact.advertisedName == "Right")
+        await session.stop()
+    }
+
+    @Test("importPrivateKey ignores OK responses with payloads")
+    func importPrivateKeyIgnoresOKResponsesWithPayloads() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let importTask = Task {
+            try await session.importPrivateKey(Data(repeating: 0x33, count: 64))
+        }
+
+        try await waitUntil("importPrivateKey should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateOK(value: 7)
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await importTask.value
+        }
+        guard case .timeout? = error else {
+            Issue.record("Expected timeout after unrelated OK payload, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+
+        await session.stop()
+    }
+
     @Test("requestStatus ignores unrelated errors and wrong-node status responses")
     func requestStatusIgnoresUnrelatedErrorsAndWrongNodeResponses() async throws {
         let transport = MockTransport()
@@ -376,5 +440,27 @@ private func makeChannelInfoPacket(index: UInt8, name: String, secret: Data) -> 
         packet.append(Data(repeating: 0, count: 31 - nameBytes.count))
     }
     packet.append(secret)
+    return packet
+}
+
+private func makeContactPacket(publicKey: Data, name: String) -> Data {
+    var packet = Data([ResponseCode.contact.rawValue])
+    packet.append(publicKey)
+    packet.append(ContactType.chat.rawValue)
+    packet.append(ContactFlags().rawValue)
+    packet.append(0xFF)
+    packet.append(Data(repeating: 0, count: 64))
+
+    let nameBytes = Array(name.utf8.prefix(31))
+    packet.append(contentsOf: nameBytes)
+    packet.append(0)
+    if nameBytes.count < 31 {
+        packet.append(Data(repeating: 0, count: 31 - nameBytes.count))
+    }
+
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: Int32(0).littleEndian) { Array($0) })
+    packet.append(contentsOf: withUnsafeBytes(of: UInt32(0).littleEndian) { Array($0) })
     return packet
 }
