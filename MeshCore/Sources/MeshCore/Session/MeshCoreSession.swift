@@ -84,6 +84,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private let dispatcher = EventDispatcher()
     private let pendingRequests = PendingRequests()
     private let binaryRequestSerializer = BinaryRequestSerializer()
+    private let requestResponseSerializer = RequestResponseSerializer()
 
     // State
     private var contactManager = ContactManager()
@@ -475,37 +476,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         matching predicate: @escaping @Sendable (MeshEvent) -> T?,
         timeout: TimeInterval? = nil
     ) async throws -> T {
-        let effectiveTimeout = timeout ?? configuration.defaultTimeout
-
-        // Subscribe BEFORE sending to avoid race condition
-        let events = await dispatcher.subscribe()
-
-        // Send after subscribing
-        try await transport.send(data)
-
-        // Now wait for matching event
-        return try await withThrowingTaskGroup(of: T?.self) { group in
-            group.addTask {
-                for await event in events {
-                    if Task.isCancelled { return nil }
-                    if let result = predicate(event) {
-                        return result
-                    }
-                }
-                return nil
+        try await sendAndMatch(data, timeout: timeout) { event in
+            if let result = predicate(event) {
+                return .success(result)
             }
-
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
-                return nil
-            }
-
-            if let result = try await group.next() ?? nil {
-                group.cancelAll()
-                return result
-            }
-            group.cancelAll()
-            throw MeshCoreError.timeout
+            return .ignore
         }
     }
 
@@ -521,43 +496,69 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private func sendAndWaitWithError<T: Sendable>(
         _ data: Data,
         matching successPredicate: @escaping @Sendable (MeshEvent) -> T?,
+        errorMatcher: (@Sendable (MeshEvent) -> MeshCoreError?)? = nil,
         timeout: TimeInterval? = nil
     ) async throws -> T {
-        let effectiveTimeout = timeout ?? configuration.defaultTimeout
+        try await sendAndMatch(data, timeout: timeout) { event in
+            if let error = errorMatcher?(event) {
+                return .failure(error)
+            }
+            if let result = successPredicate(event) {
+                return .success(result)
+            }
+            return .ignore
+        }
+    }
 
-        // Subscribe BEFORE sending to avoid race condition
-        let events = await dispatcher.subscribe()
+    private enum ResponseDisposition<T: Sendable> {
+        case success(T)
+        case failure(MeshCoreError)
+        case ignore
+    }
 
-        // Send after subscribing
-        try await transport.send(data)
+    private func sendAndMatch<T: Sendable>(
+        _ data: Data,
+        timeout: TimeInterval? = nil,
+        matching matcher: @escaping @Sendable (MeshEvent) -> ResponseDisposition<T>
+    ) async throws -> T {
+        try await requestResponseSerializer.withSerialization { [self] in
+            let effectiveTimeout = timeout ?? configuration.defaultTimeout
 
-        // Now wait for matching event
-        return try await withThrowingTaskGroup(of: T?.self) { group in
-            group.addTask {
-                for await event in events {
-                    if Task.isCancelled { return nil }
-                    // Check for error response first
-                    if case .error(let code) = event {
-                        throw MeshCoreError.deviceError(code: code ?? 0)
+            // Subscribe BEFORE sending to avoid race condition
+            let events = await dispatcher.subscribe()
+
+            // Send after subscribing
+            try await transport.send(data)
+
+            return try await withThrowingTaskGroup(of: T?.self) { group in
+                group.addTask {
+                    for await event in events {
+                        if Task.isCancelled { return nil }
+
+                        switch matcher(event) {
+                        case .success(let result):
+                            return result
+                        case .failure(let error):
+                            throw error
+                        case .ignore:
+                            continue
+                        }
                     }
-                    if let result = successPredicate(event) {
-                        return result
-                    }
+                    return nil
                 }
-                return nil
-            }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
-                return nil
-            }
+                group.addTask { [clock = self.clock] in
+                    try await clock.sleep(for: .seconds(effectiveTimeout))
+                    return nil
+                }
 
-            if let result = try await group.next() ?? nil {
+                if let result = try await group.next() ?? nil {
+                    group.cancelAll()
+                    return result
+                }
                 group.cancelAll()
-                return result
+                throw MeshCoreError.timeout
             }
-            group.cancelAll()
-            throw MeshCoreError.timeout
         }
     }
 
@@ -825,11 +826,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter flood: If `true`, the advertisement is broadcast using flood routing.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func sendAdvertisement(flood: Bool = false) async throws {
-        let data = PacketBuilder.sendAdvertisement(flood: flood)
-        let _: Bool = try await sendAndWaitWithError(data) { event in
-            if case .ok = event { return true }
-            return nil
-        }
+        try await sendSimpleCommand(PacketBuilder.sendAdvertisement(flood: flood))
     }
 
     /// Requests status information from a remote node using the binary protocol.
@@ -1192,10 +1189,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func setAutoAddConfig(_ config: AutoAddConfig) async throws {
-        try await sendAndWaitWithError(PacketBuilder.setAutoAddConfig(config)) { event in
-            if case .ok = event { return () }
-            return nil
-        }
+        try await sendSimpleCommand(PacketBuilder.setAutoAddConfig(config))
     }
 
     /// Returns the current device configuration from selfInfo.
@@ -2357,10 +2351,21 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Sends a command and waits for an "OK" response from the device.
     private func sendSimpleCommand(_ data: Data) async throws {
-        let _: Bool = try await sendAndWaitWithError(data) { event in
-            if case .ok = event { return true }
-            return nil
-        }
+        let _: Bool = try await sendAndWaitWithError(
+            data,
+            matching: { event in
+                if case .ok(let value) = event, value == nil {
+                    return true
+                }
+                return nil
+            },
+            errorMatcher: { event in
+                if case .error(let code) = event {
+                    return MeshCoreError.deviceError(code: code ?? 0)
+                }
+                return nil
+            }
+        )
     }
 
     /// The background loop for receiving data from the transport.
