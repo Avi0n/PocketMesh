@@ -234,14 +234,8 @@ public actor BinaryRequestSerializer {
         _ operation: @Sendable () async throws -> T
     ) async throws -> T {
         await acquire()
-        do {
-            let result = try await operation()
-            release()
-            return result
-        } catch {
-            release()
-            throw error
-        }
+        defer { release() }
+        return try await operation()
     }
 }
 
@@ -281,13 +275,7 @@ public actor RequestResponseSerializer {
         _ operation: @Sendable () async throws -> T
     ) async throws -> T {
         await acquire()
-        do {
-            let result = try await operation()
-            release()
-            return result
-        } catch {
-            release()
-            throw error
-        }
+        defer { release() }
+        return try await operation()
     }
 }
