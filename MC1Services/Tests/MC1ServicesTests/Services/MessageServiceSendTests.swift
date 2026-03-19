@@ -244,6 +244,82 @@ struct MessageServiceSendTests {
         #expect(messages.first?.status == .failed, "Message should be marked failed after send error")
     }
 
+    // MARK: - createPendingChannelMessage
+
+    @Test("createPendingChannelMessage saves to dataStore with pending status")
+    func createPendingChannelMessageSavesWithPendingStatus() async throws {
+        let (service, dataStore) = try await MessageService.createForTesting()
+
+        let message = try await service.createPendingChannelMessage(
+            text: "Hello channel",
+            channelIndex: 0,
+            deviceID: testDeviceID
+        )
+
+        #expect(message.status == .pending)
+        #expect(message.direction == .outgoing)
+        #expect(message.text == "Hello channel")
+        #expect(message.channelIndex == 0)
+        #expect(message.deviceID == testDeviceID)
+        #expect(message.contactID == nil)
+
+        let stored = try await dataStore.fetchMessage(id: message.id)
+        #expect(stored != nil, "Message should be persisted to dataStore")
+        #expect(stored?.status == .pending)
+    }
+
+    @Test("createPendingChannelMessage throws messageTooLong for oversized text")
+    func createPendingChannelMessageRejectsLongText() async throws {
+        let (service, _) = try await MessageService.createForTesting()
+        let longText = String(repeating: "a", count: ProtocolLimits.maxChannelMessageTotalLength + 1)
+
+        try await #expect {
+            _ = try await service.createPendingChannelMessage(
+                text: longText,
+                channelIndex: 0,
+                deviceID: testDeviceID
+            )
+        } throws: { error in
+            guard let e = error as? MessageServiceError, case .messageTooLong = e else { return false }
+            return true
+        }
+    }
+
+    // MARK: - sendPendingChannelMessage
+
+    @Test("sendPendingChannelMessage throws when message not found")
+    func sendPendingChannelMessageThrowsWhenNotFound() async throws {
+        let (service, _) = try await MessageService.createForTesting()
+
+        try await #expect {
+            try await service.sendPendingChannelMessage(messageID: UUID())
+        } throws: { error in
+            guard let e = error as? MessageServiceError, case .sendFailed = e else { return false }
+            return true
+        }
+    }
+
+    @Test("sendPendingChannelMessage sets failed status on send error")
+    func sendPendingChannelMessageSetsFailedOnError() async throws {
+        let (service, dataStore) = try await MessageService.createForTesting()
+
+        let message = try await service.createPendingChannelMessage(
+            text: "Hello channel",
+            channelIndex: 0,
+            deviceID: testDeviceID
+        )
+        #expect(message.status == .pending)
+
+        do {
+            try await service.sendPendingChannelMessage(messageID: message.id)
+        } catch {
+            // Expected — session not started
+        }
+
+        let stored = try await dataStore.fetchMessage(id: message.id)
+        #expect(stored?.status == .failed, "Message should be marked failed after send error")
+    }
+
     // MARK: - resendChannelMessage
 
     @Test("resendChannelMessage throws when message not found")

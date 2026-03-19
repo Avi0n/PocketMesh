@@ -260,40 +260,40 @@ public extension Message {
 
 /// A sendable snapshot of Message for cross-actor transfers
 public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
-    public let id: UUID
-    public let deviceID: UUID
-    public let contactID: UUID?
-    public let channelIndex: UInt8?
-    public let text: String
-    public let timestamp: UInt32
-    public let createdAt: Date
-    public let direction: MessageDirection
-    public let status: MessageStatus
-    public let textType: TextType
-    public let ackCode: UInt32?
-    public let pathLength: UInt8
-    public let snr: Double?
-    public let pathNodes: Data?
-    public let senderKeyPrefix: Data?
-    public let senderNodeName: String?
-    public let isRead: Bool
-    public let replyToID: UUID?
-    public let roundTripTime: UInt32?
-    public let heardRepeats: Int
-    public let sendCount: Int
-    public let retryAttempt: Int
-    public let maxRetryAttempts: Int
-    public let deduplicationKey: String?
-    public let linkPreviewURL: String?
-    public let linkPreviewTitle: String?
-    public let linkPreviewImageData: Data?
-    public let linkPreviewIconData: Data?
-    public let linkPreviewFetched: Bool
-    public let containsSelfMention: Bool
-    public let mentionSeen: Bool
-    public let timestampCorrected: Bool
-    public let senderTimestamp: UInt32?
-    public let reactionSummary: String?
+    public var id: UUID
+    public var deviceID: UUID
+    public var contactID: UUID?
+    public var channelIndex: UInt8?
+    public var text: String
+    public var timestamp: UInt32
+    public var createdAt: Date
+    public var direction: MessageDirection
+    public var status: MessageStatus
+    public var textType: TextType
+    public var ackCode: UInt32?
+    public var pathLength: UInt8
+    public var snr: Double?
+    public var pathNodes: Data?
+    public var senderKeyPrefix: Data?
+    public var senderNodeName: String?
+    public var isRead: Bool
+    public var replyToID: UUID?
+    public var roundTripTime: UInt32?
+    public var heardRepeats: Int
+    public var sendCount: Int
+    public var retryAttempt: Int
+    public var maxRetryAttempts: Int
+    public var deduplicationKey: String?
+    public var linkPreviewURL: String?
+    public var linkPreviewTitle: String?
+    public var linkPreviewImageData: Data?
+    public var linkPreviewIconData: Data?
+    public var linkPreviewFetched: Bool
+    public var containsSelfMention: Bool
+    public var mentionSeen: Bool
+    public var timestampCorrected: Bool
+    public var senderTimestamp: UInt32?
+    public var reactionSummary: String?
 
     public init(from message: Message) {
         self.id = message.id
@@ -426,6 +426,13 @@ public struct MessageDTO: Sendable, Equatable, Hashable, Identifiable {
 
     public var hasFailed: Bool {
         status == .failed
+    }
+
+    /// Returns a new MessageDTO with the given mutations applied.
+    public func copy(_ mutations: (inout MessageDTO) -> Void) -> MessageDTO {
+        var copy = self
+        mutations(&copy)
+        return copy
     }
 
     /// Date used for display and sorting (local receive time)

@@ -558,6 +558,77 @@ extension MessageService {
         return (id: messageID, timestamp: timestamp)
     }
 
+    /// Creates a pending channel message without sending it.
+    ///
+    /// Use this for optimistic UI — the message is saved immediately and can be
+    /// displayed in the conversation while the actual send happens in the background
+    /// via ``sendPendingChannelMessage(messageID:channelIndex:deviceID:)``.
+    ///
+    /// - Parameters:
+    ///   - text: The message text
+    ///   - channelIndex: The channel index to send on
+    ///   - deviceID: The device ID
+    ///   - textType: The text type (defaults to `.plain`)
+    ///
+    /// - Returns: The created message DTO with pending status
+    public func createPendingChannelMessage(
+        text: String,
+        channelIndex: UInt8,
+        deviceID: UUID,
+        textType: TextType = .plain
+    ) async throws -> MessageDTO {
+        guard text.utf8.count <= ProtocolLimits.maxChannelMessageTotalLength else {
+            throw MessageServiceError.messageTooLong
+        }
+
+        let messageID = UUID()
+        let timestamp = UInt32(Date().timeIntervalSince1970)
+
+        let messageDTO = createOutgoingChannelMessage(
+            id: messageID,
+            deviceID: deviceID,
+            channelIndex: channelIndex,
+            text: text,
+            timestamp: timestamp,
+            textType: textType
+        )
+        try await dataStore.saveMessage(messageDTO)
+
+        return messageDTO
+    }
+
+    /// Sends an already-created pending channel message.
+    ///
+    /// Use this after ``createPendingChannelMessage(text:channelIndex:deviceID:textType:)``
+    /// to transmit the message over the mesh. Updates the message status to `.sent` on
+    /// success or `.failed` on error.
+    ///
+    /// - Parameter messageID: The ID of the pending message to send
+    public func sendPendingChannelMessage(messageID: UUID) async throws {
+        guard let message = try await dataStore.fetchMessage(id: messageID) else {
+            throw MessageServiceError.sendFailed("Message not found")
+        }
+        guard let channelIndex = message.channelIndex else {
+            throw MessageServiceError.sendFailed("Not a channel message")
+        }
+
+        do {
+            try await session.sendChannelMessage(
+                channel: channelIndex,
+                text: message.text,
+                timestamp: Date(timeIntervalSince1970: TimeInterval(message.timestamp))
+            )
+        } catch {
+            try await failMessageAndRethrow(error, messageID: messageID)
+        }
+
+        try await dataStore.updateMessageStatus(id: messageID, status: .sent)
+
+        if let channel = try await dataStore.fetchChannel(deviceID: message.deviceID, index: channelIndex) {
+            try await dataStore.updateChannelLastMessage(channelID: channel.id, date: Date())
+        }
+    }
+
     /// Resend an existing channel message, incrementing its send count.
     ///
     /// This is used for "Send Again" - it re-transmits the same message

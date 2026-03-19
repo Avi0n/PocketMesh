@@ -191,50 +191,6 @@ extension ChatViewModel {
 
     /// Update reaction summary for a specific message inline (O(1) update)
     func updateReactionSummary(for messageID: UUID, summary: String) {
-        guard let index = messages.firstIndex(where: { $0.id == messageID }),
-              let existing = messagesByID[messageID] else {
-            return
-        }
-
-        // Create updated MessageDTO with new reaction summary
-        let updated = MessageDTO(
-            id: existing.id,
-            deviceID: existing.deviceID,
-            contactID: existing.contactID,
-            channelIndex: existing.channelIndex,
-            text: existing.text,
-            timestamp: existing.timestamp,
-            createdAt: existing.createdAt,
-            direction: existing.direction,
-            status: existing.status,
-            textType: existing.textType,
-            ackCode: existing.ackCode,
-            pathLength: existing.pathLength,
-            snr: existing.snr,
-            pathNodes: existing.pathNodes,
-            senderKeyPrefix: existing.senderKeyPrefix,
-            senderNodeName: existing.senderNodeName,
-            isRead: existing.isRead,
-            replyToID: existing.replyToID,
-            roundTripTime: existing.roundTripTime,
-            heardRepeats: existing.heardRepeats,
-            sendCount: existing.sendCount,
-            retryAttempt: existing.retryAttempt,
-            maxRetryAttempts: existing.maxRetryAttempts,
-            deduplicationKey: existing.deduplicationKey,
-            linkPreviewURL: existing.linkPreviewURL,
-            linkPreviewTitle: existing.linkPreviewTitle,
-            linkPreviewImageData: existing.linkPreviewImageData,
-            linkPreviewIconData: existing.linkPreviewIconData,
-            linkPreviewFetched: existing.linkPreviewFetched,
-            containsSelfMention: existing.containsSelfMention,
-            mentionSeen: existing.mentionSeen,
-            timestampCorrected: existing.timestampCorrected,
-            reactionSummary: summary
-        )
-
-        messages[index] = updated
-        messagesByID[messageID] = updated
-        rebuildDisplayItem(for: messageID)
+        updateMessage(id: messageID) { $0.reactionSummary = summary }
     }
 }

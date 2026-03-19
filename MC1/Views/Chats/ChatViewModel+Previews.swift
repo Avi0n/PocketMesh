@@ -126,6 +126,16 @@ extension ChatViewModel {
         }
     }
 
+    /// Update a message in place and rebuild its display item.
+    func updateMessage(id: UUID, mutation: (inout MessageDTO) -> Void) {
+        guard let index = messages.firstIndex(where: { $0.id == id }),
+              let existing = messagesByID[id] else { return }
+        let updated = existing.copy(mutation)
+        messages[index] = updated
+        messagesByID[id] = updated
+        rebuildDisplayItem(for: id)
+    }
+
     /// Rebuild a single display item with current preview state (O(1) lookup)
     func rebuildDisplayItem(for messageID: UUID) {
         guard let index = displayItemIndexByID[messageID] else { return }
@@ -144,7 +154,7 @@ extension ChatViewModel {
             status: item.status,
             containsSelfMention: item.containsSelfMention,
             mentionSeen: item.mentionSeen,
-            heardRepeats: item.heardRepeats,
+            heardRepeats: message?.heardRepeats ?? item.heardRepeats,
             retryAttempt: item.retryAttempt,
             maxRetryAttempts: item.maxRetryAttempts,
             reactionSummary: message?.reactionSummary,

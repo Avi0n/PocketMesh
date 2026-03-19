@@ -137,80 +137,111 @@ extension ChatViewModel {
 
     // MARK: - Channel Actions
 
-    /// Send a channel message
+    /// Send a channel message optimistically — shows immediately, sends in background.
     func sendChannelMessage(text: String) async {
         guard let channel = currentChannel,
               let messageService,
               !text.isEmpty else {
-            composingText = text
             return
         }
 
         errorMessage = nil
 
         do {
-            let (messageID, timestamp) = try await messageService.sendChannelMessage(
+            let message = try await messageService.createPendingChannelMessage(
                 text: text,
                 channelIndex: channel.index,
                 deviceID: channel.deviceID
             )
+            appendMessageIfNew(message)
 
-            // Index immediately for reaction matching (before reload to avoid race)
-            // Pending reactions handled by loadChannelMessages below
-            if let reactionService = appState?.services?.reactionService,
-               let localNodeName = appState?.connectedDevice?.nodeName {
-                _ = await reactionService.indexMessage(
-                    id: messageID,
-                    channelIndex: channel.index,
-                    senderName: localNodeName,
-                    text: text,
-                    timestamp: timestamp
-                )
+            channelSendQueue.append(QueuedChannelMessage(messageID: message.id))
+
+            if !isProcessingChannelQueue {
+                channelQueueTask?.cancel()
+                channelQueueTask = Task { await processChannelQueue() }
             }
-
-            // Reload messages to show the sent message
-            await loadChannelMessages(for: channel)
-
-            // Reload channels to update conversation list
-            await loadChannels(deviceID: channel.deviceID)
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    /// Retry sending a failed channel message.
-    /// This resends the message text to MeshCore - the UI should NOT change
-    /// during retry. Only the status will update (Sent -> Delivered or Failed).
+    /// Process queued channel messages serially
+    private func processChannelQueue() async {
+        guard let messageService else { return }
+
+        isProcessingChannelQueue = true
+        defer { isProcessingChannelQueue = false }
+
+        let channel = currentChannel
+
+        repeat {
+            while !channelSendQueue.isEmpty {
+                let queued = channelSendQueue.removeFirst()
+
+                do {
+                    try await messageService.sendPendingChannelMessage(messageID: queued.messageID)
+
+                    // Index for reaction matching after successful send
+                    if let message = messagesByID[queued.messageID],
+                       let channelIndex = message.channelIndex,
+                       let reactionService = appState?.services?.reactionService,
+                       let localNodeName = appState?.connectedDevice?.nodeName {
+                        _ = await reactionService.indexMessage(
+                            id: queued.messageID,
+                            channelIndex: channelIndex,
+                            senderName: localNodeName,
+                            text: message.text,
+                            timestamp: message.timestamp
+                        )
+                    }
+                } catch is CancellationError {
+                    channelSendQueue.insert(queued, at: 0)
+                    return
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            }
+
+            // Reload after queue drains — syncs statuses and conversation list
+            if let channel {
+                await loadChannelMessages(for: channel)
+                await loadChannels(deviceID: channel.deviceID)
+            }
+        } while !channelSendQueue.isEmpty
+    }
+
+    /// Retry sending a failed channel message in place.
     func retryChannelMessage(_ message: MessageDTO) async {
         guard let messageService,
-              let channel = currentChannel else { return }
+              let channel = currentChannel,
+              message.channelIndex != nil,
+              !isRetryingChannelMessage else { return }
 
-        // Update status to pending
+        isRetryingChannelMessage = true
+        defer { isRetryingChannelMessage = false }
+
         try? await dataStore?.updateMessageStatus(id: message.id, status: .pending)
-
-        // Reload to show updated status
         await loadChannelMessages(for: channel)
 
         do {
-            // Resend the message text
-            _ = try await messageService.sendChannelMessage(
-                text: message.text,
-                channelIndex: channel.index,
-                deviceID: channel.deviceID
-            )
-
-            // Delete the old failed message since a new one was created
-            try await dataStore?.deleteMessage(id: message.id)
-
-            // Reload messages
-            await loadChannelMessages(for: channel)
+            try await messageService.sendPendingChannelMessage(messageID: message.id)
+        } catch is CancellationError {
+            // Fall through to reload so UI reflects current state
         } catch {
-            // Restore failed status
-            try? await dataStore?.updateMessageStatus(id: message.id, status: .failed)
-            await loadChannelMessages(for: channel)
             errorMessage = error.localizedDescription
             showRetryError = true
         }
+
+        await loadChannelMessages(for: channel)
+        await loadChannels(deviceID: channel.deviceID)
+    }
+
+    // MARK: - In-Place Updates
+
+    /// Update heard repeat count for a message in place without a full reload.
+    func updateHeardRepeats(for messageID: UUID, count: Int) {
+        updateMessage(id: messageID) { $0.heardRepeats = count }
     }
 
     // MARK: - Channel Sender Tracking

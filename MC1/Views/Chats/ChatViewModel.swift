@@ -63,6 +63,7 @@ final class ChatViewModel {
     @ObservationIgnored var urlDetectionTask: Task<Void, Never>?
     // Stored for lifecycle tracking; queue drains independently of conversation
     @ObservationIgnored var queueProcessorTask: Task<Void, Never>?
+    @ObservationIgnored var channelQueueTask: Task<Void, Never>?
 
     /// Fallback date for conversations with no messages, used to sort them to the end.
     private static let noMessageSentinel = Date.distantPast
@@ -142,6 +143,15 @@ final class ChatViewModel {
 
     /// Whether the queue processor is running
     var isProcessingQueue = false
+
+    /// Queue of channel messages waiting to be sent
+    @ObservationIgnored var channelSendQueue: [QueuedChannelMessage] = []
+
+    /// Whether the channel queue processor is running
+    @ObservationIgnored var isProcessingChannelQueue = false
+
+    /// Whether a channel message retry is in progress
+    @ObservationIgnored var isRetryingChannelMessage = false
 
     /// Number of messages in the send queue (for testing)
     var sendQueueCount: Int { sendQueue.count }

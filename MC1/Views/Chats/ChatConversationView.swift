@@ -349,9 +349,9 @@ struct ChatConversationView: View {
                 if chatViewModel.messages.contains(where: { $0.id == messageID }) {
                     needsReload = true
                 }
-            case .heardRepeatRecorded(let messageID, _):
+            case .heardRepeatRecorded(let messageID, let count):
                 if chatViewModel.messages.contains(where: { $0.id == messageID }) {
-                    needsReload = true
+                    chatViewModel.updateHeardRepeats(for: messageID, count: count)
                 }
             case .reactionReceived(let messageID, let summary):
                 if chatViewModel.messages.contains(where: { $0.id == messageID }) {
