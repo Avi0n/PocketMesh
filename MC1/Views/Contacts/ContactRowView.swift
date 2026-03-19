@@ -52,7 +52,7 @@ struct ContactRowView: View {
                             .accessibilityLabel(L10n.Contacts.Contacts.Row.favorite)
                     }
 
-                    RelativeTimestampText(timestamp: contact.lastAdvertTimestamp)
+                    RelativeTimestampText(timestamp: contact.lastModified)
                 }
 
                 HStack(spacing: 8) {
