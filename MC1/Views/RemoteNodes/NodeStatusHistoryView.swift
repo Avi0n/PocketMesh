@@ -48,6 +48,20 @@ struct NodeStatusHistoryView: View {
                 }
             )
 
+            metricSection(
+                title: L10n.RemoteNodes.RemoteNodes.History.packetsSent, unit: "", color: .green,
+                dataPoints: filteredSnapshots.compactMap { s in
+                    s.packetsSent.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                }
+            )
+
+            metricSection(
+                title: L10n.RemoteNodes.RemoteNodes.History.packetsReceived, unit: "", color: .orange,
+                dataPoints: filteredSnapshots.compactMap { s in
+                    s.packetsReceived.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                }
+            )
+
             Section {
             } footer: {
                 Text(L10n.RemoteNodes.RemoteNodes.History.retentionNotice)

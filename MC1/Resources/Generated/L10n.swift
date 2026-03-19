@@ -2325,6 +2325,10 @@ public enum L10n {
         public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.history.noiseFloor", fallback: "Noise Floor")
         /// Location: NeighborRow - Not seen status
         public static let notSeen = L10n.tr("RemoteNodes", "remoteNodes.history.notSeen", fallback: "Not seen")
+        /// Location: NodeStatusHistoryView.swift - Packets received chart title
+        public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.history.packetsReceived", fallback: "Packets Received")
+        /// Location: NodeStatusHistoryView.swift - Packets sent chart title
+        public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.history.packetsSent", fallback: "Packets Sent")
         /// Location: NodeStatusHistoryView.swift - Footer about data retention
         public static let retentionNotice = L10n.tr("RemoteNodes", "remoteNodes.history.retentionNotice", fallback: "History data older than one year is automatically removed.")
         /// Location: NodeStatusHistoryView.swift - RSSI chart title

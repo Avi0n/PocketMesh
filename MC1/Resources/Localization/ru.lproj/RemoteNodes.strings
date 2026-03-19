@@ -463,6 +463,12 @@
 /* Location: NodeStatusHistoryView.swift - Neighbor count chart title */
 "remoteNodes.history.neighborCount" = "Количество соседей";
 
+/* Location: NodeStatusHistoryView.swift - Packets sent chart title */
+"remoteNodes.history.packetsSent" = "Пакетов отправлено";
+
+/* Location: NodeStatusHistoryView.swift - Packets received chart title */
+"remoteNodes.history.packetsReceived" = "Пакетов получено";
+
 /* Location: NeighborHistoryView.swift - Active status */
 "remoteNodes.history.active" = "Активен";
 
