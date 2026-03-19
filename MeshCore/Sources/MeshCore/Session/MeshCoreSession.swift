@@ -834,6 +834,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the remote node.
     /// - Returns: A status response containing battery, uptime, and other metrics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
     ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
         // Serialize binary requests to prevent messageSent race conditions
@@ -877,6 +878,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         logger.info("Status request to \(prefixHex): messageSent received, suggestedTimeoutMs=\(info.suggestedTimeoutMs), effective timeout=\(String(format: "%.1f", timeout))s")
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        timeoutContinuation.finish()
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
@@ -1799,6 +1804,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the remote node.
     /// - Returns: Telemetry response containing sensor data and device status.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
     ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestTelemetry(from publicKey: Data) async throws -> TelemetryResponse {
         // Serialize binary requests to prevent messageSent race conditions
@@ -1845,6 +1851,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         logger.info("Telemetry request to \(prefixHex): messageSent received, suggestedTimeoutMs=\(info.suggestedTimeoutMs), effective timeout=\(String(format: "%.1f", timeout))s")
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        timeoutContinuation.finish()
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         // Match by expectedAck (4-byte tag from firmware)
@@ -1918,6 +1928,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - end: End of the time range.
     /// - Returns: MMA response containing aggregated statistics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
     public func requestMMA(from publicKey: Data, start: Date, end: Date) async throws -> MMAResponse {
         try await binaryRequestSerializer.withSerialization { [self] in
             try await performMMARequest(from: publicKey, start: start, end: end)
@@ -1957,6 +1968,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 2.0
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        timeoutContinuation.finish()
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -1998,6 +2013,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the remote node.
     /// - Returns: ACL response containing authorized public keys.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
     public func requestACL(from publicKey: Data) async throws -> ACLResponse {
         try await binaryRequestSerializer.withSerialization { [self] in
             try await performACLRequest(from: publicKey)
@@ -2030,6 +2046,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 2.0
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        timeoutContinuation.finish()
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }
@@ -2076,6 +2096,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///   - pubkeyPrefixLength: Length of public key prefix to include (default 4).
     /// - Returns: Neighbors response containing list of adjacent nodes.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
     public func requestNeighbours(
         from publicKey: Data,
         count: UInt8 = 255,
@@ -2135,6 +2156,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                         let timeout = TimeInterval(info.suggestedTimeoutMs) / 1000.0 * 2.0
                         timeoutContinuation.yield(timeout)
                         timeoutContinuation.finish()
+
+                    case .error(let code):
+                        timeoutContinuation.finish()
+                        throw MeshCoreError.deviceError(code: code ?? 0)
 
                     case .binaryResponse(let tag, let responseData):
                         guard let expected = expectedAck, tag == expected else { continue }

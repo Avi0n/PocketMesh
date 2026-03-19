@@ -287,8 +287,8 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
-    @Test("requestStatus ignores unrelated errors and wrong-node status responses")
-    func requestStatusIgnoresUnrelatedErrorsAndWrongNodeResponses() async throws {
+    @Test("requestStatus fails fast on device error before messageSent")
+    func requestStatusFailsFastOnDeviceErrorBeforeMessageSent() async throws {
         let transport = MockTransport()
         let session = MeshCoreSession(
             transport: transport,
@@ -307,17 +307,21 @@ struct MeshCoreSessionCommandCorrelationTests {
         }
 
         await transport.simulateError(code: 10)
-        await transport.simulateReceive(makeStatusResponsePacket(publicKeyPrefix: Data(repeating: 0x99, count: 6), battery: 3900))
-        await transport.simulateReceive(makeStatusResponsePacket(publicKeyPrefix: Data(repeating: 0x31, count: 6), battery: 4010))
 
-        let response = try await statusTask.value
-        #expect(response.publicKeyPrefix == Data(repeating: 0x31, count: 6))
-        #expect(response.battery == 4010)
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await statusTask.value
+        }
+        guard case .deviceError(let code)? = error else {
+            Issue.record("Expected deviceError for binary status request, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+        #expect(code == 10)
         await session.stop()
     }
 
-    @Test("requestTelemetry ignores unrelated errors and wrong-node telemetry responses")
-    func requestTelemetryIgnoresUnrelatedErrorsAndWrongNodeResponses() async throws {
+    @Test("requestTelemetry fails fast on device error before messageSent")
+    func requestTelemetryFailsFastOnDeviceErrorBeforeMessageSent() async throws {
         let transport = MockTransport()
         let session = MeshCoreSession(
             transport: transport,
@@ -336,21 +340,73 @@ struct MeshCoreSessionCommandCorrelationTests {
         }
 
         await transport.simulateError(code: 11)
-        await transport.simulateReceive(
-            makeTelemetryPacket(
-                publicKeyPrefix: Data(repeating: 0x88, count: 6),
-                lppPayload: Data([0x01, 0x67, 0x00, 0xFA])
-            )
-        )
-        await transport.simulateReceive(
-            makeTelemetryPacket(
-                publicKeyPrefix: Data(repeating: 0x31, count: 6),
-                lppPayload: Data([0x01, 0x67, 0x00, 0xF0])
-            )
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await telemetryTask.value
+        }
+        guard case .deviceError(let code)? = error else {
+            Issue.record("Expected deviceError for binary telemetry request, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+        #expect(code == 11)
+        await session.stop()
+    }
+
+    @Test("binary request errors release the serializer for following requests")
+    func binaryRequestErrorsReleaseTheSerializer() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
         )
 
-        let response = try await telemetryTask.value
-        #expect(response.publicKeyPrefix == Data(repeating: 0x31, count: 6))
+        try await startSession(session, transport: transport)
+
+        let firstTarget = Data(repeating: 0x31, count: 32)
+        let secondTarget = Data(repeating: 0x42, count: 32)
+
+        let statusTask = Task {
+            try await session.requestStatus(from: firstTarget)
+        }
+        let telemetryTask = Task {
+            try await session.requestTelemetry(from: secondTarget)
+        }
+
+        try await waitUntil("first binary request should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(await transport.sentData.count == 2)
+
+        await transport.simulateError(code: 12)
+
+        let statusError = await #expect(throws: MeshCoreError.self) {
+            try await statusTask.value
+        }
+        guard case .deviceError(let firstCode)? = statusError else {
+            Issue.record("Expected first binary request to fail with deviceError, got \(String(describing: statusError))")
+            await session.stop()
+            return
+        }
+        #expect(firstCode == 12)
+
+        try await waitUntil("second binary request should send after the first one fails") {
+            await transport.sentData.count == 3
+        }
+
+        await transport.simulateError(code: 13)
+
+        let telemetryError = await #expect(throws: MeshCoreError.self) {
+            try await telemetryTask.value
+        }
+        guard case .deviceError(let secondCode)? = telemetryError else {
+            Issue.record("Expected second binary request to fail with deviceError, got \(String(describing: telemetryError))")
+            await session.stop()
+            return
+        }
+        #expect(secondCode == 13)
         await session.stop()
     }
 }
