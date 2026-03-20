@@ -1067,6 +1067,8 @@ public enum L10n {
         public static func routePrefix(_ p1: Any) -> String {
           return L10n.tr("Contacts", "contacts.detail.routePrefix", String(describing: p1), fallback: "Route: %@")
         }
+        /// Location: ContactDetailView.swift - Purpose: Saved History button for offline telemetry
+        public static let savedHistory = L10n.tr("Contacts", "contacts.detail.savedHistory", fallback: "Saved History")
         /// Location: ContactDetailView.swift - Purpose: Discovery countdown
         public static func secondsRemaining(_ p1: Int) -> String {
           return L10n.tr("Contacts", "contacts.detail.secondsRemaining", p1, fallback: "Up to %d seconds remaining")
@@ -2016,6 +2018,8 @@ public enum L10n {
           public static let adminAccess = L10n.tr("Map", "map.detail.action.adminAccess", fallback: "Admin Access")
           /// Location: MapView.swift ContactDetailSheet - Purpose: Button to join a room
           public static let joinRoom = L10n.tr("Map", "map.detail.action.joinRoom", fallback: "Join Room")
+          /// Location: MapView.swift - Purpose: Saved History button for offline telemetry
+          public static let savedHistory = L10n.tr("Map", "map.detail.action.savedHistory", fallback: "Saved History")
           /// Location: MapView.swift ContactDetailSheet - Purpose: Button to send a message
           public static let sendMessage = L10n.tr("Map", "map.detail.action.sendMessage", fallback: "Send Message")
           /// Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry
@@ -2319,20 +2323,34 @@ public enum L10n {
         public static let neighborCount = L10n.tr("RemoteNodes", "remoteNodes.history.neighborCount", fallback: "Neighbor Count")
         /// Location: NeighborHistoryView.swift - Neighbors section title
         public static let neighbors = L10n.tr("RemoteNodes", "remoteNodes.history.neighbors", fallback: "Neighbors")
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Neighbors section header
+        public static let neighborsSection = L10n.tr("RemoteNodes", "remoteNodes.history.neighborsSection", fallback: "Neighbors")
         /// Location: NeighborRow - New neighbor badge
         public static let new = L10n.tr("RemoteNodes", "remoteNodes.history.new", fallback: "New")
         /// Location: NodeStatusHistoryView.swift - Noise floor chart title
         public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.history.noiseFloor", fallback: "Noise Floor")
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Empty state when no snapshots exist
+        public static let noSnapshotsMessage = L10n.tr("RemoteNodes", "remoteNodes.history.noSnapshotsMessage", fallback: "Connect to this repeater at least once to see history.")
         /// Location: NeighborRow - Not seen status
         public static let notSeen = L10n.tr("RemoteNodes", "remoteNodes.history.notSeen", fallback: "Not seen")
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Navigation title
+        public static let overviewTitle = L10n.tr("RemoteNodes", "remoteNodes.history.overviewTitle", fallback: "Saved History")
         /// Location: NodeStatusHistoryView.swift - Packets received chart title
         public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.history.packetsReceived", fallback: "Packets Received")
         /// Location: NodeStatusHistoryView.swift - Packets sent chart title
         public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.history.packetsSent", fallback: "Packets Sent")
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Radio section header
+        public static let radioSection = L10n.tr("RemoteNodes", "remoteNodes.history.radioSection", fallback: "Radio")
         /// Location: NodeStatusHistoryView.swift - Footer about data retention
         public static let retentionNotice = L10n.tr("RemoteNodes", "remoteNodes.history.retentionNotice", fallback: "History data older than one year is automatically removed.")
         /// Location: NodeStatusHistoryView.swift - RSSI chart title
         public static let rssi = L10n.tr("RemoteNodes", "remoteNodes.history.rssi", fallback: "RSSI")
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Empty state when section data not captured
+        public static func sectionNotCaptured(_ p1: Any) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.history.sectionNotCaptured", String(describing: p1), fallback: "This data is captured when you view the %@ section during a live telemetry session.")
+        }
+        /// Location: TelemetryHistoryOverviewView.swift - Purpose: Sensors section header
+        public static let sensorsSection = L10n.tr("RemoteNodes", "remoteNodes.history.sensorsSection", fallback: "Sensors")
         /// Location: NodeStatusHistoryView.swift - SNR chart title
         public static let snr = L10n.tr("RemoteNodes", "remoteNodes.history.snr", fallback: "SNR")
         /// Location: NodeStatusHistoryView.swift - Time range picker

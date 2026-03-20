@@ -102,6 +102,9 @@
 /* Location: MapView.swift ContactDetailSheet - Purpose: Button to view repeater telemetry */
 "map.detail.action.telemetry" = "遥测数据";
 
+/* Location: MapView.swift - Purpose: Saved History button for offline telemetry */
+"map.detail.action.savedHistory" = "Saved History";
+
 /* Location: MapView.swift ContactDetailSheet - Purpose: Sheet title for telemetry authentication */
 "map.detail.action.telemetryAccessTitle" = "遥测数据访问权限";
 
