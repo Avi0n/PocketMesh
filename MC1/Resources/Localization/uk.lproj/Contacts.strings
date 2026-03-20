@@ -868,6 +868,9 @@
 /* Location: TracePathMapView.swift - Purpose: Show labels accessibility */
 "contacts.trace.map.showLabels" = "Показати підписи";
 
+/* Location: TracePathMapView.swift - Purpose: Center on path accessibility */
+"contacts.trace.map.centerOnPath" = "Центрувати на маршруті";
+
 /* Location: TracePathMapView.swift - Purpose: Save path alert title */
 "contacts.trace.map.saveTitle" = "Зберегти шлях";
 

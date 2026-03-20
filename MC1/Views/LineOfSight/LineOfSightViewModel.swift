@@ -15,6 +15,12 @@ enum PointID: Hashable {
     case repeater
 }
 
+// MARK: - PointID Identifiable Conformance
+
+extension PointID: Identifiable {
+    var id: Self { self }
+}
+
 // MARK: - Repeater Point
 
 /// A repeater point for relay analysis.
@@ -113,6 +119,12 @@ struct LOSRepeaterSelectionInfo {
 
 @MainActor @Observable
 final class LineOfSightViewModel {
+
+    // MARK: - Stable Map IDs
+
+    let pointAMapID = UUID()
+    let pointBMapID = UUID()
+    let repeaterTargetMapID = UUID()
 
     // MARK: - Point Selection State
 
@@ -286,18 +298,14 @@ final class LineOfSightViewModel {
         setCameraRegion(fitting: coordinates)
     }
 
-    func zoomToShowBothPoints(bottomInsetFraction: Double = 0) {
+    func zoomToShowBothPoints() {
         guard let pointA, let pointB else { return }
-        setCameraRegion(
-            fitting: [pointA.coordinate, pointB.coordinate],
-            bottomInsetFraction: bottomInsetFraction
-        )
+        setCameraRegion(fitting: [pointA.coordinate, pointB.coordinate])
     }
 
     private func setCameraRegion(
         fitting coordinates: [CLLocationCoordinate2D],
-        paddingMultiplier: Double = 1.5,
-        bottomInsetFraction: Double = 0
+        paddingMultiplier: Double = 1.5
     ) {
         guard !coordinates.isEmpty else { return }
         let lats = coordinates.map(\.latitude)
@@ -305,27 +313,15 @@ final class LineOfSightViewModel {
         let latDelta = max(0.01, (lats.max()! - lats.min()!) * paddingMultiplier)
         let lonDelta = max(0.01, (lons.max()! - lons.min()!) * paddingMultiplier)
 
-        var centerLat = (lats.min()! + lats.max()!) / 2
-        var adjustedLatDelta = latDelta
-
-        // Expand region south so content fits above the bottom sheet
-        if bottomInsetFraction > 0, bottomInsetFraction < 1 {
-            let southExtra = latDelta * bottomInsetFraction / (1 - bottomInsetFraction)
-            adjustedLatDelta = latDelta + southExtra
-            centerLat -= southExtra / 2
-        }
-
-        // Clamp to valid MKCoordinateRegion bounds to prevent MKMapView crash
-        let clampedLatDelta = min(adjustedLatDelta, 180)
-        let clampedLonDelta = min(lonDelta, 360)
-        let clampedCenterLat = centerLat.clamped(to: -90...90)
-
         cameraRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(
-                latitude: clampedCenterLat,
+                latitude: ((lats.min()! + lats.max()!) / 2).clamped(to: -90...90),
                 longitude: (lons.min()! + lons.max()!) / 2
             ),
-            span: MKCoordinateSpan(latitudeDelta: clampedLatDelta, longitudeDelta: clampedLonDelta)
+            span: MKCoordinateSpan(
+                latitudeDelta: min(latDelta, 180),
+                longitudeDelta: min(lonDelta, 360)
+            )
         )
         cameraRegionVersion += 1
     }
@@ -426,7 +422,7 @@ final class LineOfSightViewModel {
         )
 
         // Fetch elevation asynchronously
-        pointAElevationTask = Task { @MainActor in
+        pointAElevationTask = Task {
             await fetchElevationForPointA()
         }
     }
@@ -454,7 +450,7 @@ final class LineOfSightViewModel {
         )
 
         // Fetch elevation asynchronously
-        pointBElevationTask = Task { @MainActor in
+        pointBElevationTask = Task {
             await fetchElevationForPointB()
         }
     }

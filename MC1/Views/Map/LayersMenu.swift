@@ -2,12 +2,15 @@ import SwiftUI
 
 /// Dropdown menu for selecting map layers
 struct LayersMenu: View {
+    @Environment(\.appState) private var appState
     @Binding var selection: MapStyleSelection
     @Binding var isPresented: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(MapStyleSelection.allCases, id: \.self) { style in
+                let isDisabled = style.requiresNetwork && !appState.offlineMapService.isNetworkAvailable
+
                 Button {
                     selection = style
                     withAnimation {
@@ -16,16 +19,17 @@ struct LayersMenu: View {
                 } label: {
                     HStack {
                         Text(style.label)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(isDisabled ? .secondary : .primary)
                         Spacer()
                         if selection == style {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(.tint)
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                 }
+                .disabled(isDisabled)
 
                 if style != MapStyleSelection.allCases.last {
                     Divider()
@@ -44,4 +48,5 @@ struct LayersMenu: View {
         isPresented: .constant(true)
     )
     .padding()
+    .environment(\.appState, AppState())
 }

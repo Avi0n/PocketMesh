@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "com.mc1", category: "TracePathMapView")
 /// Map-based view for building and visualizing trace paths
 struct TracePathMapView: View {
     @Environment(\.appState) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var traceViewModel: TracePathViewModel
     @Binding var presentedResult: TraceResult?
     @State private var mapViewModel = TracePathMapViewModel()
@@ -37,10 +38,15 @@ struct TracePathMapView: View {
             }
 
             // Floating buttons
-            floatingButtons
+            TracePathFloatingButtonsView(
+                mapViewModel: mapViewModel,
+                showingClearConfirmation: $showingClearConfirmation,
+                presentedResult: $presentedResult,
+                buttonNamespace: buttonNamespace
+            )
 
             // Map controls toolbar
-            mapToolbar
+            TracePathMapToolbarView(mapViewModel: mapViewModel)
         }
         .onAppear {
             mapViewModel.configure(
@@ -96,24 +102,56 @@ struct TracePathMapView: View {
 
     // MARK: - Map Content
 
+    private var mapPoints: [MapPoint] {
+        var points: [MapPoint] = []
+        let pathState = mapViewModel.pathState
+
+        for repeater in mapViewModel.repeatersWithLocation {
+            let info = pathState[repeater.id]
+            let inPath = info?.inPath ?? false
+            let style: MapPoint.PinStyle = inPath ? .repeaterRingWhite : .repeater
+            points.append(MapPoint(
+                id: repeater.id,
+                coordinate: repeater.coordinate,
+                pinStyle: style,
+                label: mapViewModel.showLabels ? repeater.displayName : nil,
+                isClusterable: !inPath,
+                hopIndex: info?.hopIndex,
+                badgeText: nil
+            ))
+        }
+
+        points.append(contentsOf: mapViewModel.badgePoints)
+        return points
+    }
+
     private var mapContent: some View {
-        TracePathMKMapView(
-            repeaters: mapViewModel.repeatersWithLocation,
-            lineOverlays: mapViewModel.lineOverlays,
-            badgeAnnotations: mapViewModel.badgeAnnotations,
-            mapType: mapViewModel.mapType,
+        MC1MapView(
+            points: mapPoints,
+            lines: mapViewModel.mapLines,
+            mapStyle: mapViewModel.mapStyleSelection,
+            isDarkMode: colorScheme == .dark,
             showLabels: mapViewModel.showLabels,
+            showsUserLocation: true,
+            isInteractive: true,
+            showsScale: true,
             cameraRegion: $mapViewModel.cameraRegion,
             cameraRegionVersion: mapViewModel.cameraRegionVersion,
-            pathState: { mapViewModel.pathState },
-            onRepeaterTap: { repeater in
-                let result = mapViewModel.handleRepeaterTap(repeater)
-                if result == .rejectedMiddleHop {
-                    rejectedTapHaptic += 1
-                } else {
-                    pinTapHaptic += 1
+            onPointTap: { point, _ in
+                if let repeater = mapViewModel.repeatersWithLocation.first(where: { $0.id == point.id }) {
+                    let result = mapViewModel.handleRepeaterTap(repeater)
+                    if result == .rejectedMiddleHop {
+                        rejectedTapHaptic += 1
+                    } else {
+                        pinTapHaptic += 1
+                    }
                 }
-            }
+            },
+            onMapTap: nil,
+            onCameraRegionChange: { region in
+                mapViewModel.cameraRegion = region
+            },
+            isStyleLoaded: .constant(true)
         )
         .ignoresSafeArea()
     }
@@ -128,8 +166,8 @@ struct TracePathMapView: View {
 
                 if let distance = traceViewModel.totalPathDistance {
                     Text("•")
-                    let miles = distance / 1609.34
-                    Text("\(miles, format: .number.precision(.fractionLength(1))) mi")
+                    Text(Measurement(value: distance, unit: UnitLength.meters),
+                         format: .measurement(width: .abbreviated, usage: .road))
                 }
             }
             .font(.subheadline.weight(.medium))
@@ -159,135 +197,4 @@ struct TracePathMapView: View {
         .background(.regularMaterial)
     }
 
-    // MARK: - Floating Buttons
-
-    private var floatingButtons: some View {
-        VStack {
-            Spacer()
-
-            LiquidGlassContainer(spacing: 12) {
-                HStack(spacing: 12) {
-                    if mapViewModel.hasPath {
-                        // Clear button
-                        Button {
-                            showingClearConfirmation = true
-                        } label: {
-                            Text(L10n.Contacts.Contacts.Trace.Map.clear)
-                        }
-                        .liquidGlassButtonStyle()
-                        .liquidGlassID("clear", in: buttonNamespace)
-                        .confirmationDialog(
-                            L10n.Contacts.Contacts.Trace.clearPath,
-                            isPresented: $showingClearConfirmation,
-                            titleVisibility: .visible
-                        ) {
-                            Button(L10n.Contacts.Contacts.Trace.clearPath, role: .destructive) {
-                                mapViewModel.clearPath()
-                            }
-                        } message: {
-                            Text(L10n.Contacts.Contacts.Trace.clearPathMessage)
-                        }
-
-                        // Run Trace button
-                        Button {
-                            Task {
-                                await mapViewModel.runTrace()
-                            }
-                        } label: {
-                            if mapViewModel.isRunning {
-                                HStack {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                    Text(L10n.Contacts.Contacts.Trace.List.runningTrace)
-                                }
-                            } else {
-                                Text(L10n.Contacts.Contacts.Trace.List.runTrace)
-                            }
-                        }
-                        .liquidGlassProminentButtonStyle()
-                        .liquidGlassID("trace", in: buttonNamespace)
-                        .disabled(!mapViewModel.canRunTrace)
-
-                        // View Results button
-                        if let result = mapViewModel.result, result.success {
-                            Button {
-                                presentedResult = result
-                            } label: {
-                                Text(L10n.Contacts.Contacts.Trace.Map.viewResults)
-                            }
-                            .liquidGlassButtonStyle()
-                            .liquidGlassID("viewResults", in: buttonNamespace)
-                        }
-                    }
-                }
-            }
-            .animation(.spring(response: 0.3), value: mapViewModel.hasPath)
-            .animation(.spring(response: 0.3), value: mapViewModel.result?.id)
-            .padding(.bottom, 24)
-        }
-    }
-
-    // MARK: - Map Toolbar
-
-    private var mapToolbar: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Spacer()
-                MapControlsToolbar(
-                    onLocationTap: {
-                        if let location = appState.locationService.currentLocation {
-                            mapViewModel.cameraRegion = MKCoordinateRegion(
-                                center: location.coordinate,
-                                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                            )
-                            mapViewModel.cameraRegionVersion += 1
-                        } else {
-                            appState.locationService.requestLocation()
-                        }
-                    },
-                    showingLayersMenu: $mapViewModel.showingLayersMenu
-                ) {
-                    // Labels toggle
-                    Button {
-                        mapViewModel.showLabels.toggle()
-                    } label: {
-                        Image(systemName: "character.textbox")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
-                            .frame(width: 44, height: 44)
-                            .contentShape(.rect)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels)
-
-                    // Center on path
-                    if mapViewModel.hasPath {
-                        Button {
-                            mapViewModel.centerOnPath()
-                        } label: {
-                            Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 17, weight: .medium))
-                                .foregroundStyle(.primary)
-                                .frame(width: 44, height: 44)
-                                .contentShape(.rect)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if mapViewModel.showingLayersMenu {
-                LayersMenu(
-                    selection: $mapViewModel.mapStyleSelection,
-                    isPresented: $mapViewModel.showingLayersMenu
-                )
-                .padding(.trailing, 16)
-                .padding(.bottom, 160)
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.3), value: mapViewModel.showingLayersMenu)
-    }
 }

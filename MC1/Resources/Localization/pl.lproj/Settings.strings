@@ -1264,3 +1264,56 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Mapy offline";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Brak map offline";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Pobierz regiony mapy do użytku bez internetu.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Pobierz region";
+
+/* Section header for downloaded maps list */
+"offlineMaps.downloaded" = "Pobrane";
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Pamięć";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Zajęta pamięć";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Nieznany region";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Ukończono";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Pobieranie…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Wybierz region";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Nazwa regionu";
+
+/* Button to start download */
+"offlineMaps.download" = "Pobierz";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Anuluj";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Usunąć mapę offline?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "Pobrane dane mapy zostaną usunięte.";
+
+/* Delete button */
+"offlineMaps.delete" = "Usuń";

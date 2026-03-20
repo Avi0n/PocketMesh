@@ -11,25 +11,23 @@ struct DiagnosticsSection: View {
 
     var body: some View {
         Section {
-            Button {
-                exportLogs()
-            } label: {
-                HStack {
-                    TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
-                    Spacer()
-                    if isExporting {
-                        ProgressView()
+            if let url = exportedFileURL {
+                ShareLink(item: url) {
+                    TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "square.and.arrow.up")
+                }
+            } else {
+                Button {
+                    exportLogs()
+                } label: {
+                    HStack {
+                        TintedLabel(L10n.Settings.Diagnostics.exportLogs, systemImage: "arrow.up.doc")
+                        Spacer()
+                        if isExporting {
+                            ProgressView()
+                        }
                     }
                 }
-            }
-            .disabled(isExporting)
-            .sheet(isPresented: Binding(
-                get: { exportedFileURL != nil },
-                set: { if !$0 { exportedFileURL = nil } }
-            )) {
-                if let url = exportedFileURL {
-                    ShareSheet(items: [url])
-                }
+                .disabled(isExporting)
             }
 
             Button(role: .destructive) {
@@ -55,6 +53,7 @@ struct DiagnosticsSection: View {
 
     private func exportLogs() {
         let dataStore = appState.services?.dataStore ?? appState.connectionManager.createStandalonePersistenceStore()
+        exportedFileURL = nil
         isExporting = true
 
         Task { @MainActor in
@@ -77,9 +76,7 @@ struct DiagnosticsSection: View {
             do {
                 try await dataStore.clearDebugLogEntries()
             } catch {
-                await MainActor.run {
-                    showError = error.localizedDescription
-                }
+                showError = error.localizedDescription
             }
         }
     }

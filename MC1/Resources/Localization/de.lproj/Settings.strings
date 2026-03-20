@@ -1264,3 +1264,56 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Offline-Karten";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Keine Offline-Karten";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Kartenregionen für die Nutzung ohne Internet herunterladen.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Region herunterladen";
+
+/* Section header for downloaded maps list */
+"offlineMaps.downloaded" = "Heruntergeladen";
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Speicher";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Speicher belegt";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Unbekannte Region";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Abgeschlossen";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Wird heruntergeladen…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Region auswählen";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Regionsname";
+
+/* Button to start download */
+"offlineMaps.download" = "Herunterladen";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Abbrechen";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Offline-Karte löschen?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "Die heruntergeladenen Kartendaten werden entfernt.";
+
+/* Delete button */
+"offlineMaps.delete" = "Löschen";
