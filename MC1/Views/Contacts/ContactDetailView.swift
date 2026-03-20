@@ -547,6 +547,16 @@ private struct ContactActionsSection: View {
                 }
                 .radioDisabled(for: appState.connectionState)
 
+                // Saved History - offline telemetry charts
+                NavigationLink {
+                    TelemetryHistoryOverviewView(
+                        publicKey: currentContact.publicKey,
+                        deviceID: currentContact.deviceID
+                    )
+                } label: {
+                    Label(L10n.Contacts.Contacts.Detail.savedHistory, systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                }
+
                 // Admin Access - navigates to settings view after auth
                 Button(action: onShowAdminAccess) {
                     Label(L10n.Contacts.Contacts.Detail.adminAccess, systemImage: "gearshape.2")
