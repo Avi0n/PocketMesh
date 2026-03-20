@@ -89,19 +89,3 @@ struct TelemetryHistoryView: View {
         }
     }
 }
-
-// MARK: - Supporting Types
-
-private struct ChannelGroup: Identifiable {
-    let channel: Int
-    let charts: [TelemetryChartGroup]
-    var id: Int { channel }
-}
-
-private struct TelemetryChartGroup {
-    let key: String
-    let title: String
-    let sensorType: LPPSensorType?
-    var dataPoints: [MetricChartView.DataPoint]
-}
-
