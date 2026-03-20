@@ -3545,6 +3545,42 @@ public enum L10n {
       /// Toggle label for room messages notifications
       public static let roomMessages = L10n.tr("Settings", "notifications.roomMessages", fallback: "Room Messages")
     }
+    public enum OfflineMaps {
+      /// Cancel button
+      public static let cancel = L10n.tr("Settings", "offlineMaps.cancel", fallback: "Cancel")
+      /// Status when pack download is complete
+      public static let complete = L10n.tr("Settings", "offlineMaps.complete", fallback: "Complete")
+      /// Delete button
+      public static let delete = L10n.tr("Settings", "offlineMaps.delete", fallback: "Delete")
+      /// Delete confirmation message
+      public static let deleteMessage = L10n.tr("Settings", "offlineMaps.deleteMessage", fallback: "The downloaded map data will be removed.")
+      /// Delete confirmation title
+      public static let deleteTitle = L10n.tr("Settings", "offlineMaps.deleteTitle", fallback: "Delete Offline Map?")
+      /// Button to start download
+      public static let download = L10n.tr("Settings", "offlineMaps.download", fallback: "Download")
+      /// Section header for downloaded maps list
+      public static let downloaded = L10n.tr("Settings", "offlineMaps.downloaded", fallback: "Downloaded")
+      /// Status when pack is downloading
+      public static let downloading = L10n.tr("Settings", "offlineMaps.downloading", fallback: "Downloading…")
+      /// Button to download a new offline region
+      public static let downloadRegion = L10n.tr("Settings", "offlineMaps.downloadRegion", fallback: "Download Region")
+      /// Description for empty state
+      public static let emptyDescription = L10n.tr("Settings", "offlineMaps.emptyDescription", fallback: "Download map regions for use without internet.")
+      /// Title for empty state when no offline packs exist
+      public static let emptyTitle = L10n.tr("Settings", "offlineMaps.emptyTitle", fallback: "No Offline Maps")
+      /// Navigation title for region picker sheet
+      public static let pickRegion = L10n.tr("Settings", "offlineMaps.pickRegion", fallback: "Select Region")
+      /// Placeholder for region name text field
+      public static let regionName = L10n.tr("Settings", "offlineMaps.regionName", fallback: "Region Name")
+      /// Section header for storage info
+      public static let storage = L10n.tr("Settings", "offlineMaps.storage", fallback: "Storage")
+      /// Label for total storage used
+      public static let storageUsed = L10n.tr("Settings", "offlineMaps.storageUsed", fallback: "Storage Used")
+      /// Navigation title for offline maps settings
+      public static let title = L10n.tr("Settings", "offlineMaps.title", fallback: "Offline Maps")
+      /// Fallback name for unknown region
+      public static let unknownRegion = L10n.tr("Settings", "offlineMaps.unknownRegion", fallback: "Unknown Region")
+    }
     public enum PathHashMode {
       /// Footer explaining path hash mode tradeoff
       public static let footer = L10n.tr("Settings", "pathHashMode.footer", fallback: "Larger hashes reduce routing collisions but limit the maximum number of hops per path.")
@@ -3652,6 +3688,12 @@ public enum L10n {
         /// Navigation title for the regenerate identity sheet
         public static let title = L10n.tr("Settings", "regenerateIdentity.sheet.title", fallback: "Regenerate Key")
       }
+    }
+    public enum ReplyWithQuote {
+      /// Replying includes a preview of the original message.
+      public static let footer = L10n.tr("Settings", "replyWithQuote.footer", fallback: "Replying includes a preview of the original message.")
+      /// Reply with Quote
+      public static let toggle = L10n.tr("Settings", "replyWithQuote.toggle", fallback: "Reply with Quote")
     }
     public enum Telemetry {
       /// Toggle label for allowing telemetry requests

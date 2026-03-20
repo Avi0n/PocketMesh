@@ -16,7 +16,7 @@ struct MapView: View {
         NavigationStack {
             MapCanvasView(
                 viewModel: viewModel,
-                mapPoints: mapPoints,
+                mapPoints: viewModel.mapPoints,
                 colorScheme: colorScheme,
                 selectedCalloutContact: $selectedCalloutContact,
                 selectedPointScreenPosition: $selectedPointScreenPosition,
@@ -49,28 +49,6 @@ struct MapView: View {
                 .presentationDetents([.large])
             }
             .liquidGlassToolbarBackground()
-        }
-    }
-
-    private var mapPoints: [MapPoint] {
-        viewModel.contactsWithLocation.map { contact in
-            MapPoint(
-                id: contact.id,
-                coordinate: contact.coordinate,
-                pinStyle: pinStyle(for: contact),
-                label: contact.displayName,
-                isClusterable: true,
-                hopIndex: nil,
-                badgeText: nil
-            )
-        }
-    }
-
-    private func pinStyle(for contact: ContactDTO) -> MapPoint.PinStyle {
-        switch contact.type {
-        case .chat: .contactChat
-        case .repeater: .contactRepeater
-        case .room: .contactRoom
         }
     }
 
