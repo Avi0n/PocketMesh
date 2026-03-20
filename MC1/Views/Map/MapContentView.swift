@@ -38,8 +38,6 @@ struct MapContentView: View {
                 },
                 onCameraRegionChange: { region in
                     viewModel.cameraRegion = region
-                    selectedCalloutContact = nil
-                    selectedPointScreenPosition = nil
                 },
                 isStyleLoaded: $isStyleLoaded
             )

@@ -12,6 +12,9 @@ final class MapViewModel {
     /// All contacts with valid locations
     var contactsWithLocation: [ContactDTO] = []
 
+    /// Map points derived from contacts — stored to avoid reallocation on every body eval.
+    private(set) var mapPoints: [MapPoint] = []
+
     /// Loading state
     var isLoading = false
 
@@ -66,11 +69,36 @@ final class MapViewModel {
         do {
             let allContacts = try await dataStore.fetchContacts(deviceID: deviceID)
             contactsWithLocation = allContacts.filter(\.hasLocation)
+            rebuildMapPoints()
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isLoading = false
+    }
+
+    // MARK: - Map Points
+
+    private func rebuildMapPoints() {
+        mapPoints = contactsWithLocation.map { contact in
+            MapPoint(
+                id: contact.id,
+                coordinate: contact.coordinate,
+                pinStyle: pinStyle(for: contact),
+                label: contact.displayName,
+                isClusterable: true,
+                hopIndex: nil,
+                badgeText: nil
+            )
+        }
+    }
+
+    private func pinStyle(for contact: ContactDTO) -> MapPoint.PinStyle {
+        switch contact.type {
+        case .chat: .contactChat
+        case .repeater: .contactRepeater
+        case .room: .contactRoom
+        }
     }
 
     // MARK: - Map Interaction
