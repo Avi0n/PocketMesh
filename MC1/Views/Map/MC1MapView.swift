@@ -11,9 +11,8 @@ private let logger = Logger(subsystem: "com.mc1", category: "MapPins")
 /// Workaround for a MapLibre bug where `MLNEffectiveScaleFactorForView`
 /// computes `nativeBounds.width / bounds.width` — a ratio that breaks in
 /// landscape because `nativeBounds` is fixed while `bounds` rotates.
-/// We intercept `setDrawableSize:` on the internal Metal **UIView** (not
-/// the CAMetalLayer) so that `layoutChanged()`'s read-back of
-/// `resource.mtlView.drawableSize` also returns the corrected value.
+/// We intercept both `setDrawableSize:` and `setContentScaleFactor:` on
+/// MapLibre's internal Metal UIView so the wrong scale is never stored.
 /// Upstream issue: https://github.com/maplibre/maplibre-native/issues/3214
 private enum MetalLayerScaleFix {
 
@@ -32,6 +31,7 @@ private enum MetalLayerScaleFix {
         } else {
             guard let subclass = objc_allocateClassPair(originalClass, name, 0) else { return }
             addDrawableSizeOverride(to: subclass, originalClass: originalClass)
+            addContentScaleFactorOverride(to: subclass, originalClass: originalClass)
             objc_registerClassPair(subclass)
             fixedClass = subclass
         }
@@ -39,13 +39,17 @@ private enum MetalLayerScaleFix {
         object_setClass(metalView, fixedClass)
     }
 
-    // MARK: - Private
-
     private static func findMetalView(in view: UIView) -> UIView? {
         for subview in view.subviews where subview.layer is CAMetalLayer {
             return subview
         }
         return nil
+    }
+
+    private static func findMapView(from metalView: UIView) -> MLNMapView? {
+        var parent: UIView? = metalView.superview
+        while let v = parent, !(v is MLNMapView) { parent = v.superview }
+        return parent as? MLNMapView
     }
 
     private static func addDrawableSizeOverride(
@@ -59,10 +63,7 @@ private enum MetalLayerScaleFix {
         let callOriginal = unsafeBitCast(originalIMP, to: SetDrawableSizeFn.self)
 
         let block: @convention(block) (UIView, CGSize) -> Void = { metalView, proposedSize in
-            var parent: UIView? = metalView.superview
-            while let v = parent, !(v is MLNMapView) { parent = v.superview }
-
-            guard let mapView = parent,
+            guard let mapView = findMapView(from: metalView),
                   mapView.bounds.size.width > 0,
                   mapView.bounds.size.height > 0,
                   let screen = mapView.window?.screen else {
@@ -88,9 +89,37 @@ private enum MetalLayerScaleFix {
         let imp = imp_implementationWithBlock(block)
         class_addMethod(subclass, selector, imp, method_getTypeEncoding(original))
     }
+
+    private static func addContentScaleFactorOverride(
+        to subclass: AnyClass,
+        originalClass: AnyClass
+    ) {
+        let selector = NSSelectorFromString("setContentScaleFactor:")
+        guard let original = class_getInstanceMethod(originalClass, selector) else { return }
+        let originalIMP = method_getImplementation(original)
+        typealias SetScaleFn = @convention(c) (AnyObject, Selector, CGFloat) -> Void
+        let callOriginal = unsafeBitCast(originalIMP, to: SetScaleFn.self)
+
+        let block: @convention(block) (UIView, CGFloat) -> Void = { metalView, _ in
+            guard let mapView = findMapView(from: metalView),
+                  let screen = mapView.window?.screen else {
+                return
+            }
+
+            let correctScale = screen.nativeScale
+            if metalView.contentScaleFactor == correctScale {
+                return
+            }
+
+            callOriginal(metalView, selector, correctScale)
+        }
+
+        let imp = imp_implementationWithBlock(block)
+        class_addMethod(subclass, selector, imp, method_getTypeEncoding(original))
+    }
 }
 
-/// Applies the Metal layer scale fix once the view is attached to a window.
+/// Applies the isa-swizzle once the view is attached to a window.
 private final class ScaledMLNMapView: MLNMapView {
     override func didMoveToWindow() {
         super.didMoveToWindow()
@@ -184,9 +213,11 @@ struct MC1MapView: UIViewRepresentable {
         coordinator.currentPoints = points
         coordinator.currentLines = lines
 
-        // Style URL change
+        // Style URL change — compare against our tracked value, not mapView.styleURL
+        // which MapLibre may transiently nil during layout/rotation.
         let newStyleURL = mapStyle.styleURL(isDarkMode: isDarkMode)
-        if mapView.styleURL != newStyleURL {
+        if coordinator.lastAppliedStyleURL != newStyleURL {
+            coordinator.lastAppliedStyleURL = newStyleURL
             coordinator.isStyleLoaded = false
             mapView.styleURL = newStyleURL
         }
@@ -196,8 +227,8 @@ struct MC1MapView: UIViewRepresentable {
         // User location
         mapView.showsUserLocation = showsUserLocation
 
-        // Update data layers (only when style is loaded and data changed)
-        if coordinator.isStyleLoaded {
+        // Update data layers (only when style is loaded, data changed, and not mid-gesture)
+        if coordinator.isStyleLoaded, !coordinator.isUserInteracting {
             if mapStyleChanged {
                 coordinator.updateRasterLayerVisibility(mapView: mapView)
             }
@@ -207,7 +238,10 @@ struct MC1MapView: UIViewRepresentable {
             if linesChanged {
                 coordinator.updateLineSource(mapView: mapView)
             }
-            coordinator.updateLabelVisibility(mapView: mapView)
+            if coordinator.currentShowLabels != showLabels {
+                coordinator.currentShowLabels = showLabels
+                coordinator.updateLabelVisibility(mapView: mapView)
+            }
         }
 
         // Camera region (version-number pattern)
@@ -290,11 +324,14 @@ extension MC1MapView {
         var setIsStyleLoaded: ((Bool) -> Void)?
 
         // State
+        var isUserInteracting = false
         var isUpdatingFromSwiftUI = false
         var isStyleLoaded = false
         var lastAppliedRegionVersion = 0
         var pendingRegionTask: Task<Void, Never>?
         var showLabels = true
+        var currentShowLabels = true
+        var lastAppliedStyleURL: URL?
         var currentMapStyle: MapStyleSelection?
         var currentPoints: [MapPoint] = []
         var currentLines: [MapLine] = []
@@ -331,7 +368,12 @@ extension MC1MapView {
             .gestureRotate, .gestureTilt, .gestureOneFingerZoom
         ]
 
+        func mapViewRegionIsChanging(_ mapView: MLNMapView) {
+            isUserInteracting = true
+        }
+
         func mapView(_ mapView: MLNMapView, regionDidChangeWith reason: MLNCameraChangeReason, animated: Bool) {
+            isUserInteracting = false
             guard !isUpdatingFromSwiftUI else { return }
 
             let isUserGesture = !reason.isDisjoint(with: Self.userGestureReasons)

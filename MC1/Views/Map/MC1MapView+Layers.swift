@@ -214,6 +214,7 @@ extension MC1MapView.Coordinator {
     // MARK: - Line layers
 
     func setupLineLayers(style: MLNStyle) {
+        guard style.source(withIdentifier: MapSourceID.lines) == nil else { return }
         let source = MLNShapeSource(identifier: MapSourceID.lines, features: [], options: nil)
         style.addSource(source)
 
@@ -271,6 +272,10 @@ extension MC1MapView.Coordinator {
     // MARK: - Raster tile sources
 
     func setupRasterSources(style: MLNStyle, mapView: MLNMapView) {
+        guard style.source(withIdentifier: MapSourceID.satelliteTiles) == nil else {
+            updateRasterLayerVisibility(mapView: mapView)
+            return
+        }
         let satSource = MLNRasterTileSource(
             identifier: MapSourceID.satelliteTiles,
             tileURLTemplates: [MapTileURLs.esriWorldImagery],
