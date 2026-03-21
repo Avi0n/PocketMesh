@@ -37,6 +37,15 @@ public enum PacketBuilder: Sendable {
 
     /// Size of a public key in bytes.
     static let publicKeySize = 32
+    static let rawDataMaxPathBytes = 64
+    static let rawDataMaxPayloadBytes = 184
+
+    private static func encodePublicKey(_ publicKey: Data) -> Data {
+        if publicKey.count >= publicKeySize {
+            return publicKey.prefix(publicKeySize)
+        }
+        return publicKey + Data(repeating: 0, count: publicKeySize - publicKey.count)
+    }
 
     // MARK: - Device Commands
 
@@ -790,7 +799,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (1 byte): Reserved `0x00`
     /// - Offset 2 (1 byte): Mode value (0, 1, or 2)
     public static func setPathHashMode(_ mode: UInt8) -> Data {
-        Data([CommandCode.setPathHashMode.rawValue, 0x00, mode])
+        Data([CommandCode.setPathHashMode.rawValue, 0x00, min(mode, 2)])
     }
 
     /// Builds a factoryReset command to wipe all settings and data from the device.
@@ -864,10 +873,10 @@ public enum PacketBuilder: Sendable {
     /// - Offset 2+N (M bytes): Payload
     public static func sendRawData(path: Data, payload: Data) -> Data {
         var data = Data([CommandCode.sendRawData.rawValue])
-        let clampedPath = path.prefix(255)
+        let clampedPath = path.prefix(rawDataMaxPathBytes)
         data.append(UInt8(clampedPath.count))
         data.append(clampedPath)
-        data.append(payload)
+        data.append(payload.prefix(rawDataMaxPayloadBytes))
         return data
     }
 
@@ -881,7 +890,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func hasConnection(publicKey: Data) -> Data {
         var data = Data([CommandCode.hasConnection.rawValue])
-        data.append(publicKey.prefix(publicKeySize))
+        data.append(encodePublicKey(publicKey))
         return data
     }
 
@@ -895,7 +904,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 1 (32 bytes): Full public key
     public static func getContactByKey(publicKey: Data) -> Data {
         var data = Data([CommandCode.getContactByKey.rawValue])
-        data.append(publicKey.prefix(publicKeySize))
+        data.append(encodePublicKey(publicKey))
         return data
     }
 
@@ -910,7 +919,7 @@ public enum PacketBuilder: Sendable {
     /// - Offset 2 (32 bytes): Full public key
     public static func getAdvertPath(publicKey: Data) -> Data {
         var data = Data([CommandCode.getAdvertPath.rawValue, 0x00])
-        data.append(publicKey.prefix(publicKeySize))
+        data.append(encodePublicKey(publicKey))
         return data
     }
 

@@ -59,6 +59,24 @@ struct RoundTripTests {
         #expect(abs(contact.longitude - (-122.4194)) <= 0.0001)
     }
 
+    @Test("Contact rejects reserved path length encoding")
+    func contactRejectsReservedPathLengthEncoding() {
+        var data = Data(repeating: 0, count: 147)
+        data.replaceSubrange(0..<32, with: Data(repeating: 0xAA, count: 32))
+        data[32] = 1
+        data[33] = 0
+        data[34] = 0xC1  // mode 3 (reserved), hop count 1
+
+        let event = Parsers.Contact.parse(data)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected .parseFailure event, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("reserved path length encoding"))
+    }
+
     // MARK: - SelfInfo Round-Trip
 
     @Test("SelfInfo round trip")
@@ -263,6 +281,27 @@ struct RoundTripTests {
         #expect(msg.pathLength == pathLen)
         #expect(msg.textType == txtType)
         #expect(msg.text == "Hello World")
+    }
+
+    @Test("ContactMessage rejects truncated signature payload")
+    func contactMessageRejectsTruncatedSignaturePayload() {
+        var data = Data()
+        data.append(UInt8(bitPattern: Int8(0)))
+        data.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Data($0) })
+        data.append(Data([0x01, 0x23, 0x45, 0x67, 0x89, 0xAB]))
+        data.append(0x00)
+        data.append(0x02)  // signed text
+        data.append(contentsOf: withUnsafeBytes(of: UInt32(1704067200).littleEndian) { Data($0) })
+        data.append(Data([0xDE, 0xAD, 0xBE]))  // only 3 signature bytes, no text payload
+
+        let event = Parsers.ContactMessage.parse(data, version: .v3)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected .parseFailure event, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("signature truncated"))
     }
 
     @Test("ChannelMessage v3 round trip")
@@ -678,6 +717,28 @@ struct RoundTripTests {
         #expect(caps.blePin == blePin)
         #expect(caps.clientRepeat, "client_repeat should be true")
         #expect(caps.pathHashMode == 2, "pathHashMode should be 2 (3-byte hashes)")
+    }
+
+    @Test("DeviceInfo v10 rejects truncated payload before pathHashMode")
+    func deviceInfoV10RejectsTruncatedPayloadBeforePathHashMode() {
+        var data = Data()
+        data.append(10)  // fwVer
+        data.append(50)  // maxContacts
+        data.append(8)   // maxChannels
+        let blePin: UInt32 = 654321
+        data.append(contentsOf: withUnsafeBytes(of: blePin.littleEndian) { Data($0) })
+        data.append(Data(repeating: 0, count: 12 + 40 + 20))
+        data.append(1)   // client_repeat present
+        #expect(data.count == 80, "v10 payload missing pathHashMode byte should be truncated")
+
+        let event = Parsers.DeviceInfo.parse(data)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected .parseFailure event, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("missing pathHashMode byte"))
     }
 
     @Test("DeviceInfo v9 defaults pathHashMode to 0")

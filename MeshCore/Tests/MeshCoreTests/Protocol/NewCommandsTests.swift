@@ -25,6 +25,18 @@ struct NewCommandsTests {
         #expect(packet.count == 3, "command + pathLen + payload")
     }
 
+    @Test("sendRawData clamps to firmware limits")
+    func sendRawDataClampsToFirmwareLimits() {
+        let path = Data(repeating: 0x11, count: 80)
+        let payload = Data(repeating: 0x22, count: 220)
+
+        let packet = PacketBuilder.sendRawData(path: path, payload: payload)
+
+        #expect(packet[1] == 64, "Path length should clamp to firmware 64-byte limit")
+        #expect(Data(packet[2..<66]) == Data(repeating: 0x11, count: 64), "Path bytes should be truncated to 64 bytes")
+        #expect(Data(packet[66...]) == Data(repeating: 0x22, count: 184), "Payload should be truncated to firmware 184-byte limit")
+    }
+
     @Test("hasConnection format")
     func hasConnectionFormat() {
         let pubkey = Data(repeating: 0xAA, count: 32)
@@ -34,6 +46,17 @@ struct NewCommandsTests {
         #expect(packet.count == 33, "1 + 32 bytes")
         #expect(packet[0] == 0x1C, "Command code")
         #expect(Data(packet[1...]) == pubkey, "Public key")
+    }
+
+    @Test("hasConnection pads short public key to protocol width")
+    func hasConnectionPadsShortPublicKey() {
+        let pubkey = Data(repeating: 0xAA, count: 31)
+
+        let packet = PacketBuilder.hasConnection(publicKey: pubkey)
+
+        #expect(packet.count == 33, "Packet should still contain a full 32-byte key field")
+        #expect(Data(packet[1..<32]) == Data(repeating: 0xAA, count: 31))
+        #expect(packet[32] == 0x00, "Short public keys should be zero-padded at the builder layer")
     }
 
     @Test("getContactByKey format")
@@ -47,6 +70,17 @@ struct NewCommandsTests {
         #expect(Data(packet[1...]) == pubkey, "Public key")
     }
 
+    @Test("getContactByKey pads short public key to protocol width")
+    func getContactByKeyPadsShortPublicKey() {
+        let pubkey = Data(repeating: 0xBB, count: 31)
+
+        let packet = PacketBuilder.getContactByKey(publicKey: pubkey)
+
+        #expect(packet.count == 33, "Packet should still contain a full 32-byte key field")
+        #expect(Data(packet[1..<32]) == Data(repeating: 0xBB, count: 31))
+        #expect(packet[32] == 0x00)
+    }
+
     @Test("getAdvertPath format")
     func getAdvertPathFormat() {
         let pubkey = Data(repeating: 0xCC, count: 32)
@@ -57,6 +91,17 @@ struct NewCommandsTests {
         #expect(packet[0] == 0x2A, "Command code")
         #expect(packet[1] == 0x00, "Reserved byte")
         #expect(Data(packet[2...]) == pubkey, "Public key")
+    }
+
+    @Test("getAdvertPath pads short public key to protocol width")
+    func getAdvertPathPadsShortPublicKey() {
+        let pubkey = Data(repeating: 0xCC, count: 31)
+
+        let packet = PacketBuilder.getAdvertPath(publicKey: pubkey)
+
+        #expect(packet.count == 34, "Packet should still contain reserved byte plus a full 32-byte key field")
+        #expect(Data(packet[2..<33]) == Data(repeating: 0xCC, count: 31))
+        #expect(packet[33] == 0x00)
     }
 
     @Test("getTuningParams format")
@@ -81,5 +126,13 @@ struct NewCommandsTests {
         #expect(packet[0] == 0x3D, "Command code should be setPathHashMode (0x3D)")
         #expect(packet[1] == 0x00, "Reserved byte at offset 1 should be 0x00")
         #expect(packet[2] == mode, "Mode byte at offset 2 should be \(mode) (\(label))")
+    }
+
+    @Test("setPathHashMode clamps reserved values to max supported mode")
+    func setPathHashModeClampsReservedValues() {
+        let packet = PacketBuilder.setPathHashMode(3)
+
+        #expect(packet.count == 3)
+        #expect(packet[2] == 2, "Reserved path hash modes should clamp to the max supported mode")
     }
 }

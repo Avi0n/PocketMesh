@@ -720,6 +720,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getContact(publicKey: Data) async throws -> MeshContact? {
+        try requireFullPublicKey(publicKey, operation: "getContact")
         let data = PacketBuilder.getContactByKey(publicKey: publicKey)
         return try await sendAndWait(data) { event in
             switch event {
@@ -873,8 +874,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
     ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
+        try requireFullPublicKey(publicKey, operation: "requestStatus")
         // Serialize binary requests to prevent messageSent race conditions
-        try await binaryRequestSerializer.withSerialization { [self] in
+        return try await binaryRequestSerializer.withSerialization { [self] in
             try await performStatusRequest(from: publicKey)
         }
     }
@@ -998,6 +1000,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Information about the sent message.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func sendKeepAlive(to publicKey: Data, syncSince: UInt32) async throws -> MessageSentInfo {
+        try requireFullPublicKey(publicKey, operation: "sendKeepAlive")
         var syncSinceLE = syncSince.littleEndian
         let payload = withUnsafeBytes(of: &syncSinceLE) { Data($0) }
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .keepAlive, payload: payload)
@@ -1386,6 +1389,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the contact.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func resetPath(publicKey: Data) async throws {
+        try requireFullPublicKey(publicKey, operation: "resetPath")
         try await sendSimpleCommand(PacketBuilder.resetPath(publicKey: publicKey))
     }
 
@@ -1394,6 +1398,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the contact to remove.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func removeContact(publicKey: Data) async throws {
+        try requireFullPublicKey(publicKey, operation: "removeContact")
         try await sendSimpleCommand(PacketBuilder.removeContact(publicKey: publicKey))
     }
 
@@ -1405,6 +1410,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter publicKey: The full 32-byte public key of the contact to share.
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func shareContact(publicKey: Data) async throws {
+        try requireFullPublicKey(publicKey, operation: "shareContact")
         try await sendSimpleCommand(PacketBuilder.shareContact(publicKey: publicKey))
     }
 
@@ -1414,7 +1420,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: A URI string encoding the contact information.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func exportContact(publicKey: Data? = nil) async throws -> String {
-        try await sendAndWait(PacketBuilder.exportContact(publicKey: publicKey)) { event in
+        if let publicKey {
+            try requireFullPublicKey(publicKey, operation: "exportContact")
+        }
+        return try await sendAndWait(PacketBuilder.exportContact(publicKey: publicKey)) { event in
             if case .contactURI(let uri) = event { return uri }
             return nil
         }
@@ -1819,6 +1828,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Parameter mode: Hash mode (0=1-byte, 1=2-byte, 2=3-byte hashes).
     /// - Throws: ``MeshCoreError/timeout`` or ``MeshCoreError/deviceError(code:)`` on failure.
     public func setPathHashMode(_ mode: UInt8) async throws {
+        guard mode <= 2 else {
+            throw MeshCoreError.invalidInput("Path hash mode must be 0, 1, or 2")
+        }
         try await sendSimpleCommand(PacketBuilder.setPathHashMode(mode))
     }
 
@@ -1870,8 +1882,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestTelemetry(from publicKey: Data) async throws -> TelemetryResponse {
+        try requireFullPublicKey(publicKey, operation: "requestTelemetry")
         // Serialize binary requests to prevent messageSent race conditions
-        try await binaryRequestSerializer.withSerialization { [self] in
+        return try await binaryRequestSerializer.withSerialization { [self] in
             try await performTelemetryRequest(from: publicKey)
         }
     }
@@ -1990,7 +2003,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: MMA response containing aggregated statistics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     public func requestMMA(from publicKey: Data, start: Date, end: Date) async throws -> MMAResponse {
-        try await binaryRequestSerializer.withSerialization { [self] in
+        try requireFullPublicKey(publicKey, operation: "requestMMA")
+        return try await binaryRequestSerializer.withSerialization { [self] in
             try await performMMARequest(from: publicKey, start: start, end: end)
         }
     }
@@ -2073,7 +2087,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: ACL response containing authorized public keys.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     public func requestACL(from publicKey: Data) async throws -> ACLResponse {
-        try await binaryRequestSerializer.withSerialization { [self] in
+        try requireFullPublicKey(publicKey, operation: "requestACL")
+        return try await binaryRequestSerializer.withSerialization { [self] in
             try await performACLRequest(from: publicKey)
         }
     }
@@ -2579,6 +2594,12 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             await pendingRequests.complete(tag: code, with: event)
         default:
             break
+        }
+    }
+
+    private func requireFullPublicKey(_ publicKey: Data, operation: String) throws {
+        guard publicKey.count == PacketBuilder.publicKeySize else {
+            throw MeshCoreError.invalidInput("Full \(PacketBuilder.publicKeySize)-byte public key required for \(operation)")
         }
     }
 }

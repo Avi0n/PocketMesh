@@ -102,6 +102,12 @@ extension PacketParser {
                     reason: "Battery response too short: \(payload.count) < \(PacketSize.batteryMinimum)"
                 )
             }
+            if payload.count > PacketSize.batteryMinimum && payload.count < PacketSize.batteryExtended {
+                return .parseFailure(
+                    data: payload,
+                    reason: "Battery response has partial extended payload: \(payload.count) < \(PacketSize.batteryExtended)"
+                )
+            }
             let level = Int(payload.readUInt16LE(at: 0))
             var usedKB: Int?
             var totalKB: Int?

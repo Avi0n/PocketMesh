@@ -54,6 +54,23 @@ struct NewResponseParsingTests {
         }
     }
 
+    @Test("advertPathResponse rejects reserved path length encoding")
+    func advertPathResponseRejectsReservedPathLengthEncoding() {
+        var payload = Data()
+        payload.appendLittleEndian(UInt32(1704067200))
+        payload.append(0xC1)  // mode 3 (reserved), hop count 1
+        payload.append(0x11)
+
+        let event = Parsers.AdvertPathResponse.parse(payload)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected parseFailure for reserved path length, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("reserved path length encoding"))
+    }
+
     @Test("tuningParamsResponse parse")
     func tuningParamsResponseParse() {
         var payload = Data()

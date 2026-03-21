@@ -150,6 +150,7 @@ public enum Parsers {
         let type = ContactType(rawValue: data[offset]) ?? .chat; offset += 1
         let flags = ContactFlags(rawValue: data[offset]); offset += 1
         let pathLen = data[offset]; offset += 1
+        guard pathLen == 0xFF || decodePathLen(pathLen) != nil else { return nil }
         let actualPathLen = (pathLen == 0xFF) ? 0 : (decodePathLen(pathLen)?.byteLength ?? 0)
         // Read full 64-byte path field, but only use first actualPathLen bytes
         let pathBytes = Data(data[offset..<offset+64])
@@ -188,6 +189,15 @@ public enum Parsers {
         /// - Parameter data: Raw contact data.
         /// - Returns: A `.contact` event or `.parseFailure`.
         static func parse(_ data: Data) -> MeshEvent {
+            if data.count >= PacketSize.contact {
+                let pathLen = data[34]
+                if pathLen != 0xFF && decodePathLen(pathLen) == nil {
+                    return .parseFailure(
+                        data: data,
+                        reason: "Contact response uses reserved path length encoding: 0x\(String(format: "%02X", pathLen))"
+                    )
+                }
+            }
             guard let contact = parseContactData(data) else {
                 return .parseFailure(
                     data: data,
@@ -296,6 +306,13 @@ public enum Parsers {
             var model: String?
             var version: String?
 
+            if fwVer >= 3 && data.count < PacketSize.deviceInfoV3Full {
+                return .parseFailure(
+                    data: data,
+                    reason: "DeviceInfo v\(fwVer) response too short: \(data.count) < \(PacketSize.deviceInfoV3Full)"
+                )
+            }
+
             // v3+ format: fwBuild=12, model=40, version=20 bytes
             if fwVer >= 3 && data.count >= PacketSize.deviceInfoV3Full {
                 maxContacts = Int(data[offset]) * 2  /// Stored as count/2 in firmware.
@@ -320,14 +337,26 @@ public enum Parsers {
 
             // v9+: client_repeat byte after version string
             var clientRepeat = false
-            if fwVer >= 9 && data.count > offset {
+            if fwVer >= 9 {
+                guard data.count > offset else {
+                    return .parseFailure(
+                        data: data,
+                        reason: "DeviceInfo v\(fwVer) missing client_repeat byte"
+                    )
+                }
                 clientRepeat = data[offset] != 0
                 offset += 1
             }
 
             // v10+: path_hash_mode byte after client_repeat
             var pathHashMode: UInt8 = 0
-            if fwVer >= 10 && data.count > offset {
+            if fwVer >= 10 {
+                guard data.count > offset else {
+                    return .parseFailure(
+                        data: data,
+                        reason: "DeviceInfo v\(fwVer) missing pathHashMode byte"
+                    )
+                }
                 pathHashMode = data[offset]
             }
 
@@ -391,7 +420,13 @@ public enum Parsers {
             let timestamp = Date(timeIntervalSince1970: TimeInterval(data.readUInt32LE(at: offset))); offset += 4
 
             var signature: Data?
-            if txtType == 2 && data.count >= offset + 4 {
+            if txtType == 2 {
+                guard data.count >= offset + 4 else {
+                    return .parseFailure(
+                        data: data,
+                        reason: "ContactMessage signature truncated: \(data.count) < \(offset + 4)"
+                    )
+                }
                 signature = Data(data[offset..<offset+4]); offset += 4
             }
 
@@ -1324,7 +1359,19 @@ public enum Parsers {
 
             let timestamp = data.readUInt32LE(at: 0)
             let pathLen = data[4]
-            let byteLen = decodePathLen(pathLen)?.byteLength ?? 0
+            guard let decoded = decodePathLen(pathLen) else {
+                return .parseFailure(
+                    data: data,
+                    reason: "AdvertPathResponse uses reserved path length encoding: 0x\(String(format: "%02X", pathLen))"
+                )
+            }
+            let byteLen = decoded.byteLength
+            guard data.count >= 5 + byteLen else {
+                return .parseFailure(
+                    data: data,
+                    reason: "AdvertPathResponse path truncated: \(data.count) < \(5 + byteLen)"
+                )
+            }
             let path = Data(data.dropFirst(5).prefix(byteLen))
 
             return .advertPathResponse(MeshCore.AdvertPathResponse(

@@ -213,6 +213,22 @@ struct ProtocolBugFixTests {
         #expect(status.receiveErrors == 0, "receiveErrors should default to 0 when not present")
     }
 
+    @Test("battery response rejects partial extended payload")
+    func batteryResponseRejectsPartialExtendedPayload() {
+        var packet = Data([ResponseCode.battery.rawValue])
+        packet.append(contentsOf: [0xE8, 0x03])  // 1000 mV
+        packet.append(contentsOf: [0x01, 0x02, 0x03])  // partial extended fields only
+
+        let event = PacketParser.parse(packet)
+
+        guard case .parseFailure(_, let reason) = event else {
+            Issue.record("Expected .parseFailure event, got \(event)")
+            return
+        }
+
+        #expect(reason.contains("partial extended payload"))
+    }
+
     @Test("statusResponse parseFromBinaryResponse 52 bytes parses rxAirtime")
     func statusResponseParseFromBinaryResponse52BytesParsesRxAirtime() {
         // 52 bytes: has rxAirtime but no receiveErrors

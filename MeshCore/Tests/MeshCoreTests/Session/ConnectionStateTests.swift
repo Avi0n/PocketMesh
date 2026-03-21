@@ -60,6 +60,51 @@ struct ConnectionStateTests {
         await session.stop()
     }
 
+    @Test("getContact rejects short public key before sending")
+    func getContactRejectsShortPublicKey() async {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "Test")
+        )
+
+        await #expect(throws: MeshCoreError.self) {
+            _ = try await session.getContact(publicKey: Data(repeating: 0xAA, count: 31))
+        }
+
+        #expect(await transport.sentData.isEmpty)
+    }
+
+    @Test("requestStatus rejects short public key before sending")
+    func requestStatusRejectsShortPublicKey() async {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "Test")
+        )
+
+        await #expect(throws: MeshCoreError.self) {
+            _ = try await session.requestStatus(from: Data(repeating: 0xBB, count: 31))
+        }
+
+        #expect(await transport.sentData.isEmpty)
+    }
+
+    @Test("setPathHashMode rejects reserved mode before sending")
+    func setPathHashModeRejectsReservedMode() async {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "Test")
+        )
+
+        await #expect(throws: MeshCoreError.self) {
+            try await session.setPathHashMode(3)
+        }
+
+        #expect(await transport.sentData.isEmpty)
+    }
+
     private func makeSelfInfoPacket(name: String = "TestNode") -> Data {
         var payload = Data()
         payload.append(0)
