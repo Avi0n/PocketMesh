@@ -688,15 +688,18 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't emit a matching contact response.
     public func getContact(publicKey: Data) async throws -> MeshContact? {
         let data = PacketBuilder.getContactByKey(publicKey: publicKey)
-        return try await sendAndWait(data) { event in
+        return try await sendAndMatch(data) { event in
             switch event {
             case .contact(let contact):
-                return contact.publicKey == publicKey ? contact : nil
+                if contact.publicKey == publicKey {
+                    return .success(contact)
+                }
+                return .ignore
             case .error:
                 // Contact not found returns error, treat as nil
-                return nil as MeshContact?
+                return .success(nil)
             default:
-                return nil
+                return .ignore
             }
         }
     }
