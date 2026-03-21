@@ -234,13 +234,48 @@ public actor BinaryRequestSerializer {
         _ operation: @Sendable () async throws -> T
     ) async throws -> T {
         await acquire()
-        do {
-            let result = try await operation()
-            release()
-            return result
-        } catch {
-            release()
-            throw error
+        defer { release() }
+        return try await operation()
+    }
+}
+
+/// Serializes broad command-response operations that rely on event matching.
+///
+/// Many MeshCore commands wait for generic events such as `.ok`, `.error`, or a
+/// singleton typed response. Serializing those request/response exchanges avoids
+/// cross-command event miscorrelation when multiple callers issue commands at once.
+public actor RequestResponseSerializer {
+    private var isRequestInFlight = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    /// Acquires the serializer, waiting if another request/response exchange is active.
+    public func acquire() async {
+        if !isRequestInFlight {
+            isRequestInFlight = true
+            return
         }
+
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    /// Releases the serializer to the next waiting request.
+    public func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            next.resume()
+        } else {
+            isRequestInFlight = false
+        }
+    }
+
+    /// Executes a request/response operation while holding the serializer.
+    public func withSerialization<T: Sendable>(
+        _ operation: @Sendable () async throws -> T
+    ) async throws -> T {
+        await acquire()
+        defer { release() }
+        return try await operation()
     }
 }
