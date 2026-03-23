@@ -58,6 +58,17 @@ public actor EventDispatcher {
     public func subscribe(
         filter: (@Sendable (MeshEvent) -> Bool)?
     ) -> AsyncStream<MeshEvent> {
+        subscribeTracked(filter: filter).stream
+    }
+
+    /// Subscribes to events and returns the stream together with a handle that can
+    /// be finished explicitly by the caller.
+    ///
+    /// Explicit finishing is useful for timeout races, where a waiting task may
+    /// otherwise remain suspended on the stream after the caller has already moved on.
+    public func subscribeTracked(
+        filter: (@Sendable (MeshEvent) -> Bool)? = nil
+    ) -> (id: UUID, stream: AsyncStream<MeshEvent>) {
         let (stream, continuation) = AsyncStream.makeStream(
             of: MeshEvent.self,
             bufferingPolicy: .bufferingNewest(100)
@@ -75,7 +86,7 @@ public actor EventDispatcher {
             }
         }
 
-        return stream
+        return (id, stream)
     }
 
     /// Dispatches an event to all subscribers, applying filters.
@@ -102,6 +113,14 @@ public actor EventDispatcher {
             subscription.continuation.finish()
         }
         subscriptions.removeAll()
+    }
+
+    /// Finishes and removes a specific subscription.
+    ///
+    /// Safe to call multiple times; unknown ids are ignored.
+    public func finishSubscription(id: UUID) {
+        guard let subscription = subscriptions.removeValue(forKey: id) else { return }
+        subscription.continuation.finish()
     }
 
     /// Removes a subscription from the dispatcher.
