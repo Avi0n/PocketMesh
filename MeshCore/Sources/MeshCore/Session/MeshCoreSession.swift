@@ -83,6 +83,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     private let clock: any Clock<Duration>
     private let dispatcher = EventDispatcher()
     private let pendingRequests = PendingRequests()
+    private let companionCommandSerializer = CompanionCommandSerializer()
     private let binaryRequestSerializer = BinaryRequestSerializer()
 
     // State
@@ -475,37 +476,39 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         matching predicate: @escaping @Sendable (MeshEvent) -> T?,
         timeout: TimeInterval? = nil
     ) async throws -> T {
-        let effectiveTimeout = timeout ?? configuration.defaultTimeout
+        try await companionCommandSerializer.withSerialization { [self] in
+            let effectiveTimeout = timeout ?? configuration.defaultTimeout
 
-        // Subscribe BEFORE sending to avoid race condition
-        let events = await dispatcher.subscribe()
+            // Subscribe BEFORE sending to avoid race condition
+            let events = await dispatcher.subscribe()
 
-        // Send after subscribing
-        try await transport.send(data)
+            // Send after subscribing
+            try await transport.send(data)
 
-        // Now wait for matching event
-        return try await withThrowingTaskGroup(of: T?.self) { group in
-            group.addTask {
-                for await event in events {
-                    if Task.isCancelled { return nil }
-                    if let result = predicate(event) {
-                        return result
+            // Now wait for matching event
+            return try await withThrowingTaskGroup(of: T?.self) { group in
+                group.addTask {
+                    for await event in events {
+                        if Task.isCancelled { return nil }
+                        if let result = predicate(event) {
+                            return result
+                        }
                     }
+                    return nil
                 }
-                return nil
-            }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
-                return nil
-            }
+                group.addTask { [clock = self.clock] in
+                    try await clock.sleep(for: .seconds(effectiveTimeout))
+                    return nil
+                }
 
-            if let result = try await group.next() ?? nil {
+                if let result = try await group.next() ?? nil {
+                    group.cancelAll()
+                    return result
+                }
                 group.cancelAll()
-                return result
+                throw MeshCoreError.timeout
             }
-            group.cancelAll()
-            throw MeshCoreError.timeout
         }
     }
 
@@ -523,41 +526,43 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         matching successPredicate: @escaping @Sendable (MeshEvent) -> T?,
         timeout: TimeInterval? = nil
     ) async throws -> T {
-        let effectiveTimeout = timeout ?? configuration.defaultTimeout
+        try await companionCommandSerializer.withSerialization { [self] in
+            let effectiveTimeout = timeout ?? configuration.defaultTimeout
 
-        // Subscribe BEFORE sending to avoid race condition
-        let events = await dispatcher.subscribe()
+            // Subscribe BEFORE sending to avoid race condition
+            let events = await dispatcher.subscribe()
 
-        // Send after subscribing
-        try await transport.send(data)
+            // Send after subscribing
+            try await transport.send(data)
 
-        // Now wait for matching event
-        return try await withThrowingTaskGroup(of: T?.self) { group in
-            group.addTask {
-                for await event in events {
-                    if Task.isCancelled { return nil }
-                    // Check for error response first
-                    if case .error(let code) = event {
-                        throw MeshCoreError.deviceError(code: code ?? 0)
+            // Now wait for matching event
+            return try await withThrowingTaskGroup(of: T?.self) { group in
+                group.addTask {
+                    for await event in events {
+                        if Task.isCancelled { return nil }
+                        // Check for error response first
+                        if case .error(let code) = event {
+                            throw MeshCoreError.deviceError(code: code ?? 0)
+                        }
+                        if let result = successPredicate(event) {
+                            return result
+                        }
                     }
-                    if let result = successPredicate(event) {
-                        return result
-                    }
+                    return nil
                 }
-                return nil
-            }
 
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(effectiveTimeout))
-                return nil
-            }
+                group.addTask { [clock = self.clock] in
+                    try await clock.sleep(for: .seconds(effectiveTimeout))
+                    return nil
+                }
 
-            if let result = try await group.next() ?? nil {
+                if let result = try await group.next() ?? nil {
+                    group.cancelAll()
+                    return result
+                }
                 group.cancelAll()
-                return result
+                throw MeshCoreError.timeout
             }
-            group.cancelAll()
-            throw MeshCoreError.timeout
         }
     }
 
@@ -615,57 +620,59 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     ///           ``MeshCoreError/deviceError(code:)`` if the device returns an error.
     public func getContacts(since lastModified: Date? = nil) async throws -> [MeshContact] {
-        let data = PacketBuilder.getContacts(since: lastModified)
-        let events = await dispatcher.subscribe()
-        try await transport.send(data)
+        let (contacts, modifiedDate): ([MeshContact], Date?) = try await companionCommandSerializer.withSerialization { [self] in
+            let data = PacketBuilder.getContacts(since: lastModified)
+            let events = await dispatcher.subscribe()
+            try await transport.send(data)
 
-        // Manual timeout pattern (not withTimeout) because:
-        // 1. Uses injected clock for testability
-        // 2. Throws MeshCoreError.timeout for consistency with other session methods
-        // 3. Defers contactManager mutations until after the task group
-        //    to avoid actor-isolation issues in the @Sendable closure.
-        let (contacts, modifiedDate): ([MeshContact], Date?) = try await withThrowingTaskGroup(
-            of: ([MeshContact], Date?).self
-        ) { group in
-            group.addTask {
-                var receivedContacts: [MeshContact] = []
-                var finalModifiedDate: Date?
+            // Manual timeout pattern (not withTimeout) because:
+            // 1. Uses injected clock for testability
+            // 2. Throws MeshCoreError.timeout for consistency with other session methods
+            // 3. Defers contactManager mutations until after the task group
+            //    to avoid actor-isolation issues in the @Sendable closure.
+            return try await withThrowingTaskGroup(
+                of: ([MeshContact], Date?).self
+            ) { group in
+                group.addTask {
+                    var receivedContacts: [MeshContact] = []
+                    var finalModifiedDate: Date?
 
-                for await event in events {
-                    if Task.isCancelled {
-                        throw CancellationError()
+                    for await event in events {
+                        if Task.isCancelled {
+                            throw CancellationError()
+                        }
+
+                        switch event {
+                        case .contactsStart(let count):
+                            receivedContacts.reserveCapacity(count)
+                        case .contact(let contact):
+                            receivedContacts.append(contact)
+                        case .contactsEnd(let modifiedDate):
+                            finalModifiedDate = modifiedDate
+                            return (receivedContacts, finalModifiedDate)
+                        case .error(let code):
+                            throw MeshCoreError.deviceError(code: code ?? 0)
+                        default:
+                            continue
+                        }
                     }
 
-                    switch event {
-                    case .contactsStart(let count):
-                        receivedContacts.reserveCapacity(count)
-                    case .contact(let contact):
-                        receivedContacts.append(contact)
-                    case .contactsEnd(let modifiedDate):
-                        finalModifiedDate = modifiedDate
-                        return (receivedContacts, finalModifiedDate)
-                    case .error(let code):
-                        throw MeshCoreError.deviceError(code: code ?? 0)
-                    default:
-                        continue
-                    }
+                    throw MeshCoreError.timeout
                 }
 
-                throw MeshCoreError.timeout
+                group.addTask { [clock = self.clock] in
+                    try await clock.sleep(for: .seconds(60))
+                    throw MeshCoreError.timeout
+                }
+
+                defer { group.cancelAll() }
+
+                guard let result = try await group.next() else {
+                    throw MeshCoreError.timeout
+                }
+
+                return result
             }
-
-            group.addTask { [clock = self.clock] in
-                try await clock.sleep(for: .seconds(60))
-                throw MeshCoreError.timeout
-            }
-
-            defer { group.cancelAll() }
-
-            guard let result = try await group.next() else {
-                throw MeshCoreError.timeout
-            }
-
-            return result
         }
 
         // Update contact manager on the actor after the race completes
@@ -839,9 +846,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
     ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
-        // Serialize binary requests to prevent messageSent race conditions
-        try await binaryRequestSerializer.withSerialization { [self] in
-            try await performStatusRequest(from: publicKey)
+        try await companionCommandSerializer.withSerialization { [self] in
+            // Serialize binary requests to prevent messageSent race conditions
+            try await binaryRequestSerializer.withSerialization { [self] in
+                try await performStatusRequest(from: publicKey)
+            }
         }
     }
 
@@ -1245,9 +1254,21 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Device telemetry including battery, temperature, and sensor data.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getSelfTelemetry() async throws -> TelemetryResponse {
-        try await sendAndWait(PacketBuilder.getSelfTelemetry()) { event in
-            if case .telemetryResponse(let response) = event { return response }
-            return nil
+        guard let selfInfo else {
+            throw MeshCoreError.sessionNotStarted
+        }
+        let expectedPrefix = Data(selfInfo.publicKey.prefix(6))
+
+        return try await sendAndWait(PacketBuilder.getSelfTelemetry()) { event in
+            guard case .telemetryResponse(let response) = event else {
+                return nil
+            }
+
+            guard response.publicKeyPrefix == expectedPrefix else {
+                return nil
+            }
+
+            return response
         }
     }
 
@@ -1763,7 +1784,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func getChannel(index: UInt8) async throws -> ChannelInfo {
         try await sendAndWait(PacketBuilder.getChannel(index: index)) { event in
-            if case .channelInfo(let info) = event { return info }
+            if case .channelInfo(let info) = event, info.index == index { return info }
             return nil
         }
     }
@@ -1802,9 +1823,11 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     ///           ``MeshCoreError/invalidResponse`` if unexpected response received.
     public func requestTelemetry(from publicKey: Data) async throws -> TelemetryResponse {
-        // Serialize binary requests to prevent messageSent race conditions
-        try await binaryRequestSerializer.withSerialization { [self] in
-            try await performTelemetryRequest(from: publicKey)
+        try await companionCommandSerializer.withSerialization { [self] in
+            // Serialize binary requests to prevent messageSent race conditions
+            try await binaryRequestSerializer.withSerialization { [self] in
+                try await performTelemetryRequest(from: publicKey)
+            }
         }
     }
 
@@ -1922,8 +1945,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: MMA response containing aggregated statistics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     public func requestMMA(from publicKey: Data, start: Date, end: Date) async throws -> MMAResponse {
-        try await binaryRequestSerializer.withSerialization { [self] in
-            try await performMMARequest(from: publicKey, start: start, end: end)
+        try await companionCommandSerializer.withSerialization { [self] in
+            try await binaryRequestSerializer.withSerialization { [self] in
+                try await performMMARequest(from: publicKey, start: start, end: end)
+            }
         }
     }
 
@@ -2005,8 +2030,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: ACL response containing authorized public keys.
     /// - Throws: ``MeshCoreError/timeout`` if no response within timeout period.
     public func requestACL(from publicKey: Data) async throws -> ACLResponse {
-        try await binaryRequestSerializer.withSerialization { [self] in
-            try await performACLRequest(from: publicKey)
+        try await companionCommandSerializer.withSerialization { [self] in
+            try await binaryRequestSerializer.withSerialization { [self] in
+                try await performACLRequest(from: publicKey)
+            }
         }
     }
 
@@ -2092,14 +2119,16 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         orderBy: UInt8 = 0,
         pubkeyPrefixLength: UInt8 = 4
     ) async throws -> NeighboursResponse {
-        try await binaryRequestSerializer.withSerialization { [self] in
-            try await performNeighboursRequest(
-                from: publicKey,
-                count: count,
-                offset: offset,
-                orderBy: orderBy,
-                pubkeyPrefixLength: pubkeyPrefixLength
-            )
+        try await companionCommandSerializer.withSerialization { [self] in
+            try await binaryRequestSerializer.withSerialization { [self] in
+                try await performNeighboursRequest(
+                    from: publicKey,
+                    count: count,
+                    offset: offset,
+                    orderBy: orderBy,
+                    pubkeyPrefixLength: pubkeyPrefixLength
+                )
+            }
         }
     }
 

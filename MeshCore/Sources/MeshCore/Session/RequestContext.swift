@@ -244,3 +244,51 @@ public actor BinaryRequestSerializer {
         }
     }
 }
+
+/// Serializes companion-protocol commands that expect a direct firmware response.
+///
+/// The companion protocol expects callers to send one command at a time and wait for the
+/// corresponding response before issuing the next command. Actor isolation alone is not
+/// sufficient because the session actor can re-enter while an async command is awaiting
+/// a response. This serializer enforces the protocol's single in-flight command rule.
+public actor CompanionCommandSerializer {
+    private var isCommandInFlight = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    /// Acquires the serializer, waiting if another command is already in flight.
+    public func acquire() async {
+        if !isCommandInFlight {
+            isCommandInFlight = true
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    /// Releases the serializer so the next queued command can proceed.
+    public func release() {
+        if let next = waiters.first {
+            waiters.removeFirst()
+            next.resume()
+        } else {
+            isCommandInFlight = false
+        }
+    }
+
+    /// Executes an operation while holding the serializer.
+    public func withSerialization<T: Sendable>(
+        _ operation: @Sendable () async throws -> T
+    ) async throws -> T {
+        await acquire()
+        do {
+            let result = try await operation()
+            release()
+            return result
+        } catch {
+            release()
+            throw error
+        }
+    }
+}
