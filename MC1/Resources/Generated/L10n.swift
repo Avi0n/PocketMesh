@@ -2037,8 +2037,12 @@ public enum L10n {
         public static let hideLabels = L10n.tr("Map", "map.controls.hideLabels", fallback: "Hide labels")
         /// Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button
         public static let layers = L10n.tr("Map", "map.controls.layers", fallback: "Map layers")
+        /// Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock)
+        public static let lockNorth = L10n.tr("Map", "map.controls.lockNorth", fallback: "Lock to north")
         /// Location: MapView.swift - Purpose: Accessibility label when labels are hidden
         public static let showLabels = L10n.tr("Map", "map.controls.showLabels", fallback: "Show labels")
+        /// Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock)
+        public static let unlockNorth = L10n.tr("Map", "map.controls.unlockNorth", fallback: "Unlock rotation")
       }
       public enum Detail {
         /// Location: MapView.swift ContactDetailSheet - Purpose: Value showing contact is favorited
@@ -2114,7 +2118,7 @@ public enum L10n {
         /// Location: MapStyleSelection.swift - Purpose: Standard map style option
         public static let standard = L10n.tr("Map", "map.style.standard", fallback: "Standard")
         /// Location: MapStyleSelection.swift - Purpose: Topo map style option
-        public static let topo = L10n.tr("Map", "map.style.topo", fallback: "Topo")
+        public static let topo = L10n.tr("Map", "map.style.topo", fallback: "Topography")
       }
     }
   }
@@ -3720,6 +3724,8 @@ public enum L10n {
       public static let download = L10n.tr("Settings", "offlineMaps.download", fallback: "Download")
       /// Section header for downloaded maps list
       public static let downloaded = L10n.tr("Settings", "offlineMaps.downloaded", fallback: "Downloaded")
+      /// Hint shown before estimate is available
+      public static let downloadHint = L10n.tr("Settings", "offlineMaps.downloadHint", fallback: "Enter a name and select an area to download.")
       /// Status when pack is downloading
       public static let downloading = L10n.tr("Settings", "offlineMaps.downloading", fallback: "Downloading…")
       /// Button to download a new offline region
@@ -3728,18 +3734,54 @@ public enum L10n {
       public static let emptyDescription = L10n.tr("Settings", "offlineMaps.emptyDescription", fallback: "Download map regions for use without internet.")
       /// Title for empty state when no offline packs exist
       public static let emptyTitle = L10n.tr("Settings", "offlineMaps.emptyTitle", fallback: "No Offline Maps")
+      /// Estimated download size
+      public static func estimatedSize(_ p1: Any) -> String {
+        return L10n.tr("Settings", "offlineMaps.estimatedSize", String(describing: p1), fallback: "Estimated size: ~%@")
+      }
+      /// Download exceeds available storage
+      public static let exceedsStorage = L10n.tr("Settings", "offlineMaps.exceedsStorage", fallback: "Not enough storage on this device. Zoom in to select a smaller area.")
+      /// Include layers prompt
+      public static let includeLayers = L10n.tr("Settings", "offlineMaps.includeLayers", fallback: "Include additional layers for offline use.")
+      /// Large tile download warning
+      public static let largeTileWarning = L10n.tr("Settings", "offlineMaps.largeTileWarning", fallback: "Large download area. This may take a while and use significant storage.")
+      /// Layers section header
+      public static let layers = L10n.tr("Settings", "offlineMaps.layers", fallback: "Layers")
+      /// No network available
+      public static let noNetwork = L10n.tr("Settings", "offlineMaps.noNetwork", fallback: "An internet connection is required to download maps.")
+      /// Pause download button
+      public static let pause = L10n.tr("Settings", "offlineMaps.pause", fallback: "Pause")
+      /// Paused status label
+      public static let paused = L10n.tr("Settings", "offlineMaps.paused", fallback: "Paused")
       /// Navigation title for region picker sheet
       public static let pickRegion = L10n.tr("Settings", "offlineMaps.pickRegion", fallback: "Select Region")
       /// Placeholder for region name text field
       public static let regionName = L10n.tr("Settings", "offlineMaps.regionName", fallback: "Region Name")
+      /// Resume download button
+      public static let resume = L10n.tr("Settings", "offlineMaps.resume", fallback: "Resume")
       /// Section header for storage info
       public static let storage = L10n.tr("Settings", "offlineMaps.storage", fallback: "Storage")
+      /// Storage section footer
+      public static let storageFooter = L10n.tr("Settings", "offlineMaps.storageFooter", fallback: "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.")
       /// Label for total storage used
       public static let storageUsed = L10n.tr("Settings", "offlineMaps.storageUsed", fallback: "Storage Used")
       /// Navigation title for offline maps settings
       public static let title = L10n.tr("Settings", "offlineMaps.title", fallback: "Offline Maps")
       /// Fallback name for unknown region
       public static let unknownRegion = L10n.tr("Settings", "offlineMaps.unknownRegion", fallback: "Unknown Region")
+      public enum Error {
+        /// Error: insufficient disk space
+        public static let insufficientDiskSpace = L10n.tr("Settings", "offlineMaps.error.insufficientDiskSpace", fallback: "Not enough storage space. At least 100 MB is required.")
+        /// Error: tile limit reached
+        public static let tileLimitReached = L10n.tr("Settings", "offlineMaps.error.tileLimitReached", fallback: "The download tile limit has been reached.")
+      }
+      public enum Layer {
+        /// Layer type labels
+        public static let base = L10n.tr("Settings", "offlineMaps.layer.base", fallback: "Base Map")
+        /// Satellite
+        public static let satellite = L10n.tr("Settings", "offlineMaps.layer.satellite", fallback: "Satellite")
+        /// Topography
+        public static let topo = L10n.tr("Settings", "offlineMaps.layer.topo", fallback: "Topography")
+      }
     }
     public enum PathHashMode {
       /// Footer explaining path hash mode tradeoff

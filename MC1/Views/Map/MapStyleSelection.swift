@@ -22,16 +22,17 @@ enum MapStyleSelection: String, CaseIterable, Hashable {
         }
     }
 
-    func styleURL(isDarkMode: Bool) -> URL {
+    var offlineMapLayer: OfflineMapLayer {
         switch self {
-        case .standard:
-            let url = isDarkMode ? MapTileURLs.openFreeMapDark : MapTileURLs.openFreeMapLiberty
-            return URL(string: url)!
-        case .satellite, .topo:
-            // Satellite/topo use raster overlays on top of the base vector style.
-            // The base style URL is still needed; raster sources are added later.
-            let url = isDarkMode ? MapTileURLs.openFreeMapDark : MapTileURLs.openFreeMapLiberty
-            return URL(string: url)!
+        case .standard: .base
+        case .satellite: .satellite
+        case .topo: .topo
         }
+    }
+
+    /// All styles use the same base vector style; satellite/topo add raster overlays at runtime.
+    func styleURL(isDarkMode: Bool) -> URL {
+        let url = isDarkMode ? MapTileURLs.openFreeMapDark : MapTileURLs.openFreeMapLiberty
+        return URL(string: url)!
     }
 }

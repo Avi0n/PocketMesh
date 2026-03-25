@@ -1290,3 +1290,47 @@
 
 /* Delete button */
 "offlineMaps.delete" = "删除";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "存储空间不足，至少需要 100 MB。";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "已达到此下载的瓦片数量限制。";
+
+/* Pause download button */
+"offlineMaps.pause" = "暂停";
+
+/* Resume download button */
+"offlineMaps.resume" = "继续";
+
+/* Paused status label */
+"offlineMaps.paused" = "已暂停";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "预计大小：~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "下载区域较大，可能需要较长时间并占用大量存储空间。";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "输入名称并选择要下载的区域。";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "设备存储空间不足。请放大地图以选择更小的区域。";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.satellite" = "Satellite";
+"offlineMaps.layer.topo" = "地形";
+
+/* Layers section header */
+"offlineMaps.layers" = "Layers";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";

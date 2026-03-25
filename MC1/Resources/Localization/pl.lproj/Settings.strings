@@ -1317,3 +1317,47 @@
 
 /* Delete button */
 "offlineMaps.delete" = "Usuń";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "Za mało miejsca na dysku. Wymagane jest co najmniej 100 MB.";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "Osiągnięto limit kafelków dla tego pobierania.";
+
+/* Pause download button */
+"offlineMaps.pause" = "Wstrzymaj";
+
+/* Resume download button */
+"offlineMaps.resume" = "Wznów";
+
+/* Paused status label */
+"offlineMaps.paused" = "Wstrzymano";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "Szacowany rozmiar: ~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "Duży obszar pobierania. Może to trochę potrwać i zużyć dużo miejsca.";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "Wpisz nazwę i wybierz obszar do pobrania.";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "Za mało miejsca na tym urządzeniu. Przybliż, aby wybrać mniejszy obszar.";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.satellite" = "Satellite";
+"offlineMaps.layer.topo" = "Topografia";
+
+/* Layers section header */
+"offlineMaps.layers" = "Layers";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";
