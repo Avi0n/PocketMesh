@@ -235,8 +235,8 @@ enum PinSpriteRenderer {
             pillPath.fill()
             cgContext.restoreGState()
 
-            // Single fill at reduced opacity to approximate translucent blur
-            UIColor.secondarySystemBackground.withAlphaComponent(0.75).setFill()
+            // Light fill for readability in both light and dark mode
+            UIColor.white.withAlphaComponent(0.85).setFill()
             pillPath.fill()
         }
 
