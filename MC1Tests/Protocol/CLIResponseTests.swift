@@ -254,6 +254,23 @@ struct CLIResponseTests {
         #expect(result == .ownerInfo("just a name"))
     }
 
+    @Test func parse_ownerInfo_withColonAndSlash() {
+        // Contact info with ":" and "/" was misclassified as deviceTime
+        let result = CLIResponse.parse("> Contact: KD7ABC / 145.230", forQuery: "get owner.info")
+        #expect(result == .ownerInfo("Contact: KD7ABC / 145.230"))
+    }
+
+    @Test func parse_name_withColonAndSlash() {
+        // Name with ":" and "/" was misclassified as deviceTime
+        let result = CLIResponse.parse("> Repeater: East / West", forQuery: "get name")
+        #expect(result == .name("Repeater: East / West"))
+    }
+
+    @Test func parse_deviceTime_stillWorks_withoutQueryHint() {
+        let result = CLIResponse.parse("06:40 - 18/4/2025 UTC")
+        #expect(result == .deviceTime("06:40 - 18/4/2025 UTC"))
+    }
+
     // MARK: - Edge Cases
 
     @Test func parse_greaterThanInContent_notStripped() {
