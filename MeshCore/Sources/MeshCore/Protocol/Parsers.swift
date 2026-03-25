@@ -712,7 +712,11 @@ public enum Parsers {
         ///   - data: Raw binary response payload (without the 4-byte tag).
         ///   - publicKeyPrefix: The 6-byte public key prefix from the pending request context.
         /// - Returns: A `StatusResponse` if parsing succeeds, `nil` otherwise.
-        static func parseFromBinaryResponse(_ data: Data, publicKeyPrefix: Data) -> MeshCore.StatusResponse? {
+        static func parseFromBinaryResponse(
+            _ data: Data,
+            publicKeyPrefix: Data,
+            layout: MeshCore.StatusResponse.Layout = .repeater
+        ) -> MeshCore.StatusResponse? {
             // Accept exactly 48 (no rxAirtime), 52 (with rxAirtime), or 56+ (with receiveErrors).
             // Reject malformed payloads with incomplete fields (49-51, 53-55).
             guard data.count == PacketSize.binaryResponseStatusBase ||
@@ -736,33 +740,68 @@ public enum Parsers {
             let lastSNR = Double(data.readInt16LE(at: offset)) / 4.0; offset += 2
             let directDups = Int(data.readUInt16LE(at: offset)); offset += 2
             let floodDups = Int(data.readUInt16LE(at: offset)); offset += 2
-            let rxAirtime: UInt32 = data.count >= PacketSize.binaryResponseStatusWithRxAirtime
-                ? data.readUInt32LE(at: offset) : 0
-            offset += 4
-            let receiveErrors: UInt32 = data.count >= PacketSize.binaryResponseStatusWithReceiveErrors
-                ? data.readUInt32LE(at: offset) : 0
+            switch layout {
+            case .repeater:
+                let rxAirtime: UInt32 = data.count >= PacketSize.binaryResponseStatusWithRxAirtime
+                    ? data.readUInt32LE(at: offset) : 0
+                offset += 4
+                let receiveErrors: UInt32 = data.count >= PacketSize.binaryResponseStatusWithReceiveErrors
+                    ? data.readUInt32LE(at: offset) : 0
 
-            return MeshCore.StatusResponse(
-                publicKeyPrefix: publicKeyPrefix,
-                battery: battery,
-                txQueueLength: txQueueLen,
-                noiseFloor: noiseFloor,
-                lastRSSI: lastRSSI,
-                packetsReceived: packetsRecv,
-                packetsSent: packetsSent,
-                airtime: airtime,
-                uptime: uptime,
-                sentFlood: sentFlood,
-                sentDirect: sentDirect,
-                receivedFlood: recvFlood,
-                receivedDirect: recvDirect,
-                fullEvents: fullEvents,
-                lastSNR: lastSNR,
-                directDuplicates: directDups,
-                floodDuplicates: floodDups,
-                rxAirtime: rxAirtime,
-                receiveErrors: receiveErrors
-            )
+                return MeshCore.StatusResponse(
+                    layout: .repeater,
+                    publicKeyPrefix: publicKeyPrefix,
+                    battery: battery,
+                    txQueueLength: txQueueLen,
+                    noiseFloor: noiseFloor,
+                    lastRSSI: lastRSSI,
+                    packetsReceived: packetsRecv,
+                    packetsSent: packetsSent,
+                    airtime: airtime,
+                    uptime: uptime,
+                    sentFlood: sentFlood,
+                    sentDirect: sentDirect,
+                    receivedFlood: recvFlood,
+                    receivedDirect: recvDirect,
+                    fullEvents: fullEvents,
+                    lastSNR: lastSNR,
+                    directDuplicates: directDups,
+                    floodDuplicates: floodDups,
+                    rxAirtime: rxAirtime,
+                    receiveErrors: receiveErrors
+                )
+
+            case .roomServer:
+                let postedCount: UInt16? = data.count >= PacketSize.binaryResponseStatusWithRxAirtime
+                    ? data.readUInt16LE(at: offset) : nil
+                let postPushCount: UInt16? = data.count >= PacketSize.binaryResponseStatusWithRxAirtime
+                    ? data.readUInt16LE(at: offset + 2) : nil
+
+                return MeshCore.StatusResponse(
+                    layout: .roomServer,
+                    publicKeyPrefix: publicKeyPrefix,
+                    battery: battery,
+                    txQueueLength: txQueueLen,
+                    noiseFloor: noiseFloor,
+                    lastRSSI: lastRSSI,
+                    packetsReceived: packetsRecv,
+                    packetsSent: packetsSent,
+                    airtime: airtime,
+                    uptime: uptime,
+                    sentFlood: sentFlood,
+                    sentDirect: sentDirect,
+                    receivedFlood: recvFlood,
+                    receivedDirect: recvDirect,
+                    fullEvents: fullEvents,
+                    lastSNR: lastSNR,
+                    directDuplicates: directDups,
+                    floodDuplicates: floodDups,
+                    rxAirtime: 0,
+                    receiveErrors: 0,
+                    roomServerPostedCount: postedCount,
+                    roomServerPostPushCount: postPushCount
+                )
+            }
         }
     }
 

@@ -727,7 +727,8 @@ public actor RemoteNodeService {
 
         // Request status (which triggers sync)
         do {
-            _ = try await session.requestStatus(from: remoteSession.publicKey)
+            let contactType: ContactType = remoteSession.isRoom ? .room : .repeater
+            _ = try await session.requestStatus(from: remoteSession.publicKey, type: contactType)
         } catch let error as MeshCoreError {
             throw RemoteNodeError.sessionError(error)
         }
@@ -781,7 +782,8 @@ public actor RemoteNodeService {
         do {
             let effectiveTimeout = timeout ?? RemoteOperationTimeoutPolicy.binaryMaximum
             return try await withTimeout(effectiveTimeout, operationName: "remoteStatus") {
-                try await self.session.requestStatus(from: remoteSession.publicKey)
+                let contactType: ContactType = remoteSession.isRoom ? .room : .repeater
+                return try await self.session.requestStatus(from: remoteSession.publicKey, type: contactType)
             }
         } catch is TimeoutError {
             throw RemoteNodeError.timeout

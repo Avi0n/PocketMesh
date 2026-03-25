@@ -172,6 +172,9 @@ for await state in await session.connectionState {
 let status = try await session.requestStatus(from: publicKey)
 print("Remote battery: \(status.battery) mV, uptime: \(status.uptime)s")
 
+// For room servers, use a typed request so the correct status layout is decoded.
+let roomStatus = try await session.requestStatus(from: roomContact)
+
 // Request telemetry
 let telemetry = try await session.requestTelemetry(from: publicKey)
 

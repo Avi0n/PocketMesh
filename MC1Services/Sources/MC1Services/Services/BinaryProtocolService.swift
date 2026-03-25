@@ -119,11 +119,27 @@ public actor BinaryProtocolService {
     // MARK: - Status Request
 
     /// Request status from a remote node (blocking, waits for response)
-    /// - Parameter publicKey: The remote node's public key (full or prefix)
+    /// - Parameter publicKey: The remote node's full 32-byte public key
     /// - Returns: StatusResponse with device stats
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
         do {
             return try await session.requestStatus(from: publicKey)
+        } catch let error as MeshCoreError {
+            throw BinaryProtocolError.sessionError(error)
+        }
+    }
+
+    /// Request status from a remote node (blocking, waits for response)
+    /// - Parameters:
+    ///   - publicKey: The remote node's full 32-byte public key
+    ///   - type: The target node type used to select the correct firmware status layout
+    /// - Returns: StatusResponse with device stats
+    public func requestStatus(
+        from publicKey: Data,
+        type: ContactType
+    ) async throws -> StatusResponse {
+        do {
+            return try await session.requestStatus(from: publicKey, type: type)
         } catch let error as MeshCoreError {
             throw BinaryProtocolError.sessionError(error)
         }
