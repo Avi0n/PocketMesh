@@ -1,5 +1,4 @@
 import SwiftUI
-import MapKit
 import MC1Services
 
 /// Map content displaying MC1MapView with contact points and popover callouts
@@ -13,74 +12,53 @@ struct MapContentView: View {
     let onNavigateToChat: (ContactDTO) -> Void
 
     var body: some View {
-        if viewModel.contactsWithLocation.isEmpty && !viewModel.isLoading {
-            emptyState
-        } else {
-            MC1MapView(
-                points: viewModel.mapPoints,
-                lines: [],
-                mapStyle: viewModel.mapStyleSelection,
-                isDarkMode: colorScheme == .dark,
-                showLabels: viewModel.showLabels,
-                showsUserLocation: true,
-                isInteractive: true,
-                showsScale: true,
-                isNorthLocked: viewModel.isNorthLocked,
-                cameraRegion: $viewModel.cameraRegion,
-                cameraRegionVersion: viewModel.cameraRegionVersion,
-                onPointTap: { point, screenPosition in
-                    selectedCalloutContact = viewModel.contactsWithLocation.first { $0.id == point.id }
-                    selectedPointScreenPosition = screenPosition
-                },
-                onMapTap: { _ in
-                    selectedCalloutContact = nil
-                    selectedPointScreenPosition = nil
-                },
-                onCameraRegionChange: { region in
-                    viewModel.cameraRegion = region
-                },
-                isStyleLoaded: $isStyleLoaded
+        MC1MapView(
+            points: viewModel.mapPoints,
+            lines: [],
+            mapStyle: viewModel.mapStyleSelection,
+            isDarkMode: colorScheme == .dark,
+            showLabels: viewModel.showLabels,
+            showsUserLocation: true,
+            isInteractive: true,
+            showsScale: true,
+            isNorthLocked: viewModel.isNorthLocked,
+            cameraRegion: $viewModel.cameraRegion,
+            cameraRegionVersion: viewModel.cameraRegionVersion,
+            onPointTap: { point, screenPosition in
+                selectedCalloutContact = viewModel.contactsWithLocation.first { $0.id == point.id }
+                selectedPointScreenPosition = screenPosition
+            },
+            onMapTap: { _ in
+                selectedCalloutContact = nil
+                selectedPointScreenPosition = nil
+            },
+            onCameraRegionChange: { region in
+                viewModel.cameraRegion = region
+            },
+            isStyleLoaded: $isStyleLoaded
+        )
+        .popover(
+            item: $selectedCalloutContact,
+            attachmentAnchor: .rect(.rect(CGRect(
+                origin: selectedPointScreenPosition ?? .zero,
+                size: CGSize(width: 1, height: 1)
+            ))),
+            arrowEdge: .bottom
+        ) { contact in
+            ContactCalloutContent(
+                contact: contact,
+                onDetail: { onShowContactDetail(contact) },
+                onMessage: { onNavigateToChat(contact) }
             )
-            .popover(
-                item: $selectedCalloutContact,
-                attachmentAnchor: .rect(.rect(CGRect(
-                    origin: selectedPointScreenPosition ?? .zero,
-                    size: CGSize(width: 1, height: 1)
-                ))),
-                arrowEdge: .bottom
-            ) { contact in
-                ContactCalloutContent(
-                    contact: contact,
-                    onDetail: { onShowContactDetail(contact) },
-                    onMessage: { onNavigateToChat(contact) }
-                )
-                .presentationCompactAdaptation(.popover)
-            }
-            .overlay {
-                if !isStyleLoaded {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                } else if viewModel.isLoading {
-                    loadingOverlay
-                }
-            }
+            .presentationCompactAdaptation(.popover)
         }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label(L10n.Map.Map.EmptyState.title, systemImage: "map")
-        } description: {
-            Text(L10n.Map.Map.EmptyState.description)
-        } actions: {
-            Button(L10n.Map.Map.Common.refresh) {
-                Task {
-                    await viewModel.loadContactsWithLocation()
-                }
+        .overlay {
+            if !isStyleLoaded {
+                ProgressView()
+                    .scaleEffect(1.5)
+            } else if viewModel.isLoading {
+                loadingOverlay
             }
-            .buttonStyle(.bordered)
         }
     }
 

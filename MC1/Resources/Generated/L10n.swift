@@ -2025,8 +2025,6 @@ public enum L10n {
       public enum Common {
         /// Location: MapView.swift - Purpose: Done button for sheets
         public static let done = L10n.tr("Map", "map.common.done", fallback: "Done")
-        /// Location: MapView.swift - Purpose: Refresh button label
-        public static let refresh = L10n.tr("Map", "map.common.refresh", fallback: "Refresh")
       }
       public enum Controls {
         /// Location: MapView.swift - Purpose: Accessibility label for center on all contacts button
@@ -2093,12 +2091,6 @@ public enum L10n {
           /// Location: MapView.swift ContactDetailSheet - Purpose: Section header for network path info
           public static let networkPath = L10n.tr("Map", "map.detail.section.networkPath", fallback: "Network Path")
         }
-      }
-      public enum EmptyState {
-        /// Location: MapView.swift - Purpose: Empty state description
-        public static let description = L10n.tr("Map", "map.emptyState.description", fallback: "Contacts with location data will appear here once discovered on the mesh network.")
-        /// Location: MapView.swift - Purpose: Empty state title when no contacts have location
-        public static let title = L10n.tr("Map", "map.emptyState.title", fallback: "No Contacts on Map")
       }
       public enum NodeKind {
         /// Location: MapView.swift ContactDetailSheet - Purpose: Display name for chat contact type

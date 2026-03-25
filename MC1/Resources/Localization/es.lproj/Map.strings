@@ -11,17 +11,6 @@
 /* Location: MapView.swift - Purpose: Done button for sheets */
 "map.common.done" = "Listo";
 
-/* Location: MapView.swift - Purpose: Refresh button label */
-"map.common.refresh" = "Actualizar";
-
-// MARK: - Map View Empty State
-
-/* Location: MapView.swift - Purpose: Empty state title when no contacts have location */
-"map.emptyState.title" = "Sin contactos en el mapa";
-
-/* Location: MapView.swift - Purpose: Empty state description */
-"map.emptyState.description" = "Los contactos con datos de ubicación aparecerán aquí una vez descubiertos en la red mesh.";
-
 // MARK: - Map Controls
 
 /* Location: MapView.swift - Purpose: Accessibility label when labels are visible */
