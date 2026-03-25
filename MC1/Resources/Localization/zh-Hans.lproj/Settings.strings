@@ -1252,8 +1252,6 @@
 /* Button to download a new offline region */
 "offlineMaps.downloadRegion" = "下载区域";
 
-/* Section header for downloaded maps list */
-"offlineMaps.downloaded" = "已下载";
 
 /* Section header for storage info */
 "offlineMaps.storage" = "存储空间";
@@ -1265,7 +1263,7 @@
 "offlineMaps.unknownRegion" = "未知区域";
 
 /* Status when pack download is complete */
-"offlineMaps.complete" = "已完成";
+"offlineMaps.complete" = "已下载";
 
 /* Status when pack is downloading */
 "offlineMaps.downloading" = "下载中…";

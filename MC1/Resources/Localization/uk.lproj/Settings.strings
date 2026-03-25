@@ -1279,8 +1279,6 @@
 /* Button to download a new offline region */
 "offlineMaps.downloadRegion" = "Завантажити регіон";
 
-/* Section header for downloaded maps list */
-"offlineMaps.downloaded" = "Завантажені";
 
 /* Section header for storage info */
 "offlineMaps.storage" = "Сховище";
@@ -1292,7 +1290,7 @@
 "offlineMaps.unknownRegion" = "Невідомий регіон";
 
 /* Status when pack download is complete */
-"offlineMaps.complete" = "Завершено";
+"offlineMaps.complete" = "Завантажено";
 
 /* Status when pack is downloading */
 "offlineMaps.downloading" = "Завантаження…";

@@ -1279,8 +1279,6 @@
 /* Button to download a new offline region */
 "offlineMaps.downloadRegion" = "Region herunterladen";
 
-/* Section header for downloaded maps list */
-"offlineMaps.downloaded" = "Heruntergeladen";
 
 /* Section header for storage info */
 "offlineMaps.storage" = "Speicher";
@@ -1292,7 +1290,7 @@
 "offlineMaps.unknownRegion" = "Unbekannte Region";
 
 /* Status when pack download is complete */
-"offlineMaps.complete" = "Abgeschlossen";
+"offlineMaps.complete" = "Heruntergeladen";
 
 /* Status when pack is downloading */
 "offlineMaps.downloading" = "Wird heruntergeladen…";

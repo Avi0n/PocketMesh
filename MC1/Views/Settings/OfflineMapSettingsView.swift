@@ -81,8 +81,6 @@ private struct PacksSection: View {
                     packToDelete = appState.offlineMapService.packs[index]
                 }
             }
-        } header: {
-            Text(L10n.Settings.OfflineMaps.downloaded)
         }
     }
 }

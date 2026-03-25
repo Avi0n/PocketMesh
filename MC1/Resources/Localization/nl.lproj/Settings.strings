@@ -1279,8 +1279,6 @@
 /* Button to download a new offline region */
 "offlineMaps.downloadRegion" = "Regio downloaden";
 
-/* Section header for downloaded maps list */
-"offlineMaps.downloaded" = "Gedownload";
 
 /* Section header for storage info */
 "offlineMaps.storage" = "Opslag";
@@ -1292,7 +1290,7 @@
 "offlineMaps.unknownRegion" = "Onbekende regio";
 
 /* Status when pack download is complete */
-"offlineMaps.complete" = "Voltooid";
+"offlineMaps.complete" = "Gedownload";
 
 /* Status when pack is downloading */
 "offlineMaps.downloading" = "Downloaden…";

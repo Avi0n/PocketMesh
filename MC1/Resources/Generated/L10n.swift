@@ -3713,7 +3713,7 @@ public enum L10n {
       /// Cancel button
       public static let cancel = L10n.tr("Settings", "offlineMaps.cancel", fallback: "Cancel")
       /// Status when pack download is complete
-      public static let complete = L10n.tr("Settings", "offlineMaps.complete", fallback: "Complete")
+      public static let complete = L10n.tr("Settings", "offlineMaps.complete", fallback: "Downloaded")
       /// Delete button
       public static let delete = L10n.tr("Settings", "offlineMaps.delete", fallback: "Delete")
       /// Delete confirmation message
@@ -3722,8 +3722,6 @@ public enum L10n {
       public static let deleteTitle = L10n.tr("Settings", "offlineMaps.deleteTitle", fallback: "Delete Offline Map?")
       /// Button to start download
       public static let download = L10n.tr("Settings", "offlineMaps.download", fallback: "Download")
-      /// Section header for downloaded maps list
-      public static let downloaded = L10n.tr("Settings", "offlineMaps.downloaded", fallback: "Downloaded")
       /// Hint shown before estimate is available
       public static let downloadHint = L10n.tr("Settings", "offlineMaps.downloadHint", fallback: "Enter a name and select an area to download.")
       /// Status when pack is downloading
