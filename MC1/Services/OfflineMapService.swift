@@ -3,16 +3,21 @@ import MapLibre
 import Network
 import os
 
-enum OfflineMapLayer: String, Codable, CaseIterable {
+enum OfflineMapLayer: String, Codable {
     case base
-    case satellite
     case topo
 
     var label: String {
         switch self {
         case .base: L10n.Settings.OfflineMaps.Layer.base
-        case .satellite: L10n.Settings.OfflineMaps.Layer.satellite
         case .topo: L10n.Settings.OfflineMaps.Layer.topo
+        }
+    }
+
+    var maxDownloadZoom: Double {
+        switch self {
+        case .base: 14
+        case .topo: 17
         }
     }
 
@@ -20,8 +25,6 @@ enum OfflineMapLayer: String, Codable, CaseIterable {
         switch self {
         case .base:
             URL(string: MapTileURLs.openFreeMapLiberty)
-        case .satellite:
-            Bundle.main.url(forResource: "satellite-offline", withExtension: "json")
         case .topo:
             Bundle.main.url(forResource: "topo-offline", withExtension: "json")
         }
@@ -206,8 +209,7 @@ final class OfflineMapService {
         name: String,
         bounds: MLNCoordinateBounds,
         layers: Set<OfflineMapLayer>,
-        minZoom: Double = 10,
-        maxZoom: Double = 15
+        minZoom: Double = 10
     ) async throws {
         let values = try URL.documentsDirectory.resourceValues(
             forKeys: [.volumeAvailableCapacityForImportantUsageKey]
@@ -230,7 +232,7 @@ final class OfflineMapService {
                 styleURL: styleURL,
                 bounds: bounds,
                 fromZoomLevel: minZoom,
-                toZoomLevel: maxZoom
+                toZoomLevel: layer.maxDownloadZoom
             )
 
             let metadata = OfflinePackMetadata(name: name, createdAt: now, layer: layer)
@@ -303,22 +305,17 @@ final class OfflineMapService {
         let bytesPerTile: [Int: Int64]
         switch layer {
         case .base:
-            // Average compressed vector tile sizes for OpenFreeMap (OpenMapTiles schema).
+            // Average compressed vector tile sizes for OpenFreeMap (OpenMapTiles schema, max z14).
             bytesPerTile = [
                 10: 2_000, 11: 3_000, 12: 5_000,
-                13: 8_000, 14: 12_000, 15: 15_000,
-            ]
-        case .satellite:
-            // Esri World Imagery JPEG raster tiles (256px).
-            bytesPerTile = [
-                10: 20_000, 11: 25_000, 12: 30_000,
-                13: 35_000, 14: 40_000, 15: 45_000,
+                13: 8_000, 14: 12_000,
             ]
         case .topo:
-            // OpenTopoMap PNG raster tiles (256px).
+            // OpenTopoMap PNG raster tiles (256px, max z17).
             bytesPerTile = [
                 10: 15_000, 11: 18_000, 12: 22_000,
                 13: 25_000, 14: 30_000, 15: 35_000,
+                16: 40_000, 17: 45_000,
             ]
         }
 

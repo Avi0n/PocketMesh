@@ -177,7 +177,6 @@ private struct RegionPickerSheet: View {
     @State private var isDownloading = false
     @State private var showError: String?
     @State private var mapSize: CGSize = .zero
-    @State private var includeSatellite = false
     @State private var includeTopo = false
     @State private var isStyleLoaded = false
     @State private var debouncedRegion: MKCoordinateRegion?
@@ -247,7 +246,6 @@ private struct RegionPickerSheet: View {
             .safeAreaInset(edge: .bottom) {
                 RegionPickerBottomCard(
                     regionName: $regionName,
-                    includeSatellite: $includeSatellite,
                     includeTopo: $includeTopo,
                     estimatedDownloadBytes: estimatedDownloadBytes,
                     exceedsAvailableSpace: exceedsAvailableSpace,
@@ -265,7 +263,6 @@ private struct RegionPickerSheet: View {
 
     private var selectedLayers: Set<OfflineMapLayer> {
         var layers: Set<OfflineMapLayer> = [.base]
-        if includeSatellite { layers.insert(.satellite) }
         if includeTopo { layers.insert(.topo) }
         return layers
     }
@@ -273,7 +270,7 @@ private struct RegionPickerSheet: View {
     private var estimatedDownloadBytes: Int64? {
         guard let bounds = selectionBounds else { return nil }
         return selectedLayers.reduce(Int64(0)) { total, layer in
-            total + OfflineMapService.estimatedDownloadSize(bounds: bounds, minZoom: 10, maxZoom: 15, layer: layer)
+            total + OfflineMapService.estimatedDownloadSize(bounds: bounds, minZoom: 10, maxZoom: Int(layer.maxDownloadZoom), layer: layer)
         }
     }
 
@@ -342,7 +339,6 @@ private struct RegionPickerSheet: View {
 
 private struct RegionPickerBottomCard: View {
     @Binding var regionName: String
-    @Binding var includeSatellite: Bool
     @Binding var includeTopo: Bool
     let estimatedDownloadBytes: Int64?
     let exceedsAvailableSpace: Bool
@@ -360,7 +356,15 @@ private struct RegionPickerBottomCard: View {
 
             Divider()
 
-            LayerToggles(includeSatellite: $includeSatellite, includeTopo: $includeTopo)
+            VStack(alignment: .leading) {
+                Text(L10n.Settings.OfflineMaps.layers)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Toggle(L10n.Settings.OfflineMaps.Layer.topo, isOn: $includeTopo)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
 
             Divider()
 
@@ -448,26 +452,6 @@ private struct RegionPickerBottomCard: View {
             Text(L10n.Settings.OfflineMaps.exceedsStorage)
                 .font(.caption)
         }
-    }
-}
-
-// MARK: - Layer Toggles
-
-private struct LayerToggles: View {
-    @Binding var includeSatellite: Bool
-    @Binding var includeTopo: Bool
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(L10n.Settings.OfflineMaps.layers)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Toggle(L10n.Settings.OfflineMaps.Layer.satellite, isOn: $includeSatellite)
-            Toggle(L10n.Settings.OfflineMaps.Layer.topo, isOn: $includeTopo)
-        }
-        .toggleStyle(.switch)
-        .controlSize(.mini)
     }
 }
 

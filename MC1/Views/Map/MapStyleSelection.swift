@@ -25,7 +25,7 @@ enum MapStyleSelection: String, CaseIterable, Hashable {
     var offlineMapLayer: OfflineMapLayer {
         switch self {
         case .standard: .base
-        case .satellite: .satellite
+        case .satellite: .base
         case .topo: .topo
         }
     }

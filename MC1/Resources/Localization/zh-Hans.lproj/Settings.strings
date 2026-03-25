@@ -1318,7 +1318,6 @@
 
 /* Layer type labels */
 "offlineMaps.layer.base" = "Base Map";
-"offlineMaps.layer.satellite" = "Satellite";
 "offlineMaps.layer.topo" = "地形";
 
 /* Layers section header */

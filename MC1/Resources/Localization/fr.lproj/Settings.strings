@@ -1345,7 +1345,6 @@
 
 /* Layer type labels */
 "offlineMaps.layer.base" = "Base Map";
-"offlineMaps.layer.satellite" = "Satellite";
 "offlineMaps.layer.topo" = "Topographie";
 
 /* Layers section header */

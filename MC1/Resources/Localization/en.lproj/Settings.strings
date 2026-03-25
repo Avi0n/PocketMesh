@@ -1350,7 +1350,6 @@
 
 /* Layer type labels */
 "offlineMaps.layer.base" = "Base Map";
-"offlineMaps.layer.satellite" = "Satellite";
 "offlineMaps.layer.topo" = "Topography";
 
 /* Layers section header */

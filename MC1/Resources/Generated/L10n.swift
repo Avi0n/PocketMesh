@@ -3767,8 +3767,6 @@ public enum L10n {
       public enum Layer {
         /// Layer type labels
         public static let base = L10n.tr("Settings", "offlineMaps.layer.base", fallback: "Base Map")
-        /// Satellite
-        public static let satellite = L10n.tr("Settings", "offlineMaps.layer.satellite", fallback: "Satellite")
         /// Topography
         public static let topo = L10n.tr("Settings", "offlineMaps.layer.topo", fallback: "Topography")
       }
