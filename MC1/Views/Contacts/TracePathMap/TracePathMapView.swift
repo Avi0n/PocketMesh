@@ -115,6 +115,7 @@ struct TracePathMapView: View {
             showsScale: true,
             cameraRegion: $mapViewModel.cameraRegion,
             cameraRegionVersion: mapViewModel.cameraRegionVersion,
+            cameraBottomSheetFraction: 0,
             onPointTap: { point, _ in
                 if let repeater = mapViewModel.repeatersWithLocation.first(where: { $0.id == point.id }) {
                     let result = mapViewModel.handleRepeaterTap(repeater)
