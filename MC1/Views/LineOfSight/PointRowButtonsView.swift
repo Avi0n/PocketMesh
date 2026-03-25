@@ -13,17 +13,25 @@ struct PointRowButtonsView: View {
 
     @ScaledMetric(relativeTo: .body) private var iconButtonSize: CGFloat = 16
 
-    private var point: SelectedPoint? {
-        pointID == .pointA ? viewModel.pointA : viewModel.pointB
+    private var coordinate: CLLocationCoordinate2D? {
+        switch pointID {
+        case .pointA: viewModel.pointA?.coordinate
+        case .pointB: viewModel.pointB?.coordinate
+        case .repeater: viewModel.repeaterPoint?.coordinate
+        }
     }
 
     var body: some View {
         // Share menu
         Menu {
-            if let coord = point?.coordinate {
+            if let coord = coordinate {
                 Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
                     let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                    mapItem.name = pointID == .pointA ? L10n.Tools.Tools.LineOfSight.pointA : L10n.Tools.Tools.LineOfSight.pointB
+                    mapItem.name = switch pointID {
+                        case .pointA: L10n.Tools.Tools.LineOfSight.pointA
+                        case .pointB: L10n.Tools.Tools.LineOfSight.pointB
+                        case .repeater: L10n.Tools.Tools.LineOfSight.repeaterLocation
+                    }
                     mapItem.openInMaps()
                 }
 

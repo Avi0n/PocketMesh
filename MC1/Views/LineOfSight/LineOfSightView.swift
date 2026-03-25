@@ -25,7 +25,6 @@ struct LineOfSightView: View {
     @State private var isResultsExpanded = false
     @State private var isRFSettingsExpanded = false
     @State private var showingMapStyleMenu = false
-    @State private var showLabels = true
     @State private var copyHapticTrigger = 0
 
     private let layoutMode: LineOfSightLayoutMode
@@ -93,7 +92,7 @@ struct LineOfSightView: View {
             appState: appState,
             mapStyleSelection: $mapStyleSelection,
             showingMapStyleMenu: $showingMapStyleMenu,
-            showLabels: $showLabels,
+            showLabels: $viewModel.showLabels,
             isDropPinMode: $isDropPinMode,
             mapOverlayBottomPadding: mapOverlayBottomPadding,
             cameraBottomSheetFraction: showSheet ? 0.25 : 0,
@@ -303,33 +302,13 @@ struct LineOfSightView: View {
     // MARK: - Analyze Button Section
 
     private var analyzeButtonSection: some View {
-        Button {
-            viewModel.shouldAutoZoomOnNextResult = true
-
-            withAnimation {
-                sheetDetent = analysisSheetDetentExpanded
+        AnalyzeButton(
+            viewModel: viewModel,
+            hasAnalysisResult: hasAnalysisResult,
+            onAnalyze: {
+                withAnimation { sheetDetent = analysisSheetDetentExpanded }
             }
-            if viewModel.repeaterPoint != nil {
-                viewModel.analyzeWithRepeater()
-            } else {
-                viewModel.analyze()
-            }
-        } label: {
-            if viewModel.isAnalyzing {
-                HStack {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(L10n.Tools.Tools.LineOfSight.analyzing)
-                }
-                .frame(maxWidth: .infinity)
-            } else {
-                Label(L10n.Tools.Tools.LineOfSight.analyze, systemImage: "waveform.path")
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .liquidGlassProminentButtonStyle()
-        .controlSize(.large)
-        .disabled(viewModel.isAnalyzing || hasAnalysisResult)
+        )
     }
 
     // MARK: - Result Summary Section
@@ -429,8 +408,8 @@ private struct LOSMapCanvasView: View {
     var body: some View {
         ZStack {
             MC1MapView(
-                points: mapPoints,
-                lines: mapLines,
+                points: viewModel.mapPoints,
+                lines: viewModel.mapLines,
                 mapStyle: mapStyleSelection,
                 isDarkMode: colorScheme == .dark,
                 showLabels: showLabels,
@@ -449,7 +428,6 @@ private struct LOSMapCanvasView: View {
                 onCameraRegionChange: { region in
                     viewModel.cameraRegion = region
                 },
-                isStyleLoaded: .constant(true)
             )
             .ignoresSafeArea()
 
@@ -461,25 +439,16 @@ private struct LOSMapCanvasView: View {
                         onLocationTap: {
                             Task {
                                 if let location = try? await appState.locationService.requestCurrentLocation() {
-                                    viewModel.cameraRegion = MKCoordinateRegion(
+                                    viewModel.setCameraRegion(MKCoordinateRegion(
                                         center: location.coordinate,
                                         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                    )
-                                    viewModel.cameraRegionVersion += 1
+                                    ))
                                 }
                             }
                         },
                         showingLayersMenu: $showingMapStyleMenu
                     ) {
-                        Button(showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels, systemImage: "character.textbox") {
-                            showLabels.toggle()
-                        }
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(showLabels ? .blue : .primary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                        .buttonStyle(.plain)
-                        .labelStyle(.iconOnly)
+                        LabelsToggleButton(showLabels: $showLabels)
 
                         Button(isDropPinMode ? L10n.Tools.Tools.LineOfSight.cancelDropPin : L10n.Tools.Tools.LineOfSight.dropPin, systemImage: isDropPinMode ? "mappin.slash" : "mappin") {
                             isDropPinMode.toggle()
@@ -499,7 +468,7 @@ private struct LOSMapCanvasView: View {
                 Button {
                     withAnimation { showingMapStyleMenu = false }
                 } label: {
-                    Color.primary.opacity(0.3).ignoresSafeArea()
+                    Color.black.opacity(0.3).ignoresSafeArea()
                 }
                 .buttonStyle(.plain)
 
@@ -519,90 +488,6 @@ private struct LOSMapCanvasView: View {
         }
     }
 
-    // MARK: - Map Data
-
-    private var mapPoints: [MapPoint] {
-        var points: [MapPoint] = []
-
-        let selectionState = viewModel.selectionState
-        for repeater in viewModel.repeatersWithLocation {
-            let selectedAs = selectionState[repeater.id]?.selectedAs
-            let style: MapPoint.PinStyle = switch selectedAs {
-            case .pointA: .repeaterRingBlue
-            case .pointB: .repeaterRingGreen
-            case .repeater, nil: .repeater
-            }
-            points.append(MapPoint(
-                id: repeater.id,
-                coordinate: repeater.coordinate,
-                pinStyle: style,
-                label: showLabels ? repeater.displayName : nil,
-                isClusterable: selectedAs == nil,
-                hopIndex: nil,
-                badgeText: nil
-            ))
-        }
-
-        if let pointA = viewModel.pointA, pointA.contact == nil {
-            points.append(MapPoint(
-                id: viewModel.pointAMapID,
-                coordinate: pointA.coordinate,
-                pinStyle: .pointA,
-                label: nil,
-                isClusterable: false,
-                hopIndex: nil,
-                badgeText: nil
-            ))
-        }
-
-        if let pointB = viewModel.pointB, pointB.contact == nil {
-            points.append(MapPoint(
-                id: viewModel.pointBMapID,
-                coordinate: pointB.coordinate,
-                pinStyle: .pointB,
-                label: nil,
-                isClusterable: false,
-                hopIndex: nil,
-                badgeText: nil
-            ))
-        }
-
-        if let target = viewModel.repeaterPoint {
-            points.append(MapPoint(
-                id: viewModel.repeaterTargetMapID,
-                coordinate: target.coordinate,
-                pinStyle: .crosshair,
-                label: nil,
-                isClusterable: false,
-                hopIndex: nil,
-                badgeText: nil
-            ))
-        }
-
-        return points
-    }
-
-    private var mapLines: [MapLine] {
-        guard let a = viewModel.pointA?.coordinate,
-              let b = viewModel.pointB?.coordinate else { return [] }
-
-        let activeOpacity = 0.7
-        let dimOpacity = 0.3
-
-        if let r = viewModel.repeaterPoint?.coordinate {
-            let opacityAR = viewModel.relocatingPoint == .pointA ? dimOpacity : activeOpacity
-            let opacityRB = viewModel.relocatingPoint == .pointB ? dimOpacity : activeOpacity
-            return [
-                MapLine(id: "los-ar", coordinates: [a, r], style: .los,
-                        opacity: viewModel.relocatingPoint == .repeater ? dimOpacity : opacityAR),
-                MapLine(id: "los-rb", coordinates: [r, b], style: .los,
-                        opacity: viewModel.relocatingPoint == .repeater ? dimOpacity : opacityRB)
-            ]
-        } else {
-            let opacity = viewModel.relocatingPoint != nil ? dimOpacity : activeOpacity
-            return [MapLine(id: "los-ab", coordinates: [a, b], style: .los, opacity: opacity)]
-        }
-    }
 }
 
 // MARK: - Frequency Input Row
@@ -668,6 +553,41 @@ struct FrequencyInputRow: View {
             viewModel.frequencyMHz = parsed
             viewModel.commitFrequencyChange()
         }
+    }
+}
+
+// MARK: - Analyze Button
+
+private struct AnalyzeButton: View {
+    var viewModel: LineOfSightViewModel
+    let hasAnalysisResult: Bool
+    let onAnalyze: () -> Void
+
+    var body: some View {
+        Button {
+            viewModel.shouldAutoZoomOnNextResult = true
+            onAnalyze()
+            if viewModel.repeaterPoint != nil {
+                viewModel.analyzeWithRepeater()
+            } else {
+                viewModel.analyze()
+            }
+        } label: {
+            if viewModel.isAnalyzing {
+                HStack {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(L10n.Tools.Tools.LineOfSight.analyzing)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                Label(L10n.Tools.Tools.LineOfSight.analyze, systemImage: "waveform.path")
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .liquidGlassProminentButtonStyle()
+        .controlSize(.large)
+        .disabled(viewModel.isAnalyzing || hasAnalysisResult)
     }
 }
 

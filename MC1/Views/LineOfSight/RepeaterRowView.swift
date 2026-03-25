@@ -1,5 +1,3 @@
-import CoreLocation
-import MapKit
 import SwiftUI
 
 struct RepeaterRowView: View {
@@ -7,8 +5,6 @@ struct RepeaterRowView: View {
     @Binding var copyHapticTrigger: Int
     @Binding var editingPoint: PointID?
     let onRelocate: () -> Void
-
-    @ScaledMetric(relativeTo: .body) private var iconButtonSize: CGFloat = 16
 
     private var isEditing: Bool { editingPoint == .repeater }
 
@@ -42,81 +38,15 @@ struct RepeaterRowView: View {
 
                 Spacer()
 
-                // Share menu
-                Menu {
-                    if let coord = viewModel.repeaterPoint?.coordinate {
-                        Button(L10n.Tools.Tools.LineOfSight.openInMaps, systemImage: "map") {
-                            let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: coord))
-                            mapItem.name = L10n.Tools.Tools.LineOfSight.repeaterLocation
-                            mapItem.openInMaps()
-                        }
-
-                        Button(L10n.Tools.Tools.LineOfSight.copyCoordinates, systemImage: "doc.on.doc") {
-                            copyHapticTrigger += 1
-                            UIPasteboard.general.string = coord.formattedString
-                        }
-
-                        ShareLink(item: coord.formattedString) {
-                            Label(L10n.Tools.Tools.LineOfSight.share, systemImage: "square.and.arrow.up")
-                        }
-                    }
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.shareLabel, systemImage: "square.and.arrow.up")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .liquidGlassSecondaryButtonStyle()
-                .sensoryFeedback(.success, trigger: copyHapticTrigger)
-                .controlSize(.small)
-
-                // Relocate button (toggles on/off)
-                Button {
-                    if viewModel.relocatingPoint == .repeater {
-                        viewModel.relocatingPoint = nil
-                    } else {
-                        viewModel.relocatingPoint = .repeater
-                        onRelocate()
-                    }
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.relocate, systemImage: "mappin")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .liquidGlassSecondaryButtonStyle()
-                .controlSize(.small)
-                .disabled(viewModel.relocatingPoint != nil && viewModel.relocatingPoint != .repeater)
-
-                // Edit/Done toggle
-                Button {
-                    withAnimation {
-                        editingPoint = isEditing ? nil : .repeater
-                    }
-                } label: {
-                    Group {
-                        if isEditing {
-                            Label(L10n.Tools.Tools.LineOfSight.done, systemImage: "checkmark")
-                                .labelStyle(.iconOnly)
-                        } else {
-                            Label(L10n.Tools.Tools.LineOfSight.edit, systemImage: "ruler")
-                                .labelStyle(.iconOnly)
-                                .rotationEffect(.degrees(90))
-                        }
-                    }
-                    .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .liquidGlassSecondaryButtonStyle()
-                .controlSize(.small)
-
-                // Clear button
-                Button {
-                    viewModel.clearRepeater()
-                } label: {
-                    Label(L10n.Tools.Tools.LineOfSight.clear, systemImage: "xmark")
-                        .labelStyle(.iconOnly)
-                        .frame(width: iconButtonSize, height: iconButtonSize)
-                }
-                .liquidGlassSecondaryButtonStyle()
-                .controlSize(.small)
+                PointRowButtonsView(
+                    viewModel: viewModel,
+                    pointID: .repeater,
+                    isEditing: isEditing,
+                    copyHapticTrigger: $copyHapticTrigger,
+                    editingPoint: $editingPoint,
+                    onRelocate: onRelocate,
+                    onClear: { viewModel.clearRepeater() }
+                )
             }
 
             // Expanded editor

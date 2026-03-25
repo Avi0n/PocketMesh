@@ -128,15 +128,21 @@ final class LineOfSightViewModel {
 
     // MARK: - Point Selection State
 
-    var pointA: SelectedPoint?
-    var pointB: SelectedPoint?
-    var relocatingPoint: PointID?
+    var pointA: SelectedPoint? {
+        didSet { rebuildSelectionState() }
+    }
+    var pointB: SelectedPoint? {
+        didSet { rebuildSelectionState() }
+    }
+    var relocatingPoint: PointID? {
+        didSet { rebuildMapLines() }
+    }
     var shouldAutoZoomOnNextResult = false
 
     // MARK: - Camera State (MKMapView)
 
     var cameraRegion: MKCoordinateRegion?
-    var cameraRegionVersion = 0
+    private(set) var cameraRegionVersion = 0
 
     // MARK: - RF Parameters
 
@@ -157,14 +163,29 @@ final class LineOfSightViewModel {
         reanalyzeWithCachedProfileIfNeeded()
     }
 
+    // MARK: - Map Display State
+
+    var showLabels: Bool = true {
+        didSet { rebuildMapPoints() }
+    }
+    private(set) var mapPoints: [MapPoint] = []
+    private(set) var mapLines: [MapLine] = []
+
     // MARK: - Repeaters State
 
-    private(set) var repeatersWithLocation: [ContactDTO] = []
+    private(set) var repeatersWithLocation: [ContactDTO] = [] {
+        didSet { rebuildSelectionState() }
+    }
 
     // MARK: - Repeater State
 
     /// The active repeater point (nil when not in use)
-    var repeaterPoint: RepeaterPoint?
+    var repeaterPoint: RepeaterPoint? {
+        didSet {
+            rebuildMapPoints()
+            rebuildMapLines()
+        }
+    }
 
     /// Whether repeater row should be visible (analysis shows marginal or worse)
     var shouldShowRepeaterRow: Bool {
@@ -266,9 +287,10 @@ final class LineOfSightViewModel {
         pointA?.groundElevation != nil && pointB?.groundElevation != nil
     }
 
-    /// Pre-computes selection state for all repeaters in a single O(N) pass.
-    /// Returns a dictionary mapping repeater ID to its selection info.
-    var selectionState: [UUID: LOSRepeaterSelectionInfo] {
+    /// Pre-computed selection state for all repeaters. Rebuilt via `rebuildSelectionState()`.
+    private(set) var selectionState: [UUID: LOSRepeaterSelectionInfo] = [:]
+
+    private func rebuildSelectionState() {
         var result = [UUID: LOSRepeaterSelectionInfo]()
         result.reserveCapacity(repeatersWithLocation.count)
 
@@ -286,15 +308,102 @@ final class LineOfSightViewModel {
             }
             result[contact.id] = LOSRepeaterSelectionInfo(selectedAs: selectedAs)
         }
-        return result
+        selectionState = result
+        rebuildMapPoints()
+        rebuildMapLines()
+    }
+
+    // MARK: - Map Data Rebuild
+
+    func rebuildMapPoints() {
+        var points: [MapPoint] = []
+
+        for repeater in repeatersWithLocation {
+            let selectedAs = selectionState[repeater.id]?.selectedAs
+            let style: MapPoint.PinStyle = switch selectedAs {
+            case .pointA: .repeaterRingBlue
+            case .pointB: .repeaterRingGreen
+            case .repeater, nil: .repeater
+            }
+            points.append(MapPoint(
+                id: repeater.id,
+                coordinate: repeater.coordinate,
+                pinStyle: style,
+                label: showLabels ? repeater.displayName : nil,
+                isClusterable: selectedAs == nil,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let pointA, pointA.contact == nil {
+            points.append(MapPoint(
+                id: pointAMapID,
+                coordinate: pointA.coordinate,
+                pinStyle: .pointA,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let pointB, pointB.contact == nil {
+            points.append(MapPoint(
+                id: pointBMapID,
+                coordinate: pointB.coordinate,
+                pinStyle: .pointB,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        if let target = repeaterPoint {
+            points.append(MapPoint(
+                id: repeaterTargetMapID,
+                coordinate: target.coordinate,
+                pinStyle: .crosshair,
+                label: nil,
+                isClusterable: false,
+                hopIndex: nil,
+                badgeText: nil
+            ))
+        }
+
+        mapPoints = points
+    }
+
+    func rebuildMapLines() {
+        guard let a = pointA?.coordinate,
+              let b = pointB?.coordinate else {
+            mapLines = []
+            return
+        }
+
+        let activeOpacity = 0.7
+        let dimOpacity = 0.3
+
+        if let r = repeaterPoint?.coordinate {
+            let opacityAR = relocatingPoint == .pointA ? dimOpacity : activeOpacity
+            let opacityRB = relocatingPoint == .pointB ? dimOpacity : activeOpacity
+            mapLines = [
+                MapLine(id: "los-ar", coordinates: [a, r], style: .los,
+                        opacity: relocatingPoint == .repeater ? dimOpacity : opacityAR),
+                MapLine(id: "los-rb", coordinates: [r, b], style: .los,
+                        opacity: relocatingPoint == .repeater ? dimOpacity : opacityRB)
+            ]
+        } else {
+            let opacity = relocatingPoint != nil ? dimOpacity : activeOpacity
+            mapLines = [MapLine(id: "los-ab", coordinates: [a, b], style: .los, opacity: opacity)]
+        }
     }
 
     // MARK: - Camera Methods
 
     func centerOnAllRepeaters() {
-        let coordinates = repeatersWithLocation.map {
-            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-        }
+        let coordinates = repeatersWithLocation.map(\.coordinate)
         setCameraRegion(fitting: coordinates)
     }
 
@@ -303,27 +412,14 @@ final class LineOfSightViewModel {
         setCameraRegion(fitting: [pointA.coordinate, pointB.coordinate])
     }
 
-    private func setCameraRegion(
-        fitting coordinates: [CLLocationCoordinate2D],
-        paddingMultiplier: Double = 1.5
-    ) {
-        guard !coordinates.isEmpty else { return }
-        let lats = coordinates.map(\.latitude)
-        let lons = coordinates.map(\.longitude)
-        let latDelta = max(0.01, (lats.max()! - lats.min()!) * paddingMultiplier)
-        let lonDelta = max(0.01, (lons.max()! - lons.min()!) * paddingMultiplier)
-
-        cameraRegion = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(
-                latitude: ((lats.min()! + lats.max()!) / 2).clamped(to: -90...90),
-                longitude: (lons.min()! + lons.max()!) / 2
-            ),
-            span: MKCoordinateSpan(
-                latitudeDelta: min(latDelta, 180),
-                longitudeDelta: min(lonDelta, 360)
-            )
-        )
+    func setCameraRegion(_ region: MKCoordinateRegion) {
+        cameraRegion = region
         cameraRegionVersion += 1
+    }
+
+    private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D]) {
+        guard let region = coordinates.boundingRegion() else { return }
+        setCameraRegion(region)
     }
 
     /// Returns the elevation profile to display in terrain visualization.
@@ -483,7 +579,7 @@ final class LineOfSightViewModel {
     /// - If contact is already selected as A or B, clear that point
     /// - Otherwise, auto-assign to A (if empty) or B
     func toggleContact(_ contact: ContactDTO) {
-        let coordinate = CLLocationCoordinate2D(latitude: contact.latitude, longitude: contact.longitude)
+        let coordinate = contact.coordinate
 
         // Check if already selected as point A
         if let pointA, pointA.contact?.id == contact.id {
@@ -685,9 +781,7 @@ final class LineOfSightViewModel {
                 to: repeaterCoord,
                 sampleCount: sampleCountAR
             )
-            let profileAR = try await elevationService.fetchElevations(along: sampleCoordsAR)
-
-            // Fetch R→B profile
+            // Fetch R→B profile (computed before async let to avoid capture issues)
             let distanceRB = RFCalculator.distance(from: repeaterCoord, to: pointBCoord)
             let sampleCountRB = ElevationService.optimalSampleCount(distanceMeters: distanceRB)
             let sampleCoordsRB = ElevationService.sampleCoordinates(
@@ -695,7 +789,11 @@ final class LineOfSightViewModel {
                 to: pointBCoord,
                 sampleCount: sampleCountRB
             )
-            let profileRB = try await elevationService.fetchElevations(along: sampleCoordsRB)
+
+            // Fetch both elevation profiles in parallel
+            async let profileARTask = elevationService.fetchElevations(along: sampleCoordsAR)
+            async let profileRBTask = elevationService.fetchElevations(along: sampleCoordsRB)
+            let (profileAR, profileRB) = try await (profileARTask, profileRBTask)
 
             // Offset R→B profile distances to continue from A→R endpoint
             // (fetchElevations returns distances relative to segment start, not global A)
@@ -824,24 +922,16 @@ final class LineOfSightViewModel {
 
         analysisTask = Task {
             do {
-                // Calculate optimal sample count based on distance
                 let distance = RFCalculator.distance(from: pointACoord, to: pointBCoord)
                 let sampleCount = ElevationService.optimalSampleCount(distanceMeters: distance)
-
-                // Generate sample coordinates along the path
                 let sampleCoordinates = ElevationService.sampleCoordinates(
                     from: pointACoord,
                     to: pointBCoord,
                     sampleCount: sampleCount
                 )
-
-                // Fetch elevation profile (async network call)
                 let profile = try await elevationService.fetchElevations(along: sampleCoordinates)
-
-                // Check for cancellation
                 if Task.isCancelled { return }
 
-                // Run path analysis off main actor to avoid UI hitching
                 let result = await Task.detached {
                     RFCalculator.analyzePath(
                         elevationProfile: profile,
@@ -854,7 +944,6 @@ final class LineOfSightViewModel {
 
                 if Task.isCancelled { return }
 
-                // Update state on MainActor
                 elevationProfile = profile
                 profileSamples = FresnelZoneRenderer.buildProfileSamples(
                     from: profile,
@@ -930,7 +1019,6 @@ final class LineOfSightViewModel {
         let k = refractionK
 
         analysisTask = Task {
-            // Run path analysis off main actor
             let result = await Task.detached {
                 RFCalculator.analyzePath(
                     elevationProfile: profile,
