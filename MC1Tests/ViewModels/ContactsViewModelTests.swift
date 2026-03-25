@@ -14,7 +14,8 @@ private func createContact(
     isBlocked: Bool = false,
     lastAdvertTimestamp: UInt32 = 0,
     latitude: Double = 0,
-    longitude: Double = 0
+    longitude: Double = 0,
+    lastModified: UInt32 = 0
 ) -> ContactDTO {
     ContactDTO(
         id: UUID(),
@@ -28,7 +29,7 @@ private func createContact(
         lastAdvertTimestamp: lastAdvertTimestamp,
         latitude: latitude,
         longitude: longitude,
-        lastModified: 0,
+        lastModified: lastModified,
         nickname: nil,
         isBlocked: isBlocked,
         isMuted: false,
@@ -236,9 +237,9 @@ struct ContactsViewModelTests {
         let viewModel = ContactsViewModel()
         let deviceID = UUID()
         viewModel.contacts = [
-            createContact(deviceID: deviceID, name: "Old", type: .chat, lastAdvertTimestamp: 100),
-            createContact(deviceID: deviceID, name: "Recent", type: .chat, lastAdvertTimestamp: 300),
-            createContact(deviceID: deviceID, name: "Middle", type: .chat, lastAdvertTimestamp: 200)
+            createContact(deviceID: deviceID, name: "Old", type: .chat, lastModified: 100),
+            createContact(deviceID: deviceID, name: "Recent", type: .chat, lastModified: 300),
+            createContact(deviceID: deviceID, name: "Middle", type: .chat, lastModified: 200)
         ]
 
         let result = viewModel.filteredContacts(
