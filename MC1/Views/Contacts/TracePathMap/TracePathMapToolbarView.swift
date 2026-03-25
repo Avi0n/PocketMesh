@@ -23,7 +23,10 @@ struct TracePathMapToolbarView: View {
                             appState.locationService.requestLocation()
                         }
                     },
-                    showingLayersMenu: $mapViewModel.showingLayersMenu
+                    showingLayersMenu: $mapViewModel.showingLayersMenu,
+                    topContent: {
+                        NorthLockButton(isNorthLocked: $mapViewModel.isNorthLocked)
+                    }
                 ) {
                     LabelsToggleButton(showLabels: $mapViewModel.showLabels)
 

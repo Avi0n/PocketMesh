@@ -113,6 +113,7 @@ struct TracePathMapView: View {
             showsUserLocation: true,
             isInteractive: true,
             showsScale: true,
+            isNorthLocked: mapViewModel.isNorthLocked,
             cameraRegion: $mapViewModel.cameraRegion,
             cameraRegionVersion: mapViewModel.cameraRegionVersion,
             cameraBottomSheetFraction: 0,

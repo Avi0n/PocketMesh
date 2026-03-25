@@ -165,6 +165,7 @@ final class LineOfSightViewModel {
 
     // MARK: - Map Display State
 
+    var isNorthLocked = false
     var showLabels: Bool = true {
         didSet { rebuildMapPoints() }
     }

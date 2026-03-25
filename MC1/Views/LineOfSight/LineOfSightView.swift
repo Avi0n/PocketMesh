@@ -416,6 +416,7 @@ private struct LOSMapCanvasView: View {
                 showsUserLocation: true,
                 isInteractive: true,
                 showsScale: true,
+                isNorthLocked: viewModel.isNorthLocked,
                 cameraRegion: $viewModel.cameraRegion,
                 cameraRegionVersion: viewModel.cameraRegionVersion,
                 cameraBottomSheetFraction: cameraBottomSheetFraction,
@@ -446,7 +447,10 @@ private struct LOSMapCanvasView: View {
                                 }
                             }
                         },
-                        showingLayersMenu: $showingMapStyleMenu
+                        showingLayersMenu: $showingMapStyleMenu,
+                        topContent: {
+                            NorthLockButton(isNorthLocked: $viewModel.isNorthLocked)
+                        }
                     ) {
                         LabelsToggleButton(showLabels: $showLabels)
 

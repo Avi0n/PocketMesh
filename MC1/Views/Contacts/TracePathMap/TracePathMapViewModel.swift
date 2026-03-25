@@ -19,6 +19,7 @@ final class TracePathMapViewModel {
     var showLabels: Bool = true {
         didSet { rebuildMapPoints() }
     }
+    var isNorthLocked = false
     var showingLayersMenu: Bool = false
 
     /// Tracks whether initial centering on repeaters has been performed
