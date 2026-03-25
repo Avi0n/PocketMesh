@@ -37,6 +37,7 @@ struct AvailableRepeatersSectionView: View {
     }
 
     var body: some View {
+        let nodes = filteredNodes
         Section {
             DisclosureGroup(isExpanded: $isRepeatersExpanded) {
                 Toggle(L10n.Contacts.Contacts.Trace.List.favoritesOnly, isOn: $showOnlyFavorites)
@@ -45,7 +46,7 @@ struct AvailableRepeatersSectionView: View {
                     Toggle(L10n.Contacts.Contacts.Trace.List.includeDiscovered, isOn: $includeDiscovered)
                 }
 
-                if filteredNodes.isEmpty {
+                if nodes.isEmpty {
                     if showOnlyFavorites {
                         ContentUnavailableView(
                             L10n.Contacts.Contacts.Trace.List.NoFavorites.title,
@@ -60,7 +61,7 @@ struct AvailableRepeatersSectionView: View {
                         )
                     }
                 } else {
-                    ForEach(filteredNodes) { node in
+                    ForEach(nodes) { node in
                         Button {
                             recentlyAddedRepeaterID = node.id
                             addHapticTrigger += 1
@@ -98,7 +99,7 @@ struct AvailableRepeatersSectionView: View {
                 HStack {
                     Text(L10n.Contacts.Contacts.Trace.List.repeaters)
                     Spacer()
-                    Text("\(filteredNodes.count)")
+                    Text("\(nodes.count)")
                         .foregroundStyle(.secondary)
                 }
             }

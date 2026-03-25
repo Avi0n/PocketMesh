@@ -60,6 +60,7 @@ struct TracePathMapView: View {
             mapViewModel.updateUserLocation(newLocation)
         }
         .onChange(of: traceViewModel.availableNodes) { _, _ in
+            mapViewModel.rebuildPathState()
             if !mapViewModel.hasInitiallyCenteredOnRepeaters && !mapViewModel.repeatersWithLocation.isEmpty {
                 mapViewModel.performInitialCentering()
             }
@@ -102,32 +103,9 @@ struct TracePathMapView: View {
 
     // MARK: - Map Content
 
-    private var mapPoints: [MapPoint] {
-        var points: [MapPoint] = []
-        let pathState = mapViewModel.pathState
-
-        for repeater in mapViewModel.repeatersWithLocation {
-            let info = pathState[repeater.id]
-            let inPath = info?.inPath ?? false
-            let style: MapPoint.PinStyle = inPath ? .repeaterRingWhite : .repeater
-            points.append(MapPoint(
-                id: repeater.id,
-                coordinate: repeater.coordinate,
-                pinStyle: style,
-                label: mapViewModel.showLabels ? repeater.displayName : nil,
-                isClusterable: !inPath,
-                hopIndex: info?.hopIndex,
-                badgeText: nil
-            ))
-        }
-
-        points.append(contentsOf: mapViewModel.badgePoints)
-        return points
-    }
-
     private var mapContent: some View {
         MC1MapView(
-            points: mapPoints,
+            points: mapViewModel.mapPoints,
             lines: mapViewModel.mapLines,
             mapStyle: mapViewModel.mapStyleSelection,
             isDarkMode: colorScheme == .dark,
@@ -151,7 +129,6 @@ struct TracePathMapView: View {
             onCameraRegionChange: { region in
                 mapViewModel.cameraRegion = region
             },
-            isStyleLoaded: .constant(true)
         )
         .ignoresSafeArea()
     }

@@ -15,27 +15,17 @@ struct TracePathMapToolbarView: View {
                 MapControlsToolbar(
                     onLocationTap: {
                         if let location = appState.locationService.currentLocation {
-                            mapViewModel.cameraRegion = MKCoordinateRegion(
+                            mapViewModel.setCameraRegion(MKCoordinateRegion(
                                 center: location.coordinate,
                                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-                            )
-                            mapViewModel.cameraRegionVersion += 1
+                            ))
                         } else {
                             appState.locationService.requestLocation()
                         }
                     },
                     showingLayersMenu: $mapViewModel.showingLayersMenu
                 ) {
-                    // Labels toggle
-                    Button(mapViewModel.showLabels ? L10n.Contacts.Contacts.Trace.Map.hideLabels : L10n.Contacts.Contacts.Trace.Map.showLabels, systemImage: "character.textbox") {
-                        mapViewModel.showLabels.toggle()
-                    }
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(mapViewModel.showLabels ? .blue : .primary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(.rect)
-                    .buttonStyle(.plain)
-                    .labelStyle(.iconOnly)
+                    LabelsToggleButton(showLabels: $mapViewModel.showLabels)
 
                     // Center on path
                     if mapViewModel.hasPath {

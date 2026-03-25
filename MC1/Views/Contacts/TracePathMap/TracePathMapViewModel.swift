@@ -14,9 +14,11 @@ final class TracePathMapViewModel {
 
     var cameraRegion: MKCoordinateRegion?
     /// Incremented when code intentionally moves the camera (not from user gesture sync)
-    var cameraRegionVersion = 0
+    private(set) var cameraRegionVersion = 0
     var mapStyleSelection: MapStyleSelection = .standard
-    var showLabels: Bool = true
+    var showLabels: Bool = true {
+        didSet { rebuildMapPoints() }
+    }
     var showingLayersMenu: Bool = false
 
     /// Tracks whether initial centering on repeaters has been performed
@@ -26,6 +28,7 @@ final class TracePathMapViewModel {
 
     private(set) var mapLines: [MapLine] = []
     private(set) var badgePoints: [MapPoint] = []
+    private(set) var mapPoints: [MapPoint] = []
 
     // MARK: - Dependencies
 
@@ -42,33 +45,8 @@ final class TracePathMapViewModel {
     }
 
     /// Pre-computed path membership for all repeaters, keyed by repeater ID.
-    /// Iterates the path once (O(M) resolutions) then does O(N) dictionary lookups,
-    /// instead of O(N × M × N) per-repeater closure calls.
-    var pathState: [UUID: RepeaterPathInfo] {
-        let repeaters = repeatersWithLocation
-
-        // Build path lookup: resolve each hop to a repeater UUID
-        var pathLookup: [UUID: (index: Int, isLast: Bool)] = [:]
-        if let path = traceViewModel?.outboundPath {
-            for (index, hop) in path.enumerated() {
-                if let repeater = findRepeater(for: hop) {
-                    pathLookup[repeater.id] = (index: index + 1, isLast: index == path.count - 1)
-                }
-            }
-        }
-
-        // Build state for all repeaters with O(1) lookups
-        var state: [UUID: RepeaterPathInfo] = [:]
-        state.reserveCapacity(repeaters.count)
-        for repeater in repeaters {
-            if let info = pathLookup[repeater.id] {
-                state[repeater.id] = RepeaterPathInfo(inPath: true, hopIndex: info.index, isLastHop: info.isLast)
-            } else {
-                state[repeater.id] = RepeaterPathInfo(inPath: false, hopIndex: nil, isLastHop: false)
-            }
-        }
-        return state
-    }
+    /// Stored to avoid reallocation on every body eval. Rebuilt via `rebuildPathState()`.
+    private(set) var pathState: [UUID: RepeaterPathInfo] = [:]
 
     // MARK: - Computed Properties
 
@@ -119,29 +97,59 @@ final class TracePathMapViewModel {
         rebuildOverlays()
     }
 
+    // MARK: - Path State Rebuild
+
+    /// Rebuilds stored `pathState` and `mapPoints`. Call when path, available nodes, or user location changes.
+    func rebuildPathState() {
+        let repeaters = repeatersWithLocation
+
+        var pathLookup: [UUID: (index: Int, isLast: Bool)] = [:]
+        if let path = traceViewModel?.outboundPath {
+            for (index, hop) in path.enumerated() {
+                if let repeater = findRepeater(for: hop) {
+                    pathLookup[repeater.id] = (index: index + 1, isLast: index == path.count - 1)
+                }
+            }
+        }
+
+        var state: [UUID: RepeaterPathInfo] = [:]
+        state.reserveCapacity(repeaters.count)
+        for repeater in repeaters {
+            if let info = pathLookup[repeater.id] {
+                state[repeater.id] = RepeaterPathInfo(inPath: true, hopIndex: info.index, isLastHop: info.isLast)
+            } else {
+                state[repeater.id] = RepeaterPathInfo(inPath: false, hopIndex: nil, isLastHop: false)
+            }
+        }
+        pathState = state
+        rebuildMapPoints(repeaters: repeaters)
+    }
+
+    private func rebuildMapPoints(repeaters: [ContactDTO]? = nil) {
+        let nodes = repeaters ?? repeatersWithLocation
+        var points: [MapPoint] = []
+        for repeater in nodes {
+            let info = pathState[repeater.id]
+            let inPath = info?.inPath ?? false
+            points.append(MapPoint(
+                id: repeater.id,
+                coordinate: repeater.coordinate,
+                pinStyle: inPath ? .repeaterRingWhite : .repeater,
+                label: showLabels ? repeater.displayName : nil,
+                isClusterable: !inPath,
+                hopIndex: info?.hopIndex,
+                badgeText: nil
+            ))
+        }
+        points.append(contentsOf: badgePoints)
+        mapPoints = points
+    }
+
     // MARK: - Path Building
 
     /// Find the repeater or room for a hop using full public key or RepeaterResolver fallback.
     private func findRepeater(for hop: PathHop) -> ContactDTO? {
         RepeaterResolver.bestMatch(for: hop, in: traceViewModel?.availableNodes ?? [], userLocation: userLocation)
-    }
-
-    /// Whether a hop matches a specific repeater.
-    private func hopMatches(_ hop: PathHop, repeater: ContactDTO) -> Bool {
-        findRepeater(for: hop)?.publicKey == repeater.publicKey
-    }
-
-    /// Check if a repeater is currently in the path
-    func isRepeaterInPath(_ repeater: ContactDTO) -> Bool {
-        guard let path = traceViewModel?.outboundPath else { return false }
-        return path.contains { hopMatches($0, repeater: repeater) }
-    }
-
-    /// Check if repeater is the last hop (can be removed)
-    func isLastHop(_ repeater: ContactDTO) -> Bool {
-        guard let path = traceViewModel?.outboundPath,
-              let lastHop = path.last else { return false }
-        return hopMatches(lastHop, repeater: repeater)
     }
 
     enum RepeaterTapResult {
@@ -156,19 +164,17 @@ final class TracePathMapViewModel {
     func handleRepeaterTap(_ repeater: ContactDTO) -> RepeaterTapResult {
         guard let traceViewModel else { return .ignored }
 
+        let info = pathState[repeater.id]
         let result: RepeaterTapResult
-        if isLastHop(repeater) {
-            // Remove last hop
+        if info?.isLastHop == true {
             if let lastIndex = traceViewModel.outboundPath.indices.last {
                 traceViewModel.removeRepeater(at: lastIndex)
             }
             result = .removed
-        } else if !isRepeaterInPath(repeater) {
-            // Add to path
+        } else if info?.inPath != true {
             traceViewModel.addNode(repeater)
             result = .added
         } else {
-            // Tapping middle hop - provide feedback that this action is not allowed
             result = .rejectedMiddleHop
         }
 
@@ -180,6 +186,7 @@ final class TracePathMapViewModel {
     func clearPath() {
         traceViewModel?.clearPath()
         clearOverlays()
+        rebuildPathState()
     }
 
     // MARK: - Trace Execution
@@ -203,6 +210,7 @@ final class TracePathMapViewModel {
     /// Rebuild map lines based on current path
     func rebuildOverlays() {
         clearOverlays()
+        rebuildPathState()
 
         guard let traceViewModel,
               !traceViewModel.outboundPath.isEmpty else { return }
@@ -269,9 +277,8 @@ final class TracePathMapViewModel {
                         .formatted(.measurement(width: .abbreviated, usage: .road))
                     let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
 
-                    // swiftlint:disable:next force_unwrapping
                     badgePoints.append(MapPoint(
-                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", index))")!,
+                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", index))") ?? UUID(),
                         coordinate: mid,
                         pinStyle: .badge,
                         label: nil,
@@ -286,6 +293,7 @@ final class TracePathMapViewModel {
         }
 
         mapLines = updatedLines
+        rebuildMapPoints()
     }
 
     // MARK: - Signal Quality
@@ -294,8 +302,9 @@ final class TracePathMapViewModel {
         case untraced, weak, medium, good
     }
 
+    /// 3-tier scale with wider thresholds (±5 dB) matching SNRQuality doc convention for path segments
     private func signalQuality(snr: Double) -> SignalQuality {
-        if snr <= 0 { return .weak }
+        if snr < -5 { return .weak }
         if snr < 5 { return .medium }
         return .good
     }
@@ -340,9 +349,7 @@ final class TracePathMapViewModel {
             return
         }
 
-        let coordinates = repeaters.map {
-            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-        }
+        let coordinates = repeaters.map(\.coordinate)
         setCameraRegion(fitting: coordinates)
         hasInitiallyCenteredOnRepeaters = true
     }
@@ -394,33 +401,13 @@ final class TracePathMapViewModel {
         hasInitiallyCenteredOnRepeaters = true
     }
 
-    /// Compute a bounding region for the given coordinates and update the camera.
-    private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D]) {
-        guard !coordinates.isEmpty else { return }
-
-        var minLat = coordinates[0].latitude
-        var maxLat = coordinates[0].latitude
-        var minLon = coordinates[0].longitude
-        var maxLon = coordinates[0].longitude
-
-        for coord in coordinates {
-            minLat = min(minLat, coord.latitude)
-            maxLat = max(maxLat, coord.latitude)
-            minLon = min(minLon, coord.longitude)
-            maxLon = max(maxLon, coord.longitude)
-        }
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-
-        let span = MKCoordinateSpan(
-            latitudeDelta: min(180, max(0.01, (maxLat - minLat) * 1.5)),
-            longitudeDelta: min(360, max(0.01, (maxLon - minLon) * 1.5))
-        )
-
-        cameraRegion = MKCoordinateRegion(center: center, span: span)
+    func setCameraRegion(_ region: MKCoordinateRegion) {
+        cameraRegion = region
         cameraRegionVersion += 1
+    }
+
+    private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D]) {
+        guard let region = coordinates.boundingRegion() else { return }
+        setCameraRegion(region)
     }
 }
