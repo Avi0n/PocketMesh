@@ -390,7 +390,7 @@ private struct DiscoverySortMenu: View {
         } label: {
             Label(L10n.Contacts.Contacts.List.sort, systemImage: "arrow.up.arrow.down")
         }
-        .modifier(GlassButtonModifier())
+        .liquidGlassSecondaryButtonStyle()
         .accessibilityLabel(L10n.Contacts.Contacts.Discovery.sortMenu)
         .accessibilityHint(L10n.Contacts.Contacts.Discovery.sortMenuHint)
     }
@@ -413,7 +413,7 @@ private struct DiscoveryMoreMenu: View {
         } label: {
             Label(L10n.Contacts.Contacts.Discovery.menu, systemImage: "ellipsis.circle")
         }
-        .modifier(GlassButtonModifier())
+        .liquidGlassSecondaryButtonStyle()
     }
 }
 

@@ -140,6 +140,7 @@ struct MC1MapView: UIViewRepresentable {
     let showsUserLocation: Bool
     let isInteractive: Bool
     let showsScale: Bool
+    var isNorthLocked: Bool = false
 
     // Camera
     @Binding var cameraRegion: MKCoordinateRegion?
@@ -153,7 +154,7 @@ struct MC1MapView: UIViewRepresentable {
     let onCameraRegionChange: ((MKCoordinateRegion) -> Void)?
 
     // Optional features
-    @Binding var isStyleLoaded: Bool
+    var isStyleLoaded: Binding<Bool> = .constant(true)
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -206,8 +207,7 @@ struct MC1MapView: UIViewRepresentable {
         coordinator.onPointTap = onPointTap
         coordinator.onMapTap = onMapTap
         coordinator.onCameraRegionChange = onCameraRegionChange
-        coordinator.setIsStyleLoaded = { isStyleLoaded = $0 }
-        coordinator.showLabels = showLabels
+        coordinator.setIsStyleLoaded = { isStyleLoaded.wrappedValue = $0 }
         let pointsChanged = coordinator.currentPoints != points
         let linesChanged = coordinator.currentLines != lines
         coordinator.currentPoints = points
@@ -225,7 +225,17 @@ struct MC1MapView: UIViewRepresentable {
         coordinator.currentMapStyle = mapStyle
 
         // User location
-        mapView.showsUserLocation = showsUserLocation
+        if mapView.showsUserLocation != showsUserLocation {
+            mapView.showsUserLocation = showsUserLocation
+        }
+
+        // North lock
+        if isInteractive {
+            mapView.isRotateEnabled = !isNorthLocked
+            if isNorthLocked && mapView.direction != 0 {
+                mapView.setDirection(0, animated: true)
+            }
+        }
 
         // Update data layers (only when style is loaded, data changed, and not mid-gesture)
         if coordinator.isStyleLoaded, !coordinator.isUserInteracting {
@@ -240,7 +250,7 @@ struct MC1MapView: UIViewRepresentable {
             }
             if coordinator.currentShowLabels != showLabels {
                 coordinator.currentShowLabels = showLabels
-                coordinator.updateLabelVisibility(mapView: mapView)
+                coordinator.updateLabelVisibility(mapView: mapView, showLabels: showLabels)
             }
         }
 
@@ -329,7 +339,6 @@ extension MC1MapView {
         var isStyleLoaded = false
         var lastAppliedRegionVersion = 0
         var pendingRegionTask: Task<Void, Never>?
-        var showLabels = true
         var currentShowLabels = true
         var lastAppliedStyleURL: URL?
         var currentMapStyle: MapStyleSelection?
@@ -357,6 +366,11 @@ extension MC1MapView {
         }
 
         func mapView(_ mapView: MLNMapView, didFailToLoadImage imageName: String) -> UIImage? {
+            if let style = mapView.style {
+                if PinSpriteRenderer.renderOnDemand(name: imageName, into: style) {
+                    return nil
+                }
+            }
             logger.error("didFailToLoadImage: \(imageName)")
             return nil
         }

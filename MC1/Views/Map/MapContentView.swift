@@ -4,9 +4,8 @@ import MC1Services
 
 /// Map content displaying MC1MapView with contact points and popover callouts
 struct MapContentView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var viewModel: MapViewModel
-    let colorScheme: ColorScheme
-    let mapPoints: [MapPoint]
     @Binding var selectedCalloutContact: ContactDTO?
     @Binding var selectedPointScreenPosition: CGPoint?
     @Binding var isStyleLoaded: Bool
@@ -18,7 +17,7 @@ struct MapContentView: View {
             emptyState
         } else {
             MC1MapView(
-                points: mapPoints,
+                points: viewModel.mapPoints,
                 lines: [],
                 mapStyle: viewModel.mapStyleSelection,
                 isDarkMode: colorScheme == .dark,
@@ -26,6 +25,7 @@ struct MapContentView: View {
                 showsUserLocation: true,
                 isInteractive: true,
                 showsScale: true,
+                isNorthLocked: viewModel.isNorthLocked,
                 cameraRegion: $viewModel.cameraRegion,
                 cameraRegionVersion: viewModel.cameraRegionVersion,
                 onPointTap: { point, screenPosition in

@@ -17,4 +17,12 @@ extension ContactType {
         case .room: .purple
         }
     }
+
+    var pinStyle: MapPoint.PinStyle {
+        switch self {
+        case .chat: .contactChat
+        case .repeater: .contactRepeater
+        case .room: .contactRoom
+        }
+    }
 }

@@ -8,6 +8,8 @@ enum PinSpriteRenderer {
 
     private nonisolated(unsafe) static var cachedImages: [String: UIImage]?
 
+    /// Registers base pin sprites into the style. Hop-ring variants are rendered
+    /// lazily via `renderOnDemand(name:into:)` when MapLibre requests a missing image.
     static func renderAll(into style: MLNStyle) {
         let images: [String: UIImage]
         if let cached = cachedImages {
@@ -20,11 +22,6 @@ enum PinSpriteRenderer {
             rendered["pin-badge"] = UIGraphicsImageRenderer(
                 size: CGSize(width: 1, height: 1), format: .preferred()
             ).image { _ in }
-            if let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) {
-                for hop in 1...20 {
-                    rendered["pin-repeater-ring-white-hop-\(hop)"] = render(ringWhiteSpec, hopIndex: hop)
-                }
-            }
             rendered["pill-bg"] = renderPillBackground()
             cachedImages = rendered
             images = rendered
@@ -33,6 +30,31 @@ enum PinSpriteRenderer {
         for (name, image) in images {
             style.setImage(image, forName: name)
         }
+    }
+
+    /// Renders a hop-ring sprite on demand when MapLibre requests a missing image name.
+    /// Returns `true` if the name was recognized and the image was registered.
+    @discardableResult
+    static func renderOnDemand(name: String, into style: MLNStyle) -> Bool {
+        guard name.hasPrefix("pin-repeater-ring-white-hop-") else { return false }
+
+        // Check the cache first (may have been rendered for a different style load)
+        if let cached = cachedImages?[name] {
+            style.setImage(cached, forName: name)
+            return true
+        }
+
+        guard let hopString = name.split(separator: "-").last,
+              let hop = Int(hopString),
+              (1...20).contains(hop),
+              let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) else {
+            return false
+        }
+
+        let image = render(ringWhiteSpec, hopIndex: hop)
+        cachedImages?[name] = image
+        style.setImage(image, forName: name)
+        return true
     }
 
     // MARK: - Sprite specifications

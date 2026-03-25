@@ -702,21 +702,14 @@ private struct ContactLocationSection: View {
 
     let currentContact: ContactDTO
 
-    private var contactCoordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(
-            latitude: currentContact.latitude,
-            longitude: currentContact.longitude
-        )
-    }
-
     var body: some View {
         Section {
             // Mini map
             MC1MapView(
                 points: [MapPoint(
                     id: currentContact.id,
-                    coordinate: contactCoordinate,
-                    pinStyle: pinStyle(for: currentContact),
+                    coordinate: currentContact.coordinate,
+                    pinStyle: currentContact.type.pinStyle,
                     label: currentContact.displayName,
                     isClusterable: false,
                     hopIndex: nil,
@@ -730,14 +723,13 @@ private struct ContactLocationSection: View {
                 isInteractive: false,
                 showsScale: false,
                 cameraRegion: .constant(MKCoordinateRegion(
-                    center: contactCoordinate,
+                    center: currentContact.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                 )),
                 cameraRegionVersion: 1,
                 onPointTap: nil,
                 onMapTap: nil,
-                onCameraRegionChange: nil,
-                isStyleLoaded: .constant(true)
+                onCameraRegionChange: nil
             )
             .frame(height: 200)
             .clipShape(.rect(cornerRadius: 12))
@@ -770,17 +762,9 @@ private struct ContactLocationSection: View {
     }
 
     private func openInMaps() {
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: contactCoordinate))
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: currentContact.coordinate))
         mapItem.name = currentContact.displayName
         mapItem.openInMaps()
-    }
-
-    private func pinStyle(for contact: ContactDTO) -> MapPoint.PinStyle {
-        switch contact.type {
-        case .chat: .contactChat
-        case .repeater: .contactRepeater
-        case .room: .contactRoom
-        }
     }
 }
 

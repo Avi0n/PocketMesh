@@ -39,6 +39,12 @@
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
 "map.controls.layers" = "Couches de la carte";
 
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock) */
+"map.controls.lockNorth" = "Verrouiller au nord";
+
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
+"map.controls.unlockNorth" = "Déverrouiller la rotation";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */
@@ -48,7 +54,7 @@
 "map.style.satellite" = "Satellite";
 
 /* Location: MapStyleSelection.swift - Purpose: Topo map style option */
-"map.style.topo" = "Topo";
+"map.style.topo" = "Topographie";
 
 // MARK: - Contact Detail Sheet
 

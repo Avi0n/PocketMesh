@@ -44,8 +44,15 @@ extension MC1MapView.Coordinator {
     func updatePointSource(mapView: MLNMapView) {
         guard let style = mapView.style else { return }
 
-        let clusterablePoints = currentPoints.filter(\.isClusterable)
-        let fixedPoints = currentPoints.filter { !$0.isClusterable }
+        var clusterablePoints: [MapPoint] = []
+        var fixedPoints: [MapPoint] = []
+        for point in currentPoints {
+            if point.isClusterable {
+                clusterablePoints.append(point)
+            } else {
+                fixedPoints.append(point)
+            }
+        }
 
         // Clustered source — deferred creation on first data arrival
         if let source = clusterSource {
@@ -82,7 +89,7 @@ extension MC1MapView.Coordinator {
         }
     }
 
-    func updateLabelVisibility(mapView: MLNMapView) {
+    func updateLabelVisibility(mapView: MLNMapView, showLabels: Bool) {
         for layerId in [MapLayerID.nameLabels, MapLayerID.fixedNameLabels] {
             guard let layer = mapView.style?.layer(withIdentifier: layerId) as? MLNSymbolStyleLayer else { continue }
             layer.isVisible = showLabels
@@ -131,37 +138,13 @@ extension MC1MapView.Coordinator {
         // Name labels (above pins) with pill background
         let nameLabelLayer = MLNSymbolStyleLayer(identifier: MapLayerID.nameLabels, source: source)
         nameLabelLayer.predicate = NSPredicate(format: "cluster != YES AND nameLabel != nil")
-        nameLabelLayer.text = NSExpression(forKeyPath: "nameLabel")
-        nameLabelLayer.textFontSize = NSExpression(forConstantValue: 10)
-        nameLabelLayer.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
-        nameLabelLayer.textColor = NSExpression(forConstantValue: UIColor.label)
-        nameLabelLayer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
-        nameLabelLayer.textHaloWidth = NSExpression(forConstantValue: 0.5)
-        nameLabelLayer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -4.8)))
-        nameLabelLayer.textAnchor = NSExpression(forConstantValue: "bottom")
-        nameLabelLayer.textAllowsOverlap = NSExpression(forConstantValue: true)
-        nameLabelLayer.textIgnoresPlacement = NSExpression(forConstantValue: true)
-        nameLabelLayer.iconAllowsOverlap = NSExpression(forConstantValue: true)
-        nameLabelLayer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        nameLabelLayer.iconImageName = NSExpression(forConstantValue: "pill-bg")
-        nameLabelLayer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
-        nameLabelLayer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)))
+        configureNameLabelLayer(nameLabelLayer)
         style.addLayer(nameLabelLayer)
 
         // Stats badge text (trace path midpoints) with pill background
         let badgeLayer = MLNSymbolStyleLayer(identifier: MapLayerID.badgeText, source: source)
         badgeLayer.predicate = NSPredicate(format: "cluster != YES AND badgeText != nil")
-        badgeLayer.text = NSExpression(forKeyPath: "badgeText")
-        badgeLayer.textFontSize = NSExpression(forConstantValue: 11)
-        badgeLayer.textFontNames = mapFontNames
-        badgeLayer.textColor = NSExpression(forConstantValue: UIColor.label)
-        badgeLayer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
-        badgeLayer.textHaloWidth = NSExpression(forConstantValue: 0.5)
-        badgeLayer.textAllowsOverlap = NSExpression(forConstantValue: true)
-        badgeLayer.textIgnoresPlacement = NSExpression(forConstantValue: true)
-        badgeLayer.iconImageName = NSExpression(forConstantValue: "pill-bg")
-        badgeLayer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
-        badgeLayer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 2, left: 8, bottom: 2, right: 8)))
+        configureBadgeLayer(badgeLayer)
         style.addLayer(badgeLayer)
     }
 
@@ -178,36 +161,12 @@ extension MC1MapView.Coordinator {
 
         let fixedNameLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedNameLabels, source: source)
         fixedNameLayer.predicate = NSPredicate(format: "nameLabel != nil")
-        fixedNameLayer.text = NSExpression(forKeyPath: "nameLabel")
-        fixedNameLayer.textFontSize = NSExpression(forConstantValue: 10)
-        fixedNameLayer.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
-        fixedNameLayer.textColor = NSExpression(forConstantValue: UIColor.label)
-        fixedNameLayer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
-        fixedNameLayer.textHaloWidth = NSExpression(forConstantValue: 0.5)
-        fixedNameLayer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -4.8)))
-        fixedNameLayer.textAnchor = NSExpression(forConstantValue: "bottom")
-        fixedNameLayer.textAllowsOverlap = NSExpression(forConstantValue: true)
-        fixedNameLayer.textIgnoresPlacement = NSExpression(forConstantValue: true)
-        fixedNameLayer.iconAllowsOverlap = NSExpression(forConstantValue: true)
-        fixedNameLayer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        fixedNameLayer.iconImageName = NSExpression(forConstantValue: "pill-bg")
-        fixedNameLayer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
-        fixedNameLayer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)))
+        configureNameLabelLayer(fixedNameLayer)
         style.addLayer(fixedNameLayer)
 
         let fixedBadgeLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedBadgeText, source: source)
         fixedBadgeLayer.predicate = NSPredicate(format: "badgeText != nil")
-        fixedBadgeLayer.text = NSExpression(forKeyPath: "badgeText")
-        fixedBadgeLayer.textFontSize = NSExpression(forConstantValue: 11)
-        fixedBadgeLayer.textFontNames = mapFontNames
-        fixedBadgeLayer.textColor = NSExpression(forConstantValue: UIColor.label)
-        fixedBadgeLayer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
-        fixedBadgeLayer.textHaloWidth = NSExpression(forConstantValue: 0.5)
-        fixedBadgeLayer.textAllowsOverlap = NSExpression(forConstantValue: true)
-        fixedBadgeLayer.textIgnoresPlacement = NSExpression(forConstantValue: true)
-        fixedBadgeLayer.iconImageName = NSExpression(forConstantValue: "pill-bg")
-        fixedBadgeLayer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
-        fixedBadgeLayer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 2, left: 8, bottom: 2, right: 8)))
+        configureBadgeLayer(fixedBadgeLayer)
         style.addLayer(fixedBadgeLayer)
     }
 
@@ -219,7 +178,7 @@ extension MC1MapView.Coordinator {
         style.addSource(source)
 
         let losLayer = MLNLineStyleLayer(identifier: MapLayerID.lineLOS, source: source)
-        losLayer.predicate = NSPredicate(format: "lineStyle == 'los'")
+        losLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.los.rawValue)
         losLayer.lineColor = NSExpression(forConstantValue: UIColor.systemBlue)
         losLayer.lineWidth = NSExpression(forConstantValue: 3)
         losLayer.lineDashPattern = NSExpression(forConstantValue: [8, 4])
@@ -227,28 +186,28 @@ extension MC1MapView.Coordinator {
         style.addLayer(losLayer)
 
         let untracedLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceUntraced, source: source)
-        untracedLayer.predicate = NSPredicate(format: "lineStyle == 'traceUntraced'")
+        untracedLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceUntraced.rawValue)
         untracedLayer.lineColor = NSExpression(forConstantValue: UIColor.systemGray)
         untracedLayer.lineWidth = NSExpression(forConstantValue: 2)
         untracedLayer.lineDashPattern = NSExpression(forConstantValue: [8, 6])
         style.addLayer(untracedLayer)
 
         let weakLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceWeak, source: source)
-        weakLayer.predicate = NSPredicate(format: "lineStyle == 'traceWeak'")
+        weakLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceWeak.rawValue)
         weakLayer.lineColor = NSExpression(forConstantValue: UIColor.systemRed)
         weakLayer.lineWidth = NSExpression(forConstantValue: 3)
         weakLayer.lineDashPattern = NSExpression(forConstantValue: [4, 4])
         style.addLayer(weakLayer)
 
         let mediumLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceMedium, source: source)
-        mediumLayer.predicate = NSPredicate(format: "lineStyle == 'traceMedium'")
+        mediumLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceMedium.rawValue)
         mediumLayer.lineColor = NSExpression(forConstantValue: UIColor.systemYellow)
         mediumLayer.lineWidth = NSExpression(forConstantValue: 3)
         mediumLayer.lineDashPattern = NSExpression(forConstantValue: [12, 4])
         style.addLayer(mediumLayer)
 
         let goodLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceGood, source: source)
-        goodLayer.predicate = NSPredicate(format: "lineStyle == 'traceGood'")
+        goodLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceGood.rawValue)
         goodLayer.lineColor = NSExpression(forConstantValue: UIColor.systemGreen)
         goodLayer.lineWidth = NSExpression(forConstantValue: 4)
         style.addLayer(goodLayer)
@@ -311,6 +270,40 @@ extension MC1MapView.Coordinator {
         guard let style = mapView.style else { return }
         style.layer(withIdentifier: MapLayerID.satelliteLayer)?.isVisible = currentMapStyle == .satellite
         style.layer(withIdentifier: MapLayerID.topoLayer)?.isVisible = currentMapStyle == .topo
+    }
+
+    // MARK: - Shared layer configuration
+
+    private func configureNameLabelLayer(_ layer: MLNSymbolStyleLayer) {
+        layer.text = NSExpression(forKeyPath: "nameLabel")
+        layer.textFontSize = NSExpression(forConstantValue: 10)
+        layer.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
+        layer.textColor = NSExpression(forConstantValue: UIColor.label)
+        layer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
+        layer.textHaloWidth = NSExpression(forConstantValue: 0.5)
+        layer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -4.8)))
+        layer.textAnchor = NSExpression(forConstantValue: "bottom")
+        layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+        layer.textIgnoresPlacement = NSExpression(forConstantValue: true)
+        layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
+        layer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
+        layer.iconImageName = NSExpression(forConstantValue: "pill-bg")
+        layer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
+        layer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)))
+    }
+
+    private func configureBadgeLayer(_ layer: MLNSymbolStyleLayer) {
+        layer.text = NSExpression(forKeyPath: "badgeText")
+        layer.textFontSize = NSExpression(forConstantValue: 11)
+        layer.textFontNames = mapFontNames
+        layer.textColor = NSExpression(forConstantValue: UIColor.label)
+        layer.textHaloColor = NSExpression(forConstantValue: UIColor.systemBackground)
+        layer.textHaloWidth = NSExpression(forConstantValue: 0.5)
+        layer.textAllowsOverlap = NSExpression(forConstantValue: true)
+        layer.textIgnoresPlacement = NSExpression(forConstantValue: true)
+        layer.iconImageName = NSExpression(forConstantValue: "pill-bg")
+        layer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
+        layer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 2, left: 8, bottom: 2, right: 8)))
     }
 
     // MARK: - Private helpers

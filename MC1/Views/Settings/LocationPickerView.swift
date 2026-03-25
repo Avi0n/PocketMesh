@@ -20,7 +20,6 @@ struct LocationPickerView: View {
     @State private var cameraRegion: MKCoordinateRegion?
     @State private var cameraRegionVersion = 0
     @State private var selectedCoordinate: CLLocationCoordinate2D?
-    @State private var visibleRegion: MKCoordinateRegion?
     @State private var isSaving = false
     @State private var showError: String?
 
@@ -49,8 +48,7 @@ struct LocationPickerView: View {
                     cameraRegionVersion: cameraRegionVersion,
                     onPointTap: nil,
                     onMapTap: { coord in selectedCoordinate = coord },
-                    onCameraRegionChange: { region in visibleRegion = region },
-                    isStyleLoaded: .constant(true)
+                    onCameraRegionChange: { region in cameraRegion = region }
                 )
 
                 // Center crosshair for precise placement
@@ -172,7 +170,7 @@ struct LocationPickerView: View {
     }
 
     private func dropPinAtCenter() {
-        if let region = visibleRegion {
+        if let region = cameraRegion {
             selectedCoordinate = region.center
         }
     }

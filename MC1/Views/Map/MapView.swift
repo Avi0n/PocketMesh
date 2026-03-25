@@ -5,7 +5,6 @@ import MC1Services
 /// Map view displaying contacts with their locations
 struct MapView: View {
     @Environment(\.appState) private var appState
-    @Environment(\.colorScheme) private var colorScheme
     @State private var viewModel = MapViewModel()
     @State private var selectedCalloutContact: ContactDTO?
     @State private var selectedPointScreenPosition: CGPoint?
@@ -16,8 +15,6 @@ struct MapView: View {
         NavigationStack {
             MapCanvasView(
                 viewModel: viewModel,
-                mapPoints: viewModel.mapPoints,
-                colorScheme: colorScheme,
                 selectedCalloutContact: $selectedCalloutContact,
                 selectedPointScreenPosition: $selectedPointScreenPosition,
                 isStyleLoaded: $isStyleLoaded,
@@ -31,7 +28,7 @@ struct MapView: View {
                     BLEStatusIndicatorView()
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    refreshButton
+                    MapRefreshButton(viewModel: viewModel)
                 }
             }
             .task {
@@ -52,23 +49,6 @@ struct MapView: View {
         }
     }
 
-    // MARK: - Refresh Button
-
-    private var refreshButton: some View {
-        Button {
-            Task {
-                await viewModel.loadContactsWithLocation()
-            }
-        } label: {
-            if viewModel.isLoading {
-                ProgressView()
-            } else {
-                Image(systemName: "arrow.clockwise")
-            }
-        }
-        .disabled(viewModel.isLoading)
-    }
-
     // MARK: - Actions
 
     private func clearSelection() {
@@ -82,27 +62,41 @@ struct MapView: View {
     }
 
     private func showContactDetail(_ contact: ContactDTO) {
-        selectedCalloutContact = nil
-        selectedPointScreenPosition = nil
+        clearSelection()
         selectedContactForDetail = contact
     }
 
     private func centerOnUserLocation() {
         guard let location = appState.locationService.currentLocation else { return }
         let span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-        viewModel.cameraRegion = MKCoordinateRegion(center: location.coordinate, span: span)
-        viewModel.cameraRegionVersion += 1
+        viewModel.setCameraRegion(MKCoordinateRegion(center: location.coordinate, span: span))
+    }
+}
+
+// MARK: - Map Refresh Button
+
+private struct MapRefreshButton: View {
+    var viewModel: MapViewModel
+
+    var body: some View {
+        Button {
+            Task {
+                await viewModel.loadContactsWithLocation()
+            }
+        } label: {
+            if viewModel.isLoading {
+                ProgressView()
+            } else {
+                Image(systemName: "arrow.clockwise")
+            }
+        }
+        .disabled(viewModel.isLoading)
     }
 }
 
 // MARK: - Preview
 
-#Preview("Map with Contacts") {
-    MapView()
-        .environment(\.appState, AppState())
-}
-
-#Preview("Empty Map") {
+#Preview {
     MapView()
         .environment(\.appState, AppState())
 }

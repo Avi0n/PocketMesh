@@ -2,8 +2,8 @@ import MapKit
 import SwiftUI
 
 /// Shared toolbar for map control buttons with liquid glass styling.
-/// Provides location and layers buttons with a slot for custom content.
-struct MapControlsToolbar<CustomContent: View>: View {
+/// Provides location and layers buttons with slots for top and bottom custom content.
+struct MapControlsToolbar<TopContent: View, CustomContent: View>: View {
     /// MapScope for SwiftUI Map's MapUserLocationButton. Mutually exclusive with onLocationTap.
     var mapScope: Namespace.ID?
 
@@ -13,11 +13,18 @@ struct MapControlsToolbar<CustomContent: View>: View {
     /// Binding to control layers menu visibility. Parent view handles menu presentation.
     @Binding var showingLayersMenu: Bool
 
+    /// Custom buttons to display above the standard buttons.
+    @ViewBuilder var topContent: () -> TopContent
+
     /// Custom buttons to display below the standard buttons.
     @ViewBuilder var customContent: () -> CustomContent
 
     var body: some View {
         VStack(spacing: 0) {
+            CustomContentStack {
+                topContent()
+            }
+
             locationButton
 
             Divider()
@@ -67,6 +74,21 @@ struct MapControlsToolbar<CustomContent: View>: View {
         .contentShape(.rect)
         .buttonStyle(.plain)
         .labelStyle(.iconOnly)
+    }
+}
+
+extension MapControlsToolbar where TopContent == EmptyView {
+    init(
+        mapScope: Namespace.ID? = nil,
+        onLocationTap: (() -> Void)? = nil,
+        showingLayersMenu: Binding<Bool>,
+        @ViewBuilder customContent: @escaping () -> CustomContent
+    ) {
+        self.mapScope = mapScope
+        self.onLocationTap = onLocationTap
+        self._showingLayersMenu = showingLayersMenu
+        self.topContent = { EmptyView() }
+        self.customContent = customContent
     }
 }
 

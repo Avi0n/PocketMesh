@@ -5,8 +5,6 @@ import MC1Services
 struct MapCanvasView: View {
     @Environment(\.appState) private var appState
     @Bindable var viewModel: MapViewModel
-    let mapPoints: [MapPoint]
-    let colorScheme: ColorScheme
     @Binding var selectedCalloutContact: ContactDTO?
     @Binding var selectedPointScreenPosition: CGPoint?
     @Binding var isStyleLoaded: Bool
@@ -19,8 +17,6 @@ struct MapCanvasView: View {
         ZStack {
             MapContentView(
                 viewModel: viewModel,
-                colorScheme: colorScheme,
-                mapPoints: mapPoints,
                 selectedCalloutContact: $selectedCalloutContact,
                 selectedPointScreenPosition: $selectedPointScreenPosition,
                 isStyleLoaded: $isStyleLoaded,
@@ -75,39 +71,61 @@ struct MapCanvasView: View {
             Spacer()
             MapControlsToolbar(
                 onLocationTap: { onCenterOnUser() },
-                showingLayersMenu: $viewModel.showingLayersMenu
+                showingLayersMenu: $viewModel.showingLayersMenu,
+                topContent: {
+                    NorthLockButton(isNorthLocked: $viewModel.isNorthLocked)
+                }
             ) {
-                labelsToggleButton
-                centerAllButton
+                LabelsToggleButton(showLabels: $viewModel.showLabels)
+                CenterAllButton(
+                    isEmpty: viewModel.contactsWithLocation.isEmpty,
+                    onClearSelection: onClearSelection,
+                    onCenterAll: { viewModel.centerOnAllContacts() }
+                )
             }
         }
     }
+}
 
-    private var labelsToggleButton: some View {
-        Button(viewModel.showLabels ? L10n.Map.Map.Controls.hideLabels : L10n.Map.Map.Controls.showLabels, systemImage: "character.textbox") {
+// MARK: - Control Buttons
+
+private struct NorthLockButton: View {
+    @Binding var isNorthLocked: Bool
+
+    var body: some View {
+        Button(
+            isNorthLocked ? L10n.Map.Map.Controls.unlockNorth : L10n.Map.Map.Controls.lockNorth,
+            systemImage: isNorthLocked ? "location.north.line.fill" : "location.north.line"
+        ) {
             withAnimation {
-                viewModel.showLabels.toggle()
+                isNorthLocked.toggle()
             }
         }
         .font(.body.weight(.medium))
-        .foregroundStyle(viewModel.showLabels ? .blue : .primary)
+        .foregroundStyle(isNorthLocked ? .blue : .primary)
         .frame(width: 44, height: 44)
         .contentShape(.rect)
         .buttonStyle(.plain)
         .labelStyle(.iconOnly)
     }
+}
 
-    private var centerAllButton: some View {
+private struct CenterAllButton: View {
+    let isEmpty: Bool
+    let onClearSelection: () -> Void
+    let onCenterAll: () -> Void
+
+    var body: some View {
         Button(L10n.Map.Map.Controls.centerAll, systemImage: "arrow.up.left.and.arrow.down.right") {
             onClearSelection()
-            viewModel.centerOnAllContacts()
+            onCenterAll()
         }
         .font(.body.weight(.medium))
-        .foregroundStyle(viewModel.contactsWithLocation.isEmpty ? .secondary : .primary)
+        .foregroundStyle(isEmpty ? .secondary : .primary)
         .frame(width: 44, height: 44)
         .contentShape(.rect)
         .buttonStyle(.plain)
-        .disabled(viewModel.contactsWithLocation.isEmpty)
+        .disabled(isEmpty)
         .labelStyle(.iconOnly)
     }
 }

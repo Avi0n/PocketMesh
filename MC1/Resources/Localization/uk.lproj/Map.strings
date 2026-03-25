@@ -39,6 +39,12 @@
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
 "map.controls.layers" = "Шари карти";
 
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock) */
+"map.controls.lockNorth" = "Зафіксувати на північ";
+
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
+"map.controls.unlockNorth" = "Розблокувати обертання";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */
@@ -48,7 +54,7 @@
 "map.style.satellite" = "Супутникова";
 
 /* Location: MapStyleSelection.swift - Purpose: Topo map style option */
-"map.style.topo" = "Топо";
+"map.style.topo" = "Топографія";
 
 // MARK: - Contact Detail Sheet
 
