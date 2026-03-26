@@ -268,8 +268,12 @@ struct ContactDetailView: View {
         }
         .sheet(isPresented: $showRepeaterAdminAuth, onDismiss: {
             // Trigger navigation after sheet is fully dismissed to avoid race conditions
-            if adminSession != nil {
-                navigateToSettings = true
+            if let session = adminSession {
+                if session.isAdmin {
+                    navigateToSettings = true
+                } else {
+                    activeSheet = .repeaterStatus(session)
+                }
             }
         }) {
             if let role = RemoteNodeRole(contactType: currentContact.type) {

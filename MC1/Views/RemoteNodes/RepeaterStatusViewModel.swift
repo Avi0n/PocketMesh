@@ -45,6 +45,15 @@ final class RepeaterStatusViewModel {
     /// Whether the telemetry disclosure group is expanded
     var telemetryExpanded = false
 
+    /// Owner info text
+    var ownerInfo: String?
+
+    /// Owner info loading/state
+    var isLoadingOwnerInfo = false
+    var ownerInfoLoaded: Bool { ownerInfo != nil }
+    var ownerInfoExpanded = false
+    var ownerInfoError: String?
+
     /// Error message if any
     var errorMessage: String?
 
@@ -355,6 +364,28 @@ final class RepeaterStatusViewModel {
                 pendingTelemetryEntries = entries
             }
         }
+    }
+
+    // MARK: - Owner Info
+
+    /// Request owner info from the repeater
+    func requestOwnerInfo(for session: RemoteNodeSessionDTO) async {
+        guard let repeaterAdminService else { return }
+
+        ownerInfoError = nil
+        isLoadingOwnerInfo = true
+
+        do {
+            let response = try await performWithTransientRetries(operationName: "ownerInfo") { [repeaterAdminService] timeout in
+                return try await repeaterAdminService.requestOwnerInfo(sessionID: session.id, timeout: timeout)
+            }
+            ownerInfo = response.ownerInfo
+        } catch RemoteNodeError.timeout {
+            ownerInfoError = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+        } catch {
+            ownerInfoError = error.localizedDescription
+        }
+        isLoadingOwnerInfo = false
     }
 
     // MARK: - Telemetry Grouping

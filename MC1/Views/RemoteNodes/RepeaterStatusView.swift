@@ -15,6 +15,7 @@ struct RepeaterStatusView: View {
         NavigationStack {
             List {
                 makeHeaderSection()
+                makeOwnerInfoSection()
                 makeStatusSection()
                 makeTelemetrySection()
                 makeNeighborsSection()
@@ -36,7 +37,7 @@ struct RepeaterStatusView: View {
                     }
                     .radioDisabled(
                         for: appState.connectionState,
-                        or: viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry
+                        or: viewModel.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.isLoadingTelemetry || viewModel.isLoadingOwnerInfo
                     )
                 }
 
@@ -71,6 +72,10 @@ struct RepeaterStatusView: View {
             }
             .refreshable {
                 await viewModel.requestStatus(for: session)
+                // Refresh owner info only if already loaded
+                if viewModel.ownerInfoLoaded {
+                    await viewModel.requestOwnerInfo(for: session)
+                }
                 // Refresh telemetry only if already loaded
                 if viewModel.telemetryLoaded {
                     await viewModel.requestTelemetry(for: session)
@@ -87,7 +92,11 @@ struct RepeaterStatusView: View {
     // MARK: - Subviews
 
     private func makeHeaderSection() -> some View {
-        HeaderSection(publicKey: session.publicKey, name: session.name)
+        HeaderSection(session: session)
+    }
+
+    private func makeOwnerInfoSection() -> some View {
+        OwnerInfoSection(viewModel: viewModel, session: session)
     }
 
     private func makeStatusSection() -> some View {
@@ -121,6 +130,10 @@ struct RepeaterStatusView: View {
     private func refresh() {
         Task {
             await viewModel.requestStatus(for: session)
+            // Refresh owner info only if already loaded
+            if viewModel.ownerInfoLoaded {
+                await viewModel.requestOwnerInfo(for: session)
+            }
             // Refresh telemetry only if already loaded
             if viewModel.telemetryLoaded {
                 await viewModel.requestTelemetry(for: session)
@@ -136,22 +149,65 @@ struct RepeaterStatusView: View {
 // MARK: - Header Section
 
 private struct HeaderSection: View {
-    let publicKey: Data
-    let name: String
+    let session: RemoteNodeSessionDTO
 
     var body: some View {
         Section {
             HStack {
                 Spacer()
                 VStack(spacing: 8) {
-                    NodeAvatar(publicKey: publicKey, role: .repeater, size: 60)
+                    NodeAvatar(publicKey: session.publicKey, role: .repeater, size: 60)
 
-                    Text(name)
+                    Text(session.name)
                         .font(.headline)
+
+                    if session.permissionLevel == .guest {
+                        Text(L10n.RemoteNodes.RemoteNodes.Status.guestMode)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
             }
             .listRowBackground(Color.clear)
+        }
+    }
+}
+
+// MARK: - Owner Info Section
+
+private struct OwnerInfoSection: View {
+    @Bindable var viewModel: RepeaterStatusViewModel
+    let session: RemoteNodeSessionDTO
+
+    var body: some View {
+        Section {
+            DisclosureGroup(isExpanded: $viewModel.ownerInfoExpanded) {
+                if viewModel.isLoadingOwnerInfo {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
+                } else if let error = viewModel.ownerInfoError {
+                    Text(error)
+                        .foregroundStyle(.red)
+                } else if let info = viewModel.ownerInfo, !info.isEmpty {
+                    Text(info)
+                } else {
+                    Text(L10n.RemoteNodes.RemoteNodes.Status.noOwnerInfo)
+                        .foregroundStyle(.secondary)
+                }
+            } label: {
+                Text(L10n.RemoteNodes.RemoteNodes.Status.ownerInfo)
+            }
+            .onChange(of: viewModel.ownerInfoExpanded) { _, isExpanded in
+                if isExpanded && !viewModel.ownerInfoLoaded {
+                    Task {
+                        await viewModel.requestOwnerInfo(for: session)
+                    }
+                }
+            }
         }
     }
 }

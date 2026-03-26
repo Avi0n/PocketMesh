@@ -315,6 +315,15 @@
 /* Location: RepeaterStatusView.swift - Navigation title */
 "remoteNodes.status.title" = "Status przekaźnika";
 
+/* Location: RepeaterStatusView.swift - Guest mode badge in header */
+"remoteNodes.status.guestMode" = "Tryb gościa";
+
+/* Location: RepeaterStatusView.swift - Owner info section label */
+"remoteNodes.status.ownerInfo" = "Informacje kontaktowe";
+
+/* Location: RepeaterStatusView.swift - No owner info empty state */
+"remoteNodes.status.noOwnerInfo" = "Brak informacji kontaktowych";
+
 /* Location: RepeaterStatusView.swift - Status section header */
 "remoteNodes.status.statusSection" = "Status";
 

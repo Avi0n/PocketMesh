@@ -451,7 +451,11 @@ private struct ContactDetailSheet: View {
                 case .adminAuth:
                     if let role = RemoteNodeRole(contactType: contact.type) {
                         NodeAuthenticationSheet(contact: contact, role: role) { session in
-                            pendingSheet = .adminSettings(session)
+                            if session.isAdmin {
+                                pendingSheet = .adminSettings(session)
+                            } else {
+                                pendingSheet = .telemetryStatus(session)
+                            }
                             activeSheet = nil
                         }
                         .presentationSizing(.page)

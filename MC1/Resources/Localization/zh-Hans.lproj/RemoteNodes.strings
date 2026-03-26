@@ -318,6 +318,15 @@
 /* Location: RepeaterStatusView.swift - Navigation title */
 "remoteNodes.status.title" = "转发节点状态";
 
+/* Location: RepeaterStatusView.swift - Guest mode badge in header */
+"remoteNodes.status.guestMode" = "访客模式";
+
+/* Location: RepeaterStatusView.swift - Owner info section label */
+"remoteNodes.status.ownerInfo" = "联系信息";
+
+/* Location: RepeaterStatusView.swift - No owner info empty state */
+"remoteNodes.status.noOwnerInfo" = "无联系信息";
+
 /* Location: RepeaterStatusView.swift - Status section header */
 "remoteNodes.status.statusSection" = "状态";
 

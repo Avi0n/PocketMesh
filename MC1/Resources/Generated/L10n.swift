@@ -2675,6 +2675,8 @@ public enum L10n {
         public static func channel(_ p1: Int) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.status.channel", p1, fallback: "Channel %d")
         }
+        /// Location: RepeaterStatusView.swift - Guest mode badge in header
+        public static let guestMode = L10n.tr("RemoteNodes", "remoteNodes.status.guestMode", fallback: "Guest Mode")
         /// Location: RepeaterStatusView.swift - Hours ago format
         public static func hoursAgo(_ p1: Int) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.status.hoursAgo", p1, fallback: "%dh ago")
@@ -2695,6 +2697,8 @@ public enum L10n {
         public static let noiseFloor = L10n.tr("RemoteNodes", "remoteNodes.status.noiseFloor", fallback: "Noise Floor")
         /// Location: RepeaterStatusView.swift - No neighbors empty state
         public static let noNeighbors = L10n.tr("RemoteNodes", "remoteNodes.status.noNeighbors", fallback: "No neighbors discovered")
+        /// Location: RepeaterStatusView.swift - No owner info empty state
+        public static let noOwnerInfo = L10n.tr("RemoteNodes", "remoteNodes.status.noOwnerInfo", fallback: "No contact info")
         /// Location: RepeaterStatusView.swift - No sensor data empty state
         public static let noSensorData = L10n.tr("RemoteNodes", "remoteNodes.status.noSensorData", fallback: "No sensor data")
         /// Location: RepeaterStatusView.swift - No telemetry data empty state
@@ -2707,6 +2711,8 @@ public enum L10n {
         }
         /// Location: RepeaterStatusViewModel.swift - Cannot save OCV error
         public static let ocvSaveNoContact = L10n.tr("RemoteNodes", "remoteNodes.status.ocvSaveNoContact", fallback: "Cannot save: contact not found")
+        /// Location: RepeaterStatusView.swift - Owner info section label
+        public static let ownerInfo = L10n.tr("RemoteNodes", "remoteNodes.status.ownerInfo", fallback: "Contact Info")
         /// Location: RepeaterStatusView.swift - Packets received label
         public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.status.packetsReceived", fallback: "Packets Received")
         /// Location: RepeaterStatusView.swift - Packets sent label

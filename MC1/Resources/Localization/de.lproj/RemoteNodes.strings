@@ -318,6 +318,15 @@
 /* Location: RepeaterStatusView.swift - Navigation title */
 "remoteNodes.status.title" = "Repeater-Status";
 
+/* Location: RepeaterStatusView.swift - Guest mode badge in header */
+"remoteNodes.status.guestMode" = "Gastmodus";
+
+/* Location: RepeaterStatusView.swift - Owner info section label */
+"remoteNodes.status.ownerInfo" = "Kontaktinfo";
+
+/* Location: RepeaterStatusView.swift - No owner info empty state */
+"remoteNodes.status.noOwnerInfo" = "Keine Kontaktinfo";
+
 /* Location: RepeaterStatusView.swift - Status section header */
 "remoteNodes.status.statusSection" = "Status";
 
