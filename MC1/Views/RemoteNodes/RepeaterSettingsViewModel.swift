@@ -15,7 +15,7 @@ final class RepeaterSettingsViewModel {
     private var deviceTimeUTC: String?
     var isLoadingDeviceInfo = false
     var deviceInfoError: String?
-    var deviceInfoLoaded: Bool { firmwareVersion != nil || deviceTimeUTC != nil }
+    var deviceInfoLoaded: Bool { deviceTimeUTC != nil }
 
     /// Device time converted to user's local timezone and locale
     var deviceTime: String? {
@@ -58,7 +58,7 @@ final class RepeaterSettingsViewModel {
     private var originalLongitude: Double?
     var isLoadingIdentity = false
     var identityError: String?
-    var identityLoaded: Bool { originalName != nil || originalLatitude != nil || originalLongitude != nil }
+    var identityLoaded: Bool { originalLatitude != nil || originalLongitude != nil }
 
     // Radio settings (from get radio, get tx)
     var frequency: Double?
@@ -189,6 +189,28 @@ final class RepeaterSettingsViewModel {
             await MainActor.run {
                 self?.handleLateResponse(message.text)
             }
+        }
+
+        // Pre-fetch firmware version, node name, and owner info via binary protocol
+        await fetchNodeInfo()
+    }
+
+    private var isLoadingNodeInfo = false
+
+    /// Fetch firmware version, node name, and owner info via a single binary request.
+    private func fetchNodeInfo() async {
+        guard !isLoadingNodeInfo, let session, let repeaterAdminService else { return }
+        isLoadingNodeInfo = true
+        defer { isLoadingNodeInfo = false }
+        do {
+            let response = try await repeaterAdminService.requestOwnerInfo(sessionID: session.id)
+            firmwareVersion = response.firmwareVersion
+            name = response.nodeName
+            originalName = response.nodeName
+            ownerInfo = response.ownerInfo
+            originalOwnerInfo = response.ownerInfo
+        } catch {
+            logger.warning("Failed to fetch node info via binary: \(error)")
         }
     }
 
@@ -339,22 +361,13 @@ final class RepeaterSettingsViewModel {
 
     // MARK: - Fetch Methods (Pull-to-Load)
 
-    /// Fetch device info (firmware version and time)
+    /// Fetch device info (device time; firmware version is pre-fetched via binary)
     func fetchDeviceInfo() async {
         isLoadingDeviceInfo = true
         deviceInfoError = nil
-        var hadTimeout = false
 
-        // Get firmware version
-        do {
-            let response = try await sendAndWait("ver")
-            if case .version(let version) = CLIResponse.parse(response, forQuery: "ver") {
-                self.firmwareVersion = version
-                logger.debug("Received firmware version: \(version)")
-            }
-        } catch {
-            if case RemoteNodeError.timeout = error { hadTimeout = true }
-            logger.warning("Failed to get firmware version: \(error)")
+        if firmwareVersion == nil {
+            await fetchNodeInfo()
         }
 
         // Get device time
@@ -365,35 +378,23 @@ final class RepeaterSettingsViewModel {
                 logger.debug("Received device time: \(time)")
             }
         } catch {
-            if case RemoteNodeError.timeout = error { hadTimeout = true }
+            if case RemoteNodeError.timeout = error {
+                deviceInfoError = "error"
+            }
             logger.warning("Failed to get device time: \(error)")
-        }
-
-        // Show error if any request timed out (even if some succeeded)
-        if hadTimeout {
-            deviceInfoError = "error"
         }
 
         isLoadingDeviceInfo = false
     }
 
-    /// Fetch identity settings (name, latitude, longitude)
+    /// Fetch identity settings (latitude, longitude; name is pre-fetched via binary)
     func fetchIdentity() async {
         isLoadingIdentity = true
         identityError = nil
         var hadTimeout = false
 
-        // Get name
-        do {
-            let response = try await sendAndWait("get name")
-            if case .name(let n) = CLIResponse.parse(response, forQuery: "get name") {
-                self.name = n
-                self.originalName = n
-                logger.debug("Received name: \(n)")
-            }
-        } catch {
-            if case RemoteNodeError.timeout = error { hadTimeout = true }
-            logger.warning("Failed to get name: \(error)")
+        if originalName == nil {
+            await fetchNodeInfo()
         }
 
         // Get latitude
@@ -422,7 +423,6 @@ final class RepeaterSettingsViewModel {
             logger.warning("Failed to get longitude: \(error)")
         }
 
-        // Show error if any request timed out (even if some succeeded)
         if hadTimeout {
             identityError = "error"
         }
@@ -539,6 +539,11 @@ final class RepeaterSettingsViewModel {
 
     /// Fetch contact info (owner.info)
     func fetchContactInfo() async {
+        if originalOwnerInfo == nil {
+            await fetchNodeInfo()
+        }
+        if originalOwnerInfo != nil { return }
+
         isLoadingContactInfo = true
         contactInfoError = nil
 

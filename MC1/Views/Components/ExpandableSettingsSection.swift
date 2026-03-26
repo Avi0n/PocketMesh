@@ -67,7 +67,7 @@ struct ExpandableSettingsSection<Content: View>: View {
                         ProgressView()
                             .scaleEffect(0.8)
                             .padding(.trailing)
-                    } else if isLoaded() {
+                    } else if isExpanded && isLoaded() {
                         Button {
                             Task { await onLoad() }
                         } label: {
