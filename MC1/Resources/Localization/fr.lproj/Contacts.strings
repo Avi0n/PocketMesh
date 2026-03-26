@@ -207,7 +207,7 @@
 "contacts.detail.telemetry" = "Télémétrie";
 
 /* Location: ContactDetailView.swift - Purpose: Saved History button for offline telemetry */
-"contacts.detail.savedHistory" = "Saved History";
+"contacts.detail.savedHistory" = "Telemetry History";
 
 /* Location: ContactDetailView.swift - Purpose: Telemetry access sheet title */
 "contacts.detail.telemetryAccess" = "Accès à la télémétrie";

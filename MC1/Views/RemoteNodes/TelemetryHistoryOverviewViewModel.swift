@@ -10,6 +10,8 @@ final class TelemetryHistoryOverviewViewModel {
 
     private(set) var snapshots: [NodeStatusSnapshotDTO] = []
     private(set) var ocvArray: [Int] = OCVPreset.liIon.ocvArray
+    private(set) var contacts: [ContactDTO] = []
+    private(set) var discoveredNodes: [DiscoveredNodeDTO] = []
     var timeRange: HistoryTimeRange = .all
 
     // MARK: - Computed
@@ -83,6 +85,19 @@ final class TelemetryHistoryOverviewViewModel {
         } catch {
             // Keep default liIon
         }
+
+        contacts = (try? await dataStore.fetchContacts(deviceID: deviceID)) ?? []
+        discoveredNodes = (try? await dataStore.fetchDiscoveredNodes(deviceID: deviceID)) ?? []
+    }
+
+    func resolveNeighborName(prefix: Data) -> String? {
+        if let contact = contacts.first(where: { $0.publicKeyPrefix.starts(with: prefix) }) {
+            return contact.displayName
+        }
+        if let node = discoveredNodes.first(where: { $0.publicKey.prefix(6).starts(with: prefix) }) {
+            return node.name
+        }
+        return nil
     }
 }
 

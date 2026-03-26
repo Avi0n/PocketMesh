@@ -1112,7 +1112,7 @@ public enum L10n {
           return L10n.tr("Contacts", "contacts.detail.routePrefix", String(describing: p1), fallback: "Route: %@")
         }
         /// Location: ContactDetailView.swift - Purpose: Saved History button for offline telemetry
-        public static let savedHistory = L10n.tr("Contacts", "contacts.detail.savedHistory", fallback: "Saved History")
+        public static let savedHistory = L10n.tr("Contacts", "contacts.detail.savedHistory", fallback: "Telemetry History")
         /// Location: ContactDetailView.swift - Purpose: Discovery countdown
         public static func secondsRemaining(_ p1: Int) -> String {
           return L10n.tr("Contacts", "contacts.detail.secondsRemaining", p1, fallback: "Up to %d seconds remaining")
@@ -2378,13 +2378,15 @@ public enum L10n {
         /// Location: NeighborRow - Not seen status
         public static let notSeen = L10n.tr("RemoteNodes", "remoteNodes.history.notSeen", fallback: "Not seen")
         /// Location: TelemetryHistoryOverviewView.swift - Purpose: Navigation title
-        public static let overviewTitle = L10n.tr("RemoteNodes", "remoteNodes.history.overviewTitle", fallback: "Saved History")
+        public static let overviewTitle = L10n.tr("RemoteNodes", "remoteNodes.history.overviewTitle", fallback: "Telemetry History")
         /// Location: NodeStatusHistoryView.swift - Packets received chart title
         public static let packetsReceived = L10n.tr("RemoteNodes", "remoteNodes.history.packetsReceived", fallback: "Packets Received")
         /// Location: NodeStatusHistoryView.swift - Packets sent chart title
         public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.history.packetsSent", fallback: "Packets Sent")
         /// Location: TelemetryHistoryOverviewView.swift - Purpose: Radio section header
         public static let radioSection = L10n.tr("RemoteNodes", "remoteNodes.history.radioSection", fallback: "Radio")
+        /// Location: NodeStatusHistoryView.swift - Receive errors chart title
+        public static let receiveErrors = L10n.tr("RemoteNodes", "remoteNodes.history.receiveErrors", fallback: "Packet Errors Received")
         /// Location: NodeStatusHistoryView.swift - Footer about data retention
         public static let retentionNotice = L10n.tr("RemoteNodes", "remoteNodes.history.retentionNotice", fallback: "History data older than one year is automatically removed.")
         /// Location: NodeStatusHistoryView.swift - RSSI chart title

@@ -9,6 +9,7 @@ struct RepeaterStatusView: View {
     let session: RemoteNodeSessionDTO
     @State private var viewModel = RepeaterStatusViewModel()
     @State private var contacts: [ContactDTO] = []
+    @State private var discoveredNodes: [DiscoveredNodeDTO] = []
 
     var body: some View {
         NavigationStack {
@@ -64,6 +65,7 @@ struct RepeaterStatusView: View {
                     await viewModel.loadOCVSettings(publicKey: session.publicKey, deviceID: deviceID)
                     if let dataStore = appState.services?.dataStore {
                         contacts = (try? await dataStore.fetchContacts(deviceID: deviceID)) ?? []
+                        discoveredNodes = (try? await dataStore.fetchDiscoveredNodes(deviceID: deviceID)) ?? []
                     }
                 }
             }
@@ -96,7 +98,8 @@ struct RepeaterStatusView: View {
         NeighborsSection(
             viewModel: viewModel,
             session: session,
-            contacts: contacts
+            contacts: contacts,
+            discoveredNodes: discoveredNodes
         )
     }
 
@@ -240,6 +243,7 @@ private struct NeighborsSection: View {
     @Bindable var viewModel: RepeaterStatusViewModel
     let session: RemoteNodeSessionDTO
     let contacts: [ContactDTO]
+    let discoveredNodes: [DiscoveredNodeDTO]
 
     var body: some View {
         Section {
@@ -256,9 +260,11 @@ private struct NeighborsSection: View {
                 } else {
                     ForEach(viewModel.neighbors, id: \.publicKeyPrefix) { neighbor in
                         let contact = contacts.first { $0.publicKeyPrefix.starts(with: neighbor.publicKeyPrefix) }
+                        let resolvedName = contact?.displayName
+                            ?? discoveredNodes.first(where: { $0.publicKey.prefix(6).starts(with: neighbor.publicKeyPrefix) })?.name
                         NavigationLink {
                             NeighborSNRChartView(
-                                name: contact?.displayName ?? L10n.RemoteNodes.RemoteNodes.Status.unknown,
+                                name: resolvedName ?? L10n.RemoteNodes.RemoteNodes.Status.unknown,
                                 neighborPrefix: neighbor.publicKeyPrefix,
                                 fetchSnapshots: viewModel.fetchHistory
                             )
@@ -280,7 +286,8 @@ private struct NeighborsSection: View {
                         ForEach(disappeared, id: \.publicKeyPrefix) { old in
                             DisappearedNeighborRow(
                                 neighbor: old,
-                                contact: contacts.first { $0.publicKeyPrefix.starts(with: old.publicKeyPrefix) }
+                                contact: contacts.first { $0.publicKeyPrefix.starts(with: old.publicKeyPrefix) },
+                                discoveredName: discoveredNodes.first(where: { $0.publicKey.prefix(6).starts(with: old.publicKeyPrefix) })?.name
                             )
                         }
                     }
@@ -571,6 +578,7 @@ private struct NeighborRow: View {
 private struct DisappearedNeighborRow: View {
     let neighbor: NeighborSnapshotEntry
     let contact: ContactDTO?
+    var discoveredName: String?
 
     var body: some View {
         HStack {
@@ -588,6 +596,7 @@ private struct DisappearedNeighborRow: View {
 
     private var displayName: String {
         contact?.displayName
+            ?? discoveredName
             ?? Data(neighbor.publicKeyPrefix.prefix(4)).hexString()
     }
 }

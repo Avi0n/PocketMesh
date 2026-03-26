@@ -1425,7 +1425,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
         uptimeSeconds: UInt32?,
         rxAirtimeSeconds: UInt32?,
         packetsSent: UInt32?,
-        packetsReceived: UInt32?
+        packetsReceived: UInt32?,
+        receiveErrors: UInt32?
     ) async throws -> UUID {
         let dto = NodeStatusSnapshotDTO(
             nodePublicKey: nodePublicKey,
@@ -1436,7 +1437,8 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             uptimeSeconds: uptimeSeconds,
             rxAirtimeSeconds: rxAirtimeSeconds,
             packetsSent: packetsSent,
-            packetsReceived: packetsReceived
+            packetsReceived: packetsReceived,
+            receiveErrors: receiveErrors
         )
         nodeStatusSnapshots.append(dto)
         return dto.id

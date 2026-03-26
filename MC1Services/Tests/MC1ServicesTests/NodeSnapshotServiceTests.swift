@@ -28,7 +28,8 @@ struct NodeSnapshotServiceTests {
             uptimeSeconds: 3600,
             rxAirtimeSeconds: 100,
             packetsSent: 500,
-            packetsReceived: 1000
+            packetsReceived: 1000,
+            receiveErrors: nil
         )
 
         #expect(id != nil)
@@ -47,7 +48,8 @@ struct NodeSnapshotServiceTests {
             uptimeSeconds: nil,
             rxAirtimeSeconds: nil,
             packetsSent: nil,
-            packetsReceived: nil
+            packetsReceived: nil,
+            receiveErrors: nil
         )
         #expect(first != nil)
 
@@ -60,7 +62,8 @@ struct NodeSnapshotServiceTests {
             uptimeSeconds: nil,
             rxAirtimeSeconds: nil,
             packetsSent: nil,
-            packetsReceived: nil
+            packetsReceived: nil,
+            receiveErrors: nil
         )
         #expect(second == nil, "Second snapshot should be throttled")
     }
@@ -75,7 +78,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         #expect(first != nil)
 
@@ -84,7 +88,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3700,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         #expect(second != nil, "Different node should not be throttled")
     }
@@ -98,7 +103,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         guard let snapshotID = id else {
             Issue.record("Expected snapshot ID")
@@ -124,7 +130,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         guard let snapshotID = id else {
             Issue.record("Expected snapshot ID")
@@ -153,7 +160,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3700,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         _ = try await store.saveNodeStatusSnapshot(
             timestamp: t2,
@@ -161,7 +169,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         let previous = await service.previousSnapshot(for: testPublicKey, before: .now)
@@ -180,7 +189,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         _ = try await store.saveNodeStatusSnapshot(
             timestamp: t2,
@@ -188,7 +198,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         let snapshots = await service.fetchSnapshots(for: testPublicKey)
@@ -211,7 +222,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         // Save a "recent" snapshot
@@ -221,7 +233,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         await service.pruneOldSnapshots(olderThan: cutoff)
 
@@ -239,7 +252,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3850,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         // Prune with a cutoff 1 year ago — recent data should survive
@@ -263,7 +277,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         _ = try await store.saveNodeStatusSnapshot(
             timestamp: t2,
@@ -271,7 +286,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         let snapshots = await service.fetchSnapshots(for: testPublicKey, since: cutoff)
@@ -294,7 +310,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3600,
             lastSNR: 7.0, lastRSSI: -90, noiseFloor: -120,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         let id2 = try await store.saveNodeStatusSnapshot(
             timestamp: t2,
@@ -302,7 +319,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3800,
             lastSNR: 8.5, lastRSSI: -85, noiseFloor: -118,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
 
         // Enrich both with telemetry
@@ -344,7 +362,8 @@ struct NodeSnapshotServiceTests {
             batteryMillivolts: 3700,
             lastSNR: 7.0, lastRSSI: -90, noiseFloor: -120,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil,
+            receiveErrors: nil
         )
         guard let snapshotID = id1 else {
             Issue.record("First snapshot should not be throttled")

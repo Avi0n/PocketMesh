@@ -51,13 +51,13 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3800, lastSNR: 8.0, lastRSSI: -90,
             noiseFloor: -120, uptimeSeconds: 3600, rxAirtimeSeconds: 100,
-            packetsSent: 500, packetsReceived: 1000
+            packetsSent: 500, packetsReceived: 1000, receiveErrors: nil
         )
         _ = try await store.saveNodeStatusSnapshot(
             nodePublicKey: testPublicKey,
             batteryMillivolts: 3750, lastSNR: 7.5, lastRSSI: -92,
             noiseFloor: -118, uptimeSeconds: 7200, rxAirtimeSeconds: 200,
-            packetsSent: 600, packetsReceived: 1100
+            packetsSent: 600, packetsReceived: 1100, receiveErrors: nil
         )
 
         let viewModel = TelemetryHistoryOverviewViewModel()
@@ -119,7 +119,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         let viewModel = TelemetryHistoryOverviewViewModel()
@@ -142,7 +142,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3600,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         // Save a recent snapshot
@@ -150,7 +150,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         let viewModel = TelemetryHistoryOverviewViewModel()
@@ -175,7 +175,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         await viewModel.loadData(
@@ -193,7 +193,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         let viewModel = TelemetryHistoryOverviewViewModel()
@@ -223,7 +223,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         let viewModel = TelemetryHistoryOverviewViewModel()
@@ -254,7 +254,7 @@ struct TelemetryHistoryOverviewViewModelTests {
             nodePublicKey: testPublicKey, batteryMillivolts: 3800,
             lastSNR: nil, lastRSSI: nil, noiseFloor: nil,
             uptimeSeconds: nil, rxAirtimeSeconds: nil,
-            packetsSent: nil, packetsReceived: nil
+            packetsSent: nil, packetsReceived: nil, receiveErrors: nil
         )
 
         // Channel 0: Voltage (priority 0) and Temperature (priority 1)

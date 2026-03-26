@@ -62,6 +62,13 @@ struct NodeStatusHistoryView: View {
                 }
             )
 
+            metricSection(
+                title: L10n.RemoteNodes.RemoteNodes.History.receiveErrors, unit: "", color: .red,
+                dataPoints: filteredSnapshots.compactMap { s in
+                    s.receiveErrors.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                }
+            )
+
             Section {
             } footer: {
                 Text(L10n.RemoteNodes.RemoteNodes.History.retentionNotice)

@@ -53,7 +53,8 @@ struct TelemetryHistoryOverviewView: View {
         let hasRadioData = filtered.contains {
             $0.batteryMillivolts != nil || $0.lastSNR != nil ||
             $0.lastRSSI != nil || $0.noiseFloor != nil ||
-            $0.packetsSent != nil || $0.packetsReceived != nil
+            $0.packetsSent != nil || $0.packetsReceived != nil ||
+            $0.receiveErrors != nil
         }
 
         if hasRadioData {
@@ -110,6 +111,14 @@ struct TelemetryHistoryOverviewView: View {
                         unit: "", color: .orange,
                         dataPoints: filtered.compactMap { s in
                             s.packetsReceived.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                        }
+                    )
+
+                    metricChart(
+                        title: L10n.RemoteNodes.RemoteNodes.History.receiveErrors,
+                        unit: "", color: .red,
+                        dataPoints: filtered.compactMap { s in
+                            s.receiveErrors.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                         }
                     )
                 }
@@ -225,9 +234,10 @@ struct TelemetryHistoryOverviewView: View {
                 } else {
                     let hexName = neighbor.publicKeyPrefix
                         .map { String(format: "%02X", $0) }.joined()
+                    let resolvedName = viewModel.resolveNeighborName(prefix: neighbor.publicKeyPrefix) ?? hexName
                     charts[neighbor.publicKeyPrefix] = NeighborChart(
                         prefix: neighbor.publicKeyPrefix,
-                        name: hexName,
+                        name: resolvedName,
                         dataPoints: [point]
                     )
                 }

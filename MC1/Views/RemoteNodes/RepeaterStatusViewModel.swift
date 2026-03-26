@@ -256,7 +256,8 @@ final class RepeaterStatusViewModel {
             uptimeSeconds: response.uptimeSeconds,
             rxAirtimeSeconds: response.repeaterRxAirtimeSeconds,
             packetsSent: response.packetsSent,
-            packetsReceived: response.packetsReceived
+            packetsReceived: response.packetsReceived,
+            receiveErrors: response.receiveErrors
         )
         if let snapshotID {
             self.currentSnapshotID = snapshotID

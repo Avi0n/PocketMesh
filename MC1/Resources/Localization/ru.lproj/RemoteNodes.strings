@@ -469,6 +469,9 @@
 /* Location: NodeStatusHistoryView.swift - Packets received chart title */
 "remoteNodes.history.packetsReceived" = "Пакетов получено";
 
+/* Location: NodeStatusHistoryView.swift - Receive errors chart title */
+"remoteNodes.history.receiveErrors" = "Ошибок пакетов получено";
+
 /* Location: NeighborHistoryView.swift - Active status */
 "remoteNodes.history.active" = "Активен";
 
@@ -515,7 +518,7 @@
 "remoteNodes.history.sectionNotCaptured" = "This data is captured when you view the %@ section during a live telemetry session.";
 
 /* Location: TelemetryHistoryOverviewView.swift - Purpose: Navigation title */
-"remoteNodes.history.overviewTitle" = "Saved History";
+"remoteNodes.history.overviewTitle" = "Telemetry History";
 
 // MARK: - Room Conversation
 
