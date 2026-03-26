@@ -320,6 +320,45 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
+    @Test("requestStatus uses room layout for typed room targets")
+    func requestStatusUsesRoomLayoutForTypedRoomTargets() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let target = Data(repeating: 0x31, count: 32)
+        let expectedAck = Data([0xAA, 0xBB, 0xCC, 0xDD])
+
+        let statusTask = Task {
+            try await session.requestStatus(from: target, type: .room)
+        }
+
+        try await waitUntil("requestStatus should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateReceive(makeMessageSentPacket(expectedAck: expectedAck))
+        await transport.simulateReceive(
+            makeBinaryStatusResponsePacket(
+                tag: expectedAck,
+                battery: 1000,
+                roomServerPostedCount: 17,
+                roomServerPostPushCount: 9
+            )
+        )
+
+        let status = try await statusTask.value
+        #expect(status.battery == 1000)
+        #expect(status.roomServerPostedCount == 17)
+        #expect(status.roomServerPostPushCount == 9)
+        #expect(status.rxAirtime == 0)
+        await session.stop()
+    }
+
     @Test("requestTelemetry fails fast on device error before messageSent")
     func requestTelemetryFailsFastOnDeviceErrorBeforeMessageSent() async throws {
         let transport = MockTransport()
@@ -456,6 +495,18 @@ private func makeBatteryPacket(level: UInt16) -> Data {
     return packet
 }
 
+private func makeMessageSentPacket(
+    type: UInt8 = 0,
+    expectedAck: Data,
+    timeoutMs: UInt32 = 5000
+) -> Data {
+    var packet = Data([ResponseCode.messageSent.rawValue])
+    packet.append(type)
+    packet.append(expectedAck)
+    packet.append(contentsOf: withUnsafeBytes(of: timeoutMs.littleEndian) { Array($0) })
+    return packet
+}
+
 private func makeTelemetryPacket(publicKeyPrefix: Data, lppPayload: Data) -> Data {
     var packet = Data([ResponseCode.telemetryResponse.rawValue])
     packet.append(0x00)
@@ -484,6 +535,25 @@ private func makeStatusResponsePacket(publicKeyPrefix: Data, battery: UInt16) ->
     packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
     packet.append(contentsOf: withUnsafeBytes(of: UInt16(0).littleEndian) { Array($0) })
     packet.append(contentsOf: withUnsafeBytes(of: UInt32(0).littleEndian) { Array($0) })
+    return packet
+}
+
+private func makeBinaryStatusResponsePacket(
+    tag: Data,
+    battery: UInt16,
+    roomServerPostedCount: UInt16,
+    roomServerPostPushCount: UInt16
+) -> Data {
+    var packet = Data([ResponseCode.binaryResponse.rawValue])
+    packet.append(0x00)
+    packet.append(tag)
+
+    var payload = Data(repeating: 0, count: 52)
+    payload.replaceSubrange(0..<2, with: withUnsafeBytes(of: battery.littleEndian) { Array($0) })
+    payload.replaceSubrange(48..<50, with: withUnsafeBytes(of: roomServerPostedCount.littleEndian) { Array($0) })
+    payload.replaceSubrange(50..<52, with: withUnsafeBytes(of: roomServerPostPushCount.littleEndian) { Array($0) })
+
+    packet.append(payload)
     return packet
 }
 

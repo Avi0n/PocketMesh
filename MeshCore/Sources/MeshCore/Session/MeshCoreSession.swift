@@ -883,6 +883,10 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
     /// Requests status information from a remote node using the binary protocol.
     ///
+    /// Raw public-key status requests use the repeater status layout.
+    /// For room servers, prefer ``requestStatus(from: MeshContact)`` or
+    /// ``requestStatus(from:type:)`` so the correct status layout is selected.
+    ///
     /// - Parameter publicKey: The full 32-byte public key of the remote node.
     /// - Returns: A status response containing battery, uptime, and other metrics.
     /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
@@ -890,14 +894,46 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
     public func requestStatus(from publicKey: Data) async throws -> StatusResponse {
         try requireFullPublicKey(publicKey, operation: "requestStatus")
-        // Serialize binary requests to prevent messageSent race conditions
         return try await binaryRequestSerializer.withSerialization { [self] in
-            try await performStatusRequest(from: publicKey)
+            try await performStatusRequest(from: publicKey, layout: .repeater)
         }
     }
 
+    /// Requests status information from a remote node using the binary protocol.
+    ///
+    /// - Parameters:
+    ///   - publicKey: The full 32-byte public key of the remote node.
+    ///   - type: The target node type used to choose the correct firmware status layout.
+    /// - Returns: A status response containing battery, uptime, and other metrics.
+    /// - Throws: ``MeshCoreError/timeout`` if no response within the timeout period.
+    ///           ``MeshCoreError/deviceError(code:)`` if the device rejects the request.
+    ///           ``MeshCoreError/invalidResponse`` if an unexpected response is received.
+    public func requestStatus(
+        from publicKey: Data,
+        type: ContactType
+    ) async throws -> StatusResponse {
+        try requireFullPublicKey(publicKey, operation: "requestStatus")
+        let layout: StatusResponse.Layout = type == .room ? .roomServer : .repeater
+        return try await binaryRequestSerializer.withSerialization { [self] in
+            try await performStatusRequest(from: publicKey, layout: layout)
+        }
+    }
+
+    /// Requests status information from a remote contact using its contact type to
+    /// select the correct firmware status layout.
+    ///
+    /// - Parameter contact: The remote contact to query.
+    /// - Returns: A status response containing battery, uptime, and other metrics.
+    /// - Throws: ``MeshCoreError`` if the request fails.
+    public func requestStatus(from contact: MeshContact) async throws -> StatusResponse {
+        try await requestStatus(from: contact.publicKey, type: contact.type)
+    }
+
     /// Internal implementation of status request, called within serialization.
-    private func performStatusRequest(from publicKey: Data) async throws -> StatusResponse {
+    private func performStatusRequest(
+        from publicKey: Data,
+        layout: StatusResponse.Layout
+    ) async throws -> StatusResponse {
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .status)
         let publicKeyPrefix = Data(publicKey.prefix(6))
         let prefixHex = publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
@@ -942,7 +978,8 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
 
                         guard let response = Parsers.StatusResponse.parseFromBinaryResponse(
                             responseData,
-                            publicKeyPrefix: publicKeyPrefix
+                            publicKeyPrefix: publicKeyPrefix,
+                            layout: layout
                         ) else {
                             return nil
                         }
@@ -996,8 +1033,13 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Status response from the remote node.
     /// - Throws: ``MeshCoreError`` on failure.
     public func requestStatus(from destination: Destination) async throws -> StatusResponse {
-        let publicKey = try destination.fullPublicKey()
-        return try await requestStatus(from: publicKey)
+        switch destination {
+        case .contact(let contact):
+            return try await requestStatus(from: contact)
+        case .data, .hexString:
+            let publicKey = try destination.fullPublicKey()
+            return try await requestStatus(from: publicKey)
+        }
     }
 
     // MARK: - Keep-Alive

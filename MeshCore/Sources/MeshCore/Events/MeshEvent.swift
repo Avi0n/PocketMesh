@@ -508,6 +508,16 @@ public struct ChannelInfo: Sendable, Equatable {
 /// - Push notification responses: offset=8, pubkey_prefix at bytes 2-8, fields follow
 /// The parser must handle both cases based on whether this is a solicited vs unsolicited response
 public struct StatusResponse: Sendable, Equatable {
+    /// Describes which firmware status layout was used to decode the payload.
+    public enum Layout: Sendable, Equatable {
+        /// Standard repeater / legacy status layout.
+        case repeater
+        /// Room server layout used by room-server firmware.
+        case roomServer
+    }
+
+    /// The decoded status layout.
+    public let layout: Layout
     /// The public key prefix of the responding node.
     public let publicKeyPrefix: Data
     /// The battery level in millivolts.
@@ -546,9 +556,14 @@ public struct StatusResponse: Sendable, Equatable {
     public let rxAirtime: UInt32
     /// Total receive errors (v1.12+, 0 for older firmware).
     public let receiveErrors: UInt32
+    /// Total messages posted to the room server.
+    public let roomServerPostedCount: UInt16?
+    /// Total room-server post push attempts.
+    public let roomServerPostPushCount: UInt16?
 
     /// Initializes a new status response object.
     public init(
+        layout: Layout = .repeater,
         publicKeyPrefix: Data,
         battery: Int,
         txQueueLength: Int,
@@ -567,8 +582,11 @@ public struct StatusResponse: Sendable, Equatable {
         directDuplicates: Int,
         floodDuplicates: Int,
         rxAirtime: UInt32,
-        receiveErrors: UInt32 = 0
+        receiveErrors: UInt32 = 0,
+        roomServerPostedCount: UInt16? = nil,
+        roomServerPostPushCount: UInt16? = nil
     ) {
+        self.layout = layout
         self.publicKeyPrefix = publicKeyPrefix
         self.battery = battery
         self.txQueueLength = txQueueLength
@@ -588,6 +606,8 @@ public struct StatusResponse: Sendable, Equatable {
         self.floodDuplicates = floodDuplicates
         self.rxAirtime = rxAirtime
         self.receiveErrors = receiveErrors
+        self.roomServerPostedCount = roomServerPostedCount
+        self.roomServerPostPushCount = roomServerPostPushCount
     }
 }
 

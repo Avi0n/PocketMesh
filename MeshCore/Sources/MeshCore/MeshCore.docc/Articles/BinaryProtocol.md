@@ -11,7 +11,7 @@ The binary protocol provides efficient data transfer for complex requests like s
 Query a remote node's status:
 
 ```swift
-let status = try await session.requestStatus(from: contact.publicKey)
+let status = try await session.requestStatus(from: contact)
 
 print("Battery: \(status.battery)mV")
 print("Uptime: \(status.uptime)s")
@@ -124,3 +124,6 @@ do {
     print("Unexpected response: expected \(expected), got \(got)")
 }
 ```
+
+When querying a room server, use ``requestStatus(from: MeshContact)`` or
+``requestStatus(from:type:)`` so the session can select the room-server status layout.
