@@ -631,8 +631,9 @@ public enum Parsers {
         /// - Offset 47 (2 bytes): Full events counter
         /// - Offset 49 (2 bytes): Last SNR scaled by 4 (Int16 LE)
         /// - Offset 51 (4 bytes): Duplicate counters
-        /// - Offset 55 (4 bytes): Receive airtime
-        static func parse(_ data: Data) -> MeshEvent {
+        /// - Offset 55 (4 bytes): Repeater: Rx airtime (UInt32 LE); Room server: posted count (UInt16 LE) + post-push count (UInt16 LE)
+        /// - Offset 59 (4 bytes): Repeater only: Receive errors (UInt32 LE, optional)
+        static func parse(_ data: Data, layout: MeshCore.StatusResponse.Layout = .repeater) -> MeshEvent {
             guard data.count >= PacketSize.statusResponseMinimum else {
                 return .parseFailure(
                     data: data,
@@ -659,30 +660,65 @@ public enum Parsers {
             let lastSNR = Double(data.readInt16LE(at: offset)) / 4.0; offset += 2
             let directDups = Int(data.readUInt16LE(at: offset)); offset += 2
             let floodDups = Int(data.readUInt16LE(at: offset)); offset += 2
-            let rxAirtime = data.readUInt32LE(at: offset); offset += 4
-            let receiveErrors: UInt32 = data.count >= offset + 4 ? data.readUInt32LE(at: offset) : 0
+            switch layout {
+            case .repeater:
+                let rxAirtime = data.readUInt32LE(at: offset); offset += 4
+                let receiveErrors: UInt32 = data.count >= offset + 4 ? data.readUInt32LE(at: offset) : 0
 
-            return .statusResponse(MeshCore.StatusResponse(
-                publicKeyPrefix: pubkeyPrefix,
-                battery: battery,
-                txQueueLength: txQueueLen,
-                noiseFloor: noiseFloor,
-                lastRSSI: lastRSSI,
-                packetsReceived: packetsRecv,
-                packetsSent: packetsSent,
-                airtime: airtime,
-                uptime: uptime,
-                sentFlood: sentFlood,
-                sentDirect: sentDirect,
-                receivedFlood: recvFlood,
-                receivedDirect: recvDirect,
-                fullEvents: fullEvents,
-                lastSNR: lastSNR,
-                directDuplicates: directDups,
-                floodDuplicates: floodDups,
-                rxAirtime: rxAirtime,
-                receiveErrors: receiveErrors
-            ))
+                return .statusResponse(MeshCore.StatusResponse(
+                    layout: .repeater,
+                    publicKeyPrefix: pubkeyPrefix,
+                    battery: battery,
+                    txQueueLength: txQueueLen,
+                    noiseFloor: noiseFloor,
+                    lastRSSI: lastRSSI,
+                    packetsReceived: packetsRecv,
+                    packetsSent: packetsSent,
+                    airtime: airtime,
+                    uptime: uptime,
+                    sentFlood: sentFlood,
+                    sentDirect: sentDirect,
+                    receivedFlood: recvFlood,
+                    receivedDirect: recvDirect,
+                    fullEvents: fullEvents,
+                    lastSNR: lastSNR,
+                    directDuplicates: directDups,
+                    floodDuplicates: floodDups,
+                    rxAirtime: rxAirtime,
+                    receiveErrors: receiveErrors
+                ))
+
+            case .roomServer:
+                let postedCount: UInt16? = data.count >= offset + 4
+                    ? data.readUInt16LE(at: offset) : nil
+                let postPushCount: UInt16? = data.count >= offset + 4
+                    ? data.readUInt16LE(at: offset + 2) : nil
+
+                return .statusResponse(MeshCore.StatusResponse(
+                    layout: .roomServer,
+                    publicKeyPrefix: pubkeyPrefix,
+                    battery: battery,
+                    txQueueLength: txQueueLen,
+                    noiseFloor: noiseFloor,
+                    lastRSSI: lastRSSI,
+                    packetsReceived: packetsRecv,
+                    packetsSent: packetsSent,
+                    airtime: airtime,
+                    uptime: uptime,
+                    sentFlood: sentFlood,
+                    sentDirect: sentDirect,
+                    receivedFlood: recvFlood,
+                    receivedDirect: recvDirect,
+                    fullEvents: fullEvents,
+                    lastSNR: lastSNR,
+                    directDuplicates: directDups,
+                    floodDuplicates: floodDups,
+                    rxAirtime: 0,
+                    receiveErrors: 0,
+                    roomServerPostedCount: postedCount,
+                    roomServerPostPushCount: postPushCount
+                ))
+            }
         }
 
         /// Parses status data from a BINARY_RESPONSE (0x8C) payload.

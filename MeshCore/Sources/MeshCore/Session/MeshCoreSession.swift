@@ -2697,6 +2697,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             logger.debug("Received event: \(String(describing: event))")
         }
 
+        // Re-parse push status responses with correct layout for room servers
+        if case .statusResponse(let response) = event,
+           response.layout == .repeater,
+           let contact = contactManager.getByKeyPrefix(response.publicKeyPrefix),
+           contact.type == .room {
+            event = Parsers.StatusResponse.parse(Data(data.dropFirst()), layout: .roomServer)
+        }
+
         // Route generic binary response to typed event based on pending request
         if case .binaryResponse(let tag, let responseData) = event {
             if let typedEvent = await routeGenericBinaryResponse(tag: tag, data: responseData) {
@@ -2731,9 +2739,13 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
             return .neighboursResponse(response)
 
         case .status:
+            let layout: StatusResponse.Layout =
+                contactManager.getByKeyPrefix(publicKeyPrefix)?.type == .room
+                    ? .roomServer : .repeater
             guard let response = Parsers.StatusResponse.parseFromBinaryResponse(
                 data,
-                publicKeyPrefix: publicKeyPrefix
+                publicKeyPrefix: publicKeyPrefix,
+                layout: layout
             ) else {
                 return nil
             }
