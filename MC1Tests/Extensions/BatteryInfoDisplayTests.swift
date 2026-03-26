@@ -86,4 +86,21 @@ struct BatteryInfoDisplayTests {
         let battery = BatteryInfo(level: 3060)  // ~5%
         #expect(battery.levelColor == .red)
     }
+
+    // MARK: - Battery Presence Tests
+
+    @Test func isBatteryPresent_zeroMillivolts_returnsFalse() {
+        let battery = BatteryInfo(level: 0)
+        #expect(!battery.isBatteryPresent)
+    }
+
+    @Test func isBatteryPresent_normalVoltage_returnsTrue() {
+        let battery = BatteryInfo(level: 3700)
+        #expect(battery.isBatteryPresent)
+    }
+
+    @Test func isBatteryPresent_minimumValidVoltage_returnsTrue() {
+        let battery = BatteryInfo(level: 1)
+        #expect(battery.isBatteryPresent)
+    }
 }

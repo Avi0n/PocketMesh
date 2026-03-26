@@ -118,6 +118,7 @@ public final class BatteryMonitor {
         }
 
         guard let battery = deviceBattery else { return }
+        guard battery.isBatteryPresent else { return }
         let percentage = battery.percentage(using: device.activeOCVArray)
 
         let missedThresholds = batteryWarningThresholds.filter { threshold in
@@ -160,6 +161,11 @@ public final class BatteryMonitor {
             return
         }
 
+        guard battery.isBatteryPresent else {
+            notifiedBatteryThresholds = []
+            return
+        }
+
         let percentage = battery.percentage(using: device.activeOCVArray)
 
         let crossedThresholds = batteryWarningThresholds.filter { percentage <= $0 }
@@ -179,6 +185,8 @@ public final class BatteryMonitor {
         guard let battery = deviceBattery,
               let device,
               let notificationService = services?.notificationService else { return }
+
+        guard battery.isBatteryPresent else { return }
 
         let percentage = battery.percentage(using: device.activeOCVArray)
 

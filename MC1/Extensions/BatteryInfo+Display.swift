@@ -5,6 +5,10 @@ import SwiftUI
 /// Consolidates LiPo voltage-to-percentage calculation previously duplicated in
 /// BLEStatusIndicatorView and DeviceInfoView.
 extension BatteryInfo {
+    /// Whether this reading represents a real battery.
+    /// 0mV indicates no battery hardware (e.g., mains-powered device with no ADC pin).
+    var isBatteryPresent: Bool { level > 0 }
+
     /// Battery voltage in volts (converted from millivolts)
     var voltage: Double {
         Double(level) / 1000.0
