@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import MC1Services
 
 /// Reusable chat input bar with configurable styling
@@ -12,7 +13,6 @@ struct ChatInputBar: View {
     let onSend: (String) -> Void
 
     @State private var isCoolingDown = false
-    @State private var textFieldID = UUID()
 
     private var byteCount: Int {
         text.utf8.count
@@ -30,7 +30,6 @@ struct ChatInputBar: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 12) {
             ChatInputTextField(text: $text, placeholder: placeholder, isFocused: $isFocused, isEncrypted: isEncrypted)
-                .id(textFieldID)
             ChatSendButtonWithCounter(
                 canSend: canSend,
                 isOverLimit: isOverLimit,
@@ -78,8 +77,6 @@ struct ChatInputBar: View {
         guard !captured.isEmpty else { return }
         isCoolingDown = true
         text = ""
-        textFieldID = UUID()
-        isFocused = true
         onSend(captured)
         Task {
             try? await Task.sleep(for: .seconds(1))
@@ -98,6 +95,7 @@ private struct ChatInputTextField: View {
 
     var body: some View {
         TextField(placeholder, text: $text, axis: .vertical)
+            .background(InlinePredictionFix())
             .textFieldStyle(.plain)
             .padding(.leading, 12)
             .padding(.trailing, 28)
@@ -181,6 +179,52 @@ private struct ChatSendButton: View {
         .disabled(!canSend)
         .accessibilityLabel(sendAccessibilityLabel)
         .accessibilityHint(sendAccessibilityHint)
+    }
+}
+
+// MARK: - Inline Prediction Fix (FB13727682)
+
+/// Finds the backing UITextView of a `TextField(axis: .vertical)` and disables
+/// inline predictions, which leave ghost-text that survives binding clears.
+private struct InlinePredictionFix: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.isHidden = true
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        guard !context.coordinator.applied else { return }
+        DispatchQueue.main.async {
+            if let textView = Self.findTextView(from: uiView) {
+                textView.inlinePredictionType = .no
+                context.coordinator.applied = true
+            }
+        }
+    }
+
+    private static func findTextView(from view: UIView) -> UITextView? {
+        var ancestor: UIView? = view.superview
+        while let parent = ancestor {
+            if let found = firstTextView(in: parent) { return found }
+            ancestor = parent.superview
+        }
+        return nil
+    }
+
+    private static func firstTextView(in view: UIView) -> UITextView? {
+        if let textView = view as? UITextView { return textView }
+        for subview in view.subviews {
+            if let found = firstTextView(in: subview) { return found }
+        }
+        return nil
+    }
+
+    final class Coordinator {
+        var applied = false
     }
 }
 
