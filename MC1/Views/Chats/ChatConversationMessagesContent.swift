@@ -59,15 +59,17 @@ struct ChatConversationMessagesContent: View {
     // MARK: - Body
 
     var body: some View {
-        Group {
-            if !viewModel.hasLoadedOnce {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if viewModel.messages.isEmpty {
-                emptyState
-            } else {
-                messagesTable
-            }
+        if !viewModel.hasLoadedOnce {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            messagesTable
+                .overlay {
+                    if viewModel.messages.isEmpty {
+                        emptyState
+                            .allowsHitTesting(false)
+                    }
+                }
         }
     }
 
