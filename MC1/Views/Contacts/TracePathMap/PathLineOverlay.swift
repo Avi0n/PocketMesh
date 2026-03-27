@@ -1,29 +1,12 @@
 import MapKit
+import MC1Services
 
 /// Custom polyline overlay that carries signal quality data for styling
 /// Note: All properties are immutable - create new overlay instances when signal quality changes
 final class PathLineOverlay: MKPolyline {
 
-    /// Signal quality determines line color after trace
-    enum SignalQuality {
-        case untraced  // Dashed gray (before trace)
-        case good      // Solid green (SNR >= 5)
-        case medium    // Solid yellow (SNR -5 to 5)
-        case weak      // Solid red (SNR < -5)
-
-        init(snr: Double) {
-            if snr >= 5 {
-                self = .good
-            } else if snr >= -5 {
-                self = .medium
-            } else {
-                self = .weak
-            }
-        }
-    }
-
-    /// Signal quality - immutable after creation
-    private(set) var signalQuality: SignalQuality = .untraced
+    /// Signal quality - nil means untraced (pre-trace dashed gray line)
+    private(set) var signalQuality: SNRQuality?
 
     /// Distance in meters between the two endpoints - immutable after creation
     private(set) var distanceMeters: Double = 0
@@ -45,7 +28,7 @@ final class PathLineOverlay: MKPolyline {
         from start: CLLocationCoordinate2D,
         to end: CLLocationCoordinate2D,
         segmentIndex: Int,
-        signalQuality: SignalQuality = .untraced,
+        signalQuality: SNRQuality? = nil,
         snr: Double = 0
     ) -> PathLineOverlay {
         var coords = [start, end]
@@ -65,7 +48,7 @@ final class PathLineOverlay: MKPolyline {
     }
 
     /// Create a new overlay with updated signal quality (immutable pattern)
-    func withSignalQuality(_ quality: SignalQuality, snr: Double) -> PathLineOverlay {
+    func withSignalQuality(_ quality: SNRQuality, snr: Double) -> PathLineOverlay {
         PathLineOverlay.line(
             from: startCoordinate,
             to: endCoordinate,

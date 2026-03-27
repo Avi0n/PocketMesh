@@ -57,16 +57,7 @@ struct RepeatRowView: View {
     private var signalColor: Color { snrQuality.color }
 
     /// Signal quality description for accessibility
-    private var signalQuality: String {
-        switch snrQuality {
-        case .excellent: L10n.Chats.Chats.Signal.excellent
-        case .good: L10n.Chats.Chats.Signal.good
-        case .fair: L10n.Chats.Chats.Signal.fair
-        case .poor: L10n.Chats.Chats.Signal.poor
-        case .veryPoor: L10n.Chats.Chats.Signal.veryPoor
-        case .unknown: L10n.Chats.Chats.Path.Hop.signalUnknown
-        }
-    }
+    private var signalQuality: String { snrQuality.localizedLabel }
 
     /// Hop count text with proper pluralization
     private var hopCountText: String {

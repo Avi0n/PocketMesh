@@ -266,7 +266,7 @@ final class TracePathMapViewModel {
             let hopIndex = index + 1
             if hopIndex < result.hops.count {
                 let hop = result.hops[hopIndex]
-                let quality = PathLineOverlay.SignalQuality(snr: hop.snr)
+                let quality = SNRQuality(snr: hop.snr)
 
                 // Create new overlay with signal quality
                 let updatedOverlay = overlay.withSignalQuality(quality, snr: hop.snr)

@@ -371,13 +371,11 @@ struct TraceResultHopRow: View {
         }
     }
 
-    private var signalLevel: Double {
-        TraceHop.signalLevel(for: displaySNR)
-    }
+    private var snrQuality: SNRQuality { SNRQuality(snr: displaySNR) }
 
-    private var signalColor: Color {
-        TraceHop.signalColor(for: displaySNR)
-    }
+    private var signalLevel: Double { snrQuality.barLevel }
+
+    private var signalColor: Color { snrQuality.color }
 
     var body: some View {
         HStack {

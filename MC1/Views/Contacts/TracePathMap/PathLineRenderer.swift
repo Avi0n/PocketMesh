@@ -14,26 +14,29 @@ final class PathLineRenderer: MKPolylineRenderer {
     private func configureAppearance() {
         guard let pathOverlay = overlay as? PathLineOverlay else { return }
 
-        switch pathOverlay.signalQuality {
-        case .untraced:
+        guard let quality = pathOverlay.signalQuality else {
+            // Untraced — dashed gray
             strokeColor = UIColor.systemGray
             lineWidth = 2
             lineDashPattern = [8, 6]
+            return
+        }
 
-        case .good:
-            strokeColor = UIColor.systemGreen
-            lineWidth = 4  // Thicker for accessibility (color-blind users)
+        strokeColor = quality.uiColor
+
+        switch quality {
+        case .excellent, .good:
+            lineWidth = 4
             lineDashPattern = nil
-
-        case .medium:
-            strokeColor = UIColor.systemYellow
+        case .fair:
             lineWidth = 3
-            lineDashPattern = [12, 4]  // Different pattern for accessibility
-
-        case .weak:
-            strokeColor = UIColor.systemRed
+            lineDashPattern = [12, 4]
+        case .poor:
             lineWidth = 3
-            lineDashPattern = [4, 4]  // Different pattern for accessibility
+            lineDashPattern = [4, 4]
+        case .unknown:
+            lineWidth = 2
+            lineDashPattern = [8, 6]
         }
     }
 }
