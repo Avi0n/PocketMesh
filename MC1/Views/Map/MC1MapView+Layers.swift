@@ -21,6 +21,10 @@ enum MapLayerID {
     static let lineTraceWeak = "line-trace-weak"
     static let lineTraceMedium = "line-trace-medium"
     static let lineTraceGood = "line-trace-good"
+    static let lineTraceUntracedCasing = "line-trace-untraced-casing"
+    static let lineTraceWeakCasing = "line-trace-weak-casing"
+    static let lineTraceMediumCasing = "line-trace-medium-casing"
+    static let lineTraceGoodCasing = "line-trace-good-casing"
     static let satelliteLayer = "satellite-layer"
     static let topoLayer = "topo-layer"
 }
@@ -185,26 +189,74 @@ extension MC1MapView.Coordinator {
         losLayer.lineOpacity = NSExpression(forKeyPath: "segmentOpacity")
         style.addLayer(losLayer)
 
+        let white = NSExpression(forConstantValue: UIColor.white)
+        let casingOpacity = NSExpression(forConstantValue: 0.8)
+        let roundJoin = NSExpression(forConstantValue: "round")
+        let roundCap = NSExpression(forConstantValue: "round")
+
+        // Untraced: width 2, dash [8, 6] → casing width 5, dash scaled by 2/5
+        let untracedCasing = MLNLineStyleLayer(identifier: MapLayerID.lineTraceUntracedCasing, source: source)
+        untracedCasing.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceUntraced.rawValue)
+        untracedCasing.lineColor = white
+        untracedCasing.lineOpacity = casingOpacity
+        untracedCasing.lineWidth = NSExpression(forConstantValue: 5)
+        untracedCasing.lineDashPattern = NSExpression(forConstantValue: [1.6, 1.2])
+        untracedCasing.lineJoin = roundJoin
+        untracedCasing.lineCap = roundCap
+        style.addLayer(untracedCasing)
+
         let untracedLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceUntraced, source: source)
         untracedLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceUntraced.rawValue)
         untracedLayer.lineColor = NSExpression(forConstantValue: UIColor.systemGray)
         untracedLayer.lineWidth = NSExpression(forConstantValue: 2)
-        untracedLayer.lineDashPattern = NSExpression(forConstantValue: [8, 6])
+        untracedLayer.lineDashPattern = NSExpression(forConstantValue: [4, 3])
         style.addLayer(untracedLayer)
+
+        // Weak: width 3, dash [4, 4] → casing width 6, dash scaled by 3/6
+        let weakCasing = MLNLineStyleLayer(identifier: MapLayerID.lineTraceWeakCasing, source: source)
+        weakCasing.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceWeak.rawValue)
+        weakCasing.lineColor = white
+        weakCasing.lineOpacity = casingOpacity
+        weakCasing.lineWidth = NSExpression(forConstantValue: 6)
+        weakCasing.lineDashPattern = NSExpression(forConstantValue: [1, 1])
+        weakCasing.lineJoin = roundJoin
+        weakCasing.lineCap = roundCap
+        style.addLayer(weakCasing)
 
         let weakLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceWeak, source: source)
         weakLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceWeak.rawValue)
         weakLayer.lineColor = NSExpression(forConstantValue: UIColor.systemRed)
         weakLayer.lineWidth = NSExpression(forConstantValue: 3)
-        weakLayer.lineDashPattern = NSExpression(forConstantValue: [4, 4])
+        weakLayer.lineDashPattern = NSExpression(forConstantValue: [2, 2])
         style.addLayer(weakLayer)
+
+        // Medium: width 3, dash [12, 4] → casing width 6, dash scaled by 3/6
+        let mediumCasing = MLNLineStyleLayer(identifier: MapLayerID.lineTraceMediumCasing, source: source)
+        mediumCasing.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceMedium.rawValue)
+        mediumCasing.lineColor = white
+        mediumCasing.lineOpacity = casingOpacity
+        mediumCasing.lineWidth = NSExpression(forConstantValue: 6)
+        mediumCasing.lineDashPattern = NSExpression(forConstantValue: [3, 1])
+        mediumCasing.lineJoin = roundJoin
+        mediumCasing.lineCap = roundCap
+        style.addLayer(mediumCasing)
 
         let mediumLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceMedium, source: source)
         mediumLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceMedium.rawValue)
         mediumLayer.lineColor = NSExpression(forConstantValue: UIColor.systemYellow)
         mediumLayer.lineWidth = NSExpression(forConstantValue: 3)
-        mediumLayer.lineDashPattern = NSExpression(forConstantValue: [12, 4])
+        mediumLayer.lineDashPattern = NSExpression(forConstantValue: [6, 2])
         style.addLayer(mediumLayer)
+
+        // Good: width 4, solid → casing width 7
+        let goodCasing = MLNLineStyleLayer(identifier: MapLayerID.lineTraceGoodCasing, source: source)
+        goodCasing.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceGood.rawValue)
+        goodCasing.lineColor = white
+        goodCasing.lineOpacity = casingOpacity
+        goodCasing.lineWidth = NSExpression(forConstantValue: 7)
+        goodCasing.lineJoin = roundJoin
+        goodCasing.lineCap = roundCap
+        style.addLayer(goodCasing)
 
         let goodLayer = MLNLineStyleLayer(identifier: MapLayerID.lineTraceGood, source: source)
         goodLayer.predicate = NSPredicate(format: "lineStyle == %@", MapLine.LineStyle.traceGood.rawValue)
