@@ -1317,17 +1317,17 @@
 "offlineMaps.exceedsStorage" = "设备存储空间不足。请放大地图以选择更小的区域。";
 
 /* Layer type labels */
-"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.base" = "基础地图";
 "offlineMaps.layer.topo" = "地形";
 
 /* Layers section header */
-"offlineMaps.layers" = "Layers";
+"offlineMaps.layers" = "图层";
 
 /* Include layers prompt */
-"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+"offlineMaps.includeLayers" = "包含额外图层以供离线使用。";
 
 /* No network available */
-"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+"offlineMaps.noNetwork" = "下载地图需要互联网连接。";
 
 /* Storage section footer */
-"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";
+"offlineMaps.storageFooter" = "包括地图数据和内部索引。总大小可能超过各项下载的总和。";

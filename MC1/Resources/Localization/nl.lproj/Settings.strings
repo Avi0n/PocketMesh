@@ -1344,17 +1344,17 @@
 "offlineMaps.exceedsStorage" = "Niet genoeg opslagruimte op dit apparaat. Zoom in om een kleiner gebied te selecteren.";
 
 /* Layer type labels */
-"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.base" = "Basiskaart";
 "offlineMaps.layer.topo" = "Topografie";
 
 /* Layers section header */
-"offlineMaps.layers" = "Layers";
+"offlineMaps.layers" = "Kaartlagen";
 
 /* Include layers prompt */
-"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+"offlineMaps.includeLayers" = "Extra kaartlagen opnemen voor offline gebruik.";
 
 /* No network available */
-"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+"offlineMaps.noNetwork" = "Een internetverbinding is vereist om kaarten te downloaden.";
 
 /* Storage section footer */
-"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";
+"offlineMaps.storageFooter" = "Omvat kaartgegevens en interne indexen. Het totaal kan groter zijn dan de som van de afzonderlijke downloads.";

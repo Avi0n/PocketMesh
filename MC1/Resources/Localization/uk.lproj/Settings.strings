@@ -1344,17 +1344,17 @@
 "offlineMaps.exceedsStorage" = "Недостатньо місця на пристрої. Збільште масштаб, щоб вибрати меншу область.";
 
 /* Layer type labels */
-"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.base" = "Базова карта";
 "offlineMaps.layer.topo" = "Топографія";
 
 /* Layers section header */
-"offlineMaps.layers" = "Layers";
+"offlineMaps.layers" = "Шари";
 
 /* Include layers prompt */
-"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+"offlineMaps.includeLayers" = "Додати додаткові шари для використання офлайн.";
 
 /* No network available */
-"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+"offlineMaps.noNetwork" = "Для завантаження карт потрібне з'єднання з інтернетом.";
 
 /* Storage section footer */
-"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";
+"offlineMaps.storageFooter" = "Включає дані карти та внутрішні індекси. Загальний обсяг може перевищувати суму окремих завантажень.";

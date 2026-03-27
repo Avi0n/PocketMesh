@@ -1344,17 +1344,17 @@
 "offlineMaps.exceedsStorage" = "Za mało miejsca na tym urządzeniu. Przybliż, aby wybrać mniejszy obszar.";
 
 /* Layer type labels */
-"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.base" = "Mapa bazowa";
 "offlineMaps.layer.topo" = "Topografia";
 
 /* Layers section header */
-"offlineMaps.layers" = "Layers";
+"offlineMaps.layers" = "Warstwy";
 
 /* Include layers prompt */
-"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+"offlineMaps.includeLayers" = "Dołącz dodatkowe warstwy do użytku offline.";
 
 /* No network available */
-"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+"offlineMaps.noNetwork" = "Do pobrania map wymagane jest połączenie z internetem.";
 
 /* Storage section footer */
-"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";
+"offlineMaps.storageFooter" = "Obejmuje dane mapy i wewnętrzne indeksy. Łączny rozmiar może być większy niż suma poszczególnych pobrań.";

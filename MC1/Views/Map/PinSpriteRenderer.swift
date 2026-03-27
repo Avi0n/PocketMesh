@@ -1,6 +1,7 @@
 import MapLibre
 import UIKit
 
+@MainActor
 enum PinSpriteRenderer {
     /// Height of a standard pin sprite in points (circle + triangle pointer).
     /// Used by the map Coordinator to position callout anchors above the pin icon.
@@ -8,7 +9,7 @@ enum PinSpriteRenderer {
 
     static let labelSpritePrefix = "label-"
 
-    private nonisolated(unsafe) static var cachedImages: [String: UIImage]?
+    private static var cachedImages: [String: UIImage]?
 
     /// Registers base pin sprites into the style. Hop-ring variants are rendered
     /// lazily via `renderOnDemand(name:into:)` when MapLibre requests a missing image.
