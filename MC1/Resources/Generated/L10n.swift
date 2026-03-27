@@ -1511,6 +1511,12 @@ public enum L10n {
         public static func viewRuns(_ p1: Int) -> String {
           return L10n.tr("Contacts", "contacts.results.viewRuns", p1, fallback: "View %d runs")
         }
+        public enum Comparison {
+          /// Decreased
+          public static let decreased = L10n.tr("Contacts", "contacts.results.comparison.decreased", fallback: "Decreased")
+          /// Location: ComparisonRowView.swift - Purpose: Accessibility labels for change direction
+          public static let increased = L10n.tr("Contacts", "contacts.results.comparison.increased", fallback: "Increased")
+        }
         public enum Hop {
           /// Location: TraceResultsSheet.swift - Purpose: Average SNR display
           public static func avgSNR(_ p1: Any, _ p2: Any, _ p3: Any) -> String {
@@ -1776,6 +1782,8 @@ public enum L10n {
           public static let centerOnPath = L10n.tr("Contacts", "contacts.trace.map.centerOnPath", fallback: "Center on path")
           /// Location: TracePathMapView.swift - Purpose: Clear button
           public static let clear = L10n.tr("Contacts", "contacts.trace.map.clear", fallback: "Clear")
+          /// Location: TracePathMapViewModel.swift - Purpose: Default path name fallback
+          public static let defaultPathName = L10n.tr("Contacts", "contacts.trace.map.defaultPathName", fallback: "Path")
           /// Location: TracePathMapView.swift - Purpose: Hide labels accessibility
           public static let hideLabels = L10n.tr("Contacts", "contacts.trace.map.hideLabels", fallback: "Hide labels")
           /// Location: TracePathMapView.swift - Purpose: Hops count in results banner
@@ -2037,6 +2045,8 @@ public enum L10n {
         public static let layers = L10n.tr("Map", "map.controls.layers", fallback: "Map layers")
         /// Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock)
         public static let lockNorth = L10n.tr("Map", "map.controls.lockNorth", fallback: "Lock to north")
+        /// Location: MapView.swift - Purpose: Accessibility label for refresh button
+        public static let refresh = L10n.tr("Map", "map.controls.refresh", fallback: "Refresh contacts")
         /// Location: MapView.swift - Purpose: Accessibility label when labels are hidden
         public static let showLabels = L10n.tr("Map", "map.controls.showLabels", fallback: "Show labels")
         /// Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock)

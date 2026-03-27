@@ -34,6 +34,9 @@
 /* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
 "map.controls.unlockNorth" = "Rotatie ontgrendelen";
 
+/* Location: MapView.swift - Purpose: Accessibility label for refresh button */
+"map.controls.refresh" = "Contacten vernieuwen";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */

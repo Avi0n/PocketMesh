@@ -910,6 +910,9 @@
 /* Location: TracePathMapView.swift - Purpose: View results button */
 "contacts.trace.map.viewResults" = "Wyniki";
 
+/* Location: TracePathMapViewModel.swift - Purpose: Default path name fallback */
+"contacts.trace.map.defaultPathName" = "Ścieżka";
+
 // MARK: - Trace Results Sheet
 
 /* Location: TraceResultsSheet.swift - Purpose: Navigation title */
@@ -938,6 +941,10 @@
 
 /* Location: TraceResultsSheet.swift - Purpose: Comparison text */
 "contacts.results.comparison" = "vs. %d ms w %@";
+
+/* Location: ComparisonRowView.swift - Purpose: Accessibility labels for change direction */
+"contacts.results.comparison.increased" = "Wzrosło";
+"contacts.results.comparison.decreased" = "Spadło";
 
 /* Location: TraceResultsSheet.swift - Purpose: View runs link */
 "contacts.results.viewRuns" = "Zobacz %d uruchomień";

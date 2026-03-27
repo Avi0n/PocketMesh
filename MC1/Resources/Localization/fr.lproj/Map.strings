@@ -34,6 +34,9 @@
 /* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
 "map.controls.unlockNorth" = "Déverrouiller la rotation";
 
+/* Location: MapView.swift - Purpose: Accessibility label for refresh button */
+"map.controls.refresh" = "Actualiser les contacts";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */
