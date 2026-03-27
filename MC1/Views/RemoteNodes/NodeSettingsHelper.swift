@@ -475,7 +475,7 @@ final class NodeSettingsHelper {
         errorMessage = nil
 
         do {
-            let response = try await sendAndWait("password \(newPassword)")
+            let response = try await sendAndWait("password \(newPassword)", rawMatching: true)
             let parsed = CLIResponse.parse(response)
             // Firmware echoes "password now: {pw}" on success, not "OK"
             let isSuccess: Bool = switch parsed {
