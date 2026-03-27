@@ -52,7 +52,7 @@ final class RoomSettingsViewModel {
     // MARK: - Cleanup
 
     func cleanup() async {
-        await roomAdminService?.clearHandlers()
+        await roomAdminService?.setCLIHandler { _, _ in }
         helper.cleanup()
     }
 
@@ -127,7 +127,7 @@ final class RoomSettingsViewModel {
         var hadTimeout = false
 
         do {
-            let response = try await helper.sendAndWait("get guest.password")
+            let response = try await helper.sendAndWait("get guest.password", rawMatching: true)
             let parsed = CLIResponse.parse(response, forQuery: "get guest.password")
             switch parsed {
             case .ok, .error, .unknownCommand:
@@ -145,7 +145,7 @@ final class RoomSettingsViewModel {
         }
 
         do {
-            let response = try await helper.sendAndWait("get allow.read.only")
+            let response = try await helper.sendAndWait("get allow.read.only", rawMatching: true)
             let parsed = CLIResponse.parse(response, forQuery: "get allow.read.only")
             switch parsed {
             case .raw(let value):
