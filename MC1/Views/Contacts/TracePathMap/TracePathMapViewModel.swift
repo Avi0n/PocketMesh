@@ -136,7 +136,7 @@ final class TracePathMapViewModel {
                 coordinate: repeater.coordinate,
                 pinStyle: inPath ? .repeaterRingWhite : .repeater,
                 label: showLabels ? repeater.displayName : nil,
-                isClusterable: !inPath,
+                isClusterable: false,
                 hopIndex: info?.hopIndex,
                 badgeText: nil
             ))

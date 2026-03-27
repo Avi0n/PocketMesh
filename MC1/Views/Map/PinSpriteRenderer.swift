@@ -35,12 +35,12 @@ enum PinSpriteRenderer {
     }
 
     /// Renders a hop-ring sprite on demand when MapLibre requests a missing image name.
-    /// Returns `true` if the name was recognized and the image was registered.
-    @discardableResult
-    static func renderOnDemand(name: String, into style: MLNStyle) -> Bool {
+    /// Returns the rendered image so the caller can pass it back to MapLibre as
+    /// the immediate fallback, avoiding a single-frame blink.
+    static func renderOnDemand(name: String, into style: MLNStyle) -> UIImage? {
         if let cached = cachedImages?[name] {
             style.setImage(cached, forName: name)
-            return true
+            return cached
         }
 
         let image: UIImage
@@ -49,20 +49,20 @@ enum PinSpriteRenderer {
                   let hop = Int(hopString),
                   (1...20).contains(hop),
                   let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) else {
-                return false
+                return nil
             }
             image = render(ringWhiteSpec, hopIndex: hop)
         } else if name.hasPrefix(labelSpritePrefix) {
             let text = String(name.dropFirst(labelSpritePrefix.count))
-            guard !text.isEmpty else { return false }
+            guard !text.isEmpty else { return nil }
             image = renderLabelSprite(text: text)
         } else {
-            return false
+            return nil
         }
 
         cachedImages?[name] = image
         style.setImage(image, forName: name)
-        return true
+        return image
     }
 
     // MARK: - Sprite specifications

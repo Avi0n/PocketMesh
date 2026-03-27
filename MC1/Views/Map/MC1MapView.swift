@@ -366,10 +366,9 @@ extension MC1MapView {
         }
 
         func mapView(_ mapView: MLNMapView, didFailToLoadImage imageName: String) -> UIImage? {
-            if let style = mapView.style {
-                if PinSpriteRenderer.renderOnDemand(name: imageName, into: style) {
-                    return nil
-                }
+            if let style = mapView.style,
+               let image = PinSpriteRenderer.renderOnDemand(name: imageName, into: style) {
+                return image
             }
             logger.error("didFailToLoadImage: \(imageName)")
             return nil
