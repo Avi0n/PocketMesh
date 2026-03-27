@@ -251,8 +251,9 @@ final class TracePathMapViewModel {
         badgePoints.removeAll()
 
         var updatedLines: [MapLine] = []
-        for (index, line) in mapLines.enumerated() {
-            let hopIndex = index + 1
+        for line in mapLines {
+            let pathIndex = Int(line.id.replacing("trace-", with: ""))
+            let hopIndex = (pathIndex ?? 0) + 1
             if hopIndex < result.hops.count {
                 let hop = result.hops[hopIndex]
                 let quality = signalQuality(snr: hop.snr)
@@ -278,7 +279,7 @@ final class TracePathMapViewModel {
                     let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
 
                     badgePoints.append(MapPoint(
-                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", index))") ?? UUID(),
+                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", hopIndex))") ?? UUID(),
                         coordinate: mid,
                         pinStyle: .badge,
                         label: nil,
