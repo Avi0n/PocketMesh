@@ -224,6 +224,7 @@ private struct RegionPickerSheet: View {
                     .disabled(
                         regionName.isEmpty || isDownloading || exceedsAvailableSpace
                             || !appState.offlineMapService.isNetworkAvailable
+                            || selectionBounds == nil
                     )
                 }
             }

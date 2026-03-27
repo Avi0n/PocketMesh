@@ -296,7 +296,7 @@ final class OfflineMapService {
     }
 
     /// Estimated download size using per-zoom average byte sizes.
-    static func estimatedDownloadSize(
+    nonisolated static func estimatedDownloadSize(
         bounds: MLNCoordinateBounds,
         minZoom: Int,
         maxZoom: Int,

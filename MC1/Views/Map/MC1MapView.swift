@@ -22,7 +22,7 @@ private enum MetalLayerScaleFix {
         let selector = NSSelectorFromString("setDrawableSize:")
         guard metalView.responds(to: selector) else { return }
 
-        let originalClass: AnyClass = object_getClass(metalView)!
+        guard let originalClass: AnyClass = object_getClass(metalView) else { return }
         let name = "_MC1FixedScale_\(NSStringFromClass(originalClass))"
 
         let fixedClass: AnyClass
@@ -214,8 +214,6 @@ struct MC1MapView: UIViewRepresentable {
         coordinator.onMapTap = onMapTap
         coordinator.onCameraRegionChange = onCameraRegionChange
         coordinator.setIsStyleLoaded = { isStyleLoaded.wrappedValue = $0 }
-        let pointsChanged = coordinator.currentPoints != points
-        let linesChanged = coordinator.currentLines != lines
         coordinator.currentPoints = points
         coordinator.currentLines = lines
 
@@ -243,16 +241,20 @@ struct MC1MapView: UIViewRepresentable {
             }
         }
 
-        // Update data layers (only when style is loaded, data changed, and not mid-gesture)
+        // Update data layers (only when style is loaded and not mid-gesture).
+        // Compare against lastApplied* so updates arriving during a gesture
+        // are applied once the gesture ends.
         if coordinator.isStyleLoaded, !coordinator.isUserInteracting {
             if mapStyleChanged {
                 coordinator.updateRasterLayerVisibility(mapView: mapView)
             }
-            if pointsChanged {
+            if coordinator.lastAppliedPoints != points {
                 coordinator.updatePointSource(mapView: mapView)
+                coordinator.lastAppliedPoints = points
             }
-            if linesChanged {
+            if coordinator.lastAppliedLines != lines {
                 coordinator.updateLineSource(mapView: mapView)
+                coordinator.lastAppliedLines = lines
             }
             if coordinator.currentShowLabels != showLabels {
                 coordinator.currentShowLabels = showLabels
@@ -350,6 +352,8 @@ extension MC1MapView {
         var currentMapStyle: MapStyleSelection?
         var currentPoints: [MapPoint] = []
         var currentLines: [MapLine] = []
+        var lastAppliedPoints: [MapPoint] = []
+        var lastAppliedLines: [MapLine] = []
         var clusterSource: MLNShapeSource?
         var fixedSource: MLNShapeSource?
 
@@ -359,9 +363,11 @@ extension MC1MapView {
             isStyleLoaded = true
             setIsStyleLoaded?(true)
 
-            // Clear stale source references from the previous style.
+            // Clear stale source/state references from the previous style.
             clusterSource = nil
             fixedSource = nil
+            lastAppliedPoints = []
+            lastAppliedLines = []
 
             PinSpriteRenderer.renderAll(into: style)
             setupRasterSources(style: style, mapView: mapView)

@@ -9,9 +9,9 @@ struct LayersMenu: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(MapStyleSelection.allCases, id: \.self) { style in
-                let isDisabled = style.requiresNetwork
-                    && !appState.offlineMapService.isNetworkAvailable
-                    && !appState.offlineMapService.hasCompletedPack(for: style.offlineMapLayer)
+                let isDisabled = !appState.offlineMapService.isNetworkAvailable
+                    && (style.requiresNetwork
+                        || !appState.offlineMapService.hasCompletedPack(for: style.offlineMapLayer))
 
                 Button {
                     selection = style
