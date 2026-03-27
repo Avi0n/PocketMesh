@@ -15,20 +15,20 @@ struct RoomSettingsView: View {
     var body: some View {
         Form {
             NodeSettingsHeaderSection(publicKey: session.publicKey, name: session.name, role: session.role)
-            NodeDeviceInfoSection(settings: viewModel.helper)
             NodeRadioSettingsSection(
                 settings: viewModel.helper,
                 focusedField: $focusedField,
                 radioRestartWarning: L10n.RemoteNodes.RemoteNodes.RoomSettings.radioRestartWarning
             )
+            RoomBehaviorSection(viewModel: viewModel, focusedField: $focusedField)
             RemoteNodeIdentitySection(
                 settings: viewModel.helper,
                 focusedField: $focusedField,
                 onPickLocation: { showingLocationPicker = true }
             )
             NodeContactInfoSection(settings: viewModel.helper, focusedField: $focusedField)
-            RoomBehaviorSection(viewModel: viewModel, focusedField: $focusedField)
             NodeSecuritySection(settings: viewModel.helper)
+            NodeDeviceInfoSection(settings: viewModel.helper)
             NodeActionsSection(
                 settings: viewModel.helper,
                 showRebootConfirmation: $showRebootConfirmation,

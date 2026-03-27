@@ -15,13 +15,13 @@ struct RepeaterSettingsView: View {
     var body: some View {
         Form {
             NodeSettingsHeaderSection(publicKey: session.publicKey, name: session.name, role: session.role)
-            makeDeviceInfoSection()
             makeRadioSettingsSection()
-            makeIdentitySection()
-            makeContactInfoSection()
             makeBehaviorSection()
             makeRegionsSection()
+            makeIdentitySection()
+            makeContactInfoSection()
             makeSecuritySection()
+            makeDeviceInfoSection()
             makeActionsSection()
         }
         .navigationTitle(L10n.RemoteNodes.RemoteNodes.Settings.title)
