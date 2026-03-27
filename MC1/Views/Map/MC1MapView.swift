@@ -392,7 +392,7 @@ extension MC1MapView {
         // MARK: - Region changes
 
         private static let userGestureReasons: MLNCameraChangeReason = [
-            .gesturePan, .gestureZoomIn, .gestureZoomOut,
+            .gesturePan, .gesturePinch, .gestureZoomIn, .gestureZoomOut,
             .gestureRotate, .gestureTilt, .gestureOneFingerZoom
         ]
 
