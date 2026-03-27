@@ -5,6 +5,8 @@ import MC1Services
 /// Map view displaying contacts with their locations
 struct MapView: View {
     @Environment(\.appState) private var appState
+    @AppStorage("mapStyleSelection") private var mapStyleSelection: MapStyleSelection = .standard
+    @AppStorage("mapShowLabels") private var showLabels = true
     @State private var viewModel = MapViewModel()
     @State private var selectedCalloutContact: ContactDTO?
     @State private var selectedPointScreenPosition: CGPoint?
@@ -15,6 +17,8 @@ struct MapView: View {
         NavigationStack {
             MapCanvasView(
                 viewModel: viewModel,
+                mapStyleSelection: $mapStyleSelection,
+                showLabels: $showLabels,
                 selectedCalloutContact: $selectedCalloutContact,
                 selectedPointScreenPosition: $selectedPointScreenPosition,
                 isStyleLoaded: $isStyleLoaded,

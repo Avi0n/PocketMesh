@@ -6,6 +6,8 @@ import MC1Services
 struct TracePathMapToolbarView: View {
     @Environment(\.appState) private var appState
     @Bindable var mapViewModel: TracePathMapViewModel
+    @Binding var mapStyleSelection: MapStyleSelection
+    @Binding var showLabels: Bool
 
     var body: some View {
         VStack {
@@ -28,7 +30,7 @@ struct TracePathMapToolbarView: View {
                         NorthLockButton(isNorthLocked: $mapViewModel.isNorthLocked)
                     }
                 ) {
-                    LabelsToggleButton(showLabels: $mapViewModel.showLabels)
+                    LabelsToggleButton(showLabels: $showLabels)
 
                     // Center on path
                     if mapViewModel.hasPath {
@@ -48,7 +50,7 @@ struct TracePathMapToolbarView: View {
         .overlay(alignment: .bottomTrailing) {
             if mapViewModel.showingLayersMenu {
                 LayersMenu(
-                    selection: $mapViewModel.mapStyleSelection,
+                    selection: $mapStyleSelection,
                     isPresented: $mapViewModel.showingLayersMenu
                 )
                 .padding(.trailing, 16)

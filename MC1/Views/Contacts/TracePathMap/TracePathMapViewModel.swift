@@ -15,7 +15,6 @@ final class TracePathMapViewModel {
     var cameraRegion: MKCoordinateRegion?
     /// Incremented when code intentionally moves the camera (not from user gesture sync)
     private(set) var cameraRegionVersion = 0
-    var mapStyleSelection: MapStyleSelection = .standard
     var showLabels: Bool = true {
         didSet { rebuildMapPoints() }
     }

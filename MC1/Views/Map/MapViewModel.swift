@@ -27,12 +27,6 @@ final class MapViewModel {
     /// Version counter for the camera region, incremented to signal a new camera target
     private(set) var cameraRegionVersion = 0
 
-    /// Current map style selection
-    var mapStyleSelection: MapStyleSelection = .standard
-
-    /// Whether to show contact name labels
-    var showLabels = true
-
     /// Whether the map bearing is locked to true north
     var isNorthLocked = false
 

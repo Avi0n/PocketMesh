@@ -11,6 +11,8 @@ struct TracePathMapView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var traceViewModel: TracePathViewModel
     @Binding var presentedResult: TraceResult?
+    @AppStorage("mapStyleSelection") private var mapStyleSelection: MapStyleSelection = .standard
+    @AppStorage("mapShowLabels") private var showLabels = true
     @State private var mapViewModel = TracePathMapViewModel()
 
     @State private var showingSavePrompt = false
@@ -46,15 +48,23 @@ struct TracePathMapView: View {
             )
 
             // Map controls toolbar
-            TracePathMapToolbarView(mapViewModel: mapViewModel)
+            TracePathMapToolbarView(
+                mapViewModel: mapViewModel,
+                mapStyleSelection: $mapStyleSelection,
+                showLabels: $showLabels
+            )
         }
         .onAppear {
             mapViewModel.configure(
                 traceViewModel: traceViewModel,
                 userLocation: appState.locationService.currentLocation
             )
+            mapViewModel.showLabels = showLabels
             mapViewModel.rebuildOverlays()
             mapViewModel.performInitialCentering()
+        }
+        .onChange(of: showLabels) { _, newValue in
+            mapViewModel.showLabels = newValue
         }
         .onChange(of: appState.locationService.currentLocation) { _, newLocation in
             mapViewModel.updateUserLocation(newLocation)
@@ -107,9 +117,9 @@ struct TracePathMapView: View {
         MC1MapView(
             points: mapViewModel.mapPoints,
             lines: mapViewModel.mapLines,
-            mapStyle: mapViewModel.mapStyleSelection,
+            mapStyle: mapStyleSelection,
             isDarkMode: colorScheme == .dark,
-            showLabels: mapViewModel.showLabels,
+            showLabels: showLabels,
             showsUserLocation: true,
             isInteractive: true,
             showsScale: true,

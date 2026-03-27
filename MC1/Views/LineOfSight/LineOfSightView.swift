@@ -20,7 +20,8 @@ struct LineOfSightView: View {
     @State private var showAnalysisSheet: Bool
     @State private var editingPoint: PointID?
     @State private var isDropPinMode = false
-    @State private var mapStyleSelection: MapStyleSelection = .topo
+    @AppStorage("mapStyleSelection") private var mapStyleSelection: MapStyleSelection = .topo
+    @AppStorage("mapShowLabels") private var showLabels = true
     @State private var sheetBottomInset: CGFloat = 220
     @State private var isResultsExpanded = false
     @State private var isRFSettingsExpanded = false
@@ -92,7 +93,7 @@ struct LineOfSightView: View {
             appState: appState,
             mapStyleSelection: $mapStyleSelection,
             showingMapStyleMenu: $showingMapStyleMenu,
-            showLabels: $viewModel.showLabels,
+            showLabels: $showLabels,
             isDropPinMode: $isDropPinMode,
             mapOverlayBottomPadding: mapOverlayBottomPadding,
             cameraBottomSheetFraction: showSheet ? 0.25 : 0,
@@ -166,8 +167,12 @@ struct LineOfSightView: View {
             .task {
                 appState.locationService.requestPermissionIfNeeded()
                 viewModel.configure(appState: appState)
+                viewModel.showLabels = showLabels
                 await viewModel.loadRepeaters()
                 viewModel.centerOnAllRepeaters()
+            }
+            .onChange(of: showLabels) { _, newValue in
+                viewModel.showLabels = newValue
             }
 
         if showSheet {

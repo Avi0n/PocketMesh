@@ -5,6 +5,8 @@ import MC1Services
 struct MapCanvasView: View {
     @Environment(\.appState) private var appState
     @Bindable var viewModel: MapViewModel
+    @Binding var mapStyleSelection: MapStyleSelection
+    @Binding var showLabels: Bool
     @Binding var selectedCalloutContact: ContactDTO?
     @Binding var selectedPointScreenPosition: CGPoint?
     @Binding var isStyleLoaded: Bool
@@ -17,6 +19,8 @@ struct MapCanvasView: View {
         ZStack {
             MapContentView(
                 viewModel: viewModel,
+                mapStyleSelection: mapStyleSelection,
+                showLabels: showLabels,
                 selectedCalloutContact: $selectedCalloutContact,
                 selectedPointScreenPosition: $selectedPointScreenPosition,
                 isStyleLoaded: $isStyleLoaded,
@@ -53,7 +57,7 @@ struct MapCanvasView: View {
                     HStack {
                         Spacer()
                         LayersMenu(
-                            selection: $viewModel.mapStyleSelection,
+                            selection: $mapStyleSelection,
                             isPresented: $viewModel.showingLayersMenu
                         )
                         .padding(.trailing, 72)
@@ -76,7 +80,7 @@ struct MapCanvasView: View {
                     NorthLockButton(isNorthLocked: $viewModel.isNorthLocked)
                 }
             ) {
-                LabelsToggleButton(showLabels: $viewModel.showLabels)
+                LabelsToggleButton(showLabels: $showLabels)
                 CenterAllButton(
                     isEmpty: viewModel.contactsWithLocation.isEmpty,
                     onClearSelection: onClearSelection,

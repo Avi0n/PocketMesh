@@ -5,6 +5,8 @@ import MC1Services
 struct MapContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var viewModel: MapViewModel
+    let mapStyleSelection: MapStyleSelection
+    let showLabels: Bool
     @Binding var selectedCalloutContact: ContactDTO?
     @Binding var selectedPointScreenPosition: CGPoint?
     @Binding var isStyleLoaded: Bool
@@ -15,9 +17,9 @@ struct MapContentView: View {
         MC1MapView(
             points: viewModel.mapPoints,
             lines: [],
-            mapStyle: viewModel.mapStyleSelection,
+            mapStyle: mapStyleSelection,
             isDarkMode: colorScheme == .dark,
-            showLabels: viewModel.showLabels,
+            showLabels: showLabels,
             showsUserLocation: true,
             isInteractive: true,
             showsScale: true,
