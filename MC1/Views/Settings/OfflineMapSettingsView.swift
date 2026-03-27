@@ -5,7 +5,6 @@ import SwiftUI
 struct OfflineMapSettingsView: View {
     @Environment(\.appState) private var appState
     @State private var showingRegionPicker = false
-    @State private var packToDelete: OfflinePack?
     @State private var showError: String?
 
     var body: some View {
@@ -23,7 +22,7 @@ struct OfflineMapSettingsView: View {
                 }
             } else {
                 List {
-                    PacksSection(packToDelete: $packToDelete)
+                    PacksSection()
                     StorageSection()
                 }
                 .toolbar {
@@ -38,21 +37,6 @@ struct OfflineMapSettingsView: View {
         .navigationTitle(L10n.Settings.OfflineMaps.title)
         .sheet(isPresented: $showingRegionPicker) {
             RegionPickerSheet()
-        }
-        .alert(
-            L10n.Settings.OfflineMaps.deleteTitle,
-            isPresented: .init(
-                get: { packToDelete != nil },
-                set: { if !$0 { packToDelete = nil } }
-            ),
-            presenting: packToDelete
-        ) { pack in
-            Button(L10n.Settings.OfflineMaps.delete, role: .destructive) {
-                Task { await appState.offlineMapService.deletePack(pack) }
-            }
-            Button(L10n.Settings.OfflineMaps.cancel, role: .cancel) {}
-        } message: { _ in
-            Text(L10n.Settings.OfflineMaps.deleteMessage)
         }
         .onChange(of: appState.offlineMapService.lastPackError) { _, newValue in
             if let newValue {
@@ -69,7 +53,6 @@ struct OfflineMapSettingsView: View {
 
 private struct PacksSection: View {
     @Environment(\.appState) private var appState
-    @Binding var packToDelete: OfflinePack?
 
     var body: some View {
         Section {
@@ -78,7 +61,8 @@ private struct PacksSection: View {
             }
             .onDelete { indexSet in
                 if let index = indexSet.first {
-                    packToDelete = appState.offlineMapService.packs[index]
+                    let pack = appState.offlineMapService.packs[index]
+                    Task { await appState.offlineMapService.deletePack(pack) }
                 }
             }
         }
