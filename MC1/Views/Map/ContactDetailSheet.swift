@@ -97,7 +97,7 @@ struct ContactDetailSheet: View {
                         Button {
                             activeSheet = .adminAuth
                         } label: {
-                            Label(L10n.Map.Map.Detail.Action.adminAccess, systemImage: "gearshape.2")
+                            Label(L10n.Map.Map.Detail.Action.management, systemImage: "gearshape.2")
                         }
 
                     case .room:
