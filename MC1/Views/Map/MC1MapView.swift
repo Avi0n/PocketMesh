@@ -182,6 +182,12 @@ struct MC1MapView: UIViewRepresentable {
             mapView.compassView.isHidden = true
         }
 
+        // Disable quick-zoom (tap-then-hold-drag) gesture
+        mapView.gestureRecognizers?
+            .compactMap { $0 as? UILongPressGestureRecognizer }
+            .filter { $0.numberOfTapsRequired == 1 && $0.minimumPressDuration == 0 }
+            .forEach { $0.isEnabled = false }
+
         // Tap gesture for feature queries
         let tap = UITapGestureRecognizer(
             target: context.coordinator,
