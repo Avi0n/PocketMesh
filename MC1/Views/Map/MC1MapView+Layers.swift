@@ -137,7 +137,7 @@ extension MC1MapView.Coordinator {
 
         // Name labels (above pins) with pill background
         let nameLabelLayer = MLNSymbolStyleLayer(identifier: MapLayerID.nameLabels, source: source)
-        nameLabelLayer.predicate = NSPredicate(format: "cluster != YES AND nameLabel != nil")
+        nameLabelLayer.predicate = NSPredicate(format: "cluster != YES AND labelSpriteName != nil")
         configureNameLabelLayer(nameLabelLayer)
         style.addLayer(nameLabelLayer)
 
@@ -160,7 +160,7 @@ extension MC1MapView.Coordinator {
         style.addLayer(fixedIconLayer)
 
         let fixedNameLayer = MLNSymbolStyleLayer(identifier: MapLayerID.fixedNameLabels, source: source)
-        fixedNameLayer.predicate = NSPredicate(format: "nameLabel != nil")
+        fixedNameLayer.predicate = NSPredicate(format: "labelSpriteName != nil")
         configureNameLabelLayer(fixedNameLayer)
         style.addLayer(fixedNameLayer)
 
@@ -275,22 +275,12 @@ extension MC1MapView.Coordinator {
     // MARK: - Shared layer configuration
 
     private func configureNameLabelLayer(_ layer: MLNSymbolStyleLayer) {
-        layer.text = NSExpression(forKeyPath: "nameLabel")
-        layer.textFontSize = NSExpression(forConstantValue: 10)
-        layer.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
-        layer.textColor = NSExpression(forConstantValue: UIColor.black)
-        layer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -4.8)))
-        layer.textAnchor = NSExpression(forConstantValue: "bottom")
+        layer.iconImageName = NSExpression(forKeyPath: "labelSpriteName")
+        layer.iconAnchor = NSExpression(forConstantValue: "bottom")
+        layer.iconOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -48))) // -4.8 ems × 10pt font
         layer.symbolSortKey = NSExpression(forKeyPath: "hopIndex")
-        layer.textAllowsOverlap = NSExpression(forConstantValue: true)
-        layer.textIgnoresPlacement = NSExpression(forConstantValue: true)
-        layer.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(0.15))
-        layer.textHaloWidth = NSExpression(forConstantValue: 1)
         layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
         layer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
-        layer.iconImageName = NSExpression(forConstantValue: "pill-bg")
-        layer.iconTextFit = NSExpression(forConstantValue: NSValue(mlnIconTextFit: .both))
-        layer.iconTextFitPadding = NSExpression(forConstantValue: NSValue(uiEdgeInsets: UIEdgeInsets(top: 0, left: 2, bottom: 0, right: 2)))
     }
 
     private func configureBadgeLayer(_ layer: MLNSymbolStyleLayer) {
@@ -314,7 +304,9 @@ extension MC1MapView.Coordinator {
             "pointId": point.id.uuidString,
             "spriteName": spriteName(for: point),
         ]
-        if let label = point.label { attributes["nameLabel"] = label }
+        if let label = point.label {
+            attributes["labelSpriteName"] = "\(PinSpriteRenderer.labelSpritePrefix)\(label)"
+        }
         if let hopIndex = point.hopIndex { attributes["hopIndex"] = hopIndex }
         if let badgeText = point.badgeText { attributes["badgeText"] = badgeText }
         feature.attributes = attributes

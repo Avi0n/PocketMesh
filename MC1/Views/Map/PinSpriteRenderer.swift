@@ -6,6 +6,8 @@ enum PinSpriteRenderer {
     /// Used by the map Coordinator to position callout anchors above the pin icon.
     static let standardHeight: CGFloat = 43 // 36 (circle) + 10 (triangle) - 3 (overlap)
 
+    static let labelSpritePrefix = "label-"
+
     private nonisolated(unsafe) static var cachedImages: [String: UIImage]?
 
     /// Registers base pin sprites into the style. Hop-ring variants are rendered
@@ -36,22 +38,28 @@ enum PinSpriteRenderer {
     /// Returns `true` if the name was recognized and the image was registered.
     @discardableResult
     static func renderOnDemand(name: String, into style: MLNStyle) -> Bool {
-        guard name.hasPrefix("pin-repeater-ring-white-hop-") else { return false }
-
-        // Check the cache first (may have been rendered for a different style load)
         if let cached = cachedImages?[name] {
             style.setImage(cached, forName: name)
             return true
         }
 
-        guard let hopString = name.split(separator: "-").last,
-              let hop = Int(hopString),
-              (1...20).contains(hop),
-              let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) else {
+        let image: UIImage
+        if name.hasPrefix("pin-repeater-ring-white-hop-") {
+            guard let hopString = name.split(separator: "-").last,
+                  let hop = Int(hopString),
+                  (1...20).contains(hop),
+                  let ringWhiteSpec = allSpecs.first(where: { $0.name == "pin-repeater-ring-white" }) else {
+                return false
+            }
+            image = render(ringWhiteSpec, hopIndex: hop)
+        } else if name.hasPrefix(labelSpritePrefix) {
+            let text = String(name.dropFirst(labelSpritePrefix.count))
+            guard !text.isEmpty else { return false }
+            image = renderLabelSprite(text: text)
+        } else {
             return false
         }
 
-        let image = render(ringWhiteSpec, hopIndex: hop)
         cachedImages?[name] = image
         style.setImage(image, forName: name)
         return true
@@ -208,7 +216,7 @@ enum PinSpriteRenderer {
 
     // MARK: - Pill sprites
 
-    /// Semi-transparent stretchable pill for name labels and stats badges.
+    /// Semi-transparent stretchable pill for stats badges.
     /// Registered as a resizable image so MapLibre's `iconTextFit` can stretch
     /// the flat center while preserving the rounded caps.
     private static func renderPillBackground() -> UIImage {
@@ -244,6 +252,53 @@ enum PinSpriteRenderer {
             withCapInsets: UIEdgeInsets(top: capInset, left: capInset, bottom: capInset, right: capInset),
             resizingMode: .stretch
         )
+    }
+
+    private static func renderLabelSprite(text: String) -> UIImage {
+        let font = UIFont.systemFont(ofSize: 10, weight: .bold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.black]
+        let textSize = (text as NSString).size(withAttributes: attrs)
+
+        let horizontalPadding: CGFloat = 6
+        let verticalPadding: CGFloat = 4
+        let cornerRadius: CGFloat = 4
+        let shadowPadding: CGFloat = 1
+
+        let pillWidth = textSize.width + horizontalPadding * 2
+        let pillHeight = textSize.height + verticalPadding * 2
+        let totalWidth = pillWidth + shadowPadding * 2
+        let totalHeight = pillHeight + shadowPadding * 2
+
+        let renderer = UIGraphicsImageRenderer(
+            size: CGSize(width: totalWidth, height: totalHeight),
+            format: .preferred()
+        )
+        return renderer.image { ctx in
+            let cgContext = ctx.cgContext
+            let pillRect = CGRect(x: shadowPadding, y: shadowPadding, width: pillWidth, height: pillHeight)
+            let pillPath = UIBezierPath(roundedRect: pillRect, cornerRadius: cornerRadius)
+
+            cgContext.saveGState()
+            cgContext.setShadow(
+                offset: CGSize(width: 0, height: 0.5),
+                blur: 1,
+                color: UIColor.black.withAlphaComponent(0.15).cgColor
+            )
+            UIColor.white.setFill()
+            pillPath.fill()
+            cgContext.restoreGState()
+
+            UIColor.white.withAlphaComponent(0.85).setFill()
+            pillPath.fill()
+
+            let textRect = CGRect(
+                x: shadowPadding + (pillWidth - textSize.width) / 2,
+                y: shadowPadding + (pillHeight - textSize.height) / 2,
+                width: textSize.width,
+                height: textSize.height
+            )
+            (text as NSString).draw(in: textRect, withAttributes: attrs)
+        }
     }
 
     private static func renderCrosshair(_ spec: SpriteSpec) -> UIImage {
