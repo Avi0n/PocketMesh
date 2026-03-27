@@ -6,9 +6,9 @@ extension SNRQuality {
     /// SwiftUI color for signal quality indicators.
     var color: Color {
         switch self {
-        case .excellent: .green
-        case .good: .yellow
-        case .fair, .poor: .red
+        case .excellent, .good: .green
+        case .fair: .yellow
+        case .poor: .red
         case .unknown: .secondary
         }
     }

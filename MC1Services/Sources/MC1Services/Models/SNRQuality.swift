@@ -2,10 +2,10 @@
 ///
 /// Standard 4-tier scale for signal quality indicators across the app.
 public enum SNRQuality: Sendable, Equatable {
-    case excellent  // SNR > 10 dB
-    case good       // SNR > 5 dB
-    case fair       // SNR > 0 dB
-    case poor       // SNR <= 0 dB
+    case excellent  // SNR > +6 dB
+    case good       // SNR > +0 dB
+    case fair       // SNR > -6 dB
+    case poor       // SNR <= -6 dB
     case unknown    // nil SNR
 
     public init(snr: Double?) {
@@ -13,9 +13,9 @@ public enum SNRQuality: Sendable, Equatable {
             self = .unknown
             return
         }
-        if snr > 10 { self = .excellent }
-        else if snr > 5 { self = .good }
-        else if snr > 0 { self = .fair }
+        if snr > 6 { self = .excellent }
+        else if snr > 0 { self = .good }
+        else if snr > -6 { self = .fair }
         else { self = .poor }
     }
 
