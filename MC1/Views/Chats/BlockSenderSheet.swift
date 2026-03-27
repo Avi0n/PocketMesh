@@ -30,7 +30,7 @@ struct BlockSenderSheet: View {
                         ContactMatchSection(
                             contacts: matchingContacts,
                             selectedIDs: $selectedContactIDs,
-                            userLocation: appState.locationService.currentLocation
+                            userLocation: appState.bestAvailableLocation
                         )
                     }
                 }

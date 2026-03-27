@@ -287,6 +287,64 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
+    @Test("exportPrivateKey throws featureDisabled on disabled response")
+    func exportPrivateKeyThrowsFeatureDisabledOnDisabledResponse() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let exportTask = Task {
+            try await session.exportPrivateKey()
+        }
+
+        try await waitUntil("exportPrivateKey should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateReceive(Data([ResponseCode.disabled.rawValue]))
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await exportTask.value
+        }
+        guard case .featureDisabled? = error else {
+            Issue.record("Expected featureDisabled, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+
+        await session.stop()
+    }
+
+    @Test("disabled responses do not break unrelated requests")
+    func disabledResponsesDoNotBreakUnrelatedRequests() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let batteryTask = Task {
+            try await session.getBattery()
+        }
+
+        try await waitUntil("getBattery should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateReceive(Data([ResponseCode.disabled.rawValue]))
+        await transport.simulateReceive(makeBatteryPacket(level: 4018))
+
+        let battery = try await batteryTask.value
+        #expect(battery.level == 4018)
+        await session.stop()
+    }
+
     @Test("requestStatus fails fast on device error before messageSent")
     func requestStatusFailsFastOnDeviceErrorBeforeMessageSent() async throws {
         let transport = MockTransport()

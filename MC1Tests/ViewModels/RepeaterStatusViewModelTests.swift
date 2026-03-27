@@ -72,31 +72,42 @@ struct RepeaterStatusViewModelTests {
         let session = createTestSession()
 
         let viewModel = RepeaterStatusViewModel()
-        viewModel.nodeSnapshotService = service
-        viewModel.session = session
+        viewModel.helper.configure(contactService: nil, nodeSnapshotService: service)
+        viewModel.helper.session = session
 
         // Visit 1: First status response — snapshot saved (not throttled)
-        await viewModel.handleStatusResponse(createStatusResponse())
-        let snapshots1 = await viewModel.fetchHistory()
+        let status = createStatusResponse()
+        await viewModel.helper.handleStatusResponse(
+            status,
+            rxAirtimeSeconds: status.repeaterRxAirtimeSeconds,
+            receiveErrors: status.receiveErrors
+        )
+        let snapshots1 = await viewModel.helper.fetchHistory()
         #expect(snapshots1.count == 1, "First visit should save a snapshot")
 
         // Simulate refresh within 15 min — snapshot will be throttled
-        await viewModel.handleStatusResponse(createStatusResponse())
-        let snapshots2 = await viewModel.fetchHistory()
+        await viewModel.helper.handleStatusResponse(
+            status,
+            rxAirtimeSeconds: status.repeaterRxAirtimeSeconds,
+            receiveErrors: status.receiveErrors
+        )
+        let snapshots2 = await viewModel.helper.fetchHistory()
         #expect(snapshots2.count == 1, "Throttled save should not create a new snapshot")
 
         // User expands neighbors section — enrichment data arrives
         viewModel.handleNeighboursResponse(createNeighboursResponse())
 
-        // Give fire-and-forget enrichment Task time to complete
-        try await Task.sleep(for: .milliseconds(50))
-
-        // Verify: the existing snapshot should be enriched
-        let snapshots3 = await viewModel.fetchHistory()
-        #expect(snapshots3.count == 1)
-        #expect(
-            snapshots3[0].neighborSnapshots?.isEmpty == false,
-            "Neighbor enrichment should persist even after throttled refresh"
-        )
+        // Poll until enrichment completes (fire-and-forget Task) or timeout
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        var enriched = false
+        while ContinuousClock.now < deadline {
+            let snapshots = await viewModel.helper.fetchHistory()
+            if snapshots.first?.neighborSnapshots?.isEmpty == false {
+                enriched = true
+                break
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(enriched, "Neighbor enrichment should persist even after throttled refresh")
     }
 }

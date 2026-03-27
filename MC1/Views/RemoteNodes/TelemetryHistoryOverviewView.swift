@@ -54,7 +54,8 @@ struct TelemetryHistoryOverviewView: View {
             $0.batteryMillivolts != nil || $0.lastSNR != nil ||
             $0.lastRSSI != nil || $0.noiseFloor != nil ||
             $0.packetsSent != nil || $0.packetsReceived != nil ||
-            $0.receiveErrors != nil
+            $0.receiveErrors != nil ||
+            $0.postedCount != nil || $0.postPushCount != nil
         }
 
         if hasRadioData {
@@ -119,6 +120,22 @@ struct TelemetryHistoryOverviewView: View {
                         unit: "", color: .red,
                         dataPoints: filtered.compactMap { s in
                             s.receiveErrors.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                        }
+                    )
+
+                    metricChart(
+                        title: L10n.RemoteNodes.RemoteNodes.RoomStatus.postsReceived,
+                        unit: "", color: .purple,
+                        dataPoints: filtered.compactMap { s in
+                            s.postedCount.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                        }
+                    )
+
+                    metricChart(
+                        title: L10n.RemoteNodes.RemoteNodes.RoomStatus.postsPushed,
+                        unit: "", color: .cyan,
+                        dataPoints: filtered.compactMap { s in
+                            s.postPushCount.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                         }
                     )
                 }

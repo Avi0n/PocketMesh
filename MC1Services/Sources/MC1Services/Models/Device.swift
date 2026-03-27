@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import SwiftData
 
@@ -274,6 +275,14 @@ public struct DeviceDTO: Sendable, Equatable, Identifiable {
     /// Hash size per hop in trace packets (1, 2, or 4 bytes), derived from ``pathHashMode``.
     /// Trace protocol uses power-of-2 encoding: `1 << pathHashMode`.
     public var traceHashSize: Int { 1 << Int(pathHashMode) }
+
+    public var hasLocation: Bool {
+        let hasNonZero = latitude != 0 || longitude != 0
+        guard hasNonZero else { return false }
+        return CLLocationCoordinate2DIsValid(
+            CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        )
+    }
 
     public var preRepeatFrequency: UInt32?
     public var preRepeatBandwidth: UInt32?

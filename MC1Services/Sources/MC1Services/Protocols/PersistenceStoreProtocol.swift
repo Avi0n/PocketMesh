@@ -411,7 +411,9 @@ public protocol PersistenceStoreProtocol: Actor {
         rxAirtimeSeconds: UInt32?,
         packetsSent: UInt32?,
         packetsReceived: UInt32?,
-        receiveErrors: UInt32?
+        receiveErrors: UInt32?,
+        postedCount: UInt16?,
+        postPushCount: UInt16?
     ) async throws -> UUID
 
     /// Fetch the most recent snapshot for a node

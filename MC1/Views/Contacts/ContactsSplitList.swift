@@ -24,7 +24,7 @@ struct ContactsSplitList: View {
                 ContactRowView(
                     contact: contact,
                     showTypeLabel: isSearching,
-                    userLocation: appState.locationService.currentLocation,
+                    userLocation: appState.bestAvailableLocation,
                     index: index,
                     isTogglingFavorite: viewModel.togglingFavoriteID == contact.id
                 )

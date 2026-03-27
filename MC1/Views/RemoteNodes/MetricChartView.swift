@@ -90,7 +90,11 @@ private struct MetricChartContent: View {
                 AxisMarks(position: .leading)
             }
             .chartXAxis {
-                AxisMarks(values: .automatic(desiredCount: 4))
+                AxisMarks(values: .automatic(desiredCount: 4)) { _ in
+                    AxisGridLine()
+                    AxisTick()
+                    AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                }
             }
             .accessibilityLabel(title)
             .frame(height: 180)

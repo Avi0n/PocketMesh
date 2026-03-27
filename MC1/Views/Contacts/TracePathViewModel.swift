@@ -326,7 +326,7 @@ final class TracePathViewModel {
     }
 
     private var currentUserLocation: CLLocation? {
-        appState?.locationService.currentLocation
+        appState?.bestAvailableLocation
     }
 
     /// Try contacts first, then discovered nodes. Returns the best match from either source.
@@ -996,17 +996,9 @@ final class TracePathViewModel {
         let deviceName = appState?.connectedDevice?.nodeName ?? L10n.Contacts.Contacts.Results.Hop.myDevice
         let path = traceInfo.path
 
-        // Resolve device location: GPS first, then device's set location, treat (0,0) as nil
-        var deviceLat: Double?
-        var deviceLon: Double?
-        if let gpsLocation = appState?.locationService.currentLocation {
-            deviceLat = gpsLocation.coordinate.latitude
-            deviceLon = gpsLocation.coordinate.longitude
-        } else if let device = appState?.connectedDevice,
-                  device.latitude != 0 || device.longitude != 0 {
-            deviceLat = device.latitude
-            deviceLon = device.longitude
-        }
+        let deviceLocation = appState?.bestAvailableLocation
+        let deviceLat = deviceLocation?.coordinate.latitude
+        let deviceLon = deviceLocation?.coordinate.longitude
 
         // Start node has no SNR (it transmitted first, didn't receive anything)
         hops.append(TraceHop(

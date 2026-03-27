@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 import SwiftData
 import UserNotifications
@@ -27,6 +28,17 @@ public final class AppState {
 
     /// Offline map pack management and network monitoring
     let offlineMapService = OfflineMapService()
+
+    /// Best available location for proximity-based disambiguation.
+    public var bestAvailableLocation: CLLocation? {
+        if let phoneLocation = locationService.currentLocation {
+            return phoneLocation
+        }
+        guard let device = connectedDevice, device.hasLocation else {
+            return nil
+        }
+        return CLLocation(latitude: device.latitude, longitude: device.longitude)
+    }
 
     // MARK: - Connection (via ConnectionManager)
 

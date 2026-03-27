@@ -238,9 +238,15 @@ private struct ConnectedMenu: View {
                     }
 
                     Button {
-                        onAdvancedSettings()
+                        onChangeDevice()
                     } label: {
-                        Label(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape")
+                        Label(L10n.Settings.BleStatus.changeDevice, systemImage: "flipphone")
+                    }
+
+                    Button(role: .destructive) {
+                        onDisconnect()
+                    } label: {
+                        Label(L10n.Settings.BleStatus.disconnect, systemImage: "eject")
                     }
                 }
             }
@@ -265,21 +271,16 @@ private struct ConnectedMenu: View {
 
             Section {
                 Button {
-                    onChangeDevice()
+                    onAdvancedSettings()
                 } label: {
-                    Label(L10n.Settings.BleStatus.changeDevice, systemImage: "antenna.radiowaves.left.and.right")
-                }
-
-                Button(role: .destructive) {
-                    onDisconnect()
-                } label: {
-                    Label(L10n.Settings.BleStatus.disconnect, systemImage: "eject")
+                    Label(L10n.Settings.AdvancedSettings.title, systemImage: "gearshape")
                 }
             }
         } label: {
             StatusIcon(iconName: iconName, iconColor: iconColor, isAnimating: isAnimating)
         }
         .popoverTip(deviceMenuTip)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .sensoryFeedback(.success, trigger: successFeedbackTrigger)
         .sensoryFeedback(.error, trigger: errorFeedbackTrigger)
         .accessibilityLabel(L10n.Settings.BleStatus.accessibilityLabel)

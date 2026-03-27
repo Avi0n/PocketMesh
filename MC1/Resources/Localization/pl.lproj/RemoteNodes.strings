@@ -298,14 +298,14 @@
 /* Location: RepeaterSettingsViewModel.swift - Timeout error */
 "remoteNodes.settings.timeout" = "Upłynął limit czasu polecenia";
 
-/* Location: RepeaterSettingsViewModel.swift - No service error */
-"remoteNodes.settings.noService" = "Usługa przekaźnika niedostępna";
+/* Location: NodeSettingsHelper.swift - No service error */
+"remoteNodes.settings.noService" = "Usługa niedostępna";
 
 /* Location: RepeaterSettingsViewModel.swift - Advert interval validation error */
 "remoteNodes.settings.advertIntervalValidation" = "Akceptuje 0 (wyłączone) lub 60-240 min";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood interval validation error */
-"remoteNodes.settings.floodIntervalValidation" = "Akceptuje 3-48 godzin";
+"remoteNodes.settings.floodIntervalValidation" = "Akceptuje 0 (wył.) lub 3–168 godzin";
 
 /* Location: RepeaterSettingsViewModel.swift - Flood max hops validation error */
 "remoteNodes.settings.floodMaxValidation" = "Akceptuje 0-64 skoków";
@@ -481,6 +481,9 @@
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
 "remoteNodes.status.batteryCurveFooter" = "Mapowanie napięcia na procent do szacowania poziomu baterii.";
 
+/* Location: RepeaterStatusView.swift, RoomStatusView.swift - Refresh button accessibility label */
+"remoteNodes.status.refresh" = "Odśwież";
+
 // MARK: - History
 
 /* Location: RepeaterStatusViewModel.swift - Delta timestamp (minutes ago) */
@@ -580,7 +583,7 @@
 "remoteNodes.history.neighborsSection" = "Neighbors";
 
 /* Location: TelemetryHistoryOverviewView.swift - Purpose: Empty state when no snapshots exist */
-"remoteNodes.history.noSnapshotsMessage" = "Connect to this repeater at least once to see history.";
+"remoteNodes.history.noSnapshotsMessage" = "Connect to this node at least once to see history.";
 
 /* Location: TelemetryHistoryOverviewView.swift - Purpose: Empty state when section data not captured */
 "remoteNodes.history.sectionNotCaptured" = "This data is captured when you view the %@ section during a live telemetry session.";
@@ -657,6 +660,69 @@
 
 /* Location: RoomMessageBubble.swift - Accessibility label for delivered message status */
 "remoteNodes.room.message.status.deliveredLabel" = "Wiadomość dostarczona";
+
+// MARK: - Room Status
+
+/* Location: RoomStatusView.swift - Navigation title */
+"remoteNodes.roomStatus.title" = "Room Status";
+
+/* Location: RoomStatusView.swift - Posts received label */
+"remoteNodes.roomStatus.postsReceived" = "Posts Received";
+
+/* Location: RoomStatusView.swift - Posts pushed label */
+"remoteNodes.roomStatus.postsPushed" = "Posts Pushed";
+
+// MARK: - Room Settings
+
+/* Location: RoomSettingsView.swift - Navigation title */
+"remoteNodes.roomSettings.title" = "Room Settings";
+
+/* Location: RoomSettingsView.swift - Room settings section header */
+"remoteNodes.roomSettings.roomSettingsSection" = "Room Settings";
+
+/* Location: RoomSettingsView.swift - Room settings section footer */
+"remoteNodes.roomSettings.roomSettingsFooter" = "Guest access, advertisement intervals, and flood hops.";
+
+/* Location: RoomSettingsView.swift - Guest password label */
+"remoteNodes.roomSettings.guestPassword" = "Guest Password";
+
+/* Location: RoomSettingsView.swift - Allow read-only toggle label */
+"remoteNodes.roomSettings.allowReadOnly" = "Allow Read-Only";
+
+/* Location: RoomSettingsView.swift - Allow read-only footer */
+"remoteNodes.roomSettings.allowReadOnlyFooter" = "Allow users without a password to connect in read-only mode.";
+
+/* Location: RoomSettingsView.swift - Apply room settings button */
+"remoteNodes.roomSettings.applyRoomSettings" = "Apply Room Settings";
+
+/* Location: RoomSettingsView.swift - Identity section footer */
+"remoteNodes.roomSettings.identityFooter" = "Room name and GPS coordinates for map display.";
+
+/* Location: RoomSettingsView.swift - Reboot confirmation title */
+"remoteNodes.roomSettings.rebootConfirmTitle" = "Reboot Room?";
+
+/* Location: RoomSettingsView.swift - Reboot confirmation message */
+"remoteNodes.roomSettings.rebootMessage" = "The room will restart and be temporarily unavailable.";
+
+/* Location: RoomSettingsView.swift - Radio restart warning */
+"remoteNodes.roomSettings.radioRestartWarning" = "Applying these changes will restart the room";
+
+/* Location: RoomSettingsView.swift - No service error */
+"remoteNodes.roomSettings.noService" = "Room service not available";
+
+/* Location: RoomSettingsView.swift - Not connected error */
+"remoteNodes.roomSettings.notConnected" = "Not connected to room";
+
+/* Location: RoomSettingsView.swift - Clock ahead error */
+"remoteNodes.roomSettings.clockAheadError" = "Room clock is ahead of phone time. If it's too far forward, reboot the room then sync time again.";
+
+// MARK: - Room Info Sheet (additions)
+
+/* Location: RoomInfoSheet.swift - Telemetry button */
+"remoteNodes.room.telemetry" = "Telemetry";
+
+/* Location: RoomInfoSheet.swift - Management button */
+"remoteNodes.room.management" = "Management";
 
 // MARK: - Shared
 

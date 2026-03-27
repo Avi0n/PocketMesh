@@ -24,7 +24,7 @@ struct ContactsListView: View {
 
     private var filteredContacts: [ContactDTO] {
         // Fall back to lastHeard sort when distance is selected but location unavailable
-        let effectiveSortOrder = (sortOrder == .distance && appState.locationService.currentLocation == nil)
+        let effectiveSortOrder = (sortOrder == .distance && appState.bestAvailableLocation == nil)
             ? .lastHeard
             : sortOrder
 
@@ -32,7 +32,7 @@ struct ContactsListView: View {
             searchText: searchText,
             segment: selectedSegment,
             sortOrder: effectiveSortOrder,
-            userLocation: appState.locationService.currentLocation
+            userLocation: appState.bestAvailableLocation
         )
     }
 

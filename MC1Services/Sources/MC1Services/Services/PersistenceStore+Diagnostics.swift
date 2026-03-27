@@ -377,7 +377,9 @@ extension PersistenceStore {
         rxAirtimeSeconds: UInt32?,
         packetsSent: UInt32?,
         packetsReceived: UInt32?,
-        receiveErrors: UInt32?
+        receiveErrors: UInt32?,
+        postedCount: UInt16? = nil,
+        postPushCount: UInt16? = nil
     ) throws -> UUID {
         try saveNodeStatusSnapshot(
             timestamp: .now,
@@ -390,7 +392,9 @@ extension PersistenceStore {
             rxAirtimeSeconds: rxAirtimeSeconds,
             packetsSent: packetsSent,
             packetsReceived: packetsReceived,
-            receiveErrors: receiveErrors
+            receiveErrors: receiveErrors,
+            postedCount: postedCount,
+            postPushCount: postPushCount
         )
     }
 
@@ -407,7 +411,9 @@ extension PersistenceStore {
         rxAirtimeSeconds: UInt32?,
         packetsSent: UInt32?,
         packetsReceived: UInt32?,
-        receiveErrors: UInt32?
+        receiveErrors: UInt32?,
+        postedCount: UInt16? = nil,
+        postPushCount: UInt16? = nil
     ) throws -> UUID {
         let snapshot = NodeStatusSnapshot(
             timestamp: timestamp,
@@ -420,7 +426,9 @@ extension PersistenceStore {
             rxAirtimeSeconds: rxAirtimeSeconds,
             packetsSent: packetsSent,
             packetsReceived: packetsReceived,
-            receiveErrors: receiveErrors
+            receiveErrors: receiveErrors,
+            postedCount: postedCount,
+            postPushCount: postPushCount
         )
         modelContext.insert(snapshot)
         try modelContext.save()

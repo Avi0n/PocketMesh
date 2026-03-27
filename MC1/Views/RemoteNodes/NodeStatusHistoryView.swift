@@ -16,12 +16,13 @@ struct NodeStatusHistoryView: View {
     }
 
     var body: some View {
+        let filtered = filteredSnapshots
         List {
             HistoryTimeRangePicker(selection: $timeRange)
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.battery, unit: "V", color: .mint,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.batteryMillivolts.map { .init(id: s.id, date: s.timestamp, value: Double($0) / 1000.0) }
                 },
                 yAxisDomain: ocvArray.voltageChartDomain()
@@ -29,43 +30,57 @@ struct NodeStatusHistoryView: View {
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.snr, unit: "dB", color: .blue,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.lastSNR.map { .init(id: s.id, date: s.timestamp, value: $0) }
                 }
             )
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.rssi, unit: "dBm", color: .purple,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.lastRSSI.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.noiseFloor, unit: "dBm", color: .indigo,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.noiseFloor.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.packetsSent, unit: "", color: .green,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.packetsSent.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.packetsReceived, unit: "", color: .orange,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.packetsReceived.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
 
             metricSection(
                 title: L10n.RemoteNodes.RemoteNodes.History.receiveErrors, unit: "", color: .red,
-                dataPoints: filteredSnapshots.compactMap { s in
+                dataPoints: filtered.compactMap { s in
                     s.receiveErrors.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                }
+            )
+
+            metricSection(
+                title: L10n.RemoteNodes.RemoteNodes.RoomStatus.postsReceived, unit: "", color: .purple,
+                dataPoints: filtered.compactMap { s in
+                    s.postedCount.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
+                }
+            )
+
+            metricSection(
+                title: L10n.RemoteNodes.RemoteNodes.RoomStatus.postsPushed, unit: "", color: .mint,
+                dataPoints: filtered.compactMap { s in
+                    s.postPushCount.map { .init(id: s.id, date: s.timestamp, value: Double($0)) }
                 }
             )
 

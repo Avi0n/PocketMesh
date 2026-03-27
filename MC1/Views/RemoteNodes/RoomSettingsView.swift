@@ -1,0 +1,249 @@
+import SwiftUI
+import MC1Services
+import CoreLocation
+
+struct RoomSettingsView: View {
+    @Environment(\.appState) private var appState
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: NodeSettingsField?
+
+    let session: RemoteNodeSessionDTO
+    @State private var viewModel = RoomSettingsViewModel()
+    @State private var showRebootConfirmation = false
+    @State private var showingLocationPicker = false
+
+    var body: some View {
+        Form {
+            NodeSettingsHeaderSection(publicKey: session.publicKey, name: session.name, role: session.role)
+            NodeRadioSettingsSection(
+                settings: viewModel.helper,
+                focusedField: $focusedField,
+                radioRestartWarning: L10n.RemoteNodes.RemoteNodes.RoomSettings.radioRestartWarning
+            )
+            RoomBehaviorSection(viewModel: viewModel, focusedField: $focusedField)
+            RemoteNodeIdentitySection(
+                settings: viewModel.helper,
+                focusedField: $focusedField,
+                onPickLocation: { showingLocationPicker = true }
+            )
+            NodeContactInfoSection(settings: viewModel.helper, focusedField: $focusedField)
+            NodeSecuritySection(settings: viewModel.helper)
+            NodeDeviceInfoSection(settings: viewModel.helper)
+            NodeActionsSection(
+                settings: viewModel.helper,
+                showRebootConfirmation: $showRebootConfirmation,
+                rebootConfirmTitle: L10n.RemoteNodes.RemoteNodes.RoomSettings.rebootConfirmTitle,
+                rebootMessage: L10n.RemoteNodes.RemoteNodes.RoomSettings.rebootMessage
+            )
+        }
+        .navigationTitle(L10n.RemoteNodes.RemoteNodes.RoomSettings.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(L10n.RemoteNodes.RemoteNodes.Settings.done) {
+                    focusedField = nil
+                }
+            }
+        }
+        .task {
+            await viewModel.configure(appState: appState, session: session)
+        }
+        .onDisappear {
+            Task {
+                await viewModel.cleanup()
+            }
+        }
+        .alert(L10n.RemoteNodes.RemoteNodes.Settings.success, isPresented: $viewModel.helper.showSuccessAlert) {
+            Button(L10n.RemoteNodes.RemoteNodes.Settings.ok, role: .cancel) { }
+        } message: {
+            Text(viewModel.helper.successMessage ?? L10n.RemoteNodes.RemoteNodes.Settings.settingsApplied)
+        }
+        .sheet(isPresented: $showingLocationPicker) {
+            LocationPickerView(
+                initialCoordinate: CLLocationCoordinate2D(
+                    latitude: viewModel.helper.latitude ?? 0,
+                    longitude: viewModel.helper.longitude ?? 0
+                )
+            ) { coordinate in
+                viewModel.helper.setLocationFromPicker(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude
+                )
+            }
+        }
+    }
+}
+
+// MARK: - Room Behavior Section
+
+private struct RoomBehaviorSection: View {
+    @Bindable var viewModel: RoomSettingsViewModel
+    var focusedField: FocusState<NodeSettingsField?>.Binding
+
+    var body: some View {
+        ExpandableSettingsSection(
+            title: L10n.RemoteNodes.RemoteNodes.RoomSettings.roomSettingsSection,
+            icon: "slider.horizontal.3",
+            isExpanded: $viewModel.isRoomSettingsExpanded,
+            isLoaded: { viewModel.roomSettingsLoaded },
+            isLoading: $viewModel.isLoadingRoomSettings,
+            hasError: $viewModel.roomSettingsError,
+            onLoad: { await viewModel.fetchRoomSettings() },
+            footer: L10n.RemoteNodes.RemoteNodes.RoomSettings.roomSettingsFooter
+        ) {
+            SecureField(L10n.RemoteNodes.RemoteNodes.RoomSettings.guestPassword, text: Binding(
+                get: { viewModel.guestPassword ?? "" },
+                set: { viewModel.guestPassword = $0 }
+            ))
+            .focused(focusedField, equals: .guestPassword)
+            .overlay(alignment: .trailing) {
+                if viewModel.guestPassword == nil && viewModel.isLoadingRoomSettings {
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.trailing, 8)
+                }
+            }
+
+            Toggle(L10n.RemoteNodes.RemoteNodes.RoomSettings.allowReadOnly, isOn: Binding(
+                get: { viewModel.allowReadOnly ?? false },
+                set: { viewModel.allowReadOnly = $0 }
+            ))
+                .overlay(alignment: .trailing) {
+                    if viewModel.allowReadOnly == nil && viewModel.isLoadingRoomSettings {
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.trailing, 60)
+                    }
+                }
+
+            Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.allowReadOnlyFooter)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.advertInterval0Hop)
+                Spacer()
+                if let interval = viewModel.advertIntervalMinutes {
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.min, value: Binding(
+                        get: { interval },
+                        set: { viewModel.advertIntervalMinutes = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused(focusedField, equals: .advertInterval)
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.min)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = viewModel.advertIntervalError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.advertIntervalFlood)
+                Spacer()
+                if let interval = viewModel.floodAdvertIntervalHours {
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.hrs, value: Binding(
+                        get: { interval },
+                        set: { viewModel.floodAdvertIntervalHours = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused(focusedField, equals: .floodAdvertInterval)
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.hrs)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = viewModel.floodAdvertIntervalError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            HStack {
+                Text(L10n.RemoteNodes.RemoteNodes.Settings.maxFloodHops)
+                Spacer()
+                if let hops = viewModel.floodMaxHops {
+                    TextField(L10n.RemoteNodes.RemoteNodes.Settings.hops, value: Binding(
+                        get: { hops },
+                        set: { viewModel.floodMaxHops = $0 }
+                    ), format: .number)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 60)
+                        .focused(focusedField, equals: .floodMaxHops)
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.hops)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let error = viewModel.floodMaxHopsError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+
+            Button {
+                Task { await viewModel.applyRoomSettings() }
+            } label: {
+                HStack {
+                    Spacer()
+                    if viewModel.helper.isApplying {
+                        ProgressView()
+                    } else if viewModel.roomSettingsApplySuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.applyRoomSettings)
+                            .foregroundStyle(viewModel.roomSettingsModified ? Color.accentColor : .secondary)
+                            .transition(.opacity)
+                    }
+                    Spacer()
+                }
+                .animation(.default, value: viewModel.roomSettingsApplySuccess)
+            }
+            .disabled(viewModel.helper.isApplying || viewModel.roomSettingsApplySuccess || !viewModel.roomSettingsModified)
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        RoomSettingsView(
+            session: RemoteNodeSessionDTO(
+                id: UUID(),
+                deviceID: UUID(),
+                publicKey: Data(repeating: 0x42, count: 32),
+                name: "Community Room",
+                role: .roomServer,
+                latitude: 37.7749,
+                longitude: -122.4194,
+                isConnected: true,
+                permissionLevel: .admin
+            )
+        )
+        .environment(\.appState, AppState())
+    }
+}

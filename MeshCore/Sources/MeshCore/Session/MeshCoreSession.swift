@@ -1373,12 +1373,19 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// This is a sensitive operation that exposes the device's cryptographic identity.
     /// The exported key can be imported into another device to clone its identity.
     ///
-    /// - Returns: The 32-byte private key, or `nil` if export is disabled.
-    /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
+    /// - Returns: The 32-byte private key.
+    /// - Throws: ``MeshCoreError/featureDisabled`` if private key export is disabled on the device,
+    ///   or ``MeshCoreError/timeout`` if the device doesn't respond.
     public func exportPrivateKey() async throws -> Data {
-        try await sendAndWait(PacketBuilder.exportPrivateKey()) { event in
+        try await sendAndWaitWithError(
+            PacketBuilder.exportPrivateKey()
+        ) { event in
             if case .privateKey(let key) = event { return key }
-            if case .disabled = event { return nil }
+            return nil
+        } errorMatcher: { event in
+            if case .disabled = event {
+                return MeshCoreError.featureDisabled
+            }
             return nil
         }
     }

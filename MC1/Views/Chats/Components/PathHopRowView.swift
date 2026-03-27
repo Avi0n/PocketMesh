@@ -80,16 +80,7 @@ struct PathHopRowView: View {
 
     private var snrQuality: SNRQuality { SNRQuality(snr: snr) }
 
-    private var signalQualityText: String {
-        switch snrQuality {
-        case .excellent: L10n.Chats.Chats.Signal.excellent
-        case .good: L10n.Chats.Chats.Signal.good
-        case .fair: L10n.Chats.Chats.Signal.fair
-        case .poor: L10n.Chats.Chats.Signal.poor
-        case .veryPoor: L10n.Chats.Chats.Signal.veryPoor
-        case .unknown: L10n.Chats.Chats.Path.Hop.signalUnknown
-        }
-    }
+    private var signalQualityText: String { snrQuality.localizedLabel }
 }
 
 #Preview {

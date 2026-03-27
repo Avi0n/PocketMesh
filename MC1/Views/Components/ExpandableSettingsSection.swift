@@ -9,7 +9,7 @@ struct ExpandableSettingsSection<Content: View>: View {
     @Binding var isExpanded: Bool
     let isLoaded: () -> Bool  // Closure instead of binding (supports computed properties)
     @Binding var isLoading: Bool
-    @Binding var error: String?
+    @Binding var hasError: Bool
 
     let onLoad: () async -> Void
     let footer: String?
@@ -21,7 +21,7 @@ struct ExpandableSettingsSection<Content: View>: View {
         isExpanded: Binding<Bool>,
         isLoaded: @escaping () -> Bool,
         isLoading: Binding<Bool>,
-        error: Binding<String?>,
+        hasError: Binding<Bool>,
         onLoad: @escaping () async -> Void,
         footer: String? = nil,
         @ViewBuilder content: @escaping () -> Content
@@ -31,7 +31,7 @@ struct ExpandableSettingsSection<Content: View>: View {
         self._isExpanded = isExpanded
         self.isLoaded = isLoaded
         self._isLoading = isLoading
-        self._error = error
+        self._hasError = hasError
         self.onLoad = onLoad
         self.footer = footer
         self.content = content
@@ -45,7 +45,7 @@ struct ExpandableSettingsSection<Content: View>: View {
                 content()
 
                 // Show error banner if something failed
-                if let error, !isLoaded() {
+                if hasError && !isLoaded() {
                     VStack(spacing: 12) {
                         Label(L10n.Localizable.Common.Error.failedToLoad, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
@@ -102,7 +102,7 @@ struct ExpandableSettingsSection<Content: View>: View {
 #Preview {
     @Previewable @State var isExpanded = false
     @Previewable @State var isLoading = false
-    @Previewable @State var error: String?
+    @Previewable @State var hasError = false
     @Previewable @State var data: String?
 
     Form {
@@ -112,7 +112,7 @@ struct ExpandableSettingsSection<Content: View>: View {
             isExpanded: $isExpanded,
             isLoaded: { data != nil },
             isLoading: $isLoading,
-            error: $error,
+            hasError: $hasError,
             onLoad: {
                 isLoading = true
                 try? await Task.sleep(for: .seconds(1))

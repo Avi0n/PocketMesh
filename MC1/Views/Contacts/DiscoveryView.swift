@@ -13,7 +13,7 @@ struct DiscoveryView: View {
     @State private var showClearConfirmation = false
 
     private var filteredNodes: [DiscoveredNodeDTO] {
-        let effectiveSortOrder = (sortOrder == .distance && appState.locationService.currentLocation == nil)
+        let effectiveSortOrder = (sortOrder == .distance && appState.bestAvailableLocation == nil)
             ? .lastHeard
             : sortOrder
 
@@ -21,7 +21,7 @@ struct DiscoveryView: View {
             searchText: searchText,
             segment: selectedSegment,
             sortOrder: effectiveSortOrder,
-            userLocation: appState.locationService.currentLocation
+            userLocation: appState.bestAvailableLocation
         )
     }
 
@@ -351,7 +351,7 @@ private struct DiscoveryNodeRow: View {
     }
 
     private var distanceToNode: String? {
-        guard let userLocation = appState.locationService.currentLocation,
+        guard let userLocation = appState.bestAvailableLocation,
               node.hasLocation else { return nil }
 
         let nodeLocation = CLLocation(

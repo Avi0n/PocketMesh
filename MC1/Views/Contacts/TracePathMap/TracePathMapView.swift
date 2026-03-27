@@ -57,7 +57,7 @@ struct TracePathMapView: View {
         .onAppear {
             mapViewModel.configure(
                 traceViewModel: traceViewModel,
-                userLocation: appState.locationService.currentLocation
+                userLocation: appState.bestAvailableLocation
             )
             mapViewModel.showLabels = showLabels
             mapViewModel.rebuildOverlays()
@@ -66,8 +66,10 @@ struct TracePathMapView: View {
         .onChange(of: showLabels) { _, newValue in
             mapViewModel.showLabels = newValue
         }
-        .onChange(of: appState.locationService.currentLocation) { _, newLocation in
-            mapViewModel.updateUserLocation(newLocation)
+        .onChange(of: appState.bestAvailableLocation) { old, new in
+            guard old?.coordinate.latitude != new?.coordinate.latitude
+               || old?.coordinate.longitude != new?.coordinate.longitude else { return }
+            mapViewModel.updateUserLocation(new)
         }
         .onChange(of: traceViewModel.availableNodes) { _, _ in
             mapViewModel.rebuildPathState()
