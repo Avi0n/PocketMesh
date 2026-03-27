@@ -410,7 +410,11 @@ extension SyncCoordinator {
             guard let self else { return }
 
             if let contact {
-                await services.repeaterAdminService.invokeCLIHandler(message, fromContact: contact)
+                if contact.type == .room {
+                    await services.roomAdminService.invokeCLIHandler(message, fromContact: contact)
+                } else {
+                    await services.repeaterAdminService.invokeCLIHandler(message, fromContact: contact)
+                }
             } else {
                 self.logger.warning("Dropping CLI response: no contact found for sender")
             }

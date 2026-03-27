@@ -62,9 +62,6 @@ public final class MessageEventBroadcaster {
     /// Reference to binary protocol service for handling binary responses
     var binaryProtocolService: BinaryProtocolService?
 
-    /// Reference to repeater admin service for telemetry and CLI handling
-    var repeaterAdminService: RepeaterAdminService?
-
     // MARK: - Initialization
 
     public init() {}
@@ -204,7 +201,6 @@ public final class MessageEventBroadcaster {
         dataStore = services.dataStore
         roomServerService = services.roomServerService
         binaryProtocolService = services.binaryProtocolService
-        repeaterAdminService = services.repeaterAdminService
 
         // Wire message event callbacks for real-time chat updates
         await services.syncCoordinator.setMessageEventCallbacks(
@@ -293,26 +289,4 @@ public final class MessageEventBroadcaster {
         }
     }
 
-    // MARK: - Status Response Handling
-
-    /// Handle status response from remote node
-    func handleStatusResponse(_ status: StatusResponse) async {
-        await repeaterAdminService?.invokeStatusHandler(status)
-
-        let prefixHex = status.publicKeyPrefix.map { String(format: "%02x", $0) }.joined()
-        logger.info("Received status response from node: \(prefixHex)")
-    }
-
-    // Note: Login results and binary responses are handled internally by
-    // MC1Services via MeshCore event monitoring. No external handlers needed.
-
-    /// Handle telemetry response
-    func handleTelemetryResponse(_ response: TelemetryResponse) async {
-        await repeaterAdminService?.invokeTelemetryHandler(response)
-    }
-
-    /// Handle CLI response
-    func handleCLIResponse(_ message: ContactMessage, fromContact contact: ContactDTO) async {
-        await repeaterAdminService?.invokeCLIHandler(message, fromContact: contact)
-    }
 }

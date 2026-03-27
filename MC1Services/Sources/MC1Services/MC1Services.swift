@@ -80,6 +80,9 @@ public enum RadioOptions {
         7_800, 10_400, 15_600, 20_800, 31_250, 41_700, 62_500, 125_000, 250_000, 500_000
     ]
 
+    /// Bandwidth options in kHz for CLI protocol display
+    public static let bandwidthsKHz: [Double] = bandwidthsHz.map { Double($0) / 1000.0 }
+
     /// Valid spreading factor range (SF5-SF12)
     public static let spreadingFactors: ClosedRange<Int> = 5...12
 

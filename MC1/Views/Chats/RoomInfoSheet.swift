@@ -13,6 +13,8 @@ struct RoomInfoSheet: View {
     @State private var isFavorite: Bool
     @State private var notificationTask: Task<Void, Never>?
     @State private var favoriteTask: Task<Void, Never>?
+    @State private var showTelemetry = false
+    @State private var showSettings = false
 
     init(session: RemoteNodeSessionDTO) {
         self.session = session
@@ -54,6 +56,19 @@ struct RoomInfoSheet: View {
                     favoriteTask?.cancel()
                 }
 
+                if session.isConnected {
+                    Section {
+                        Button { showTelemetry = true } label: {
+                            Label(L10n.Contacts.Contacts.Detail.telemetry, systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        if session.isAdmin {
+                            Button { showSettings = true } label: {
+                                Label(L10n.Contacts.Contacts.Detail.management, systemImage: "gearshape.2")
+                            }
+                        }
+                    }
+                }
+
                 Section(Strings.details) {
                     LabeledContent(L10n.RemoteNodes.RemoteNodes.name, value: session.name)
                     LabeledContent(Strings.permission, value: session.permissionLevel.displayName)
@@ -89,6 +104,13 @@ struct RoomInfoSheet: View {
                 }
             }
         }
-
+        .sheet(isPresented: $showTelemetry) {
+            RoomStatusView(session: session)
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                RoomSettingsView(session: session)
+            }
+        }
     }
 }

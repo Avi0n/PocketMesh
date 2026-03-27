@@ -2596,7 +2596,7 @@ public enum L10n {
         /// Location: RepeaterSettingsView.swift - Firmware label
         public static let firmware = L10n.tr("RemoteNodes", "remoteNodes.settings.firmware", fallback: "Firmware")
         /// Location: RepeaterSettingsViewModel.swift - Flood interval validation error
-        public static let floodIntervalValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.floodIntervalValidation", fallback: "Accepts 3-48 hours")
+        public static let floodIntervalValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.floodIntervalValidation", fallback: "Accepts 0 (off) or 3-168 hours")
         /// Location: RepeaterSettingsViewModel.swift - Flood max hops validation error
         public static let floodMaxValidation = L10n.tr("RemoteNodes", "remoteNodes.settings.floodMaxValidation", fallback: "Accepts 0-64 hops")
         /// Location: RepeaterSettingsView.swift - Frequency label
@@ -2627,8 +2627,8 @@ public enum L10n {
         public static let min = L10n.tr("RemoteNodes", "remoteNodes.settings.min", fallback: "min")
         /// Location: RepeaterSettingsView.swift - New password placeholder
         public static let newPassword = L10n.tr("RemoteNodes", "remoteNodes.settings.newPassword", fallback: "New Password")
-        /// Location: RepeaterSettingsViewModel.swift - No service error
-        public static let noService = L10n.tr("RemoteNodes", "remoteNodes.settings.noService", fallback: "Repeater service not available")
+        /// Location: NodeSettingsHelper.swift - No service error
+        public static let noService = L10n.tr("RemoteNodes", "remoteNodes.settings.noService", fallback: "Service not available")
         /// Location: RepeaterSettingsViewModel.swift - Not connected error
         public static let notConnected = L10n.tr("RemoteNodes", "remoteNodes.settings.notConnected", fallback: "Not connected to repeater")
         /// Location: RepeaterSettingsView.swift - OK button
@@ -2809,6 +2809,8 @@ public enum L10n {
         public static let packetsSent = L10n.tr("RemoteNodes", "remoteNodes.status.packetsSent", fallback: "Packets Sent")
         /// Location: RepeaterStatusView.swift - Receive errors label
         public static let receiveErrors = L10n.tr("RemoteNodes", "remoteNodes.status.receiveErrors", fallback: "Packet Errors Received")
+        /// Location: RepeaterStatusView.swift, RoomStatusView.swift - Refresh button accessibility label
+        public static let refresh = L10n.tr("RemoteNodes", "remoteNodes.status.refresh", fallback: "Refresh")
         /// Location: RepeaterStatusViewModel.swift - Request timed out
         public static let requestTimedOut = L10n.tr("RemoteNodes", "remoteNodes.status.requestTimedOut", fallback: "Request timed out")
         /// Location: RepeaterStatusView.swift - Seconds ago format

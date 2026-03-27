@@ -103,9 +103,9 @@ public enum OCVPreset: String, CaseIterable, Codable, Sendable {
         allCases.filter { $0.category == .batteryChemistry }
     }
 
-    /// Presets available for repeater/remote node configuration.
+    /// Presets available for remote node configuration.
     /// Includes battery chemistry types plus select device-specific presets.
-    public static var repeaterPresets: [OCVPreset] {
+    public static var nodePresets: [OCVPreset] {
         var presets = batteryChemistryPresets
         presets.append(.seeedSolarNode)
         return presets

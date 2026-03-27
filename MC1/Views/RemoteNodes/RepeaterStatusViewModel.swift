@@ -9,41 +9,23 @@ private let logger = Logger(subsystem: "com.mc1", category: "RepeaterStatusVM")
 @MainActor
 final class RepeaterStatusViewModel {
 
-    // MARK: - Properties
+    // MARK: - Shared Helper
 
-    /// Current session
-    var session: RemoteNodeSessionDTO?
+    var helper = NodeStatusHelper()
 
-    /// Last received status
-    var status: RemoteNodeStatus?
+    // MARK: - Repeater-Only Properties
 
     /// Neighbor entries
     var neighbors: [NeighbourInfo] = []
 
-    /// Last received telemetry
-    var telemetry: TelemetryResponse?
-
-    /// Cached decoded data points to avoid repeated LPP decoding.
-    /// The TelemetryResponse.dataPoints computed property decodes on every access,
-    /// which causes memory pressure during SwiftUI re-renders.
-    private(set) var cachedDataPoints: [LPPDataPoint] = []
-
     /// Loading states
-    var isLoadingStatus = false
     var isLoadingNeighbors = false
-    var isLoadingTelemetry = false
 
     /// Whether neighbors have been loaded at least once (for refresh logic)
     var neighborsLoaded = false
 
     /// Whether the neighbors disclosure group is expanded
     var neighborsExpanded = false
-
-    /// Whether telemetry has been loaded at least once (for refresh logic)
-    var telemetryLoaded = false
-
-    /// Whether the telemetry disclosure group is expanded
-    var telemetryExpanded = false
 
     /// Owner info text
     var ownerInfo: String?
@@ -54,65 +36,28 @@ final class RepeaterStatusViewModel {
     var ownerInfoExpanded = false
     var ownerInfoError: String?
 
-    /// Error message if any
-    var errorMessage: String?
-
-    // MARK: - OCV Curve Properties
-
-    /// Whether the battery curve disclosure group is expanded
-    var isBatteryCurveExpanded = false
-
-    /// Selected OCV preset
-    var selectedOCVPreset: OCVPreset = .liIon
-
-    /// Current OCV voltage values
-    var ocvValues: [Int] = OCVPreset.liIon.ocvArray
-
-    /// Error from OCV save operation
-    var ocvError: String?
-
-    /// Contact ID for saving OCV settings
-    private var contactID: UUID?
-
     // MARK: - Dependencies
 
     private var repeaterAdminService: RepeaterAdminService?
-    private var contactService: ContactService?
-    var nodeSnapshotService: NodeSnapshotService?
 
-    /// ID of the current session's snapshot (for enrichment).
-    /// Because `handleStatusResponse` suspends while saving the snapshot,
-    /// neighbor/telemetry handlers may fire before this is set.
-    /// In that case, enrichment data is buffered in `pendingNeighborEntries`
-    /// / `pendingTelemetryEntries` and flushed once the ID is available.
-    private var currentSnapshotID: UUID?
-
-    /// Buffered enrichment data received before `currentSnapshotID` was set.
+    /// Buffered neighbor enrichment data received before snapshot ID was set.
     private var pendingNeighborEntries: [NeighborSnapshotEntry]?
-    private var pendingTelemetryEntries: [TelemetrySnapshotEntry]?
-
-    /// Previous snapshot for delta display
-    private(set) var previousSnapshot: NodeStatusSnapshotDTO?
 
     // MARK: - Initialization
 
     init() {}
 
-    /// Configure with services from AppState
     func configure(appState: AppState) {
         self.repeaterAdminService = appState.services?.repeaterAdminService
-        self.contactService = appState.services?.contactService
-        self.nodeSnapshotService = appState.services?.nodeSnapshotService
-        // Handler registration moved to registerHandlers() called from view's .task modifier
+        helper.configure(
+            contactService: appState.services?.contactService,
+            nodeSnapshotService: appState.services?.nodeSnapshotService
+        )
     }
 
-    /// Register for push notification handlers
-    /// Called from view's .task modifier to ensure proper lifecycle management
-    /// This method is idempotent - it clears existing handlers before registering new ones
     func registerHandlers(appState: AppState) async {
         guard let repeaterAdminService = appState.services?.repeaterAdminService else { return }
 
-        // Clear any existing handlers first (idempotent setup)
         await repeaterAdminService.clearHandlers()
 
         await repeaterAdminService.setStatusHandler { [weak self] status in
@@ -120,263 +65,121 @@ final class RepeaterStatusViewModel {
         }
 
         await repeaterAdminService.setNeighboursHandler { [weak self] response in
-            await MainActor.run {
-                self?.handleNeighboursResponse(response)
-            }
+            await self?.handleNeighboursResponse(response)
         }
 
         await repeaterAdminService.setTelemetryHandler { [weak self] response in
-            await MainActor.run {
-                self?.handleTelemetryResponse(response)
-            }
+            await self?.helper.handleTelemetryResponse(response)
         }
-
     }
 
     // MARK: - Status
 
-    /// Timeout duration for status/neighbors requests
-    private static let requestTimeout: Duration = RemoteOperationTimeoutPolicy.binaryMaximum
-
-    /// Check if error is a transient "not ready" error that should be retried.
-    /// Error code 10 occurs when the firmware isn't fully ready after login.
-    private func isTransientError(_ error: Error) -> Bool {
-        guard let remoteError = error as? RemoteNodeError,
-              case .sessionError(let meshError) = remoteError,
-              case .deviceError(let code) = meshError else {
-            return false
-        }
-        return code == 10
-    }
-
-    private static let transientRetryDelays: [Duration] = [
-        .milliseconds(500),
-        .seconds(1),
-        .seconds(2),
-    ]
-
-    private func remainingBudget(until deadline: ContinuousClock.Instant) -> Duration? {
-        let remaining = deadline - .now
-        return remaining > .zero ? remaining : nil
-    }
-
-    private func waitForRetry(delay: Duration, until deadline: ContinuousClock.Instant) async throws {
-        guard let remaining = remainingBudget(until: deadline) else {
-            throw RemoteNodeError.timeout
-        }
-        try await Task.sleep(for: min(delay, remaining))
-    }
-
-    private func performWithTransientRetries<T>(
-        operationName: String,
-        operation: @escaping @Sendable (Duration) async throws -> T
-    ) async throws -> T {
-        let deadline = ContinuousClock.now.advanced(by: Self.requestTimeout)
-        var delayIterator = Self.transientRetryDelays.makeIterator()
-
-        while true {
-            guard let timeout = remainingBudget(until: deadline) else {
-                logger.warning("\(operationName, privacy: .public) request exhausted its shared timeout budget")
-                throw RemoteNodeError.timeout
-            }
-
-            do {
-                return try await operation(timeout)
-            } catch {
-                guard isTransientError(error), let delay = delayIterator.next() else {
-                    throw error
-                }
-                try await waitForRetry(delay: delay, until: deadline)
-            }
-        }
-    }
-
-    /// Request status from the repeater
     func requestStatus(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
 
-        self.session = session
-        isLoadingStatus = true
-        errorMessage = nil
+        if helper.session == nil { helper.session = session }
+        helper.isLoadingStatus = true
+        helper.errorMessage = nil
 
         do {
-            let response = try await performWithTransientRetries(operationName: "status") { [repeaterAdminService] timeout in
+            let response = try await helper.performWithTransientRetries(operationName: "status") { [repeaterAdminService] timeout in
                 return try await repeaterAdminService.requestStatus(sessionID: session.id, timeout: timeout)
             }
             await handleStatusResponse(response)
         } catch RemoteNodeError.timeout {
-            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
-            isLoadingStatus = false
+            helper.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            helper.isLoadingStatus = false
         } catch {
-            errorMessage = error.localizedDescription
-            isLoadingStatus = false
+            helper.errorMessage = error.localizedDescription
+            helper.isLoadingStatus = false
         }
     }
 
-    /// Request neighbors from the repeater
+    private func handleStatusResponse(_ response: RemoteNodeStatus) async {
+        await helper.handleStatusResponse(
+            response,
+            rxAirtimeSeconds: response.repeaterRxAirtimeSeconds,
+            receiveErrors: response.receiveErrors
+        )
+
+        // Flush any buffered neighbor entries now that snapshot ID is set
+        if let pending = pendingNeighborEntries {
+            pendingNeighborEntries = nil
+            helper.flushPendingNeighborEntries(pending)
+        }
+    }
+
+    // MARK: - Neighbors
+
     func requestNeighbors(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
 
-        self.session = session
+        if helper.session == nil { helper.session = session }
         isLoadingNeighbors = true
-        errorMessage = nil
+        helper.errorMessage = nil
 
         do {
-            let response = try await performWithTransientRetries(operationName: "neighbors") { [repeaterAdminService] timeout in
+            let response = try await helper.performWithTransientRetries(operationName: "neighbors") { [repeaterAdminService] timeout in
                 return try await repeaterAdminService.requestNeighbors(sessionID: session.id, timeout: timeout)
             }
             handleNeighboursResponse(response)
         } catch RemoteNodeError.timeout {
-            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            helper.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
             isLoadingNeighbors = false
         } catch {
-            errorMessage = error.localizedDescription
+            helper.errorMessage = error.localizedDescription
             isLoadingNeighbors = false
         }
     }
 
-    /// Handle status response from push notification
-    /// Validates response matches current session before updating
-    func handleStatusResponse(_ response: RemoteNodeStatus) async {
-        // Session validation: only accept responses for our session
-        guard let expectedPrefix = session?.publicKeyPrefix,
-              response.publicKeyPrefix == expectedPrefix else {
-            return  // Ignore responses for other sessions
-        }
-        self.status = response
-        self.isLoadingStatus = false
-
-        // Capture snapshot for history
-        guard let nodeSnapshotService, let session else { return }
-
-        // Fetch previous snapshot BEFORE saving so we compare against the last visit
-        let prev = await nodeSnapshotService.previousSnapshot(
-            for: session.publicKey,
-            before: .now
-        )
-        self.previousSnapshot = prev
-
-        let snapshotID = await nodeSnapshotService.saveStatusSnapshot(
-            nodePublicKey: session.publicKey,
-            batteryMillivolts: response.batteryMillivolts,
-            lastSNR: response.lastSNR,
-            lastRSSI: Int16(clamping: response.lastRSSI),
-            noiseFloor: Int16(clamping: response.noiseFloor),
-            uptimeSeconds: response.uptimeSeconds,
-            rxAirtimeSeconds: response.repeaterRxAirtimeSeconds,
-            packetsSent: response.packetsSent,
-            packetsReceived: response.packetsReceived,
-            receiveErrors: response.receiveErrors
-        )
-        if let snapshotID {
-            self.currentSnapshotID = snapshotID
-        } else if let prevID = prev?.id {
-            // Snapshot throttled — enrich the most recent existing snapshot instead
-            self.currentSnapshotID = prevID
-        }
-
-        // Flush any enrichment data that arrived during the await
-        if let enrichmentTarget = self.currentSnapshotID {
-            if let pending = pendingNeighborEntries {
-                pendingNeighborEntries = nil
-                Task { await nodeSnapshotService.enrichWithNeighbors(pending, snapshotID: enrichmentTarget) }
-            }
-            if let pending = pendingTelemetryEntries {
-                pendingTelemetryEntries = nil
-                Task { await nodeSnapshotService.enrichWithTelemetry(pending, snapshotID: enrichmentTarget) }
-            }
-        }
-    }
-
-    /// Handle neighbours response from push notification
     func handleNeighboursResponse(_ response: NeighboursResponse) {
-        // Note: NeighboursResponse may not include source prefix - validate if available
         self.neighbors = response.neighbours
         self.isLoadingNeighbors = false
         self.neighborsLoaded = true
 
-        // Enrich current snapshot with neighbor data
         let entries = response.neighbours.map {
             NeighborSnapshotEntry(publicKeyPrefix: $0.publicKeyPrefix, snr: $0.snr, secondsAgo: $0.secondsAgo)
         }
-        if let snapshotID = currentSnapshotID {
-            Task { await nodeSnapshotService?.enrichWithNeighbors(entries, snapshotID: snapshotID) }
-        } else {
+        if !helper.enrichWithNeighbors(entries) {
             pendingNeighborEntries = entries
         }
     }
 
     // MARK: - Telemetry
 
-    /// Request telemetry from the repeater
     func requestTelemetry(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
 
-        self.session = session
-        isLoadingTelemetry = true
-        errorMessage = nil
+        if helper.session == nil { helper.session = session }
+        helper.isLoadingTelemetry = true
+        helper.errorMessage = nil
 
         do {
-            let response = try await performWithTransientRetries(operationName: "telemetry") { [repeaterAdminService] timeout in
+            let response = try await helper.performWithTransientRetries(operationName: "telemetry") { [repeaterAdminService] timeout in
                 return try await repeaterAdminService.requestTelemetry(sessionID: session.id, timeout: timeout)
             }
-            handleTelemetryResponse(response)
+            helper.handleTelemetryResponse(response)
         } catch RemoteNodeError.timeout {
-            errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
-            isLoadingTelemetry = false
+            helper.errorMessage = L10n.RemoteNodes.RemoteNodes.Status.requestTimedOut
+            helper.isLoadingTelemetry = false
         } catch {
-            errorMessage = error.localizedDescription
-            isLoadingTelemetry = false
-        }
-    }
-
-    /// Handle telemetry response from push notification
-    func handleTelemetryResponse(_ response: TelemetryResponse) {
-        // Session validation: only accept responses for our session
-        guard let expectedPrefix = session?.publicKeyPrefix,
-              response.publicKeyPrefix == expectedPrefix else {
-            return  // Ignore responses for other sessions
-        }
-        self.telemetry = response
-        // Decode and cache data points once to avoid repeated LPP decoding during view updates
-        self.cachedDataPoints = response.dataPoints
-        self.isLoadingTelemetry = false
-        self.telemetryLoaded = true
-
-        // Enrich current snapshot with telemetry data
-        let entries: [TelemetrySnapshotEntry] = cachedDataPoints.compactMap { dp in
-            let numericValue: Double?
-            switch dp.value {
-            case .float(let value):
-                numericValue = value
-            case .integer(let value):
-                numericValue = Double(value)
-            default:
-                numericValue = nil
-            }
-            guard let value = numericValue else { return nil }
-            return TelemetrySnapshotEntry(channel: Int(dp.channel), type: dp.typeName, value: value)
-        }
-        if !entries.isEmpty {
-            if let snapshotID = currentSnapshotID {
-                Task { await nodeSnapshotService?.enrichWithTelemetry(entries, snapshotID: snapshotID) }
-            } else {
-                pendingTelemetryEntries = entries
-            }
+            helper.errorMessage = error.localizedDescription
+            helper.isLoadingTelemetry = false
         }
     }
 
     // MARK: - Owner Info
 
-    /// Request owner info from the repeater
     func requestOwnerInfo(for session: RemoteNodeSessionDTO) async {
         guard let repeaterAdminService else { return }
+        if helper.session == nil { helper.session = session }
 
         ownerInfoError = nil
         isLoadingOwnerInfo = true
 
         do {
-            let response = try await performWithTransientRetries(operationName: "ownerInfo") { [repeaterAdminService] timeout in
+            let response = try await helper.performWithTransientRetries(operationName: "ownerInfo") { [repeaterAdminService] timeout in
                 return try await repeaterAdminService.requestOwnerInfo(sessionID: session.id, timeout: timeout)
             }
             ownerInfo = response.ownerInfo
@@ -388,207 +191,10 @@ final class RepeaterStatusViewModel {
         isLoadingOwnerInfo = false
     }
 
-    // MARK: - Telemetry Grouping
-
-    /// Whether cached data points span multiple channels.
-    var hasMultipleChannels: Bool {
-        let channels = Set(cachedDataPoints.map(\.channel))
-        return channels.count > 1
-    }
-
-    /// Data points grouped by channel, sorted by channel number.
-    /// Only useful when `hasMultipleChannels` is true.
-    var groupedDataPoints: [(channel: UInt8, dataPoints: [LPPDataPoint])] {
-        Dictionary(grouping: cachedDataPoints, by: \.channel)
-            .sorted { $0.key < $1.key }
-            .map { (channel: $0.key, dataPoints: $0.value) }
-    }
-
-    // MARK: - Computed Properties
-
-    /// Em-dash for missing data (cleaner than "Unavailable")
-    private static let emDash = "—"
-
-    private static let secondsPerMinute: UInt32 = 60
-    private static let secondsPerHour: UInt32 = 3_600
-    private static let secondsPerDay: UInt32 = 86_400
-
-    var uptimeDisplay: String {
-        guard let uptime = status?.uptimeSeconds else { return Self.emDash }
-        let days = Int(uptime / Self.secondsPerDay)
-        let hours = Int((uptime % Self.secondsPerDay) / Self.secondsPerHour)
-        let minutes = Int((uptime % Self.secondsPerHour) / Self.secondsPerMinute)
-
-        if days > 0 {
-            if days == 1 {
-                return L10n.RemoteNodes.RemoteNodes.Status.uptime1Day(hours, minutes)
-            } else {
-                return L10n.RemoteNodes.RemoteNodes.Status.uptimeDays(days, hours, minutes)
-            }
-        } else if hours > 0 {
-            return L10n.RemoteNodes.RemoteNodes.Status.uptimeHours(hours, minutes)
-        }
-        return L10n.RemoteNodes.RemoteNodes.Status.uptimeMinutes(minutes)
-    }
-
-    var batteryDisplay: String {
-        guard let mv = status?.batteryMillivolts else { return Self.emDash }
-        let volts = Double(mv) / 1000.0
-        let battery = BatteryInfo(level: Int(mv))
-        let percent = battery.percentage(using: ocvValues)
-        return "\(volts.formatted(.number.precision(.fractionLength(2))))V (\(percent)%)"
-    }
-
-    var lastRSSIDisplay: String {
-        guard let rssi = status?.lastRSSI else { return Self.emDash }
-        return "\(rssi) dBm"
-    }
-
-    var lastSNRDisplay: String {
-        guard let snr = status?.lastSNR else { return Self.emDash }
-        return "\(snr.formatted(.number.precision(.fractionLength(1)))) dB"
-    }
-
-    var noiseFloorDisplay: String {
-        guard let nf = status?.noiseFloor else { return Self.emDash }
-        return "\(nf) dBm"
-    }
-
-    var packetsSentDisplay: String {
-        guard let count = status?.packetsSent else { return Self.emDash }
-        return count.formatted()
-    }
-
-    var packetsReceivedDisplay: String {
-        guard let count = status?.packetsReceived else { return Self.emDash }
-        return count.formatted()
-    }
+    // MARK: - Repeater-Only Display
 
     var receiveErrorsDisplay: String? {
-        guard let count = status?.receiveErrors, count > 0 else { return nil }
+        guard let count = helper.status?.receiveErrors, count > 0 else { return nil }
         return count.formatted()
-    }
-
-    // MARK: - Delta Display
-
-    /// Format a delta timestamp relative to now.
-    var previousSnapshotTimestamp: String? {
-        guard let prev = previousSnapshot else { return nil }
-        let interval = prev.timestamp.distance(to: .now)
-        let secondsPerHour: TimeInterval = 3_600
-        let secondsPerDay: TimeInterval = 86_400
-        if interval < secondsPerHour {
-            return L10n.RemoteNodes.RemoteNodes.History.vsMinutesAgo(Int(interval / 60))
-        } else if interval < secondsPerDay {
-            return L10n.RemoteNodes.RemoteNodes.History.vsHoursAgo(Int(interval / secondsPerHour))
-        } else {
-            return L10n.RemoteNodes.RemoteNodes.History.vsDate(prev.timestamp.formatted(.dateTime.month().day()))
-        }
-    }
-
-    /// Battery delta from previous snapshot (in millivolts, positive = increase)
-    var batteryDeltaMV: Int? {
-        guard let current = status?.batteryMillivolts,
-              let previous = previousSnapshot?.batteryMillivolts else { return nil }
-        return Int(current) - Int(previous)
-    }
-
-    /// SNR delta from previous snapshot
-    var snrDelta: Double? {
-        guard let current = status?.lastSNR,
-              let previous = previousSnapshot?.lastSNR else { return nil }
-        return current - previous
-    }
-
-    /// RSSI delta from previous snapshot
-    var rssiDelta: Int? {
-        guard let current = status?.lastRSSI,
-              let previous = previousSnapshot?.lastRSSI else { return nil }
-        return Int(current) - Int(previous)
-    }
-
-    /// Noise floor delta from previous snapshot
-    var noiseFloorDelta: Int? {
-        guard let current = status?.noiseFloor,
-              let previous = previousSnapshot?.noiseFloor else { return nil }
-        return Int(current) - Int(previous)
-    }
-
-    /// Fetch all snapshots for the current node
-    func fetchHistory() async -> [NodeStatusSnapshotDTO] {
-        guard let nodeSnapshotService, let session else {
-            logger.warning("fetchHistory: nodeSnapshotService or session is nil")
-            return []
-        }
-        return await nodeSnapshotService.fetchSnapshots(for: session.publicKey)
-    }
-
-    // MARK: - OCV Settings
-
-    /// Load OCV settings for a contact by public key
-    func loadOCVSettings(publicKey: Data, deviceID: UUID) async {
-        guard let contactService else { return }
-
-        do {
-            if let contact = try await contactService.getContact(deviceID: deviceID, publicKey: publicKey) {
-                contactID = contact.id
-
-                if let presetName = contact.ocvPreset {
-                    if presetName == OCVPreset.custom.rawValue, let customString = contact.customOCVArrayString {
-                        let parsed = customString.split(separator: ",")
-                            .compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
-                        if parsed.count == 11 {
-                            ocvValues = parsed
-                            selectedOCVPreset = .custom
-                            return
-                        }
-                    }
-                    if let preset = OCVPreset(rawValue: presetName) {
-                        selectedOCVPreset = preset
-                        ocvValues = preset.ocvArray
-                        return
-                    }
-                }
-
-                selectedOCVPreset = .liIon
-                ocvValues = OCVPreset.liIon.ocvArray
-            }
-        } catch {
-            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvLoadFailed
-        }
-    }
-
-    /// Save OCV settings for the current contact
-    func saveOCVSettings(preset: OCVPreset, values: [Int]) async {
-        guard let contactService,
-              let contactID else {
-            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvSaveNoContact
-            return
-        }
-
-        ocvError = nil
-
-        do {
-            if preset == .custom {
-                let customString = values.map(String.init).joined(separator: ",")
-                try await contactService.updateContactOCVSettings(
-                    contactID: contactID,
-                    preset: OCVPreset.custom.rawValue,
-                    customArray: customString
-                )
-            } else {
-                try await contactService.updateContactOCVSettings(
-                    contactID: contactID,
-                    preset: preset.rawValue,
-                    customArray: nil
-                )
-            }
-
-            // Update local state
-            selectedOCVPreset = preset
-            ocvValues = values
-        } catch {
-            ocvError = L10n.RemoteNodes.RemoteNodes.Status.ocvSaveFailed(error.localizedDescription)
-        }
     }
 }

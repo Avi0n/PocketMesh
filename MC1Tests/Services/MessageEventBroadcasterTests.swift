@@ -37,7 +37,6 @@ struct MessageEventBroadcasterTests {
         #expect(broadcaster.dataStore == nil)
         #expect(broadcaster.roomServerService == nil)
         #expect(broadcaster.binaryProtocolService == nil)
-        #expect(broadcaster.repeaterAdminService == nil)
     }
 
     // MARK: - Handler Methods
@@ -379,7 +378,6 @@ struct MessageEventBroadcasterTests {
         #expect(broadcaster.dataStore != nil)
         #expect(broadcaster.roomServerService != nil)
         #expect(broadcaster.binaryProtocolService != nil)
-        #expect(broadcaster.repeaterAdminService != nil)
     }
 }
 
