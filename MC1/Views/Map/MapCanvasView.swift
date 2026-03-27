@@ -37,7 +37,15 @@ struct MapCanvasView: View {
             // Floating controls
             VStack {
                 Spacer()
-                mapControls
+                MapCanvasControls(
+                    isNorthLocked: $viewModel.isNorthLocked,
+                    showingLayersMenu: $viewModel.showingLayersMenu,
+                    showLabels: $showLabels,
+                    contactsEmpty: viewModel.contactsWithLocation.isEmpty,
+                    onLocationTap: { onCenterOnUser() },
+                    onClearSelection: onClearSelection,
+                    onCenterAll: { viewModel.centerOnAllContacts() }
+                )
             }
 
             // Layers menu overlay
@@ -68,23 +76,34 @@ struct MapCanvasView: View {
         }
     }
 
-    // MARK: - Map Controls
+}
 
-    private var mapControls: some View {
+// MARK: - Map Controls
+
+private struct MapCanvasControls: View {
+    @Binding var isNorthLocked: Bool
+    @Binding var showingLayersMenu: Bool
+    @Binding var showLabels: Bool
+    let contactsEmpty: Bool
+    let onLocationTap: () -> Void
+    let onClearSelection: () -> Void
+    let onCenterAll: () -> Void
+
+    var body: some View {
         HStack {
             Spacer()
             MapControlsToolbar(
-                onLocationTap: { onCenterOnUser() },
-                showingLayersMenu: $viewModel.showingLayersMenu,
+                onLocationTap: onLocationTap,
+                showingLayersMenu: $showingLayersMenu,
                 topContent: {
-                    NorthLockButton(isNorthLocked: $viewModel.isNorthLocked)
+                    NorthLockButton(isNorthLocked: $isNorthLocked)
                 }
             ) {
                 LabelsToggleButton(showLabels: $showLabels)
                 CenterAllButton(
-                    isEmpty: viewModel.contactsWithLocation.isEmpty,
+                    isEmpty: contactsEmpty,
                     onClearSelection: onClearSelection,
-                    onCenterAll: { viewModel.centerOnAllContacts() }
+                    onCenterAll: onCenterAll
                 )
             }
         }

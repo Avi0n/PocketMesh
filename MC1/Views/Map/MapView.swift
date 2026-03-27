@@ -83,18 +83,19 @@ private struct MapRefreshButton: View {
     var viewModel: MapViewModel
 
     var body: some View {
-        Button {
+        Button(L10n.Map.Map.Controls.refresh, systemImage: "arrow.clockwise") {
             Task {
                 await viewModel.loadContactsWithLocation()
             }
-        } label: {
+        }
+        .labelStyle(.iconOnly)
+        .disabled(viewModel.isLoading)
+        .opacity(viewModel.isLoading ? 0 : 1)
+        .overlay {
             if viewModel.isLoading {
                 ProgressView()
-            } else {
-                Image(systemName: "arrow.clockwise")
             }
         }
-        .disabled(viewModel.isLoading)
     }
 }
 

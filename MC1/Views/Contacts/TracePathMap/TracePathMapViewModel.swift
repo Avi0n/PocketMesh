@@ -202,7 +202,7 @@ final class TracePathMapViewModel {
     }
 
     func generatePathName() -> String {
-        traceViewModel?.generatePathName() ?? "Path"
+        traceViewModel?.generatePathName() ?? L10n.Contacts.Contacts.Trace.Map.defaultPathName
     }
 
     // MARK: - Overlay Management

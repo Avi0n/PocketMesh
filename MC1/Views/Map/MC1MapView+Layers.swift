@@ -303,7 +303,7 @@ extension MC1MapView.Coordinator {
 
         let topoSource = MLNRasterTileSource(
             identifier: MapSourceID.topoTiles,
-            tileURLTemplates: [MapTileURLs.openTopoMapA],
+            tileURLTemplates: [MapTileURLs.openTopoMapA, MapTileURLs.openTopoMapB, MapTileURLs.openTopoMapC],
             options: [
                 .tileSize: 256,
                 .maximumZoomLevel: 17,

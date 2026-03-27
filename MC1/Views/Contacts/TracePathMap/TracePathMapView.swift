@@ -31,12 +31,15 @@ struct TracePathMapView: View {
 
             // Results banner at top
             if let result = mapViewModel.result, result.success {
-                resultsBanner(result: result)
+                TracePathResultsBanner(
+                    result: result,
+                    totalPathDistance: traceViewModel.totalPathDistance
+                )
             }
 
             // Empty state
             if mapViewModel.repeatersWithLocation.isEmpty {
-                emptyState
+                TracePathEmptyState()
             }
 
             // Floating buttons
@@ -147,15 +150,21 @@ struct TracePathMapView: View {
         .ignoresSafeArea()
     }
 
-    // MARK: - Results Banner
+}
 
-    private func resultsBanner(result: TraceResult) -> some View {
+// MARK: - Results Banner
+
+private struct TracePathResultsBanner: View {
+    let result: TraceResult
+    let totalPathDistance: Double?
+
+    var body: some View {
         VStack {
             HStack {
                 let hopCount = result.hops.count - 2
                 Text(L10n.Contacts.Contacts.Trace.Map.hops(hopCount))
 
-                if let distance = traceViewModel.totalPathDistance {
+                if let distance = totalPathDistance {
                     Text("•")
                     Text(Measurement(value: distance, unit: UnitLength.meters),
                          format: .measurement(width: .abbreviated, usage: .road))
@@ -168,14 +177,16 @@ struct TracePathMapView: View {
 
             Spacer()
         }
-        .padding(.top, 8)
+        .safeAreaPadding(.top)
         .transition(.move(edge: .top).combined(with: .opacity))
         .animation(.spring(response: 0.3), value: result.id)
     }
+}
 
-    // MARK: - Empty State
+// MARK: - Empty State
 
-    private var emptyState: some View {
+private struct TracePathEmptyState: View {
+    var body: some View {
         VStack {
             Spacer()
             ContentUnavailableView(
@@ -187,5 +198,4 @@ struct TracePathMapView: View {
         }
         .background(.regularMaterial)
     }
-
 }

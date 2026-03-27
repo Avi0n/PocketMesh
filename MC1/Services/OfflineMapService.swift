@@ -52,11 +52,14 @@ struct OfflinePackMetadata: Codable {
 
 enum OfflineMapError: LocalizedError {
     case insufficientDiskSpace
+    case missingStyleResource(OfflineMapLayer)
 
     var errorDescription: String? {
         switch self {
         case .insufficientDiskSpace:
             L10n.Settings.OfflineMaps.Error.insufficientDiskSpace
+        case .missingStyleResource(let layer):
+            "Missing style resource for layer: \(layer.rawValue)"
         }
     }
 }
@@ -80,9 +83,12 @@ final class OfflineMapService {
     private var downloadSpeeds: [ObjectIdentifier: Int64] = [:]
     private var metadataCache: [ObjectIdentifier: OfflinePackMetadata?] = [:]
     private var deletingPackIDs: Set<ObjectIdentifier> = []
+    private var userPausedPackIDs: Set<ObjectIdentifier> = []
 
     init() {
+        let monitor = self.monitor
         let networkStream = AsyncStream<NWPath> { continuation in
+            continuation.onTermination = { _ in monitor.cancel() }
             monitor.pathUpdateHandler = { continuation.yield($0) }
             // NWPathMonitor requires a DispatchQueue; no Swift concurrency alternative exists.
             monitor.start(queue: .global(qos: .utility))
@@ -224,8 +230,7 @@ final class OfflineMapService {
 
         for layer in layers {
             guard let styleURL = layer.styleURL else {
-                Self.logger.error("Missing style URL for layer: \(layer.rawValue)")
-                continue
+                throw OfflineMapError.missingStyleResource(layer)
             }
 
             let region = MLNTilePyramidOfflineRegion(
@@ -273,18 +278,21 @@ final class OfflineMapService {
     }
 
     func pausePack(_ pack: OfflinePack) {
+        userPausedPackIDs.insert(pack.id)
         pack.mlnPack.suspend()
         loadPacks()
     }
 
     func resumePack(_ pack: OfflinePack) {
+        userPausedPackIDs.remove(pack.id)
         pack.mlnPack.resume()
         loadPacks()
     }
 
     func resumeAllPacks() {
         for pack in MLNOfflineStorage.shared.packs ?? [] {
-            if pack.state == .inactive {
+            let packID = ObjectIdentifier(pack)
+            if pack.state == .inactive, !userPausedPackIDs.contains(packID) {
                 pack.resume()
             }
         }

@@ -364,10 +364,13 @@ extension MC1MapView {
             setIsStyleLoaded?(true)
 
             // Clear stale source/state references from the previous style.
+            // Reset currentShowLabels to the new layer default (visible) so
+            // updateUIView detects the mismatch and reapplies the user's preference.
             clusterSource = nil
             fixedSource = nil
             lastAppliedPoints = []
             lastAppliedLines = []
+            currentShowLabels = true
 
             PinSpriteRenderer.renderAll(into: style)
             setupRasterSources(style: style, mapView: mapView)
@@ -444,10 +447,13 @@ extension MC1MapView {
                 return
             }
 
-            // 2. Check point layers (both clustered and fixed)
+            // 2. Check point and name label layers (both clustered and fixed)
             let pointFeatures = mapView.visibleFeatures(
                 at: point,
-                styleLayerIdentifiers: [MapLayerID.unclusteredIcons, MapLayerID.fixedIcons]
+                styleLayerIdentifiers: [
+                    MapLayerID.unclusteredIcons, MapLayerID.fixedIcons,
+                    MapLayerID.nameLabels, MapLayerID.fixedNameLabels
+                ]
             )
             logger.debug("pointFeatures: \(pointFeatures.count, privacy: .public), clusterFeatures: \(clusterFeatures.count, privacy: .public)")
             if let feature = pointFeatures.first,
@@ -461,13 +467,15 @@ extension MC1MapView {
                 return
             }
 
-            // 3. Check badge text layers
+            // 3. Check badge text layers — dismiss any open callout but don't select
             let badgeFeatures = mapView.visibleFeatures(
                 at: point,
                 styleLayerIdentifiers: [MapLayerID.badgeText, MapLayerID.fixedBadgeText]
             )
             if badgeFeatures.first != nil {
-                return // absorb tap on badges
+                let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+                onMapTap?(coordinate)
+                return
             }
 
             // 4. Map background tap

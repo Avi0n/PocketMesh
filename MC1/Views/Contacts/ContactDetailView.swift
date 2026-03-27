@@ -764,7 +764,7 @@ private struct ContactLocationSection: View {
                     center: currentContact.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
                 )),
-                cameraRegionVersion: 1,
+                cameraRegionVersion: currentContact.latitude.hashValue ^ currentContact.longitude.hashValue,
                 onPointTap: nil,
                 onMapTap: nil,
                 onCameraRegionChange: nil

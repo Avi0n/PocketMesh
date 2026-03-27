@@ -30,7 +30,10 @@ struct RepeaterRowView: View {
 
                     if let elevation = viewModel.repeaterGroundElevation {
                         let totalHeight = Int(elevation) + (viewModel.repeaterPoint?.additionalHeight ?? 0)
-                        Text("\(totalHeight)m")
+                        Text(Measurement(
+                            value: Double(totalHeight),
+                            unit: UnitLength.meters
+                        ).formatted())
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

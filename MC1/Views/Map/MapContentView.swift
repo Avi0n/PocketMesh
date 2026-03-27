@@ -59,14 +59,17 @@ struct MapContentView: View {
                 ProgressView()
                     .scaleEffect(1.5)
             } else if viewModel.isLoading {
-                loadingOverlay
+                MapLoadingOverlay()
             }
         }
     }
 
-    // MARK: - Loading Overlay
+}
 
-    private var loadingOverlay: some View {
+// MARK: - Loading Overlay
+
+private struct MapLoadingOverlay: View {
+    var body: some View {
         ZStack {
             Color.black.opacity(0.1)
             ProgressView()

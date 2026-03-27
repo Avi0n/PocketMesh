@@ -25,6 +25,9 @@ struct ComparisonRowView: View {
                 if diff != 0 {
                     Text(diff > 0 ? "\u{25B2}" : "\u{25BC}")
                         .foregroundStyle(diff > 0 ? .red : .green)
+                        .accessibilityLabel(diff > 0
+                            ? L10n.Contacts.Contacts.Results.Comparison.increased
+                            : L10n.Contacts.Contacts.Results.Comparison.decreased)
                     Text(abs(percentChange), format: .number.precision(.fractionLength(0)))
                         .font(.caption.monospacedDigit())
                     + Text("%")

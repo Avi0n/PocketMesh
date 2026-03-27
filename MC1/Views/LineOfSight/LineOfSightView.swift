@@ -222,6 +222,8 @@ struct LineOfSightView: View {
         showAnalysisSheet = false
         viewModel.relocatingPoint = nil
 
+        // Yield to let showAnalysisSheet = false commit before dismiss fires,
+        // avoiding a sheet-dismissal animation conflict.
         Task { @MainActor in
             await Task.yield()
             dismiss()
@@ -596,7 +598,7 @@ private struct AnalyzeButton: View {
         }
         .liquidGlassProminentButtonStyle()
         .controlSize(.large)
-        .disabled(viewModel.isAnalyzing || hasAnalysisResult)
+        .disabled(viewModel.isAnalyzing)
     }
 }
 

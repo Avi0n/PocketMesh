@@ -44,7 +44,10 @@ struct PointRowView: View {
                                     .foregroundStyle(.secondary)
                             }
                         } else if let elevation = point.groundElevation {
-                            Text("\(Int(elevation) + point.additionalHeight)m")
+                            Text(Measurement(
+                                value: Double(Int(elevation) + point.additionalHeight),
+                                unit: UnitLength.meters
+                            ).formatted())
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

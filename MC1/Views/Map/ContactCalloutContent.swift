@@ -1,7 +1,7 @@
 import SwiftUI
 import MC1Services
 
-/// SwiftUI content view displayed inside the native MKAnnotationView callout
+/// SwiftUI content displayed in a popover callout when a map pin is tapped
 struct ContactCalloutContent: View {
     let contact: ContactDTO
     let onDetail: () -> Void
@@ -26,18 +26,16 @@ struct ContactCalloutContent: View {
             VStack(spacing: 6) {
                 Button(L10n.Map.Map.Callout.details, systemImage: "info.circle", action: onDetail)
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
 
                 if contact.type == .chat || contact.type == .room {
                     Button(L10n.Map.Map.Callout.message, systemImage: "message.fill", action: onMessage)
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
                 }
             }
             .frame(maxWidth: .infinity)
         }
         .padding(12)
-        .frame(width: 160)
+        .frame(minWidth: 160)
     }
 
     // MARK: - Computed Properties

@@ -14,23 +14,17 @@ enum PinSpriteRenderer {
     /// Registers base pin sprites into the style. Hop-ring variants are rendered
     /// lazily via `renderOnDemand(name:into:)` when MapLibre requests a missing image.
     static func renderAll(into style: MLNStyle) {
-        let images: [String: UIImage]
-        if let cached = cachedImages {
-            images = cached
-        } else {
-            var rendered: [String: UIImage] = [:]
-            for spec in allSpecs {
-                rendered[spec.name] = render(spec)
-            }
-            rendered["pin-badge"] = UIGraphicsImageRenderer(
-                size: CGSize(width: 1, height: 1), format: .preferred()
-            ).image { _ in }
-            rendered["pill-bg"] = renderPillBackground()
-            cachedImages = rendered
-            images = rendered
+        var rendered: [String: UIImage] = [:]
+        for spec in allSpecs {
+            rendered[spec.name] = render(spec)
         }
+        rendered["pin-badge"] = UIGraphicsImageRenderer(
+            size: CGSize(width: 1, height: 1), format: .preferred()
+        ).image { _ in }
+        rendered["pill-bg"] = renderPillBackground()
+        cachedImages = rendered
 
-        for (name, image) in images {
+        for (name, image) in rendered {
             style.setImage(image, forName: name)
         }
     }
