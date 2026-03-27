@@ -281,8 +281,11 @@ extension MC1MapView.Coordinator {
         layer.textColor = NSExpression(forConstantValue: UIColor.black)
         layer.textOffset = NSExpression(forConstantValue: NSValue(cgVector: CGVector(dx: 0, dy: -4.8)))
         layer.textAnchor = NSExpression(forConstantValue: "bottom")
+        layer.symbolSortKey = NSExpression(forKeyPath: "hopIndex")
         layer.textAllowsOverlap = NSExpression(forConstantValue: true)
         layer.textIgnoresPlacement = NSExpression(forConstantValue: true)
+        layer.textHaloColor = NSExpression(forConstantValue: UIColor.black.withAlphaComponent(0.15))
+        layer.textHaloWidth = NSExpression(forConstantValue: 1)
         layer.iconAllowsOverlap = NSExpression(forConstantValue: true)
         layer.iconIgnoresPlacement = NSExpression(forConstantValue: true)
         layer.iconImageName = NSExpression(forConstantValue: "pill-bg")
@@ -312,7 +315,7 @@ extension MC1MapView.Coordinator {
             "spriteName": spriteName(for: point),
         ]
         if let label = point.label { attributes["nameLabel"] = label }
-        if let hopIndex = point.hopIndex { attributes["hopIndex"] = "\(hopIndex)" }
+        if let hopIndex = point.hopIndex { attributes["hopIndex"] = hopIndex }
         if let badgeText = point.badgeText { attributes["badgeText"] = badgeText }
         feature.attributes = attributes
         return feature
