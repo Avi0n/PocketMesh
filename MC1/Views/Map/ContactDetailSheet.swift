@@ -93,12 +93,14 @@ struct ContactDetailSheet: View {
                         } label: {
                             Label(L10n.Map.Map.Detail.Action.telemetry, systemImage: "chart.line.uptrend.xyaxis")
                         }
+                        .radioDisabled(for: appState.connectionState)
 
                         Button {
                             activeSheet = .adminAuth
                         } label: {
                             Label(L10n.Map.Map.Detail.Action.management, systemImage: "gearshape.2")
                         }
+                        .radioDisabled(for: appState.connectionState)
 
                     case .room:
                         Button {
@@ -106,6 +108,7 @@ struct ContactDetailSheet: View {
                         } label: {
                             Label(L10n.Map.Map.Detail.Action.joinRoom, systemImage: "door.left.hand.open")
                         }
+                        .radioDisabled(for: appState.connectionState)
 
                     case .chat:
                         Button {
