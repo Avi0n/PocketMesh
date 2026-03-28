@@ -10,17 +10,7 @@
 
 /* Location: MapView.swift - Purpose: Done button for sheets */
 "map.common.done" = "完成";
-
-/* Location: MapView.swift - Purpose: Refresh button label */
-"map.common.refresh" = "刷新";
-
-// MARK: - Map View Empty State
-
-/* Location: MapView.swift - Purpose: Empty state title when no contacts have location */
-"map.emptyState.title" = "地图上无联系人";
-
-/* Location: MapView.swift - Purpose: Empty state description */
-"map.emptyState.description" = "带有位置数据的联系人将在Mesh网络上发现后显示在此处";
+"map.common.dismissOverlay" = "关闭";
 
 // MARK: - Map Controls
 
@@ -39,6 +29,15 @@
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
 "map.controls.layers" = "地图图层";
 
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock) */
+"map.controls.lockNorth" = "锁定朝北";
+
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
+"map.controls.unlockNorth" = "解锁旋转";
+
+/* Location: MapView.swift - Purpose: Accessibility label for refresh button */
+"map.controls.refresh" = "刷新联系人";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */
@@ -47,8 +46,17 @@
 /* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
 "map.style.satellite" = "卫星";
 
-/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
-"map.style.hybrid" = "混合";
+/* Location: MapStyleSelection.swift - Purpose: Topo map style option */
+"map.style.topo" = "地形";
+
+/* Location: LayersMenu.swift - Purpose: Accessibility label for map style menu */
+"map.style.accessibilityLabel" = "Map style";
+
+/* Location: LayersMenu.swift - Purpose: Hint when style requires network */
+"map.style.requiresNetwork" = "Requires network connection";
+
+/* Location: LayersMenu.swift - Purpose: Hint when no offline pack covers viewport */
+"map.style.noOfflineCoverage" = "No offline map covers this area";
 
 // MARK: - Contact Detail Sheet
 
@@ -155,3 +163,8 @@
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
 "map.annotation.room" = "房间";
+
+// MARK: - Offline Badge
+
+/* Label shown on map when device has no internet connection */
+"map.offlineBadge.label" = "离线";

@@ -896,6 +896,9 @@
 /* Location: TracePathMapView.swift - Purpose: Show labels accessibility */
 "contacts.trace.map.showLabels" = "Labels tonen";
 
+/* Location: TracePathMapView.swift - Purpose: Center on path accessibility */
+"contacts.trace.map.centerOnPath" = "Centreren op pad";
+
 /* Location: TracePathMapView.swift - Purpose: Save path alert title */
 "contacts.trace.map.saveTitle" = "Pad opslaan";
 
@@ -919,6 +922,9 @@
 
 /* Location: TracePathMapView.swift - Purpose: View results button */
 "contacts.trace.map.viewResults" = "Resultaten";
+
+/* Location: TracePathMapViewModel.swift - Purpose: Default path name fallback */
+"contacts.trace.map.defaultPathName" = "Pad";
 
 // MARK: - Trace Results Sheet
 
@@ -948,6 +954,10 @@
 
 /* Location: TraceResultsSheet.swift - Purpose: Comparison text */
 "contacts.results.comparison" = "vs. %d ms op %@";
+
+/* Location: ComparisonRowView.swift - Purpose: Accessibility labels for change direction */
+"contacts.results.comparison.increased" = "Gestegen";
+"contacts.results.comparison.decreased" = "Gedaald";
 
 /* Location: TraceResultsSheet.swift - Purpose: View runs link */
 "contacts.results.viewRuns" = "Bekijk %d uitvoeringen";

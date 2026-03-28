@@ -175,7 +175,7 @@ struct RxLogView: View {
                 ? "line.3.horizontal.decrease.circle"
                 : "line.3.horizontal.decrease.circle.fill")
         }
-        .modifier(GlassButtonModifier())
+        .liquidGlassSecondaryButtonStyle()
     }
 
     @State private var showClearConfirmation = false
@@ -201,7 +201,7 @@ struct RxLogView: View {
         } label: {
             Label(L10n.Tools.Tools.RxLog.more, systemImage: "ellipsis.circle")
         }
-        .modifier(GlassButtonModifier())
+        .liquidGlassSecondaryButtonStyle()
         .confirmationDialog(L10n.Tools.Tools.RxLog.deleteConfirmation, isPresented: $showClearConfirmation, titleVisibility: .visible) {
             Button(L10n.Tools.Tools.RxLog.delete, role: .destructive) {
                 clearLog()

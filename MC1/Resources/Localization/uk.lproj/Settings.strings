@@ -1264,3 +1264,97 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Офлайн-карти";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Немає офлайн-карт";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Завантажте регіони карти для використання без інтернету.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Завантажити регіон";
+
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Сховище";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Використано";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Невідомий регіон";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Завантажено";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Завантаження…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Оберіть регіон";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Назва регіону";
+
+/* Button to start download */
+"offlineMaps.download" = "Завантажити";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Скасувати";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Видалити офлайн-карту?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "Завантажені дані карти буде видалено.";
+
+/* Delete button */
+"offlineMaps.delete" = "Видалити";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "Недостатньо місця. Потрібно щонайменше 100 МБ.";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "Досягнуто ліміт тайлів для цього завантаження.";
+
+/* Pause download button */
+"offlineMaps.pause" = "Пауза";
+
+/* Resume download button */
+"offlineMaps.resume" = "Продовжити";
+
+/* Paused status label */
+"offlineMaps.paused" = "Призупинено";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "Орієнтовний розмір: ~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "Велика область завантаження. Це може зайняти час і потребувати значного обсягу пам'яті.";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "Введіть назву та виберіть область для завантаження.";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "Недостатньо місця на пристрої. Збільште масштаб, щоб вибрати меншу область.";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Базова карта";
+"offlineMaps.layer.topo" = "Топографія";
+
+/* Layers section header */
+"offlineMaps.layers" = "Шари";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Додати додаткові шари для використання офлайн.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "Для завантаження карт потрібне з'єднання з інтернетом.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Включає дані карти та внутрішні індекси. Загальний обсяг може перевищувати суму окремих завантажень.";

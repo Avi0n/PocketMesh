@@ -736,24 +736,41 @@ private struct ContactInfoSection: View {
 }
 
 private struct ContactLocationSection: View {
-    let currentContact: ContactDTO
+    @Environment(\.appState) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
-    private var contactCoordinate: CLLocationCoordinate2D {
-        CLLocationCoordinate2D(
-            latitude: currentContact.latitude,
-            longitude: currentContact.longitude
-        )
-    }
+    let currentContact: ContactDTO
 
     var body: some View {
         Section {
             // Mini map
-            Map(position: .constant(.region(MKCoordinateRegion(
-                center: contactCoordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
-            )))) {
-                Marker(currentContact.displayName, coordinate: contactCoordinate)
-            }
+            MC1MapView(
+                points: [MapPoint(
+                    id: currentContact.id,
+                    coordinate: currentContact.coordinate,
+                    pinStyle: currentContact.type.pinStyle,
+                    label: currentContact.displayName,
+                    isClusterable: false,
+                    hopIndex: nil,
+                    badgeText: nil
+                )],
+                lines: [],
+                mapStyle: .standard,
+                isDarkMode: colorScheme == .dark,
+                isOffline: !appState.offlineMapService.isNetworkAvailable,
+                showLabels: false,
+                showsUserLocation: false,
+                isInteractive: false,
+                showsScale: false,
+                cameraRegion: .constant(MKCoordinateRegion(
+                    center: currentContact.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                )),
+                cameraRegionVersion: currentContact.latitude.hashValue ^ currentContact.longitude.hashValue,
+                onPointTap: nil,
+                onMapTap: nil,
+                onCameraRegionChange: nil
+            )
             .frame(height: 200)
             .clipShape(.rect(cornerRadius: 12))
             .listRowInsets(EdgeInsets())
@@ -770,7 +787,7 @@ private struct ContactLocationSection: View {
             }
             .listRowBackground(
                 UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    .fill(Color(.secondarySystemGroupedBackground))
             )
 
             // Open in Maps
@@ -785,7 +802,7 @@ private struct ContactLocationSection: View {
     }
 
     private func openInMaps() {
-        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: contactCoordinate))
+        let mapItem = MKMapItem(placemark: MKPlacemark(coordinate: currentContact.coordinate))
         mapItem.name = currentContact.displayName
         mapItem.openInMaps()
     }

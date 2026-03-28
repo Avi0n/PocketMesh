@@ -1269,3 +1269,97 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Offline Maps";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "No Offline Maps";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Download map regions for use without internet.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Download Region";
+
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Storage";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Storage Used";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Unknown Region";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Downloaded";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Downloading…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Select Region";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Region Name";
+
+/* Button to start download */
+"offlineMaps.download" = "Download";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Cancel";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Delete Offline Map?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "The downloaded map data will be removed.";
+
+/* Delete button */
+"offlineMaps.delete" = "Delete";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "Not enough storage space. At least 100 MB is required.";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "The download tile limit has been reached.";
+
+/* Pause download button */
+"offlineMaps.pause" = "Pause";
+
+/* Resume download button */
+"offlineMaps.resume" = "Resume";
+
+/* Paused status label */
+"offlineMaps.paused" = "Paused";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "Estimated size: ~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "Large download area. This may take a while and use significant storage.";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "Enter a name and select an area to download.";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "Not enough storage on this device. Zoom in to select a smaller area.";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Base Map";
+"offlineMaps.layer.topo" = "Topography";
+
+/* Layers section header */
+"offlineMaps.layers" = "Layers";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Include additional layers for offline use.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "An internet connection is required to download maps.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Includes map data and internal indexes. Total may be larger than the sum of individual downloads.";

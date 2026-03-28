@@ -10,17 +10,7 @@
 
 /* Location: MapView.swift - Purpose: Done button for sheets */
 "map.common.done" = "Klaar";
-
-/* Location: MapView.swift - Purpose: Refresh button label */
-"map.common.refresh" = "Vernieuwen";
-
-// MARK: - Map View Empty State
-
-/* Location: MapView.swift - Purpose: Empty state title when no contacts have location */
-"map.emptyState.title" = "Geen contacten op de kaart";
-
-/* Location: MapView.swift - Purpose: Empty state description */
-"map.emptyState.description" = "Contacten met locatiegegevens verschijnen hier zodra ze worden ontdekt op het mesh-netwerk.";
+"map.common.dismissOverlay" = "Sluiten";
 
 // MARK: - Map Controls
 
@@ -39,6 +29,15 @@
 /* Location: MapControlsToolbar.swift - Purpose: Accessibility label for layers button */
 "map.controls.layers" = "Kaartlagen";
 
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (lock) */
+"map.controls.lockNorth" = "Vergrendel op noorden";
+
+/* Location: MapCanvasView.swift - Purpose: Accessibility label for north lock button (unlock) */
+"map.controls.unlockNorth" = "Rotatie ontgrendelen";
+
+/* Location: MapView.swift - Purpose: Accessibility label for refresh button */
+"map.controls.refresh" = "Contacten vernieuwen";
+
 // MARK: - Map Style Selection
 
 /* Location: MapStyleSelection.swift - Purpose: Standard map style option */
@@ -47,8 +46,17 @@
 /* Location: MapStyleSelection.swift - Purpose: Satellite map style option */
 "map.style.satellite" = "Satelliet";
 
-/* Location: MapStyleSelection.swift - Purpose: Hybrid map style option */
-"map.style.hybrid" = "Hybride";
+/* Location: MapStyleSelection.swift - Purpose: Topo map style option */
+"map.style.topo" = "Topografie";
+
+/* Location: LayersMenu.swift - Purpose: Accessibility label for map style menu */
+"map.style.accessibilityLabel" = "Map style";
+
+/* Location: LayersMenu.swift - Purpose: Hint when style requires network */
+"map.style.requiresNetwork" = "Requires network connection";
+
+/* Location: LayersMenu.swift - Purpose: Hint when no offline pack covers viewport */
+"map.style.noOfflineCoverage" = "No offline map covers this area";
 
 // MARK: - Contact Detail Sheet
 
@@ -155,3 +163,8 @@
 
 /* Location: ContactAnnotation.swift - Purpose: Subtitle for room nodes */
 "map.annotation.room" = "Kamer";
+
+// MARK: - Offline Badge
+
+/* Label shown on map when device has no internet connection */
+"map.offlineBadge.label" = "Offline";

@@ -24,6 +24,11 @@ public final class AppState {
     /// App-wide location service for permission management
     public let locationService = LocationService()
 
+    // MARK: - Offline Maps
+
+    /// Offline map pack management and network monitoring
+    let offlineMapService = OfflineMapService()
+
     /// Best available location for proximity-based disambiguation.
     public var bestAvailableLocation: CLLocation? {
         if let phoneLocation = locationService.currentLocation {
@@ -640,6 +645,8 @@ public final class AppState {
             await batteryMonitor.checkMissedBatteryThreshold(device: connectedDevice, services: services)
             batteryMonitor.startRefreshLoop(services: services, device: connectedDevice)
         }
+
+        offlineMapService.resumeAllPacks()
     }
 
     // MARK: - Onboarding

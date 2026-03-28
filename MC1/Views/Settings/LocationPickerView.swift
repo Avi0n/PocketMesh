@@ -7,15 +7,19 @@ import MC1Services
 struct LocationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appState) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     // Configuration
     private let initialCoordinate: CLLocationCoordinate2D?
     private let onSave: (CLLocationCoordinate2D) async throws -> Void
 
+    // Stable marker identity
+    private let markerID = UUID()
+
     // UI State
-    @State private var position: MapCameraPosition = .automatic
+    @State private var cameraRegion: MKCoordinateRegion?
+    @State private var cameraRegionVersion = 0
     @State private var selectedCoordinate: CLLocationCoordinate2D?
-    @State private var visibleRegion: MKCoordinateRegion?
     @State private var isSaving = false
     @State private var showError: String?
 
@@ -31,26 +35,21 @@ struct LocationPickerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                MapReader { proxy in
-                    Map(position: $position, interactionModes: [.pan, .zoom]) {
-                        if let coord = selectedCoordinate {
-                            Marker(L10n.Settings.LocationPicker.markerTitle, coordinate: coord)
-                                .tint(.blue)
-                        }
-                    }
-                    .onTapGesture { screenLocation in
-                        if let coordinate = proxy.convert(screenLocation, from: .local) {
-                            selectedCoordinate = coordinate
-                        }
-                    }
-                    .onMapCameraChange { context in
-                        visibleRegion = context.region
-                    }
-                    .mapControls {
-                        MapUserLocationButton()
-                        MapCompass()
-                    }
-                }
+                MC1MapView(
+                    points: markerPoints,
+                    lines: [],
+                    mapStyle: .standard,
+                    isDarkMode: colorScheme == .dark,
+                    showLabels: false,
+                    showsUserLocation: true,
+                    isInteractive: true,
+                    showsScale: false,
+                    cameraRegion: $cameraRegion,
+                    cameraRegionVersion: cameraRegionVersion,
+                    onPointTap: nil,
+                    onMapTap: { coord in selectedCoordinate = coord },
+                    onCameraRegionChange: { region in cameraRegion = region }
+                )
 
                 // Center crosshair for precise placement
                 Image(systemName: "plus")
@@ -113,19 +112,33 @@ struct LocationPickerView: View {
                 loadCurrentLocation()
             }
             .onChange(of: appState.locationService.currentLocation) { _, newLocation in
-                // Only react if we haven't set a position yet (no saved location case)
+                // Only react if we haven't set a camera region yet (no saved location case)
                 guard let newLocation,
                       initialCoordinate == nil
                         || (initialCoordinate?.latitude == 0 && initialCoordinate?.longitude == 0),
-                      position == .automatic else { return }
+                      cameraRegion == nil else { return }
 
-                position = .region(MKCoordinateRegion(
+                cameraRegion = MKCoordinateRegion(
                     center: newLocation.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                ))
+                )
+                cameraRegionVersion += 1
             }
             .errorAlert($showError)
         }
+    }
+
+    private var markerPoints: [MapPoint] {
+        guard let coord = selectedCoordinate else { return [] }
+        return [MapPoint(
+            id: markerID,
+            coordinate: coord,
+            pinStyle: .pointA,
+            label: nil,
+            isClusterable: false,
+            hopIndex: nil,
+            badgeText: nil
+        )]
     }
 
     private func loadCurrentLocation() {
@@ -133,10 +146,11 @@ struct LocationPickerView: View {
         if let coord = initialCoordinate,
            coord.latitude != 0 || coord.longitude != 0 {
             selectedCoordinate = coord
-            position = .region(MKCoordinateRegion(
+            cameraRegion = MKCoordinateRegion(
                 center: coord,
                 span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            ))
+            )
+            cameraRegionVersion += 1
             return
         }
 
@@ -144,23 +158,19 @@ struct LocationPickerView: View {
         let locationService = appState.locationService
         if locationService.isAuthorized {
             if let userLocation = locationService.currentLocation {
-                position = .region(MKCoordinateRegion(
+                cameraRegion = MKCoordinateRegion(
                     center: userLocation.coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                ))
+                )
+                cameraRegionVersion += 1
             } else if !locationService.isRequestingLocation {
                 locationService.requestLocation()
             }
         }
-
-        // Case 3: No saved location, no authorization - .automatic handles it
     }
 
     private func dropPinAtCenter() {
-        // Get center from tracked visible region, falling back to position.region
-        if let region = visibleRegion {
-            selectedCoordinate = region.center
-        } else if let region = position.region {
+        if let region = cameraRegion {
             selectedCoordinate = region.center
         }
     }
@@ -200,13 +210,15 @@ private struct ButtonContent: View {
                 Button(L10n.Settings.LocationPicker.clearLocation, role: .destructive) {
                     onClear()
                 }
-                .modifier(LocationPickerGlassButtonModifier(isProminent: false))
+                .liquidGlassSecondaryButtonStyle()
+                .controlSize(.regular)
             }
 
             Button(L10n.Settings.LocationPicker.dropPin) {
                 onDropPin()
             }
-            .modifier(LocationPickerGlassButtonModifier(isProminent: true))
+            .liquidGlassProminentButtonStyle()
+            .controlSize(.regular)
         }
     }
 }
@@ -269,30 +281,6 @@ private struct CoordinateGlassModifier: ViewModifier {
             content.glassEffect(.regular, in: .rect(cornerRadius: 8))
         } else {
             content
-        }
-    }
-}
-
-private struct LocationPickerGlassButtonModifier: ViewModifier {
-    let isProminent: Bool
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            if isProminent {
-                content
-                    .buttonStyle(.glassProminent)
-                    .controlSize(.regular)
-            } else {
-                content
-                    .buttonStyle(.glass)
-                    .controlSize(.regular)
-            }
-        } else {
-            if isProminent {
-                content.buttonStyle(.borderedProminent)
-            } else {
-                content.buttonStyle(.bordered)
-            }
         }
     }
 }

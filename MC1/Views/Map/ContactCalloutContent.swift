@@ -1,7 +1,7 @@
 import SwiftUI
 import MC1Services
 
-/// SwiftUI content view displayed inside the native MKAnnotationView callout
+/// SwiftUI content displayed in a popover callout when a map pin is tapped
 struct ContactCalloutContent: View {
     let contact: ContactDTO
     let onDetail: () -> Void
@@ -9,14 +9,17 @@ struct ContactCalloutContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Type indicator only (name is in native callout title)
+            Text(contact.displayName)
+                .font(.headline)
+
             HStack(spacing: 6) {
-                Image(systemName: typeIconName)
-                    .foregroundStyle(typeColor)
+                Image(systemName: contact.type.iconSystemName)
+                    .foregroundStyle(contact.type.displayColor)
                 Text(typeDisplayName)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
 
             Divider()
 
@@ -24,43 +27,21 @@ struct ContactCalloutContent: View {
             VStack(spacing: 6) {
                 Button(L10n.Map.Map.Callout.details, systemImage: "info.circle", action: onDetail)
                     .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .accessibilityHint(contact.displayName)
 
                 if contact.type == .chat || contact.type == .room {
                     Button(L10n.Map.Map.Callout.message, systemImage: "message.fill", action: onMessage)
                         .buttonStyle(.bordered)
-                        .controlSize(.small)
+                        .accessibilityHint(contact.displayName)
                 }
             }
             .frame(maxWidth: .infinity)
         }
         .padding(12)
-        .frame(width: 160)
+        .frame(minWidth: 160)
     }
 
     // MARK: - Computed Properties
-
-    private var typeIconName: String {
-        switch contact.type {
-        case .chat:
-            "person.fill"
-        case .repeater:
-            "antenna.radiowaves.left.and.right"
-        case .room:
-            "person.3.fill"
-        }
-    }
-
-    private var typeColor: Color {
-        switch contact.type {
-        case .chat:
-            .blue
-        case .repeater:
-            .green
-        case .room:
-            .purple
-        }
-    }
 
     private var typeDisplayName: String {
         switch contact.type {

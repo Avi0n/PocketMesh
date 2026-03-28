@@ -1264,3 +1264,97 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Офлайн-карты";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Нет офлайн-карт";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Скачайте регионы карты для использования без интернета.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Скачать регион";
+
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Хранилище";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Занято";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Неизвестный регион";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Загружено";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Загрузка…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Выберите регион";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Название региона";
+
+/* Button to start download */
+"offlineMaps.download" = "Скачать";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Отмена";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Удалить офлайн-карту?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "Скачанные данные карты будут удалены.";
+
+/* Delete button */
+"offlineMaps.delete" = "Удалить";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "Недостаточно места. Требуется не менее 100 МБ.";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "Достигнут лимит тайлов для этой загрузки.";
+
+/* Pause download button */
+"offlineMaps.pause" = "Пауза";
+
+/* Resume download button */
+"offlineMaps.resume" = "Продолжить";
+
+/* Paused status label */
+"offlineMaps.paused" = "Приостановлено";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "Примерный размер: ~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "Большая область загрузки. Это может занять время и потребовать значительного объёма памяти.";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "Введите название и выберите область для загрузки.";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "Недостаточно места на устройстве. Увеличьте масштаб, чтобы выбрать меньшую область.";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Базовая карта";
+"offlineMaps.layer.topo" = "Топография";
+
+/* Layers section header */
+"offlineMaps.layers" = "Слои";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Включить дополнительные слои для использования офлайн.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "Для загрузки карт требуется подключение к интернету.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Включает данные карты и внутренние индексы. Общий объём может превышать сумму отдельных загрузок.";

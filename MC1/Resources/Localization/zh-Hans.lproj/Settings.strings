@@ -1237,3 +1237,97 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "离线地图";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "无离线地图";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "下载地图区域以便在无网络时使用。";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "下载区域";
+
+
+/* Section header for storage info */
+"offlineMaps.storage" = "存储空间";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "已使用";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "未知区域";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "已下载";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "下载中…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "选择区域";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "区域名称";
+
+/* Button to start download */
+"offlineMaps.download" = "下载";
+
+/* Cancel button */
+"offlineMaps.cancel" = "取消";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "删除离线地图？";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "已下载的地图数据将被删除。";
+
+/* Delete button */
+"offlineMaps.delete" = "删除";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "存储空间不足，至少需要 100 MB。";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "已达到此下载的瓦片数量限制。";
+
+/* Pause download button */
+"offlineMaps.pause" = "暂停";
+
+/* Resume download button */
+"offlineMaps.resume" = "继续";
+
+/* Paused status label */
+"offlineMaps.paused" = "已暂停";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "预计大小：~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "下载区域较大，可能需要较长时间并占用大量存储空间。";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "输入名称并选择要下载的区域。";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "设备存储空间不足。请放大地图以选择更小的区域。";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "基础地图";
+"offlineMaps.layer.topo" = "地形";
+
+/* Layers section header */
+"offlineMaps.layers" = "图层";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "包含额外图层以供离线使用。";
+
+/* No network available */
+"offlineMaps.noNetwork" = "下载地图需要互联网连接。";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "包括地图数据和内部索引。总大小可能超过各项下载的总和。";

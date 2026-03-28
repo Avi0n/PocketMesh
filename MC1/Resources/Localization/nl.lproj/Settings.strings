@@ -1264,3 +1264,97 @@
 // Reply with Quote
 "replyWithQuote.toggle" = "Reply with Quote";
 "replyWithQuote.footer" = "Replying includes a preview of the original message.";
+
+// MARK: - Offline Maps
+
+/* Navigation title for offline maps settings */
+"offlineMaps.title" = "Offline kaarten";
+
+/* Title for empty state when no offline packs exist */
+"offlineMaps.emptyTitle" = "Geen offline kaarten";
+
+/* Description for empty state */
+"offlineMaps.emptyDescription" = "Download kaartregio's voor gebruik zonder internet.";
+
+/* Button to download a new offline region */
+"offlineMaps.downloadRegion" = "Regio downloaden";
+
+
+/* Section header for storage info */
+"offlineMaps.storage" = "Opslag";
+
+/* Label for total storage used */
+"offlineMaps.storageUsed" = "Opslag gebruikt";
+
+/* Fallback name for unknown region */
+"offlineMaps.unknownRegion" = "Onbekende regio";
+
+/* Status when pack download is complete */
+"offlineMaps.complete" = "Gedownload";
+
+/* Status when pack is downloading */
+"offlineMaps.downloading" = "Downloaden…";
+
+/* Navigation title for region picker sheet */
+"offlineMaps.pickRegion" = "Selecteer regio";
+
+/* Placeholder for region name text field */
+"offlineMaps.regionName" = "Regionaam";
+
+/* Button to start download */
+"offlineMaps.download" = "Downloaden";
+
+/* Cancel button */
+"offlineMaps.cancel" = "Annuleren";
+
+/* Delete confirmation title */
+"offlineMaps.deleteTitle" = "Offline kaart verwijderen?";
+
+/* Delete confirmation message */
+"offlineMaps.deleteMessage" = "De gedownloade kaartgegevens worden verwijderd.";
+
+/* Delete button */
+"offlineMaps.delete" = "Verwijderen";
+
+/* Error: insufficient disk space */
+"offlineMaps.error.insufficientDiskSpace" = "Niet genoeg opslagruimte. Er is minimaal 100 MB vereist.";
+
+/* Error: tile limit reached */
+"offlineMaps.error.tileLimitReached" = "De tegellimiet voor deze download is bereikt.";
+
+/* Pause download button */
+"offlineMaps.pause" = "Pauzeren";
+
+/* Resume download button */
+"offlineMaps.resume" = "Hervatten";
+
+/* Paused status label */
+"offlineMaps.paused" = "Gepauzeerd";
+
+/* Estimated download size */
+"offlineMaps.estimatedSize" = "Geschatte grootte: ~%@";
+
+/* Large tile download warning */
+"offlineMaps.largeTileWarning" = "Groot downloadgebied. Dit kan even duren en aanzienlijke opslagruimte gebruiken.";
+
+/* Hint shown before estimate is available */
+"offlineMaps.downloadHint" = "Voer een naam in en selecteer een gebied om te downloaden.";
+
+/* Download exceeds available storage */
+"offlineMaps.exceedsStorage" = "Niet genoeg opslagruimte op dit apparaat. Zoom in om een kleiner gebied te selecteren.";
+
+/* Layer type labels */
+"offlineMaps.layer.base" = "Basiskaart";
+"offlineMaps.layer.topo" = "Topografie";
+
+/* Layers section header */
+"offlineMaps.layers" = "Kaartlagen";
+
+/* Include layers prompt */
+"offlineMaps.includeLayers" = "Extra kaartlagen opnemen voor offline gebruik.";
+
+/* No network available */
+"offlineMaps.noNetwork" = "Een internetverbinding is vereist om kaarten te downloaden.";
+
+/* Storage section footer */
+"offlineMaps.storageFooter" = "Omvat kaartgegevens en interne indexen. Het totaal kan groter zijn dan de som van de afzonderlijke downloads.";

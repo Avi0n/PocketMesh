@@ -15,45 +15,28 @@ struct TracePathListView: View {
     @Binding var presentedResult: TraceResult?
     @Binding var showJumpToPath: Bool
 
-    @State private var isRepeatersExpanded = false
     @State private var codeInput = ""
     @State private var codeInputError: String?
     @State private var pastedSuccessfully = false
-    @AppStorage("tracePathShowOnlyFavorites") private var showOnlyFavorites = false
-    @AppStorage("tracePathIncludeRooms") private var includeRooms = false
-    @AppStorage("tracePathIncludeDiscovered") private var includeDiscovered = false
-
-    private var filteredNodes: [PickerNode] {
-        var nodes: [PickerNode] = viewModel.availableRepeaters.map { .contact($0) }
-        if includeRooms {
-            nodes += viewModel.availableRooms.map { .contact($0) }
-        }
-        if includeDiscovered {
-            let contactKeys = Set(nodes.compactMap {
-                if case .contact(let c) = $0 { c.publicKey } else { nil }
-            })
-            nodes += viewModel.discoveredRepeaters
-                .filter { !contactKeys.contains($0.publicKey) }
-                .map { .discovered($0) }
-        }
-        if showOnlyFavorites {
-            nodes = nodes.filter {
-                switch $0 {
-                case .contact(let c): c.isFavorite
-                case .discovered: false
-                }
-            }
-        }
-        return nodes
-    }
 
     var body: some View {
         List {
             codeInputSection
-            availableRepeatersSection
+            AvailableRepeatersSectionView(
+                viewModel: viewModel,
+                recentlyAddedRepeaterID: $recentlyAddedRepeaterID,
+                addHapticTrigger: $addHapticTrigger
+            )
             outboundPathSection
-            pathActionsSection
-            runTraceSection
+            PathActionsSectionView(
+                viewModel: viewModel,
+                showingClearConfirmation: $showingClearConfirmation,
+                copyHapticTrigger: $copyHapticTrigger
+            )
+            RunTraceSectionView(
+                viewModel: viewModel,
+                showJumpToPath: $showJumpToPath
+            )
 
             Color.clear
                 .frame(height: 1)
@@ -119,82 +102,6 @@ struct TracePathListView: View {
         }
     }
 
-    // MARK: - Repeaters Section
-
-    private var availableRepeatersSection: some View {
-        Section {
-            DisclosureGroup(isExpanded: $isRepeatersExpanded) {
-                Toggle(L10n.Contacts.Contacts.Trace.List.favoritesOnly, isOn: $showOnlyFavorites)
-                Toggle(L10n.Contacts.Contacts.Trace.List.includeRooms, isOn: $includeRooms)
-                if !showOnlyFavorites {
-                    Toggle(L10n.Contacts.Contacts.Trace.List.includeDiscovered, isOn: $includeDiscovered)
-                }
-
-                if filteredNodes.isEmpty {
-                    if showOnlyFavorites {
-                        ContentUnavailableView(
-                            L10n.Contacts.Contacts.Trace.List.NoFavorites.title,
-                            systemImage: "star.slash",
-                            description: Text(L10n.Contacts.Contacts.Trace.List.NoFavorites.description)
-                        )
-                    } else {
-                        ContentUnavailableView(
-                            L10n.Contacts.Contacts.PathEdit.NoRepeaters.title,
-                            systemImage: "antenna.radiowaves.left.and.right.slash",
-                            description: Text(L10n.Contacts.Contacts.PathEdit.NoRepeaters.description)
-                        )
-                    }
-                } else {
-                    ForEach(filteredNodes) { node in
-                        Button {
-                            recentlyAddedRepeaterID = node.id
-                            addHapticTrigger += 1
-                            viewModel.addNode(node.underlying)
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    HStack {
-                                        Text(node.displayName)
-                                        if node.isRoom {
-                                            NodeKindBadge(text: L10n.Contacts.Contacts.NodeKind.room, color: .orange)
-                                        }
-                                        if node.isDiscovered {
-                                            NodeKindBadge(text: L10n.Contacts.Contacts.NodeKind.discovered, color: .blue)
-                                        }
-                                    }
-                                    Text(node.publicKeyHex)
-                                        .font(.caption.monospaced())
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                }
-                                Spacer()
-                                Image(systemName: recentlyAddedRepeaterID == node.id ? "checkmark.circle.fill" : "plus.circle")
-                                    .foregroundStyle(recentlyAddedRepeaterID == node.id ? Color.green : Color.accentColor)
-                                    .contentTransition(.symbolEffect(.replace))
-                            }
-                        }
-                        .id(node.id)
-                        .foregroundStyle(.primary)
-                        .accessibilityLabel(L10n.Contacts.Contacts.PathEdit.addToPath(node.displayName))
-                    }
-                }
-            } label: {
-                HStack {
-                    Text(L10n.Contacts.Contacts.Trace.List.repeaters)
-                    Spacer()
-                    Text("\(filteredNodes.count)")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .onChange(of: showOnlyFavorites) { _, newValue in
-                if newValue {
-                    includeDiscovered = false
-                }
-            }
-        }
-    }
-
     // MARK: - Outbound Path Section
 
     private var outboundPathSection: some View {
@@ -220,134 +127,5 @@ struct TracePathListView: View {
         } header: {
             Text(L10n.Contacts.Contacts.Trace.List.roundTripPath)
         }
-    }
-
-    // MARK: - Path Actions Section
-
-    private var pathActionsSection: some View {
-        Section {
-            if !viewModel.outboundPath.isEmpty {
-                Toggle(isOn: $viewModel.autoReturnPath) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.Contacts.Contacts.Trace.List.autoReturn)
-                        Text(L10n.Contacts.Contacts.Trace.List.autoReturnDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Toggle(isOn: $viewModel.batchEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.Contacts.Contacts.Trace.List.batchTrace)
-                        Text(L10n.Contacts.Contacts.Trace.List.batchTraceDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                if viewModel.batchEnabled {
-                    HStack(spacing: 12) {
-                        Text(L10n.Contacts.Contacts.Trace.List.traces)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        BatchSizeChip(size: 3, selectedSize: $viewModel.batchSize)
-                        BatchSizeChip(size: 5, selectedSize: $viewModel.batchSize)
-                        BatchSizeChip(size: 10, selectedSize: $viewModel.batchSize)
-                    }
-                }
-
-                HStack {
-                    Text(viewModel.fullPathString)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button(L10n.Contacts.Contacts.Trace.List.copyPath, systemImage: "doc.on.doc") {
-                        copyHapticTrigger += 1
-                        viewModel.copyPathToClipboard()
-                    }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                }
-
-                Button(L10n.Contacts.Contacts.Trace.clearPath, systemImage: "trash", role: .destructive) {
-                    showingClearConfirmation = true
-                }
-                .foregroundStyle(.red)
-            }
-        } footer: {
-            if !viewModel.outboundPath.isEmpty {
-                Text(L10n.Contacts.Contacts.Trace.List.rangeWarning)
-            }
-        }
-    }
-
-    // MARK: - Run Trace Section
-
-    private var runTraceSection: some View {
-        Section {
-            HStack {
-                Spacer()
-                if viewModel.isRunning {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        if viewModel.batchEnabled {
-                            Text(L10n.Contacts.Contacts.Trace.List.runningBatch(viewModel.currentTraceIndex, viewModel.batchSize))
-                        } else {
-                            Text(L10n.Contacts.Contacts.Trace.List.runningTrace)
-                        }
-                    }
-                    .frame(minWidth: 160)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 16)
-                    .background(.regularMaterial, in: .capsule)
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.secondary.opacity(0.3), lineWidth: 1)
-                    }
-                    .accessibilityLabel(viewModel.batchEnabled
-                        ? L10n.Contacts.Contacts.Trace.List.runningBatchLabel(viewModel.currentTraceIndex, viewModel.batchSize)
-                        : L10n.Contacts.Contacts.Trace.List.runningLabel)
-                    .accessibilityHint(L10n.Contacts.Contacts.Trace.List.runningHint)
-                } else {
-                    Button {
-                        Task {
-                            if viewModel.batchEnabled {
-                                await viewModel.runBatchTrace()
-                            } else {
-                                await viewModel.runTrace()
-                            }
-                        }
-                    } label: {
-                        Text(L10n.Contacts.Contacts.Trace.List.runTrace)
-                            .frame(minWidth: 160)
-                            .padding(.vertical, 4)
-                    }
-                    .liquidGlassProminentButtonStyle()
-                    .radioDisabled(for: appState.connectionState, or: !viewModel.canRunTraceWhenConnected)
-                    .accessibilityLabel(L10n.Contacts.Contacts.Trace.List.runTraceLabel)
-                    .accessibilityHint(viewModel.batchEnabled
-                        ? L10n.Contacts.Contacts.Trace.List.batchHint(viewModel.batchSize)
-                        : L10n.Contacts.Contacts.Trace.List.singleHint)
-                }
-                Spacer()
-            }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .id("runTrace")
-            .onAppear {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showJumpToPath = false
-                }
-            }
-            .onDisappear {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showJumpToPath = true
-                }
-            }
-        }
-        .listSectionSeparator(.hidden)
     }
 }
