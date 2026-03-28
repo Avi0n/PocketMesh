@@ -5,6 +5,7 @@ struct MapLine: Identifiable, Equatable {
     let coordinates: [CLLocationCoordinate2D]
     let style: LineStyle
     let opacity: Double
+    var pathIndex: Int?
 
     enum LineStyle: String, Hashable {
         case los

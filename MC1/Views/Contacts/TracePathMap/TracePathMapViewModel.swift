@@ -236,7 +236,8 @@ final class TracePathMapViewModel {
                     id: "trace-\(index)",
                     coordinates: [prevCoord, hopCoordinate],
                     style: .traceUntraced,
-                    opacity: 1.0
+                    opacity: 1.0,
+                    pathIndex: index
                 ))
             }
 
@@ -252,8 +253,11 @@ final class TracePathMapViewModel {
 
         var updatedLines: [MapLine] = []
         for line in mapLines {
-            let pathIndex = Int(line.id.replacing("trace-", with: ""))
-            let hopIndex = (pathIndex ?? 0) + 1
+            guard let pathIndex = line.pathIndex else {
+                updatedLines.append(line)
+                continue
+            }
+            let hopIndex = pathIndex + 1
             if hopIndex < result.hops.count {
                 let hop = result.hops[hopIndex]
                 let style = lineStyle(for: hop.snr)
@@ -262,7 +266,8 @@ final class TracePathMapViewModel {
                     id: line.id,
                     coordinates: line.coordinates,
                     style: style,
-                    opacity: 1.0
+                    opacity: 1.0,
+                    pathIndex: pathIndex
                 ))
 
                 // Badge at midpoint
@@ -278,10 +283,7 @@ final class TracePathMapViewModel {
                     let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
 
                     badgePoints.append(MapPoint(
-                        id: {
-                            let padded = String(repeating: "0", count: 12) + "\(hopIndex)"
-                            return UUID(uuidString: "00000000-0000-0000-0000-\(String(padded.suffix(12)))") ?? UUID()
-                        }(),
+                        id: UUID(hopIndex: hopIndex),
                         coordinate: mid,
                         pinStyle: .badge,
                         label: nil,
@@ -401,5 +403,14 @@ final class TracePathMapViewModel {
     private func setCameraRegion(fitting coordinates: [CLLocationCoordinate2D]) {
         guard let region = coordinates.boundingRegion() else { return }
         setCameraRegion(region)
+    }
+}
+
+private extension UUID {
+    /// Deterministic UUID for badge points keyed by hop index.
+    init(hopIndex: Int) {
+        let hex = String(hopIndex, radix: 16)
+        let padded = String(repeating: "0", count: max(0, 12 - hex.count)) + hex
+        self = UUID(uuidString: "00000000-0000-0000-0000-\(padded)") ?? UUID()
     }
 }
