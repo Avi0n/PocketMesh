@@ -1,4 +1,5 @@
 import MapKit
+import MapLibre
 import SwiftUI
 import MC1Services
 
@@ -16,7 +17,7 @@ struct TracePathMapToolbarView: View {
                 Spacer()
                 MapControlsToolbar(
                     onLocationTap: {
-                        if let location = appState.locationService.currentLocation {
+                        if let location = appState.bestAvailableLocation {
                             mapViewModel.setCameraRegion(MKCoordinateRegion(
                                 center: location.coordinate,
                                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
@@ -51,7 +52,8 @@ struct TracePathMapToolbarView: View {
             if mapViewModel.showingLayersMenu {
                 LayersMenu(
                     selection: $mapStyleSelection,
-                    isPresented: $mapViewModel.showingLayersMenu
+                    isPresented: $mapViewModel.showingLayersMenu,
+                    viewportBounds: mapViewModel.cameraRegion?.toMLNCoordinateBounds()
                 )
                 .padding(.trailing, 16)
                 .padding(.bottom, 160)

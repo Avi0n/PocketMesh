@@ -71,7 +71,7 @@ struct MapView: View {
     }
 
     private func centerOnUserLocation() {
-        guard let location = appState.locationService.currentLocation else { return }
+        guard let location = appState.bestAvailableLocation else { return }
         let span = MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
         viewModel.setCameraRegion(MKCoordinateRegion(center: location.coordinate, span: span))
     }
