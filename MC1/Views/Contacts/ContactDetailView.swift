@@ -736,6 +736,7 @@ private struct ContactInfoSection: View {
 }
 
 private struct ContactLocationSection: View {
+    @Environment(\.appState) private var appState
     @Environment(\.colorScheme) private var colorScheme
 
     let currentContact: ContactDTO
@@ -756,6 +757,7 @@ private struct ContactLocationSection: View {
                 lines: [],
                 mapStyle: .standard,
                 isDarkMode: colorScheme == .dark,
+                isOffline: !appState.offlineMapService.isNetworkAvailable,
                 showLabels: false,
                 showsUserLocation: false,
                 isInteractive: false,

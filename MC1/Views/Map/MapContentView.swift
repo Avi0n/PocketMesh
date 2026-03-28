@@ -3,6 +3,7 @@ import MC1Services
 
 /// Map content displaying MC1MapView with contact points and popover callouts
 struct MapContentView: View {
+    @Environment(\.appState) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @Bindable var viewModel: MapViewModel
     let mapStyleSelection: MapStyleSelection
@@ -19,6 +20,7 @@ struct MapContentView: View {
             lines: [],
             mapStyle: mapStyleSelection,
             isDarkMode: colorScheme == .dark,
+            isOffline: !appState.offlineMapService.isNetworkAvailable,
             showLabels: showLabels,
             showsUserLocation: true,
             isInteractive: true,
@@ -36,6 +38,10 @@ struct MapContentView: View {
             },
             onCameraRegionChange: { region in
                 viewModel.cameraRegion = region
+                if selectedCalloutContact != nil {
+                    selectedCalloutContact = nil
+                    selectedPointScreenPosition = nil
+                }
             },
             isStyleLoaded: $isStyleLoaded
         )

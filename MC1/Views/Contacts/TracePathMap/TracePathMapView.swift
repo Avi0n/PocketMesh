@@ -124,6 +124,7 @@ struct TracePathMapView: View {
             lines: mapViewModel.mapLines,
             mapStyle: mapStyleSelection,
             isDarkMode: colorScheme == .dark,
+            isOffline: !appState.offlineMapService.isNetworkAvailable,
             showLabels: showLabels,
             showsUserLocation: true,
             isInteractive: true,
@@ -194,8 +195,9 @@ private struct TracePathEmptyState: View {
                 systemImage: "map",
                 description: Text(L10n.Contacts.Contacts.Trace.Map.Empty.description)
             )
-            Spacer()
+            .padding()
+            .background(.regularMaterial, in: .rect(cornerRadius: 16))
+            .padding()
         }
-        .background(.regularMaterial)
     }
 }

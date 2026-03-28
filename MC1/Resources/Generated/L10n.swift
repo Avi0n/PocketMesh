@@ -2115,6 +2115,12 @@ public enum L10n {
         public static let label = L10n.tr("Map", "map.offlineBadge.label", fallback: "Offline")
       }
       public enum Style {
+        /// Location: LayersMenu.swift - Purpose: Accessibility label for map style menu
+        public static let accessibilityLabel = L10n.tr("Map", "map.style.accessibilityLabel", fallback: "Map style")
+        /// Location: LayersMenu.swift - Purpose: Hint when no offline pack covers viewport
+        public static let noOfflineCoverage = L10n.tr("Map", "map.style.noOfflineCoverage", fallback: "No offline map covers this area")
+        /// Location: LayersMenu.swift - Purpose: Hint when style requires network
+        public static let requiresNetwork = L10n.tr("Map", "map.style.requiresNetwork", fallback: "Requires network connection")
         /// Location: MapStyleSelection.swift - Purpose: Satellite map style option
         public static let satellite = L10n.tr("Map", "map.style.satellite", fallback: "Satellite")
         /// Location: MapStyleSelection.swift - Purpose: Standard map style option

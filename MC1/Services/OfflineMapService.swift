@@ -151,6 +151,12 @@ final class OfflineMapService {
         packs.contains { $0.layer == layer && $0.isComplete }
     }
 
+    func hasCompletedPack(for layer: OfflineMapLayer, overlapping viewport: MLNCoordinateBounds) -> Bool {
+        packs.contains { pack in
+            pack.layer == layer && pack.isComplete && pack.bounds.map { $0.overlaps(viewport) } ?? false
+        }
+    }
+
     func loadPacks() {
         let mlnPacks = MLNOfflineStorage.shared.packs ?? []
         let currentIDs = Set(mlnPacks.map { ObjectIdentifier($0) })
@@ -368,6 +374,7 @@ struct OfflinePack: Identifiable {
     let layer: OfflineMapLayer
     let completedFraction: Double
     let downloadSpeed: Int64?
+    let bounds: MLNCoordinateBounds?
 
     private let progress: MLNOfflinePackProgress
     private let state: MLNOfflinePackState
@@ -381,6 +388,7 @@ struct OfflinePack: Identifiable {
         self.mlnPack = pack
         self.progress = pack.progress
         self.state = pack.state
+        self.bounds = (pack.region as? MLNTilePyramidOfflineRegion)?.bounds
 
         let rawFraction: Double
         if state == .complete {
@@ -402,5 +410,14 @@ struct OfflinePack: Identifiable {
             self.createdAt = nil
             self.layer = .base
         }
+    }
+}
+
+extension MLNCoordinateBounds {
+    func overlaps(_ other: MLNCoordinateBounds) -> Bool {
+        sw.latitude <= other.ne.latitude
+            && ne.latitude >= other.sw.latitude
+            && sw.longitude <= other.ne.longitude
+            && ne.longitude >= other.sw.longitude
     }
 }

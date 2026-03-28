@@ -1,3 +1,4 @@
+import MapLibre
 import SwiftUI
 import MC1Services
 
@@ -66,7 +67,8 @@ struct MapCanvasView: View {
                         Spacer()
                         LayersMenu(
                             selection: $mapStyleSelection,
-                            isPresented: $viewModel.showingLayersMenu
+                            isPresented: $viewModel.showingLayersMenu,
+                            viewportBounds: viewModel.cameraRegion?.toMLNCoordinateBounds()
                         )
                         .padding(.trailing, 72)
                         .padding(.bottom)

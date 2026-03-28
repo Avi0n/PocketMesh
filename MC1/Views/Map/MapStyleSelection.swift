@@ -31,8 +31,14 @@ enum MapStyleSelection: String, CaseIterable, Hashable {
     }
 
     /// All styles use the same base vector style; satellite/topo add raster overlays at runtime.
-    func styleURL(isDarkMode: Bool) -> URL {
-        let url = isDarkMode ? MapTileURLs.openFreeMapDark : MapTileURLs.openFreeMapLiberty
-        return URL(string: url)!
+    /// When offline, always returns Liberty — offline packs are downloaded against that style
+    /// and MapLibre serves cached tiles only for the exact style URL used during download.
+    func styleURL(isDarkMode: Bool, isOffline: Bool = false) -> URL {
+        let useDark = isDarkMode && !isOffline
+        let url = useDark ? MapTileURLs.openFreeMapDark : MapTileURLs.openFreeMapLiberty
+        guard let result = URL(string: url) else {
+            fatalError("Invalid map tile URL constant: \(url)")
+        }
+        return result
     }
 }

@@ -419,6 +419,7 @@ private struct LOSMapCanvasView: View {
                 lines: viewModel.mapLines,
                 mapStyle: mapStyleSelection,
                 isDarkMode: colorScheme == .dark,
+                isOffline: !appState.offlineMapService.isNetworkAvailable,
                 showLabels: showLabels,
                 showsUserLocation: true,
                 isInteractive: true,
@@ -489,7 +490,8 @@ private struct LOSMapCanvasView: View {
                         Spacer()
                         LayersMenu(
                             selection: $mapStyleSelection,
-                            isPresented: $showingMapStyleMenu
+                            isPresented: $showingMapStyleMenu,
+                            viewportBounds: viewModel.cameraRegion?.toMLNCoordinateBounds()
                         )
                         .padding(.trailing)
                     }

@@ -134,6 +134,7 @@ struct MC1MapView: UIViewRepresentable {
     let lines: [MapLine]
     let mapStyle: MapStyleSelection
     let isDarkMode: Bool
+    var isOffline: Bool = false
 
     // Configuration
     let showLabels: Bool
@@ -219,7 +220,7 @@ struct MC1MapView: UIViewRepresentable {
 
         // Style URL change — compare against our tracked value, not mapView.styleURL
         // which MapLibre may transiently nil during layout/rotation.
-        let newStyleURL = mapStyle.styleURL(isDarkMode: isDarkMode)
+        let newStyleURL = mapStyle.styleURL(isDarkMode: isDarkMode, isOffline: isOffline)
         if coordinator.lastAppliedStyleURL != newStyleURL {
             coordinator.lastAppliedStyleURL = newStyleURL
             coordinator.isStyleLoaded = false
