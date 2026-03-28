@@ -90,6 +90,31 @@ public struct DiscoveredNodeDTO: Sendable, Equatable, Identifiable, RepeaterReso
         latitude != 0 || longitude != 0
     }
 
+    public var isFloodRouted: Bool {
+        outPathLength == 0xFF
+    }
+
+    public var pathHashSize: Int {
+        decodePathLen(outPathLength)?.hashSize ?? 1
+    }
+
+    public var pathHopCount: Int {
+        decodePathLen(outPathLength)?.hopCount ?? 0
+    }
+
+    public var pathByteLength: Int {
+        decodePathLen(outPathLength)?.byteLength ?? 0
+    }
+
+    public var pathNodesHex: [String] {
+        let size = pathHashSize
+        let relevantPath = outPath.prefix(pathByteLength)
+        return stride(from: 0, to: relevantPath.count, by: size).compactMap { start in
+            let end = min(start + size, relevantPath.count)
+            return relevantPath[start..<end].hexString()
+        }
+    }
+
     public var recencyDate: Date { lastHeard }
     public var resolvableName: String { name }
 

@@ -301,6 +301,26 @@ private struct DiscoveryNodeRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "arrowshape.bounce.right")
+                    if node.isFloodRouted {
+                        Text(L10n.Contacts.Contacts.Route.flood)
+                    } else if node.pathHopCount == 0 {
+                        Text(L10n.Contacts.Contacts.Route.direct)
+                    } else {
+                        let pathNodes = node.pathNodesHex
+                        Text("\(node.pathHopCount)")
+
+                        if !pathNodes.isEmpty {
+                            Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
+                            Text(formattedPath(pathNodes))
+                                .monospaced()
+                        }
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
 
             Spacer()
@@ -348,6 +368,15 @@ private struct DiscoveryNodeRow: View {
         case .repeater: return L10n.Contacts.Contacts.NodeKind.repeater
         case .room: return L10n.Contacts.Contacts.NodeKind.room
         }
+    }
+
+    private func formattedPath(_ nodes: [String]) -> String {
+        if nodes.count > 6 {
+            let first = nodes.prefix(3).joined(separator: ",")
+            let last = nodes.suffix(3).joined(separator: ",")
+            return "\(first)…\(last)"
+        }
+        return nodes.joined(separator: ",")
     }
 
     private var distanceToNode: String? {
