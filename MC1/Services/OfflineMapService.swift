@@ -234,31 +234,39 @@ final class OfflineMapService {
         let encoder = JSONEncoder()
         let now = Date.now
 
+        var pendingPacks: [(region: MLNTilePyramidOfflineRegion, context: Data)] = []
         for layer in layers {
             guard let styleURL = layer.styleURL else {
                 throw OfflineMapError.missingStyleResource(layer)
             }
-
             let region = MLNTilePyramidOfflineRegion(
                 styleURL: styleURL,
                 bounds: bounds,
                 fromZoomLevel: minZoom,
                 toZoomLevel: layer.maxDownloadZoom
             )
-
             let metadata = OfflinePackMetadata(name: name, createdAt: now, layer: layer)
             let context = try encoder.encode(metadata)
+            pendingPacks.append((region, context))
+        }
 
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                MLNOfflineStorage.shared.addPack(for: region, withContext: context) { pack, error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        pack?.resume()
-                        continuation.resume()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for (region, context) in pendingPacks {
+                nonisolated(unsafe) let region = region
+                group.addTask {
+                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                        MLNOfflineStorage.shared.addPack(for: region, withContext: context) { pack, error in
+                            if let error {
+                                continuation.resume(throwing: error)
+                            } else {
+                                pack?.resume()
+                                continuation.resume()
+                            }
+                        }
                     }
                 }
             }
+            try await group.waitForAll()
         }
         loadPacks()
         updateDatabaseSize()
