@@ -481,6 +481,12 @@
 /* Location: RepeaterStatusView.swift - Neighbors section footer */
 "remoteNodes.status.neighborsFooter" = "Andere von diesem Repeater entdeckte Knoten und ihre Signalqualität.";
 
+/* Location: RepeaterStatusView.swift - Discover neighbours button label */
+"remoteNodes.status.discoverNeighbors" = "Nachbarn entdecken";
+
+/* Location: RepeaterStatusView.swift - Discovery in progress with countdown */
+"remoteNodes.status.discoveringSeconds" = "Suche... %ds";
+
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
 "remoteNodes.status.batteryCurveFooter" = "Spannungs-Prozent-Zuordnung zur Schätzung des Batteriestands.";
 

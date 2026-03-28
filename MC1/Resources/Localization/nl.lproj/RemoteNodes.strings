@@ -481,6 +481,12 @@
 /* Location: RepeaterStatusView.swift - Neighbors section footer */
 "remoteNodes.status.neighborsFooter" = "Andere knooppunten ontdekt door deze repeater en hun signaalkwaliteit.";
 
+/* Location: RepeaterStatusView.swift - Discover neighbours button label */
+"remoteNodes.status.discoverNeighbors" = "Buren ontdekken";
+
+/* Location: RepeaterStatusView.swift - Discovery in progress with countdown */
+"remoteNodes.status.discoveringSeconds" = "Ontdekken... %ds";
+
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
 "remoteNodes.status.batteryCurveFooter" = "Spanning-naar-percentage-toewijzing voor schatting van het batterijniveau.";
 

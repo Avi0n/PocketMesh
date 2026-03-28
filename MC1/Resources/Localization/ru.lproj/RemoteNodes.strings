@@ -478,6 +478,12 @@
 /* Location: RepeaterStatusView.swift - Neighbors section footer */
 "remoteNodes.status.neighborsFooter" = "Другие узлы, обнаруженные этим ретранслятором, и качество их сигнала.";
 
+/* Location: RepeaterStatusView.swift - Discover neighbours button label */
+"remoteNodes.status.discoverNeighbors" = "Обнаружить соседей";
+
+/* Location: RepeaterStatusView.swift - Discovery in progress with countdown */
+"remoteNodes.status.discoveringSeconds" = "Обнаружение... %dс";
+
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
 "remoteNodes.status.batteryCurveFooter" = "Соответствие напряжения и процента для оценки уровня заряда батареи.";
 

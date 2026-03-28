@@ -481,6 +481,12 @@
 /* Location: RepeaterStatusView.swift - Neighbors section footer */
 "remoteNodes.status.neighborsFooter" = "Otros nodos descubiertos por este repetidor y su calidad de señal.";
 
+/* Location: RepeaterStatusView.swift - Discover neighbours button label */
+"remoteNodes.status.discoverNeighbors" = "Descubrir vecinos";
+
+/* Location: RepeaterStatusView.swift - Discovery in progress with countdown */
+"remoteNodes.status.discoveringSeconds" = "Descubriendo... %ds";
+
 /* Location: RepeaterStatusView.swift - Battery curve section footer */
 "remoteNodes.status.batteryCurveFooter" = "Mapeo de voltaje a porcentaje para estimar el nivel de batería.";
 

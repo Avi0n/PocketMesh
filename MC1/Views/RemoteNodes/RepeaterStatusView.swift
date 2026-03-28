@@ -38,7 +38,7 @@ struct RepeaterStatusView: View {
                     .accessibilityLabel(L10n.RemoteNodes.RemoteNodes.Status.refresh)
                     .radioDisabled(
                         for: appState.connectionState,
-                        or: viewModel.helper.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.helper.isLoadingTelemetry || viewModel.isLoadingOwnerInfo
+                        or: viewModel.helper.isLoadingStatus || viewModel.isLoadingNeighbors || viewModel.helper.isLoadingTelemetry || viewModel.isLoadingOwnerInfo || viewModel.isDiscovering
                     )
                 }
 
@@ -82,11 +82,14 @@ struct RepeaterStatusView: View {
                 if viewModel.helper.telemetryLoaded {
                     await viewModel.requestTelemetry(for: session)
                 }
-                // Refresh neighbors only if already loaded
-                if viewModel.neighborsLoaded {
+                // Refresh neighbors only if already loaded (skip during discovery polling)
+                if viewModel.neighborsLoaded && !viewModel.isDiscovering {
                     await viewModel.requestNeighbors(for: session)
                 }
             }
+        }
+        .onDisappear {
+            viewModel.stopDiscovery()
         }
         .presentationDetents([.large])
     }
@@ -110,7 +113,8 @@ struct RepeaterStatusView: View {
             viewModel: viewModel,
             session: session,
             contacts: contacts,
-            discoveredNodes: discoveredNodes
+            discoveredNodes: discoveredNodes,
+            connectionState: appState.connectionState
         )
     }
 
@@ -142,8 +146,8 @@ struct RepeaterStatusView: View {
             if viewModel.helper.telemetryLoaded {
                 await viewModel.requestTelemetry(for: session)
             }
-            // Refresh neighbors only if already loaded
-            if viewModel.neighborsLoaded {
+            // Refresh neighbors only if already loaded (skip during discovery polling)
+            if viewModel.neighborsLoaded && !viewModel.isDiscovering {
                 await viewModel.requestNeighbors(for: session)
             }
         }
@@ -221,17 +225,18 @@ private struct NeighborsSection: View {
     let session: RemoteNodeSessionDTO
     let contacts: [ContactDTO]
     let discoveredNodes: [DiscoveredNodeDTO]
+    let connectionState: ConnectionState
 
     var body: some View {
         Section {
             DisclosureGroup(isExpanded: $viewModel.neighborsExpanded) {
-                if viewModel.isLoadingNeighbors {
+                if viewModel.isLoadingNeighbors && !viewModel.isDiscovering {
                     HStack {
                         Spacer()
                         ProgressView()
                         Spacer()
                     }
-                } else if viewModel.neighbors.isEmpty {
+                } else if viewModel.neighbors.isEmpty && !viewModel.isDiscovering {
                     Text(L10n.RemoteNodes.RemoteNodes.Status.noNeighbors)
                         .foregroundStyle(.secondary)
                 } else {
@@ -268,6 +273,27 @@ private struct NeighborsSection: View {
                             )
                         }
                     }
+                }
+
+                if session.isAdmin {
+                    Button {
+                        if viewModel.isDiscovering {
+                            viewModel.stopDiscovery()
+                        } else {
+                            viewModel.startDiscovery(for: session)
+                        }
+                    } label: {
+                        HStack {
+                            if viewModel.isDiscovering {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text(L10n.RemoteNodes.RemoteNodes.Status.discoveringSeconds(viewModel.discoverySecondsRemaining))
+                            } else {
+                                Label(L10n.RemoteNodes.RemoteNodes.Status.discoverNeighbors, systemImage: "antenna.radiowaves.left.and.right")
+                            }
+                        }
+                    }
+                    .radioDisabled(for: connectionState, or: viewModel.isLoadingNeighbors && !viewModel.isDiscovering)
                 }
             } label: {
                 HStack {

@@ -2785,6 +2785,12 @@ public enum L10n {
         public static func channel(_ p1: Int) -> String {
           return L10n.tr("RemoteNodes", "remoteNodes.status.channel", p1, fallback: "Channel %d")
         }
+        /// Location: RepeaterStatusView.swift - Discovery in progress with countdown
+        public static func discoveringSeconds(_ p1: Int) -> String {
+          return L10n.tr("RemoteNodes", "remoteNodes.status.discoveringSeconds", p1, fallback: "Discovering... %ds")
+        }
+        /// Location: RepeaterStatusView.swift - Discover neighbours button label
+        public static let discoverNeighbors = L10n.tr("RemoteNodes", "remoteNodes.status.discoverNeighbors", fallback: "Discover Neighbours")
         /// Location: RepeaterStatusView.swift - Guest mode badge in header
         public static let guestMode = L10n.tr("RemoteNodes", "remoteNodes.status.guestMode", fallback: "Guest Mode")
         /// Location: RepeaterStatusView.swift - Hours ago format
