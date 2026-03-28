@@ -118,7 +118,7 @@ private struct OfflinePackRow: View {
                 VStack(alignment: .trailing) {
                     Text(Int64(pack.completedBytes), format: .byteCount(style: .file))
                     if let speed = pack.downloadSpeed, speed > 0 {
-                        Text(speed, format: .byteCount(style: .file)) + Text("/s")
+                        Text("\(speed, format: .byteCount(style: .file))/s")
                     }
                 }
                 .foregroundStyle(.secondary)

@@ -252,7 +252,11 @@ final class OfflineMapService {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             for (region, context) in pendingPacks {
+                // Safety: both values are immutable after creation; safe to send across task boundary.
+                // MLNTilePyramidOfflineRegion is non-Sendable ObjC; Data is Sendable but the Xcode 26.2
+                // compiler's region-based isolation still flags it without explicit transfer.
                 nonisolated(unsafe) let region = region
+                nonisolated(unsafe) let context = context
                 group.addTask {
                     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
                         MLNOfflineStorage.shared.addPack(for: region, withContext: context) { pack, error in
