@@ -313,10 +313,11 @@ final class OfflineMapService {
         let bytesPerTile: [Int: Int64]
         switch layer {
         case .base:
-            // Average compressed vector tile sizes for OpenFreeMap (OpenMapTiles schema, max z14).
+            // OpenFreeMap vector tiles (OpenMapTiles schema, max z14).
+            // Populated land regions average 30-150 KB per tile at these zooms.
             bytesPerTile = [
-                10: 2_000, 11: 3_000, 12: 5_000,
-                13: 8_000, 14: 12_000,
+                10: 15_000, 11: 25_000, 12: 45_000,
+                13: 70_000, 14: 100_000,
             ]
         case .topo:
             // OpenTopoMap PNG raster tiles (256px, max z17).
@@ -326,6 +327,9 @@ final class OfflineMapService {
                 16: 40_000, 17: 45_000,
             ]
         }
+
+        // Non-tile resources: style JSON, TileJSON manifests, sprites, glyph PBFs
+        let overhead: Int64 = 500_000
 
         var total: Int64 = 0
         for z in minZoom...maxZoom {
@@ -341,7 +345,7 @@ final class OfflineMapService {
             let tileCount = (abs(xMax - xMin) + 1) * (abs(yMax - yMin) + 1)
             total += Int64(tileCount) * (bytesPerTile[z] ?? 10_000)
         }
-        return total
+        return total + overhead
     }
 
     private func excludeDatabaseFromBackup() {
