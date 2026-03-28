@@ -2031,6 +2031,8 @@ public enum L10n {
         }
       }
       public enum Common {
+        /// Dismiss
+        public static let dismissOverlay = L10n.tr("Map", "map.common.dismissOverlay", fallback: "Dismiss")
         /// Location: MapView.swift - Purpose: Done button for sheets
         public static let done = L10n.tr("Map", "map.common.done", fallback: "Done")
       }

@@ -483,6 +483,7 @@ private struct LOSMapCanvasView: View {
                     Color.black.opacity(0.3).ignoresSafeArea()
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L10n.Map.Map.Common.dismissOverlay)
 
                 VStack {
                     Spacer()

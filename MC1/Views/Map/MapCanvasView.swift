@@ -60,6 +60,7 @@ struct MapCanvasView: View {
                         .ignoresSafeArea()
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L10n.Map.Map.Common.dismissOverlay)
 
                 VStack {
                     Spacer()

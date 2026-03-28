@@ -10,6 +10,7 @@
 
 /* Location: MapView.swift - Purpose: Done button for sheets */
 "map.common.done" = "Listo";
+"map.common.dismissOverlay" = "Cerrar";
 
 // MARK: - Map Controls
 
