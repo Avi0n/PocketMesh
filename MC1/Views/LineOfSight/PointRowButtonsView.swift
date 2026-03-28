@@ -11,7 +11,7 @@ struct PointRowButtonsView: View {
     let onRelocate: () -> Void
     let onClear: () -> Void
 
-    @ScaledMetric(relativeTo: .body) private var iconButtonSize: CGFloat = 16
+    private let iconButtonSize: CGFloat = 22
 
     private var coordinate: CLLocationCoordinate2D? {
         switch pointID {

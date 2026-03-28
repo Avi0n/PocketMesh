@@ -3,6 +3,7 @@ import UIKit
 
 /// Font stack available on the OpenFreeMap glyph server.
 /// MapLibre's default ("Open Sans Regular") returns 404, causing silent symbol dropout.
+/// Safety: immutable after initialization, only read from @MainActor coordinator methods.
 private nonisolated(unsafe) let mapFontNames = NSExpression(forConstantValue: ["Noto Sans Regular"])
 
 // MARK: - Layer and source identifiers

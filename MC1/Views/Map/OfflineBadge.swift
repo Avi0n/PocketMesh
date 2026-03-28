@@ -11,7 +11,7 @@ struct OfflineBadge: View {
             .padding(.horizontal)
             .padding(.vertical, 6)
             .background(.ultraThinMaterial, in: .capsule)
-            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityAddTraits(.isStaticText)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             .padding(.trailing)
             .padding(.top)

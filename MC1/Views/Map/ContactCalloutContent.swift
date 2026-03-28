@@ -19,6 +19,7 @@ struct ContactCalloutContent: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
 
             Divider()
 
@@ -26,10 +27,12 @@ struct ContactCalloutContent: View {
             VStack(spacing: 6) {
                 Button(L10n.Map.Map.Callout.details, systemImage: "info.circle", action: onDetail)
                     .buttonStyle(.bordered)
+                    .accessibilityHint(contact.displayName)
 
                 if contact.type == .chat || contact.type == .room {
                     Button(L10n.Map.Map.Callout.message, systemImage: "message.fill", action: onMessage)
                         .buttonStyle(.bordered)
+                        .accessibilityHint(contact.displayName)
                 }
             }
             .frame(maxWidth: .infinity)

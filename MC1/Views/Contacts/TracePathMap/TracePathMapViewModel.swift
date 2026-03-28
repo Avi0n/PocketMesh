@@ -256,8 +256,7 @@ final class TracePathMapViewModel {
             let hopIndex = (pathIndex ?? 0) + 1
             if hopIndex < result.hops.count {
                 let hop = result.hops[hopIndex]
-                let quality = signalQuality(snr: hop.snr)
-                let style = lineStyle(for: quality)
+                let style = lineStyle(for: hop.snr)
 
                 updatedLines.append(MapLine(
                     id: line.id,
@@ -279,7 +278,10 @@ final class TracePathMapViewModel {
                     let snrFormatted = hop.snr.formatted(.number.precision(.fractionLength(1)))
 
                     badgePoints.append(MapPoint(
-                        id: UUID(uuidString: "00000000-0000-0000-0000-\(String(format: "%012d", hopIndex))") ?? UUID(),
+                        id: {
+                            let padded = String(repeating: "0", count: 12) + "\(hopIndex)"
+                            return UUID(uuidString: "00000000-0000-0000-0000-\(String(padded.suffix(12)))") ?? UUID()
+                        }(),
                         coordinate: mid,
                         pinStyle: .badge,
                         label: nil,
@@ -299,23 +301,12 @@ final class TracePathMapViewModel {
 
     // MARK: - Signal Quality
 
-    private enum SignalQuality {
-        case untraced, weak, medium, good
-    }
-
-    /// 3-tier scale with wider thresholds (±5 dB) matching SNRQuality doc convention for path segments
-    private func signalQuality(snr: Double) -> SignalQuality {
-        if snr < -5 { return .weak }
-        if snr < 5 { return .medium }
-        return .good
-    }
-
-    private func lineStyle(for quality: SignalQuality) -> MapLine.LineStyle {
-        switch quality {
-        case .untraced: .traceUntraced
-        case .weak: .traceWeak
-        case .medium: .traceMedium
-        case .good: .traceGood
+    private func lineStyle(for snr: Double?) -> MapLine.LineStyle {
+        switch SNRQuality(snr: snr) {
+        case .excellent, .good: .traceGood
+        case .fair: .traceMedium
+        case .poor: .traceWeak
+        case .unknown: .traceUntraced
         }
     }
 

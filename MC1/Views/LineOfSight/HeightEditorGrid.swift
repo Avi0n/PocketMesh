@@ -16,7 +16,7 @@ struct HeightEditorGrid: View {
 
                     Spacer()
 
-                    Text("\(Int(groundElevation)) m")
+                    Text(Measurement(value: groundElevation, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)))
                         .font(.caption)
                         .monospacedDigit()
                 }
@@ -41,7 +41,7 @@ struct HeightEditorGrid: View {
                 Spacer()
 
                 Stepper(value: $additionalHeight, in: range) {
-                    Text("\(additionalHeight) m")
+                    Text(Measurement(value: Double(additionalHeight), unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)))
                         .font(.caption)
                         .monospacedDigit()
                 }
@@ -62,7 +62,7 @@ struct HeightEditorGrid: View {
 
                     Spacer()
 
-                    Text("\(Int(groundElevation) + additionalHeight) m")
+                    Text(Measurement(value: groundElevation + Double(additionalHeight), unit: UnitLength.meters).formatted(.measurement(width: .abbreviated)))
                         .font(.caption)
                         .monospacedDigit()
                         .bold()

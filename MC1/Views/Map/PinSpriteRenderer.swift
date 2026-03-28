@@ -250,7 +250,7 @@ enum PinSpriteRenderer {
     }
 
     private static func renderLabelSprite(text: String) -> UIImage {
-        let font = UIFont.systemFont(ofSize: 10, weight: .bold)
+        let font = UIFont.systemFont(ofSize: 12, weight: .bold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor.black]
         let textSize = (text as NSString).size(withAttributes: attrs)
 

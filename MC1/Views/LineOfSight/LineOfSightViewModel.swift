@@ -276,6 +276,13 @@ final class LineOfSightViewModel {
     private var pointBElevationTask: Task<Void, Never>?
     private var repeaterElevationTask: Task<Void, Never>?
 
+    isolated deinit {
+        analysisTask?.cancel()
+        pointAElevationTask?.cancel()
+        pointBElevationTask?.cancel()
+        repeaterElevationTask?.cancel()
+    }
+
     // MARK: - Dependencies
 
     private let elevationService: ElevationServiceProtocol
