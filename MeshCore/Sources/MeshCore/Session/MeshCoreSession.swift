@@ -549,6 +549,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         }
     }
 
+    /// Standard error matcher that converts `.error` events into ``MeshCoreError/deviceError(code:)``.
+    private static let deviceErrorMatcher: @Sendable (MeshEvent) -> MeshCoreError? = { event in
+        if case .error(let code) = event {
+            return MeshCoreError.deviceError(code: code ?? 0)
+        }
+        return nil
+    }
+
     private enum ResponseDisposition<T: Sendable> {
         case success(T)
         case failure(MeshCoreError)
@@ -770,10 +778,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         attempt: UInt8 = 0
     ) async throws -> MessageSentInfo {
         let data = PacketBuilder.sendMessage(to: destination, text: text, timestamp: timestamp, attempt: attempt)
-        return try await sendAndWaitWithError(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        return try await sendAndWaitWithError(
+            data,
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Sends a text message to a destination.
@@ -1063,10 +1075,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         var syncSinceLE = syncSince.littleEndian
         let payload = withUnsafeBytes(of: &syncSinceLE) { Data($0) }
         let data = PacketBuilder.binaryRequest(to: publicKey, type: .keepAlive, payload: payload)
-        return try await sendAndWait(data) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        return try await sendAndWaitWithError(
+            data,
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     // MARK: - Device Configuration Commands
@@ -1385,6 +1401,9 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         } errorMatcher: { event in
             if case .disabled = event {
                 return MeshCoreError.featureDisabled
+            }
+            if case .error(let code) = event {
+                return MeshCoreError.deviceError(code: code ?? 0)
             }
             return nil
         }
@@ -1750,10 +1769,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         command: String,
         timestamp: Date = Date()
     ) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.sendCommand(to: destination, command: command, timestamp: timestamp)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        try await sendAndWaitWithError(
+            PacketBuilder.sendCommand(to: destination, command: command, timestamp: timestamp),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Sends a message to a channel.
@@ -1783,10 +1806,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func sendLogin(to destination: Data, password: String) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.sendLogin(to: destination, password: password)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        try await sendAndWaitWithError(
+            PacketBuilder.sendLogin(to: destination, password: password),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Sends a login request to a remote node.
@@ -1817,10 +1844,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func sendStatusRequest(to destination: Data) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.sendStatusRequest(to: destination)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        try await sendAndWaitWithError(
+            PacketBuilder.sendStatusRequest(to: destination),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Requests telemetry data from a remote node.
@@ -1829,10 +1860,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func sendTelemetryRequest(to destination: Data) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.getSelfTelemetry(destination: destination)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        try await sendAndWaitWithError(
+            PacketBuilder.getSelfTelemetry(destination: destination),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Initiates path discovery to a remote node.
@@ -1843,10 +1878,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
     /// - Returns: Information about the sent message, including the expected ACK code.
     /// - Throws: ``MeshCoreError/timeout`` if the device doesn't respond.
     public func sendPathDiscovery(to destination: Data) async throws -> MessageSentInfo {
-        try await sendAndWait(PacketBuilder.sendPathDiscovery(to: destination)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        try await sendAndWaitWithError(
+            PacketBuilder.sendPathDiscovery(to: destination),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Sends a trace packet through the mesh network.
@@ -1869,10 +1908,14 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
         let actualTag = tag ?? UInt32.random(in: 1...UInt32.max)
         let actualAuth = authCode ?? UInt32.random(in: 1...UInt32.max)
 
-        return try await sendAndWait(PacketBuilder.sendTrace(tag: actualTag, authCode: actualAuth, flags: flags, path: path)) { event in
-            if case .messageSent(let info) = event { return info }
-            return nil
-        }
+        return try await sendAndWaitWithError(
+            PacketBuilder.sendTrace(tag: actualTag, authCode: actualAuth, flags: flags, path: path),
+            matching: { event in
+                if case .messageSent(let info) = event { return info }
+                return nil
+            },
+            errorMatcher: Self.deviceErrorMatcher
+        )
     }
 
     /// Sets the flood scope using a raw scope key.
@@ -2765,12 +2808,7 @@ public actor MeshCoreSession: MeshCoreSessionProtocol {
                 }
                 return nil
             },
-            errorMatcher: { event in
-                if case .error(let code) = event {
-                    return MeshCoreError.deviceError(code: code ?? 0)
-                }
-                return nil
-            }
+            errorMatcher: Self.deviceErrorMatcher
         )
     }
 

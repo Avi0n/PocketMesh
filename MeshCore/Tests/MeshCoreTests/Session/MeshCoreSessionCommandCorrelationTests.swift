@@ -450,6 +450,108 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
+    @Test("sendMessage fails fast on device error")
+    func sendMessageFailsFastOnDeviceError() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let messageTask = Task {
+            try await session.sendMessage(
+                to: Data(repeating: 0x11, count: 32),
+                text: "hello"
+            )
+        }
+
+        try await waitUntil("sendMessage should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateError(code: 5)
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await messageTask.value
+        }
+        guard case .deviceError(let code)? = error else {
+            Issue.record("Expected deviceError, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+        #expect(code == 5)
+        await session.stop()
+    }
+
+    @Test("sendKeepAlive fails fast on device error")
+    func sendKeepAliveFailsFastOnDeviceError() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let keepAliveTask = Task {
+            try await session.sendKeepAlive(
+                to: Data(repeating: 0x22, count: 32),
+                syncSince: 0
+            )
+        }
+
+        try await waitUntil("sendKeepAlive should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateError(code: 3)
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await keepAliveTask.value
+        }
+        guard case .deviceError(let code)? = error else {
+            Issue.record("Expected deviceError, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+        #expect(code == 3)
+        await session.stop()
+    }
+
+    @Test("exportPrivateKey fails fast on device error")
+    func exportPrivateKeyFailsFastOnDeviceError() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        let exportTask = Task {
+            try await session.exportPrivateKey()
+        }
+
+        try await waitUntil("exportPrivateKey should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        await transport.simulateError(code: 8)
+
+        let error = await #expect(throws: MeshCoreError.self) {
+            try await exportTask.value
+        }
+        guard case .deviceError(let code)? = error else {
+            Issue.record("Expected deviceError, got \(String(describing: error))")
+            await session.stop()
+            return
+        }
+        #expect(code == 8)
+        await session.stop()
+    }
+
     @Test("binary request errors release the serializer for following requests")
     func binaryRequestErrorsReleaseTheSerializer() async throws {
         let transport = MockTransport()

@@ -620,27 +620,42 @@ public actor RemoteNodeService {
 
     /// Start periodic keep-alive for a room server session.
     /// Sends an immediate keep-alive on start (for connectivity check + sync_since update),
-    /// then continues at the configured interval.
+    /// then continues at the configured interval. Transient failures are retried up to
+    /// `KeepAliveRetryPolicy.maxConsecutiveFailures` times before disconnecting.
     private func startKeepAlive(sessionID: UUID, publicKey: Data) {
         stopKeepAlive(sessionID: sessionID)
 
         let interval = keepAliveIntervals[sessionID] ?? Self.defaultKeepAliveInterval
 
         let task = Task {
+            var consecutiveFailures = 0
+
             while !Task.isCancelled {
                 do {
                     try await sendKeepAliveIfDirectRouted(sessionID: sessionID, publicKey: publicKey)
-                } catch RemoteNodeError.floodRouted {
-                    logger.info("Skipping keep-alive for flood-routed session \(sessionID)")
+                    KeepAliveRetryPolicy.recordSuccess(consecutiveFailures: &consecutiveFailures)
                 } catch {
-                    logger.warning("Keep-alive failed for session \(sessionID): \(error)")
-                    do {
-                        try await dataStore.markSessionDisconnected(sessionID)
-                    } catch {
-                        logger.error("Failed to persist disconnected state for session \(sessionID): \(error)")
+                    let action = KeepAliveRetryPolicy.evaluate(error: error, consecutiveFailures: &consecutiveFailures)
+                    switch action {
+                    case .stop:
+                        break
+                    case .skip:
+                        logger.info("Skipping keep-alive for flood-routed session \(sessionID)")
+                    case .retryNextInterval:
+                        let reason = KeepAliveRetryPolicy.failureReason(for: error)
+                        logger.warning("Keep-alive \(consecutiveFailures)/\(KeepAliveRetryPolicy.maxConsecutiveFailures) failed for \(sessionID): \(reason)")
+                    case .disconnect, .disconnectNow:
+                        let reason = KeepAliveRetryPolicy.failureReason(for: error)
+                        logger.warning("Keep-alive failed for \(sessionID): \(reason)")
+                        do {
+                            try await dataStore.markSessionDisconnected(sessionID)
+                        } catch {
+                            logger.error("Failed to persist disconnected state for session \(sessionID): \(error)")
+                        }
+                        await sessionStateChangedHandler?(sessionID, false)
+                        break
                     }
-                    await sessionStateChangedHandler?(sessionID, false)
-                    break
+                    if action.shouldExitLoop { break }
                 }
 
                 try? await Task.sleep(for: interval)
