@@ -74,6 +74,8 @@ struct NodeCommonStatusRows: View {
 
         LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.uptime, value: helper.uptimeDisplay)
 
+        LabeledContent(L10n.RemoteNodes.RemoteNodes.Status.airtime, value: helper.airtimeDisplay)
+
         NodeMetricRow(
             label: L10n.RemoteNodes.RemoteNodes.Status.lastRssi,
             value: helper.lastRSSIDisplay,

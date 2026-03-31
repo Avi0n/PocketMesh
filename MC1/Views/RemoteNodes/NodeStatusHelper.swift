@@ -254,9 +254,20 @@ final class NodeStatusHelper {
 
     var uptimeDisplay: String {
         guard let uptime = status?.uptimeSeconds else { return Self.emDash }
-        let days = Int(uptime / Self.secondsPerDay)
-        let hours = Int((uptime % Self.secondsPerDay) / Self.secondsPerHour)
-        let minutes = Int((uptime % Self.secondsPerHour) / Self.secondsPerMinute)
+        return Self.formatDuration(uptime)
+    }
+
+    var airtimeDisplay: String {
+        guard let status else { return Self.emDash }
+        let tx = Self.formatDuration(status.airtime)
+        let rx = Self.formatDuration(status.rxAirtime)
+        return "TX \(tx) / RX \(rx)"
+    }
+
+    private static func formatDuration(_ seconds: UInt32) -> String {
+        let days = Int(seconds / secondsPerDay)
+        let hours = Int((seconds % secondsPerDay) / secondsPerHour)
+        let minutes = Int((seconds % secondsPerHour) / secondsPerMinute)
 
         if days > 0 {
             if days == 1 {

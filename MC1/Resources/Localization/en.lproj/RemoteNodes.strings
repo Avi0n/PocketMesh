@@ -395,6 +395,9 @@
 /* Location: RepeaterStatusView.swift - Uptime label */
 "remoteNodes.status.uptime" = "Uptime";
 
+/* Location: SharedNodeViews.swift - Airtime label */
+"remoteNodes.status.airtime" = "Airtime";
+
 /* Location: RepeaterStatusView.swift - Last RSSI label */
 "remoteNodes.status.lastRssi" = "Last RSSI";
 
