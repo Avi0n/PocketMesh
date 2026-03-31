@@ -184,6 +184,9 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Delete all messages for a contact
     func deleteMessagesForContact(contactID: UUID) async throws
 
+    /// Delete all channel messages from a specific sender for a device
+    func deleteChannelMessages(fromSender senderName: String, deviceID: UUID) async throws
+
     /// Fetch blocked contacts for a device
     func fetchBlockedContacts(deviceID: UUID) async throws -> [ContactDTO]
 

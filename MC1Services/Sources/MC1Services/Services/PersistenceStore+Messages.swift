@@ -465,6 +465,31 @@ extension PersistenceStore {
         }
     }
 
+    /// Delete all channel messages from a specific sender for a device.
+    /// Only deletes messages with a non-nil channelIndex (channel messages), preserving DMs.
+    /// Also deletes any reactions associated with the deleted messages.
+    public func deleteChannelMessages(fromSender senderName: String, deviceID: UUID) throws {
+        let targetDeviceID = deviceID
+        let targetSenderName: String? = senderName
+        let messagePredicate = #Predicate<Message> { message in
+            message.deviceID == targetDeviceID &&
+            message.senderNodeName == targetSenderName &&
+            message.channelIndex != nil
+        }
+
+        // Fetch message IDs to clean up associated reactions
+        let messageIDs = try modelContext.fetch(FetchDescriptor(predicate: messagePredicate)).map(\.id)
+
+        if !messageIDs.isEmpty {
+            try modelContext.delete(model: Reaction.self, where: #Predicate {
+                messageIDs.contains($0.messageID)
+            })
+        }
+
+        try modelContext.delete(model: Message.self, where: messagePredicate)
+        try modelContext.save()
+    }
+
     /// Count pending messages for a device
     public func countPendingMessages(deviceID: UUID) throws -> Int {
         let targetDeviceID = deviceID

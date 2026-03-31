@@ -263,12 +263,6 @@ public actor SyncCoordinator {
         }
     }
 
-    /// Invalidate the blocked names cache (call when block status changes)
-    public func invalidateBlockedContactsCache() {
-        blockedNames = []
-        logger.debug("Invalidated blocked names cache")
-    }
-
     /// Check if a sender name is blocked (O(1) lookup)
     public func isBlockedSender(_ name: String?) -> Bool {
         guard let name else { return false }
@@ -278,6 +272,19 @@ public actor SyncCoordinator {
     /// Returns a snapshot of blocked sender names for synchronous filtering
     public func blockedSenderNames() -> Set<String> {
         blockedNames
+    }
+
+    /// Delete any channel messages from blocked senders still in the DB.
+    /// Runs on every connection. After the first pass, delete queries match zero rows
+    /// and are effectively free (indexed predicate, no mutations). This handles legacy
+    /// data from app versions that filtered at read time instead of deleting at block time.
+    func deleteBlockedSenderMessages(deviceID: UUID, dataStore: any PersistenceStoreProtocol) async {
+        let names = blockedNames
+        guard !names.isEmpty else { return }
+
+        for name in names {
+            try? await dataStore.deleteChannelMessages(fromSender: name, deviceID: deviceID)
+        }
     }
 
     // MARK: - Timestamp Correction

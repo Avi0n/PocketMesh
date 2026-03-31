@@ -256,6 +256,7 @@ actor PaginationTestDataStore: PersistenceStoreProtocol {
 
     func saveBlockedChannelSender(_ dto: BlockedChannelSenderDTO) async throws {}
     func deleteBlockedChannelSender(deviceID: UUID, name: String) async throws {}
+    func deleteChannelMessages(fromSender senderName: String, deviceID: UUID) async throws {}
     func fetchBlockedChannelSenders(deviceID: UUID) async throws -> [BlockedChannelSenderDTO] { [] }
 
     // MARK: - Channel Operations

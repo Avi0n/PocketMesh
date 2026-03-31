@@ -628,6 +628,9 @@ struct ChatConversationView: View {
             return
         }
 
+        // Delete existing channel messages from the blocked sender
+        try? await services.dataStore.deleteChannelMessages(fromSender: senderName, deviceID: deviceID)
+
         for contactID in contactIDs {
             do {
                 try await services.contactService.updateContactPreferences(

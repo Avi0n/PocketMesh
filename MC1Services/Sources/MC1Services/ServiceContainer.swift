@@ -218,9 +218,19 @@ public final class ServiceContainer {
         await contactService.setCleanupHandler { [weak self] contactID, reason, publicKey in
             guard let self else { return }
 
-            // Invalidate blocked contacts cache (for both block and unblock)
+            // Refresh blocked names cache and delete channel messages on block
             if reason == .blocked || reason == .unblocked {
-                await self.syncCoordinator.invalidateBlockedContactsCache()
+                if let contact = try? await self.dataStore.fetchContact(id: contactID) {
+                    if reason == .blocked {
+                        try? await self.dataStore.deleteChannelMessages(
+                            fromSender: contact.name, deviceID: contact.deviceID
+                        )
+                    }
+                    await self.syncCoordinator.refreshBlockedContactsCache(
+                        deviceID: contact.deviceID, dataStore: self.dataStore
+                    )
+                    await self.syncCoordinator.notifyConversationsChanged()
+                }
             }
 
             // Remove delivered notifications for this contact (only on block/delete)

@@ -203,6 +203,9 @@ extension SyncCoordinator {
             // 1. Wire message handlers FIRST (before events can arrive)
             await wireMessageHandlers(services: services, deviceID: deviceID)
 
+            // Clean up legacy blocked sender messages still in DB from older app versions
+            await deleteBlockedSenderMessages(deviceID: deviceID, dataStore: services.dataStore)
+
             // 2. NOW start event monitoring (handlers are ready), but delay auto-fetch and advert monitoring until after sync
             logger.info("[Sync] Starting event monitoring for device \(deviceID.uuidString.prefix(8))")
             await services.startEventMonitoring(deviceID: deviceID, enableAutoFetch: false)

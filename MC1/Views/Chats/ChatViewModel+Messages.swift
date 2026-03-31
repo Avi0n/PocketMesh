@@ -523,17 +523,6 @@ extension ChatViewModel {
                 hasMoreMessages = false
             }
 
-            // Filter blocked senders for channel messages
-            if channel != nil, let syncCoordinator {
-                let blockedNames = await syncCoordinator.blockedSenderNames()
-                if !blockedNames.isEmpty {
-                    olderMessages = olderMessages.filter { message in
-                        guard let senderName = message.senderNodeName else { return true }
-                        return !blockedNames.contains(senderName)
-                    }
-                }
-            }
-
             // Hide sent reaction messages (unless failed)
             let isDM = contact != nil
             olderMessages = filterOutgoingReactionMessages(olderMessages, isDM: isDM)
@@ -698,19 +687,14 @@ extension ChatViewModel {
 
         // Batch fetch channel message previews (single actor hop)
         if !channels.isEmpty {
-            let blockedNames = await syncCoordinator?.blockedSenderNames() ?? []
             do {
                 let channelParams = channels.map { (deviceID: $0.deviceID, channelIndex: $0.index, id: $0.id) }
                 let channelMessages = try await dataStore.fetchLastChannelMessages(channels: channelParams, limit: 20)
                 for channel in channels {
                     guard let messages = channelMessages[channel.id] else { continue }
 
-                    // Filter out messages from blocked senders and outgoing reactions
+                    // Filter out outgoing reactions (keep failed ones visible)
                     let lastMessage = messages.last { message in
-                        if let senderName = message.senderNodeName,
-                           blockedNames.contains(senderName) {
-                            return false
-                        }
                         if message.direction == .outgoing,
                            ReactionParser.parse(message.text) != nil,
                            message.status != .failed {

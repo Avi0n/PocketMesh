@@ -37,6 +37,7 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public private(set) var deletedChannelIDs: [UUID] = []
     public private(set) var deletedMessagesForContactIDs: [UUID] = []
     public private(set) var deletedMessagesForChannelCalls: [(deviceID: UUID, channelIndex: UInt8)] = []
+    public private(set) var deletedChannelMessagesFromSenderCalls: [(senderName: String, deviceID: UUID)] = []
     public private(set) var updatedMessageStatuses: [(id: UUID, status: MessageStatus)] = []
     public private(set) var updatedMessageAcks: [(id: UUID, ackCode: UInt32, status: MessageStatus, roundTripTime: UInt32?)] = []
 
@@ -906,6 +907,13 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
     public func deleteMessagesForChannel(deviceID: UUID, channelIndex: UInt8) async throws {
         deletedMessagesForChannelCalls.append((deviceID: deviceID, channelIndex: channelIndex))
         messages = messages.filter { $0.value.deviceID != deviceID || $0.value.channelIndex != channelIndex }
+    }
+
+    public func deleteChannelMessages(fromSender senderName: String, deviceID: UUID) async throws {
+        deletedChannelMessagesFromSenderCalls.append((senderName: senderName, deviceID: deviceID))
+        messages = messages.filter { _, msg in
+            !(msg.senderNodeName == senderName && msg.deviceID == deviceID && msg.channelIndex != nil)
+        }
     }
 
     public func updateChannelLastMessage(channelID: UUID, date: Date?) async throws {

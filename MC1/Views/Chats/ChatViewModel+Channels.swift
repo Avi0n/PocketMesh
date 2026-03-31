@@ -61,17 +61,6 @@ extension ChatViewModel {
             // Compute divider position before filtering, using unfiltered array
             computeDividerPosition(from: fetchedMessages, unreadCount: channel.unreadCount)
 
-            // Filter out messages from blocked senders using SyncCoordinator's cache
-            if let syncCoordinator {
-                let blockedNames = await syncCoordinator.blockedSenderNames()
-                if !blockedNames.isEmpty {
-                    fetchedMessages = fetchedMessages.filter { message in
-                        guard let senderName = message.senderNodeName else { return true }
-                        return !blockedNames.contains(senderName)
-                    }
-                }
-            }
-
             // Hide sent reaction messages (unless failed)
             fetchedMessages = filterOutgoingReactionMessages(fetchedMessages, isDM: false)
 
