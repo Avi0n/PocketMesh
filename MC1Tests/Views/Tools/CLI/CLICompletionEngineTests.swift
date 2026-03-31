@@ -459,4 +459,160 @@ struct CLICompletionEngineTests {
         #expect(suggestions.contains("prefs"))
         #expect(suggestions.contains("share"))
     }
+
+    // MARK: - Start OTA Tests
+
+    @Test("start appears in remote session suggestions")
+    func startAppearsInRemote() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "st", isLocal: false)
+
+        #expect(suggestions.contains("start"))
+    }
+
+    @Test("start ota subcommand completes")
+    func startOtaSubcommandCompletes() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "start ", isLocal: false)
+
+        #expect(suggestions == ["ota"])
+    }
+
+    @Test("start returns empty after ota complete")
+    func startReturnsEmptyAfterOtaComplete() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "start ota ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    // MARK: - Region List Multi-Level Tests
+
+    @Test("Region list appears in subcommands")
+    func regionListAppearsInSubcommands() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "region ", isLocal: false)
+
+        #expect(suggestions.contains("list"))
+        #expect(suggestions.contains("load"))
+        #expect(suggestions.contains("get"))
+    }
+
+    @Test("Region list completes with allowed and denied")
+    func regionListCompletesWithValues() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "region list ", isLocal: false)
+
+        #expect(suggestions == ["allowed", "denied"])
+    }
+
+    @Test("Region list filters values by prefix")
+    func regionListFiltersPrefix() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "region list a", isLocal: false)
+
+        #expect(suggestions == ["allowed"])
+    }
+
+    @Test("Region list returns empty after value complete")
+    func regionListReturnsEmptyAfterValueComplete() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "region list allowed ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    @Test("Region non-list subcommands return empty at position 2")
+    func regionNonListReturnsEmptyAtPosition2() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "region get ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
+
+    // MARK: - New Get/Set Parameters Tests
+
+    @Test("New get/set params include owner.info, radio.rxgain, bridge.channel, pwrmgt")
+    func newGetSetParamsIncludeAdded() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "get ", isLocal: false)
+
+        #expect(suggestions.contains("owner.info"))
+        #expect(suggestions.contains("radio.rxgain"))
+        #expect(suggestions.contains("bridge.channel"))
+        #expect(suggestions.contains("pwrmgt.support"))
+        #expect(suggestions.contains("pwrmgt.source"))
+        #expect(suggestions.contains("pwrmgt.bootreason"))
+        #expect(suggestions.contains("pwrmgt.bootmv"))
+    }
+
+    @Test("pwrmgt prefix filters to four params")
+    func pwrmgtPrefixFilters() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "get pwrmgt.", isLocal: false)
+
+        #expect(suggestions.count == 4)
+        #expect(suggestions.contains("pwrmgt.support"))
+        #expect(suggestions.contains("pwrmgt.source"))
+        #expect(suggestions.contains("pwrmgt.bootreason"))
+        #expect(suggestions.contains("pwrmgt.bootmv"))
+    }
+
+    // MARK: - New Set Value Completion Tests
+
+    @Test("set repeat suggests on/off")
+    func setRepeatSuggestsOnOff() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set repeat ", isLocal: false)
+
+        #expect(suggestions == ["off", "on"])
+    }
+
+    @Test("set allow.read.only suggests on/off")
+    func setAllowReadOnlySuggestsOnOff() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set allow.read.only ", isLocal: false)
+
+        #expect(suggestions == ["off", "on"])
+    }
+
+    @Test("set bridge.enabled suggests on/off")
+    func setBridgeEnabledSuggestsOnOff() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set bridge.enabled ", isLocal: false)
+
+        #expect(suggestions == ["off", "on"])
+    }
+
+    @Test("set radio.rxgain suggests on/off")
+    func setRadioRxgainSuggestsOnOff() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set radio.rxgain ", isLocal: false)
+
+        #expect(suggestions == ["off", "on"])
+    }
+
+    @Test("set multi.acks suggests 0/1")
+    func setMultiAcksSuggestsValues() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set multi.acks ", isLocal: false)
+
+        #expect(suggestions == ["0", "1"])
+    }
+
+    @Test("set bridge.source suggests tx/rx")
+    func setBridgeSourceSuggestsValues() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set bridge.source ", isLocal: false)
+
+        #expect(suggestions == ["rx", "tx"])
+    }
+
+    @Test("set repeat returns empty after value complete")
+    func setRepeatReturnsEmptyAfterValue() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set repeat on ", isLocal: false)
+
+        #expect(suggestions.isEmpty)
+    }
 }

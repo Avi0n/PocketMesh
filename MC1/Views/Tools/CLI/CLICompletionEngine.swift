@@ -19,7 +19,8 @@ final class CLICompletionEngine {
         "ver", "board", "clock", "clkreboot",
         "neighbors", "get", "set", "password",
         "log", "reboot", "advert", "advert.zerohop", "setperm", "tempradio", "neighbor.remove",
-        "region", "gps", "powersaving", "clear", "discover.neighbors"
+        "region", "gps", "powersaving", "clear", "discover.neighbors",
+        "start"
     ]
 
     private static let sessionSubcommands = ["list", "local"]
@@ -32,7 +33,7 @@ final class CLICompletionEngine {
 
     // Per MeshCore CLI Reference - region subcommands
     private static let regionSubcommands = [
-        "load", "get", "put", "remove", "allowf", "denyf", "home", "save"
+        "load", "get", "put", "remove", "allowf", "denyf", "home", "save", "list"
     ]
 
     // Per MeshCore CLI Reference - gps subcommands
@@ -40,7 +41,15 @@ final class CLICompletionEngine {
 
     private static let gpsAdvertValues = ["none", "share", "prefs"]
 
-    private static let powersavingValues = ["on", "off"]
+    private static let startSubcommands = ["ota"]
+
+    private static let regionListValues = ["allowed", "denied"]
+
+    private static let onOffValues = ["on", "off"]
+
+    private static let multiAcksValues = ["0", "1"]
+
+    private static let bridgeSourceValues = ["tx", "rx"]
 
     // Per MeshCore CLI Reference - all get/set parameters
     private static let getSetParams = [
@@ -52,7 +61,9 @@ final class CLICompletionEngine {
         "bridge.enabled", "bridge.delay", "bridge.source",
         "bridge.baud", "bridge.secret", "bridge.type",
         "adc.multiplier", "public.key", "prv.key", "role", "freq",
-        "path.hash.mode", "loop.detect", "bootloader.ver"
+        "path.hash.mode", "loop.detect", "bootloader.ver",
+        "owner.info", "radio.rxgain", "bridge.channel",
+        "pwrmgt.support", "pwrmgt.source", "pwrmgt.bootreason", "pwrmgt.bootmv"
     ]
 
     private static let pathHashModeValues = ["0", "1", "2"]
@@ -106,7 +117,7 @@ final class CLICompletionEngine {
         let argPosition = endsWithSpace ? parts.count : parts.count - 1
 
         switch command {
-        case "session", "login", "log", "powersaving", "clear", "region", "clock":
+        case "session", "login", "log", "powersaving", "clear", "clock", "start":
             // 1-arg commands: only complete when argPosition == 1
             guard argPosition == 1 else { return [] }
             return completeFirstArg(for: command, prefix: prefix)
@@ -123,6 +134,9 @@ final class CLICompletionEngine {
         case "gps":
             return completeGpsArgs(argPosition: argPosition, parts: parts, prefix: prefix)
 
+        case "region":
+            return completeRegionArgs(argPosition: argPosition, parts: parts, prefix: prefix)
+
         default:
             return []
         }
@@ -137,13 +151,13 @@ final class CLICompletionEngine {
         case "log":
             return Self.logSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
         case "powersaving":
-            return Self.powersavingValues.filter { $0.hasPrefix(prefix) }.sorted()
+            return Self.onOffValues.filter { $0.hasPrefix(prefix) }.sorted()
         case "clear":
             return Self.clearSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
-        case "region":
-            return Self.regionSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
         case "clock":
             return Self.clockSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
+        case "start":
+            return Self.startSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
         default:
             return []
         }
@@ -177,6 +191,24 @@ final class CLICompletionEngine {
             return Self.pathHashModeValues.filter { $0.hasPrefix(prefix) }.sorted()
         case "loop.detect":
             return Self.loopDetectValues.filter { $0.hasPrefix(prefix) }.sorted()
+        case "repeat", "allow.read.only", "bridge.enabled", "radio.rxgain":
+            return Self.onOffValues.filter { $0.hasPrefix(prefix) }.sorted()
+        case "multi.acks":
+            return Self.multiAcksValues.filter { $0.hasPrefix(prefix) }.sorted()
+        case "bridge.source":
+            return Self.bridgeSourceValues.filter { $0.hasPrefix(prefix) }.sorted()
+        default:
+            return []
+        }
+    }
+
+    private func completeRegionArgs(argPosition: Int, parts: [String], prefix: String) -> [String] {
+        switch argPosition {
+        case 1:
+            return Self.regionSubcommands.filter { $0.hasPrefix(prefix) }.sorted()
+        case 2 where parts.count >= 2 && parts[1].lowercased() == "list":
+            let valuePrefix = parts.count > 2 ? parts[2].lowercased() : ""
+            return Self.regionListValues.filter { $0.hasPrefix(valuePrefix) }.sorted()
         default:
             return []
         }
