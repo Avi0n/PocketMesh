@@ -552,6 +552,65 @@ struct MeshCoreSessionCommandCorrelationTests {
         await session.stop()
     }
 
+    @Test("error event from binary request also fails concurrent text command")
+    func errorEventFromBinaryRequestAffectsConcurrentTextCommand() async throws {
+        let transport = MockTransport()
+        let session = MeshCoreSession(
+            transport: transport,
+            configuration: SessionConfiguration(defaultTimeout: 0.2, clientIdentifier: "MCTst")
+        )
+
+        try await startSession(session, transport: transport)
+
+        // Launch a text command (uses requestResponseSerializer)
+        let keepAliveTask = Task {
+            try await session.sendKeepAlive(
+                to: Data(repeating: 0x22, count: 32),
+                syncSince: 0
+            )
+        }
+
+        try await waitUntil("sendKeepAlive should be sent") {
+            await transport.sentData.count == 2
+        }
+
+        // Launch a binary request (uses binaryRequestSerializer) — runs concurrently
+        let target = Data(repeating: 0x31, count: 32)
+        let statusTask = Task {
+            try await session.requestStatus(from: target)
+        }
+
+        try await waitUntil("requestStatus should also be sent (independent serializer)") {
+            await transport.sentData.count == 3
+        }
+
+        // One error event — both subscribers see it because EventDispatcher
+        // broadcasts to all with no command correlation.
+        await transport.simulateError(code: 42)
+
+        let keepAliveError = await #expect(throws: MeshCoreError.self) {
+            try await keepAliveTask.value
+        }
+        guard case .deviceError(let keepAliveCode)? = keepAliveError else {
+            Issue.record("Expected keepAlive deviceError, got \(String(describing: keepAliveError))")
+            await session.stop()
+            return
+        }
+        #expect(keepAliveCode == 42)
+
+        let statusError = await #expect(throws: MeshCoreError.self) {
+            try await statusTask.value
+        }
+        guard case .deviceError(let statusCode)? = statusError else {
+            Issue.record("Expected status deviceError, got \(String(describing: statusError))")
+            await session.stop()
+            return
+        }
+        #expect(statusCode == 42)
+
+        await session.stop()
+    }
+
     @Test("binary request errors release the serializer for following requests")
     func binaryRequestErrorsReleaseTheSerializer() async throws {
         let transport = MockTransport()
