@@ -94,7 +94,9 @@ struct SelectedPoint: Identifiable, Equatable {
     }
 
     static func == (lhs: SelectedPoint, rhs: SelectedPoint) -> Bool {
-        lhs.id == rhs.id
+        lhs.id == rhs.id &&
+        lhs.additionalHeight == rhs.additionalHeight &&
+        lhs.groundElevation == rhs.groundElevation
     }
 }
 
