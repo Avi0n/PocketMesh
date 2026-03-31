@@ -83,11 +83,11 @@ struct ChannelInfoSheet: View {
                     isDiscovering: $isDiscoveringRegions,
                     discoveryMessage: $discoveryMessage,
                     onRegionSelected: { region in
-                        selectRegion(region)
+                        Task { await selectRegion(region) }
                     },
                     onDiscoverTapped: {
                         runDiscovery { newRegions in
-                            for region in newRegions { addRegion(region) }
+                            for region in newRegions { await addRegion(region) }
                         }
                     },
                     onManageTapped: {
@@ -143,10 +143,10 @@ struct ChannelInfoSheet: View {
                     isDiscovering: $isDiscoveringRegions,
                     discoveryMessage: $discoveryMessage,
                     onRemoveRegion: { region in
-                        removeRegion(region)
+                        Task { await removeRegion(region) }
                     },
                     onAddRegion: { region in
-                        addRegion(region)
+                        Task { await addRegion(region) }
                     },
                     onDiscoverTapped: {
                         runDiscovery { newRegions in
@@ -158,8 +158,10 @@ struct ChannelInfoSheet: View {
             }
             .navigationDestination(isPresented: $showingDiscoveryResults) {
                 RegionDiscoveryResultsView(discoveredRegions: discoveredNewRegions) { selected in
-                    for region in selected {
-                        addRegion(region)
+                    Task {
+                        for region in selected {
+                            await addRegion(region)
+                        }
                     }
                 }
             }
@@ -274,37 +276,35 @@ struct ChannelInfoSheet: View {
         }
     }
 
-    private func selectRegion(_ region: String?) {
+    private func selectRegion(_ region: String?) async {
         let previousScope = selectedRegionScope
         selectedRegionScope = region
         do {
-            try appState.offlineDataStore?.setChannelRegionScope(channel.id, regionScope: region)
+            try await appState.offlineDataStore?.setChannelRegionScope(channel.id, regionScope: region)
         } catch {
             logger.error("Failed to save region scope: \(error.localizedDescription)")
             selectedRegionScope = previousScope
             return
         }
 
-        Task {
-            if let session = appState.services?.session {
-                let scope: FloodScope = region.map { .region($0) } ?? .disabled
-                try? await session.setFloodScope(scope)
-            }
+        if let session = appState.services?.session {
+            let scope: FloodScope = region.map { .region($0) } ?? .disabled
+            try? await session.setFloodScope(scope)
         }
     }
 
-    private func removeRegion(_ region: String) {
+    private func removeRegion(_ region: String) async {
         do {
-            try appState.offlineDataStore?.removeDeviceKnownRegion(deviceID: channel.deviceID, region: region)
+            try await appState.offlineDataStore?.removeDeviceKnownRegion(deviceID: channel.deviceID, region: region)
             knownRegions.removeAll { $0 == region }
         } catch {
             logger.error("Failed to remove region: \(error.localizedDescription)")
         }
     }
 
-    private func addRegion(_ region: String) {
+    private func addRegion(_ region: String) async {
         do {
-            try appState.offlineDataStore?.addDeviceKnownRegion(deviceID: channel.deviceID, region: region)
+            try await appState.offlineDataStore?.addDeviceKnownRegion(deviceID: channel.deviceID, region: region)
             if !knownRegions.contains(region) {
                 knownRegions.append(region)
             }
@@ -313,7 +313,7 @@ struct ChannelInfoSheet: View {
         }
     }
 
-    private func runDiscovery(onNewRegions: @escaping ([String]) -> Void) {
+    private func runDiscovery(onNewRegions: @escaping ([String]) async -> Void) {
         discoveryTask?.cancel()
         discoveryTask = Task {
             isDiscoveringRegions = true
@@ -329,7 +329,7 @@ struct ChannelInfoSheet: View {
             if newRegions.isEmpty {
                 discoveryMessage = L10n.Chats.Chats.ChannelInfo.Region.noNewRegions
             } else {
-                onNewRegions(newRegions)
+                await onNewRegions(newRegions)
             }
             isDiscoveringRegions = false
         }
