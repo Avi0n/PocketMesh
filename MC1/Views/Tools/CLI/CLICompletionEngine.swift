@@ -66,6 +66,10 @@ final class CLICompletionEngine {
         "pwrmgt.support", "pwrmgt.source", "pwrmgt.bootreason", "pwrmgt.bootmv"
     ]
 
+    // Serial-only params excluded from remote session completions
+    private static let serialOnlyGetParams: Set<String> = ["prv.key", "acl"]
+    private static let serialOnlySetParams: Set<String> = ["freq"]
+
     private static let pathHashModeValues = ["0", "1", "2"]
 
     private static let loopDetectValues = ["off", "minimal", "moderate", "strict"]
@@ -122,11 +126,21 @@ final class CLICompletionEngine {
             guard argPosition == 1 else { return [] }
             return completeFirstArg(for: command, prefix: prefix)
 
-        case "get", "set":
+        case "get":
             if argPosition == 1 {
-                return Self.getSetParams.filter { $0.hasPrefix(prefix) }.sorted()
+                return Self.getSetParams
+                    .filter { !Self.serialOnlyGetParams.contains($0) }
+                    .filter { $0.hasPrefix(prefix) }.sorted()
             }
-            if command == "set", argPosition == 2, parts.count >= 2 {
+            return []
+
+        case "set":
+            if argPosition == 1 {
+                return Self.getSetParams
+                    .filter { !Self.serialOnlySetParams.contains($0) }
+                    .filter { $0.hasPrefix(prefix) }.sorted()
+            }
+            if argPosition == 2, parts.count >= 2 {
                 return completeSetValue(param: parts[1].lowercased(), prefix: parts.count > 2 ? parts[2].lowercased() : "")
             }
             return []

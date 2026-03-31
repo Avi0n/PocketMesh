@@ -90,7 +90,6 @@ struct CLICompletionEngineTests {
         #expect(suggestions.contains("radio"))
         #expect(suggestions.contains("flood.max"))
         #expect(suggestions.contains("bridge.enabled"))
-        #expect(suggestions.contains("prv.key"))
     }
 
     @Test("Clear subcommands complete")
@@ -606,6 +605,43 @@ struct CLICompletionEngineTests {
         let suggestions = engine.completions(for: "set bridge.source ", isLocal: false)
 
         #expect(suggestions == ["rx", "tx"])
+    }
+
+    // MARK: - Serial-Only Exclusion Tests
+
+    @Test("get excludes serial-only params prv.key and acl")
+    func getExcludesSerialOnlyParams() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "get ", isLocal: false)
+
+        #expect(!suggestions.contains("prv.key"))
+        #expect(!suggestions.contains("acl"))
+        // freq is only serial-only for set, not get
+        #expect(suggestions.contains("freq"))
+    }
+
+    @Test("get prefix matching still excludes serial-only params")
+    func getPrefixExcludesSerialOnly() {
+        let engine = createEngine()
+
+        #expect(!engine.completions(for: "get prv", isLocal: false).contains("prv.key"))
+        #expect(!engine.completions(for: "get a", isLocal: false).contains("acl"))
+    }
+
+    @Test("set excludes serial-only param freq")
+    func setExcludesSerialOnlyParams() {
+        let engine = createEngine()
+        let suggestions = engine.completions(for: "set ", isLocal: false)
+
+        #expect(!suggestions.contains("freq"))
+        #expect(suggestions.contains("prv.key"))
+    }
+
+    @Test("set prefix matching still excludes serial-only param freq")
+    func setPrefixExcludesSerialOnly() {
+        let engine = createEngine()
+
+        #expect(!engine.completions(for: "set f", isLocal: false).contains("freq"))
     }
 
     @Test("set repeat returns empty after value complete")
