@@ -33,7 +33,7 @@ struct RepeaterPoint: Equatable {
     var groundElevation: Double?
 
     /// Additional height above ground in meters
-    var additionalHeight: Int
+    var additionalHeight: Double
 
     /// True if repeater is on the A-B path (from slider), false if relocated off-path
     var isOnPath: Bool
@@ -47,7 +47,7 @@ struct RepeaterPoint: Equatable {
         }
     }
 
-    init(coordinate: CLLocationCoordinate2D, groundElevation: Double? = nil, additionalHeight: Int = 10, isOnPath: Bool = true, pathFraction: Double = 0.5) {
+    init(coordinate: CLLocationCoordinate2D, groundElevation: Double? = nil, additionalHeight: Double = 10, isOnPath: Bool = true, pathFraction: Double = 0.5) {
         self.coordinate = coordinate
         self.groundElevation = groundElevation
         self.additionalHeight = additionalHeight
@@ -79,10 +79,10 @@ struct SelectedPoint: Identifiable, Equatable {
     let coordinate: CLLocationCoordinate2D
     let contact: ContactDTO?
     var groundElevation: Double?
-    var additionalHeight: Int = 7
+    var additionalHeight: Double = 7
 
     var totalHeight: Double? {
-        groundElevation.map { $0 + Double(additionalHeight) }
+        groundElevation.map { $0 + additionalHeight }
     }
 
     var displayName: String {
@@ -590,8 +590,8 @@ final class LineOfSightViewModel {
 
     // MARK: - Height Adjustment
 
-    func updateAdditionalHeight(for point: PointID, meters: Int) {
-        let clampedHeight = max(0, meters)
+    func updateAdditionalHeight(for point: PointID, meters: Double) {
+        let clampedHeight = max(0.0, meters)
 
         switch point {
         case .pointA:
@@ -715,9 +715,9 @@ final class LineOfSightViewModel {
     }
 
     /// Updates repeater height above ground
-    func updateRepeaterHeight(meters: Int) {
+    func updateRepeaterHeight(meters: Double) {
         guard repeaterPoint != nil else { return }
-        repeaterPoint?.additionalHeight = max(0, meters)
+        repeaterPoint?.additionalHeight = max(0.0, meters)
     }
 
     /// Sets repeater to an off-path location
@@ -787,9 +787,9 @@ final class LineOfSightViewModel {
         applyRelayAnalysis(
             profileAR: Array(elevationProfile[0...splitIndex]),
             profileRB: Array(elevationProfile[splitIndex...]),
-            pointAHeight: Double(pointA.additionalHeight),
-            repeaterHeight: Double(repeaterPoint.additionalHeight),
-            pointBHeight: Double(pointB.additionalHeight),
+            pointAHeight: pointA.additionalHeight,
+            repeaterHeight: repeaterPoint.additionalHeight,
+            pointBHeight: pointB.additionalHeight,
             frequencyMHz: frequencyMHz,
             refractionK: refractionK
         )
@@ -843,9 +843,9 @@ final class LineOfSightViewModel {
             applyRelayAnalysis(
                 profileAR: profileAR,
                 profileRB: profileRBAdjusted,
-                pointAHeight: Double(pointA.additionalHeight),
-                repeaterHeight: Double(repeaterPoint.additionalHeight),
-                pointBHeight: Double(pointB.additionalHeight),
+                pointAHeight: pointA.additionalHeight,
+                repeaterHeight: repeaterPoint.additionalHeight,
+                pointBHeight: pointB.additionalHeight,
                 frequencyMHz: frequencyMHz,
                 refractionK: refractionK
             )
@@ -950,8 +950,8 @@ final class LineOfSightViewModel {
         // Capture values for use in task
         let pointACoord = pointA.coordinate
         let pointBCoord = pointB.coordinate
-        let pointAHeight = Double(pointA.additionalHeight)
-        let pointBHeight = Double(pointB.additionalHeight)
+        let pointAHeight = pointA.additionalHeight
+        let pointBHeight = pointB.additionalHeight
         let freq = frequencyMHz
         let k = refractionK
 
@@ -1048,8 +1048,8 @@ final class LineOfSightViewModel {
 
         // Capture values for use in task
         let profile = elevationProfile
-        let pointAHeight = Double(pointA.additionalHeight)
-        let pointBHeight = Double(pointB.additionalHeight)
+        let pointAHeight = pointA.additionalHeight
+        let pointBHeight = pointB.additionalHeight
         let freq = frequencyMHz
         let k = refractionK
 
