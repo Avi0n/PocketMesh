@@ -1610,6 +1610,62 @@ struct RelayAnalysisTests {
         // A→R segment should be shorter now
         #expect(updatedResult.segmentAR.distanceMeters < initialARDistance)
     }
+
+    @Test("Off-path height and RF changes reuse cached profiles without network fetch")
+    func offPathParamChangesUseCachedProfiles() async throws {
+        let mockService = MockElevationService()
+        let viewModel = LineOfSightViewModel(elevationService: mockService)
+
+        viewModel.setPointA(coordinate: sanFrancisco)
+        viewModel.setPointB(coordinate: oakland)
+        try await waitForBothPointElevations(viewModel)
+
+        let fetchCountAfterPoints = await mockService.fetchCount
+
+        // Place repeater off-path and do initial analysis (triggers network fetch)
+        let repeaterCoord = CLLocationCoordinate2D(latitude: 37.79, longitude: -122.35)
+        viewModel.setRepeaterOffPath(coordinate: repeaterCoord)
+
+        // Wait for repeater elevation fetch
+        try await waitUntil("repeater elevation should load") {
+            viewModel.repeaterPoint?.groundElevation != nil
+        }
+
+        viewModel.analyzeWithRepeater()
+        try await waitUntil(timeout: .seconds(5), "off-path analysis should complete") {
+            if case .relayResult = viewModel.analysisStatus { return true }
+            return false
+        }
+
+        let fetchCountAfterAnalysis = await mockService.fetchCount
+        #expect(fetchCountAfterAnalysis > fetchCountAfterPoints)
+
+        // Change repeater height — should NOT trigger new fetches
+        viewModel.updateRepeaterHeight(meters: 25)
+        viewModel.analyzeWithRepeater()
+
+        let fetchCountAfterHeight = await mockService.fetchCount
+        #expect(fetchCountAfterHeight == fetchCountAfterAnalysis)
+
+        // Verify we still have a relay result
+        if case .relayResult = viewModel.analysisStatus {
+            // expected
+        } else {
+            Issue.record("Expected relayResult after height change, got: \(viewModel.analysisStatus)")
+        }
+
+        // Change RF params — should NOT trigger new fetches
+        viewModel.refractionK = 4.0 / 3.0
+
+        let fetchCountAfterRF = await mockService.fetchCount
+        #expect(fetchCountAfterRF == fetchCountAfterAnalysis)
+
+        if case .relayResult = viewModel.analysisStatus {
+            // expected
+        } else {
+            Issue.record("Expected relayResult after RF change, got: \(viewModel.analysisStatus)")
+        }
+    }
 }
 
 // MARK: - AnalysisStatus Relay Extension Tests

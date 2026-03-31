@@ -654,6 +654,8 @@ final class LineOfSightViewModel {
         isAnalyzing = false
         analysisStatus = .idle
         elevationProfile = []
+        elevationProfileAR = []
+        elevationProfileRB = []
     }
 
     func clearPointA() {
@@ -733,6 +735,10 @@ final class LineOfSightViewModel {
             pathFraction: 0.5  // Not used for off-path
         )
 
+        // Invalidate cached off-path profiles (coordinates changed)
+        elevationProfileAR = []
+        elevationProfileRB = []
+
         // Fetch elevation for the new coordinate
         repeaterElevationTask?.cancel()
         repeaterElevationTask = Task {
@@ -756,14 +762,23 @@ final class LineOfSightViewModel {
     /// Analyzes the path with the current repeater position
     func analyzeWithRepeater() {
         guard let repeaterPoint,
-              pointA != nil,
-              pointB != nil else { return }
+              let pointA,
+              let pointB else { return }
 
         if repeaterPoint.isOnPath {
-            // On-path: use cached profile (existing logic)
             analyzeWithRepeaterOnPath()
+        } else if !elevationProfileAR.isEmpty, !elevationProfileRB.isEmpty {
+            // Cached profiles exist — no network fetch needed
+            applyRelayAnalysis(
+                profileAR: elevationProfileAR,
+                profileRB: elevationProfileRB,
+                pointAHeight: pointA.additionalHeight,
+                repeaterHeight: repeaterPoint.additionalHeight,
+                pointBHeight: pointB.additionalHeight,
+                frequencyMHz: frequencyMHz,
+                refractionK: refractionK
+            )
         } else {
-            // Off-path: fetch fresh profiles
             analysisTask?.cancel()
             analysisTask = Task {
                 await analyzeWithRepeaterOffPath()
@@ -1020,6 +1035,8 @@ final class LineOfSightViewModel {
         repeaterElevationTask?.cancel()
         repeaterElevationTask = nil
         elevationProfile = []
+        elevationProfileAR = []
+        elevationProfileRB = []
         profileSamples = []
         profileSamplesRB = []
         elevationFetchFailed = false
