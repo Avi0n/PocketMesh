@@ -230,6 +230,9 @@
 /* Location: ContactDetailView.swift - Purpose: Share via advert button */
 "contacts.detail.shareViaAdvert" = "Contact delen via advertentie";
 
+/* Location: ContactDetailView.swift - Purpose: Share contact error when advert is missing or stale */
+"contacts.detail.shareContactUnavailable" = "Kan knooppunt niet delen. De advertentie van het knooppunt ontbreekt mogelijk of is te oud.";
+
 /* Location: ContactDetailView.swift - Purpose: Ping repeater button */
 "contacts.detail.pingRepeater" = "Ping repeater";
 

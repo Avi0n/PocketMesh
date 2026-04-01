@@ -230,6 +230,9 @@
 /* Location: ContactDetailView.swift - Purpose: Share via advert button */
 "contacts.detail.shareViaAdvert" = "Share Contact via Advert";
 
+/* Location: ContactDetailView.swift - Purpose: Share contact error when advert is missing or stale */
+"contacts.detail.shareContactUnavailable" = "Unable to share node. The node's advertisement may be missing or too old.";
+
 /* Location: ContactDetailView.swift - Purpose: Ping repeater button */
 "contacts.detail.pingRepeater" = "Ping Repeater";
 

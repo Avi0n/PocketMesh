@@ -230,6 +230,9 @@
 /* Location: ContactDetailView.swift - Purpose: Share via advert button */
 "contacts.detail.shareViaAdvert" = "Partager le contact via annonce";
 
+/* Location: ContactDetailView.swift - Purpose: Share contact error when advert is missing or stale */
+"contacts.detail.shareContactUnavailable" = "Impossible de partager le nœud. L'annonce du nœud est peut-être manquante ou trop ancienne.";
+
 /* Location: ContactDetailView.swift - Purpose: Ping repeater button */
 "contacts.detail.pingRepeater" = "Ping du répéteur";
 

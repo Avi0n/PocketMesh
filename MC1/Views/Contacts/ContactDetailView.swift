@@ -361,6 +361,8 @@ struct ContactDetailView: View {
     private func shareContact() async {
         do {
             try await appState.services?.contactService.shareContact(publicKey: currentContact.publicKey)
+        } catch ContactServiceError.shareContactUnavailable {
+            errorMessage = L10n.Contacts.Contacts.Detail.shareContactUnavailable
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -11,6 +11,7 @@ public enum ContactServiceError: Error, Sendable, LocalizedError {
     case syncInterrupted
     case contactNotFound
     case contactTableFull
+    case shareContactUnavailable
     case sessionError(MeshCoreError)
 
     public var errorDescription: String? {
@@ -27,6 +28,8 @@ public enum ContactServiceError: Error, Sendable, LocalizedError {
             return "Contact not found on device"
         case .contactTableFull:
             return "Device node list is full"
+        case .shareContactUnavailable:
+            return "Unable to share node. The node's advertisement may be missing or too old."
         case .sessionError(let error):
             return error.localizedDescription
         }
@@ -346,6 +349,9 @@ public actor ContactService {
         do {
             try await session.shareContact(publicKey: publicKey)
         } catch let error as MeshCoreError {
+            if case .deviceError(let code) = error, code == ProtocolError.tableFull.rawValue {
+                throw ContactServiceError.shareContactUnavailable
+            }
             if case .deviceError(let code) = error, code == ProtocolError.notFound.rawValue {
                 throw ContactServiceError.contactNotFound
             }

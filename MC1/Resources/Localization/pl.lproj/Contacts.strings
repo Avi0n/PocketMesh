@@ -230,6 +230,9 @@
 /* Location: ContactDetailView.swift - Purpose: Share via advert button */
 "contacts.detail.shareViaAdvert" = "Udostępnij kontakt przez ogłoszenie";
 
+/* Location: ContactDetailView.swift - Purpose: Share contact error when advert is missing or stale */
+"contacts.detail.shareContactUnavailable" = "Nie można udostępnić węzła. Ogłoszenie węzła może być niedostępne lub zbyt stare.";
+
 /* Location: ContactDetailView.swift - Purpose: Ping repeater button */
 "contacts.detail.pingRepeater" = "Pinguj przekaźnik";
 

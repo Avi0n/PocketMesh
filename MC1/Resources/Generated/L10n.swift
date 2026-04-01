@@ -1129,6 +1129,8 @@ public enum L10n {
         public static let sendMessage = L10n.tr("Contacts", "contacts.detail.sendMessage", fallback: "Send Message")
         /// Location: ContactDetailView.swift - Purpose: Share contact button
         public static let shareContact = L10n.tr("Contacts", "contacts.detail.shareContact", fallback: "Share Contact")
+        /// Location: ContactDetailView.swift - Purpose: Share contact error when advert is missing or stale
+        public static let shareContactUnavailable = L10n.tr("Contacts", "contacts.detail.shareContactUnavailable", fallback: "Unable to share node. The node's advertisement may be missing or too old.")
         /// Location: ContactDetailView.swift - Purpose: Share via advert button
         public static let shareViaAdvert = L10n.tr("Contacts", "contacts.detail.shareViaAdvert", fallback: "Share Contact via Advert")
         /// Location: ContactDetailView.swift - Purpose: Technical section header
