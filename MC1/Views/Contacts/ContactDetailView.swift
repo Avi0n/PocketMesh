@@ -60,12 +60,14 @@ struct ContactDetailView: View {
         case nodeAuth
         case repeaterStatus(RemoteNodeSessionDTO)
         case roomStatus(RemoteNodeSessionDTO)
+        case nodeTelemetry(ContactDTO)
 
         var id: String {
             switch self {
             case .nodeAuth: return "auth"
             case .repeaterStatus(let session): return "status-\(session.id)"
             case .roomStatus(let session): return "room-status-\(session.id)"
+            case .nodeTelemetry(let contact): return "telemetry-\(contact.id)"
             }
         }
     }
@@ -118,7 +120,13 @@ struct ContactDetailView: View {
                 isTogglingFavorite: isTogglingFavorite,
                 pingResult: pingResult,
                 onJoinRoom: { showRoomJoinSheet = true },
-                onShowTelemetry: { activeSheet = .nodeAuth },
+                onShowTelemetry: {
+                    if currentContact.type == .chat {
+                        activeSheet = .nodeTelemetry(currentContact)
+                    } else {
+                        activeSheet = .nodeAuth
+                    }
+                },
                 onShowAdminAccess: {
                     adminSession = nil
                     showRepeaterAdminAuth = true
@@ -269,6 +277,8 @@ struct ContactDetailView: View {
                 RepeaterStatusView(session: session)
             case .roomStatus(let session):
                 RoomStatusView(session: session)
+            case .nodeTelemetry(let contact):
+                NodeTelemetryView(contact: contact)
             }
         }
         .sheet(isPresented: $showRepeaterAdminAuth, onDismiss: {
@@ -599,6 +609,22 @@ private struct ContactActionsSection: View {
                     }
                     .radioDisabled(for: appState.connectionState)
                 }
+
+                Button(action: onShowTelemetry) {
+                    Label(L10n.Contacts.Contacts.Detail.telemetry, systemImage: "chart.line.uptrend.xyaxis")
+                }
+                .radioDisabled(for: appState.connectionState)
+
+                NavigationLink {
+                    TelemetryHistoryOverviewView(
+                        publicKey: currentContact.publicKey,
+                        deviceID: currentContact.deviceID,
+                        showNeighbors: false
+                    )
+                } label: {
+                    Label(L10n.Contacts.Contacts.Detail.savedHistory, systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                        .foregroundStyle(.tint)
+                }
             }
 
             // Toggle favorite (for all contact types)
@@ -624,7 +650,11 @@ private struct ContactActionsSection: View {
 
             // Share Contact via Advert
             Button(action: onShareViaAdvert) {
-                AsyncActionLabel(isLoading: isSharing, showSuccess: showShareSuccess) {
+                if isSharing || showShareSuccess {
+                    AsyncActionLabel(isLoading: isSharing, showSuccess: showShareSuccess) {
+                        EmptyView()
+                    }
+                } else {
                     Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
                 }
             }

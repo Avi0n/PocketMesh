@@ -110,22 +110,11 @@ struct NodesSettingsSection: View {
             Button {
                 applySettings()
             } label: {
-                HStack {
-                    Spacer()
-                    if isApplying {
-                        ProgressView()
-                    } else if showSuccess {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        Text(L10n.Settings.AdvancedRadio.apply)
-                            .foregroundStyle(canApply ? Color.accentColor : .secondary)
-                            .transition(.opacity)
-                    }
-                    Spacer()
+                AsyncActionLabel(isLoading: isApplying, showSuccess: showSuccess) {
+                    Text(L10n.Settings.AdvancedRadio.apply)
+                        .foregroundStyle(canApply ? Color.accentColor : .secondary)
+                        .transition(.opacity)
                 }
-                .animation(.default, value: showSuccess)
             }
             .radioDisabled(for: appState.connectionState, or: isApplying || showSuccess || !settingsModified)
         } header: {

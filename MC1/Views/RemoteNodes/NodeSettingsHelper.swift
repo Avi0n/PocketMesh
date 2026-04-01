@@ -124,6 +124,7 @@ final class NodeSettingsHelper {
     var showSuccessAlert = false
     var identityApplySuccess = false
     var contactInfoApplySuccess = false
+    var changePasswordSuccess = false
 
     // MARK: - Service Closures
 
@@ -484,10 +485,15 @@ final class NodeSettingsHelper {
             default: false
             }
             if isSuccess {
-                successMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordChangedSuccess
-                showSuccessAlert = true
                 newPassword = ""
                 confirmPassword = ""
+                withAnimation {
+                    isApplying = false
+                    changePasswordSuccess = true
+                }
+                try? await Task.sleep(for: .seconds(1.5))
+                withAnimation { changePasswordSuccess = false }
+                return
             } else {
                 errorMessage = L10n.RemoteNodes.RemoteNodes.Settings.passwordChangeFailed
             }

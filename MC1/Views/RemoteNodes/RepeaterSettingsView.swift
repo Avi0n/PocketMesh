@@ -221,22 +221,11 @@ private struct BehaviorSection: View {
             Button {
                 Task { await viewModel.applyBehaviorSettings() }
             } label: {
-                HStack {
-                    Spacer()
-                    if viewModel.helper.isApplying {
-                        ProgressView()
-                    } else if viewModel.behaviorApplySuccess {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        Text(L10n.RemoteNodes.RemoteNodes.Settings.applyBehaviorSettings)
-                            .foregroundStyle(viewModel.behaviorSettingsModified ? Color.accentColor : .secondary)
-                            .transition(.opacity)
-                    }
-                    Spacer()
+                AsyncActionLabel(isLoading: viewModel.helper.isApplying, showSuccess: viewModel.behaviorApplySuccess) {
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.applyBehaviorSettings)
+                        .foregroundStyle(viewModel.behaviorSettingsModified ? Color.accentColor : .secondary)
+                        .transition(.opacity)
                 }
-                .animation(.default, value: viewModel.behaviorApplySuccess)
             }
             .disabled(viewModel.helper.isApplying || viewModel.behaviorApplySuccess || !viewModel.behaviorSettingsModified)
         }
@@ -339,22 +328,11 @@ private struct RegionsSection: View {
                 Button {
                     Task { await viewModel.saveRegions() }
                 } label: {
-                    HStack {
-                        Spacer()
-                        if viewModel.helper.isApplying {
-                            ProgressView()
-                        } else if viewModel.regionsSaveSuccess {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                                .transition(.scale.combined(with: .opacity))
-                        } else {
-                            Text(L10n.RemoteNodes.RemoteNodes.Settings.Regions.saveToDevice)
-                                .foregroundStyle(viewModel.hasUnsavedRegionChanges ? Color.accentColor : .secondary)
-                                .transition(.opacity)
-                        }
-                        Spacer()
+                    AsyncActionLabel(isLoading: viewModel.helper.isApplying, showSuccess: viewModel.regionsSaveSuccess) {
+                        Text(L10n.RemoteNodes.RemoteNodes.Settings.Regions.saveToDevice)
+                            .foregroundStyle(viewModel.hasUnsavedRegionChanges ? Color.accentColor : .secondary)
+                            .transition(.opacity)
                     }
-                    .animation(.default, value: viewModel.regionsSaveSuccess)
                 }
                 .disabled(viewModel.helper.isApplying || viewModel.regionsSaveSuccess || !viewModel.hasUnsavedRegionChanges)
             }

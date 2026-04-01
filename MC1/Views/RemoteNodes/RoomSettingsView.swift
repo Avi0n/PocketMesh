@@ -207,22 +207,11 @@ private struct RoomBehaviorSection: View {
             Button {
                 Task { await viewModel.applyRoomSettings() }
             } label: {
-                HStack {
-                    Spacer()
-                    if viewModel.helper.isApplying {
-                        ProgressView()
-                    } else if viewModel.roomSettingsApplySuccess {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.applyRoomSettings)
-                            .foregroundStyle(viewModel.roomSettingsModified ? Color.accentColor : .secondary)
-                            .transition(.opacity)
-                    }
-                    Spacer()
+                AsyncActionLabel(isLoading: viewModel.helper.isApplying, showSuccess: viewModel.roomSettingsApplySuccess) {
+                    Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.applyRoomSettings)
+                        .foregroundStyle(viewModel.roomSettingsModified ? Color.accentColor : .secondary)
+                        .transition(.opacity)
                 }
-                .animation(.default, value: viewModel.roomSettingsApplySuccess)
             }
             .disabled(viewModel.helper.isApplying || viewModel.roomSettingsApplySuccess || !viewModel.roomSettingsModified)
         }
