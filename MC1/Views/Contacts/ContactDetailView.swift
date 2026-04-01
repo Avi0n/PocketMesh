@@ -91,6 +91,8 @@ struct ContactDetailView: View {
     // Ping state
     @State private var isPinging = false
     @State private var pingResult: PingResult?
+    @State private var isSharing = false
+    @State private var showShareSuccess = false
 
     private let pingLogger = Logger(subsystem: "com.mc1", category: "Ping")
 
@@ -124,7 +126,9 @@ struct ContactDetailView: View {
                 onPingRepeater: { Task { await pingRepeater() } },
                 onToggleFavorite: { Task { await toggleFavorite() } },
                 onShareQR: { showQRShareSheet = true },
-                onShareViaAdvert: { Task { await shareContact() } }
+                onShareViaAdvert: { Task { await shareContact() } },
+                isSharing: isSharing,
+                showShareSuccess: showShareSuccess
             )
 
             // Info section
@@ -359,11 +363,18 @@ struct ContactDetailView: View {
     }
 
     private func shareContact() async {
+        isSharing = true
         do {
             try await appState.services?.contactService.shareContact(publicKey: currentContact.publicKey)
+            isSharing = false
+            withAnimation { showShareSuccess = true }
+            try? await Task.sleep(for: .seconds(1.5))
+            withAnimation { showShareSuccess = false }
         } catch ContactServiceError.shareContactUnavailable {
+            isSharing = false
             errorMessage = L10n.Contacts.Contacts.Detail.shareContactUnavailable
         } catch {
+            isSharing = false
             errorMessage = error.localizedDescription
         }
     }
@@ -542,6 +553,8 @@ private struct ContactActionsSection: View {
     let onToggleFavorite: () -> Void
     let onShareQR: () -> Void
     let onShareViaAdvert: () -> Void
+    let isSharing: Bool
+    let showShareSuccess: Bool
 
     var body: some View {
         Section {
@@ -611,9 +624,11 @@ private struct ContactActionsSection: View {
 
             // Share Contact via Advert
             Button(action: onShareViaAdvert) {
-                Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
+                AsyncActionLabel(isLoading: isSharing, showSuccess: showShareSuccess) {
+                    Label(L10n.Contacts.Contacts.Detail.shareViaAdvert, systemImage: "antenna.radiowaves.left.and.right")
+                }
             }
-            .radioDisabled(for: appState.connectionState)
+            .radioDisabled(for: appState.connectionState, or: isSharing || showShareSuccess)
         }
     }
 }
