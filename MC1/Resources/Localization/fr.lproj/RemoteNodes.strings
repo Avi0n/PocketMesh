@@ -453,6 +453,7 @@
 
 /* Location: RepeaterStatusViewModel.swift - Request timed out */
 "remoteNodes.status.requestTimedOut" = "La demande a expiré";
+"remoteNodes.status.telemetryTimedOut" = "Délai expiré ou le contact a désactivé la télémétrie";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
 "remoteNodes.status.uptime1Day" = "1 jour %d h %d min";

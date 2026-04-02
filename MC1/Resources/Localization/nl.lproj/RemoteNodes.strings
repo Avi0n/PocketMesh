@@ -453,6 +453,7 @@
 
 /* Location: RepeaterStatusViewModel.swift - Request timed out */
 "remoteNodes.status.requestTimedOut" = "Verzoek time-out";
+"remoteNodes.status.telemetryTimedOut" = "Time-out of contact heeft telemetrie uitgeschakeld";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
 "remoteNodes.status.uptime1Day" = "1 dag %du %dm";

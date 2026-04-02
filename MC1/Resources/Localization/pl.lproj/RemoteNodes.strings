@@ -450,6 +450,7 @@
 
 /* Location: RepeaterStatusViewModel.swift - Request timed out */
 "remoteNodes.status.requestTimedOut" = "Upłynął limit czasu żądania";
+"remoteNodes.status.telemetryTimedOut" = "Upłynął limit czasu lub kontakt ma wyłączoną telemetrię";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
 "remoteNodes.status.uptime1Day" = "1 dzień %dh %dm";

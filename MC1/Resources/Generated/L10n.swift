@@ -2851,6 +2851,8 @@ public enum L10n {
         public static let telemetry = L10n.tr("RemoteNodes", "remoteNodes.status.telemetry", fallback: "Telemetry")
         /// Location: RepeaterStatusView.swift - Telemetry section footer
         public static let telemetryFooter = L10n.tr("RemoteNodes", "remoteNodes.status.telemetryFooter", fallback: "Sensor readings such as temperature, humidity, and voltage.")
+        /// Timed out or contact has telemetry disabled
+        public static let telemetryTimedOut = L10n.tr("RemoteNodes", "remoteNodes.status.telemetryTimedOut", fallback: "Timed out or contact has telemetry disabled")
         /// Location: RepeaterStatusView.swift - Navigation title
         public static let title = L10n.tr("RemoteNodes", "remoteNodes.status.title", fallback: "Repeater Status")
         /// Location: RepeaterStatusView.swift - Unknown neighbor name

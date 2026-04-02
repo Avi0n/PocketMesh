@@ -453,6 +453,7 @@
 
 /* Location: RepeaterStatusViewModel.swift - Request timed out */
 "remoteNodes.status.requestTimedOut" = "请求超时";
+"remoteNodes.status.telemetryTimedOut" = "超时或联系人已禁用遥测";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
 "remoteNodes.status.uptime1Day" = "1 天 %d小时 %d分钟";

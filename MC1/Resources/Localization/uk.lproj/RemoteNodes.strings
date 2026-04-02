@@ -450,6 +450,7 @@
 
 /* Location: RepeaterStatusViewModel.swift - Request timed out */
 "remoteNodes.status.requestTimedOut" = "Час очікування запиту вичерпано";
+"remoteNodes.status.telemetryTimedOut" = "Час очікування вичерпано або контакт вимкнув телеметрію";
 
 /* Location: RepeaterStatusViewModel.swift - Uptime 1 day format */
 "remoteNodes.status.uptime1Day" = "1 день %d год %d хв";
