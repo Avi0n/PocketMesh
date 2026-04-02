@@ -5,12 +5,20 @@ import SwiftUI
 struct TelemetryHistoryOverviewView: View {
     let publicKey: Data
     let deviceID: UUID
+    let showNeighbors: Bool
 
     @Environment(\.appState) private var appState
     @State private var viewModel = TelemetryHistoryOverviewViewModel()
     @State private var radioExpanded = true
-    @State private var sensorsExpanded = false
+    @State private var sensorsExpanded: Bool
     @State private var neighborsExpanded = false
+
+    init(publicKey: Data, deviceID: UUID, showNeighbors: Bool = true) {
+        self.publicKey = publicKey
+        self.deviceID = deviceID
+        self.showNeighbors = showNeighbors
+        self._sensorsExpanded = State(initialValue: !showNeighbors)
+    }
 
     var body: some View {
         List {
@@ -20,7 +28,9 @@ struct TelemetryHistoryOverviewView: View {
                 HistoryTimeRangePicker(selection: $viewModel.timeRange)
                 radioSection
                 sensorsSection
-                neighborsSection
+                if showNeighbors {
+                    neighborsSection
+                }
                 retentionFooter
             }
         }
