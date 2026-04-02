@@ -434,6 +434,12 @@ public protocol PersistenceStoreProtocol: Actor {
     /// Update telemetry data on an existing snapshot
     func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) async throws
 
+    /// Save a telemetry-only snapshot (no radio metrics). Returns the snapshot ID.
+    func saveTelemetryOnlySnapshot(
+        nodePublicKey: Data,
+        telemetryEntries: [TelemetrySnapshotEntry]
+    ) async throws -> UUID
+
     /// Delete snapshots older than the given date
     func deleteOldNodeStatusSnapshots(olderThan date: Date) async throws
 }

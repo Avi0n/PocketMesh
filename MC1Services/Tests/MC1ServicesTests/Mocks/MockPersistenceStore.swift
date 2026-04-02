@@ -1476,6 +1476,18 @@ public actor MockPersistenceStore: PersistenceStoreProtocol {
             .first
     }
 
+    public func saveTelemetryOnlySnapshot(
+        nodePublicKey: Data,
+        telemetryEntries: [TelemetrySnapshotEntry]
+    ) async throws -> UUID {
+        let dto = NodeStatusSnapshotDTO(
+            nodePublicKey: nodePublicKey,
+            telemetryEntries: telemetryEntries
+        )
+        nodeStatusSnapshots.append(dto)
+        return dto.id
+    }
+
     public func updateSnapshotNeighbors(id: UUID, neighbors: [NeighborSnapshotEntry]) async throws {
         if let index = nodeStatusSnapshots.firstIndex(where: { $0.id == id }) {
             let existing = nodeStatusSnapshots[index]

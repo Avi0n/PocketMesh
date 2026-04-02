@@ -479,6 +479,19 @@ extension PersistenceStore {
         try modelContext.save()
     }
 
+    public func saveTelemetryOnlySnapshot(
+        nodePublicKey: Data,
+        telemetryEntries: [TelemetrySnapshotEntry]
+    ) throws -> UUID {
+        let snapshot = NodeStatusSnapshot(
+            nodePublicKey: nodePublicKey,
+            telemetryEntries: telemetryEntries
+        )
+        modelContext.insert(snapshot)
+        try modelContext.save()
+        return snapshot.id
+    }
+
     public func updateSnapshotTelemetry(id: UUID, telemetry: [TelemetrySnapshotEntry]) throws {
         var descriptor = FetchDescriptor<NodeStatusSnapshot>(
             predicate: #Predicate { $0.id == id }

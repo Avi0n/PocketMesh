@@ -16,6 +16,20 @@ final class NodeStatusHelper {
     /// Current session
     var session: RemoteNodeSessionDTO?
 
+    /// Public key for direct telemetry (no remote session).
+    /// Used for chat nodes that don't require login.
+    private var directPublicKey: Data?
+
+    /// The public key to use for requests and history — prefers session, falls back to direct.
+    var effectivePublicKey: Data? {
+        session?.publicKey ?? directPublicKey
+    }
+
+    /// 6-byte prefix for response matching.
+    var effectivePublicKeyPrefix: Data? {
+        session?.publicKeyPrefix ?? directPublicKey?.prefix(6)
+    }
+
     /// Last received status
     var status: RemoteNodeStatus?
 
@@ -71,6 +85,12 @@ final class NodeStatusHelper {
     func configure(contactService: ContactService?, nodeSnapshotService: NodeSnapshotService?) {
         self.contactService = contactService
         self.nodeSnapshotService = nodeSnapshotService
+    }
+
+    /// Configure for direct telemetry access (no login session).
+    /// Used for chat nodes that can be queried without authentication.
+    func configureForDirectTelemetry(publicKey: Data) {
+        self.directPublicKey = publicKey
     }
 
     // MARK: - Transient Retry Machinery
@@ -201,7 +221,7 @@ final class NodeStatusHelper {
     // MARK: - Telemetry Response Handling
 
     func handleTelemetryResponse(_ response: TelemetryResponse) {
-        guard let expectedPrefix = session?.publicKeyPrefix,
+        guard let expectedPrefix = effectivePublicKeyPrefix,
               response.publicKeyPrefix == expectedPrefix else {
             return
         }
@@ -357,11 +377,11 @@ final class NodeStatusHelper {
     // MARK: - History
 
     func fetchHistory() async -> [NodeStatusSnapshotDTO] {
-        guard let nodeSnapshotService, let session else {
-            logger.warning("fetchHistory: nodeSnapshotService or session is nil")
+        guard let nodeSnapshotService, let publicKey = effectivePublicKey else {
+            logger.warning("fetchHistory: nodeSnapshotService or public key is nil")
             return []
         }
-        return await nodeSnapshotService.fetchSnapshots(for: session.publicKey)
+        return await nodeSnapshotService.fetchSnapshots(for: publicKey)
     }
 
     // MARK: - OCV Settings

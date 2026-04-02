@@ -76,6 +76,31 @@ public actor NodeSnapshotService {
         }
     }
 
+    /// Save a telemetry-only snapshot if enough time has passed since the last one.
+    /// Returns the snapshot ID if saved, nil if throttled.
+    public func saveTelemetryOnlySnapshot(
+        nodePublicKey: Data,
+        telemetryEntries: [TelemetrySnapshotEntry]
+    ) async -> UUID? {
+        do {
+            if let latest = try await dataStore.fetchLatestNodeStatusSnapshot(nodePublicKey: nodePublicKey),
+               latest.timestamp.distance(to: .now) < Self.minimumInterval {
+                logger.debug("Telemetry snapshot throttled for node (last: \(latest.timestamp))")
+                return nil
+            }
+
+            let id = try await dataStore.saveTelemetryOnlySnapshot(
+                nodePublicKey: nodePublicKey,
+                telemetryEntries: telemetryEntries
+            )
+            logger.info("Saved telemetry-only snapshot for node")
+            return id
+        } catch {
+            logger.error("Failed to save telemetry snapshot: \(error)")
+            return nil
+        }
+    }
+
     /// Fetch the most recent snapshot before the given date (for delta calculation).
     public func previousSnapshot(for nodePublicKey: Data, before date: Date) async -> NodeStatusSnapshotDTO? {
         do {
