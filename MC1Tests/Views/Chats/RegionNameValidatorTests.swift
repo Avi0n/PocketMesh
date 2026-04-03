@@ -13,11 +13,6 @@ struct RegionNameValidatorTests {
         #expect(RegionNameValidator.isValid(name, existingRegions: []))
     }
 
-    @Test("accepts unicode region names")
-    func unicodeRegionName() {
-        #expect(RegionNameValidator.isValid("Île-de-France", existingRegions: []))
-    }
-
     // MARK: - Invalid Names
 
     @Test("rejects empty name")
@@ -35,14 +30,14 @@ struct RegionNameValidatorTests {
         #expect(RegionNameValidator.validate("my region", existingRegions: []) == .invalidCharacters)
     }
 
-    @Test("rejects hash prefix")
-    func hashPrefixIsInvalid() {
-        #expect(RegionNameValidator.validate("#Europe", existingRegions: []) == .invalidPrefix)
+    @Test("rejects unicode characters")
+    func unicodeIsInvalid() {
+        #expect(RegionNameValidator.validate("Île-de-France", existingRegions: []) == .invalidCharacters)
     }
 
-    @Test("rejects dollar prefix")
-    func dollarPrefixIsInvalid() {
-        #expect(RegionNameValidator.validate("$secret", existingRegions: []) == .invalidPrefix)
+    @Test("rejects special characters", arguments: ["hello!", "foo@bar", "a&b", "test.region", "#Europe", "$secret"])
+    func specialCharsAreInvalid(name: String) {
+        #expect(RegionNameValidator.validate(name, existingRegions: []) == .invalidCharacters)
     }
 
     // MARK: - Duplicates

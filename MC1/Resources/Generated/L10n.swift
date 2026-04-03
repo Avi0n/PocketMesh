@@ -147,7 +147,7 @@ public enum L10n {
           /// Location: ChannelInfoSheet.swift - Purpose: Explanation shown when no regions exist
           public static let explanation = L10n.tr("Chats", "chats.channelInfo.region.explanation", fallback: "Limit messages to a geographic area")
           /// Location: AddRegionView.swift - Purpose: Validation error
-          public static let invalidName = L10n.tr("Chats", "chats.channelInfo.region.invalidName", fallback: "Region names cannot contain spaces or start with # or $.")
+          public static let invalidName = L10n.tr("Chats", "chats.channelInfo.region.invalidName", fallback: "Region names can only contain letters, numbers, and hyphens.")
           /// Location: RegionManagementView.swift - Purpose: Navigation title
           public static let manage = L10n.tr("Chats", "chats.channelInfo.region.manage", fallback: "Regions")
           /// Location: RegionManagementView.swift - Purpose: Manage regions link

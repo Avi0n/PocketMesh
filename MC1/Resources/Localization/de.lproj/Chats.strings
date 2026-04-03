@@ -1031,7 +1031,7 @@
 "chats.channelInfo.region.addRegionPlaceholder" = "Region name";
 
 /* Location: AddRegionView.swift - Purpose: Validation error */
-"chats.channelInfo.region.invalidName" = "Region names cannot contain spaces or start with # or $.";
+"chats.channelInfo.region.invalidName" = "Region names can only contain letters, numbers, and hyphens.";
 
 /* Location: AddRegionView.swift - Purpose: Duplicate error */
 "chats.channelInfo.region.duplicate" = "This region is already in your list.";

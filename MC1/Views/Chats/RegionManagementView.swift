@@ -70,7 +70,7 @@ struct RegionManagementView: View {
     private func validationText(for error: RegionNameValidator.ValidationError) -> String? {
         switch error {
         case .empty: nil
-        case .invalidCharacters, .invalidPrefix: L10n.Chats.Chats.ChannelInfo.Region.invalidName
+        case .invalidCharacters: L10n.Chats.Chats.ChannelInfo.Region.invalidName
         case .duplicate: L10n.Chats.Chats.ChannelInfo.Region.duplicate
         }
     }
