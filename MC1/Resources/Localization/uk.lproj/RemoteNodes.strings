@@ -691,7 +691,7 @@
 "remoteNodes.roomSettings.roomSettingsSection" = "Room Settings";
 
 /* Location: RoomSettingsView.swift - Room settings section footer */
-"remoteNodes.roomSettings.roomSettingsFooter" = "Guest access, advertisement intervals, and flood hops.";
+"remoteNodes.roomSettings.roomSettingsFooter" = "Guest password and read-only access.";
 
 /* Location: RoomSettingsView.swift - Guest password label */
 "remoteNodes.roomSettings.guestPassword" = "Guest Password";
@@ -704,6 +704,9 @@
 
 /* Location: RoomSettingsView.swift - Apply room settings button */
 "remoteNodes.roomSettings.applyRoomSettings" = "Apply Room Settings";
+
+/* Location: RoomSettingsView.swift - Room behavior section footer */
+"remoteNodes.roomSettings.behaviorFooter" = "Advertisement intervals and flood hops.";
 
 /* Location: RoomSettingsView.swift - Identity section footer */
 "remoteNodes.roomSettings.identityFooter" = "Room name and GPS coordinates for map display.";

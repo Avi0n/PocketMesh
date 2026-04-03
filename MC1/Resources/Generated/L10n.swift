@@ -2519,6 +2519,8 @@ public enum L10n {
         public static let allowReadOnlyFooter = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.allowReadOnlyFooter", fallback: "Allow users without a password to connect in read-only mode.")
         /// Location: RoomSettingsView.swift - Apply room settings button
         public static let applyRoomSettings = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.applyRoomSettings", fallback: "Apply Room Settings")
+        /// Location: RoomSettingsView.swift - Room behavior section footer
+        public static let behaviorFooter = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.behaviorFooter", fallback: "Advertisement intervals and flood hops.")
         /// Location: RoomSettingsView.swift - Clock ahead error
         public static let clockAheadError = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.clockAheadError", fallback: "Room clock is ahead of phone time. If it's too far forward, reboot the room then sync time again.")
         /// Location: RoomSettingsView.swift - Guest password label
@@ -2536,7 +2538,7 @@ public enum L10n {
         /// Location: RoomSettingsView.swift - Reboot confirmation message
         public static let rebootMessage = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.rebootMessage", fallback: "The room will restart and be temporarily unavailable.")
         /// Location: RoomSettingsView.swift - Room settings section footer
-        public static let roomSettingsFooter = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.roomSettingsFooter", fallback: "Guest access, advertisement intervals, and flood hops.")
+        public static let roomSettingsFooter = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.roomSettingsFooter", fallback: "Guest password and read-only access.")
         /// Location: RoomSettingsView.swift - Room settings section header
         public static let roomSettingsSection = L10n.tr("RemoteNodes", "remoteNodes.roomSettings.roomSettingsSection", fallback: "Room Settings")
         /// Location: RoomSettingsView.swift - Navigation title

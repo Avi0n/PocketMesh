@@ -15,6 +15,7 @@ struct RoomSettingsView: View {
     var body: some View {
         Form {
             NodeSettingsHeaderSection(publicKey: session.publicKey, name: session.name, role: session.role)
+            RoomAccessSection(viewModel: viewModel, focusedField: $focusedField)
             NodeRadioSettingsSection(
                 settings: viewModel.helper,
                 focusedField: $focusedField,
@@ -75,21 +76,21 @@ struct RoomSettingsView: View {
     }
 }
 
-// MARK: - Room Behavior Section
+// MARK: - Room Access Section
 
-private struct RoomBehaviorSection: View {
+private struct RoomAccessSection: View {
     @Bindable var viewModel: RoomSettingsViewModel
     var focusedField: FocusState<NodeSettingsField?>.Binding
 
     var body: some View {
         ExpandableSettingsSection(
             title: L10n.RemoteNodes.RemoteNodes.RoomSettings.roomSettingsSection,
-            icon: "slider.horizontal.3",
-            isExpanded: $viewModel.isRoomSettingsExpanded,
-            isLoaded: { viewModel.roomSettingsLoaded },
-            isLoading: $viewModel.isLoadingRoomSettings,
-            hasError: $viewModel.roomSettingsError,
-            onLoad: { await viewModel.fetchRoomSettings() },
+            icon: "person.badge.key",
+            isExpanded: $viewModel.isRoomAccessExpanded,
+            isLoaded: { viewModel.roomAccessLoaded },
+            isLoading: $viewModel.isLoadingRoomAccess,
+            hasError: $viewModel.roomAccessError,
+            onLoad: { await viewModel.fetchRoomAccess() },
             footer: L10n.RemoteNodes.RemoteNodes.RoomSettings.roomSettingsFooter
         ) {
             SecureField(L10n.RemoteNodes.RemoteNodes.RoomSettings.guestPassword, text: Binding(
@@ -98,7 +99,7 @@ private struct RoomBehaviorSection: View {
             ))
             .focused(focusedField, equals: .guestPassword)
             .overlay(alignment: .trailing) {
-                if viewModel.guestPassword == nil && viewModel.isLoadingRoomSettings {
+                if viewModel.guestPassword == nil && viewModel.isLoadingRoomAccess {
                     Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -111,7 +112,7 @@ private struct RoomBehaviorSection: View {
                 set: { viewModel.allowReadOnly = $0 }
             ))
                 .overlay(alignment: .trailing) {
-                    if viewModel.allowReadOnly == nil && viewModel.isLoadingRoomSettings {
+                    if viewModel.allowReadOnly == nil && viewModel.isLoadingRoomAccess {
                         Text(L10n.RemoteNodes.RemoteNodes.Settings.loading)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -123,6 +124,37 @@ private struct RoomBehaviorSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            Button {
+                Task { await viewModel.applyRoomAccess() }
+            } label: {
+                AsyncActionLabel(isLoading: viewModel.isApplyingRoomAccess, showSuccess: viewModel.roomAccessApplySuccess) {
+                    Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.applyRoomSettings)
+                        .foregroundStyle(viewModel.roomAccessModified ? Color.accentColor : .secondary)
+                        .transition(.opacity)
+                }
+            }
+            .disabled(viewModel.isApplyingRoomAccess || viewModel.roomAccessApplySuccess || !viewModel.roomAccessModified)
+        }
+    }
+}
+
+// MARK: - Room Behavior Section
+
+private struct RoomBehaviorSection: View {
+    @Bindable var viewModel: RoomSettingsViewModel
+    var focusedField: FocusState<NodeSettingsField?>.Binding
+
+    var body: some View {
+        ExpandableSettingsSection(
+            title: L10n.RemoteNodes.RemoteNodes.Settings.behavior,
+            icon: "slider.horizontal.3",
+            isExpanded: $viewModel.isBehaviorExpanded,
+            isLoaded: { viewModel.behaviorLoaded },
+            isLoading: $viewModel.isLoadingBehavior,
+            hasError: $viewModel.behaviorError,
+            onLoad: { await viewModel.fetchBehaviorSettings() },
+            footer: L10n.RemoteNodes.RemoteNodes.RoomSettings.behaviorFooter
+        ) {
             HStack {
                 Text(L10n.RemoteNodes.RemoteNodes.Settings.advertInterval0Hop)
                 Spacer()
@@ -138,7 +170,7 @@ private struct RoomBehaviorSection: View {
                     Text(L10n.RemoteNodes.RemoteNodes.Settings.min)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -165,7 +197,7 @@ private struct RoomBehaviorSection: View {
                     Text(L10n.RemoteNodes.RemoteNodes.Settings.hrs)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -192,7 +224,7 @@ private struct RoomBehaviorSection: View {
                     Text(L10n.RemoteNodes.RemoteNodes.Settings.hops)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(viewModel.isLoadingRoomSettings ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.roomSettingsError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
+                    Text(viewModel.isLoadingBehavior ? L10n.RemoteNodes.RemoteNodes.Settings.loading : (viewModel.behaviorError ? L10n.RemoteNodes.RemoteNodes.Settings.failedToLoad : "—"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -205,15 +237,15 @@ private struct RoomBehaviorSection: View {
             }
 
             Button {
-                Task { await viewModel.applyRoomSettings() }
+                Task { await viewModel.applyBehaviorSettings() }
             } label: {
-                AsyncActionLabel(isLoading: viewModel.helper.isApplying, showSuccess: viewModel.roomSettingsApplySuccess) {
-                    Text(L10n.RemoteNodes.RemoteNodes.RoomSettings.applyRoomSettings)
-                        .foregroundStyle(viewModel.roomSettingsModified ? Color.accentColor : .secondary)
+                AsyncActionLabel(isLoading: viewModel.isApplyingBehavior, showSuccess: viewModel.behaviorApplySuccess) {
+                    Text(L10n.RemoteNodes.RemoteNodes.Settings.applyBehaviorSettings)
+                        .foregroundStyle(viewModel.behaviorModified ? Color.accentColor : .secondary)
                         .transition(.opacity)
                 }
             }
-            .disabled(viewModel.helper.isApplying || viewModel.roomSettingsApplySuccess || !viewModel.roomSettingsModified)
+            .disabled(viewModel.isApplyingBehavior || viewModel.behaviorApplySuccess || !viewModel.behaviorModified)
         }
     }
 }
