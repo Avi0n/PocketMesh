@@ -144,6 +144,7 @@ struct LocationPickerView: View {
     private func loadCurrentLocation() {
         // Case 1: Existing saved location
         if let coord = initialCoordinate,
+           CLLocationCoordinate2DIsValid(coord),
            coord.latitude != 0 || coord.longitude != 0 {
             selectedCoordinate = coord
             cameraRegion = MKCoordinateRegion(
@@ -154,7 +155,13 @@ struct LocationPickerView: View {
             return
         }
 
-        // Case 2: No saved location, check user location
+        // Invalid coordinates (not nil, not zero, but out of range) — show default map
+        if let coord = initialCoordinate,
+           coord.latitude != 0 || coord.longitude != 0 {
+            return
+        }
+
+        // Case 2: No saved location (nil or 0,0), check user location
         let locationService = appState.locationService
         if locationService.isAuthorized {
             if let userLocation = locationService.currentLocation {

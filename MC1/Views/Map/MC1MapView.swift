@@ -271,6 +271,11 @@ struct MC1MapView: UIViewRepresentable {
         guard let region = cameraRegion else { return }
         guard cameraRegionVersion != coordinator.lastAppliedRegionVersion else { return }
 
+        guard CLLocationCoordinate2DIsValid(region.center) else {
+            coordinator.lastAppliedRegionVersion = cameraRegionVersion
+            return
+        }
+
         let isInflated = mapView.window.map { mapView.bounds.height > $0.bounds.height * 1.5 } ?? false
         let animated = coordinator.lastAppliedRegionVersion > 0 && !isInflated
         coordinator.lastAppliedRegionVersion = cameraRegionVersion
