@@ -268,42 +268,38 @@ public actor RemoteNodeService {
     }
 
     /// Handle CLI response from a contact message.
+    /// Content-based matching runs first — raw (FIFO) matching only gets responses
+    /// that no typed query claimed.
     private func handleCLIResponse(_ message: ContactMessage) {
         let prefix = Data(message.senderPublicKeyPrefix.prefix(6))
 
-        // Check raw CLI requests first (FIFO - single pending per sender)
-        // Used by CLI tool for passthrough where any response is accepted
+        // Try content-based matching first for structured requests
+        if var requests = pendingCLIRequests[prefix], !requests.isEmpty {
+            let (matchIndex, matchCount) = findBestMatch(response: message.text, in: requests)
+
+            if let matchIndex {
+                let matched = requests.remove(at: matchIndex)
+                pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
+                matched.continuation.resume(returning: message.text)
+                return
+            }
+
+            if matchCount > 1 {
+                // Multiple matches (ambiguous like "OK") - fall back to FIFO
+                let oldest = requests.removeFirst()
+                pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
+                oldest.continuation.resume(returning: message.text)
+                return
+            }
+        }
+
+        // No content match — deliver to raw CLI request if one is pending
         if let continuation = pendingRawCLIRequests.removeValue(forKey: prefix) {
             continuation.resume(returning: message.text)
             return
         }
 
-        // Fall back to content-based matching for structured requests
-        guard var requests = pendingCLIRequests[prefix], !requests.isEmpty else {
-            return
-        }
-
-        // Try content-based matching using CLIResponse.parse()
-        let (matchIndex, matchCount) = findBestMatch(response: message.text, in: requests)
-
-        if let matchIndex {
-            // Exactly one match - deliver to that request
-            let matched = requests.remove(at: matchIndex)
-            pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
-            matched.continuation.resume(returning: message.text)
-            return
-        }
-
-        if matchCount > 1 {
-            // Multiple matches (ambiguous like "OK") - fall back to FIFO
-            let oldest = requests.removeFirst()
-            pendingCLIRequests[prefix] = requests.isEmpty ? nil : requests
-            oldest.continuation.resume(returning: message.text)
-            return
-        }
-
-        // No matches - likely a late response for a timed-out request
-        // Response still flows to CLI handler for UI display
+        // No pending requests matched
         logger.debug("Unmatched CLI response (no pending request): \(message.text.prefix(50))")
     }
 
