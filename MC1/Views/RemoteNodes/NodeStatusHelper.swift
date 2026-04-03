@@ -226,7 +226,7 @@ final class NodeStatusHelper {
             return
         }
         self.telemetry = response
-        self.cachedDataPoints = response.dataPoints
+        self.cachedDataPoints = response.dataPoints.filter { $0.channel != 0 }
         self.isLoadingTelemetry = false
         self.telemetryLoaded = true
 
