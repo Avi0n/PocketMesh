@@ -358,7 +358,7 @@
 "pathHashMode.threeBytes" = "3 bytes";
 
 /* Footer explaining path hash mode tradeoff */
-"pathHashMode.footer" = "Grotere hashes verminderen routeringscollisies, maar beperken het maximale aantal hops per pad.";
+"pathHashMode.footer" = "Grotere hashes verminderen routeringscollisies, maar beperken het maximale aantal hops per pad. Repeaters met firmware ouder dan 1.14.0 herhalen geen berichten met een hashgrootte groter dan 1 byte.";
 
 
 // MARK: - Battery Curve Section

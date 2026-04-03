@@ -349,7 +349,7 @@
 "pathHashMode.threeBytes" = "3 Bytes";
 
 /* Footer explaining path hash mode tradeoff */
-"pathHashMode.footer" = "Larger hashes reduce routing collisions but limit the maximum number of hops per path.";
+"pathHashMode.footer" = "Larger hashes reduce routing collisions but limit the maximum number of hops per path. Repeaters running firmware older than 1.14.0 will not repeat messages with a hash size greater than 1 byte.";
 
 
 // MARK: - Battery Curve Section

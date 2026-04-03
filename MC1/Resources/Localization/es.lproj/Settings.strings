@@ -349,7 +349,7 @@
 "pathHashMode.threeBytes" = "3 bytes";
 
 /* Footer explaining path hash mode tradeoff */
-"pathHashMode.footer" = "Los hashes más grandes reducen las colisiones de enrutamiento, pero limitan el número máximo de saltos por ruta.";
+"pathHashMode.footer" = "Los hashes más grandes reducen las colisiones de enrutamiento, pero limitan el número máximo de saltos por ruta. Los repetidores con firmware anterior a 1.14.0 no repetirán mensajes con un tamaño de hash superior a 1 byte.";
 
 
 // MARK: - Battery Curve Section

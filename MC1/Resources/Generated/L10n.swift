@@ -3809,7 +3809,7 @@ public enum L10n {
     }
     public enum PathHashMode {
       /// Footer explaining path hash mode tradeoff
-      public static let footer = L10n.tr("Settings", "pathHashMode.footer", fallback: "Larger hashes reduce routing collisions but limit the maximum number of hops per path.")
+      public static let footer = L10n.tr("Settings", "pathHashMode.footer", fallback: "Larger hashes reduce routing collisions but limit the maximum number of hops per path. Repeaters running firmware older than 1.14.0 will not repeat messages with a hash size greater than 1 byte.")
       /// Section header for path hash mode
       public static let header = L10n.tr("Settings", "pathHashMode.header", fallback: "Path Hash Size")
       /// Label for path hash mode picker

@@ -358,7 +358,7 @@
 "pathHashMode.threeBytes" = "3 octets";
 
 /* Footer explaining path hash mode tradeoff */
-"pathHashMode.footer" = "Des hashes plus grands réduisent les collisions de routage, mais limitent le nombre maximum de sauts par chemin.";
+"pathHashMode.footer" = "Des hashes plus grands réduisent les collisions de routage, mais limitent le nombre maximum de sauts par chemin. Les répéteurs avec un firmware antérieur à 1.14.0 ne relayeront pas les messages dont la taille de hash dépasse 1 octet.";
 
 
 // MARK: - Battery Curve Section

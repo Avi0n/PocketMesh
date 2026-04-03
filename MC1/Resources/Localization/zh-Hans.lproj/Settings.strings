@@ -339,7 +339,7 @@
 "pathHashMode.threeBytes" = "3 字节";
 
 /* Footer explaining path hash mode tradeoff */
-"pathHashMode.footer" = "较大的哈希值可减少路由冲突，但会限制每条路径的最大跳数。";
+"pathHashMode.footer" = "较大的哈希值可减少路由冲突，但会限制每条路径的最大跳数。固件版本低于 1.14.0 的中继器不会转发哈希大小超过 1 字节的消息。";
 
 
 // MARK: - Battery Curve Section
