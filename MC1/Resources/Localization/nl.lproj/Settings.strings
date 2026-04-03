@@ -931,6 +931,18 @@
 "messages.footer" = "Routeringsinformatie weergeven in inkomende berichtballonnen.";
 
 
+// MARK: - Direct Messages Settings Section
+
+/* Section header for direct message settings */
+"directMessages.header" = "Direct Messages";
+
+/* Picker label for number of acknowledgments */
+"directMessages.acknowledgments" = "Acknowledgments";
+
+/* Footer explaining the acknowledgments setting */
+"directMessages.footer" = "Number of acknowledgments sent per direct message. Use 2 for better delivery confirmation over unreliable links.";
+
+
 // MARK: - BLE Status Indicator
 
 /* Menu item to send a zero-hop advertisement */

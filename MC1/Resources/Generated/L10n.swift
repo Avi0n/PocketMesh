@@ -3481,6 +3481,14 @@ public enum L10n {
         public static let exportFailed = L10n.tr("Settings", "diagnostics.error.exportFailed", fallback: "Failed to create export file")
       }
     }
+    public enum DirectMessages {
+      /// Picker label for number of acknowledgments
+      public static let acknowledgments = L10n.tr("Settings", "directMessages.acknowledgments", fallback: "Acknowledgments")
+      /// Footer explaining the acknowledgments setting
+      public static let footer = L10n.tr("Settings", "directMessages.footer", fallback: "Number of acknowledgments sent per direct message. Use 2 for better delivery confirmation over unreliable links.")
+      /// Section header for direct message settings
+      public static let header = L10n.tr("Settings", "directMessages.header", fallback: "Direct Messages")
+    }
     public enum ImportKey {
       /// Button to import the key
       public static let `import` = L10n.tr("Settings", "importKey.import", fallback: "Import Key")
