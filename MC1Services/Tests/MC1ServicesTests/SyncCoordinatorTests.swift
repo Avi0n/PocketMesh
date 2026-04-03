@@ -8,24 +8,16 @@ import MeshCoreTestSupport
 @Suite("SyncCoordinator Tests")
 struct SyncCoordinatorTests {
 
-    /// Creates an in-memory persistence store with a test device
     private func createTestDataStore(
         deviceID: UUID,
         maxChannels: UInt8 = 8,
         lastContactSync: UInt32 = 0
     ) async throws -> PersistenceStore {
-        let container = try PersistenceStore.createContainer(inMemory: true)
-        let store = PersistenceStore(modelContainer: container)
-        let device = DeviceDTO.testDevice(
-            id: deviceID,
-            firmwareVersion: 8,
-            firmwareVersionString: "v1.0.0",
+        try await PersistenceStore.createTestDataStore(
+            deviceID: deviceID,
             maxChannels: maxChannels,
-            multiAcks: 0,
             lastContactSync: lastContactSync
         )
-        try await store.saveDevice(device)
-        return store
     }
 
     @Test("SyncState cases are distinct")
@@ -115,7 +107,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { startedTracker.markCalled() },
-            onEnded: { endedTracker.markCalled() },
+            onEnded: { _ in endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -145,7 +137,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: { endedTracker.markCalled() },
+            onEnded: { _ in endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -180,7 +172,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: {
+            onEnded: { _ in
                 // Record when activity ended
                 await orderTracker.recordActivityEnded()
             },
@@ -258,7 +250,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { startedTracker.markCalled() },
-            onEnded: { endedTracker.markCalled() },
+            onEnded: { _ in endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -390,7 +382,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { startedTracker.markCalled() },
-            onEnded: { },
+            onEnded: { _ in },
             onPhaseChanged: { _ in }
         )
 
@@ -441,7 +433,7 @@ struct SyncCoordinatorTests {
 
         await coordinator.setSyncActivityCallbacks(
             onStarted: { },
-            onEnded: { endedTracker.markCalled() },
+            onEnded: { _ in endedTracker.markCalled() },
             onPhaseChanged: { _ in }
         )
 
@@ -538,9 +530,150 @@ struct SyncCoordinatorTests {
         let actualSince = try #require(since, "Should pass lastContactSync as since parameter")
         #expect(actualSince == expectedDate, "Since date should match device lastContactSync")
     }
+    // MARK: - Succeeded Parameter Tests
+
+    @Test("Successful sync passes succeeded: true to onEnded callback")
+    @MainActor
+    func syncActivityEndedWithSuccessPassesTrue() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        let succeededValues = ValueTracker<Bool>()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { },
+            onEnded: { succeeded in succeededValues.record(succeeded) },
+            onPhaseChanged: { _ in }
+        )
+
+        try await coordinator.performFullSync(
+            deviceID: testDeviceID,
+            dataStore: dataStore,
+            contactService: mockContactService,
+            channelService: mockChannelService,
+            messagePollingService: mockMessagePollingService
+        )
+
+        #expect(succeededValues.values == [true], "Successful sync should pass succeeded: true")
+    }
+
+    @Test("Failed sync passes succeeded: false to onEnded callback")
+    @MainActor
+    func syncActivityEndedWithFailurePassesFalse() async throws {
+        let coordinator = SyncCoordinator()
+        let mockContactService = MockContactService()
+        let mockChannelService = MockChannelService()
+        let mockMessagePollingService = MockMessagePollingService()
+        let testDeviceID = UUID()
+        let dataStore = try await createTestDataStore(deviceID: testDeviceID)
+
+        let succeededValues = ValueTracker<Bool>()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { },
+            onEnded: { succeeded in succeededValues.record(succeeded) },
+            onPhaseChanged: { _ in }
+        )
+
+        await mockContactService.setStubbedSyncContactsResult(.failure(SyncCoordinatorError.syncFailed("Test error")))
+
+        do {
+            try await coordinator.performFullSync(
+                deviceID: testDeviceID,
+                dataStore: dataStore,
+                contactService: mockContactService,
+                channelService: mockChannelService,
+                messagePollingService: mockMessagePollingService
+            )
+            Issue.record("Should have thrown error")
+        } catch {
+            // Expected
+        }
+
+        #expect(succeededValues.values == [false], "Failed sync should pass succeeded: false")
+    }
+
+    // MARK: - Resync Activity Bracket Tests
+
+    @Test("beginResyncActivity and endResyncActivity fire the correct callbacks")
+    @MainActor
+    func resyncActivityBracketCallsStartedAndEnded() async {
+        let coordinator = SyncCoordinator()
+
+        let startedTracker = CallTracker()
+        let succeededValues = ValueTracker<Bool>()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { startedTracker.markCalled() },
+            onEnded: { succeeded in succeededValues.record(succeeded) },
+            onPhaseChanged: { _ in }
+        )
+
+        await coordinator.beginResyncActivity()
+        #expect(startedTracker.callCount == 1, "beginResyncActivity should fire onStarted")
+
+        await coordinator.endResyncActivity(succeeded: true)
+        #expect(succeededValues.values == [true], "endResyncActivity(succeeded: true) should pass true")
+
+        // Call again with false to verify the value is forwarded
+        await coordinator.beginResyncActivity()
+        await coordinator.endResyncActivity(succeeded: false)
+        #expect(succeededValues.values == [true, false], "endResyncActivity(succeeded: false) should pass false")
+    }
+
+    @Test("Disconnect during resync does not double-end the resync bracket")
+    @MainActor
+    func disconnectDuringResyncDoesNotInterfereWithResyncBracket() async throws {
+        let coordinator = SyncCoordinator()
+
+        let mockTransport = SimulatorMockTransport()
+        let session = MeshCoreSession(transport: mockTransport)
+        let services = try await ServiceContainer.forTesting(session: session)
+
+        let succeededValues = ValueTracker<Bool>()
+
+        await coordinator.setSyncActivityCallbacks(
+            onStarted: { },
+            onEnded: { succeeded in succeededValues.record(succeeded) },
+            onPhaseChanged: { _ in }
+        )
+
+        // Simulate resync bracket open
+        await coordinator.beginResyncActivity()
+
+        // Disconnect while resync bracket is open
+        await coordinator.onDisconnected(services: services)
+
+        // onDisconnected calls endSyncActivityOnce, which is for the initial sync bracket,
+        // not the resync bracket. Since no initial sync was started, hasEndedSyncActivity
+        // is already true and endSyncActivityOnce should be a no-op.
+        #expect(succeededValues.values.isEmpty, "onDisconnected should not end the resync bracket")
+    }
 }
 
 // MARK: - Test Helpers
+
+/// Thread-safe value recorder for verifying callback arguments in tests.
+final class ValueTracker<T: Sendable>: @unchecked Sendable {
+    private var _values: [T] = []
+    private let lock = NSLock()
+
+    var values: [T] {
+        lock.lock()
+        defer { lock.unlock() }
+        return _values
+    }
+
+    func record(_ value: T) {
+        lock.lock()
+        defer { lock.unlock() }
+        _values.append(value)
+    }
+}
 
 /// Actor to safely track callback invocations from concurrent closures
 /// Mock that tracks the order of activity ended callback vs message polling
@@ -563,7 +696,11 @@ actor OrderTrackingMessagePollingService: MessagePollingServiceProtocol {
 
     // MARK: - MessagePollingServiceProtocol
 
-    func pollAllMessages() async throws -> Int {
+    func pollAllMessages(
+        messageDelay: Duration,
+        breathingInterval: Int,
+        breathingDuration: Duration
+    ) async throws -> Int {
         messagePollTime = Date()
         return 0
     }
