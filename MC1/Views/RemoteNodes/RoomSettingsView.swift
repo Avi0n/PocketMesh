@@ -4,7 +4,6 @@ import CoreLocation
 
 struct RoomSettingsView: View {
     @Environment(\.appState) private var appState
-    @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: NodeSettingsField?
 
     let session: RemoteNodeSessionDTO
