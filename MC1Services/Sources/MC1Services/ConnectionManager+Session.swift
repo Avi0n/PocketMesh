@@ -119,6 +119,7 @@ extension ConnectionManager: BLEReconnectionDelegate {
             appStateProvider: appStateProvider
         )
         await newServices.wireServices()
+        await wireCleanChannelSyncCallback(on: newServices)
 
         // Check after await
         guard connectionIntent.wantsConnection else {
@@ -152,39 +153,49 @@ extension ConnectionManager: BLEReconnectionDelegate {
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices, context: "[BLE] iOS auto-reconnect")
+        let syncSucceeded = await performInitialSync(deviceID: deviceID, services: newServices, context: "[BLE] iOS auto-reconnect")
 
-        // User may have disconnected or a new reconnect cycle may have started while sync was in progress
+        // Caller-specific guard: generation check for superseded reconnects
         guard connectionIntent.wantsConnection,
-              reconnectionCoordinator.reconnectGeneration == expectedGeneration
+              reconnectionCoordinator.reconnectGeneration == expectedGeneration,
+              self.services === newServices
         else {
             await newSession.stop()
             return
         }
 
-        await syncDeviceTimeIfNeeded()
-        guard connectionIntent.wantsConnection,
-              reconnectionCoordinator.reconnectGeneration == expectedGeneration
-        else {
+        if syncSucceeded {
+            // Re-authenticate room sessions (sends BLE commands — skip on failure path).
+            let sessionIDs = sessionsAwaitingReauth
+            await newServices.remoteNodeService.handleBLEReconnection(sessionIDs: sessionIDs)
+
+            guard connectionIntent.wantsConnection,
+                  reconnectionCoordinator.reconnectGeneration == expectedGeneration,
+                  self.services === newServices
+            else {
+                // IDs preserved for next reconnect cycle — new IDs may have
+                // arrived during handleBLEReconnection if BLE dropped mid-reauth.
+                await newSession.stop()
+                return
+            }
+
+            // Only clear consumed IDs after confirming this cycle is still authoritative.
+            // Any IDs appended during the await (via teardownSessionForReconnect) survive.
+            sessionsAwaitingReauth.subtract(sessionIDs)
+        }
+
+        guard await promoteToReady(
+            syncSucceeded: syncSucceeded,
+            expectedServices: newServices,
+            transportType: .bluetooth,
+            additionalGuard: { [reconnectionCoordinator] in
+                reconnectionCoordinator.reconnectGeneration == expectedGeneration
+            }
+        ) else {
             await newSession.stop()
             return
         }
 
-        // Re-authenticate room sessions that were connected before BLE loss
-        let sessionIDs = sessionsAwaitingReauth
-        sessionsAwaitingReauth = []
-        await newServices.remoteNodeService.handleBLEReconnection(sessionIDs: sessionIDs)
-
-        guard connectionIntent.wantsConnection,
-              reconnectionCoordinator.reconnectGeneration == expectedGeneration
-        else {
-            await newSession.stop()
-            return
-        }
-
-        currentTransportType = .bluetooth
-        connectionState = .ready
-        await onDeviceSynced?()
         recordConnectionSuccess()
         stopReconnectionWatchdog()
         logger.info("[BLE] iOS auto-reconnect: session ready, device: \(deviceID.uuidString.prefix(8))")

@@ -105,11 +105,20 @@ public actor SyncCoordinator {
     /// Last successful sync date
     @MainActor public private(set) var lastSyncDate: Date?
 
+    /// Called when channel sync completes with zero errors (including retries).
+    /// Used by ConnectionManager to track clean channel completions for smart resync.
+    var onCleanChannelSync: (@Sendable (_ deviceID: UUID) async -> Void)?
+
+    /// Sets the callback for clean channel sync completion.
+    public func setCleanChannelSyncCallback(_ callback: @escaping @Sendable (_ deviceID: UUID) async -> Void) {
+        onCleanChannelSync = callback
+    }
+
     /// Callback when non-message sync activity starts
     var onSyncActivityStarted: (@Sendable () async -> Void)?
 
     /// Callback when non-message sync activity ends
-    private var onSyncActivityEnded: (@Sendable () async -> Void)?
+    private var onSyncActivityEnded: (@Sendable (_ succeeded: Bool) async -> Void)?
 
     /// Tracks whether onSyncActivityEnded has been called for the current sync cycle.
     /// Prevents double-callback when disconnect occurs mid-sync (both onDisconnected
@@ -166,7 +175,7 @@ public actor SyncCoordinator {
     /// Only called for contacts and channels phases, NOT for messages.
     public func setSyncActivityCallbacks(
         onStarted: @escaping @Sendable () async -> Void,
-        onEnded: @escaping @Sendable () async -> Void,
+        onEnded: @escaping @Sendable (_ succeeded: Bool) async -> Void,
         onPhaseChanged: @escaping @Sendable @MainActor (_ phase: SyncPhase?) -> Void
     ) async {
         onSyncActivityStarted = onStarted
@@ -202,11 +211,23 @@ public actor SyncCoordinator {
 
     /// Calls onSyncActivityEnded at most once per sync cycle.
     /// Guards against double-callback when disconnect occurs mid-sync.
-    func endSyncActivityOnce() async {
+    func endSyncActivityOnce(succeeded: Bool = false) async {
         guard !hasEndedSyncActivity else { return }
         hasEndedSyncActivity = true
-        logger.info("[Sync] Calling onSyncActivityEnded")
-        await onSyncActivityEnded?()
+        logger.info("[Sync] Calling onSyncActivityEnded (succeeded: \(succeeded))")
+        await onSyncActivityEnded?(succeeded)
+    }
+
+    /// Called by ConnectionManager when a resync loop starts.
+    /// Increments the activity count so "Syncing" pill stays visible across retries.
+    func beginResyncActivity() async {
+        await onSyncActivityStarted?()
+    }
+
+    /// Called by ConnectionManager when a resync loop ends (success or exhausted retries).
+    /// Decrements the activity count. Only triggers "Ready" toast on success.
+    func endResyncActivity(succeeded: Bool) async {
+        await onSyncActivityEnded?(succeeded)
     }
 
     // MARK: - Notification Suppression Watchdog

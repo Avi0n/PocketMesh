@@ -420,6 +420,7 @@ extension ConnectionManager {
             appStateProvider: appStateProvider
         )
         await newServices.wireServices()
+        await wireCleanChannelSyncCallback(on: newServices)
         self.services = newServices
 
         // Fetch existing device and auto-add config concurrently (independent operations)
@@ -458,17 +459,13 @@ extension ConnectionManager {
         } else {
             shouldForceFullSync = false
         }
-        await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: shouldForceFullSync)
+        let syncSucceeded = await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: shouldForceFullSync)
 
-        // User may have disconnected while sync was in progress
-        guard connectionIntent.wantsConnection else { return }
+        guard await promoteToReady(syncSucceeded: syncSucceeded, expectedServices: newServices, transportType: .bluetooth) else {
+            await newSession.stop()
+            return
+        }
 
-        await syncDeviceTimeIfNeeded()
-        guard connectionIntent.wantsConnection else { return }
-
-        currentTransportType = .bluetooth
-        connectionState = .ready
-        await onDeviceSynced?()
         stopReconnectionWatchdog()
         logger.info("Connection complete - device ready")
     }

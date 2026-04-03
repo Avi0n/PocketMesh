@@ -32,7 +32,8 @@ extension SyncCoordinator {
         appStateProvider: AppStateProvider? = nil,
         rxLogService: RxLogService? = nil,
         notificationService: NotificationService? = nil,
-        forceFullSync: Bool = false
+        forceFullSync: Bool = false,
+        throttling: SyncThrottlingConfig = .none
     ) async throws {
         // Prevent concurrent syncs - check before logging to avoid noise
         let currentState = await state
@@ -42,6 +43,7 @@ extension SyncCoordinator {
         }
 
         logger.info("Starting full sync for device \(deviceID)")
+        let syncStart = ContinuousClock.now
 
         do {
             // Set phase before triggering pill visibility
@@ -60,7 +62,9 @@ extension SyncCoordinator {
                     channelService: channelService,
                     appStateProvider: appStateProvider,
                     rxLogService: rxLogService,
-                    forceFullSync: forceFullSync
+                    forceFullSync: forceFullSync,
+                    channelSyncSkipWindow: throttling.channelSyncSkipWindow,
+                    lastCleanChannelSync: throttling.lastCleanChannelSync
                 )
             } catch {
                 // End sync activity on error during contacts/channels phase
@@ -68,14 +72,24 @@ extension SyncCoordinator {
                 throw error
             }
 
-            // End sync activity before messages phase (pill should hide)
-            await endSyncActivityOnce()
+            // End sync activity before messages phase (pill should hide).
+            // During resync, the outer bracket (beginResyncActivity) holds syncActivityCount >= 1,
+            // so this inner succeeded=true decrement cannot reach zero and prematurely trigger
+            // the "Ready" toast. During initial sync there is no outer bracket, and reaching
+            // zero here is the correct "sync complete" signal.
+            await endSyncActivityOnce(succeeded: true)
 
             // Phase 3: Messages (no pill for this phase)
             logger.info("[Sync] State → .syncing(.messages)")
             await setState(.syncing(progress: SyncProgress(phase: .messages, current: 0, total: 0)))
-            let messageCount = try await messagePollingService.pollAllMessages()
-            logger.info("[Sync] Phase end: messages - \(messageCount) polled")
+            let messageStart = ContinuousClock.now
+            let messageCount = try await messagePollingService.pollAllMessages(
+                messageDelay: throttling.messageDelay,
+                breathingInterval: throttling.breathingInterval,
+                breathingDuration: throttling.breathingDuration
+            )
+            let messageElapsed = ContinuousClock.now - messageStart
+            logger.info("[Sync] Phase end: messages - \(messageCount) polled in \(messageElapsed)")
 
             // Clear notification suppression immediately after catch-up poll completes.
             // All catch-up messages have been processed with suppression active;
@@ -94,7 +108,8 @@ extension SyncCoordinator {
             await setState(.synced)
             await setLastSyncDate(Date())
 
-            logger.info("Full sync complete")
+            let elapsed = ContinuousClock.now - syncStart
+            logger.info("Full sync complete in \(elapsed)")
         } catch let error as CancellationError {
             // Defensive: ensure activity count is decremented even if cancellation
             // occurs outside the contacts/channels error path.
@@ -116,11 +131,14 @@ extension SyncCoordinator {
     /// - Parameters:
     ///   - deviceID: The connected device UUID
     ///   - services: The ServiceContainer with all services
+    ///   - forceFullSync: When true, forces a full contact sync instead of incremental.
+    ///   - throttling: Sync throttling parameters (message delay, breathing, channel skip).
     /// - Returns: `true` if sync succeeded, `false` if it failed
     public func performResync(
         deviceID: UUID,
         services: ServiceContainer,
-        forceFullSync: Bool = false
+        forceFullSync: Bool = false,
+        throttling: SyncThrottlingConfig = .none
     ) async -> Bool {
         logger.info("Attempting resync for device \(deviceID)")
 
@@ -142,7 +160,8 @@ extension SyncCoordinator {
                 appStateProvider: services.appStateProvider,
                 rxLogService: services.rxLogService,
                 notificationService: services.notificationService,
-                forceFullSync: forceFullSync
+                forceFullSync: forceFullSync,
+                throttling: throttling
             )
 
             await wireDiscoveryHandlers(services: services, deviceID: deviceID)
@@ -178,7 +197,13 @@ extension SyncCoordinator {
     ///   - deviceID: The connected device UUID
     ///   - services: The ServiceContainer with all services
     ///   - forceFullSync: When true, forces a full contact sync instead of incremental.
-    public func onConnectionEstablished(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) async throws {
+    ///   - throttling: Sync throttling parameters (message delay, breathing, channel skip).
+    public func onConnectionEstablished(
+        deviceID: UUID,
+        services: ServiceContainer,
+        forceFullSync: Bool = false,
+        throttling: SyncThrottlingConfig = .none
+    ) async throws {
         logger.info("Connection established for device \(deviceID)")
 
         // Prevent duplicate sync if already syncing (race condition during rapid auto-reconnect cycles)
@@ -229,7 +254,8 @@ extension SyncCoordinator {
                 appStateProvider: services.appStateProvider,
                 rxLogService: services.rxLogService,
                 notificationService: services.notificationService,
-                forceFullSync: forceFullSync
+                forceFullSync: forceFullSync,
+                throttling: throttling
             )
 
             // 5. Wire discovery handlers (for ongoing contact discovery)
@@ -298,7 +324,9 @@ extension SyncCoordinator {
         channelService: some ChannelServiceProtocol,
         appStateProvider: AppStateProvider?,
         rxLogService: RxLogService?,
-        forceFullSync: Bool
+        forceFullSync: Bool,
+        channelSyncSkipWindow: Duration = .zero,
+        lastCleanChannelSync: Date? = nil
     ) async throws {
         // Fetch device once for both contacts (lastContactSync) and channels (maxChannels)
         let device = try await dataStore.fetchDevice(id: deviceID)
@@ -315,10 +343,12 @@ extension SyncCoordinator {
             logger.notice("[Sync] Phase start: contacts (FULL sync, reason=\(reason)) — local contacts not on device will be pruned")
         }
 
+        let contactStart = ContinuousClock.now
         let contactResult = try await contactService.syncContacts(deviceID: deviceID, since: lastContactSync)
+        let contactElapsed = ContinuousClock.now - contactStart
         let syncType = contactResult.isIncremental ? "incremental" : "full"
         let forced = forceFullSync ? ", forced" : ""
-        logger.info("[Sync] Phase end: contacts - \(contactResult.contactsReceived) (\(syncType)\(forced))")
+        logger.info("[Sync] Phase end: contacts - \(contactResult.contactsReceived) (\(syncType)\(forced)) in \(contactElapsed)")
         await notifyContactsChanged()
 
         // Update lastContactSync watermark for future incremental syncs
@@ -353,28 +383,53 @@ extension SyncCoordinator {
         }
         logger.debug("Proceeding with shouldSyncChannels=\(shouldSyncChannels)")
         if shouldSyncChannels {
-            logger.info("[Sync] State → .syncing(.channels)")
-            await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
-            let maxChannels = device?.maxChannels ?? 0
+            let shouldSkipChannels: Bool = {
+                guard !forceFullSync,
+                      channelSyncSkipWindow > .zero,
+                      let lastSync = lastCleanChannelSync else { return false }
+                return Date().timeIntervalSince(lastSync) < Double(channelSyncSkipWindow.components.seconds)
+            }()
 
-            let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
-            logger.info("[Sync] Phase end: channels - \(channelResult.channelsSynced) synced (device capacity: \(maxChannels))")
+            if shouldSkipChannels {
+                logger.info("[Sync] Skipping channel sync (clean sync completed recently)")
+            } else {
+                logger.info("[Sync] State → .syncing(.channels)")
+                await setState(.syncing(progress: SyncProgress(phase: .channels, current: 0, total: 0)))
+                let maxChannels = device?.maxChannels ?? 0
 
-            // Retry failed channels once if there are retryable errors
-            if !channelResult.isComplete {
-                let retryableIndices = channelResult.retryableIndices
-                if !retryableIndices.isEmpty {
-                    logger.info("Retrying \(retryableIndices.count) failed channels")
-                    let retryResult = try await channelService.retryFailedChannels(
-                        deviceID: deviceID,
-                        indices: retryableIndices
-                    )
+                let channelStart = ContinuousClock.now
+                let channelResult = try await channelService.syncChannels(deviceID: deviceID, maxChannels: maxChannels)
+                let channelElapsed = ContinuousClock.now - channelStart
+                logger.info("[Sync] Phase end: channels - \(channelResult.channelsSynced) synced (device capacity: \(maxChannels)) in \(channelElapsed)")
 
-                    if retryResult.isComplete {
-                        logger.info("Retry recovered \(retryResult.channelsSynced) channels")
-                    } else {
-                        logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                var channelPhaseClean = channelResult.isComplete
+                let hasNonRetryableErrors = channelResult.errors.count > channelResult.retryableIndices.count
+
+                // Retry failed channels once if there are retryable errors
+                if !channelResult.isComplete {
+                    let retryableIndices = channelResult.retryableIndices
+                    if !retryableIndices.isEmpty {
+                        logger.info("Retrying \(retryableIndices.count) failed channels")
+                        let retryResult = try await channelService.retryFailedChannels(
+                            deviceID: deviceID,
+                            indices: retryableIndices
+                        )
+
+                        if retryResult.isComplete && !hasNonRetryableErrors {
+                            logger.info("Retry recovered \(retryResult.channelsSynced) channels")
+                            channelPhaseClean = true
+                        } else {
+                            if hasNonRetryableErrors {
+                                logger.warning("Channels have non-retryable errors, phase not clean")
+                            }
+                            logger.warning("Channels still failing after retry: \(retryResult.errors.map { $0.index })")
+                            channelPhaseClean = false
+                        }
                     }
+                }
+
+                if channelPhaseClean {
+                    await onCleanChannelSync?(deviceID)
                 }
             }
 

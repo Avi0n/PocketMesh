@@ -207,6 +207,7 @@ extension ConnectionManager {
             appStateProvider: appStateProvider
         )
         await newServices.wireServices()
+        await wireCleanChannelSyncCallback(on: newServices)
         self.services = newServices
 
         // Fetch existing device and auto-add config concurrently (independent operations)
@@ -239,17 +240,10 @@ extension ConnectionManager {
         }
 
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices, context: "WiFi reconnect")
+        let syncSucceeded = await performInitialSync(deviceID: deviceID, services: newServices, transportType: .wifi, context: "WiFi reconnect")
 
-        // User may have disconnected while sync was in progress
-        guard connectionIntent.wantsConnection else { return }
+        guard await promoteToReady(syncSucceeded: syncSucceeded, expectedServices: newServices, transportType: .wifi) else { return }
 
-        await syncDeviceTimeIfNeeded()
-        guard connectionIntent.wantsConnection else { return }
-
-        currentTransportType = .wifi
-        connectionState = .ready
-        await onDeviceSynced?()
         stopReconnectionWatchdog()
         startWiFiHeartbeat()
     }
@@ -344,6 +338,7 @@ extension ConnectionManager {
                 appStateProvider: appStateProvider
             )
             await newServices.wireServices()
+            await wireCleanChannelSyncCallback(on: newServices)
             self.services = newServices
 
             // Fetch existing device and auto-add config concurrently (independent operations)
@@ -377,26 +372,18 @@ extension ConnectionManager {
             persistConnection(deviceID: deviceID, deviceName: meshCoreSelfInfo.name)
 
             await onConnectionReady?()
-            await performInitialSync(deviceID: deviceID, services: newServices, forceFullSync: forceFullSync)
+            let syncSucceeded = await performInitialSync(deviceID: deviceID, services: newServices, transportType: .wifi, forceFullSync: forceFullSync)
 
-            // User may have disconnected while sync was in progress
-            guard connectionIntent.wantsConnection else { return }
-
-            await syncDeviceTimeIfNeeded()
-            guard connectionIntent.wantsConnection else { return }
-
-            // Wire disconnection handler for auto-reconnect
+            // Wire disconnection handler before promotion — needed even if promotion fails
             await newWiFiTransport.setDisconnectionHandler { [weak self] error in
                 Task { @MainActor in
                     await self?.handleWiFiDisconnection(error: error)
                 }
             }
 
-            currentTransportType = .wifi
-            connectionState = .ready
-            await onDeviceSynced?()
-            stopReconnectionWatchdog()
+            guard await promoteToReady(syncSucceeded: syncSucceeded, expectedServices: newServices, transportType: .wifi) else { return }
 
+            stopReconnectionWatchdog()
             startWiFiHeartbeat()
             logger.info("WiFi connection complete - device ready")
 

@@ -30,6 +30,7 @@ public actor MessagePollingService {
 
     private let session: MeshCoreSession
     private let dataStore: PersistenceStore
+    private let sleepFor: @Sendable (Duration) async throws -> Void
     private let logger = PersistentLogger(subsystem: "com.mc1", category: "MessagePolling")
 
     /// Handler for incoming contact messages
@@ -66,9 +67,14 @@ public actor MessagePollingService {
 
     // MARK: - Initialization
 
-    public init(session: MeshCoreSession, dataStore: PersistenceStore) {
+    public init(
+        session: MeshCoreSession,
+        dataStore: PersistenceStore,
+        sleepFor: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
         self.session = session
         self.dataStore = dataStore
+        self.sleepFor = sleepFor
     }
 
     deinit {
@@ -189,8 +195,16 @@ public actor MessagePollingService {
     }
 
     /// Poll all waiting messages from the device.
+    /// - Parameters:
+    ///   - messageDelay: Sleep duration after each message to avoid BLE saturation.
+    ///   - breathingInterval: Insert a longer pause every N messages (0 disables).
+    ///   - breathingDuration: Duration of the breathing pause.
     /// - Returns: Count of messages retrieved
-    public func pollAllMessages() async throws -> Int {
+    public func pollAllMessages(
+        messageDelay: Duration = .zero,
+        breathingInterval: Int = 0,
+        breathingDuration: Duration = .zero
+    ) async throws -> Int {
         isPolling = true
         defer { isPolling = false }
         var count = 0
@@ -206,6 +220,15 @@ public actor MessagePollingService {
                 await handleChannelMessage(msg)
             case .noMoreMessages:
                 return count
+            }
+
+            // Throttle to avoid saturating ESP32 BLE stack
+            if messageDelay > .zero || breathingDuration > .zero {
+                let isBreathingPoint = breathingInterval > 0 && count.isMultiple(of: breathingInterval)
+                let delay = isBreathingPoint ? breathingDuration : messageDelay
+                if delay > .zero {
+                    try await sleepFor(delay)
+                }
             }
         }
     }

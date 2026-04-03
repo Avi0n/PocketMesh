@@ -217,6 +217,15 @@ public final class ConnectionManager {
     /// Current transport type (bluetooth or wifi)
     public internal(set) var currentTransportType: TransportType?
 
+    /// Detected device platform, used for sync throttling config.
+    /// Survives reconnects (lives on ConnectionManager, not ServiceContainer).
+    private(set) var detectedPlatform: DevicePlatform = .unknown
+
+    /// Records the last fully-clean channel sync, keyed by device.
+    /// Only set when channel sync completes with zero errors (including retries).
+    /// Survives transient disconnects; cleared on explicit disconnect or device change.
+    var lastCleanChannelSync: (deviceID: UUID, completedAt: Date)?
+
     /// The user's connection intent. Replaces shouldBeConnected, userExplicitlyDisconnected, and pendingForceFullSync.
     var connectionIntent: ConnectionIntent = .none
 
@@ -482,7 +491,11 @@ public final class ConnectionManager {
         wifiReconnectAttempt = 0
     }
 
-    /// Cancels any resync retry loop in progress
+    /// Cancels any resync retry loop in progress.
+    /// The cancelled task's catch-all calls endResyncActivity(succeeded: false) asynchronously,
+    /// but callers that also trigger handleDisconnect don't need to wait for it —
+    /// handleDisconnect zeroes syncActivityCount independently, and the onEnded callback's
+    /// guard (syncActivityCount > 0) prevents underflow.
     func cancelResyncLoop() {
         resyncTask?.cancel()
         resyncTask = nil
@@ -492,47 +505,67 @@ public final class ConnectionManager {
     // MARK: - Initial Sync
 
     /// Performs initial sync with automatic resync loop on failure.
+    /// Returns `true` if sync completed successfully, `false` if it failed and a resync loop was started.
     /// - Parameters:
     ///   - deviceID: The device ID to sync
     ///   - services: The service container
+    ///   - transportType: The transport being used (determines whether BLE throttling applies)
     ///   - context: Optional context string for logging (e.g., "WiFi reconnect")
     ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
     func performInitialSync(
         deviceID: UUID,
         services: ServiceContainer,
+        transportType: TransportType = .bluetooth,
         context: String = "",
         forceFullSync: Bool = false
-    ) async {
+    ) async -> Bool {
+        let throttling = currentThrottlingConfig(for: deviceID, transportType: transportType)
         do {
             try await withTimeout(.seconds(120), operationName: "performInitialSync") {
                 try await services.syncCoordinator.onConnectionEstablished(
                     deviceID: deviceID,
                     services: services,
-                    forceFullSync: forceFullSync
+                    forceFullSync: forceFullSync,
+                    throttling: throttling
                 )
             }
+            return true
         } catch {
             // Don't start resync if user disconnected while sync was in progress
-            guard connectionIntent.wantsConnection else { return }
+            guard connectionIntent.wantsConnection else { return false }
             let prefix = context.isEmpty ? "" : "\(context): "
             logger.warning("\(prefix)Initial sync failed, starting resync loop: \(error.localizedDescription)")
-            startResyncLoop(deviceID: deviceID, services: services, forceFullSync: forceFullSync)
+            startResyncLoop(deviceID: deviceID, services: services, transportType: transportType, forceFullSync: forceFullSync)
+            return false
         }
     }
 
     /// Starts a retry loop to resync after initial sync failure.
     /// Retries every 2 seconds, shows "Sync Failed" pill and disconnects after 3 failures.
+    /// Holds a sync activity bracket so the "Syncing" pill stays visible across retries.
     /// - Parameters:
     ///   - deviceID: The connected device UUID
     ///   - services: The ServiceContainer with all services
     ///   - forceFullSync: When true, forces complete data exchange regardless of sync state
-    func startResyncLoop(deviceID: UUID, services: ServiceContainer, forceFullSync: Bool = false) {
+    func startResyncLoop(
+        deviceID: UUID,
+        services: ServiceContainer,
+        transportType: TransportType = .bluetooth,
+        forceFullSync: Bool = false
+    ) {
         resyncTask?.cancel()
         resyncAttemptCount = 0
 
         // Note: No [weak self] needed - Task is stored property, self is @MainActor class.
         // Task inherits MainActor isolation, no retain cycle risk.
         resyncTask = Task {
+            // Hold sync activity for the entire resync loop so the "Syncing" pill stays visible.
+            // Must be inside the task body: placing it before task assignment introduced a
+            // suspension point where resyncTask was still nil, breaking the dedup guard in
+            // checkSyncHealth().
+            await services.syncCoordinator.beginResyncActivity()
+            var didEndResyncActivity = false
+
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.resyncInterval)
                 guard !Task.isCancelled else { break }
@@ -543,13 +576,15 @@ public final class ConnectionManager {
                 resyncAttemptCount += 1
                 logger.info("Resync attempt \(resyncAttemptCount)/\(Self.maxResyncAttempts)")
 
+                let throttling = self.currentThrottlingConfig(for: deviceID, transportType: transportType)
                 let success: Bool
                 do {
                     success = try await withTimeout(.seconds(60), operationName: "performResync") {
                         await services.syncCoordinator.performResync(
                             deviceID: deviceID,
                             services: services,
-                            forceFullSync: forceFullSync
+                            forceFullSync: forceFullSync,
+                            throttling: throttling
                         )
                     }
                 } catch {
@@ -560,18 +595,71 @@ public final class ConnectionManager {
                 if success {
                     logger.info("Resync succeeded")
                     resyncAttemptCount = 0
+
+                    // Run post-sync hooks deferred when initial sync failed.
+                    // Guard each await: disconnect(), device switch, or a new
+                    // reconnect cycle may have torn down the connection.
+                    guard !Task.isCancelled,
+                          connectionIntent.wantsConnection,
+                          connectionState == .ready,
+                          self.services === services else { break }
+
+                    await syncDeviceTimeIfNeeded()
+
+                    guard !Task.isCancelled,
+                          connectionIntent.wantsConnection,
+                          connectionState == .ready,
+                          self.services === services else { break }
+
+                    // Re-authenticate room sessions before onDeviceSynced to avoid
+                    // BLE contention with stale node cleanup's fire-and-forget Task.
+                    let sessionIDs = sessionsAwaitingReauth
+                    if !sessionIDs.isEmpty {
+                        await services.remoteNodeService.handleBLEReconnection(sessionIDs: sessionIDs)
+                    }
+
+                    guard !Task.isCancelled,
+                          connectionIntent.wantsConnection,
+                          connectionState == .ready,
+                          self.services === services else { break }
+
+                    // Report success only after confirming the loop is still authoritative.
+                    // Earlier placement fired the "Ready" toast before these guards,
+                    // relying on handleDisconnect as an accidental backstop.
+                    await services.syncCoordinator.endResyncActivity(succeeded: true)
+                    didEndResyncActivity = true
+
+                    // Only clear consumed IDs after confirming the loop is still valid.
+                    // Any IDs appended during the await (via teardownSessionForReconnect) survive.
+                    sessionsAwaitingReauth.subtract(sessionIDs)
+
+                    await onDeviceSynced?()
+
                     break
                 }
 
                 if resyncAttemptCount >= Self.maxResyncAttempts {
                     logger.warning("Resync failed \(Self.maxResyncAttempts) times, disconnecting")
+                    await services.syncCoordinator.endResyncActivity(succeeded: false)
+                    didEndResyncActivity = true
                     onResyncFailed?()
                     await disconnect(reason: .resyncFailed)
                     break
                 }
             }
 
-            resyncTask = nil
+            // Catch-all for cancellation or guard exits
+            if !didEndResyncActivity {
+                await services.syncCoordinator.endResyncActivity(succeeded: false)
+            }
+
+            // Only nil resyncTask if this task wasn't cancelled. When startResyncLoop()
+            // is called while a previous loop is running, it cancels the old task and
+            // assigns a new one. The old task's catch-all must not nil resyncTask or it
+            // would destroy the replacement.
+            if !Task.isCancelled {
+                resyncTask = nil
+            }
         }
     }
 
@@ -718,6 +806,92 @@ public final class ConnectionManager {
         }
     }
 
+    // MARK: - Service Wiring Helpers
+
+    /// Wires the clean-channel-sync callback on a new ServiceContainer so that
+    /// `lastCleanChannelSync` is updated when a channel phase completes without errors.
+    /// Called from every path that creates a new ServiceContainer.
+    func wireCleanChannelSyncCallback(on services: ServiceContainer) async {
+        await services.syncCoordinator.setCleanChannelSyncCallback { [weak self] deviceID in
+            await MainActor.run {
+                self?.lastCleanChannelSync = (deviceID: deviceID, completedAt: Date())
+            }
+        }
+    }
+
+    // MARK: - Sync Throttling
+
+    /// Builds a throttling config for the current device and transport.
+    /// WiFi connections are unthrottled; BLE connections use platform-specific values.
+    private func currentThrottlingConfig(for deviceID: UUID, transportType: TransportType) -> SyncThrottlingConfig {
+        guard transportType != .wifi else { return .none }
+        return detectedPlatform.syncThrottlingConfig(
+            lastCleanChannelSync: lastCleanChannelSync?.deviceID == deviceID
+                ? lastCleanChannelSync?.completedAt : nil
+        )
+    }
+
+    // MARK: - Ready Promotion
+
+    /// Promotes connection to `.ready` if the connection is still alive and owned by the expected services.
+    /// Skips post-sync work (time sync, onDeviceSynced) when sync failed to avoid BLE pressure.
+    /// Returns `true` if `.ready` was set, `false` if promotion was suppressed.
+    ///
+    /// - Parameter additionalGuard: Caller-specific invariant checked at every guard point,
+    ///   including after async operations like `syncDeviceTimeIfNeeded()`. This cannot be an
+    ///   inline check at the call site because the invariant must hold both before AND after
+    ///   the internal awaits — a competing reconnect cycle could start during time sync,
+    ///   and promoting a stale session to `.ready` would shadow the new one.
+    ///   Currently only `rebuildSession` uses this (reconnect-generation check).
+    @discardableResult
+    func promoteToReady(
+        syncSucceeded: Bool,
+        expectedServices: ServiceContainer,
+        transportType: TransportType,
+        additionalGuard: (() -> Bool)? = nil
+    ) async -> Bool {
+        guard connectionIntent.wantsConnection else {
+            logger.warning("Promotion suppressed: user disconnected")
+            return false
+        }
+        guard self.services === expectedServices else {
+            logger.warning("Promotion suppressed: services replaced or nil")
+            return false
+        }
+        guard additionalGuard?() ?? true else {
+            logger.warning("Promotion suppressed: caller guard failed (e.g. reconnect generation)")
+            return false
+        }
+
+        // Skip time sync on BLE failure to avoid pressure on a saturated link.
+        // WiFi/TCP has no such constraint, so always correct the clock there.
+        if syncSucceeded || transportType == .wifi {
+            await syncDeviceTimeIfNeeded()
+            guard connectionIntent.wantsConnection else {
+                logger.warning("Promotion suppressed after time sync: user disconnected")
+                return false
+            }
+            guard self.services === expectedServices else {
+                logger.warning("Promotion suppressed after time sync: services replaced or nil")
+                return false
+            }
+            guard additionalGuard?() ?? true else {
+                logger.warning("Promotion suppressed after time sync: caller guard failed (e.g. reconnect generation)")
+                return false
+            }
+        }
+
+        currentTransportType = transportType
+        // Known gap: .ready is set even when sync failed. This is inherited from the
+        // pre-refactor code where performInitialSync was fire-and-forget (returned Void)
+        // and callers always fell through to .ready. Changing this requires designing an
+        // intermediate "connected but not synced" state. For now, the resync loop runs
+        // deferred post-sync hooks (time sync, reauth, onDeviceSynced) when it succeeds.
+        connectionState = .ready
+        if syncSucceeded { await onDeviceSynced?() }
+        return true
+    }
+
     /// Syncs the device clock if it drifts more than 60 seconds from the phone.
     /// Safe to call after sync — only affects future device-originated timestamps.
     func syncDeviceTimeIfNeeded() async {
@@ -818,6 +992,7 @@ public final class ConnectionManager {
     /// - Parameter capabilities: The device capabilities from queryDevice()
     func configureBLEPacing(for capabilities: MeshCore.DeviceCapabilities) async {
         let platform = DevicePlatform.detect(from: capabilities.model)
+        detectedPlatform = platform
         let pacing = platform.recommendedWritePacing
         await stateMachine.setWritePacingDelay(pacing)
         if pacing > 0 {
@@ -880,6 +1055,9 @@ public final class ConnectionManager {
     /// Sets internal state for testing. Only available in DEBUG builds.
     internal func setTestState(
         connectionState: ConnectionState? = nil,
+        services: ServiceContainer?? = nil,
+        session: MeshCoreSession?? = nil,
+        connectedDevice: DeviceDTO?? = nil,
         currentTransportType: TransportType?? = nil,
         connectionIntent: ConnectionIntent? = nil,
         connectingDeviceID: UUID?? = nil,
@@ -890,6 +1068,15 @@ public final class ConnectionManager {
 
         if let state = connectionState {
             self.connectionState = state
+        }
+        if let svc = services {
+            self.services = svc
+        }
+        if let sess = session {
+            self.session = sess
+        }
+        if let device = connectedDevice {
+            self.connectedDevice = device
         }
         if let transport = currentTransportType {
             self.currentTransportType = transport

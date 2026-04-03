@@ -93,7 +93,7 @@ extension ConnectionManager {
         }
 
         logger.info("Foreground return: sync state is failed, starting resync loop")
-        startResyncLoop(deviceID: deviceID, services: services)
+        startResyncLoop(deviceID: deviceID, services: services, transportType: currentTransportType ?? .bluetooth)
     }
 
     // MARK: - Activation
@@ -449,11 +449,13 @@ extension ConnectionManager {
 
         cancelResyncLoop()
 
-        // Only clear user intent for user-initiated disconnects
+        // Only clear user intent and clean-channel state for explicit disconnects.
+        // Transient reasons preserve both so the next reconnect can skip redundant channel sync.
         switch reason {
         case .userInitiated, .statusMenuDisconnectTap, .forgetDevice, .deviceRemovedFromSettings, .factoryReset, .switchingDevice:
             connectionIntent = .userDisconnected
             persistIntent()
+            lastCleanChannelSync = nil
         case .resyncFailed, .wifiAddressChange, .wifiReconnectPrep, .pairingFailed:
             // Preserve .wantsConnection so health check can retry
             break
@@ -543,6 +545,7 @@ extension ConnectionManager {
                 appStateProvider: appStateProvider
             )
             await newServices.wireServices()
+            await wireCleanChannelSyncCallback(on: newServices)
                 self.services = newServices
 
             // Seed mock data
@@ -578,6 +581,7 @@ extension ConnectionManager {
     /// - Parameter deviceID: UUID of the new device to connect to
     public func switchDevice(to deviceID: UUID) async throws {
         logger.info("Switching to device: \(deviceID)")
+        lastCleanChannelSync = nil
 
         // Update intent
         connectionIntent = .wantsConnection()
@@ -593,6 +597,9 @@ extension ConnectionManager {
                 throw ConnectionError.deviceNotFound
             }
         }
+
+        // Cancel any resync loop from the old device before teardown
+        cancelResyncLoop()
 
         // Reset sync state before destroying services to prevent stuck "Syncing" pill
         if let services {
@@ -626,6 +633,7 @@ extension ConnectionManager {
             appStateProvider: appStateProvider
         )
         await newServices.wireServices()
+        await wireCleanChannelSyncCallback(on: newServices)
         self.services = newServices
 
         // Fetch existing device and auto-add config concurrently (independent operations)
@@ -656,17 +664,10 @@ extension ConnectionManager {
 
         // Notify observers BEFORE sync starts so they can wire callbacks
         await onConnectionReady?()
-        await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch", forceFullSync: true)
+        let syncSucceeded = await performInitialSync(deviceID: deviceID, services: newServices, context: "Device switch", forceFullSync: true)
 
-        // User may have disconnected while sync was in progress
-        guard connectionIntent.wantsConnection else { return }
+        guard await promoteToReady(syncSucceeded: syncSucceeded, expectedServices: newServices, transportType: .bluetooth) else { return }
 
-        await syncDeviceTimeIfNeeded()
-        guard connectionIntent.wantsConnection else { return }
-
-        currentTransportType = .bluetooth
-        connectionState = .ready
-        await onDeviceSynced?()
         stopReconnectionWatchdog()
         logger.info("Device switch complete - device ready")
     }

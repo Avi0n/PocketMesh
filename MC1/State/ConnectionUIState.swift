@@ -157,9 +157,12 @@ public final class ConnectionUIState {
     }
 
     /// Test helper: Simulates sync activity ended callback (mirrors actual callback guard logic)
-    func simulateSyncEnded() {
+    func simulateSyncEnded(succeeded: Bool = false) {
         guard syncActivityCount > 0 else { return }
         syncActivityCount -= 1
+        if syncActivityCount == 0 && succeeded {
+            showReadyToastBriefly()
+        }
     }
 #endif
 
@@ -204,14 +207,14 @@ public final class ConnectionUIState {
             onStarted: { @MainActor [weak self] in
                 self?.syncActivityCount += 1
             },
-            onEnded: { @MainActor [weak self] in
+            onEnded: { @MainActor [weak self] succeeded in
                 guard let self else { return }
                 // Guard against double-decrement: onDisconnected and sync error path
                 // can both call this if WiFi drops or device switch during sync
                 guard self.syncActivityCount > 0 else { return }
                 self.syncActivityCount -= 1
-                // Show "Ready" toast when all sync activity completes
-                if self.syncActivityCount == 0 {
+                // Show "Ready" toast only when all sync activity completes successfully
+                if self.syncActivityCount == 0 && succeeded {
                     self.showReadyToastBriefly()
                 }
             },
